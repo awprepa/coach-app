@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
 export default function Clients() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchClients()
@@ -28,13 +30,25 @@ export default function Clients() {
       {clients.length === 0 ? (
         <p>Aucun client pour l'instant.</p>
       ) : (
-        <ul>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {clients.map(client => (
-            <li key={client.id}>
-              {client.prenom} {client.nom} — {client.offre}
-            </li>
+            <div
+              key={client.id}
+              onClick={() => navigate(`/client/${client.id}`)}
+              style={{
+                padding: '1rem',
+                border: '1px solid #ccc',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              <strong>{client.prenom} {client.nom}</strong>
+              <span style={{ marginLeft: '1rem', color: '#666' }}>
+                {client.offre === 'suivi_premium' ? 'Suivi Premium' : 'Plan Seul'}
+              </span>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )
