@@ -69,6 +69,18 @@ export default function FicheClient() {
     else navigate('/')
   }
 
+  async function inviterClient() {
+    if (!client.email) {
+      alert('Ce client n\'a pas d\'email renseigné.')
+      return
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(client.email, {
+      redirectTo: window.location.origin + '/login'
+    })
+    if (error) alert(error.message)
+    else alert(`Email de création de mot de passe envoyé à ${client.email}`)
+  }
+
   if (loading) return <p>Chargement...</p>
   if (!client) return <p>Client introuvable.</p>
 
@@ -138,6 +150,7 @@ export default function FicheClient() {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={() => setEditMode(true)}>✏️ Modifier</button>
             <button onClick={supprimerClient} style={{ color: 'red' }}>🗑️ Supprimer</button>
+            <button onClick={inviterClient} style={{ color: '#2563eb' }}>📧 Inviter</button>
           </div>
         </div>
       )}
