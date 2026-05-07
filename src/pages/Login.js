@@ -87,12 +87,12 @@ export default function Login() {
               <div style={{ ...styles.field, flex: 1 }}>
                 <label style={styles.label}>Prénom *</label>
                 <input type="text" value={prenom} onChange={e => setPrenom(e.target.value)}
-                  required placeholder="Lucas" style={styles.input} />
+                  required placeholder="" style={styles.input} />
               </div>
               <div style={{ ...styles.field, flex: 1 }}>
                 <label style={styles.label}>Nom *</label>
                 <input type="text" value={nom} onChange={e => setNom(e.target.value)}
-                  required placeholder="MAUGARD" style={styles.input} />
+                  required placeholder="" style={styles.input} />
               </div>
             </div>
             <div style={styles.field}>

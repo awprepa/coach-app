@@ -149,9 +149,13 @@ export default function GPS() {
   const [cmpMetric, setCmpMetric]       = useState('distance')
   const [cmpType, setCmpType]           = useState('bar')          // bar | line
   const [importing, setImporting]       = useState(false)
-  const [preview, setPreview]           = useState(null)           // sessions parsed avant sauvegarde
+  const [preview, setPreview]           = useState(null)
   const [clients, setClients]           = useState([])
   const [loading, setLoading]           = useState(true)
+  const [selectedJoueurs, setSelectedJ] = useState(new Set())
+  const [dupeModal, setDupeModal]       = useState(null)   // { joueur, rows[] } en cours de résolution
+  const [dupeChoices, setDupeChoices]   = useState({})     // joueur → index de la ligne choisie
+  const [dupeQueue, setDupeQueue]       = useState([])     // liste des joueurs en doublon restants
 
   useEffect(() => {
     fetchAll()
@@ -213,11 +217,46 @@ export default function GPS() {
     if (selected?.id === id) setSelected(null)
   }
 
-  // Lignes filtrées selon toggle total/périodes
+  // Détection doublons quand session change
+  useEffect(() => {
+    if (!selected) return
+    setSelectedJ(new Set())
+    setDupeChoices({})
+    const totals = selected.lignes.filter(l => l.periode_num === 0)
+    const grouped = {}
+    totals.forEach(l => { grouped[l.joueur] = [...(grouped[l.joueur] || []), l] })
+    const dupes = Object.entries(grouped).filter(([, rows]) => rows.length > 1).map(([joueur, rows]) => ({ joueur, rows }))
+    if (dupes.length) {
+      setDupeQueue(dupes.slice(1))
+      setDupeModal(dupes[0])
+    }
+  }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function resolveDupe(joueur, idx) {
+    setDupeChoices(prev => ({ ...prev, [joueur]: idx }))
+    if (dupeQueue.length) {
+      setDupeModal(dupeQueue[0])
+      setDupeQueue(q => q.slice(1))
+    } else {
+      setDupeModal(null)
+    }
+  }
+
+  // Lignes filtrées selon toggle total/périodes + résolution doublons
   const lignes = selected?.lignes || []
-  const lignesFiltrees = showPeriodes
-    ? lignes.filter(l => l.periode_num > 0)
-    : lignes.filter(l => l.periode_num === 0)
+  const lignesFiltrees = (() => {
+    if (showPeriodes) return lignes.filter(l => l.periode_num > 0)
+    const totals = lignes.filter(l => l.periode_num === 0)
+    // Pour les joueurs avec doublon, ne garder que la ligne choisie
+    const seen = {}
+    return totals.filter(l => {
+      const groupe = totals.filter(x => x.joueur === l.joueur)
+      if (groupe.length === 1) return true
+      const chosenIdx = dupeChoices[l.joueur] ?? 0
+      const idx = groupe.indexOf(l)
+      return idx === chosenIdx
+    })
+  })()
 
   // Tri
   const lignesTri = [...lignesFiltrees].sort((a, b) => {
@@ -382,12 +421,52 @@ export default function GPS() {
               ))}
             </div>
 
+            {/* ── MODAL DOUBLON ── */}
+            {dupeModal && (
+              <div style={S.modalOverlay}>
+                <div style={S.modalBox}>
+                  <div style={S.modalTitle}>Doublon détecté — {dupeModal.joueur}</div>
+                  <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0 0 1rem' }}>
+                    Ce joueur apparaît {dupeModal.rows.length} fois dans la session. Laquelle garder ?
+                  </p>
+                  {dupeModal.rows.map((row, idx) => (
+                    <button key={idx} onClick={() => resolveDupe(dupeModal.joueur, idx)} style={S.dupeRow}>
+                      <span style={S.dupeBadge}>{row.periode_nom || `Ligne ${idx + 1}`}</span>
+                      <span style={{ color: '#374151', fontSize: '0.82rem' }}>
+                        {row.distance != null && `${row.distance}m`}
+                        {row.m_min != null && ` · ${row.m_min}m/min`}
+                        {row.vmax != null && ` · Vmax ${row.vmax}km/h`}
+                        {row.duree && ` · ${row.duree}`}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ── TABLEAU ── */}
             {mode === 'tableau' && (
               <div style={S.tableWrap}>
+                {/* Barre de sélection */}
+                {selectedJoueurs.size > 0 && (
+                  <div style={S.selBar}>
+                    <span style={{ fontWeight: '700', color: '#111827' }}>{selectedJoueurs.size} joueur{selectedJoueurs.size > 1 ? 's' : ''} sélectionné{selectedJoueurs.size > 1 ? 's' : ''}</span>
+                    <button onClick={() => { setCmpJoueurs([...selectedJoueurs]); setMode('comparer') }} style={S.selBtn}>Comparer →</button>
+                    <button onClick={() => { setChartMetric('distance'); setMode('graphiques') }} style={S.selBtnSecondary}>Graphique →</button>
+                    <button onClick={() => setSelectedJ(new Set())} style={{ ...S.selBtnSecondary, marginLeft: 'auto' }}>✕ Désélectionner</button>
+                  </div>
+                )}
                 <table style={S.table}>
                   <thead>
                     <tr>
+                      <th style={{ ...S.th, width: '36px', textAlign: 'center', paddingRight: 0 }}>
+                        <input type="checkbox"
+                          checked={lignesTri.length > 0 && lignesTri.every(l => selectedJoueurs.has(l.joueur))}
+                          onChange={e => {
+                            if (e.target.checked) setSelectedJ(new Set(lignesTri.map(l => l.joueur)))
+                            else setSelectedJ(new Set())
+                          }} />
+                      </th>
                       <th style={{ ...S.th, ...S.thSticky }}>Joueur</th>
                       {showPeriodes && <th style={S.th}>Période</th>}
                       {visibleMetrics.map(k => {
@@ -404,9 +483,19 @@ export default function GPS() {
                   <tbody>
                     {lignesTri.map((l, i) => {
                       const client = matchClient(l.joueur)
+                      const isSelected = selectedJoueurs.has(l.joueur)
+                      const rowBg = isSelected ? '#fffef0' : (i % 2 === 0 ? 'white' : '#f9fafb')
                       return (
-                        <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f9fafb' }}>
-                          <td style={{ ...S.td, ...S.tdSticky, fontWeight: '600', background: i % 2 === 0 ? 'white' : '#f9fafb' }}>
+                        <tr key={i} style={{ background: rowBg }}>
+                          <td style={{ ...S.td, textAlign: 'center', paddingRight: 0 }}>
+                            <input type="checkbox" checked={isSelected}
+                              onChange={e => {
+                                const next = new Set(selectedJoueurs)
+                                if (e.target.checked) next.add(l.joueur); else next.delete(l.joueur)
+                                setSelectedJ(next)
+                              }} />
+                          </td>
+                          <td style={{ ...S.td, ...S.tdSticky, fontWeight: '600', background: rowBg }}>
                             {l.joueur}
                             {client && <span style={S.clientBadge}>✓</span>}
                           </td>
@@ -422,6 +511,7 @@ export default function GPS() {
                     {/* Ligne moyenne */}
                     {!showPeriodes && (
                       <tr style={{ background: '#111827', fontWeight: '700' }}>
+                        <td style={{ ...S.td, background: '#111827' }} />
                         <td style={{ ...S.td, ...S.tdSticky, color: '#e4f816', background: '#111827', borderRight: '2px solid #374151' }}>MOYENNE</td>
                         {visibleMetrics.map(k => {
                           const vals = lignesFiltrees.map(l => l[k]).filter(v => typeof v === 'number')
@@ -596,4 +686,12 @@ const S = {
   cmpBlock:      { display: 'flex', flexDirection: 'column', gap: '0.4rem' },
   cmpBlockTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' },
   cmpFixed:      { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', background: '#111827', color: '#e4f816', fontSize: '0.78rem', fontWeight: '700' },
+  modalOverlay:  { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  modalBox:      { background: 'white', borderRadius: '16px', padding: '1.75rem', width: '440px', maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
+  modalTitle:    { fontWeight: '800', fontSize: '1rem', color: '#111827', marginBottom: '0.5rem' },
+  dupeRow:       { display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%', textAlign: 'left', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '0.5rem', cursor: 'pointer' },
+  dupeBadge:     { fontWeight: '700', fontSize: '0.8rem', color: '#111827' },
+  selBar:        { display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#fffef0', border: '1.5px solid #e4f816', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '0.75rem', flexWrap: 'wrap' },
+  selBtn:        { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '7px', padding: '0.35rem 0.9rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
+  selBtnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '7px', padding: '0.35rem 0.9rem', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' },
 }
