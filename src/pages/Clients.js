@@ -4,6 +4,14 @@ import { supabase } from '../supabase'
 
 const PALETTE_CATS = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 
+const OFFRES = {
+  essai:               { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
+  preparation_physique:{ label: 'Prépa physique', bg: '#eff6ff', color: '#1d4ed8' },
+  coaching:            { label: 'Coaching',       bg: '#f5f3ff', color: '#6d28d9' },
+}
+function offreLabel(offre) { return OFFRES[offre]?.label || offre }
+function offreBadge(offre) { const o = OFFRES[offre]; return o ? { background: o.bg, color: o.color } : {} }
+
 function getAvatar(prenom, nom) {
   const initiales = `${prenom?.[0] || ''}${nom?.[0] || ''}`.toUpperCase()
   const palettes = [
@@ -82,8 +90,9 @@ export default function Clients() {
     if (activeCat === catId) setActiveCat(null)
   }
 
-  const premium  = clients.filter(c => c.offre === 'suivi_premium').length
-  const planSeul = clients.filter(c => c.offre === 'plan_seul').length
+  const nbEssai  = clients.filter(c => c.offre === 'essai').length
+  const nbPrepa  = clients.filter(c => c.offre === 'preparation_physique').length
+  const nbCoach  = clients.filter(c => c.offre === 'coaching').length
 
   const filtered = clients.filter(c => {
     const matchSearch = `${c.prenom} ${c.nom}`.toLowerCase().includes(search.toLowerCase())
@@ -175,11 +184,12 @@ export default function Clients() {
       </div>
 
       {/* Stats */}
-      <div style={styles.statsGrid}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
         {[
-          { label: 'Clients actifs', value: clients.length },
-          { label: 'Suivi premium', value: premium },
-          { label: 'Plans seul', value: planSeul },
+          { label: 'Total', value: clients.length },
+          { label: 'Essai', value: nbEssai },
+          { label: 'Prépa physique', value: nbPrepa },
+          { label: 'Coaching', value: nbCoach },
         ].map(stat => (
           <div key={stat.label} style={styles.statCard}>
             <p style={styles.statLabel}>{stat.label}</p>
@@ -240,12 +250,8 @@ export default function Clients() {
                       {sub.label}
                     </span>
                   )}
-                  <span style={{
-                    ...styles.badge,
-                    background: client.offre === 'suivi_premium' ? '#eff6ff' : '#f0fdf4',
-                    color: client.offre === 'suivi_premium' ? '#1d4ed8' : '#15803d',
-                  }}>
-                    {client.offre === 'suivi_premium' ? 'Suivi premium' : 'Plan seul'}
+                  <span style={{ ...styles.badge, ...offreBadge(client.offre) }}>
+                    {offreLabel(client.offre)}
                   </span>
                   <span style={styles.chevron}>›</span>
                 </div>
@@ -266,8 +272,7 @@ const styles = {
   pageSubtitle: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.7rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   catTab: { padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' },
-  statCard: { background: '#f9fafb', borderRadius: '14px', padding: '1.25rem' },
+statCard: { background: '#f9fafb', borderRadius: '14px', padding: '1.25rem' },
   statLabel: { fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.5rem' },
   statValue: { fontSize: '2rem', fontWeight: '800', color: '#333333', margin: 0 },
   listCard: { background: 'white', borderRadius: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' },
