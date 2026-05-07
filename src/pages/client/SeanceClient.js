@@ -24,6 +24,7 @@ export default function SeanceClient() {
   const [semaineActuelle, setSemaineActuelle] = useState(1)
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
+  const [compressed, setCompressed] = useState(false)
 
   useEffect(() => { fetchSeance() }, [])
 
@@ -217,9 +218,12 @@ export default function SeanceClient() {
         </div>
 
         {/* Exercices */}
-        <p style={{ ...S.sectionLabel, marginBottom: '0.75rem' }}>
-          Exercices · {exercices.length}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <p style={{ ...S.sectionLabel, margin: 0 }}>Exercices · {exercices.length}</p>
+          <button onClick={() => setCompressed(c => !c)} style={S.compressBtn}>
+            {compressed ? '⊞ Développer' : '⊟ Compresser'}
+          </button>
+        </div>
 
         {exercices.length === 0 ? (
           <div style={S.emptyCard}>Aucun exercice.</div>
@@ -239,6 +243,33 @@ export default function SeanceClient() {
               })
 
               function renderExCard(ex, showRecup, showSeries = true) {
+                if (compressed) {
+                  const params = [
+                    showSeries && ex.series      && { label: 'SÉRIES', value: ex.series },
+                    ex.repetitions               && { label: 'REPS',   value: ex.repetitions },
+                    ex.tempo                     && { label: 'TEMPO',  value: ex.tempo },
+                    showRecup && ex.recuperation && { label: 'RÉCUP',  value: ex.recuperation },
+                    ex.type_intensite            && { label: ex.type_intensite, value: ex.valeur_intensite || '—' },
+                  ].filter(Boolean)
+                  return (
+                    <div key={ex.id} style={S.compressCard}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: params.length ? '0.6rem' : 0 }}>
+                        <span style={S.exCode}>{ex.code}</span>
+                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#111827' }}>{ex.nom}</span>
+                      </div>
+                      {params.length > 0 && (
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {params.map((p, i) => (
+                            <div key={i} style={S.compressParam}>
+                              <span style={S.compressParamLabel}>{p.label}</span>
+                              <span style={S.compressParamValue}>{p.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
                 return (
                   <div key={ex.id}>
                     {/* En-tête exercice */}
@@ -395,6 +426,11 @@ const S = {
   paramLabel:  { fontSize: '0.58rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
   paramValue:  { fontSize: '1rem', fontWeight: '800', color: '#e4f816', lineHeight: 1.3 },
   intensiteBadge: { background: '#f3f4f6', color: '#374151', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0 },
+  compressBtn: { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '999px', padding: '0.3rem 0.85rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  compressCard: { padding: '0.7rem 0', borderBottom: '1px solid #f0f0f0' },
+  compressParam: { background: '#111827', borderRadius: '8px', padding: '0.25rem 0.55rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  compressParamLabel: { fontSize: '0.55rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2 },
+  compressParamValue: { fontSize: '0.85rem', fontWeight: '800', color: '#e4f816', lineHeight: 1.3 },
   supersetWrapper: { borderRadius: '14px', overflow: 'hidden', border: '2px solid #e4f816', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   supersetHeader: { background: '#111827', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   supersetBadge: { background: '#e4f816', color: '#111827', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.05em' },

@@ -19,8 +19,13 @@ export default function BibliothequeExercices() {
   const [imagePreviewEdit, setImagePreviewEdit] = useState(null)
   const fileRef = useRef(null)
   const fileRefEdit = useRef(null)
+  // Ajout à une séance
+  const [seances, setSeances] = useState([])
+  const [addingToSeance, setAddingToSeance] = useState(null) // id de l'exercice bibliothèque
+  const [addForm, setAddForm] = useState({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
+  const [addSaving, setAddSaving] = useState(false)
 
-  useEffect(() => { fetchExercices() }, [])
+  useEffect(() => { fetchExercices(); fetchSeances() }, [])
 
   async function fetchExercices() {
     const { data, error } = await supabase
@@ -28,6 +33,39 @@ export default function BibliothequeExercices() {
     if (error) console.log(error)
     else setExercices(data)
     setLoading(false)
+  }
+
+  async function fetchSeances() {
+    const { data } = await supabase
+      .from('seances')
+      .select('id, nom, programmes(nom, clients(prenom, nom))')
+      .order('nom')
+    setSeances(data || [])
+  }
+
+  async function ajouterASeance(ex) {
+    if (!addForm.seance_id || !addForm.code.trim()) return
+    setAddSaving(true)
+    const { data: existing } = await supabase
+      .from('exercices').select('id').eq('seance_id', addForm.seance_id)
+    const ordre = (existing?.length || 0) + 1
+    const { error } = await supabase.from('exercices').insert([{
+      seance_id: addForm.seance_id,
+      bibliotheque_id: ex.id,
+      nom: ex.nom,
+      code: addForm.code,
+      series: addForm.series ? parseInt(addForm.series) : null,
+      repetitions: addForm.repetitions || null,
+      tempo: addForm.tempo || null,
+      recuperation: addForm.recuperation || null,
+      type_intensite: addForm.type_intensite || null,
+      valeur_intensite: addForm.valeur_intensite || null,
+      ordre,
+    }])
+    setAddSaving(false)
+    if (error) { alert(error.message); return }
+    setAddingToSeance(null)
+    setAddForm({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
   }
 
   async function uploadImage(file) {
@@ -234,14 +272,65 @@ export default function BibliothequeExercices() {
                     {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
                     {ex.description && <p style={S.cardDesc}>{ex.description}</p>}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', padding: '0 0.875rem 0.875rem' }}>
-                    <button onClick={() => {
-                      setEnEdition(ex.id)
-                      setShowForm(false)
-                      setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', description: ex.description || '', image_url: ex.image_url || null })
-                      setImagePreviewEdit(null)
-                    }} style={S.iconBtn}>✏️ Modifier</button>
-                    <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
+                  <div style={{ padding: '0 0.875rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {/* Bouton ajouter à une séance */}
+                    <button
+                      onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
+                      style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#111827' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
+                    >
+                      {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
+                    </button>
+
+                    {/* Panel ajout à séance */}
+                    {addingToSeance === ex.id && (
+                      <div style={S.addPanel}>
+                        <select value={addForm.seance_id} onChange={e => setAddForm({ ...addForm, seance_id: e.target.value })} style={S.addInput}>
+                          <option value="">— Choisir une séance —</option>
+                          {seances.map(s => (
+                            <option key={s.id} value={s.id}>
+                              {s.programmes?.clients?.prenom} {s.programmes?.clients?.nom} · {s.programmes?.nom} · {s.nom}
+                            </option>
+                          ))}
+                        </select>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {[
+                            { key: 'code', ph: 'Code (A1)' },
+                            { key: 'series', ph: 'Séries' },
+                            { key: 'repetitions', ph: 'Reps' },
+                            { key: 'tempo', ph: 'Tempo' },
+                            { key: 'recuperation', ph: 'Récup' },
+                          ].map(f => (
+                            <input key={f.key} value={addForm[f.key]} onChange={e => setAddForm({ ...addForm, [f.key]: e.target.value })}
+                              placeholder={f.ph} style={{ ...S.addInput, flex: 1, minWidth: '60px' }} />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <select value={addForm.type_intensite} onChange={e => setAddForm({ ...addForm, type_intensite: e.target.value })} style={{ ...S.addInput, flex: 1 }}>
+                            <option value="">Type intensité</option>
+                            <option value="RPE">RPE</option>
+                            <option value="RIR">RIR</option>
+                            <option value="% 1RM">% 1RM</option>
+                            <option value="Vitesse">Vitesse</option>
+                            <option value="Libre">Libre</option>
+                          </select>
+                          <input value={addForm.valeur_intensite} onChange={e => setAddForm({ ...addForm, valeur_intensite: e.target.value })}
+                            placeholder="Valeur" style={{ ...S.addInput, flex: 1 }} />
+                        </div>
+                        <button onClick={() => ajouterASeance(ex)} disabled={addSaving || !addForm.seance_id || !addForm.code}
+                          style={{ ...S.btnPrimary, width: '100%', opacity: (!addForm.seance_id || !addForm.code) ? 0.5 : 1 }}>
+                          {addSaving ? 'Ajout...' : '✓ Ajouter à la séance'}
+                        </button>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button onClick={() => {
+                        setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
+                        setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', description: ex.description || '', image_url: ex.image_url || null })
+                        setImagePreviewEdit(null)
+                      }} style={S.iconBtn}>✏️ Modifier</button>
+                      <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
+                    </div>
                   </div>
                 </>
               )}
@@ -281,4 +370,7 @@ const S = {
   iconBtnDanger: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.78rem' },
   btnPrimary: { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
+  btnAddSeance: { border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.45rem 0.75rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700', textAlign: 'center' },
+  addPanel: { background: '#f9fafb', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1.5px solid #e5e7eb' },
+  addInput: { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.8rem', color: '#111827', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' },
 }

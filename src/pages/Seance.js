@@ -24,6 +24,8 @@ export default function Seance() {
   const [libraryImageFile, setLibraryImageFile] = useState(null)
   const [libraryImagePreview, setLibraryImagePreview] = useState(null)
   const libraryFileRef = useRef(null)
+  const [nomSuggestions, setNomSuggestions] = useState([])
+  const [editNomSuggestions, setEditNomSuggestions] = useState([])
 
   useEffect(() => { fetchSeance() }, [])
 
@@ -63,6 +65,20 @@ export default function Seance() {
     const { data } = await supabase.from('bibliotheque_exercices')
       .select('id, nom, categorie, image_url').ilike('nom', `%${query}%`).limit(8)
     setBiblioResults(data || [])
+  }
+
+  async function searchNom(query) {
+    if (!query.trim()) { setNomSuggestions([]); return }
+    const { data } = await supabase.from('bibliotheque_exercices')
+      .select('id, nom, categorie, image_url').ilike('nom', `%${query}%`).limit(6)
+    setNomSuggestions(data || [])
+  }
+
+  async function searchEditNom(query) {
+    if (!query.trim()) { setEditNomSuggestions([]); return }
+    const { data } = await supabase.from('bibliotheque_exercices')
+      .select('id, nom, categorie, image_url').ilike('nom', `%${query}%`).limit(6)
+    setEditNomSuggestions(data || [])
   }
 
   async function openFullLibrary() {
@@ -179,6 +195,15 @@ export default function Seance() {
   if (!seance) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Séance introuvable.</p></div>
 
   const colSemaines = Array.from({ length: semaines }, (_, i) => i + 1)
+
+  const BLOC_BG = ['#fffbeb','#eff6ff','#f0fdf4','#faf5ff','#fff1f2','#fff7ed','#ecfdf5','#f0f9ff']
+  const BLOC_BORDER = ['#f59e0b','#3b82f6','#22c55e','#a855f7','#f43f5e','#f97316','#10b981','#0ea5e9']
+  function blocStyle(code) {
+    const letter = code?.match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+    if (!letter) return {}
+    const i = letter.charCodeAt(0) - 65
+    return { background: BLOC_BG[i % BLOC_BG.length], borderLeft: `3px solid ${BLOC_BORDER[i % BLOC_BORDER.length]}` }
+  }
   const graphData = colSemaines.map(s => ({
     name: `S${s}`,
     'RPE cible': rpeSeances[s]?.rpe_cible || null,
@@ -286,18 +311,42 @@ export default function Seance() {
             </thead>
             <tbody>
               {exercices.map(ex => (
-                <tr key={ex.id} style={styles.tr}>
+                <tr key={ex.id} style={{ ...styles.tr, ...blocStyle(ex.code) }}>
                   {enEdition === ex.id ? (
                     <>
                       <td style={styles.td}><input value={formEdition.code} onChange={e => setFormEdition({ ...formEdition, code: e.target.value })} style={{ ...styles.cellInput, width: '50px' }} /></td>
-                      <td style={styles.td}><input value={formEdition.nom} onChange={e => setFormEdition({ ...formEdition, nom: e.target.value })} style={{ ...styles.cellInput, width: '130px' }} /></td>
+                      <td style={styles.td}>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            value={formEdition.nom}
+                            onChange={e => { setFormEdition({ ...formEdition, nom: e.target.value, bibliotheque_id: null }); searchEditNom(e.target.value) }}
+                            onBlur={() => setTimeout(() => setEditNomSuggestions([]), 150)}
+                            style={{ ...styles.cellInput, width: '130px' }}
+                          />
+                          {editNomSuggestions.length > 0 && (
+                            <div style={styles.suggDropdown}>
+                              {editNomSuggestions.map(ex => (
+                                <div key={ex.id}
+                                  onClick={() => { setFormEdition(f => ({ ...f, nom: ex.nom, bibliotheque_id: ex.id })); setEditNomSuggestions([]) }}
+                                  style={styles.suggItem}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                                >
+                                  {ex.image_url && <img src={ex.image_url} alt="" style={styles.suggImg} />}
+                                  <span>{ex.nom}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td style={styles.td}><input value={formEdition.series} onChange={e => setFormEdition({ ...formEdition, series: e.target.value })} style={{ ...styles.cellInput, width: '45px' }} /></td>
                       <td style={styles.td}><input value={formEdition.repetitions} onChange={e => setFormEdition({ ...formEdition, repetitions: e.target.value })} style={{ ...styles.cellInput, width: '55px' }} /></td>
                       <td style={styles.td}><input value={formEdition.tempo} onChange={e => setFormEdition({ ...formEdition, tempo: e.target.value })} style={{ ...styles.cellInput, width: '55px' }} /></td>
                       <td style={styles.td}><input value={formEdition.recuperation} onChange={e => setFormEdition({ ...formEdition, recuperation: e.target.value })} style={{ ...styles.cellInput, width: '55px' }} /></td>
                       <td style={styles.td}>
                         <select value={formEdition.type_intensite} onChange={e => setFormEdition({ ...formEdition, type_intensite: e.target.value })} style={{ ...styles.cellInput, width: '90px' }}>
-                          <option value="">—</option>
+                          <option value="">Intensité</option>
                           <option value="RPE">RPE</option>
                           <option value="RIR">RIR</option>
                           <option value="% 1RM">% 1RM</option>
@@ -448,18 +497,39 @@ export default function Seance() {
 
         <form onSubmit={ajouterExercice}>
           <div style={styles.formGrid}>
-            {[
-              { name: 'code', placeholder: 'A1', width: '70px' },
-              { name: 'nom', placeholder: 'Squat', width: '160px' },
-              { name: 'series', placeholder: 'Séries', width: '80px' },
-              { name: 'repetitions', placeholder: 'Reps', width: '80px' },
-              { name: 'tempo', placeholder: 'Tempo', width: '80px' },
-              { name: 'recuperation', placeholder: 'Récup', width: '80px' },
-            ].map(f => (
-              <input key={f.name} name={f.name} value={form[f.name]} onChange={e => setForm({ ...form, [e.target.name]: e.target.value })} placeholder={f.placeholder} style={{ ...styles.formInput, width: f.width }} />
+            <input name="code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="A1" style={{ ...styles.formInput, width: '70px' }} />
+            {/* Champ nom avec suggestions bibliothèque */}
+            <div style={{ position: 'relative' }}>
+              <input
+                name="nom" value={form.nom}
+                onChange={e => { setForm({ ...form, nom: e.target.value, bibliotheque_id: null }); searchNom(e.target.value) }}
+                onBlur={() => setTimeout(() => setNomSuggestions([]), 150)}
+                placeholder="Exercice"
+                style={{ ...styles.formInput, width: '160px' }}
+              />
+              {nomSuggestions.length > 0 && (
+                <div style={styles.suggDropdown}>
+                  {nomSuggestions.map(ex => (
+                    <div key={ex.id}
+                      onClick={() => { setForm(f => ({ ...f, nom: ex.nom, bibliotheque_id: ex.id })); setNomSuggestions([]) }}
+                      style={styles.suggItem}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                    >
+                      {ex.image_url && <img src={ex.image_url} alt="" style={styles.suggImg} />}
+                      <span>{ex.nom}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {['series', 'repetitions', 'tempo', 'recuperation'].map(name => (
+              <input key={name} name={name} value={form[name]} onChange={e => setForm({ ...form, [e.target.name]: e.target.value })}
+                placeholder={{ series: 'Séries', repetitions: 'Reps', tempo: 'Tempo', recuperation: 'Récup' }[name]}
+                style={{ ...styles.formInput, width: '80px' }} />
             ))}
             <select name="type_intensite" value={form.type_intensite} onChange={e => setForm({ ...form, type_intensite: e.target.value })} style={{ ...styles.formInput, width: '100px' }}>
-              <option value="">Type</option>
+              <option value="">Intensité</option>
               <option value="RPE">RPE</option>
               <option value="RIR">RIR</option>
               <option value="% 1RM">% 1RM</option>
@@ -531,4 +601,7 @@ const styles = {
   formInput: { padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', color: '#111827', outline: 'none' },
   btnPrimary: { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
+  suggDropdown: { position: 'absolute', top: '100%', left: 0, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, marginTop: '3px', overflow: 'hidden', minWidth: '200px' },
+  suggItem: { padding: '0.45rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: '0.85rem', color: '#111827', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white' },
+  suggImg: { width: 32, height: 32, objectFit: 'cover', borderRadius: 6, flexShrink: 0 },
 }
