@@ -200,9 +200,9 @@ export default function BibliothequeExercices() {
           {allCats.map(c => (
             <button key={c} onClick={() => setCatFilter(c)} style={{
               ...S.catPill,
-              background: catFilter === c ? '#111827' : 'white',
+              background: catFilter === c ? '#333333' : 'white',
               color: catFilter === c ? '#e4f816' : '#374151',
-              border: `1.5px solid ${catFilter === c ? '#111827' : '#e5e7eb'}`,
+              border: `1.5px solid ${catFilter === c ? '#333333' : '#e5e7eb'}`,
             }}>{c}</button>
           ))}
         </div>
@@ -278,7 +278,7 @@ export default function BibliothequeExercices() {
                     {/* Bouton ajouter à une séance */}
                     <button
                       onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
-                      style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#111827' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
+                      style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#333333' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
                     >
                       {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
                     </button>
@@ -347,15 +347,15 @@ export default function BibliothequeExercices() {
 const S = {
   page: { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
-  title: { fontSize: '1.75rem', fontWeight: '800', color: '#111827', margin: '0 0 0.25rem' },
+  title: { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
   subtitle: { color: '#9ca3af', fontSize: '0.85rem', margin: 0 },
   formCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '1.75rem', border: '2px solid #e4f816' },
   formTitle: { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1.25rem' },
   formRow: { display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' },
   label: { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
-  input: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#111827', outline: 'none', boxSizing: 'border-box' },
-  select: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#111827', outline: 'none', background: 'white', boxSizing: 'border-box' },
-  textarea: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#111827', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' },
+  input: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
+  select: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', background: 'white', boxSizing: 'border-box' },
+  textarea: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' },
   imagePreview: { width: '72px', height: '72px', objectFit: 'cover', borderRadius: '10px', border: '1.5px solid #e5e7eb' },
   btnUpload: { background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: '10px', padding: '0.6rem 1rem', fontSize: '0.85rem', cursor: 'pointer', color: '#374151', fontWeight: '600' },
   catPill: { padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' },
@@ -365,14 +365,14 @@ const S = {
   cardImg: { width: '100%', aspectRatio: '4/3', overflow: 'hidden', background: '#f3f4f6' },
   img: { width: '100%', height: '100%', objectFit: 'cover' },
   imgPlaceholder: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' },
-  cardName: { fontWeight: '700', fontSize: '0.92rem', color: '#111827', margin: '0 0 0.35rem' },
+  cardName: { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.35rem' },
   catTag: { background: '#f3f4f6', color: '#374151', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' },
   cardDesc: { color: '#9ca3af', fontSize: '0.78rem', margin: '0.5rem 0 0', lineHeight: 1.4 },
   iconBtn: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '600', color: '#374151' },
   iconBtnDanger: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.78rem' },
-  btnPrimary: { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
   btnAddSeance: { border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.45rem 0.75rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700', textAlign: 'center' },
   addPanel: { background: '#f9fafb', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1.5px solid #e5e7eb' },
-  addInput: { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.8rem', color: '#111827', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' },
+  addInput: { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.8rem', color: '#333333', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' },
 }

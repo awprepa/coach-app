@@ -31,7 +31,7 @@ function CoachNav() {
   }
   return (
     <nav style={{
-      background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+      background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
       padding: '0 2rem',
       display: 'flex',
       alignItems: 'center',
@@ -44,7 +44,7 @@ function CoachNav() {
       </Link>
       <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
         <Link to="/" style={navLink}>
-          Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#111827', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
+          Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
         </Link>
         <Link to="/nouveau-client" style={navLink}>+ Nouveau client</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>

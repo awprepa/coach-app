@@ -119,22 +119,22 @@ export default function Login() {
 
 const styles = {
   page: {
-    minHeight: '100vh', background: '#f5f5f5', display: 'flex', flexDirection: 'column',
+    minHeight: '100vh', background: '#efefef', display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center', padding: '2rem',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   brand:       { textAlign: 'center', marginBottom: '2rem' },
-  logo:        { fontSize: '2.25rem', fontWeight: '900', color: '#111827', letterSpacing: '-1px' },
+  logo:        { fontSize: '2.25rem', fontWeight: '900', color: '#333333', letterSpacing: '-1px' },
   tagline:     { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.4rem' },
   card:        { background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '420px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' },
   toggle:      { display: 'flex', background: '#f3f4f6', borderRadius: '12px', padding: '4px', marginBottom: '1.75rem' },
   toggleBtn:   { flex: 1, background: 'transparent', border: 'none', borderRadius: '9px', padding: '0.55rem', fontSize: '0.875rem', fontWeight: '600', color: '#6b7280', cursor: 'pointer' },
-  toggleActive:{ background: '#111827', color: '#e4f816' },
+  toggleActive:{ background: '#333333', color: '#e4f816' },
   field:       { marginBottom: '1rem' },
   label:       { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
-  input:       { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#111827', outline: 'none', boxSizing: 'border-box' },
+  input:       { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   error:       { color: '#dc2626', fontSize: '0.85rem', marginBottom: '1rem', background: '#fef2f2', padding: '0.6rem 0.875rem', borderRadius: '8px' },
   successMsg:  { color: '#065f46', fontSize: '0.85rem', marginBottom: '1rem', background: '#d1fae5', padding: '0.6rem 0.875rem', borderRadius: '8px' },
-  btn:         { width: '100%', padding: '0.875rem', background: '#111827', color: '#e4f816', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginTop: '0.5rem' },
+  btn:         { width: '100%', padding: '0.875rem', background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginTop: '0.5rem' },
   hint:        { color: '#9ca3af', fontSize: '0.75rem', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 },
 }

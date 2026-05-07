@@ -101,7 +101,7 @@ export default function ProgrammeClient() {
           <div style={{ marginBottom: '1.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
               <span style={styles.sectionTitle}>Progression semaine {semaineActuelle}</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#111827' }}>{progression}%</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#333333' }}>{progression}%</span>
             </div>
             <div style={styles.progressBar}>
               <div style={{ ...styles.progressFill, width: `${progression}%` }} />
@@ -158,19 +158,19 @@ export default function ProgrammeClient() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#f5f5f5',
+    background: '#efefef',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   centered: {
     minHeight: '100vh',
-    background: '#f5f5f5',
+    background: '#efefef',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   header: {
-    background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+    background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
     padding: '1.25rem 1.5rem',
     display: 'flex',
     justifyContent: 'space-between',
@@ -204,7 +204,7 @@ const styles = {
   title: {
     fontSize: '1.5rem',
     fontWeight: '800',
-    color: '#111827',
+    color: '#333333',
     margin: 0,
   },
   meta: {
@@ -212,7 +212,7 @@ const styles = {
     fontSize: '0.85rem',
   },
   badge: {
-    background: '#111827',
+    background: '#333333',
     color: '#e4f816',
     padding: '0.2rem 0.65rem',
     borderRadius: '999px',
@@ -267,7 +267,7 @@ const styles = {
     justifyContent: 'space-between',
   },
   jourBadge: {
-    background: '#111827',
+    background: '#333333',
     borderRadius: '10px',
     padding: '0.3rem 0.55rem',
     display: 'flex',
@@ -293,7 +293,7 @@ const styles = {
   cardTitle: {
     fontWeight: '700',
     fontSize: '0.95rem',
-    color: '#111827',
+    color: '#333333',
     margin: '0 0 0.15rem',
   },
   cardSub: {

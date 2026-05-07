@@ -121,7 +121,7 @@ const styles = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   header: { marginBottom: '1.5rem' },
-  title: { fontSize: '1.5rem', fontWeight: '800', color: '#111827', margin: 0 },
+  title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   subtitle: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
   form: {},
   section: {
@@ -145,23 +145,23 @@ const styles = {
   input: {
     width: '100%', padding: '0.7rem 0.875rem',
     border: '1.5px solid #e5e7eb', borderRadius: '10px',
-    fontSize: '0.9rem', color: '#111827', outline: 'none',
+    fontSize: '0.9rem', color: '#333333', outline: 'none',
     boxSizing: 'border-box',
   },
   select: {
     width: '100%', padding: '0.7rem 0.875rem',
     border: '1.5px solid #e5e7eb', borderRadius: '10px',
-    fontSize: '0.9rem', color: '#111827', outline: 'none',
+    fontSize: '0.9rem', color: '#333333', outline: 'none',
     background: 'white', boxSizing: 'border-box',
   },
   textarea: {
     width: '100%', padding: '0.7rem 0.875rem',
     border: '1.5px solid #e5e7eb', borderRadius: '10px',
-    fontSize: '0.9rem', color: '#111827', outline: 'none',
+    fontSize: '0.9rem', color: '#333333', outline: 'none',
     resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit',
   },
   btnPrimary: {
-    background: '#111827', color: '#e4f816', border: 'none',
+    background: '#333333', color: '#e4f816', border: 'none',
     borderRadius: '12px', padding: '0.75rem 1.5rem',
     fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', flex: 1,
   },
@@ -178,10 +178,10 @@ const styles = {
   },
   successIcon: {
     width: '56px', height: '56px', borderRadius: '50%',
-    background: '#e4f816', color: '#111827',
+    background: '#e4f816', color: '#333333',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '1.5rem', fontWeight: '900', margin: '0 auto 1rem',
   },
-  successTitle: { fontSize: '1.25rem', fontWeight: '800', color: '#111827', margin: '0 0 0.5rem' },
+  successTitle: { fontSize: '1.25rem', fontWeight: '800', color: '#333333', margin: '0 0 0.5rem' },
   successSub: { color: '#9ca3af', marginBottom: '1.5rem' },
 }

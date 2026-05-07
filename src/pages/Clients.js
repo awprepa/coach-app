@@ -111,7 +111,7 @@ export default function Clients() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         <button
           onClick={() => setActiveCat(null)}
-          style={{ ...styles.catTab, background: activeCat === null ? '#111827' : 'white', color: activeCat === null ? '#e4f816' : '#6b7280', border: activeCat === null ? 'none' : '1.5px solid #e5e7eb' }}
+          style={{ ...styles.catTab, background: activeCat === null ? '#333333' : 'white', color: activeCat === null ? '#e4f816' : '#6b7280', border: activeCat === null ? 'none' : '1.5px solid #e5e7eb' }}
         >
           Tous
         </button>
@@ -151,7 +151,7 @@ export default function Clients() {
                 <button
                   key={c}
                   onClick={() => setNewCatColor(c)}
-                  style={{ width: 20, height: 20, borderRadius: '50%', background: c, border: newCatColor === c ? '2.5px solid #111827' : '2px solid transparent', cursor: 'pointer', padding: 0 }}
+                  style={{ width: 20, height: 20, borderRadius: '50%', background: c, border: newCatColor === c ? '2.5px solid #333333' : '2px solid transparent', cursor: 'pointer', padding: 0 }}
                 />
               ))}
             </div>
@@ -240,19 +240,19 @@ const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   page: { padding: '2rem', maxWidth: '900px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
-  pageTitle: { fontSize: '1.75rem', fontWeight: '800', color: '#111827', margin: 0 },
+  pageTitle: { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
   pageSubtitle: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
-  btnPrimary: { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.7rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
+  btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.7rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   catTab: { padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' },
   statCard: { background: '#f9fafb', borderRadius: '14px', padding: '1.25rem' },
   statLabel: { fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.5rem' },
-  statValue: { fontSize: '2rem', fontWeight: '800', color: '#111827', margin: 0 },
+  statValue: { fontSize: '2rem', fontWeight: '800', color: '#333333', margin: 0 },
   listCard: { background: 'white', borderRadius: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' },
   listHeader: { fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em', padding: '1rem 1.5rem 0.5rem', margin: 0 },
   listRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', cursor: 'pointer' },
   avatar: { width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.875rem', flexShrink: 0 },
-  clientName: { fontWeight: '700', fontSize: '0.95rem', color: '#111827', margin: '0 0 0.15rem' },
+  clientName: { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.15rem' },
   clientObjectif: { color: '#9ca3af', fontSize: '0.8rem', margin: 0 },
   badge: { padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600' },
   chevron: { color: '#d1d5db', fontSize: '1.25rem' },

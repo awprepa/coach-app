@@ -205,19 +205,19 @@ export default function AccueilClient() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#f5f5f5',
+    background: '#efefef',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   centered: {
     minHeight: '100vh',
-    background: '#f5f5f5',
+    background: '#efefef',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   header: {
-    background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+    background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
     padding: '1.25rem 1.5rem',
     display: 'flex',
     justifyContent: 'space-between',
@@ -234,7 +234,7 @@ const styles = {
     height: '38px',
     borderRadius: '50%',
     background: '#e4f816',
-    color: '#111827',
+    color: '#333333',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -254,7 +254,7 @@ const styles = {
   title: {
     fontSize: '1.75rem',
     fontWeight: '800',
-    color: '#111827',
+    color: '#333333',
     margin: 0,
   },
   subtitle: {
@@ -300,7 +300,7 @@ const styles = {
   cardTitle: {
     fontWeight: '700',
     fontSize: '0.95rem',
-    color: '#111827',
+    color: '#333333',
     margin: '0 0 0.2rem',
   },
   cardSub: {
@@ -325,7 +325,7 @@ const styles = {
     cursor: 'pointer',
   },
   nextCard: {
-    background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+    background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
     borderRadius: '16px',
     padding: '1.25rem 1.5rem',
     marginBottom: '1.5rem',

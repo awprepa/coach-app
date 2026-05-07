@@ -56,9 +56,9 @@ export default function NouveauProgramme() {
                 onClick={() => setForm({ ...form, semaines: n })}
                 style={{
                   ...styles.weekBtn,
-                  background: form.semaines == n ? '#111827' : 'white',
+                  background: form.semaines == n ? '#333333' : 'white',
                   color: form.semaines == n ? '#e4f816' : '#374151',
-                  border: `1.5px solid ${form.semaines == n ? '#111827' : '#e5e7eb'}`,
+                  border: `1.5px solid ${form.semaines == n ? '#333333' : '#e5e7eb'}`,
                   fontWeight: form.semaines == n ? '700' : '500',
                 }}
               >{n}</button>
@@ -80,15 +80,15 @@ const styles = {
   page: { padding: '2rem', maxWidth: '600px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
   header: { marginBottom: '1.5rem' },
-  title: { fontSize: '1.5rem', fontWeight: '800', color: '#111827', margin: 0 },
+  title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   subtitle: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   field: { marginBottom: '1.25rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' },
-  input: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#111827', outline: 'none', boxSizing: 'border-box' },
+  input: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   weeksGrid: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
   weekBtn: { width: '48px', height: '48px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer' },
   weeksHint: { color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.6rem' },
-  btnPrimary: { flex: 1, background: '#111827', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
+  btnPrimary: { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },
 }

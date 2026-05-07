@@ -450,7 +450,7 @@ export default function GPS() {
                 {/* Barre de sélection */}
                 {selectedJoueurs.size > 0 && (
                   <div style={S.selBar}>
-                    <span style={{ fontWeight: '700', color: '#111827' }}>{selectedJoueurs.size} joueur{selectedJoueurs.size > 1 ? 's' : ''} sélectionné{selectedJoueurs.size > 1 ? 's' : ''}</span>
+                    <span style={{ fontWeight: '700', color: '#333333' }}>{selectedJoueurs.size} joueur{selectedJoueurs.size > 1 ? 's' : ''} sélectionné{selectedJoueurs.size > 1 ? 's' : ''}</span>
                     <button onClick={() => { setCmpJoueurs([...selectedJoueurs]); setMode('comparer') }} style={S.selBtn}>Comparer →</button>
                     <button onClick={() => { setChartMetric('distance'); setMode('graphiques') }} style={S.selBtnSecondary}>Graphique →</button>
                     <button onClick={() => setSelectedJ(new Set())} style={{ ...S.selBtnSecondary, marginLeft: 'auto' }}>✕ Désélectionner</button>
@@ -510,9 +510,9 @@ export default function GPS() {
                     })}
                     {/* Ligne moyenne */}
                     {!showPeriodes && (
-                      <tr style={{ background: '#111827', fontWeight: '700' }}>
-                        <td style={{ ...S.td, background: '#111827' }} />
-                        <td style={{ ...S.td, ...S.tdSticky, color: '#e4f816', background: '#111827', borderRight: '2px solid #374151' }}>MOYENNE</td>
+                      <tr style={{ background: '#333333', fontWeight: '700' }}>
+                        <td style={{ ...S.td, background: '#333333' }} />
+                        <td style={{ ...S.td, ...S.tdSticky, color: '#e4f816', background: '#333333', borderRight: '2px solid #374151' }}>MOYENNE</td>
                         {visibleMetrics.map(k => {
                           const vals = lignesFiltrees.map(l => l[k]).filter(v => typeof v === 'number')
                           const avg = vals.length ? round2(vals.reduce((a, b) => a + b, 0) / vals.length) : null
@@ -638,11 +638,11 @@ export default function GPS() {
 
 // ── STYLES ─────────────────────────────────────────────────────────────────
 const S = {
-  page:          { display: 'flex', minHeight: '100vh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  sidebar:       { width: '280px', minWidth: '280px', background: '#111827', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1f2937' },
+  page:          { display: 'flex', minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  sidebar:       { width: '280px', minWidth: '280px', background: '#333333', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1f2937' },
   sideHeader:    { padding: '1.25rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1f2937' },
   sideTitle:     { color: 'white', fontWeight: '800', fontSize: '0.95rem' },
-  uploadBtn:     { background: '#e4f816', color: '#111827', border: 'none', borderRadius: '8px', padding: '0.4rem 0.8rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
+  uploadBtn:     { background: '#e4f816', color: '#333333', border: 'none', borderRadius: '8px', padding: '0.4rem 0.8rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
   sideList:      { flex: 1, overflowY: 'auto', padding: '0.5rem' },
   sideItem:      { padding: '0.75rem 0.85rem', borderRadius: '10px', marginBottom: '0.25rem', cursor: 'pointer', position: 'relative', transition: 'background 0.15s' },
   sideItemActive:{ background: 'rgba(228,248,22,0.1)', border: '1px solid rgba(228,248,22,0.3)' },
@@ -652,46 +652,46 @@ const S = {
   previewBox:    { margin: '0.75rem', background: '#1f2937', borderRadius: '10px', padding: '0.9rem' },
   previewTitle:  { color: '#e4f816', fontWeight: '700', fontSize: '0.8rem', marginBottom: '0.5rem' },
   previewRow:    { marginBottom: '0.4rem', paddingBottom: '0.4rem', borderBottom: '1px solid #374151' },
-  btnSave:       { flex: 1, background: '#e4f816', color: '#111827', border: 'none', borderRadius: '7px', padding: '0.4rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
+  btnSave:       { flex: 1, background: '#e4f816', color: '#333333', border: 'none', borderRadius: '7px', padding: '0.4rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
   btnCancel:     { flex: 1, background: '#374151', color: 'white', border: 'none', borderRadius: '7px', padding: '0.4rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
   dimText:       { color: '#6b7280', fontSize: '0.8rem', padding: '1rem', textAlign: 'center' },
   main:          { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   empty:         { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' },
-  mainHeader:    { background: 'linear-gradient(135deg,#111827,#1f2937)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' },
+  mainHeader:    { background: 'linear-gradient(135deg,#333333,#1f2937)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' },
   mainTitle:     { color: 'white', fontWeight: '800', fontSize: '1.1rem', marginBottom: '0.2rem' },
   mainMeta:      { color: '#9ca3af', fontSize: '0.8rem' },
   toggle:        { display: 'flex', background: 'rgba(255,255,255,0.07)', borderRadius: '8px', padding: '3px' },
   toggleBtn:     { background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', padding: '0.3rem 0.8rem', borderRadius: '6px', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' },
-  toggleActive:  { background: '#e4f816', color: '#111827' },
+  toggleActive:  { background: '#e4f816', color: '#333333' },
   cfgBtn:        { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '8px', padding: '0.4rem 0.9rem', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' },
   metaCfg:       { background: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.5rem' },
   metaGroup:     { fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
   metaChip:      { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', border: '1.5px solid #e5e7eb', fontSize: '0.78rem', fontWeight: '600', color: '#374151', cursor: 'pointer', userSelect: 'none' },
-  metaChipOn:    { background: '#111827', color: '#e4f816', borderColor: '#111827' },
+  metaChipOn:    { background: '#333333', color: '#e4f816', borderColor: '#333333' },
   tabs:          { display: 'flex', background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 1.5rem' },
   tab:           { background: 'transparent', border: 'none', borderBottom: '2.5px solid transparent', color: '#6b7280', fontWeight: '600', fontSize: '0.875rem', padding: '0.85rem 1rem', cursor: 'pointer' },
-  tabActive:     { color: '#111827', borderBottomColor: '#e4f816' },
+  tabActive:     { color: '#333333', borderBottomColor: '#e4f816' },
   tableWrap:     { flex: 1, overflow: 'auto', padding: '1rem 1.5rem' },
   table:         { width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.85rem' },
   th:            { background: '#f9fafb', padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', fontSize: '0.75rem', color: '#374151', borderBottom: '2px solid #e5e7eb', borderRight: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
   thSticky:      { position: 'sticky', left: 0, zIndex: 2, background: '#f9fafb', minWidth: '160px', borderRight: '2px solid #e5e7eb' },
-  td:            { padding: '0.55rem 0.75rem', borderBottom: '1px solid #f3f4f6', borderRight: '1px solid #f3f4f6', color: '#111827', whiteSpace: 'nowrap' },
+  td:            { padding: '0.55rem 0.75rem', borderBottom: '1px solid #f3f4f6', borderRight: '1px solid #f3f4f6', color: '#333333', whiteSpace: 'nowrap' },
   tdSticky:      { position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', borderRight: '2px solid #e5e7eb' },
   clientBadge:   { marginLeft: '0.4rem', fontSize: '0.65rem', color: '#10b981', fontWeight: '700' },
   chartSection:  { flex: 1, padding: '1.5rem', overflow: 'auto' },
   chartToolbar:  { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' },
-  select:        { border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.4rem 0.7rem', fontSize: '0.85rem', background: 'white', color: '#111827', fontWeight: '600' },
+  select:        { border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.4rem 0.7rem', fontSize: '0.85rem', background: 'white', color: '#333333', fontWeight: '600' },
   cmpSection:    { flex: 1, padding: '1.5rem', overflow: 'auto' },
   cmpConfig:     { background: 'white', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '1rem' },
   cmpBlock:      { display: 'flex', flexDirection: 'column', gap: '0.4rem' },
   cmpBlockTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' },
-  cmpFixed:      { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', background: '#111827', color: '#e4f816', fontSize: '0.78rem', fontWeight: '700' },
+  cmpFixed:      { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', background: '#333333', color: '#e4f816', fontSize: '0.78rem', fontWeight: '700' },
   modalOverlay:  { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   modalBox:      { background: 'white', borderRadius: '16px', padding: '1.75rem', width: '440px', maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
-  modalTitle:    { fontWeight: '800', fontSize: '1rem', color: '#111827', marginBottom: '0.5rem' },
+  modalTitle:    { fontWeight: '800', fontSize: '1rem', color: '#333333', marginBottom: '0.5rem' },
   dupeRow:       { display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%', textAlign: 'left', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '0.5rem', cursor: 'pointer' },
-  dupeBadge:     { fontWeight: '700', fontSize: '0.8rem', color: '#111827' },
+  dupeBadge:     { fontWeight: '700', fontSize: '0.8rem', color: '#333333' },
   selBar:        { display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#fffef0', border: '1.5px solid #e4f816', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '0.75rem', flexWrap: 'wrap' },
-  selBtn:        { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '7px', padding: '0.35rem 0.9rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
+  selBtn:        { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '7px', padding: '0.35rem 0.9rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
   selBtnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '7px', padding: '0.35rem 0.9rem', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' },
 }

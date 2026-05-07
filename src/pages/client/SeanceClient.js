@@ -229,7 +229,7 @@ export default function SeanceClient() {
     return (
       <div style={{
         width: COL, flexShrink: 0, textAlign: 'center',
-        background: isCur ? '#111827' : '#f3f4f6',
+        background: isCur ? '#333333' : '#f3f4f6',
         color: isCur ? '#e4f816' : '#9ca3af',
         borderRadius: 8, padding: '5px 0', fontSize: '0.7rem', fontWeight: '900',
       }}>S{s}</div>
@@ -250,9 +250,9 @@ export default function SeanceClient() {
 
   const inputStyle = (isCur) => ({
     width: COL, height: 36, textAlign: 'center',
-    border: `1.5px solid ${isCur ? '#111827' : '#e5e7eb'}`,
+    border: `1.5px solid ${isCur ? '#333333' : '#e5e7eb'}`,
     borderRadius: 8, fontSize: '0.88rem', fontWeight: '700',
-    color: '#111827', outline: 'none', boxSizing: 'border-box',
+    color: '#333333', outline: 'none', boxSizing: 'border-box',
     background: isCur ? '#fffef5' : 'white',
     flexShrink: 0,
   })
@@ -267,13 +267,13 @@ export default function SeanceClient() {
   return (
     <div style={S.page}>
       {/* Toast enregistré */}
-      <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#e4f816', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
+      <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: '#333333', color: '#e4f816', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
         ✓ Enregistré
       </div>
 
       {/* Timer récup */}
       {timerTotal > 0 && (
-        <div style={{ ...S.timerBanner, background: timerSecs === 0 ? '#14532d' : '#111827' }}>
+        <div style={{ ...S.timerBanner, background: timerSecs === 0 ? '#14532d' : '#333333' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <span style={S.timerCount}>{timerSecs === 0 ? '✓ GO !' : formatTimer(timerSecs)}</span>
             <span style={S.timerLabel}>{timerSecs === 0 ? 'Récup terminée' : 'RÉCUPÉRATION'}</span>
@@ -314,7 +314,7 @@ export default function SeanceClient() {
               <YAxis domain={[0, 10]} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.8rem' }} />
               <Legend wrapperStyle={{ fontSize: '0.72rem' }} />
-              <Line type="monotone" dataKey="RPE cible" stroke="#111827" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+              <Line type="monotone" dataKey="RPE cible" stroke="#333333" strokeWidth={2} dot={{ r: 2 }} connectNulls />
               <Line type="monotone" dataKey="RPE réel" stroke="#e4f816" strokeWidth={2} dot={{ r: 2 }} strokeDasharray="5 5" connectNulls />
             </LineChart>
           </ResponsiveContainer>
@@ -395,7 +395,7 @@ export default function SeanceClient() {
                     <div key={ex.id} style={S.compressCard}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: params.length ? '0.6rem' : 0 }}>
                         <span style={S.exCode}>{ex.code}</span>
-                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#111827' }}>{ex.nom}</span>
+                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#333333' }}>{ex.nom}</span>
                       </div>
                       {params.length > 0 && (
                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -602,34 +602,34 @@ export default function SeanceClient() {
 }
 
 const S = {
-  page:        { minHeight: '100vh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: '2rem' },
-  centered:    { minHeight: '100vh', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:      { background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  page:        { minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: '2rem' },
+  centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  header:      { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   backBtn:     { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '1.5rem', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.5px' },
   content:     { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
   programmeNom:{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' },
-  title:       { fontSize: '1.5rem', fontWeight: '800', color: '#111827', margin: 0 },
-  curBadge:    { background: '#111827', color: '#e4f816', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+  title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
+  curBadge:    { background: '#333333', color: '#e4f816', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
   card:        { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', marginBottom: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   sectionLabel:{ fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' },
   emptyCard:   { background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   exCard:      { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  exCode:      { background: '#111827', color: '#e4f816', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
-  exNom:       { fontWeight: '700', fontSize: '0.92rem', color: '#111827' },
+  exCode:      { background: '#333333', color: '#e4f816', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
+  exNom:       { fontWeight: '700', fontSize: '0.92rem', color: '#333333' },
   paramsRow:   { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' },
-  paramChip:   { background: '#111827', borderRadius: '10px', padding: '0.35rem 0.7rem', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '52px' },
+  paramChip:   { background: '#333333', borderRadius: '10px', padding: '0.35rem 0.7rem', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '52px' },
   paramLabel:  { fontSize: '0.58rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
   paramValue:  { fontSize: '1rem', fontWeight: '800', color: '#e4f816', lineHeight: 1.3 },
   intensiteBadge: { background: '#f3f4f6', color: '#374151', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0 },
-  compressBtn: { background: '#111827', color: '#e4f816', border: 'none', borderRadius: '999px', padding: '0.3rem 0.85rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  compressBtn: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '999px', padding: '0.3rem 0.85rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   compressCard: { padding: '0.7rem 0', borderBottom: '1px solid #f0f0f0' },
-  compressParam: { background: '#111827', borderRadius: '8px', padding: '0.25rem 0.55rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  compressParam: { background: '#333333', borderRadius: '8px', padding: '0.25rem 0.55rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
   compressParamLabel: { fontSize: '0.55rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2 },
   compressParamValue: { fontSize: '0.85rem', fontWeight: '800', color: '#e4f816', lineHeight: 1.3 },
   supersetWrapper: { borderRadius: '14px', overflow: 'hidden', border: '2px solid #e4f816', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  supersetHeader: { background: '#111827', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  supersetBadge: { background: '#e4f816', color: '#111827', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.05em' },
+  supersetHeader: { background: '#333333', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  supersetBadge: { background: '#e4f816', color: '#333333', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.05em' },
   supersetHint: { color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '600' },
   supersetConnector: { background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
   supersetLine: { flex: 1, height: '1px', background: '#e4f816', opacity: 0.4 },
@@ -646,12 +646,12 @@ const S = {
   seriesTrackerLabel: { fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' },
   serieRow: { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone: { background: '#f0fdf4', border: '1.5px solid #86efac' },
-  serieNum: { fontSize: '0.72rem', fontWeight: '900', color: '#e4f816', background: '#111827', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  serieInput: { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#111827', textAlign: 'center', outline: 'none' },
+  serieNum: { fontSize: '0.72rem', fontWeight: '900', color: '#e4f816', background: '#333333', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  serieInput: { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
   serieUnit: { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
-  serieValBtn: { marginLeft: 'auto', background: '#111827', color: '#e4f816', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  serieValBtn: { marginLeft: 'auto', background: '#333333', color: '#e4f816', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
   serieDoneBadge: { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0 },
-  recupBtn: { width: '100%', marginTop: '0.5rem', background: '#111827', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
+  recupBtn: { width: '100%', marginTop: '0.5rem', background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
   // Bloc done state
   exCardDone: { border: '2px solid #86efac', background: '#f0fdf4' },
   blocDoneBadge: { background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.25rem 0.7rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.5rem' },

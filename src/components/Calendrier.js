@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 const EVENT_TYPES = [
-  { value: 'seance',      label: 'Séance',       bg: '#111827', text: '#e4f816' },
-  { value: 'match',       label: 'Match',        bg: '#e4f816', text: '#111827' },
+  { value: 'seance',      label: 'Séance',       bg: '#333333', text: '#e4f816' },
+  { value: 'match',       label: 'Match',        bg: '#e4f816', text: '#333333' },
   { value: 'combat',      label: 'Combat',       bg: '#dc2626', text: 'white'   },
   { value: 'competition', label: 'Compétition',  bg: '#7c3aed', text: 'white'   },
   { value: 'repos',       label: 'Repos',        bg: '#e5e7eb', text: '#6b7280' },
@@ -81,7 +81,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
     const weekDays = days.slice(row * 7, row * 7 + 7)
     const cycleW = getCycleWeek(weekDays[0], programmeDebut, programmeSemaines)
     cells.push(
-      <div key={`sw-${row}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: cycleW ? '#111827' : '#f9fafb', borderRadius: 7 }}>
+      <div key={`sw-${row}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: cycleW ? '#333333' : '#f9fafb', borderRadius: 7 }}>
         {cycleW
           ? <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#e4f816', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.05em' }}>S{cycleW}</span>
           : <span style={{ width: 2, height: '60%', background: '#e5e7eb', borderRadius: 2 }} />}
@@ -93,7 +93,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
       cells.push(
         <div key={ds} onClick={() => onDayClick(day)} style={{
           height: 72, overflow: 'hidden', boxSizing: 'border-box',
-          background: isSel ? '#111827' : inCycle ? '#fffef5' : 'white',
+          background: isSel ? '#333333' : inCycle ? '#fffef5' : 'white',
           borderRadius: 8, padding: '5px 4px', cursor: 'pointer',
           border: isToday ? '2px solid #e4f816' : inCycle ? '1px solid #f0ead0' : '1px solid #f3f4f6',
           opacity: day.getMonth() === month ? 1 : 0.35,
@@ -116,7 +116,7 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
   return (
     <div>
       {cycleW ? (
-        <div style={{ background: '#111827', borderRadius: 12, padding: '0.875rem 1.25rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ background: '#333333', borderRadius: 12, padding: '0.875rem 1.25rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div>
             <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.62rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cycle en cours</p>
             <p style={{ color: '#e4f816', fontSize: '1.05rem', fontWeight: '900', margin: '0.2rem 0 0' }}>Semaine {cycleW} <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: '400' }}>/ {programmeSemaines}</span></p>
@@ -136,13 +136,13 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
           return (
             <div key={i} onClick={() => onDayClick(day)} style={{
               height: 150, overflow: 'hidden', boxSizing: 'border-box',
-              background: isSel ? '#111827' : cycleW ? '#fffef5' : 'white',
+              background: isSel ? '#333333' : cycleW ? '#fffef5' : 'white',
               borderRadius: 12, padding: '10px 6px', cursor: 'pointer',
               border: isToday ? '2px solid #e4f816' : cycleW ? '1px solid #f0ead0' : '1px solid #f3f4f6',
             }}>
               <div style={{ textAlign: 'center', marginBottom: 8 }}>
                 <p style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? '#e4f816' : '#9ca3af', margin: '0 0 2px', textTransform: 'uppercase' }}>{JOURS[i]}</p>
-                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: isSel ? '#e4f816' : isToday ? '#111827' : '#374151' }}>{day.getDate()}</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: isSel ? '#e4f816' : isToday ? '#333333' : '#374151' }}>{day.getDate()}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
                 {evs.slice(0, 3).map(ev => <EventChip key={ev.id} ev={ev} />)}
@@ -166,7 +166,7 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
       </div>
       {weeks.map((week, wi) => (
         <div key={wi} style={{ display: 'grid', gridTemplateColumns: '36px repeat(7,1fr)', gap: 3, marginBottom: 4, alignItems: 'stretch', minWidth: 560 }}>
-          <div style={{ background: '#111827', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#333333', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#e4f816', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>S{wi + 1}</span>
           </div>
           {week.map((day, di) => {
@@ -175,7 +175,7 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
             return (
               <div key={di} onClick={() => onDayClick(day)} style={{
                 height: 64, overflow: 'hidden', boxSizing: 'border-box',
-                background: isSel ? '#111827' : '#fffef5', borderRadius: 7, padding: '5px',
+                background: isSel ? '#333333' : '#fffef5', borderRadius: 7, padding: '5px',
                 cursor: 'pointer', border: isToday ? '2px solid #e4f816' : '1px solid #f0ead0',
               }}>
                 <span style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? '#e4f816' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}/{day.getMonth()+1}</span>
@@ -328,14 +328,14 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
             <button key={v.k} onClick={() => setVue(v.k)} style={{
               padding: '0.3rem 0.8rem', borderRadius: 7, border: 'none', fontSize: '0.78rem', fontWeight: '600',
               cursor: 'pointer', background: vue === v.k ? 'white' : 'transparent',
-              color: vue === v.k ? '#111827' : '#9ca3af',
+              color: vue === v.k ? '#333333' : '#9ca3af',
               boxShadow: vue === v.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}>{v.l}</button>
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
           <button onClick={prev} style={S.navBtn}>‹</button>
-          <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#111827', minWidth: 160, textAlign: 'center' }}>{headerLabel}</span>
+          <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#333333', minWidth: 160, textAlign: 'center' }}>{headerLabel}</span>
           <button onClick={next} style={S.navBtn}>›</button>
           <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, fontSize: '0.72rem' }}>Auj.</button>
           <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ Exporter</button>
@@ -358,10 +358,10 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
       {selectedDay && (
         <div style={S.panel}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <p style={{ fontWeight: '800', fontSize: '0.9rem', color: '#111827', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <p style={{ fontWeight: '800', fontSize: '0.9rem', color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {selectedDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {getCycleWeek(selectedDay, programmeDebut, programmeSemaines) && (
-                <span style={{ fontSize: '0.72rem', background: '#111827', color: '#e4f816', padding: '2px 8px', borderRadius: 6, fontWeight: '800' }}>
+                <span style={{ fontSize: '0.72rem', background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 6, fontWeight: '800' }}>
                   S{getCycleWeek(selectedDay, programmeDebut, programmeSemaines)}
                 </span>
               )}
@@ -423,6 +423,6 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
 const S = {
   navBtn:    { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '4px 10px', fontSize: '1rem', cursor: 'pointer', color: '#374151' },
   panel:     { marginTop: '1rem', background: '#f9fafb', borderRadius: 14, padding: '1rem 1.25rem', border: '1px solid #e5e7eb' },
-  formInput: { padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', color: '#111827', outline: 'none', background: 'white' },
-  addBtn:    { background: '#111827', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
+  formInput: { padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', color: '#333333', outline: 'none', background: 'white' },
+  addBtn:    { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
 }
