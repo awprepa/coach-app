@@ -31,17 +31,18 @@ export default function Login() {
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: REDIRECT },
+      options: {
+        emailRedirectTo: REDIRECT,
+        data: {
+          prenom: prenom.trim(),
+          nom: nom.trim().toUpperCase(),
+        },
+      },
     })
     if (authError) { setError(authError.message); setLoading(false); return }
 
-    const { error: dbError } = await supabase.from('clients').insert({
-      prenom: prenom.trim(),
-      nom: nom.trim().toUpperCase(),
-      email: email.trim().toLowerCase(),
-      coach_notifie: false,
-    })
-    if (dbError) console.error('Profil client:', dbError)
+    // L'insert clients est géré par le trigger Supabase handle_new_user
+    // (évite les problèmes RLS quand l'email n'est pas encore confirmé)
 
     setSuccess('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.')
     setLoading(false)
