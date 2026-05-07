@@ -8,6 +8,7 @@ import NouveauProgramme from './pages/NouveauProgramme'
 import Programme from './pages/Programme'
 import Seance from './pages/Seance'
 import BibliothequeExercices from './pages/BibliothequeExercices'
+import GPS from './pages/GPS'
 import Login from './pages/Login'
 import AccueilClient from './pages/AccueilClient'
 import ProgrammeClient from './pages/client/ProgrammeClient'
@@ -36,6 +37,7 @@ function CoachNav() {
         <Link to="/" style={navLink}>Clients</Link>
         <Link to="/nouveau-client" style={navLink}>+ Nouveau client</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
+        <Link to="/gps" style={navLink}>GPS</Link>
       </div>
       <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
     </nav>
@@ -105,6 +107,12 @@ function App() {
             <>
               <CoachNav />
               <BibliothequeExercices />
+            </>
+          } />
+          <Route path="/gps" element={
+            <>
+              <CoachNav />
+              <GPS />
             </>
           } />
         </Routes>
