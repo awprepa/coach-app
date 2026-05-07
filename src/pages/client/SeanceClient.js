@@ -471,7 +471,7 @@ export default function SeanceClient() {
                         <p style={S.seriesTrackerLabel}>Séries — S{semaineActuelle}</p>
                         {seriesList.map((serie, si) => (
                           <div key={si} style={{ ...S.serieRow, ...(serie.valide ? S.serieRowDone : {}) }}>
-                            <span style={S.serieNum}>S{si + 1}</span>
+                            <span style={S.serieNum}>{si + 1}</span>
                             <input
                               type="text"
                               value={serie.poids}
@@ -646,7 +646,7 @@ const S = {
   seriesTrackerLabel: { fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' },
   serieRow: { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone: { background: '#f0fdf4', border: '1.5px solid #86efac' },
-  serieNum: { fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', width: 20, flexShrink: 0 },
+  serieNum: { fontSize: '0.72rem', fontWeight: '900', color: '#e4f816', background: '#111827', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput: { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#111827', textAlign: 'center', outline: 'none' },
   serieUnit: { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
   serieValBtn: { marginLeft: 'auto', background: '#111827', color: '#e4f816', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
