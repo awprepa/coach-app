@@ -13,14 +13,24 @@ function getSemaineActuelle(dateDebut, totalSemaines) {
 function parseRecup(str) {
   if (!str) return 0
   const s = String(str).trim()
-  const m1 = s.match(/^(\d+)[''′](\d{2})/)
+  // 1'30" ou 1'30  → minutes + secondes
+  const m1 = s.match(/^(\d+)[''′](\d{1,2})[""″]?/)
   if (m1) return parseInt(m1[1]) * 60 + parseInt(m1[2])
+  // 1:30 → minutes:secondes
   const m2 = s.match(/^(\d+):(\d{2})/)
   if (m2) return parseInt(m2[1]) * 60 + parseInt(m2[2])
-  const m3 = s.match(/^(\d+)\s*min?/i)
+  // 1' → minutes seules
+  const m3 = s.match(/^(\d+)[''′]$/)
   if (m3) return parseInt(m3[1]) * 60
-  const m4 = s.match(/^(\d+)/)
+  // 30" → secondes seules
+  const m4 = s.match(/^(\d+)[""″]/)
   if (m4) return parseInt(m4[1])
+  // 3min → minutes
+  const m5 = s.match(/^(\d+)\s*min?/i)
+  if (m5) return parseInt(m5[1]) * 60
+  // nombre seul → secondes
+  const m6 = s.match(/^(\d+)/)
+  if (m6) return parseInt(m6[1])
   return 0
 }
 
