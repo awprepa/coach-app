@@ -200,6 +200,7 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
   const [form, setForm]               = useState({ type: 'seance', titre: '', seanceId: '', description: '' })
   const [saving, setSaving]           = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchEvenements() }, [clientId])
 
   async function fetchEvenements() {

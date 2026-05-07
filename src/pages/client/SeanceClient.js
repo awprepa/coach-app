@@ -26,6 +26,7 @@ export default function SeanceClient() {
   const [saved, setSaved] = useState(false)
   const [compressed, setCompressed] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
 
   async function fetchSeance() {
@@ -292,7 +293,7 @@ export default function SeanceClient() {
                           <span style={S.intensiteBadge}>{ex.type_intensite} {ex.valeur_intensite}</span>
                         )}
                       </div>
-                      {(showSeries && ex.series || ex.repetitions || ex.tempo || (showRecup && ex.recuperation)) && (
+                      {((showSeries && ex.series) || ex.repetitions || ex.tempo || (showRecup && ex.recuperation)) && (
                         <div style={S.paramsRow}>
                           {showSeries && ex.series && (
                             <div style={S.paramChip}>

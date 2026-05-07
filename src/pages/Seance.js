@@ -27,6 +27,7 @@ export default function Seance() {
   const [nomSuggestions, setNomSuggestions] = useState([])
   const [editNomSuggestions, setEditNomSuggestions] = useState([])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
 
   async function fetchSeance() {

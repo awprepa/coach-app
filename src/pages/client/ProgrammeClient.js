@@ -19,6 +19,7 @@ export default function ProgrammeClient() {
   const [seancesRenseignees, setSeancesRenseignees] = useState({})
   const [loading, setLoading] = useState(true)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchData()
   }, [])

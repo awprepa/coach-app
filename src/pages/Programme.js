@@ -14,6 +14,7 @@ export default function Programme() {
   const [editProgramme, setEditProgramme] = useState(false)
   const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '' })
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchProgramme(); fetchSeances() }, [])
 
   async function fetchProgramme() {

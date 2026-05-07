@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 
-const PALETTE_CATS = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 
 function getAvatar(prenom, nom) {
   const initiales = `${prenom?.[0] || ''}${nom?.[0] || ''}`.toUpperCase()
@@ -35,6 +34,7 @@ export default function FicheClient() {
   const [seances, setSeances] = useState([])
   const [showPastCycles, setShowPastCycles] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClient(); fetchCycles(); fetchCategories() }, [])
 
   async function fetchCategories() {

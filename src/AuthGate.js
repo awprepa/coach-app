@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabase'
 
 const COACH_EMAIL = 'wehrey.arthur@gmail.com' 
 
 export default function AuthGate({ children }) {
   const navigate = useNavigate()
-  const location = useLocation()
   const [loading, setLoading] = useState(true)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user
