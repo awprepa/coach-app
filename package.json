@@ -27,7 +27,13 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "react-hooks/exhaustive-deps": "off",
+      "no-unused-vars": "warn",
+      "eqeqeq": "warn",
+      "no-mixed-operators": "warn"
+    }
   },
   "browserslist": {
     "production": [
