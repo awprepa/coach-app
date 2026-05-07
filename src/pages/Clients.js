@@ -37,6 +37,7 @@ export default function Clients() {
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
   const navigate = useNavigate()
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClients(); fetchCategories() }, [])
 
   async function fetchClients() {
@@ -44,8 +45,16 @@ export default function Clients() {
       .from('clients')
       .select('*, categories(id, nom, couleur)')
       .order('created_at', { ascending: false })
-    if (error) console.log(error)
-    else setClients(data)
+    if (error) { console.log(error); setLoading(false); return }
+
+    // Wellness du jour
+    const today = new Date().toISOString().slice(0, 10)
+    const { data: wData } = await supabase.from('wellness').select('*').eq('date', today)
+    const withWellness = (data || []).map(c => ({
+      ...c,
+      wellness_today: wData?.find(w => w.client_id === c.id) || null,
+    }))
+    setClients(withWellness)
     setLoading(false)
   }
 
@@ -213,6 +222,19 @@ export default function Clients() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  {/* Badge wellness du jour */}
+                  {(() => {
+                    const w = client.wellness_today
+                    if (!w) return null
+                    const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                    const alert = avg <= 2
+                    return (
+                      <span title={`Sommeil ${w.sommeil} · Fatigue ${w.fatigue} · Douleurs ${w.douleurs} · Stress ${w.stress}`}
+                        style={{ background: alert ? '#fef2f2' : '#f0fdf4', color: alert ? '#dc2626' : '#16a34a', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '700' }}>
+                        {alert ? '⚠ ' : '✓ '}{avg.toFixed(1)}/4
+                      </span>
+                    )
+                  })()}
                   {sub && (
                     <span style={{ background: sub.bg, color: sub.color, padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '700' }}>
                       {sub.label}
