@@ -11,6 +11,8 @@ export default function NouveauClient() {
   })
   const [categories, setCategories] = useState([])
   const [succes, setSucces] = useState(false)
+  const [inviteSent, setInviteSent] = useState(false)
+  const [inviteSending, setInviteSending] = useState(false)
 
   useEffect(() => {
     supabase.from('categories').select('*').order('created_at').then(({ data }) => setCategories(data || []))
@@ -28,12 +30,35 @@ export default function NouveauClient() {
     else setSucces(true)
   }
 
+  async function sendInvite() {
+    if (!form.email) return
+    setInviteSending(true)
+    await supabase.auth.signInWithOtp({
+      email: form.email,
+      options: { shouldCreateUser: true, emailRedirectTo: 'https://awprepa.app' },
+    })
+    setInviteSending(false)
+    setInviteSent(true)
+  }
+
   if (succes) return (
     <div style={styles.page}>
       <div style={styles.successCard}>
         <div style={styles.successIcon}>✓</div>
         <h2 style={styles.successTitle}>Client ajouté !</h2>
         <p style={styles.successSub}>Le profil a bien été créé.</p>
+        {form.email && (
+          inviteSent ? (
+            <p style={{ color: '#16a34a', fontSize: '0.85rem', marginBottom: '1rem', fontWeight: '600' }}>
+              ✓ Invitation envoyée à {form.email}
+            </p>
+          ) : (
+            <button onClick={sendInvite} disabled={inviteSending}
+              style={{ ...styles.btnSecondary, width: '100%', marginBottom: '0.75rem', opacity: inviteSending ? 0.6 : 1 }}>
+              {inviteSending ? 'Envoi...' : `Envoyer une invitation à ${form.email}`}
+            </button>
+          )
+        )}
         <button onClick={() => navigate('/')} style={styles.btnPrimary}>Retour aux clients</button>
       </div>
     </div>

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 
+const REDIRECT = 'https://awprepa.app'
+
 export default function Login() {
-  const [mode, setMode]         = useState('connexion') // 'connexion' | 'inscription'
+  const [mode, setMode]         = useState('connexion') // 'connexion' | 'inscription' | 'reset'
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [prenom, setPrenom]     = useState('')
@@ -10,6 +12,8 @@ export default function Login() {
   const [error, setError]       = useState('')
   const [success, setSuccess]   = useState('')
   const [loading, setLoading]   = useState(false)
+
+  function switchMode(m) { setMode(m); setError(''); setSuccess('') }
 
   async function handleConnexion(e) {
     e.preventDefault()
@@ -24,10 +28,13 @@ export default function Login() {
     if (!prenom.trim() || !nom.trim()) { setError('Prénom et nom obligatoires.'); return }
     setLoading(true); setError(''); setSuccess('')
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: REDIRECT },
+    })
     if (authError) { setError(authError.message); setLoading(false); return }
 
-    // Créer le profil client
     const { error: dbError } = await supabase.from('clients').insert({
       prenom: prenom.trim(),
       nom: nom.trim().toUpperCase(),
@@ -38,8 +45,18 @@ export default function Login() {
 
     setSuccess('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.')
     setLoading(false)
-    setMode('connexion')
+    switchMode('connexion')
     setPrenom(''); setNom(''); setEmail(''); setPassword('')
+  }
+
+  async function handleReset(e) {
+    e.preventDefault()
+    if (!email) { setError('Entre ton adresse email.'); return }
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: REDIRECT })
+    if (error) setError(error.message)
+    else setSuccess('Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.')
+    setLoading(false)
   }
 
   return (
@@ -50,21 +67,22 @@ export default function Login() {
       </div>
 
       <div style={styles.card}>
-        {/* Toggle */}
-        <div style={styles.toggle}>
-          <button onClick={() => { setMode('connexion'); setError(''); setSuccess('') }}
-            style={{ ...styles.toggleBtn, ...(mode === 'connexion' ? styles.toggleActive : {}) }}>
-            Connexion
-          </button>
-          <button onClick={() => { setMode('inscription'); setError(''); setSuccess('') }}
-            style={{ ...styles.toggleBtn, ...(mode === 'inscription' ? styles.toggleActive : {}) }}>
-            Créer un compte
-          </button>
-        </div>
+        {mode !== 'reset' && (
+          <div style={styles.toggle}>
+            <button onClick={() => switchMode('connexion')}
+              style={{ ...styles.toggleBtn, ...(mode === 'connexion' ? styles.toggleActive : {}) }}>
+              Connexion
+            </button>
+            <button onClick={() => switchMode('inscription')}
+              style={{ ...styles.toggleBtn, ...(mode === 'inscription' ? styles.toggleActive : {}) }}>
+              Créer un compte
+            </button>
+          </div>
+        )}
 
         {success && <p style={styles.successMsg}>{success}</p>}
 
-        {mode === 'connexion' ? (
+        {mode === 'connexion' && (
           <form onSubmit={handleConnexion}>
             <div style={styles.field}>
               <label style={styles.label}>Email</label>
@@ -80,19 +98,24 @@ export default function Login() {
             <button type="submit" disabled={loading} style={styles.btn}>
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
+            <button type="button" onClick={() => switchMode('reset')} style={styles.forgotBtn}>
+              Mot de passe oublié ?
+            </button>
           </form>
-        ) : (
+        )}
+
+        {mode === 'inscription' && (
           <form onSubmit={handleInscription}>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <div style={{ ...styles.field, flex: 1 }}>
                 <label style={styles.label}>Prénom *</label>
                 <input type="text" value={prenom} onChange={e => setPrenom(e.target.value)}
-                  required placeholder="" style={styles.input} />
+                  required style={styles.input} />
               </div>
               <div style={{ ...styles.field, flex: 1 }}>
                 <label style={styles.label}>Nom *</label>
                 <input type="text" value={nom} onChange={e => setNom(e.target.value)}
-                  required placeholder="" style={styles.input} />
+                  required style={styles.input} />
               </div>
             </div>
             <div style={styles.field}>
@@ -112,17 +135,33 @@ export default function Login() {
             <p style={styles.hint}>En créant un compte, tu seras visible par ton coach qui pourra te contacter et t'assigner des séances.</p>
           </form>
         )}
+
+        {mode === 'reset' && (
+          <form onSubmit={handleReset}>
+            <p style={{ fontSize: '0.9rem', color: '#374151', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Entre ton adresse email et on t'envoie un lien pour réinitialiser ton mot de passe.
+            </p>
+            <div style={styles.field}>
+              <label style={styles.label}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                required placeholder="votre@email.com" style={styles.input} />
+            </div>
+            {error && <p style={styles.error}>{error}</p>}
+            <button type="submit" disabled={loading} style={styles.btn}>
+              {loading ? 'Envoi...' : 'Envoyer le lien'}
+            </button>
+            <button type="button" onClick={() => switchMode('connexion')} style={styles.forgotBtn}>
+              ← Retour à la connexion
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
 }
 
 const styles = {
-  page: {
-    minHeight: '100vh', background: '#efefef', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', padding: '2rem',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  },
+  page:        { minHeight: '100vh', background: '#efefef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   brand:       { textAlign: 'center', marginBottom: '2rem' },
   logo:        { fontSize: '2.25rem', fontWeight: '900', color: '#333333', letterSpacing: '-1px' },
   tagline:     { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.4rem' },
@@ -136,5 +175,6 @@ const styles = {
   error:       { color: '#dc2626', fontSize: '0.85rem', marginBottom: '1rem', background: '#fef2f2', padding: '0.6rem 0.875rem', borderRadius: '8px' },
   successMsg:  { color: '#065f46', fontSize: '0.85rem', marginBottom: '1rem', background: '#d1fae5', padding: '0.6rem 0.875rem', borderRadius: '8px' },
   btn:         { width: '100%', padding: '0.875rem', background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginTop: '0.5rem' },
+  forgotBtn:   { width: '100%', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.8rem', cursor: 'pointer', marginTop: '0.75rem', padding: '0.25rem' },
   hint:        { color: '#9ca3af', fontSize: '0.75rem', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 },
 }

@@ -48,7 +48,7 @@ function CoachNav() {
         <Link to="/" style={navLink}>
           Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
         </Link>
-        <Link to="/nouveau-client" style={navLink}>+ Nouveau client</Link>
+        <Link to="/nouveau-client" style={navLink}>Nouveau client</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
         <Link to="/gps" style={navLink}>GPS</Link>
         <Link to="/tests" style={navLink}>Tests</Link>
