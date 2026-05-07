@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -8,6 +8,25 @@ function getSemaineActuelle(dateDebut, totalSemaines) {
   const diffJours = Math.floor((new Date() - debut) / (1000 * 60 * 60 * 24))
   const semaine = Math.ceil((diffJours + 1) / 7)
   return Math.min(Math.max(semaine, 1), totalSemaines)
+}
+
+function parseRecup(str) {
+  if (!str) return 0
+  const s = String(str).trim()
+  const m1 = s.match(/^(\d+)[''′](\d{2})/)
+  if (m1) return parseInt(m1[1]) * 60 + parseInt(m1[2])
+  const m2 = s.match(/^(\d+):(\d{2})/)
+  if (m2) return parseInt(m2[1]) * 60 + parseInt(m2[2])
+  const m3 = s.match(/^(\d+)\s*min?/i)
+  if (m3) return parseInt(m3[1]) * 60
+  const m4 = s.match(/^(\d+)/)
+  if (m4) return parseInt(m4[1])
+  return 0
+}
+
+function formatTimer(secs) {
+  const m = Math.floor(secs / 60), s = secs % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 const COL = 52  // largeur colonne semaine en px
@@ -25,6 +44,13 @@ export default function SeanceClient() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [compressed, setCompressed] = useState(false)
+  const [tracking, setTracking]         = useState({}) // { exId: [{poids,reps_reelles,valide}] }
+  const [blocsTermines, setBlocsTermines] = useState(new Set())
+  const [timerSecs, setTimerSecs]       = useState(0)
+  const [timerTotal, setTimerTotal]     = useState(0)
+  const [timerRunning, setTimerRunning] = useState(false)
+  const timerRef  = useRef(null)
+  const blocRefs  = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -40,12 +66,12 @@ export default function SeanceClient() {
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.clients?.date_debut
     if (dateDebut) setSemaineActuelle(getSemaineActuelle(dateDebut, total))
-    await fetchExercices()
+    await fetchExercices(data.programmes.semaines, data.programmes.date_debut || data.programmes.clients?.date_debut)
     await fetchRpeSeances()
     setLoading(false)
   }
 
-  async function fetchExercices() {
+  async function fetchExercices(totalSem, dateDebut) {
     const { data, error } = await supabase
       .from('exercices').select('*, charges(*), bibliotheque_exercices(image_url)')
       .eq('seance_id', id).order('ordre', { ascending: true })
@@ -57,6 +83,33 @@ export default function SeanceClient() {
       ex.charges.forEach(c => { map[ex.id][c.semaine] = { id: c.id, charge: c.charge, rpe_reel: c.rpe_reel } })
     })
     setCharges(map)
+
+    // Initialiser le tracking série
+    const sem = dateDebut ? getSemaineActuelle(dateDebut, totalSem || 4) : 1
+    const exIds = data.map(e => e.id)
+    const { data: rows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
+    const t = {}
+    data.forEach(ex => {
+      const n = Math.max(parseInt(ex.series) || 0, 1)
+      t[ex.id] = Array.from({ length: n }, (_, i) => {
+        const saved = rows?.find(r => r.exercice_id === ex.id && r.serie === i + 1)
+        return saved ? { poids: saved.poids || '', reps_reelles: saved.reps_reelles?.toString() || '', valide: saved.valide || false } : { poids: '', reps_reelles: '', valide: false }
+      })
+    })
+    setTracking(t)
+    // Marquer blocs déjà terminés
+    const done = new Set()
+    data.forEach(ex => {
+      const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
+      if (!letter) return
+      const group = data.filter(e => e.code?.match(/^([A-Za-z]+)/)?.[1] === letter)
+      const allDone = group.every(e => {
+        const tr = t[e.id] || []
+        return tr.length > 0 && tr.every(s => s.valide)
+      })
+      if (allDone) done.add(letter)
+    })
+    setBlocsTermines(done)
   }
 
   async function fetchRpeSeances() {
@@ -65,6 +118,66 @@ export default function SeanceClient() {
     const map = {}
     data.forEach(r => { map[r.semaine] = { id: r.id, rpe_cible: r.rpe_cible, rpe_reel: r.rpe_reel } })
     setRpeSeances(map)
+  }
+
+  // Nettoyage timer au démontage
+  useEffect(() => () => clearInterval(timerRef.current), [])
+
+  function startTimer(secs) {
+    clearInterval(timerRef.current)
+    setTimerTotal(secs); setTimerSecs(secs); setTimerRunning(true)
+    timerRef.current = setInterval(() => {
+      setTimerSecs(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current)
+          setTimerRunning(false)
+          if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300])
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  function stopTimer() { clearInterval(timerRef.current); setTimerRunning(false); setTimerSecs(0); setTimerTotal(0) }
+
+  function updateTrackingField(exId, serieIdx, field, value) {
+    setTracking(prev => {
+      const series = [...(prev[exId] || [])]
+      series[serieIdx] = { ...(series[serieIdx] || {}), [field]: value }
+      return { ...prev, [exId]: series }
+    })
+  }
+
+  async function validerSerie(exId, serieIdx, groupLetter, groupItems) {
+    const serie = tracking[exId]?.[serieIdx] || {}
+    // Mise à jour state
+    const newT = { ...tracking }
+    newT[exId] = [...(tracking[exId] || [])]
+    newT[exId][serieIdx] = { ...serie, valide: true }
+    setTracking(newT)
+    flashSaved()
+    // Sauvegarde DB
+    await supabase.from('serie_tracking').upsert({
+      exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
+      poids: serie.poids || null,
+      reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
+      valide: true
+    }, { onConflict: 'exercice_id,semaine,serie' })
+    // Vérifier si bloc terminé
+    if (!groupLetter || !groupItems) return
+    const allDone = groupItems.every(ex => {
+      const t = newT[ex.id] || []
+      return t.length > 0 && t.every(s => s.valide)
+    })
+    if (allDone) {
+      setBlocsTermines(prev => new Set([...prev, groupLetter]))
+      const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
+      const idx = letters.indexOf(groupLetter)
+      if (idx < letters.length - 1) {
+        setTimeout(() => blocRefs.current[letters[idx + 1]]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
+      }
+    }
   }
 
   function flashSaved() { setSaved(true); setTimeout(() => setSaved(false), 1500) }
@@ -143,10 +256,26 @@ export default function SeanceClient() {
 
   return (
     <div style={S.page}>
-      {/* Toast */}
+      {/* Toast enregistré */}
       <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#e4f816', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
         ✓ Enregistré
       </div>
+
+      {/* Timer récup */}
+      {timerTotal > 0 && (
+        <div style={{ ...S.timerBanner, background: timerSecs === 0 ? '#14532d' : '#111827' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={S.timerCount}>{timerSecs === 0 ? '✓ GO !' : formatTimer(timerSecs)}</span>
+            <span style={S.timerLabel}>{timerSecs === 0 ? 'Récup terminée' : 'RÉCUPÉRATION'}</span>
+          </div>
+          {timerSecs > 0 && (
+            <div style={S.timerBar}>
+              <div style={{ ...S.timerProgress, width: `${(1 - timerSecs / timerTotal) * 100}%` }} />
+            </div>
+          )}
+          <button onClick={stopTimer} style={S.timerStop}>✕</button>
+        </div>
+      )}
 
       {/* Header */}
       <div style={S.header}>
@@ -243,7 +372,7 @@ export default function SeanceClient() {
                 }
               })
 
-              function renderExCard(ex, showRecup, showSeries = true) {
+              function renderExCard(ex, showRecup, showSeries = true, groupLetter = null, groupItems = null) {
                 if (compressed) {
                   const params = [
                     showSeries && ex.series      && { label: 'SÉRIES', value: ex.series },
@@ -271,6 +400,9 @@ export default function SeanceClient() {
                     </div>
                   )
                 }
+
+                const seriesList = tracking[ex.id] || []
+
                 return (
                   <div key={ex.id}>
                     {/* En-tête exercice */}
@@ -323,6 +455,52 @@ export default function SeanceClient() {
                       )}
                     </div>
 
+                    {/* Suivi des séries */}
+                    {seriesList.length > 0 && (
+                      <div style={S.seriesTracker}>
+                        <p style={S.seriesTrackerLabel}>Séries — S{semaineActuelle}</p>
+                        {seriesList.map((serie, si) => (
+                          <div key={si} style={{ ...S.serieRow, ...(serie.valide ? S.serieRowDone : {}) }}>
+                            <span style={S.serieNum}>S{si + 1}</span>
+                            <input
+                              type="text"
+                              value={serie.poids}
+                              onChange={e => updateTrackingField(ex.id, si, 'poids', e.target.value)}
+                              placeholder="kg"
+                              disabled={serie.valide}
+                              style={{ ...S.serieInput, width: 52 }}
+                            />
+                            <span style={S.serieUnit}>kg</span>
+                            <input
+                              type="number"
+                              value={serie.reps_reelles}
+                              onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
+                              placeholder={ex.repetitions || 'reps'}
+                              disabled={serie.valide}
+                              style={{ ...S.serieInput, width: 48 }}
+                            />
+                            <span style={S.serieUnit}>reps</span>
+                            {serie.valide ? (
+                              <span style={S.serieDoneBadge}>✓</span>
+                            ) : (
+                              <button
+                                onClick={() => validerSerie(ex.id, si, groupLetter, groupItems)}
+                                style={S.serieValBtn}
+                              >Valider</button>
+                            )}
+                          </div>
+                        ))}
+                        {showRecup && ex.recuperation && (() => {
+                          const recupSecs = parseRecup(ex.recuperation)
+                          return recupSecs > 0 ? (
+                            <button onClick={() => startTimer(recupSecs)} style={S.recupBtn}>
+                              ⏱ Lancer la récup · {ex.recuperation}
+                            </button>
+                          ) : null
+                        })()}
+                      </div>
+                    )}
+
                     {/* Table charge/RPE toutes semaines */}
                     <div style={{ overflowX: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem' }}>
                       <div style={{ minWidth: COL_LABEL + cols.length * (COL + 4) }}>
@@ -363,19 +541,26 @@ export default function SeanceClient() {
               }
 
               return groups.map((group, gi) => {
+                const isDone = group.letter && blocsTermines.has(group.letter)
                 if (group.items.length === 1) {
                   return (
-                    <div key={gi} style={S.exCard}>
-                      {renderExCard(group.items[0], true)}
+                    <div key={gi} ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
+                      style={{ ...S.exCard, ...(isDone ? S.exCardDone : {}) }}>
+                      {isDone && <div style={S.blocDoneBadge}>✓ Bloc terminé</div>}
+                      {renderExCard(group.items[0], true, true, group.letter, group.items)}
                     </div>
                   )
                 }
                 // Superset : plusieurs exercices avec la même lettre
                 return (
-                  <div key={gi} style={S.supersetWrapper}>
-                    <div style={S.supersetHeader}>
+                  <div key={gi} ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
+                    style={{ ...S.supersetWrapper, ...(isDone ? { borderColor: '#16a34a' } : {}) }}>
+                    <div style={{ ...S.supersetHeader, ...(isDone ? { background: '#14532d' } : {}) }}>
                       <span style={S.supersetBadge}>SUPERSET · {group.letter}</span>
-                      <span style={S.supersetHint}>Enchaîner sans récupération</span>
+                      {isDone
+                        ? <span style={{ color: '#86efac', fontSize: '0.7rem', fontWeight: '700' }}>✓ Terminé</span>
+                        : <span style={S.supersetHint}>Enchaîner sans récupération</span>
+                      }
                     </div>
                     {group.items.map((ex, idx) => {
                       const isLast = idx === group.items.length - 1
@@ -383,7 +568,7 @@ export default function SeanceClient() {
                       return (
                         <div key={ex.id}>
                           <div style={{ ...S.exCard, borderRadius: idx === 0 ? '0 0 0 0' : '0', marginBottom: 0 }}>
-                            {renderExCard(ex, isLast, isFirst)}
+                            {renderExCard(ex, isLast, isFirst, group.letter, group.items)}
                           </div>
                           {!isLast && (
                             <div style={S.supersetConnector}>
@@ -439,4 +624,25 @@ const S = {
   supersetConnector: { background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
   supersetLine: { flex: 1, height: '1px', background: '#e4f816', opacity: 0.4 },
   supersetTag: { fontSize: '0.68rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
+  // Timer banner
+  timerBanner: { position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' },
+  timerCount: { fontSize: '2rem', fontWeight: '900', color: 'white', lineHeight: 1 },
+  timerLabel: { fontSize: '0.62rem', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.15rem' },
+  timerBar: { flex: 1, height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' },
+  timerProgress: { height: '100%', background: '#e4f816', borderRadius: 999, transition: 'width 1s linear' },
+  timerStop: { background: 'rgba(255,255,255,0.12)', border: 'none', color: 'white', width: 36, height: 36, borderRadius: 999, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // Series tracking
+  seriesTracker: { background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.75rem' },
+  seriesTrackerLabel: { fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' },
+  serieRow: { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
+  serieRowDone: { background: '#f0fdf4', border: '1.5px solid #86efac' },
+  serieNum: { fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', width: 20, flexShrink: 0 },
+  serieInput: { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#111827', textAlign: 'center', outline: 'none' },
+  serieUnit: { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
+  serieValBtn: { marginLeft: 'auto', background: '#111827', color: '#e4f816', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  serieDoneBadge: { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0 },
+  recupBtn: { width: '100%', marginTop: '0.5rem', background: '#111827', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
+  // Bloc done state
+  exCardDone: { border: '2px solid #86efac', background: '#f0fdf4' },
+  blocDoneBadge: { background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.25rem 0.7rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.5rem' },
 }
