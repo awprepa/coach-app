@@ -188,12 +188,20 @@ export default function AccueilClient() {
         </div>
 
         {prochaineSeance && (
-          <div style={styles.nextCard}>
+          <div
+            onClick={() => prochaineSeance.seance_id && navigate(`/client/seance/${prochaineSeance.seance_id}`)}
+            style={{ ...styles.nextCard, cursor: prochaineSeance.seance_id ? 'pointer' : 'default' }}
+          >
             <p style={styles.nextLabel}>Prochain événement</p>
             <p style={styles.nextTitle}>{prochaineSeance.titre}</p>
-            <p style={styles.nextDate}>
-              {new Date(prochaineSeance.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={styles.nextDate}>
+                {new Date(prochaineSeance.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              {prochaineSeance.seance_id && (
+                <span style={{ color: '#e4f816', fontSize: '0.78rem', fontWeight: '700' }}>Ouvrir →</span>
+              )}
+            </div>
           </div>
         )}
 

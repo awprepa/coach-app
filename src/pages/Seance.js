@@ -292,8 +292,8 @@ export default function Seance() {
                 <th style={styles.th}>Reps</th>
                 <th style={styles.th}>Tempo</th>
                 <th style={styles.th}>Récup</th>
-                <th style={styles.th}>Intensité</th>
-                <th style={styles.th}>Valeur</th>
+                <th style={{ ...styles.th, textAlign: 'center' }}>Intensité</th>
+                <th style={{ ...styles.th, textAlign: 'center' }}>Valeur</th>
                 {colSemaines.map(s => (
                   <th key={s} style={{ ...styles.th, textAlign: 'center' }} colSpan={2}>S{s}</th>
                 ))}
