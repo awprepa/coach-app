@@ -84,16 +84,18 @@ export default function BibliothequeExercices() {
     try {
       let image_url = null
       if (imageFile) image_url = await uploadImage(imageFile)
-      const { data, error } = await supabase.from('bibliotheque_exercices').insert([{
-        nom: form.nom, categorie: form.categorie || null,
-        description: form.description || null, image_url
-      }]).select().single()
-      if (error) { alert(error.message); setUploading(false); return }
+      const { data, error } = await supabase.from('bibliotheque_exercices').insert({
+        nom: form.nom.trim(),
+        categorie: form.categorie || null,
+        description: form.description || null,
+        image_url
+      }).select().single()
+      if (error) { console.error('Insert error:', error); alert('Erreur : ' + error.message); setUploading(false); return }
       setExercices(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
       setForm({ nom: '', categorie: '', description: '' })
       setImageFile(null); setImagePreview(null)
       setShowForm(false)
-    } catch (err) { alert(err.message) }
+    } catch (err) { console.error('Catch error:', err); alert('Erreur : ' + err.message) }
     setUploading(false)
   }
 

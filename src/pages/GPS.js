@@ -406,7 +406,7 @@ export default function GPS() {
                       const client = matchClient(l.joueur)
                       return (
                         <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f9fafb' }}>
-                          <td style={{ ...S.td, ...S.tdSticky, fontWeight: '600' }}>
+                          <td style={{ ...S.td, ...S.tdSticky, fontWeight: '600', background: i % 2 === 0 ? 'white' : '#f9fafb' }}>
                             {l.joueur}
                             {client && <span style={S.clientBadge}>✓</span>}
                           </td>
@@ -422,7 +422,7 @@ export default function GPS() {
                     {/* Ligne moyenne */}
                     {!showPeriodes && (
                       <tr style={{ background: '#111827', fontWeight: '700' }}>
-                        <td style={{ ...S.td, ...S.tdSticky, color: '#e4f816', background: '#111827' }}>MOYENNE</td>
+                        <td style={{ ...S.td, ...S.tdSticky, color: '#e4f816', background: '#111827', borderRight: '2px solid #374151' }}>MOYENNE</td>
                         {visibleMetrics.map(k => {
                           const vals = lignesFiltrees.map(l => l[k]).filter(v => typeof v === 'number')
                           const avg = vals.length ? round2(vals.reduce((a, b) => a + b, 0) / vals.length) : null
@@ -582,11 +582,11 @@ const S = {
   tab:           { background: 'transparent', border: 'none', borderBottom: '2.5px solid transparent', color: '#6b7280', fontWeight: '600', fontSize: '0.875rem', padding: '0.85rem 1rem', cursor: 'pointer' },
   tabActive:     { color: '#111827', borderBottomColor: '#e4f816' },
   tableWrap:     { flex: 1, overflow: 'auto', padding: '1rem 1.5rem' },
-  table:         { width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' },
-  th:            { background: '#f9fafb', padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', fontSize: '0.75rem', color: '#374151', borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' },
-  thSticky:      { position: 'sticky', left: 0, zIndex: 2, background: '#f9fafb' },
-  td:            { padding: '0.55rem 0.75rem', borderBottom: '1px solid #f3f4f6', color: '#111827', whiteSpace: 'nowrap' },
-  tdSticky:      { position: 'sticky', left: 0, zIndex: 1, background: 'inherit' },
+  table:         { width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.85rem' },
+  th:            { background: '#f9fafb', padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', fontSize: '0.75rem', color: '#374151', borderBottom: '2px solid #e5e7eb', borderRight: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
+  thSticky:      { position: 'sticky', left: 0, zIndex: 2, background: '#f9fafb', minWidth: '160px', borderRight: '2px solid #e5e7eb' },
+  td:            { padding: '0.55rem 0.75rem', borderBottom: '1px solid #f3f4f6', borderRight: '1px solid #f3f4f6', color: '#111827', whiteSpace: 'nowrap' },
+  tdSticky:      { position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', borderRight: '2px solid #e5e7eb' },
   clientBadge:   { marginLeft: '0.4rem', fontSize: '0.65rem', color: '#10b981', fontWeight: '700' },
   chartSection:  { flex: 1, padding: '1.5rem', overflow: 'auto' },
   chartToolbar:  { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' },

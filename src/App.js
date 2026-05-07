@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import AuthGate from './AuthGate'
 import { supabase } from './supabase'
 import Clients from './pages/Clients'
@@ -16,6 +17,14 @@ import SeanceClient from './pages/client/SeanceClient'
 
 function CoachNav() {
   const navigate = useNavigate()
+  const [newClients, setNewClients] = useState(0)
+
+  useEffect(() => {
+    supabase.from('clients').select('id', { count: 'exact', head: true })
+      .eq('coach_notifie', false)
+      .then(({ count }) => setNewClients(count || 0))
+  }, [])
+
   async function handleLogout() {
     try { await supabase.auth.signOut() } catch (e) { console.error(e) }
     navigate('/login')
@@ -34,7 +43,9 @@ function CoachNav() {
         AW<span style={{ color: '#e4f816' }}>prepa</span>
       </Link>
       <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
-        <Link to="/" style={navLink}>Clients</Link>
+        <Link to="/" style={navLink}>
+          Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#111827', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
+        </Link>
         <Link to="/nouveau-client" style={navLink}>+ Nouveau client</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
         <Link to="/gps" style={navLink}>GPS</Link>
