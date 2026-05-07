@@ -15,6 +15,7 @@ import Login from './pages/Login'
 import AccueilClient from './pages/AccueilClient'
 import ProgrammeClient from './pages/client/ProgrammeClient'
 import SeanceClient from './pages/client/SeanceClient'
+import TestsClient from './pages/client/TestsClient'
 
 function CoachNav() {
   const navigate = useNavigate()
@@ -78,6 +79,7 @@ function App() {
         <Routes>
           <Route path="/client/programme/:id" element={<ProgrammeClient />} />
           <Route path="/client/seance/:id" element={<SeanceClient />} />
+          <Route path="/client/tests" element={<TestsClient />} />
           <Route path="/login" element={<Login />} />
           <Route path="/client/accueil" element={<AccueilClient />} />
           <Route path="/" element={

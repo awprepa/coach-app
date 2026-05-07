@@ -225,6 +225,19 @@ export default function AccueilClient() {
           </div>
         )}
 
+        {/* Raccourcis */}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.75rem' }}>
+          <div onClick={() => navigate('/client/tests')}
+            style={{ flex: 1, background: 'white', borderRadius: 14, padding: '1rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.4rem' }}>🏋️</span>
+            <div>
+              <p style={{ fontWeight: '700', fontSize: '0.88rem', color: '#333333', margin: '0 0 0.1rem' }}>Tests physiques</p>
+              <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: 0 }}>Mes résultats</p>
+            </div>
+            <span style={{ marginLeft: 'auto', color: '#d1d5db', fontSize: '1.2rem' }}>›</span>
+          </div>
+        </div>
+
         {/* Mes cycles */}
         <div style={styles.sectionHeader}>
           <span style={styles.sectionTitle}>Mes cycles</span>
