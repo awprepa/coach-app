@@ -61,7 +61,7 @@ export default function ClientBottomNav() {
           style={{
             flex: 1, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            gap: '5px', padding: '14px 0',
+            gap: '5px', padding: '18px 0',
             background: 'none', border: 'none', cursor: 'pointer',
           }}>
           <div style={{
