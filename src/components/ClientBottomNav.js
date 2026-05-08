@@ -61,11 +61,11 @@ export default function ClientBottomNav() {
           style={{
             flex: 1, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            gap: '4px', padding: '10px 0',
+            gap: '5px', padding: '14px 0',
             background: 'none', border: 'none', cursor: 'pointer',
           }}>
           <div style={{
-            width: 40, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 44, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 10,
             background: active ? '#f0f0f0' : 'transparent',
             transition: 'background 0.15s',
@@ -73,7 +73,7 @@ export default function ClientBottomNav() {
             <Icon active={active} />
           </div>
           <span style={{
-            fontSize: '0.63rem', fontWeight: active ? '700' : '500',
+            fontSize: '0.67rem', fontWeight: active ? '700' : '500',
             color: active ? '#1a1a1a' : '#b0b8c1',
             letterSpacing: '0.01em',
           }}>{label}</span>
