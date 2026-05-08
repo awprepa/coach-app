@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
+import ClientBottomNav from '../../components/ClientBottomNav'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -151,6 +152,7 @@ export default function ProgrammeClient() {
           </div>
         )}
       </div>
+      <ClientBottomNav />
     </div>
   )
 }
@@ -160,6 +162,7 @@ const styles = {
     minHeight: '100vh',
     background: '#efefef',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    paddingBottom: 90,
   },
   centered: {
     minHeight: '100vh',

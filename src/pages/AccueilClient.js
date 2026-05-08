@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
+import ClientBottomNav from '../components/ClientBottomNav'
+import ClientProfileMenu from '../components/ClientProfileMenu'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -185,6 +187,7 @@ export default function AccueilClient() {
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [showWellness, setShowWellness]   = useState(false)
   const [showInstall, setShowInstall]     = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useState(true)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -268,8 +271,9 @@ export default function AccueilClient() {
 
       <div style={styles.header}>
         <span style={styles.logo}>AW<span style={{ color: '#e4f816' }}>prepa</span></span>
-        <div style={styles.avatar}>{initiales}</div>
+        <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>{initiales}</div>
       </div>
+      {showProfileMenu && <ClientProfileMenu client={client} onClose={() => setShowProfileMenu(false)} />}
 
       <div style={styles.content}>
         <div style={{ marginBottom: '1.75rem' }}>
@@ -397,12 +401,13 @@ export default function AccueilClient() {
 
         <button onClick={handleLogout} style={styles.logoutBtn}>Se déconnecter</button>
       </div>
+      <ClientBottomNav />
     </div>
   )
 }
 
 const styles = {
-  page:        { minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:        { minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 90 },
   centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:      { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.25rem', letterSpacing: '-0.5px' },

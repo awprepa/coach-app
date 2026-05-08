@@ -1,0 +1,136 @@
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../supabase'
+
+const OFFRES = {
+  essai:               'Essai',
+  preparation_physique:'Prépa physique',
+  coaching:            'Coaching',
+}
+
+export default function ClientProfileMenu({ client, onClose }) {
+  const navigate = useNavigate()
+
+  async function handleLogout() {
+    onClose()
+    try { await supabase.auth.signOut() } catch (e) { console.error(e) }
+    navigate('/login')
+  }
+
+  function go(path) { onClose(); navigate(path) }
+
+  const initiales = `${client?.prenom?.[0] || ''}${client?.nom?.[0] || ''}`.toUpperCase()
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, zIndex: 150,
+        background: 'rgba(0,0,0,0.25)',
+      }} />
+
+      {/* Menu */}
+      <div style={{
+        position: 'fixed', top: 60, right: 14, zIndex: 160,
+        width: 250, background: 'white', borderRadius: 18,
+        boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+        overflow: 'hidden',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      }}>
+
+        {/* Profil header */}
+        <div style={{ padding: '1.1rem 1.1rem 0.85rem', borderBottom: '1px solid #f3f4f6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: '50%',
+              background: '#333333', color: '#e4f816',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: '800', fontSize: '0.95rem', flexShrink: 0,
+            }}>{initiales}</div>
+            <div>
+              <p style={{ margin: 0, fontWeight: '800', fontSize: '0.9rem', color: '#1a1a1a' }}>
+                {client?.prenom} {client?.nom}
+              </p>
+              {client?.offre && (
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>
+                  {OFFRES[client.offre] || client.offre}
+                </p>
+              )}
+            </div>
+          </div>
+          {client?.objectif && (
+            <p style={{ margin: '0.75rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4, fontStyle: 'italic' }}>
+              "{client.objectif}"
+            </p>
+          )}
+        </div>
+
+        {/* Items */}
+        <div style={{ padding: '0.4rem 0' }}>
+          <MenuItem
+            icon={<IconWellness />}
+            label="Mon wellness"
+            onClick={() => go('/client/wellness')}
+          />
+          <MenuItem
+            icon={<IconTests />}
+            label="Mes tests"
+            onClick={() => go('/client/tests')}
+          />
+        </div>
+
+        <div style={{ borderTop: '1px solid #f3f4f6', padding: '0.4rem 0' }}>
+          <MenuItem
+            icon={<IconLogout />}
+            label="Se déconnecter"
+            onClick={handleLogout}
+            danger
+          />
+        </div>
+      </div>
+    </>
+  )
+}
+
+function MenuItem({ icon, label, onClick, danger }) {
+  return (
+    <button onClick={onClick} style={{
+      width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
+      padding: '0.65rem 1.1rem', background: 'none', border: 'none',
+      cursor: 'pointer', textAlign: 'left',
+    }}
+      onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+    >
+      <span style={{ color: danger ? '#ef4444' : '#6b7280', flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: '0.85rem', fontWeight: '600', color: danger ? '#ef4444' : '#1a1a1a' }}>
+        {label}
+      </span>
+    </button>
+  )
+}
+
+function IconWellness() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+function IconTests() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  )
+}
+
+function IconLogout() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  )
+}
