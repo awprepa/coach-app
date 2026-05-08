@@ -54,7 +54,7 @@ export default function ClientBottomNav() {
       borderTop: '1px solid #f0f0f0',
       boxShadow: '0 -4px 20px rgba(0,0,0,0.07)',
       display: 'flex',
-      paddingBottom: 'env(safe-area-inset-bottom)',
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
     }}>
       {tabs.map(({ label, Icon, active, to }) => (
         <button key={label} onClick={() => navigate(to)}
