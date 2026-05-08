@@ -212,16 +212,20 @@ export default function Programme() {
           </div>
         )}
 
-        <form onSubmit={ajouterSeance} style={styles.addForm}>
-          <input
-            value={nouvelleSeance}
-            onChange={e => setNouvelleSeance(e.target.value)}
-            placeholder="ex: Séance A — Lower body"
-            style={{ ...styles.input, flex: 1 }}
-          />
-          <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
-          <button type="button" onClick={ouvrirTemplates} style={styles.btnSecondary}>📋 Modèle</button>
-          <button type="button" onClick={() => setShowImport(true)} style={styles.btnSecondary}>⬆ Excel</button>
+        <form onSubmit={ajouterSeance}>
+          <div style={styles.addForm}>
+            <input
+              value={nouvelleSeance}
+              onChange={e => setNouvelleSeance(e.target.value)}
+              placeholder="ex: Séance A — Lower body"
+              style={{ ...styles.input, flex: 1 }}
+            />
+            <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button type="button" onClick={ouvrirTemplates} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>📋 Depuis un modèle</button>
+            <button type="button" onClick={() => setShowImport(true)} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>⬆ Importer Excel</button>
+          </div>
         </form>
 
         {/* Panel modèles */}

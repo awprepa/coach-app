@@ -55,7 +55,7 @@ function CoachNav() {
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
         <Link to="/gps" style={navLink}>GPS</Link>
         <Link to="/tests" style={navLink}>Tests</Link>
-        <Link to="/modeles" style={navLink}>Modèles</Link>
+        <Link to="/modeles" style={navLink}>Modèles de séances</Link>
       </div>
       <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
     </nav>
