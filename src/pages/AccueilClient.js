@@ -34,6 +34,87 @@ const QUESTIONS = [
 ]
 const COLORS = ['#ef4444', '#f97316', '#84cc16', '#22c55e']
 
+function InstallGuide({ onDone }) {
+  const ua = navigator.userAgent || ''
+  const isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream
+  const isAndroid = /Android/.test(ua)
+  const isInApp   = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches
+
+  if (isInApp) { onDone(); return null }
+
+  return (
+    <div style={W.overlay}>
+      <div style={W.card}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📲</div>
+          <p style={W.subtitle}>Bienvenue sur AWprepa</p>
+          <h2 style={W.title}>Installe l'application</h2>
+          <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
+            Accède à l'app directement depuis ton écran d'accueil, comme une vraie application.
+          </p>
+        </div>
+
+        {isIOS && (
+          <div style={I.steps}>
+            <div style={I.step}>
+              <span style={I.num}>1</span>
+              <span style={I.text}>Appuie sur le bouton <strong>Partager</strong> en bas de Safari <span style={{ fontSize: '1.1rem' }}>⬆</span></span>
+            </div>
+            <div style={I.step}>
+              <span style={I.num}>2</span>
+              <span style={I.text}>Fais défiler et sélectionne <strong>"Sur l'écran d'accueil"</strong></span>
+            </div>
+            <div style={I.step}>
+              <span style={I.num}>3</span>
+              <span style={I.text}>Appuie sur <strong>Ajouter</strong> en haut à droite</span>
+            </div>
+          </div>
+        )}
+
+        {isAndroid && (
+          <div style={I.steps}>
+            <div style={I.step}>
+              <span style={I.num}>1</span>
+              <span style={I.text}>Appuie sur le menu <strong>⋮</strong> en haut à droite de Chrome</span>
+            </div>
+            <div style={I.step}>
+              <span style={I.num}>2</span>
+              <span style={I.text}>Sélectionne <strong>"Ajouter à l'écran d'accueil"</strong></span>
+            </div>
+            <div style={I.step}>
+              <span style={I.num}>3</span>
+              <span style={I.text}>Confirme en appuyant sur <strong>Ajouter</strong></span>
+            </div>
+          </div>
+        )}
+
+        {!isIOS && !isAndroid && (
+          <div style={I.steps}>
+            <div style={I.step}>
+              <span style={I.num}>📱</span>
+              <span style={I.text}>Sur ton téléphone, ouvre ce site dans <strong>Safari</strong> (iPhone) ou <strong>Chrome</strong> (Android) pour l'installer.</span>
+            </div>
+          </div>
+        )}
+
+        <button onClick={onDone} style={{ ...W.submitBtn, background: '#333333', color: '#e4f816', cursor: 'pointer', marginTop: '1.25rem' }}>
+          Compris, on y va !
+        </button>
+        <button onClick={onDone} style={{ width: '100%', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.82rem', cursor: 'pointer', marginTop: '0.5rem', padding: '0.25rem' }}>
+          Plus tard
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const I = {
+  steps: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  step:  { display: 'flex', alignItems: 'flex-start', gap: '0.75rem', background: '#f9fafb', borderRadius: 12, padding: '0.75rem' },
+  num:   { width: 24, height: 24, borderRadius: '50%', background: '#333333', color: '#e4f816', fontSize: '0.72rem', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
+  text:  { fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 },
+}
+
 function WellnessOverlay({ clientId, onDone }) {
   const [vals, setVals]     = useState({ sommeil: 0, fatigue: 0, douleurs: 0, stress: 0 })
   const [saving, setSaving] = useState(false)
@@ -103,6 +184,7 @@ export default function AccueilClient() {
   const [weekEvents, setWeekEvents]       = useState([])
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [showWellness, setShowWellness]   = useState(false)
+  const [showInstall, setShowInstall]     = useState(false)
   const [loading, setLoading]             = useState(true)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,6 +227,12 @@ export default function AccueilClient() {
         .gte('date', start).lte('date', end).order('date', { ascending: true })
       setWeekEvents(wevs || [])
 
+      // Guide installation : afficher une seule fois
+      const isInApp = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches
+      if (!isInApp && !localStorage.getItem('awprepa_install_seen')) {
+        setShowInstall(true)
+      }
+
       // Wellness : afficher si ≥ 7h et pas encore soumis aujourd'hui
       if (new Date().getHours() >= 7) {
         const { data: w } = await supabase
@@ -171,7 +259,10 @@ export default function AccueilClient() {
 
   return (
     <div style={styles.page}>
-      {showWellness && (
+      {showInstall && (
+        <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />
+      )}
+      {!showInstall && showWellness && (
         <WellnessOverlay clientId={client.id} onDone={() => setShowWellness(false)} />
       )}
 
