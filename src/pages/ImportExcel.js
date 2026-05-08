@@ -49,13 +49,13 @@ function parseExcelFile(file) {
                 if (/poids\s*s?\d+/i.test(c)) colMap.poids.push({ idx, sem: colMap.poids.length + 1 })
               })
 
-              // Session name: look back up to 3 rows for the title
+              // Session name: look back up to 4 rows, keep the FURTHEST match
+              // (title "HDC 1" is 2 rows before header, subtitle "Activation et Mobilité" is 1 row before)
               let sessionName = sheetName
-              for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+              for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
                 const titleCells = rows[j].map(c => String(c ?? '').trim()).filter(Boolean)
                 if (titleCells.length >= 1 && titleCells.length <= 4) {
-                  sessionName = titleCells[0]
-                  break
+                  sessionName = titleCells[0] // keep overwriting → ends up with the furthest row
                 }
               }
 
