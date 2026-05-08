@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import AuthGate from './AuthGate'
 import { supabase } from './supabase'
 import Clients from './pages/Clients'
+import Dashboard from './pages/Dashboard'
 import NouveauClient from './pages/NouveauClient'
 import FicheClient from './pages/FicheClient'
 import NouveauProgramme from './pages/NouveauProgramme'
@@ -45,7 +46,8 @@ function CoachNav() {
         AW<span style={{ color: '#e4f816' }}>prepa</span>
       </Link>
       <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
-        <Link to="/" style={navLink}>
+        <Link to="/" style={navLink}>Tableau de bord</Link>
+        <Link to="/clients" style={navLink}>
           Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
         </Link>
         <Link to="/nouveau-client" style={navLink}>Nouveau client</Link>
@@ -83,6 +85,12 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/client/accueil" element={<AccueilClient />} />
           <Route path="/" element={
+            <>
+              <CoachNav />
+              <Dashboard />
+            </>
+          } />
+          <Route path="/clients" element={
             <>
               <CoachNav />
               <Clients />
