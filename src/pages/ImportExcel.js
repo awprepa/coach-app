@@ -96,7 +96,7 @@ function parseExcelFile(file) {
   })
 }
 
-export default function ImportExcel({ programmeId, semaines, onClose, onImported }) {
+export default function ImportExcel({ programmeId, semaines, onClose, onImported, mode = 'programme' }) {
   const fileRef  = useRef(null)
   const [step, setStep]         = useState('upload')    // upload | preview | importing
   const [sessions, setSessions] = useState([])
@@ -122,6 +122,26 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
   async function importer() {
     setStep('importing')
     const toImport = sessions.filter((_, i) => selected.has(i))
+
+    // Mode template : sauvegarder dans seance_templates
+    if (mode === 'template') {
+      for (let si = 0; si < toImport.length; si++) {
+        const s = toImport[si]
+        setProgress(`Sauvegarde de "${s.nom}"... (${si + 1}/${toImport.length})`)
+        const exData = s.exercices.map((ex, idx) => ({
+          code: ex.code, nom: ex.nom,
+          series: parseSeries(ex.series), repetitions: ex.repetitions || null,
+          recuperation: ex.recuperation || null, tempo: ex.tempo || null,
+          type_intensite: ex.type_intensite || null, valeur_intensite: ex.valeur_intensite || null,
+          ordre: idx + 1,
+        }))
+        const { error } = await supabase.from('seance_templates').insert([{ nom: s.nom, exercices: exData }])
+        if (error) { setError(error.message); setStep('preview'); return }
+      }
+      setProgress('')
+      onImported()
+      return
+    }
 
     for (let si = 0; si < toImport.length; si++) {
       const s = toImport[si]

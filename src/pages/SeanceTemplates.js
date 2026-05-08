@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import ImportExcel from './ImportExcel'
 
 export default function SeanceTemplates() {
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
+  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     supabase.from('seance_templates').select('*').order('created_at', { ascending: false })
@@ -17,13 +19,28 @@ export default function SeanceTemplates() {
     if (!error) setTemplates(prev => prev.filter(t => t.id !== id))
   }
 
+  async function reloadTemplates() {
+    const { data } = await supabase.from('seance_templates').select('*').order('created_at', { ascending: false })
+    setTemplates(data || [])
+  }
+
   if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
 
   return (
     <div style={S.page}>
+      {showImport && (
+        <ImportExcel
+          mode="template"
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); reloadTemplates() }}
+        />
+      )}
       <div style={S.header}>
-        <h1 style={S.title}>Modèles de séances</h1>
-        <p style={S.subtitle}>{templates.length} modèle{templates.length > 1 ? 's' : ''} sauvegardé{templates.length > 1 ? 's' : ''}</p>
+        <div>
+          <h1 style={S.title}>Modèles de séances</h1>
+          <p style={S.subtitle}>{templates.length} modèle{templates.length > 1 ? 's' : ''} sauvegardé{templates.length > 1 ? 's' : ''}</p>
+        </div>
+        <button onClick={() => setShowImport(true)} style={S.importBtn}>⬆ Importer Excel</button>
       </div>
 
       {templates.length === 0 ? (
@@ -74,7 +91,8 @@ export default function SeanceTemplates() {
 const S = {
   page:      { padding: '2rem', maxWidth: '700px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   centered:  { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:    { marginBottom: '1.5rem' },
+  header:    { marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+  importBtn: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   title:     { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   subtitle:  { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
   empty:     { background: 'white', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
