@@ -50,7 +50,7 @@ function InstallGuide({ onDone }) {
           <p style={W.subtitle}>Bienvenue sur AWprepa</p>
           <h2 style={W.title}>Installe l'application</h2>
           <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
-            Accède à l'app directement depuis ton écran d'accueil, comme une vraie application.
+            Suis les étapes ci-dessous pour installer l'application sur ton téléphone.
           </p>
         </div>
 
