@@ -4,6 +4,14 @@ import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 
 
+const OFFRES = {
+  essai:               { label: 'Essai',          bg: '#fff7ed', color: '#c2410c' },
+  preparation_physique:{ label: 'Prépa physique',  bg: '#eff6ff', color: '#1d4ed8' },
+  coaching:            { label: 'Coaching',        bg: '#f5f3ff', color: '#6d28d9' },
+}
+function offreLabel(offre) { return OFFRES[offre]?.label || offre }
+function offreBadge(offre) { const o = OFFRES[offre]; return o ? { background: o.bg, color: o.color } : {} }
+
 function getAvatar(prenom, nom) {
   const initiales = `${prenom?.[0] || ''}${nom?.[0] || ''}`.toUpperCase()
   const palettes = [
@@ -22,6 +30,31 @@ function isCycleTermine(prog) {
   return fin < new Date()
 }
 
+const INDICATORS = [
+  { key: 'sommeil',  label: 'Sommeil',  emoji: '🌙' },
+  { key: 'fatigue',  label: 'Fatigue',  emoji: '⚡' },
+  { key: 'douleurs', label: 'Douleurs', emoji: '🩹' },
+  { key: 'stress',   label: 'Stress',   emoji: '🧠' },
+]
+
+function scoreColor(v) {
+  if (!v) return '#e5e7eb'
+  if (v <= 1) return '#ef4444'
+  if (v <= 2) return '#f97316'
+  if (v <= 3) return '#eab308'
+  return '#22c55e'
+}
+
+function scoreLabel(key, v) {
+  const labels = {
+    sommeil:  ['', 'Très mauvais', 'Mauvais', 'Bien', 'Excellent'],
+    fatigue:  ['', 'Épuisé', 'Fatigué', 'En forme', 'Top'],
+    douleurs: ['', 'Intense', 'Présentes', 'Légères', 'Aucune'],
+    stress:   ['', 'Très stressé', 'Stressé', 'Calme', 'Très calme'],
+  }
+  return labels[key]?.[v] || v
+}
+
 export default function FicheClient() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -33,13 +66,22 @@ export default function FicheClient() {
   const [categories, setCategories] = useState([])
   const [seances, setSeances] = useState([])
   const [showPastCycles, setShowPastCycles] = useState(false)
+  const [wellness, setWellness] = useState([])
+  const [showAllWellness, setShowAllWellness] = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories() }, [])
+  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness() }, [])
 
   async function fetchCategories() {
     const { data } = await supabase.from('categories').select('*').order('created_at')
     setCategories(data || [])
+  }
+
+  async function fetchWellness() {
+    const { data } = await supabase.from('wellness')
+      .select('*').eq('client_id', id)
+      .order('date', { ascending: false }).limit(60)
+    setWellness(data || [])
   }
 
   async function fetchClient() {
@@ -113,9 +155,19 @@ export default function FicheClient() {
           </div>
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Offre</label>
-            <select value={form.offre} onChange={e => setForm({ ...form, offre: e.target.value })} style={styles.select}>
-              <option value="suivi_premium">Suivi Premium</option>
-              <option value="plan_seul">Plan Seul</option>
+            <select value={form.offre} onChange={e => {
+              const updated = { ...form, offre: e.target.value }
+              if (e.target.value === 'essai') {
+                const base = updated.date_debut || new Date().toISOString().slice(0, 10)
+                const fin = new Date(base + 'T00:00:00')
+                fin.setMonth(fin.getMonth() + 1)
+                updated.date_fin = fin.toISOString().slice(0, 10)
+              }
+              setForm(updated)
+            }} style={styles.select}>
+              <option value="essai">Essai (1 mois)</option>
+              <option value="preparation_physique">Préparation physique</option>
+              <option value="coaching">Coaching</option>
             </select>
           </div>
           <div style={{ marginBottom: '1rem' }}>
@@ -151,12 +203,8 @@ export default function FicheClient() {
               <div>
                 <h1 style={styles.clientName}>{client.prenom} {client.nom}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{
-                    ...styles.badge,
-                    background: client.offre === 'suivi_premium' ? '#eff6ff' : '#f0fdf4',
-                    color: client.offre === 'suivi_premium' ? '#1d4ed8' : '#15803d',
-                  }}>
-                    {client.offre === 'suivi_premium' ? 'Suivi Premium' : 'Plan Seul'}
+                  <span style={{ ...styles.badge, ...offreBadge(client.offre) }}>
+                    {offreLabel(client.offre)}
                   </span>
                   {client.categories && (
                     <span style={{ ...styles.badge, background: client.categories.couleur + '22', color: client.categories.couleur, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -254,6 +302,102 @@ export default function FicheClient() {
           />
         </div>
       </div>
+
+      {/* Wellness */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <div style={styles.sectionHeader}>
+          <p style={styles.sectionTitle}>Wellness</p>
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
+            {wellness.length} entrée{wellness.length > 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {wellness.length === 0 ? (
+          <div style={styles.emptyCard}>Aucune donnée wellness pour ce client.</div>
+        ) : (() => {
+          const today = new Date().toISOString().slice(0, 10)
+          const latest = wellness[0]
+          const isToday = latest.date === today
+          const avg = (latest.sommeil + latest.fatigue + latest.douleurs + latest.stress) / 4
+          const visible = showAllWellness ? wellness : wellness.slice(0, 14)
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+              {/* Dernière entrée mise en avant */}
+              <div style={{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: isToday ? '1.5px solid #e4f816' : '1.5px solid #f3f4f6' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>
+                      {isToday ? "Aujourd'hui" : new Date(latest.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                    {isToday && <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{latest.date}</p>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: scoreColor(Math.round(avg)) }} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#374151' }}>{avg.toFixed(1)}/4</span>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                  {INDICATORS.map(({ key, label, emoji }) => (
+                    <div key={key} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1rem' }}>{emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</p>
+                        <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: '700', color: scoreColor(latest[key]) }}>{scoreLabel(key, latest[key])}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 3 }}>
+                        {[1,2,3,4].map(v => (
+                          <div key={v} style={{ width: 6, height: 18, borderRadius: 3, background: v <= latest[key] ? scoreColor(latest[key]) : '#e5e7eb' }} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Historique */}
+              {wellness.length > 1 && (
+                <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+                    <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
+                  </div>
+                  {/* Légende colonnes */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr 1fr 40px', gap: '0.25rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}>
+                    <span style={styles.colLabel}>Date</span>
+                    {INDICATORS.map(i => <span key={i.key} style={styles.colLabel}>{i.emoji} {i.label.slice(0,3)}</span>)}
+                    <span style={styles.colLabel}>Moy.</span>
+                  </div>
+                  {visible.slice(1).map(w => {
+                    const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                    return (
+                      <div key={w.id} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr 1fr 40px', gap: '0.25rem', padding: '0.5rem 1rem', borderBottom: '1px solid #f9fafb', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
+                          {new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </span>
+                        {INDICATORS.map(({ key }) => (
+                          <div key={key} style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                            {[1,2,3,4].map(v => (
+                              <div key={v} style={{ width: 5, height: 14, borderRadius: 2, background: v <= w[key] ? scoreColor(w[key]) : '#e5e7eb' }} />
+                            ))}
+                          </div>
+                        ))}
+                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: scoreColor(Math.round(a)) }}>{a.toFixed(1)}</span>
+                      </div>
+                    )
+                  })}
+                  {wellness.length > 15 && (
+                    <button onClick={() => setShowAllWellness(v => !v)}
+                      style={{ width: '100%', background: 'none', border: 'none', padding: '0.65rem', fontSize: '0.8rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600', borderTop: '1px solid #f3f4f6' }}>
+                      {showAllWellness ? '↑ Voir moins' : `↓ Voir tout (${wellness.length - 1} entrées)`}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+      </div>
     </div>
   )
 }
@@ -302,4 +446,5 @@ const styles = {
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
   btnDanger: { background: '#fef2f2', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
+  colLabel:  { fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' },
 }
