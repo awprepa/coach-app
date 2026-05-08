@@ -98,9 +98,24 @@ export default function SeanceClient() {
     const sem = dateDebut ? getSemaineActuelle(dateDebut, totalSem || 4) : 1
     const exIds = data.map(e => e.id)
     const { data: rows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
+
+    // Grouper par lettre pour calculer le max de séries dans chaque superset
+    const groupMap = {}
+    data.forEach(ex => {
+      const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
+      if (letter) {
+        if (!groupMap[letter]) groupMap[letter] = []
+        groupMap[letter].push(ex)
+      }
+    })
+
     const t = {}
     data.forEach(ex => {
-      const n = Math.max(parseInt(ex.series) || 0, 1)
+      const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
+      const group = letter ? groupMap[letter] : [ex]
+      const n = group.length > 1
+        ? Math.max(...group.map(e => Math.max(parseInt(e.series) || 0, 1)))
+        : Math.max(parseInt(ex.series) || 0, 1)
       t[ex.id] = Array.from({ length: n }, (_, i) => {
         const saved = rows?.find(r => r.exercice_id === ex.id && r.serie === i + 1)
         return saved ? { poids: saved.poids || '', reps_reelles: saved.reps_reelles?.toString() || '', valide: saved.valide || false } : { poids: '', reps_reelles: '', valide: false }
