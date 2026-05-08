@@ -56,6 +56,9 @@ export default function SeanceClient() {
   const [compressed, setCompressed] = useState(false)
   const [tracking, setTracking]         = useState({}) // { exId: [{poids,reps_reelles,valide}] }
   const [blocsTermines, setBlocsTermines] = useState(new Set())
+  const [commentaire, setCommentaire]   = useState('')
+  const [commentaires, setCommentaires] = useState([]) // historique toutes semaines
+  const [commentSaved, setCommentSaved] = useState(false)
   const [timerSecs, setTimerSecs]       = useState(0)
   const [timerTotal, setTimerTotal]     = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
@@ -78,6 +81,7 @@ export default function SeanceClient() {
     if (dateDebut) setSemaineActuelle(getSemaineActuelle(dateDebut, total))
     await fetchExercices(data.programmes.semaines, data.programmes.date_debut || data.programmes.clients?.date_debut)
     await fetchRpeSeances()
+    await fetchCommentaires()
     setLoading(false)
   }
 
@@ -135,6 +139,29 @@ export default function SeanceClient() {
       if (allDone) done.add(letter)
     })
     setBlocsTermines(done)
+  }
+
+  async function fetchCommentaires() {
+    const { data } = await supabase
+      .from('seance_commentaires').select('*').eq('seance_id', id).order('semaine', { ascending: false })
+    if (!data) return
+    setCommentaires(data)
+    const cur = data.find(c => c.semaine === semaineActuelle)
+    if (cur) setCommentaire(cur.texte)
+  }
+
+  async function saveCommentaire() {
+    if (!commentaire.trim()) return
+    await supabase.from('seance_commentaires').upsert(
+      { seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() },
+      { onConflict: 'seance_id,semaine' }
+    )
+    setCommentaires(prev => {
+      const others = prev.filter(c => c.semaine !== semaineActuelle)
+      return [{ seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() }, ...others]
+    })
+    setCommentSaved(true)
+    setTimeout(() => setCommentSaved(false), 2000)
   }
 
   async function fetchRpeSeances() {
@@ -611,6 +638,39 @@ export default function SeanceClient() {
             })()}
           </div>
         )}
+        {/* Commentaires */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <p style={{ ...S.sectionLabel, marginBottom: '0.75rem' }}>Notes · S{semaineActuelle}</p>
+          <div style={{ background: 'white', borderRadius: 14, padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <textarea
+              value={commentaire}
+              onChange={e => setCommentaire(e.target.value)}
+              onBlur={saveCommentaire}
+              rows={3}
+              placeholder="Laisse une note sur cette séance..."
+              style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.88rem', color: '#333333', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button onClick={saveCommentaire} style={{ background: commentSaved ? '#16a34a' : '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', transition: 'background 0.3s' }}>
+                {commentSaved ? '✓ Enregistré' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+
+          {/* Historique semaines précédentes */}
+          {commentaires.filter(c => c.semaine !== semaineActuelle).length > 0 && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <p style={{ fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Semaines précédentes</p>
+              {commentaires.filter(c => c.semaine !== semaineActuelle).map(c => (
+                <div key={c.semaine} style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>S{c.semaine}</span>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{c.texte}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )
