@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import ImportExcel from './ImportExcel'
 
 export default function Programme() {
   const { id } = useParams()
@@ -12,6 +13,7 @@ export default function Programme() {
   const [enEdition, setEnEdition] = useState(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [templates, setTemplates] = useState([])
+  const [showImport, setShowImport] = useState(false)
   const [nomEdition, setNomEdition] = useState('')
   const [editProgramme, setEditProgramme] = useState(false)
   const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '' })
@@ -113,6 +115,15 @@ export default function Programme() {
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
   if (!programme) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Programme introuvable.</p></div>
 
+  if (showImport) return (
+    <ImportExcel
+      programmeId={id}
+      semaines={programme.semaines}
+      onClose={() => setShowImport(false)}
+      onImported={() => { setShowImport(false); fetchSeances() }}
+    />
+  )
+
   return (
     <div style={styles.page}>
       <button onClick={() => navigate(`/client/${programme.client_id}`)} style={styles.backBtn}>← Retour</button>
@@ -210,6 +221,7 @@ export default function Programme() {
           />
           <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
           <button type="button" onClick={ouvrirTemplates} style={styles.btnSecondary}>📋 Modèle</button>
+          <button type="button" onClick={() => setShowImport(true)} style={styles.btnSecondary}>⬆ Excel</button>
         </form>
 
         {/* Panel modèles */}
