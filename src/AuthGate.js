@@ -19,7 +19,7 @@ export default function AuthGate({ children }) {
       } else if (user.email === COACH_EMAIL) {
         if (path === '/login') navigate('/')
       } else {
-        if (!path.startsWith('/client/')) navigate('/client/accueil')
+        if (!path.startsWith('/client/') && path !== '/') navigate('/')
       }
       setLoading(false)
     })

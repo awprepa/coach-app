@@ -1,9 +1,8 @@
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthGate from './AuthGate'
-import { supabase } from './supabase'
+import CoachNav from './CoachNav'
+import Home from './pages/Home'
 import Clients from './pages/Clients'
-import Dashboard from './pages/Dashboard'
 import NouveauClient from './pages/NouveauClient'
 import FicheClient from './pages/FicheClient'
 import NouveauProgramme from './pages/NouveauProgramme'
@@ -14,66 +13,12 @@ import GPS from './pages/GPS'
 import Tests from './pages/Tests'
 import SeanceTemplates from './pages/SeanceTemplates'
 import Login from './pages/Login'
-import AccueilClient from './pages/AccueilClient'
 import ProgrammeClient from './pages/client/ProgrammeClient'
 import SeanceClient from './pages/client/SeanceClient'
 import TestsClient from './pages/client/TestsClient'
 
-function CoachNav() {
-  const navigate = useNavigate()
-  const [newClients, setNewClients] = useState(0)
-
-  useEffect(() => {
-    supabase.from('clients').select('id', { count: 'exact', head: true })
-      .eq('coach_notifie', false)
-      .then(({ count }) => setNewClients(count || 0))
-  }, [])
-
-  async function handleLogout() {
-    try { await supabase.auth.signOut() } catch (e) { console.error(e) }
-    navigate('/login')
-  }
-  return (
-    <nav style={{
-      background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
-      padding: '0 2rem',
-      display: 'flex',
-      alignItems: 'center',
-      height: '60px',
-      gap: '0',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    }}>
-      <Link to="/" style={{ color: 'white', fontWeight: '800', fontSize: '1.2rem', letterSpacing: '-0.5px', textDecoration: 'none', marginRight: '2.5rem' }}>
-        AW<span style={{ color: '#e4f816' }}>prepa</span>
-      </Link>
-      <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
-        <Link to="/" style={navLink}>Tableau de bord</Link>
-        <Link to="/clients" style={navLink}>
-          Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
-        </Link>
-        <Link to="/nouveau-client" style={navLink}>Nouveau client</Link>
-        <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
-        <Link to="/gps" style={navLink}>GPS</Link>
-        <Link to="/tests" style={navLink}>Tests</Link>
-        <Link to="/modeles" style={navLink}>Modèles de séances</Link>
-      </div>
-      <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
-    </nav>
-  )
-}
-
-const navLink = {
-  color: 'rgba(255,255,255,0.7)', textDecoration: 'none',
-  fontSize: '0.875rem', fontWeight: '500',
-  padding: '0.4rem 0.875rem', borderRadius: '8px',
-  transition: 'all 0.15s',
-}
-
-const logoutBtn = {
-  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)',
-  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-  padding: '0.4rem 0.875rem', fontSize: '0.875rem',
-  cursor: 'pointer', fontWeight: '500',
+function WithNav({ children }) {
+  return <><CoachNav />{children}</>
 }
 
 function App() {
@@ -81,77 +26,27 @@ function App() {
     <BrowserRouter>
       <AuthGate>
         <Routes>
+          {/* Client-facing */}
           <Route path="/client/programme/:id" element={<ProgrammeClient />} />
-          <Route path="/client/seance/:id" element={<SeanceClient />} />
-          <Route path="/client/tests" element={<TestsClient />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/client/accueil" element={<AccueilClient />} />
-          <Route path="/" element={
-            <>
-              <CoachNav />
-              <Dashboard />
-            </>
-          } />
-          <Route path="/clients" element={
-            <>
-              <CoachNav />
-              <Clients />
-            </>
-          } />
-          <Route path="/nouveau-client" element={
-            <>
-              <CoachNav />
-              <NouveauClient />
-            </>
-          } />
-          <Route path="/client/:id" element={
-            <>
-              <CoachNav />
-              <FicheClient />
-            </>
-          } />
-          <Route path="/client/:id/nouveau-programme" element={
-            <>
-              <CoachNav />
-              <NouveauProgramme />
-            </>
-          } />
-          <Route path="/programme/:id" element={
-            <>
-              <CoachNav />
-              <Programme />
-            </>
-          } />
-          <Route path="/seance/:id" element={
-            <>
-              <CoachNav />
-              <Seance />
-            </>
-          } />
-          <Route path="/bibliotheque" element={
-            <>
-              <CoachNav />
-              <BibliothequeExercices />
-            </>
-          } />
-          <Route path="/gps" element={
-            <>
-              <CoachNav />
-              <GPS />
-            </>
-          } />
-          <Route path="/tests" element={
-            <>
-              <CoachNav />
-              <Tests />
-            </>
-          } />
-          <Route path="/modeles" element={
-            <>
-              <CoachNav />
-              <SeanceTemplates />
-            </>
-          } />
+          <Route path="/client/seance/:id"    element={<SeanceClient />} />
+          <Route path="/client/tests"         element={<TestsClient />} />
+          <Route path="/client/accueil"       element={<Home />} />
+          <Route path="/login"                element={<Login />} />
+
+          {/* Unified home — coach sees Dashboard, client sees AccueilClient */}
+          <Route path="/" element={<Home />} />
+
+          {/* Coach-only */}
+          <Route path="/clients"                      element={<WithNav><Clients /></WithNav>} />
+          <Route path="/nouveau-client"               element={<WithNav><NouveauClient /></WithNav>} />
+          <Route path="/client/:id"                   element={<WithNav><FicheClient /></WithNav>} />
+          <Route path="/client/:id/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
+          <Route path="/programme/:id"                element={<WithNav><Programme /></WithNav>} />
+          <Route path="/seance/:id"                   element={<WithNav><Seance /></WithNav>} />
+          <Route path="/bibliotheque"                 element={<WithNav><BibliothequeExercices /></WithNav>} />
+          <Route path="/gps"                          element={<WithNav><GPS /></WithNav>} />
+          <Route path="/tests"                        element={<WithNav><Tests /></WithNav>} />
+          <Route path="/modeles"                      element={<WithNav><SeanceTemplates /></WithNav>} />
         </Routes>
       </AuthGate>
     </BrowserRouter>
