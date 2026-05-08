@@ -10,6 +10,8 @@ export default function Programme() {
   const [loading, setLoading] = useState(true)
   const [nouvelleSeance, setNouvelleSeance] = useState('')
   const [enEdition, setEnEdition] = useState(null)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [templates, setTemplates] = useState([])
   const [nomEdition, setNomEdition] = useState('')
   const [editProgramme, setEditProgramme] = useState(false)
   const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '' })
@@ -74,6 +76,31 @@ export default function Programme() {
     const { error } = await supabase.from('programmes').update({ nom: formProgramme.nom, semaines: formProgramme.semaines, date_debut: formProgramme.date_debut || null }).eq('id', id)
     if (error) alert(error.message)
     else { setProgramme({ ...programme, ...formProgramme }); setEditProgramme(false) }
+  }
+
+  async function ouvrirTemplates() {
+    if (templates.length === 0) {
+      const { data } = await supabase.from('seance_templates').select('*').order('created_at', { ascending: false })
+      setTemplates(data || [])
+    }
+    setShowTemplates(true)
+  }
+
+  async function chargerTemplate(template) {
+    const { data: newSeance, error } = await supabase
+      .from('seances').insert([{ programme_id: id, nom: template.nom, ordre: seances.length + 1 }]).select().single()
+    if (error) { alert(error.message); return }
+    if (template.exercices?.length > 0) {
+      const exInserts = template.exercices.map(ex => ({
+        seance_id: newSeance.id, code: ex.code, nom: ex.nom, series: ex.series,
+        repetitions: ex.repetitions, tempo: ex.tempo, recuperation: ex.recuperation,
+        type_intensite: ex.type_intensite, valeur_intensite: ex.valeur_intensite,
+        ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id || null,
+      }))
+      await supabase.from('exercices').insert(exInserts)
+    }
+    setSeances(prev => [...prev, newSeance])
+    setShowTemplates(false)
   }
 
   async function supprimerProgramme() {
@@ -182,7 +209,35 @@ export default function Programme() {
             style={{ ...styles.input, flex: 1 }}
           />
           <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
+          <button type="button" onClick={ouvrirTemplates} style={styles.btnSecondary}>📋 Modèle</button>
         </form>
+
+        {/* Panel modèles */}
+        {showTemplates && (
+          <div style={{ marginTop: '0.75rem', background: 'white', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Choisir un modèle</p>
+              <button onClick={() => setShowTemplates(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            </div>
+            {templates.length === 0 ? (
+              <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>Aucun modèle sauvegardé.</p>
+            ) : (
+              templates.map(t => (
+                <div key={t.id} onClick={() => chargerTemplate(t)}
+                  style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333333' }}>{t.nom}</p>
+                    <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{t.exercices?.length || 0} exercice{(t.exercices?.length || 0) > 1 ? 's' : ''}</p>
+                  </div>
+                  <span style={{ color: '#9ca3af', fontSize: '1.2rem' }}>›</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

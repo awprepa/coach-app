@@ -26,6 +26,7 @@ export default function Seance() {
   const libraryFileRef = useRef(null)
   const [nomSuggestions, setNomSuggestions] = useState([])
   const [editNomSuggestions, setEditNomSuggestions] = useState([])
+  const [templateSaved, setTemplateSaved] = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -179,6 +180,18 @@ export default function Seance() {
     }
   }
 
+  async function sauvegarderTemplate() {
+    if (exercices.length === 0) { alert('Ajoutez des exercices avant de sauvegarder comme modèle.'); return }
+    const exData = exercices.map(ex => ({
+      code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions,
+      tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite,
+      valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id,
+    }))
+    const { error } = await supabase.from('seance_templates').insert([{ nom: seance.nom, exercices: exData }])
+    if (error) alert(error.message)
+    else { setTemplateSaved(true); setTimeout(() => setTemplateSaved(false), 2500) }
+  }
+
   async function updateRpeSeance(semaine, field, valeur) {
     const existing = rpeSeances[semaine]
     if (existing) {
@@ -216,9 +229,14 @@ export default function Seance() {
       <button onClick={() => navigate(`/programme/${seance.programmes.id}`)} style={styles.backBtn}>← Retour</button>
 
       {/* En-tête */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <p style={styles.progLabel}>{seance.programmes.nom}</p>
-        <h1 style={styles.title}>{seance.nom}</h1>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p style={styles.progLabel}>{seance.programmes.nom}</p>
+          <h1 style={styles.title}>{seance.nom}</h1>
+        </div>
+        <button onClick={sauvegarderTemplate} style={{ background: templateSaved ? '#f0fdf4' : 'white', color: templateSaved ? '#16a34a' : '#374151', border: `1.5px solid ${templateSaved ? '#86efac' : '#e5e7eb'}`, borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.3s' }}>
+          {templateSaved ? '✓ Modèle sauvegardé' : '📋 Sauvegarder comme modèle'}
+        </button>
       </div>
 
       {/* RPE + graphique */}
