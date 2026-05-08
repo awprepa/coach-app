@@ -30,9 +30,8 @@ export default function CoachNav() {
         AW<span style={{ color: '#e4f816' }}>prepa</span>
       </Link>
       <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
-        <Link to="/" style={navLink}>Tableau de bord</Link>
-        <Link to="/clients" style={navLink}>
-          Clients {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
+        <Link to="/" style={navLink}>
+          Tableau de bord {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
         </Link>
         <Link to="/nouveau-client" style={navLink}>Nouveau client</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
