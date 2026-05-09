@@ -26,15 +26,18 @@ export function usePush() {
       })
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('push_subscriptions').upsert([{
+        const { error } = await supabase.from('push_subscriptions').upsert([{
           user_id: user.id,
           subscription: sub.toJSON()
         }], { onConflict: 'user_id' })
+        if (error) console.error('[usePush] Erreur sauvegarde subscription :', error.message, error)
+        else console.log('[usePush] Subscription sauvegardée en base ✓', sub.endpoint)
       }
       setPermission('granted')
       setSubscribed(true)
       return true
-    } catch {
+    } catch (e) {
+      console.error('[usePush] Erreur subscribe :', e?.message, e)
       setPermission('denied')
       return false
     }

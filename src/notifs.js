@@ -23,11 +23,12 @@ export async function sendNotif(destinataireId, { titre, corps = '', type = 'inf
 
   // 2. Déclencher le push téléphone via la Edge Function
   try {
-    await supabase.functions.invoke('send-push', {
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('send-push', {
       body: { record: notif },
     })
+    if (fnError) console.error('[sendNotif] Edge Function erreur :', fnError)
+    else console.log('[sendNotif] Edge Function réponse :', fnData)
   } catch (e) {
-    // Le push échoue silencieusement (Edge Function pas déployée, pas de subscription…)
     console.warn('[sendNotif] Push non envoyé :', e?.message)
   }
 
