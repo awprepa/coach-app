@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useNotifications } from '../hooks/useNotifications'
+import { useNotifCtx } from '../context/NotifContext'
 
 function IconHome({ active }) {
   const s = active ? '#1a1a1a' : '#b0b8c1'
@@ -47,7 +47,7 @@ export default function ClientBottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const p = location.pathname
-  const { unread } = useNotifications()
+  const { unread } = useNotifCtx()
 
   const isHome      = p === '/' || p === '/client/accueil'
   const isProgramme = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'

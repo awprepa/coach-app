@@ -23,9 +23,15 @@ import SeanceProjection from './pages/SeanceProjection'
 import EchauffementsTemplates from './pages/EchauffementsTemplates'
 import ImportClientExcel from './pages/ImportClientExcel'
 import NotificationsClient from './pages/client/NotificationsClient'
+import { NotifProvider } from './context/NotifContext'
 
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
+}
+
+// Entoure toutes les pages client avec le provider de notifs (un seul channel Realtime)
+function WithNotifs({ children }) {
+  return <NotifProvider>{children}</NotifProvider>
 }
 
 function App() {
@@ -33,19 +39,19 @@ function App() {
     <BrowserRouter>
       <AuthGate>
         <Routes>
-          {/* Client-facing */}
-          <Route path="/client/programme/:id" element={<ProgrammeClient />} />
-          <Route path="/client/seance/:id"    element={<SeanceClient />} />
-          <Route path="/client/tests"         element={<TestsClient />} />
-          <Route path="/client/wellness"      element={<WellnessClient />} />
-          <Route path="/client/gps"           element={<GPSClient />} />
-          <Route path="/client/mon-programme" element={<MonProgrammeClient />} />
-          <Route path="/client/accueil"         element={<Home />} />
-          <Route path="/client/notifications"  element={<NotificationsClient />} />
-          <Route path="/login"                element={<Login />} />
+          {/* Client-facing — enveloppés dans NotifProvider pour un seul channel Realtime */}
+          <Route path="/client/programme/:id"  element={<WithNotifs><ProgrammeClient /></WithNotifs>} />
+          <Route path="/client/seance/:id"     element={<WithNotifs><SeanceClient /></WithNotifs>} />
+          <Route path="/client/tests"          element={<WithNotifs><TestsClient /></WithNotifs>} />
+          <Route path="/client/wellness"       element={<WithNotifs><WellnessClient /></WithNotifs>} />
+          <Route path="/client/gps"            element={<WithNotifs><GPSClient /></WithNotifs>} />
+          <Route path="/client/mon-programme"  element={<WithNotifs><MonProgrammeClient /></WithNotifs>} />
+          <Route path="/client/accueil"        element={<WithNotifs><Home /></WithNotifs>} />
+          <Route path="/client/notifications"  element={<WithNotifs><NotificationsClient /></WithNotifs>} />
+          <Route path="/login"                 element={<Login />} />
 
-          {/* Unified home — coach sees Dashboard, client sees AccueilClient */}
-          <Route path="/" element={<Home />} />
+          {/* Unified home — coach voit Dashboard, client voit AccueilClient */}
+          <Route path="/" element={<WithNotifs><Home /></WithNotifs>} />
 
           {/* Coach-only */}
           <Route path="/clients"                      element={<WithNav><Clients /></WithNav>} />

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useNotifications } from '../../hooks/useNotifications'
+import { useNotifCtx } from '../../context/NotifContext'
 import ClientBottomNav from '../../components/ClientBottomNav'
 
 function timeAgo(dateStr) {
@@ -23,7 +23,7 @@ function typeIcon(type) {
 
 export default function NotificationsClient() {
   const navigate = useNavigate()
-  const { notifs, unread, markRead, markAllRead } = useNotifications()
+  const { notifs, unread, markRead, markAllRead } = useNotifCtx()
 
   async function handleClick(notif) {
     if (!notif.lu) await markRead(notif.id)
