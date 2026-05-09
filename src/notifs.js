@@ -11,20 +11,20 @@ export async function sendNotif(destinataireId, { titre, corps = '', type = 'inf
     return { ok: false, reason: 'no_id' }
   }
 
-  // 1. Insérer la notification in-app
-  const { data: notif, error } = await supabase
+  // 1. Insérer la notification in-app (sans .select() pour éviter le blocage RLS en lecture)
+  const { error } = await supabase
     .from('notifications')
     .insert([{ destinataire_id: destinataireId, titre, corps, type, lien }])
-    .select().single()
   if (error) {
     console.error('[sendNotif] Erreur Supabase :', error.message, error)
     return { ok: false, reason: error.message }
   }
 
   // 2. Déclencher le push téléphone via la Edge Function
+  // On reconstruit le payload avec les données connues (pas besoin de relire la DB)
   try {
     const { data: fnData, error: fnError } = await supabase.functions.invoke('send-push', {
-      body: { record: notif },
+      body: { record: { destinataire_id: destinataireId, titre, corps, type, lien } },
     })
     if (fnError) console.error('[sendNotif] Edge Function erreur :', fnError)
     else console.log('[sendNotif] Edge Function réponse :', fnData)
