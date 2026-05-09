@@ -144,24 +144,19 @@ export default function Programme() {
         .from('clients').select('user_id, prenom').eq('id', programme.client_id).single()
 
       if (!clientData?.user_id) {
-        showToast('❌ clients.user_id est null — le client doit ouvrir l\'app', false)
+        showToast('❌ clients.user_id est null — le client doit ouvrir l\'app une fois', false)
         return
       }
 
-      // Vérifier si une subscription push existe pour ce client
-      const { data: subs, error: subErr } = await supabase
-        .from('push_subscriptions').select('id').eq('user_id', clientData.user_id)
-      if (subErr) { showToast(`❌ push_subscriptions : ${subErr.message}`, false); return }
-      if (!subs?.length) { showToast('❌ Aucune subscription push pour ce client — il doit cliquer "Activer les notifications"', false); return }
-
-      // Envoyer une notif de test
+      // Envoyer directement (la Edge Function vérifie la subscription côté serveur avec service_role)
+      showToast('⏳ Envoi en cours…', true)
       const result = await sendNotif(clientData.user_id, {
         titre: '🧪 Test push',
         corps: 'Si tu vois cette notification sur ton téléphone, les push fonctionnent !',
         type: 'info',
         lien: '/client/notifications',
       })
-      if (result?.ok) showToast('✓ Notif test envoyée — vérifie le téléphone', true)
+      if (result?.ok) showToast('✓ Notif envoyée — vérifie le téléphone', true)
       else showToast(`❌ ${result?.reason}`, false)
     } catch (e) {
       showToast(`❌ Erreur : ${e.message}`, false)

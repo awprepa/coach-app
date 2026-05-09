@@ -16,11 +16,19 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: subs } = await supabase
+    console.log("[send-push] destinataire_id:", record.destinataire_id);
+
+    const { data: subs, error: subErr } = await supabase
       .from("push_subscriptions")
       .select("subscription")
       .eq("user_id", record.destinataire_id);
 
+    if (subErr) {
+      console.error("[send-push] Erreur lecture push_subscriptions:", subErr);
+      return new Response("db error", { status: 500 });
+    }
+
+    console.log("[send-push] subscriptions trouvées:", subs?.length ?? 0);
     if (!subs?.length) return new Response("no subscription", { status: 200 });
 
     const payload = JSON.stringify({
@@ -29,9 +37,14 @@ Deno.serve(async (req) => {
       lien: record.lien || "/",
     });
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       subs.map(({ subscription }) => webpush.sendNotification(subscription, payload))
     );
+
+    results.forEach((r, i) => {
+      if (r.status === "rejected") console.error(`[send-push] push #${i} échoué:`, r.reason);
+      else console.log(`[send-push] push #${i} envoyé ✓`);
+    });
 
     return new Response("sent", { status: 200 });
   } catch (e) {
