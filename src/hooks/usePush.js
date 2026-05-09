@@ -41,6 +41,8 @@ export function usePush() {
   }
 
   async function requestAndSubscribe() {
+    // Si déjà accordé, subscribe directement sans re-demander
+    if (Notification.permission === 'granted') return subscribe()
     const perm = await Notification.requestPermission()
     setPermission(perm)
     if (perm === 'granted') return subscribe()

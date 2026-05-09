@@ -193,7 +193,7 @@ const W = {
 
 export default function AccueilClient() {
   const navigate = useNavigate()
-  const { permission, requestAndSubscribe } = usePush()
+  const { permission, subscribed, requestAndSubscribe } = usePush()
   const [client, setClient]               = useState(null)
   const [programmes, setProgrammes]       = useState([])
   const [seances, setSeances]             = useState([])
@@ -314,9 +314,9 @@ export default function AccueilClient() {
           {client.objectif && <p style={styles.subtitle}>{client.objectif}</p>}
         </div>
 
-        {permission === 'default' && (
+        {(permission === 'default' || (permission === 'granted' && !subscribed)) && (
           <button onClick={requestAndSubscribe} style={styles.pushBtn}>
-            🔔 Activer les notifications
+            🔔 Activer les notifications push
           </button>
         )}
 
