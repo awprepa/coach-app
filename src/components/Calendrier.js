@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 const EVENT_TYPES = [
-  { value: 'seance',      label: 'Séance',       bg: '#333333', text: '#e4f816' },
-  { value: 'match',       label: 'Match',        bg: '#e4f816', text: '#333333' },
-  { value: 'combat',      label: 'Combat',       bg: '#dc2626', text: 'white'   },
-  { value: 'competition', label: 'Compétition',  bg: '#7c3aed', text: 'white'   },
-  { value: 'repos',       label: 'Repos',        bg: '#e5e7eb', text: '#6b7280' },
-  { value: 'autre',       label: 'Autre',        bg: '#f0fdfa', text: '#0f766e' },
+  { value: 'seance',       label: 'Séance',        bg: '#333333', text: '#e4f816' },
+  { value: 'entrainement', label: 'Entraînement',  bg: '#f97316', text: 'white'   },
+  { value: 'match',        label: 'Match',         bg: '#e4f816', text: '#333333' },
+  { value: 'combat',       label: 'Combat',        bg: '#dc2626', text: 'white'   },
+  { value: 'competition',  label: 'Compétition',   bg: '#7c3aed', text: 'white'   },
+  { value: 'repos',        label: 'Repos',         bg: '#e5e7eb', text: '#6b7280' },
+  { value: 'autre',        label: 'Autre',         bg: '#f0fdfa', text: '#0f766e' },
 ]
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
