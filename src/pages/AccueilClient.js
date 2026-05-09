@@ -4,6 +4,8 @@ import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import ClientBottomNav from '../components/ClientBottomNav'
 import ClientProfileMenu from '../components/ClientProfileMenu'
+import { sendNotif, getCoachId } from '../notifs'
+import { usePush } from '../hooks/usePush'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -117,7 +119,7 @@ const I = {
   text:  { fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 },
 }
 
-function WellnessOverlay({ clientId, onDone }) {
+function WellnessOverlay({ clientId, clientName, onDone }) {
   const [vals, setVals]     = useState({ sommeil: 0, fatigue: 0, douleurs: 0, stress: 0 })
   const [saving, setSaving] = useState(false)
   const allFilled = Object.values(vals).every(v => v > 0)
@@ -130,6 +132,18 @@ function WellnessOverlay({ clientId, onDone }) {
       { client_id: clientId, date: today, ...vals },
       { onConflict: 'client_id,date' }
     )
+    // Notifier le coach
+    try {
+      const coachId = await getCoachId()
+      await sendNotif(coachId, {
+        titre: 'Nouveau wellness renseigné',
+        corps: `${clientName || 'Un client'} a renseigné son bilan du jour`,
+        type: 'wellness',
+        lien: '/',
+      })
+    } catch (e) {
+      console.error('sendNotif error:', e)
+    }
     setSaving(false)
     onDone()
   }
@@ -179,6 +193,7 @@ const W = {
 
 export default function AccueilClient() {
   const navigate = useNavigate()
+  const { permission, requestAndSubscribe } = usePush()
   const [client, setClient]               = useState(null)
   const [programmes, setProgrammes]       = useState([])
   const [seances, setSeances]             = useState([])
@@ -266,7 +281,11 @@ export default function AccueilClient() {
         <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />
       )}
       {!showInstall && showWellness && (
-        <WellnessOverlay clientId={client.id} onDone={() => setShowWellness(false)} />
+        <WellnessOverlay
+          clientId={client.id}
+          clientName={`${client.prenom} ${client.nom}`}
+          onDone={() => setShowWellness(false)}
+        />
       )}
 
       <div style={styles.header}>
@@ -281,6 +300,12 @@ export default function AccueilClient() {
           <h1 style={styles.title}>{client.prenom} 👋</h1>
           {client.objectif && <p style={styles.subtitle}>{client.objectif}</p>}
         </div>
+
+        {permission === 'default' && (
+          <button onClick={requestAndSubscribe} style={styles.pushBtn}>
+            🔔 Activer les notifications
+          </button>
+        )}
 
         {prochaineSeance && (
           <div
@@ -430,6 +455,7 @@ const styles = {
   nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: '#e4f816', margin: '0 0 0.2rem' },
   nextDate:    { fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', margin: 0 },
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
   weekRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 12, padding: '0.65rem 1rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
   weekDay:     { width: 40, height: 40, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 }

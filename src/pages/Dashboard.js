@@ -60,7 +60,26 @@ export default function Dashboard() {
   const [showWeek, setShowWeek]       = useState(false)
   const [showBilan, setShowBilan]     = useState(true)
 
-  useEffect(() => { fetchAll() }, [])
+  useEffect(() => {
+    fetchAll()
+    // Enregistrer l'ID du coach dans app_settings
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('app_settings').upsert([{ key: 'coach_user_id', value: user.id }], { onConflict: 'key' })
+      }
+    })
+    // Realtime : nouvelles entrées wellness
+    const channel = supabase.channel('wellness-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wellness' },
+        payload => {
+          setClients(prev => prev.map(c =>
+            c.id === payload.new.client_id ? { ...c, coach_notifie: false } : c
+          ))
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function fetchAll() {
     const today = new Date().toISOString().slice(0, 10)

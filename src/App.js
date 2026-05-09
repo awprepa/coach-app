@@ -21,6 +21,8 @@ import WellnessClient from './pages/client/WellnessClient'
 import GPSClient from './pages/client/GPSClient'
 import SeanceProjection from './pages/SeanceProjection'
 import EchauffementsTemplates from './pages/EchauffementsTemplates'
+import ImportClientExcel from './pages/ImportClientExcel'
+import NotificationsClient from './pages/client/NotificationsClient'
 
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -38,7 +40,8 @@ function App() {
           <Route path="/client/wellness"      element={<WellnessClient />} />
           <Route path="/client/gps"           element={<GPSClient />} />
           <Route path="/client/mon-programme" element={<MonProgrammeClient />} />
-          <Route path="/client/accueil"       element={<Home />} />
+          <Route path="/client/accueil"         element={<Home />} />
+          <Route path="/client/notifications"  element={<NotificationsClient />} />
           <Route path="/login"                element={<Login />} />
 
           {/* Unified home — coach sees Dashboard, client sees AccueilClient */}
@@ -48,7 +51,8 @@ function App() {
           <Route path="/clients"                      element={<WithNav><Clients /></WithNav>} />
           <Route path="/nouveau-client"               element={<WithNav><NouveauClient /></WithNav>} />
           <Route path="/client/:id"                   element={<WithNav><FicheClient /></WithNav>} />
-          <Route path="/client/:id/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
+          <Route path="/client/:id/nouveau-programme"  element={<WithNav><NouveauProgramme /></WithNav>} />
+          <Route path="/client/:id/import-excel"      element={<WithNav><ImportClientExcel /></WithNav>} />
           <Route path="/programme/:id"                element={<WithNav><Programme /></WithNav>} />
           <Route path="/seance/:id"                   element={<WithNav><Seance /></WithNav>} />
           <Route path="/seance/:id/projection"        element={<SeanceProjection />} />

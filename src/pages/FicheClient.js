@@ -238,9 +238,14 @@ export default function FicheClient() {
       <div style={{ marginTop: '1.5rem' }}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Cycles</p>
-          <button onClick={() => navigate(`/client/${id}/nouveau-programme`)} style={styles.btnPrimary}>
-            + Nouveau
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => navigate(`/client/${id}/import-excel`)} style={styles.btnSecondary} title="Importer depuis Excel">
+              📥 Excel
+            </button>
+            <button onClick={() => navigate(`/client/${id}/nouveau-programme`)} style={styles.btnPrimary}>
+              + Nouveau
+            </button>
+          </div>
         </div>
         {(() => {
           const actifs   = programmes.filter(p => !isCycleTermine(p))

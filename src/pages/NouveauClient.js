@@ -6,7 +6,7 @@ export default function NouveauClient() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', telephone: '',
-    objectif: '', offre: 'suivi_premium',
+    objectif: '', offre: 'coaching',
     date_debut: '', date_fin: '', notes: '', categorie_id: ''
   })
   const [categories, setCategories] = useState([])
@@ -19,7 +19,15 @@ export default function NouveauClient() {
   }, [])
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value })
+    const updated = { ...form, [e.target.name]: e.target.value }
+    // Auto date_fin à 1 mois pour l'essai
+    if (e.target.name === 'offre' && e.target.value === 'essai') {
+      const base = updated.date_debut || new Date().toISOString().slice(0, 10)
+      const fin = new Date(base + 'T00:00:00')
+      fin.setMonth(fin.getMonth() + 1)
+      updated.date_fin = fin.toISOString().slice(0, 10)
+    }
+    setForm(updated)
   }
 
   async function handleSubmit(e) {
@@ -89,8 +97,9 @@ export default function NouveauClient() {
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Offre</label>
             <select name="offre" value={form.offre} onChange={handleChange} style={styles.select}>
-              <option value="suivi_premium">Suivi Premium</option>
-              <option value="plan_seul">Plan Seul</option>
+              <option value="essai">Essai (1 mois)</option>
+              <option value="preparation_physique">Préparation physique</option>
+              <option value="coaching">Coaching</option>
             </select>
           </div>
           {categories.length > 0 && (

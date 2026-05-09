@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import ImportExcel from './ImportExcel'
+import { sendNotif } from '../notifs'
 
 export default function Programme() {
   const { id } = useParams()
@@ -41,8 +42,27 @@ export default function Programme() {
     if (!nouvelleSeance.trim()) return
     const { data, error } = await supabase
       .from('seances').insert([{ programme_id: id, nom: nouvelleSeance, ordre: seances.length + 1 }]).select().single()
-    if (error) alert(error.message)
-    else { setSeances([...seances, data]); setNouvelleSeance('') }
+    if (error) { alert(error.message); return }
+    setSeances([...seances, data])
+    setNouvelleSeance('')
+    // Notifier le client
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('user_id, prenom')
+        .eq('id', programme.client_id)
+        .single()
+      if (clientData?.user_id) {
+        await sendNotif(clientData.user_id, {
+          titre: `Nouvelle séance : ${nouvelleSeance}`,
+          corps: `Ton coach a ajouté une séance à ton programme ${programme.nom}`,
+          type: 'seance',
+          lien: '/client/mon-programme',
+        })
+      }
+    } catch (e) {
+      console.error('sendNotif error:', e)
+    }
   }
 
   async function sauvegarderSeance(seanceId) {
