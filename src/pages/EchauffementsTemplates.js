@@ -21,17 +21,23 @@ function WarmupDisplay({ lignes }) {
             </div>
           ))
         }
+        const tours = g.items[0]?.tours
         return (
-          <div key={gi} style={{ border: '1.5px solid #e9f7a8', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
-            <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}
-            </span>
-            {g.items.map((l, i) => (
-              <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.3rem', paddingTop: i > 0 ? '0.3rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
-                <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6366f1' }}>{l.reps}</span>
+          <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+            <div style={{ flex: 1 }}>
+              {g.items.map((l, i) => (
+                <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: i > 0 ? '0.3rem' : 0, paddingTop: i > 0 ? '0.3rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                  <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6366f1' }}>{l.reps}</span>
+                </div>
+              ))}
+            </div>
+            {tours && (
+              <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
+                <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
               </div>
-            ))}
+            )}
           </div>
         )
       })}
@@ -121,33 +127,67 @@ export default function EchauffementsTemplates() {
   function parsePaste(text) {
     const raw = (text || pasteText).trim()
     if (!raw) return
-    const lines = raw.split('\n').map(r => r.split('\t').map(c => c.trim())).filter(c => c[0])
-    // Détection auto des colonnes : on cherche si une colonne ressemble à un bloc (1-2 lettres majuscules)
-    // Format attendu le plus courant : Nom | Reps | Bloc | Tours  — ou Bloc | Nom | Reps | Tours
-    const toursByGroup = {}
-    const parsed = lines.map(cols => {
-      let nom = '', reps = '', groupe = null, tours = null
-      if (cols.length === 1) {
-        nom = cols[0]
-      } else if (cols.length === 2) {
-        nom = cols[0]; reps = cols[1]
-      } else {
-        // Cherche la colonne "bloc" (1-2 lettres, pas un chiffre seul)
-        const blocIdx = cols.findIndex(c => /^[A-Za-z]{1,2}$/.test(c) && !/^\d+$/.test(c))
-        if (blocIdx === 0) {
-          groupe = cols[0].toUpperCase(); nom = cols[1] || ''; reps = cols[2] || ''; tours = cols[3] ? parseInt(cols[3]) || null : null
-        } else if (blocIdx >= 2) {
-          nom = cols[0]; reps = cols[1]; groupe = cols[blocIdx].toUpperCase(); tours = cols[blocIdx + 1] ? parseInt(cols[blocIdx + 1]) || null : null
-        } else {
-          nom = cols[0]; reps = cols[1]; groupe = cols[2] ? cols[2].toUpperCase() : null; tours = cols[3] ? parseInt(cols[3]) || null : null
-        }
+
+    function splitNomReps(str) {
+      const m = str.match(/^(.*?)\s+(\d*[xX]\d+(?:[\/\.]\w)?|\d+\s*(?:s|min|sec|reps?))\s*$/i)
+      return m ? { nom: m[1].trim(), reps: m[2].trim() } : { nom: str.trim(), reps: '' }
+    }
+
+    const rows = raw.split('\n').map(r => r.trim())
+    const result = []
+    let pending = []   // lignes accumulées en attente d'un "X tours"
+    let groupIdx = 0
+
+    const flushPending = (tours) => {
+      if (!pending.length) return
+      if (tours) {
+        const letter = String.fromCharCode(65 + groupIdx)
+        pending.forEach(l => { l.groupe = letter; l.tours = tours })
+        groupIdx++
       }
-      if (groupe && tours) toursByGroup[groupe] = tours
-      return { id: newId(), nom, reps, groupe: groupe || null, tours }
-    })
-    // Propager tours aux lignes du même groupe qui n'en ont pas
-    const result = parsed.map(l => l.groupe ? { ...l, tours: toursByGroup[l.groupe] || l.tours || null } : l)
-    setParsedPreview(result)
+      result.push(...pending)
+      pending = []
+    }
+
+    for (const row of rows) {
+      if (!row || /^[-–—]+$/.test(row) || /^(échauffement|echauffement|début)/i.test(row)) continue
+
+      // Ligne "X tours" seule → applique aux lignes en attente
+      const toursOnly = row.match(/^(\d+)\s*tours?\s*$/i)
+      if (toursOnly) { flushPending(parseInt(toursOnly[1])); continue }
+
+      // Colonnes séparées par tabulation
+      const cols = row.split('\t').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 2) {
+        flushPending(null)
+        let nom = cols[0], reps = cols[1], groupe = null, tours = null
+        if (cols[2] && /^[A-Za-z]{1,2}$/.test(cols[2])) { groupe = cols[2].toUpperCase(); tours = cols[3] ? parseInt(cols[3]) || null : null }
+        result.push({ id: newId(), nom, reps, groupe: groupe || null, tours })
+        continue
+      }
+
+      // Pattern "exercice ] X tours" inline
+      const bracketMatch = row.match(/^(.+?)\s*\]\s*(\d+)\s*tours?\s*$/i)
+      if (bracketMatch) {
+        flushPending(null)
+        const { nom, reps } = splitNomReps(bracketMatch[1])
+        const letter = String.fromCharCode(65 + groupIdx)
+        result.push({ id: newId(), nom, reps, groupe: letter, tours: parseInt(bracketMatch[2]) })
+        groupIdx++
+        continue
+      }
+
+      // Ligne simple → accumule pour le prochain "X tours"
+      const { nom, reps } = splitNomReps(row)
+      pending.push({ id: newId(), nom, reps, groupe: null, tours: null })
+    }
+
+    flushPending(null)
+
+    // Propager tours dans chaque groupe
+    const toursByGroup = {}
+    result.forEach(l => { if (l.groupe && l.tours) toursByGroup[l.groupe] = l.tours })
+    setParsedPreview(result.map(l => l.groupe ? { ...l, tours: toursByGroup[l.groupe] || l.tours || null } : l))
   }
 
   function confirmPaste() {

@@ -89,19 +89,27 @@ export default function SeanceProjection() {
                   </div>
                 ))
               }
-              return (
-                <div key={gi} style={{ border: '1.5px solid rgba(228,248,22,0.22)', borderRadius: 14, overflow: 'hidden' }}>
-                  <div style={{ background: 'rgba(228,248,22,0.09)', padding: '0.35rem 1.25rem' }}>
-                    <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#e4f816', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}</span>
-                  </div>
-                  {g.items.map((l, i) => (
-                    <div key={l.id || i} style={{ ...P.warmRow, borderRadius: 0, borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                      <span style={{ flex: 1, fontSize: '1.25rem', fontWeight: '700', color: 'white' }}>{l.nom}</span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#e4f816', minWidth: 100, textAlign: 'right' }}>{l.reps}</span>
+              {(() => {
+                const tours = g.items[0]?.tours
+                return (
+                  <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid rgba(228,248,22,0.22)', borderLeft: '3px solid #e4f816', borderRadius: '0 14px 14px 0', background: 'rgba(228,248,22,0.04)' }}>
+                    <div style={{ flex: 1 }}>
+                      {g.items.map((l, i) => (
+                        <div key={l.id || i} style={{ ...P.warmRow, borderRadius: 0, borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                          <span style={{ flex: 1, fontSize: '1.25rem', fontWeight: '700', color: 'white' }}>{l.nom}</span>
+                          <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#e4f816', minWidth: 100, textAlign: 'right' }}>{l.reps}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )
+                    {tours && (
+                      <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '0.75rem', paddingRight: '1.25rem', flexShrink: 0 }}>
+                        <div style={{ borderTop: '2px solid #e4f816', borderRight: '2px solid #e4f816', borderBottom: '2px solid #e4f816', borderRadius: '0 4px 4px 0', width: 8, alignSelf: 'stretch' }} />
+                        <span style={{ fontSize: '0.9rem', fontWeight: '900', color: '#e4f816', paddingLeft: '0.5rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             })}
           </div>
         </div>

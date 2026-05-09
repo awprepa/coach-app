@@ -240,23 +240,57 @@ export default function Seance() {
   function parseEchauffPaste(text) {
     const raw = (text || echauffPasteText).trim()
     if (!raw) return
-    const lines = raw.split('\n').map(r => r.split('\t').map(c => c.trim())).filter(c => c[0])
-    const toursByGroup = {}
-    const parsed = lines.map(cols => {
-      let nom = '', reps = '', groupe = null, tours = null
-      if (cols.length === 1) { nom = cols[0] }
-      else if (cols.length === 2) { nom = cols[0]; reps = cols[1] }
-      else {
-        const blocIdx = cols.findIndex(c => /^[A-Za-z]{1,2}$/.test(c) && !/^\d+$/.test(c))
-        if (blocIdx === 0) { groupe = cols[0].toUpperCase(); nom = cols[1] || ''; reps = cols[2] || ''; tours = cols[3] ? parseInt(cols[3]) || null : null }
-        else if (blocIdx >= 2) { nom = cols[0]; reps = cols[1]; groupe = cols[blocIdx].toUpperCase(); tours = cols[blocIdx + 1] ? parseInt(cols[blocIdx + 1]) || null : null }
-        else { nom = cols[0]; reps = cols[1]; groupe = cols[2] ? cols[2].toUpperCase() : null; tours = cols[3] ? parseInt(cols[3]) || null : null }
+
+    function splitNomReps(str) {
+      const m = str.match(/^(.*?)\s+(\d*[xX]\d+(?:[\/\.]\w)?|\d+\s*(?:s|min|sec|reps?))\s*$/i)
+      return m ? { nom: m[1].trim(), reps: m[2].trim() } : { nom: str.trim(), reps: '' }
+    }
+
+    const rows = raw.split('\n').map(r => r.trim())
+    const result = []
+    let pending = []
+    let groupIdx = 0
+
+    const flushPending = (tours) => {
+      if (!pending.length) return
+      if (tours) {
+        const letter = String.fromCharCode(65 + groupIdx)
+        pending.forEach(l => { l.groupe = letter; l.tours = tours })
+        groupIdx++
       }
-      if (groupe && tours) toursByGroup[groupe] = tours
-      return { id: newId(), nom, reps, groupe: groupe || null, tours }
-    })
-    const result = parsed.map(l => l.groupe ? { ...l, tours: toursByGroup[l.groupe] || l.tours || null } : l)
-    setEchauffParsed(result)
+      result.push(...pending)
+      pending = []
+    }
+
+    for (const row of rows) {
+      if (!row || /^[-–—]+$/.test(row) || /^(échauffement|echauffement|début)/i.test(row)) continue
+      const toursOnly = row.match(/^(\d+)\s*tours?\s*$/i)
+      if (toursOnly) { flushPending(parseInt(toursOnly[1])); continue }
+      const cols = row.split('\t').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 2) {
+        flushPending(null)
+        let nom = cols[0], reps = cols[1], groupe = null, tours = null
+        if (cols[2] && /^[A-Za-z]{1,2}$/.test(cols[2])) { groupe = cols[2].toUpperCase(); tours = cols[3] ? parseInt(cols[3]) || null : null }
+        result.push({ id: newId(), nom, reps, groupe: groupe || null, tours })
+        continue
+      }
+      const bracketMatch = row.match(/^(.+?)\s*\]\s*(\d+)\s*tours?\s*$/i)
+      if (bracketMatch) {
+        flushPending(null)
+        const { nom, reps } = splitNomReps(bracketMatch[1])
+        const letter = String.fromCharCode(65 + groupIdx)
+        result.push({ id: newId(), nom, reps, groupe: letter, tours: parseInt(bracketMatch[2]) })
+        groupIdx++
+        continue
+      }
+      const { nom, reps } = splitNomReps(row)
+      pending.push({ id: newId(), nom, reps, groupe: null, tours: null })
+    }
+
+    flushPending(null)
+    const toursByGroup = {}
+    result.forEach(l => { if (l.groupe && l.tours) toursByGroup[l.groupe] = l.tours })
+    setEchauffParsed(result.map(l => l.groupe ? { ...l, tours: toursByGroup[l.groupe] || l.tours || null } : l))
   }
 
   function confirmEchauffPaste() {
@@ -381,14 +415,14 @@ export default function Seance() {
           {showEchauffPaste && (
             <div style={{ marginTop: '0.5rem', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
               <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.5 }}>
-                Colle directement depuis Excel. Format conseillé :<br />
-                <span style={{ fontFamily: 'monospace', background: '#e5e7eb', padding: '1px 5px', borderRadius: 4 }}>Exercice · Reps · Bloc · Tours</span>
+                Colle directement depuis Excel (une ligne par exercice).<br />
+                Les lignes <span style={{ fontFamily: 'monospace', background: '#e5e7eb', padding: '1px 4px', borderRadius: 3 }}>2 tours</span> en fin de groupe seront détectées automatiquement.
               </p>
               <textarea
                 value={echauffPasteText}
                 onChange={e => { setEchauffPasteText(e.target.value); setEchauffParsed(null) }}
                 onPaste={e => { setTimeout(() => parseEchauffPaste(e.target.value + '\n' + (e.clipboardData?.getData('text') || '')), 0) }}
-                placeholder={"Squat\t3x10\nFentes\t3x12\nGainage\t30s\nPompes\t3x15\tA\t3\nTraction\t3x8\tA"}
+                placeholder={"90° hanches x8/c\nFacepull unilat x8/b\nSquat x6\n2 tours"}
                 rows={5}
                 style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', fontFamily: 'monospace', resize: 'vertical', outline: 'none', background: 'white' }}
               />
@@ -419,17 +453,27 @@ export default function Seance() {
                                   <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
                                 </div>
                               ))
-                            : (
-                                <div key={gi} style={{ border: '1.5px solid #e9f7a8', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
-                                  <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase' }}>Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}</span>
-                                  {g.items.map((l, i) => (
-                                    <div key={l.id || i} style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-                                      <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                                      <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
+                            : (() => {
+                                const tours = g.items[0]?.tours
+                                return (
+                                  <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+                                    <div style={{ flex: 1 }}>
+                                      {g.items.map((l, i) => (
+                                        <div key={l.id || i} style={{ display: 'flex', gap: '0.75rem', marginTop: i > 0 ? '0.25rem' : 0 }}>
+                                          <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
+                                          <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
-                              )
+                                    {tours && (
+                                      <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
+                                        <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()
                           )}
                         </div>
                       )

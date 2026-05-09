@@ -361,25 +361,33 @@ export default function SeanceClient() {
           return (
             <div style={{ ...S.card, marginBottom: '1rem' }}>
               <p style={S.sectionLabel}>Échauffement</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {warmGroups.map((g, gi) => {
                   if (!g.groupe) {
                     return g.items.map((l, i) => (
-                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #f9fafb' }}>
+                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.4rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
                         <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                         <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
                       </div>
                     ))
                   }
+                  const tours = g.items[0]?.tours
                   return (
-                    <div key={gi} style={{ borderLeft: '3px solid #e4f816', paddingLeft: '0.75rem', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem', marginBottom: '0.2rem' }}>
-                      <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}</span>
-                      {g.items.map((l, i) => (
-                        <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', marginTop: '0.3rem' }}>
-                          <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
-                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
+                    <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem' }}>
+                      <div style={{ flex: 1 }}>
+                        {g.items.map((l, i) => (
+                          <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                            <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {tours && (
+                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
+                          <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )
                 })}
