@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [newCatNom, setNewCatNom]     = useState('')
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
   const [showWeek, setShowWeek]       = useState(false)
+  const [showBilan, setShowBilan]     = useState(true)
 
   useEffect(() => { fetchAll() }, [])
 
@@ -72,16 +73,19 @@ export default function Dashboard() {
       { data: catsData },
     ] = await Promise.all([
       supabase.from('clients').select('*, categories(id, nom, couleur)').order('prenom'),
-      supabase.from('wellness').select('*').eq('date', today),
+      supabase.from('wellness').select('*').gte('date', start).lte('date', end),
       supabase.from('evenements').select('*, clients(prenom, nom)')
         .gte('date', start).lte('date', end).order('date', { ascending: true }),
       supabase.from('categories').select('*').order('created_at'),
     ])
 
-    const withWellness = (clientsData || []).map(c => ({
-      ...c,
-      wellness_today: (wData || []).find(w => w.client_id === c.id) || null,
-    }))
+    const withWellness = (clientsData || []).map(c => {
+      const wWeek = (wData || []).filter(w => w.client_id === c.id)
+      const wToday = wWeek.find(w => w.date === today) || null
+      const weekAvgs = wWeek.map(w => (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4)
+      const weekAvg = weekAvgs.length ? weekAvgs.reduce((a, b) => a + b, 0) / weekAvgs.length : null
+      return { ...c, wellness_today: wToday, wellness_week: wWeek, wellness_week_avg: weekAvg }
+    })
 
     setClients(withWellness)
     setCategories(catsData || [])
@@ -138,6 +142,23 @@ export default function Dashboard() {
 
   const nouveaux = clients.filter(c => c.coach_notifie === false)
   const totalAlertes = wellnessAlertes.length + expirations.length + nouveaux.length
+
+  // Bilan hebdo
+  const { start: wStart, end: wEnd } = getWeekBounds()
+  const bilanRows = clients.map(c => {
+    const evs = weekEvents.filter(e => e.client_id === c.id)
+    return { ...c, eventsCount: evs.length }
+  }).sort((a, b) => {
+    // inactifs d'abord, puis par wellness le plus bas
+    const aInactif = a.wellness_week?.length === 0 && a.eventsCount === 0
+    const bInactif = b.wellness_week?.length === 0 && b.eventsCount === 0
+    if (aInactif && !bInactif) return -1
+    if (!aInactif && bInactif) return 1
+    if (a.wellness_week_avg !== null && b.wellness_week_avg !== null) return a.wellness_week_avg - b.wellness_week_avg
+    if (a.wellness_week_avg === null) return 1
+    if (b.wellness_week_avg === null) return -1
+    return 0
+  })
 
   // Filtrage clients
   const filtered = clients.filter(c => {
@@ -221,6 +242,75 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      {/* ── Bilan de la semaine ─────────────────────────────────── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <button onClick={() => setShowBilan(v => !v)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0, marginBottom: showBilan ? '0.75rem' : 0 }}>
+          <p style={S.sectionTitle}>Bilan de la semaine</p>
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
+            {new Date(wStart + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {new Date(wEnd + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+          </span>
+          <span style={{ color: '#d1d5db', fontSize: '1rem', transform: showBilan ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+        </button>
+        {showBilan && (
+          <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            {/* En-tête colonnes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px', gap: '0.5rem', padding: '0.5rem 1.1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+              {['Client', 'Wellness moy.', 'Séances', 'Statut'].map(h => (
+                <span key={h} style={{ fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</span>
+              ))}
+            </div>
+            {bilanRows.map((c, i) => {
+              const avg = c.wellness_week_avg
+              const entriesCount = c.wellness_week?.length || 0
+              const inactif = entriesCount === 0 && c.eventsCount === 0
+              const wColor = avg === null ? '#9ca3af' : avg <= 2 ? '#dc2626' : avg <= 3 ? '#d97706' : '#16a34a'
+              const av = getAvatar(c.prenom, c.nom)
+              return (
+                <div key={c.id} onClick={() => navigate(`/client/${c.id}`)}
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px', gap: '0.5rem', alignItems: 'center', padding: '0.65rem 1.1rem', borderTop: i > 0 ? '1px solid #f9fafb' : 'none', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  {/* Nom */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
+                    <span style={{ fontWeight: '600', fontSize: '0.88rem', color: '#333333' }}>{c.prenom} {c.nom}</span>
+                  </div>
+                  {/* Wellness moy */}
+                  <div>
+                    {avg !== null ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div style={{ flex: 1, height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
+                          <div style={{ width: `${(avg / 4) * 100}%`, height: '100%', background: wColor, borderRadius: 99 }} />
+                        </div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: wColor, minWidth: 28 }}>{avg.toFixed(1)}</span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>
+                    )}
+                    {entriesCount > 0 && (
+                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>{entriesCount} bilan{entriesCount > 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                  {/* Séances */}
+                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: c.eventsCount > 0 ? '#333333' : '#d1d5db' }}>
+                    {c.eventsCount > 0 ? c.eventsCount : '—'}
+                  </span>
+                  {/* Statut */}
+                  {inactif ? (
+                    <span style={{ background: '#f3f4f6', color: '#9ca3af', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', whiteSpace: 'nowrap' }}>Inactif</span>
+                  ) : avg !== null && avg <= 2 ? (
+                    <span style={{ background: '#fef2f2', color: '#dc2626', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', whiteSpace: 'nowrap' }}>⚠ Bas</span>
+                  ) : (
+                    <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ OK</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── Planning de la semaine (collapsible) ────────────────── */}
       <div style={{ marginBottom: '1.5rem' }}>

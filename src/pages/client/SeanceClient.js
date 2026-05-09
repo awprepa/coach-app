@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
@@ -63,6 +63,7 @@ export default function SeanceClient() {
   const [timerSecs, setTimerSecs]       = useState(0)
   const [timerTotal, setTimerTotal]     = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
+  const [histoOpen, setHistoOpen]       = useState({})
   const timerRef  = useRef(null)
   const blocRefs  = useRef({})
 
@@ -553,6 +554,50 @@ export default function SeanceClient() {
                         })()}
                       </div>
                     )}
+
+                    {/* Historique charges */}
+                    {(() => {
+                      const histoData = Object.entries(charges[ex.id] || {})
+                        .filter(([, v]) => v.charge && parseFloat(v.charge) > 0)
+                        .map(([sem, v]) => ({ sem: `S${sem}`, kg: parseFloat(v.charge), isCur: parseInt(sem) === semaineActuelle }))
+                        .sort((a, b) => parseInt(a.sem.slice(1)) - parseInt(b.sem.slice(1)))
+                      if (histoData.length < 2) return null
+                      const isOpen = histoOpen[ex.id]
+                      return (
+                        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem', marginBottom: '0.5rem' }}>
+                          <button onClick={() => setHistoOpen(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#6b7280', fontSize: '0.72rem', fontWeight: '700' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg>
+                            Historique charges
+                            <span style={{ color: '#d1d5db', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '0.85rem' }}>›</span>
+                          </button>
+                          {isOpen && (
+                            <div style={{ marginTop: '0.6rem' }}>
+                              <ResponsiveContainer width="100%" height={110}>
+                                <BarChart data={histoData} barSize={20} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                                  <XAxis dataKey="sem" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                                  <Tooltip
+                                    contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '0.78rem' }}
+                                    formatter={v => [`${v} kg`, '']}
+                                    labelStyle={{ fontWeight: '700', color: '#333' }}
+                                  />
+                                  <Bar dataKey="kg" radius={[4, 4, 0, 0]}>
+                                    {histoData.map((entry, idx) => (
+                                      <Cell key={idx} fill={entry.isCur ? '#333333' : '#e5e7eb'} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                              <p style={{ margin: '0.25rem 0 0', fontSize: '0.62rem', color: '#9ca3af', textAlign: 'center' }}>Barre foncée = semaine en cours</p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Table charge/RPE toutes semaines */}
                     <div style={{ overflowX: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem' }}>
