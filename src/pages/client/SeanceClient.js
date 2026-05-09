@@ -64,6 +64,7 @@ export default function SeanceClient() {
   const [timerTotal, setTimerTotal]     = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
   const [histoOpen, setHistoOpen]       = useState({})
+  const [echauffement, setEchauffement] = useState([])
   const timerRef  = useRef(null)
   const blocRefs  = useRef({})
 
@@ -77,6 +78,7 @@ export default function SeanceClient() {
       .eq('id', id).single()
     if (error) { console.log(error); setLoading(false); return }
     setSeance(data)
+    setEchauffement(data.echauffement || [])
     const total = data.programmes.semaines
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.clients?.date_debut
@@ -347,6 +349,44 @@ export default function SeanceClient() {
             <span style={S.curBadge}>S{semaineActuelle} en cours</span>
           </div>
         </div>
+
+        {/* Échauffement */}
+        {echauffement.length > 0 && (() => {
+          const warmGroups = []
+          echauffement.forEach(l => {
+            const last = warmGroups[warmGroups.length - 1]
+            if (l.groupe && last?.groupe === l.groupe) last.items.push(l)
+            else warmGroups.push({ groupe: l.groupe, items: [l] })
+          })
+          return (
+            <div style={{ ...S.card, marginBottom: '1rem' }}>
+              <p style={S.sectionLabel}>Échauffement</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {warmGroups.map((g, gi) => {
+                  if (!g.groupe) {
+                    return g.items.map((l, i) => (
+                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #f9fafb' }}>
+                        <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
+                        <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
+                      </div>
+                    ))
+                  }
+                  return (
+                    <div key={gi} style={{ borderLeft: '3px solid #e4f816', paddingLeft: '0.75rem', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem', marginBottom: '0.2rem' }}>
+                      <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Bloc {g.groupe}</span>
+                      {g.items.map((l, i) => (
+                        <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', marginTop: '0.3rem' }}>
+                          <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
+                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Graphique progression */}
         <div style={S.card}>

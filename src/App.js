@@ -19,6 +19,8 @@ import TestsClient from './pages/client/TestsClient'
 import MonProgrammeClient from './pages/client/MonProgrammeClient'
 import WellnessClient from './pages/client/WellnessClient'
 import GPSClient from './pages/client/GPSClient'
+import SeanceProjection from './pages/SeanceProjection'
+import EchauffementsTemplates from './pages/EchauffementsTemplates'
 
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -49,6 +51,8 @@ function App() {
           <Route path="/client/:id/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
           <Route path="/programme/:id"                element={<WithNav><Programme /></WithNav>} />
           <Route path="/seance/:id"                   element={<WithNav><Seance /></WithNav>} />
+          <Route path="/seance/:id/projection"        element={<SeanceProjection />} />
+          <Route path="/echauffements"                element={<WithNav><EchauffementsTemplates /></WithNav>} />
           <Route path="/bibliotheque"                 element={<WithNav><BibliothequeExercices /></WithNav>} />
           <Route path="/gps"                          element={<WithNav><GPS /></WithNav>} />
           <Route path="/tests"                        element={<WithNav><Tests /></WithNav>} />

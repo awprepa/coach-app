@@ -38,6 +38,7 @@ export default function CoachNav() {
         <Link to="/gps" style={navLink}>GPS</Link>
         <Link to="/tests" style={navLink}>Tests</Link>
         <Link to="/modeles" style={navLink}>Modèles de séances</Link>
+        <Link to="/echauffements" style={navLink}>Échauffements</Link>
       </div>
       <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
     </nav>

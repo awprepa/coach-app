@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
+function newId() { return Math.random().toString(36).slice(2) }
+
 export default function Seance() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -27,6 +29,12 @@ export default function Seance() {
   const [nomSuggestions, setNomSuggestions] = useState([])
   const [editNomSuggestions, setEditNomSuggestions] = useState([])
   const [templateSaved, setTemplateSaved] = useState(false)
+  // Échauffement
+  const [echauffement, setEchauffement]           = useState([])
+  const [echauffForm, setEchauffForm]             = useState({ nom: '', reps: '', groupe: '' })
+  const [showImportEchauff, setShowImportEchauff] = useState(false)
+  const [echauffTemplates, setEchauffTemplates]   = useState([])
+  const [loadingTemplates, setLoadingTemplates]   = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -34,7 +42,7 @@ export default function Seance() {
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
     if (error) console.log(error)
-    else { setSeance(data); setSemaines(data.programmes.semaines); await fetchExercices(); await fetchRpeSeances() }
+    else { setSeance(data); setSemaines(data.programmes.semaines); setEchauffement(data.echauffement || []); await fetchExercices(); await fetchRpeSeances() }
     setLoading(false)
   }
 
@@ -205,6 +213,54 @@ export default function Seance() {
     }
   }
 
+  // ── Fonctions échauffement ──────────────────────────────────────
+  async function persistEchauff(lines) {
+    await supabase.from('seances').update({ echauffement: lines }).eq('id', id)
+    setEchauffement(lines)
+  }
+
+  function addEchauffLine() {
+    if (!echauffForm.nom.trim()) return
+    const g = echauffForm.groupe.trim().toUpperCase()
+    const line = { id: newId(), nom: echauffForm.nom.trim(), reps: echauffForm.reps.trim(), groupe: g || null }
+    persistEchauff([...echauffement, line])
+    setEchauffForm({ nom: '', reps: '', groupe: '' })
+  }
+
+  function removeEchauffLine(lid) { persistEchauff(echauffement.filter(l => l.id !== lid)) }
+
+  function moveEchauffLine(idx, dir) {
+    const arr = [...echauffement]
+    const ni = idx + dir
+    if (ni < 0 || ni >= arr.length) return
+    ;[arr[idx], arr[ni]] = [arr[ni], arr[idx]]
+    persistEchauff(arr)
+  }
+
+  async function openImportTemplates() {
+    setShowImportEchauff(v => !v)
+    if (echauffTemplates.length === 0 && !loadingTemplates) {
+      setLoadingTemplates(true)
+      const { data } = await supabase.from('echauffements_templates').select('*').order('created_at', { ascending: false })
+      setEchauffTemplates(data || [])
+      setLoadingTemplates(false)
+    }
+  }
+
+  function importEchauffTemplate(t) {
+    persistEchauff(t.lignes || [])
+    setShowImportEchauff(false)
+  }
+
+  async function saveEchauffAsTemplate() {
+    if (echauffement.length === 0) return
+    const nom = window.prompt('Nom du template :', seance.nom + ' – Échauff.')
+    if (!nom) return
+    const { error } = await supabase.from('echauffements_templates').insert([{ nom: nom.trim(), lignes: echauffement }])
+    if (error) alert(error.message)
+    else alert('Template sauvegardé !')
+  }
+
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
   if (!seance) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Séance introuvable.</p></div>
 
@@ -234,9 +290,100 @@ export default function Seance() {
           <p style={styles.progLabel}>{seance.programmes.nom}</p>
           <h1 style={styles.title}>{seance.nom}</h1>
         </div>
-        <button onClick={sauvegarderTemplate} style={{ background: templateSaved ? '#f0fdf4' : 'white', color: templateSaved ? '#16a34a' : '#374151', border: `1.5px solid ${templateSaved ? '#86efac' : '#e5e7eb'}`, borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.3s' }}>
-          {templateSaved ? '✓ Modèle sauvegardé' : '📋 Sauvegarder comme modèle'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => navigate(`/seance/${id}/projection`)} style={{ background: '#111827', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            📺 Projection
+          </button>
+          <button onClick={sauvegarderTemplate} style={{ background: templateSaved ? '#f0fdf4' : 'white', color: templateSaved ? '#16a34a' : '#374151', border: `1.5px solid ${templateSaved ? '#86efac' : '#e5e7eb'}`, borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.3s' }}>
+            {templateSaved ? '✓ Modèle sauvegardé' : '📋 Sauvegarder comme modèle'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Échauffement ── */}
+      <div style={{ ...styles.card, marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+          <p style={styles.sectionTitle}>Échauffement</p>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={openImportTemplates} style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+              📥 Importer {showImportEchauff ? '▲' : '▼'}
+            </button>
+            {echauffement.length > 0 && (
+              <button onClick={saveEchauffAsTemplate} style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                💾 Sauvegarder comme template
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dropdown import templates */}
+        {showImportEchauff && (
+          <div style={{ background: '#f9fafb', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '0.875rem', border: '1.5px solid #e5e7eb' }}>
+            {loadingTemplates ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Chargement...</p>
+            ) : echauffTemplates.length === 0 ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Aucun template — crée-en un depuis la page Échauffements.</p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {echauffTemplates.map(t => (
+                  <button key={t.id} onClick={() => importEchauffTemplate(t)}
+                    style={{ background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.875rem', fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer', color: '#333333' }}>
+                    {t.nom} <span style={{ color: '#9ca3af' }}>· {(t.lignes || []).length} ex.</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Table des lignes */}
+        {echauffement.length > 0 && (
+          <table style={{ ...styles.table, marginBottom: '0.875rem' }}>
+            <thead>
+              <tr style={styles.thead}>
+                <th style={styles.th}>Bloc</th>
+                <th style={styles.th}>Exercice</th>
+                <th style={styles.th}>Reps / durée</th>
+                <th style={styles.th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {echauffement.map((l, i) => (
+                <tr key={l.id} style={{ ...styles.tr, background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none' }}>
+                  <td style={styles.td}>
+                    {l.groupe && <span style={styles.codeTag}>{l.groupe}</span>}
+                  </td>
+                  <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>{l.nom}</td>
+                  <td style={styles.tdCenter}>{l.reps}</td>
+                  <td style={styles.td}>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.iconBtnSm, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
+                      <button onClick={() => moveEchauffLine(i, 1)} disabled={i === echauffement.length - 1} style={{ ...styles.iconBtnSm, opacity: i === echauffement.length - 1 ? 0.3 : 1 }}>↓</button>
+                      <button onClick={() => removeEchauffLine(l.id)} style={{ ...styles.iconBtnSm, color: '#dc2626' }}>✕</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {/* Formulaire ajout ligne */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input value={echauffForm.nom} onChange={e => setEchauffForm(f => ({ ...f, nom: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addEchauffLine()}
+            placeholder="Exercice" style={{ ...styles.formInput, flex: 1, minWidth: 140 }} />
+          <input value={echauffForm.reps} onChange={e => setEchauffForm(f => ({ ...f, reps: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addEchauffLine()}
+            placeholder="Reps / durée" style={{ ...styles.formInput, width: 110 }} />
+          <input value={echauffForm.groupe} onChange={e => setEchauffForm(f => ({ ...f, groupe: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addEchauffLine()}
+            placeholder="Bloc A, B…" style={{ ...styles.formInput, width: 90 }} maxLength={2} />
+          <button onClick={addEchauffLine} disabled={!echauffForm.nom.trim()}
+            style={{ ...styles.btnPrimary, opacity: !echauffForm.nom.trim() ? 0.5 : 1 }}>
+            + Ajouter
+          </button>
+        </div>
       </div>
 
       {/* RPE + graphique */}
