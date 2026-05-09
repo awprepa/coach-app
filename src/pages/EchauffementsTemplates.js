@@ -11,23 +11,23 @@ function WarmupDisplay({ lignes }) {
     else groups.push({ groupe: l.groupe, items: [l] })
   })
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
       {groups.map((g, gi) => {
         if (!g.groupe) {
           return g.items.map((l, i) => (
-            <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.3rem 0', borderBottom: '1px solid #f9fafb' }}>
+            <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.3rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
               <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
               <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6366f1', minWidth: 50, textAlign: 'right' }}>{l.reps}</span>
             </div>
           ))
         }
         return (
-          <div key={gi} style={{ borderLeft: '3px solid #e4f816', paddingLeft: '0.75rem', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem', marginBottom: '0.15rem' }}>
-            <span style={{ fontSize: '0.58rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div key={gi} style={{ border: '1.5px solid #e9f7a8', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+            <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}
             </span>
             {g.items.map((l, i) => (
-              <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+              <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.3rem', paddingTop: i > 0 ? '0.3rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                 <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
                 <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6366f1' }}>{l.reps}</span>
               </div>
@@ -46,7 +46,7 @@ export default function EchauffementsTemplates() {
   const [editingId, setEditingId]     = useState(null)
   const [formNom, setFormNom]         = useState('')
   const [formLignes, setFormLignes]   = useState([])
-  const [newLigne, setNewLigne]       = useState({ nom: '', reps: '', groupe: '' })
+  const [newLigne, setNewLigne]       = useState({ nom: '', reps: '', groupe: '', tours: '' })
   const [saving, setSaving]           = useState(false)
   const [editingLineId, setEditingLineId] = useState(null)
   const [editLineForm, setEditLineForm]   = useState({ nom: '', reps: '', groupe: '', tours: '' })
@@ -62,13 +62,13 @@ export default function EchauffementsTemplates() {
   function startCreate() {
     setCreating(true); setEditingId(null)
     setFormNom(''); setFormLignes([])
-    setNewLigne({ nom: '', reps: '', groupe: '' })
+    setNewLigne({ nom: '', reps: '', groupe: '', tours: '' })
   }
 
   function startEdit(t) {
     setEditingId(t.id); setCreating(false)
     setFormNom(t.nom); setFormLignes(t.lignes || [])
-    setNewLigne({ nom: '', reps: '', groupe: '' })
+    setNewLigne({ nom: '', reps: '', groupe: '', tours: '' })
   }
 
   function cancelForm() { setCreating(false); setEditingId(null) }
@@ -77,8 +77,15 @@ export default function EchauffementsTemplates() {
     if (!newLigne.nom.trim()) return
     const g = newLigne.groupe.trim().toUpperCase() || null
     const existingTours = g ? (formLignes.find(l => l.groupe === g)?.tours || null) : null
-    setFormLignes(prev => [...prev, { id: newId(), nom: newLigne.nom.trim(), reps: newLigne.reps.trim(), groupe: g, tours: existingTours }])
-    setNewLigne({ nom: '', reps: '', groupe: '' })
+    const formTours = g && newLigne.tours ? parseInt(newLigne.tours) || null : null
+    const tours = existingTours ?? formTours
+    setFormLignes(prev => {
+      const next = [...prev, { id: newId(), nom: newLigne.nom.trim(), reps: newLigne.reps.trim(), groupe: g, tours }]
+      // propager tours saisi à tout le groupe si nouveau groupe
+      if (g && formTours && !existingTours) return next.map(l => l.groupe === g ? { ...l, tours: formTours } : l)
+      return next
+    })
+    setNewLigne(n => ({ nom: '', reps: '', groupe: n.groupe, tours: n.tours })) // garde bloc+tours pour enchaîner
   }
 
   function removeLigne(lid) { setFormLignes(prev => prev.filter(l => l.id !== lid)) }
@@ -160,9 +167,12 @@ export default function EchauffementsTemplates() {
 
           {/* Liste des lignes */}
           {formLignes.length > 0 && (
-            <div style={{ marginBottom: '0.875rem', border: '1.5px solid #f3f4f6', borderRadius: 12, overflow: 'hidden' }}>
-              {formLignes.map((l, i) => (
-                <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none', borderBottom: i < formLignes.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+            <div style={{ marginBottom: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {formLignes.map((l, i) => {
+                const prevGroupe = i > 0 ? formLignes[i - 1].groupe : undefined
+                const groupeChange = l.groupe !== prevGroupe
+                return (
+                <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none', border: l.groupe ? '1.5px solid #e9f7a8' : '1.5px solid #f3f4f6', borderLeft: l.groupe ? '3px solid #e4f816' : '1.5px solid #f3f4f6', borderRadius: l.groupe ? '0 10px 10px 0' : 10, marginTop: groupeChange && i > 0 ? '0.25rem' : 0 }}>
                   {editingLineId === l.id ? (
                     /* ── Mode édition ── */
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', padding: '0.5rem 0.875rem' }}>
@@ -196,7 +206,7 @@ export default function EchauffementsTemplates() {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
 
@@ -218,9 +228,21 @@ export default function EchauffementsTemplates() {
               value={newLigne.groupe} onChange={e => setNewLigne(n => ({ ...n, groupe: e.target.value }))}
               onKeyDown={e => e.key === 'Enter' && addLigne()}
               placeholder="Bloc A, B…"
-              style={{ ...S.input, width: 90 }}
+              style={{ ...S.input, width: 80 }}
               maxLength={2}
             />
+            {newLigne.groupe.trim() && (() => {
+              const existingGroup = formLignes.find(l => l.groupe === newLigne.groupe.trim().toUpperCase())
+              return !existingGroup ? (
+                <input
+                  value={newLigne.tours} onChange={e => setNewLigne(n => ({ ...n, tours: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && addLigne()}
+                  placeholder="Tours"
+                  style={{ ...S.input, width: 72 }}
+                  type="number" min="1"
+                />
+              ) : null
+            })()}
             <button onClick={addLigne} disabled={!newLigne.nom.trim()}
               style={{ ...S.btnSecondary, opacity: !newLigne.nom.trim() ? 0.4 : 1 }}>
               + Ajouter

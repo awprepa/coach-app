@@ -31,7 +31,7 @@ export default function Seance() {
   const [templateSaved, setTemplateSaved] = useState(false)
   // Échauffement
   const [echauffement, setEchauffement]           = useState([])
-  const [echauffForm, setEchauffForm]             = useState({ nom: '', reps: '', groupe: '' })
+  const [echauffForm, setEchauffForm]             = useState({ nom: '', reps: '', groupe: '', tours: '' })
   const [showImportEchauff, setShowImportEchauff] = useState(false)
   const [echauffTemplates, setEchauffTemplates]   = useState([])
   const [loadingTemplates, setLoadingTemplates]   = useState(false)
@@ -225,9 +225,13 @@ export default function Seance() {
     if (!echauffForm.nom.trim()) return
     const g = echauffForm.groupe.trim().toUpperCase() || null
     const existingTours = g ? (echauffement.find(l => l.groupe === g)?.tours || null) : null
-    const line = { id: newId(), nom: echauffForm.nom.trim(), reps: echauffForm.reps.trim(), groupe: g, tours: existingTours }
-    persistEchauff([...echauffement, line])
-    setEchauffForm({ nom: '', reps: '', groupe: '' })
+    const formTours = g && echauffForm.tours ? parseInt(echauffForm.tours) || null : null
+    const tours = existingTours ?? formTours
+    const line = { id: newId(), nom: echauffForm.nom.trim(), reps: echauffForm.reps.trim(), groupe: g, tours }
+    let next = [...echauffement, line]
+    if (g && formTours && !existingTours) next = next.map(l => l.groupe === g ? { ...l, tours: formTours } : l)
+    persistEchauff(next)
+    setEchauffForm(f => ({ nom: '', reps: '', groupe: f.groupe, tours: f.tours }))
   }
 
   function startEditEchauffLine(l) {
@@ -359,9 +363,12 @@ export default function Seance() {
 
         {/* Table des lignes */}
         {echauffement.length > 0 && (
-          <div style={{ border: '1.5px solid #f3f4f6', borderRadius: 12, overflow: 'hidden', marginBottom: '0.875rem' }}>
-            {echauffement.map((l, i) => (
-              <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none', borderBottom: i < echauffement.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.875rem' }}>
+            {echauffement.map((l, i) => {
+              const prevGroupe = i > 0 ? echauffement[i - 1].groupe : undefined
+              const groupeChange = l.groupe !== prevGroupe
+              return (
+              <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', border: l.groupe ? '1.5px solid #e9f7a8' : '1.5px solid #f3f4f6', borderLeft: l.groupe ? '3px solid #e4f816' : '1.5px solid #f3f4f6', borderRadius: l.groupe ? '0 10px 10px 0' : 10, marginTop: groupeChange && i > 0 ? '0.25rem' : 0 }}>
                 {editingEchauffId === l.id ? (
                   /* ── Mode édition ── */
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', padding: '0.5rem 0.875rem' }}>
@@ -395,7 +402,7 @@ export default function Seance() {
                   </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         )}
 
@@ -409,7 +416,12 @@ export default function Seance() {
             placeholder="Reps / durée" style={{ ...styles.formInput, width: 110 }} />
           <input value={echauffForm.groupe} onChange={e => setEchauffForm(f => ({ ...f, groupe: e.target.value }))}
             onKeyDown={e => e.key === 'Enter' && addEchauffLine()}
-            placeholder="Bloc A, B…" style={{ ...styles.formInput, width: 90 }} maxLength={2} />
+            placeholder="Bloc A, B…" style={{ ...styles.formInput, width: 80 }} maxLength={2} />
+          {echauffForm.groupe.trim() && !echauffement.find(l => l.groupe === echauffForm.groupe.trim().toUpperCase()) && (
+            <input value={echauffForm.tours} onChange={e => setEchauffForm(f => ({ ...f, tours: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && addEchauffLine()}
+              placeholder="Tours" style={{ ...styles.formInput, width: 72 }} type="number" min="1" />
+          )}
           <button onClick={addEchauffLine} disabled={!echauffForm.nom.trim()}
             style={{ ...styles.btnPrimary, opacity: !echauffForm.nom.trim() ? 0.5 : 1 }}>
             + Ajouter
