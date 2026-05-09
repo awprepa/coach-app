@@ -23,7 +23,9 @@ function WarmupDisplay({ lignes }) {
         }
         return (
           <div key={gi} style={{ borderLeft: '3px solid #e4f816', paddingLeft: '0.75rem', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem', marginBottom: '0.15rem' }}>
-            <span style={{ fontSize: '0.58rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Bloc {g.groupe}</span>
+            <span style={{ fontSize: '0.58rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}
+            </span>
             {g.items.map((l, i) => (
               <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
                 <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
@@ -46,6 +48,8 @@ export default function EchauffementsTemplates() {
   const [formLignes, setFormLignes]   = useState([])
   const [newLigne, setNewLigne]       = useState({ nom: '', reps: '', groupe: '' })
   const [saving, setSaving]           = useState(false)
+  const [editingLineId, setEditingLineId] = useState(null)
+  const [editLineForm, setEditLineForm]   = useState({ nom: '', reps: '', groupe: '', tours: '' })
 
   useEffect(() => { load() }, [])
 
@@ -71,8 +75,9 @@ export default function EchauffementsTemplates() {
 
   function addLigne() {
     if (!newLigne.nom.trim()) return
-    const g = newLigne.groupe.trim().toUpperCase()
-    setFormLignes(prev => [...prev, { id: newId(), nom: newLigne.nom.trim(), reps: newLigne.reps.trim(), groupe: g || null }])
+    const g = newLigne.groupe.trim().toUpperCase() || null
+    const existingTours = g ? (formLignes.find(l => l.groupe === g)?.tours || null) : null
+    setFormLignes(prev => [...prev, { id: newId(), nom: newLigne.nom.trim(), reps: newLigne.reps.trim(), groupe: g, tours: existingTours }])
     setNewLigne({ nom: '', reps: '', groupe: '' })
   }
 
@@ -84,6 +89,23 @@ export default function EchauffementsTemplates() {
     if (ni < 0 || ni >= arr.length) return
     ;[arr[idx], arr[ni]] = [arr[ni], arr[idx]]
     setFormLignes(arr)
+  }
+
+  function startEditLine(l) {
+    setEditingLineId(l.id)
+    setEditLineForm({ nom: l.nom || '', reps: l.reps || '', groupe: l.groupe || '', tours: l.tours ? String(l.tours) : '' })
+  }
+
+  function saveEditLine() {
+    if (!editLineForm.nom.trim()) return
+    const g = editLineForm.groupe.trim().toUpperCase() || null
+    const tours = g && editLineForm.tours ? parseInt(editLineForm.tours) || null : null
+    setFormLignes(prev => prev.map(l => {
+      if (l.id === editingLineId) return { ...l, nom: editLineForm.nom.trim(), reps: editLineForm.reps.trim(), groupe: g, tours: g ? tours : null }
+      if (g && l.groupe === g) return { ...l, tours }   // propager tours aux autres lignes du même bloc
+      return l
+    }))
+    setEditingLineId(null)
   }
 
   async function saveTemplate() {
@@ -140,15 +162,39 @@ export default function EchauffementsTemplates() {
           {formLignes.length > 0 && (
             <div style={{ marginBottom: '0.875rem', border: '1.5px solid #f3f4f6', borderRadius: 12, overflow: 'hidden' }}>
               {formLignes.map((l, i) => (
-                <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none', borderBottom: i < formLignes.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                  {l.groupe && (
-                    <span style={{ background: '#333333', color: '#e4f816', padding: '0.1rem 0.45rem', borderRadius: 5, fontSize: '0.68rem', fontWeight: '900', flexShrink: 0 }}>{l.groupe}</span>
+                <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none', borderBottom: i < formLignes.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                  {editingLineId === l.id ? (
+                    /* ── Mode édition ── */
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', padding: '0.5rem 0.875rem' }}>
+                      <input value={editLineForm.nom} onChange={e => setEditLineForm(f => ({ ...f, nom: e.target.value }))}
+                        placeholder="Exercice" style={{ ...S.input, flex: 1, minWidth: 120, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} autoFocus />
+                      <input value={editLineForm.reps} onChange={e => setEditLineForm(f => ({ ...f, reps: e.target.value }))}
+                        placeholder="Reps / durée" style={{ ...S.input, width: 100, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} />
+                      <input value={editLineForm.groupe} onChange={e => setEditLineForm(f => ({ ...f, groupe: e.target.value }))}
+                        placeholder="Bloc" style={{ ...S.input, width: 60, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} maxLength={2} />
+                      {editLineForm.groupe.trim() && (
+                        <input value={editLineForm.tours} onChange={e => setEditLineForm(f => ({ ...f, tours: e.target.value }))}
+                          placeholder="Tours" style={{ ...S.input, width: 68, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} type="number" min="1" />
+                      )}
+                      <button onClick={saveEditLine} style={{ ...S.iconBtn, color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800' }}>✓</button>
+                      <button onClick={() => setEditingLineId(null)} style={S.iconBtn}>✕</button>
+                    </div>
+                  ) : (
+                    /* ── Mode affichage ── */
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem' }}>
+                      {l.groupe && (
+                        <span style={{ background: '#333333', color: '#e4f816', padding: '0.1rem 0.45rem', borderRadius: 5, fontSize: '0.68rem', fontWeight: '900', flexShrink: 0 }}>
+                          {l.groupe}{l.tours && formLignes.findIndex(x => x.groupe === l.groupe) === i ? ` · ${l.tours}t` : ''}
+                        </span>
+                      )}
+                      <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
+                      <button onClick={() => startEditLine(l)} style={{ ...S.iconBtn, fontSize: '0.75rem' }}>✏️</button>
+                      <button onClick={() => moveLigne(i, -1)} disabled={i === 0} style={{ ...S.iconBtn, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
+                      <button onClick={() => moveLigne(i, 1)} disabled={i === formLignes.length - 1} style={{ ...S.iconBtn, opacity: i === formLignes.length - 1 ? 0.3 : 1 }}>↓</button>
+                      <button onClick={() => removeLigne(l.id)} style={{ ...S.iconBtn, color: '#dc2626', borderColor: '#fecaca' }}>✕</button>
+                    </div>
                   )}
-                  <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
-                  <button onClick={() => moveLigne(i, -1)} disabled={i === 0} style={{ ...S.iconBtn, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-                  <button onClick={() => moveLigne(i, 1)} disabled={i === formLignes.length - 1} style={{ ...S.iconBtn, opacity: i === formLignes.length - 1 ? 0.3 : 1 }}>↓</button>
-                  <button onClick={() => removeLigne(l.id)} style={{ ...S.iconBtn, color: '#dc2626', borderColor: '#fecaca' }}>✕</button>
                 </div>
               ))}
             </div>

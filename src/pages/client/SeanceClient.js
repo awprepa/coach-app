@@ -373,7 +373,7 @@ export default function SeanceClient() {
                   }
                   return (
                     <div key={gi} style={{ borderLeft: '3px solid #e4f816', paddingLeft: '0.75rem', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem', marginBottom: '0.2rem' }}>
-                      <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Bloc {g.groupe}</span>
+                      <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}</span>
                       {g.items.map((l, i) => (
                         <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', marginTop: '0.3rem' }}>
                           <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>

@@ -35,6 +35,8 @@ export default function Seance() {
   const [showImportEchauff, setShowImportEchauff] = useState(false)
   const [echauffTemplates, setEchauffTemplates]   = useState([])
   const [loadingTemplates, setLoadingTemplates]   = useState(false)
+  const [editingEchauffId, setEditingEchauffId]   = useState(null)
+  const [editEchauffForm, setEditEchauffForm]     = useState({ nom: '', reps: '', groupe: '', tours: '' })
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -221,10 +223,29 @@ export default function Seance() {
 
   function addEchauffLine() {
     if (!echauffForm.nom.trim()) return
-    const g = echauffForm.groupe.trim().toUpperCase()
-    const line = { id: newId(), nom: echauffForm.nom.trim(), reps: echauffForm.reps.trim(), groupe: g || null }
+    const g = echauffForm.groupe.trim().toUpperCase() || null
+    const existingTours = g ? (echauffement.find(l => l.groupe === g)?.tours || null) : null
+    const line = { id: newId(), nom: echauffForm.nom.trim(), reps: echauffForm.reps.trim(), groupe: g, tours: existingTours }
     persistEchauff([...echauffement, line])
     setEchauffForm({ nom: '', reps: '', groupe: '' })
+  }
+
+  function startEditEchauffLine(l) {
+    setEditingEchauffId(l.id)
+    setEditEchauffForm({ nom: l.nom || '', reps: l.reps || '', groupe: l.groupe || '', tours: l.tours ? String(l.tours) : '' })
+  }
+
+  function saveEditEchauffLine() {
+    if (!editEchauffForm.nom.trim()) return
+    const g = editEchauffForm.groupe.trim().toUpperCase() || null
+    const tours = g && editEchauffForm.tours ? parseInt(editEchauffForm.tours) || null : null
+    const updated = echauffement.map(l => {
+      if (l.id === editingEchauffId) return { ...l, nom: editEchauffForm.nom.trim(), reps: editEchauffForm.reps.trim(), groupe: g, tours: g ? tours : null }
+      if (g && l.groupe === g) return { ...l, tours }
+      return l
+    })
+    persistEchauff(updated)
+    setEditingEchauffId(null)
   }
 
   function removeEchauffLine(lid) { persistEchauff(echauffement.filter(l => l.id !== lid)) }
@@ -338,34 +359,44 @@ export default function Seance() {
 
         {/* Table des lignes */}
         {echauffement.length > 0 && (
-          <table style={{ ...styles.table, marginBottom: '0.875rem' }}>
-            <thead>
-              <tr style={styles.thead}>
-                <th style={styles.th}>Bloc</th>
-                <th style={styles.th}>Exercice</th>
-                <th style={styles.th}>Reps / durée</th>
-                <th style={styles.th}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {echauffement.map((l, i) => (
-                <tr key={l.id} style={{ ...styles.tr, background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none' }}>
-                  <td style={styles.td}>
-                    {l.groupe && <span style={styles.codeTag}>{l.groupe}</span>}
-                  </td>
-                  <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>{l.nom}</td>
-                  <td style={styles.tdCenter}>{l.reps}</td>
-                  <td style={styles.td}>
-                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.iconBtnSm, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-                      <button onClick={() => moveEchauffLine(i, 1)} disabled={i === echauffement.length - 1} style={{ ...styles.iconBtnSm, opacity: i === echauffement.length - 1 ? 0.3 : 1 }}>↓</button>
-                      <button onClick={() => removeEchauffLine(l.id)} style={{ ...styles.iconBtnSm, color: '#dc2626' }}>✕</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ border: '1.5px solid #f3f4f6', borderRadius: 12, overflow: 'hidden', marginBottom: '0.875rem' }}>
+            {echauffement.map((l, i) => (
+              <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', borderLeft: l.groupe ? '3px solid #e4f816' : 'none', borderBottom: i < echauffement.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                {editingEchauffId === l.id ? (
+                  /* ── Mode édition ── */
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', padding: '0.5rem 0.875rem' }}>
+                    <input value={editEchauffForm.nom} onChange={e => setEditEchauffForm(f => ({ ...f, nom: e.target.value }))}
+                      placeholder="Exercice" style={{ ...styles.formInput, flex: 1, minWidth: 120, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} autoFocus />
+                    <input value={editEchauffForm.reps} onChange={e => setEditEchauffForm(f => ({ ...f, reps: e.target.value }))}
+                      placeholder="Reps / durée" style={{ ...styles.formInput, width: 100, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} />
+                    <input value={editEchauffForm.groupe} onChange={e => setEditEchauffForm(f => ({ ...f, groupe: e.target.value }))}
+                      placeholder="Bloc" style={{ ...styles.formInput, width: 60, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} maxLength={2} />
+                    {editEchauffForm.groupe.trim() && (
+                      <input value={editEchauffForm.tours} onChange={e => setEditEchauffForm(f => ({ ...f, tours: e.target.value }))}
+                        placeholder="Tours" style={{ ...styles.formInput, width: 68, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} type="number" min="1" />
+                    )}
+                    <button onClick={saveEditEchauffLine} style={{ ...styles.iconBtnSm, color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800' }}>✓</button>
+                    <button onClick={() => setEditingEchauffId(null)} style={styles.iconBtnSm}>✕</button>
+                  </div>
+                ) : (
+                  /* ── Mode affichage ── */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem' }}>
+                    {l.groupe ? (
+                      <span style={{ background: '#333333', color: '#e4f816', padding: '0.1rem 0.45rem', borderRadius: 5, fontSize: '0.68rem', fontWeight: '900', flexShrink: 0 }}>
+                        {l.groupe}{l.tours && echauffement.findIndex(x => x.groupe === l.groupe) === i ? ` · ${l.tours}t` : ''}
+                      </span>
+                    ) : <span style={{ width: 0 }} />}
+                    <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
+                    <button onClick={() => startEditEchauffLine(l)} style={{ ...styles.iconBtnSm, fontSize: '0.75rem' }}>✏️</button>
+                    <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.iconBtnSm, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
+                    <button onClick={() => moveEchauffLine(i, 1)} disabled={i === echauffement.length - 1} style={{ ...styles.iconBtnSm, opacity: i === echauffement.length - 1 ? 0.3 : 1 }}>↓</button>
+                    <button onClick={() => removeEchauffLine(l.id)} style={{ ...styles.iconBtnSm, color: '#dc2626' }}>✕</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Formulaire ajout ligne */}
