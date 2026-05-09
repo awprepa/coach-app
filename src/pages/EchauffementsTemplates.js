@@ -50,6 +50,9 @@ export default function EchauffementsTemplates() {
   const [saving, setSaving]           = useState(false)
   const [editingLineId, setEditingLineId] = useState(null)
   const [editLineForm, setEditLineForm]   = useState({ nom: '', reps: '', groupe: '', tours: '' })
+  const [showPaste, setShowPaste]         = useState(false)
+  const [pasteText, setPasteText]         = useState('')
+  const [parsedPreview, setParsedPreview] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -115,6 +118,44 @@ export default function EchauffementsTemplates() {
     setEditingLineId(null)
   }
 
+  function parsePaste(text) {
+    const raw = (text || pasteText).trim()
+    if (!raw) return
+    const lines = raw.split('\n').map(r => r.split('\t').map(c => c.trim())).filter(c => c[0])
+    // Détection auto des colonnes : on cherche si une colonne ressemble à un bloc (1-2 lettres majuscules)
+    // Format attendu le plus courant : Nom | Reps | Bloc | Tours  — ou Bloc | Nom | Reps | Tours
+    const toursByGroup = {}
+    const parsed = lines.map(cols => {
+      let nom = '', reps = '', groupe = null, tours = null
+      if (cols.length === 1) {
+        nom = cols[0]
+      } else if (cols.length === 2) {
+        nom = cols[0]; reps = cols[1]
+      } else {
+        // Cherche la colonne "bloc" (1-2 lettres, pas un chiffre seul)
+        const blocIdx = cols.findIndex(c => /^[A-Za-z]{1,2}$/.test(c) && !/^\d+$/.test(c))
+        if (blocIdx === 0) {
+          groupe = cols[0].toUpperCase(); nom = cols[1] || ''; reps = cols[2] || ''; tours = cols[3] ? parseInt(cols[3]) || null : null
+        } else if (blocIdx >= 2) {
+          nom = cols[0]; reps = cols[1]; groupe = cols[blocIdx].toUpperCase(); tours = cols[blocIdx + 1] ? parseInt(cols[blocIdx + 1]) || null : null
+        } else {
+          nom = cols[0]; reps = cols[1]; groupe = cols[2] ? cols[2].toUpperCase() : null; tours = cols[3] ? parseInt(cols[3]) || null : null
+        }
+      }
+      if (groupe && tours) toursByGroup[groupe] = tours
+      return { id: newId(), nom, reps, groupe: groupe || null, tours }
+    })
+    // Propager tours aux lignes du même groupe qui n'en ont pas
+    const result = parsed.map(l => l.groupe ? { ...l, tours: toursByGroup[l.groupe] || l.tours || null } : l)
+    setParsedPreview(result)
+  }
+
+  function confirmPaste() {
+    if (!parsedPreview) return
+    setFormLignes(prev => [...prev, ...parsedPreview])
+    setPasteText(''); setParsedPreview(null); setShowPaste(false)
+  }
+
   async function saveTemplate() {
     if (!formNom.trim()) return
     setSaving(true)
@@ -164,6 +205,52 @@ export default function EchauffementsTemplates() {
             style={{ ...S.input, width: '100%', boxSizing: 'border-box', marginBottom: '1rem' }}
             autoFocus
           />
+
+          {/* ── Zone collage Excel ── */}
+          <div style={{ marginBottom: '0.875rem' }}>
+            <button onClick={() => { setShowPaste(v => !v); setParsedPreview(null); setPasteText('') }}
+              style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+              📋 Coller depuis Excel {showPaste ? '▲' : '▼'}
+            </button>
+            {showPaste && (
+              <div style={{ marginTop: '0.5rem', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
+                <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.5 }}>
+                  Colle directement depuis Excel. Colonnes détectées automatiquement.<br />
+                  Format conseillé : <span style={{ fontFamily: 'monospace', background: '#e5e7eb', padding: '1px 5px', borderRadius: 4 }}>Exercice · Reps · Bloc · Tours</span> (tabulation entre chaque)
+                </p>
+                <textarea
+                  value={pasteText}
+                  onChange={e => { setPasteText(e.target.value); setParsedPreview(null) }}
+                  onPaste={e => { setTimeout(() => parsePaste(e.target.value + '\n' + (e.clipboardData?.getData('text') || '')), 0) }}
+                  placeholder={"Squat\t3x10\nFentes\t3x12\nGainage\t30s\nPompes\t3x15\tA\t3\nTraction\t3x8\tA"}
+                  rows={6}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', fontFamily: 'monospace', resize: 'vertical', outline: 'none', background: 'white' }}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+                  <button onClick={() => parsePaste()} disabled={!pasteText.trim()}
+                    style={{ ...S.btnPrimary, opacity: !pasteText.trim() ? 0.5 : 1, fontSize: '0.82rem', padding: '0.45rem 0.875rem' }}>
+                    🔍 Analyser
+                  </button>
+                  {parsedPreview && (
+                    <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{parsedPreview.length} exercice{parsedPreview.length > 1 ? 's' : ''} détecté{parsedPreview.length > 1 ? 's' : ''}</span>
+                  )}
+                </div>
+
+                {parsedPreview && parsedPreview.length > 0 && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Aperçu</p>
+                    <div style={{ background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.625rem 0.875rem' }}>
+                      <WarmupDisplay lignes={parsedPreview} />
+                    </div>
+                    <button onClick={confirmPaste}
+                      style={{ ...S.btnPrimary, marginTop: '0.625rem', fontSize: '0.82rem', padding: '0.5rem 1rem' }}>
+                      ✓ Ajouter ces {parsedPreview.length} exercices
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Liste des lignes */}
           {formLignes.length > 0 && (

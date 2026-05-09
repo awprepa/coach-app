@@ -37,6 +37,9 @@ export default function Seance() {
   const [loadingTemplates, setLoadingTemplates]   = useState(false)
   const [editingEchauffId, setEditingEchauffId]   = useState(null)
   const [editEchauffForm, setEditEchauffForm]     = useState({ nom: '', reps: '', groupe: '', tours: '' })
+  const [showEchauffPaste, setShowEchauffPaste]   = useState(false)
+  const [echauffPasteText, setEchauffPasteText]   = useState('')
+  const [echauffParsed, setEchauffParsed]         = useState(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -234,6 +237,34 @@ export default function Seance() {
     setEchauffForm(f => ({ nom: '', reps: '', groupe: f.groupe, tours: f.tours }))
   }
 
+  function parseEchauffPaste(text) {
+    const raw = (text || echauffPasteText).trim()
+    if (!raw) return
+    const lines = raw.split('\n').map(r => r.split('\t').map(c => c.trim())).filter(c => c[0])
+    const toursByGroup = {}
+    const parsed = lines.map(cols => {
+      let nom = '', reps = '', groupe = null, tours = null
+      if (cols.length === 1) { nom = cols[0] }
+      else if (cols.length === 2) { nom = cols[0]; reps = cols[1] }
+      else {
+        const blocIdx = cols.findIndex(c => /^[A-Za-z]{1,2}$/.test(c) && !/^\d+$/.test(c))
+        if (blocIdx === 0) { groupe = cols[0].toUpperCase(); nom = cols[1] || ''; reps = cols[2] || ''; tours = cols[3] ? parseInt(cols[3]) || null : null }
+        else if (blocIdx >= 2) { nom = cols[0]; reps = cols[1]; groupe = cols[blocIdx].toUpperCase(); tours = cols[blocIdx + 1] ? parseInt(cols[blocIdx + 1]) || null : null }
+        else { nom = cols[0]; reps = cols[1]; groupe = cols[2] ? cols[2].toUpperCase() : null; tours = cols[3] ? parseInt(cols[3]) || null : null }
+      }
+      if (groupe && tours) toursByGroup[groupe] = tours
+      return { id: newId(), nom, reps, groupe: groupe || null, tours }
+    })
+    const result = parsed.map(l => l.groupe ? { ...l, tours: toursByGroup[l.groupe] || l.tours || null } : l)
+    setEchauffParsed(result)
+  }
+
+  function confirmEchauffPaste() {
+    if (!echauffParsed) return
+    persistEchauff([...echauffement, ...echauffParsed])
+    setEchauffPasteText(''); setEchauffParsed(null); setShowEchauffPaste(false)
+  }
+
   function startEditEchauffLine(l) {
     setEditingEchauffId(l.id)
     setEditEchauffForm({ nom: l.nom || '', reps: l.reps || '', groupe: l.groupe || '', tours: l.tours ? String(l.tours) : '' })
@@ -339,6 +370,79 @@ export default function Seance() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* ── Zone collage Excel ── */}
+        <div style={{ marginBottom: '0.875rem' }}>
+          <button onClick={() => { setShowEchauffPaste(v => !v); setEchauffParsed(null); setEchauffPasteText('') }}
+            style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+            📋 Coller depuis Excel {showEchauffPaste ? '▲' : '▼'}
+          </button>
+          {showEchauffPaste && (
+            <div style={{ marginTop: '0.5rem', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.5 }}>
+                Colle directement depuis Excel. Format conseillé :<br />
+                <span style={{ fontFamily: 'monospace', background: '#e5e7eb', padding: '1px 5px', borderRadius: 4 }}>Exercice · Reps · Bloc · Tours</span>
+              </p>
+              <textarea
+                value={echauffPasteText}
+                onChange={e => { setEchauffPasteText(e.target.value); setEchauffParsed(null) }}
+                onPaste={e => { setTimeout(() => parseEchauffPaste(e.target.value + '\n' + (e.clipboardData?.getData('text') || '')), 0) }}
+                placeholder={"Squat\t3x10\nFentes\t3x12\nGainage\t30s\nPompes\t3x15\tA\t3\nTraction\t3x8\tA"}
+                rows={5}
+                style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', fontFamily: 'monospace', resize: 'vertical', outline: 'none', background: 'white' }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+                <button onClick={() => parseEchauffPaste()} disabled={!echauffPasteText.trim()}
+                  style={{ ...styles.btnSecondary, opacity: !echauffPasteText.trim() ? 0.5 : 1, fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}>
+                  🔍 Analyser
+                </button>
+                {echauffParsed && <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{echauffParsed.length} exercice{echauffParsed.length > 1 ? 's' : ''} détecté{echauffParsed.length > 1 ? 's' : ''}</span>}
+              </div>
+              {echauffParsed && echauffParsed.length > 0 && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Aperçu</p>
+                  <div style={{ background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.625rem 0.875rem' }}>
+                    {(() => {
+                      const groups = []
+                      echauffParsed.forEach(l => {
+                        const last = groups[groups.length - 1]
+                        if (l.groupe && last?.groupe === l.groupe) last.items.push(l)
+                        else groups.push({ groupe: l.groupe, items: [l] })
+                      })
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          {groups.map((g, gi) => !g.groupe
+                            ? g.items.map((l, i) => (
+                                <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', gap: '0.75rem', padding: '0.25rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
+                                  <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
+                                  <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
+                                </div>
+                              ))
+                            : (
+                                <div key={gi} style={{ border: '1.5px solid #e9f7a8', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+                                  <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#a16207', textTransform: 'uppercase' }}>Bloc {g.groupe}{g.items[0]?.tours ? ` · ${g.items[0].tours} tours` : ''}</span>
+                                  {g.items.map((l, i) => (
+                                    <div key={l.id || i} style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                                      <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
+                                      <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                  <button onClick={confirmEchauffPaste}
+                    style={{ ...styles.btnSecondary, marginTop: '0.625rem', fontSize: '0.82rem', padding: '0.5rem 1rem', background: '#333333', color: '#e4f816', border: 'none' }}>
+                    ✓ Ajouter ces {echauffParsed.length} exercices
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Dropdown import templates */}
