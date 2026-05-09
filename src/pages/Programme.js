@@ -53,15 +53,20 @@ export default function Programme() {
         .eq('id', programme.client_id)
         .single()
       if (clientData?.user_id) {
-        await sendNotif(clientData.user_id, {
+        const result = await sendNotif(clientData.user_id, {
           titre: `Nouvelle séance : ${nouvelleSeance}`,
           corps: `Ton coach a ajouté une séance à ton programme ${programme.nom}`,
           type: 'seance',
           lien: '/client/mon-programme',
         })
+        if (result && !result.ok) {
+          console.warn('[Programme] Notif non envoyée :', result.reason)
+        }
+      } else {
+        console.warn('[Programme] clients.user_id est null — le client doit se connecter une fois pour activer les notifs')
       }
     } catch (e) {
-      console.error('sendNotif error:', e)
+      console.error('[Programme] sendNotif error:', e)
     }
   }
 
