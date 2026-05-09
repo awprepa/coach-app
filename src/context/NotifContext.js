@@ -22,21 +22,23 @@ export function NotifProvider({ children }) {
       .catch(() => setReady(true))
   }, [])
 
-  // Charger les notifs + Realtime une seule fois
+  // Charger les notifs + Realtime + polling de secours
   useEffect(() => {
     if (!userId) return
 
-    // Chargement initial
-    supabase
-      .from('notifications')
-      .select('*')
-      .eq('destinataire_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data }) => setNotifs(data || []))
-      .catch(() => {}) // table peut ne pas exister encore
+    async function fetchNotifs() {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('destinataire_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (data) setNotifs(data)
+    }
 
-    // Realtime — un seul channel pour toute l'app
+    fetchNotifs()
+
+    // Realtime (push instantané si la table est dans la publication Supabase)
     const channel = supabase
       .channel(`notifs-global-${userId}`)
       .on(
@@ -51,7 +53,13 @@ export function NotifProvider({ children }) {
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    // Polling de secours toutes les 15 s (cas où Realtime n'est pas actif)
+    const poll = setInterval(fetchNotifs, 15000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(poll)
+    }
   }, [userId])
 
   const markRead = useCallback(async (id) => {

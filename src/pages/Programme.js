@@ -18,9 +18,15 @@ export default function Programme() {
   const [nomEdition, setNomEdition] = useState('')
   const [editProgramme, setEditProgramme] = useState(false)
   const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '' })
+  const [notifToast, setNotifToast] = useState(null) // { msg, ok }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchProgramme(); fetchSeances() }, [])
+
+  function showToast(msg, ok) {
+    setNotifToast({ msg, ok })
+    setTimeout(() => setNotifToast(null), 3500)
+  }
 
   async function fetchProgramme() {
     const { data, error } = await supabase
@@ -59,11 +65,13 @@ export default function Programme() {
           type: 'seance',
           lien: '/client/mon-programme',
         })
-        if (result && !result.ok) {
-          console.warn('[Programme] Notif non envoyée :', result.reason)
+        if (result?.ok) {
+          showToast('Notification envoyée au client ✓', true)
+        } else {
+          showToast(`Notif non envoyée : ${result?.reason || 'erreur'}`, false)
         }
       } else {
-        console.warn('[Programme] clients.user_id est null — le client doit se connecter une fois pour activer les notifs')
+        showToast('Le client doit ouvrir l\'app une fois pour activer les notifs', false)
       }
     } catch (e) {
       console.error('[Programme] sendNotif error:', e)
@@ -151,6 +159,20 @@ export default function Programme() {
 
   return (
     <div style={styles.page}>
+      {/* Toast confirmation notification */}
+      {notifToast && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
+          background: notifToast.ok ? '#111827' : '#dc2626',
+          color: notifToast.ok ? '#e4f816' : 'white',
+          padding: '0.65rem 1.25rem', borderRadius: 12,
+          fontSize: '0.85rem', fontWeight: '700',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+          zIndex: 999, whiteSpace: 'nowrap',
+        }}>
+          {notifToast.msg}
+        </div>
+      )}
       <button onClick={() => navigate(`/client/${programme.client_id}`)} style={styles.backBtn}>← Retour</button>
 
       {/* En-tête programme */}
