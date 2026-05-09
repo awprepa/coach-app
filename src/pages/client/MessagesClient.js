@@ -6,19 +6,31 @@ import ChatBox from '../../components/ChatBox'
 
 export default function MessagesClient() {
   const navigate = useNavigate()
-  const [clientId, setClientId] = useState(null)  // user_id du client
-  const [coachId, setCoachId]   = useState(null)  // user_id du coach
+  const [clientId, setClientId] = useState(null)
+  const [coachId, setCoachId]   = useState(null)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     async function load() {
-      const { data: sess } = await supabase.auth.getSession()
-      const userId = sess?.session?.user?.id
-      if (!userId) return
-      setClientId(userId)
-      // Récupérer le coach
-      const { data: setting } = await supabase
-        .from('app_settings').select('value').eq('key', 'coach_user_id').single()
-      if (setting?.value) setCoachId(setting.value)
+      try {
+        const { data: sess } = await supabase.auth.getSession()
+        const userId = sess?.session?.user?.id
+        if (!userId) { setLoadError(true); return }
+        setClientId(userId)
+
+        const { data: setting, error } = await supabase
+          .from('app_settings').select('value').eq('key', 'coach_user_id').single()
+
+        if (error || !setting?.value) {
+          console.error('[MessagesClient] app_settings inaccessible :', error?.message)
+          setLoadError(true)
+          return
+        }
+        setCoachId(setting.value)
+      } catch (e) {
+        console.error('[MessagesClient] erreur load :', e)
+        setLoadError(true)
+      }
     }
     load()
   }, [])
@@ -36,7 +48,13 @@ export default function MessagesClient() {
       </div>
 
       <div style={S.content}>
-        {!clientId || !coachId ? (
+        {loadError ? (
+          <div style={{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>💬</p>
+            <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Messagerie indisponible</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Contacte ton coach pour activer la messagerie.</p>
+          </div>
+        ) : !clientId || !coachId ? (
           <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem', fontSize: '0.88rem' }}>Chargement…</p>
         ) : (
           <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
