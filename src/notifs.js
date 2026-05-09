@@ -24,7 +24,8 @@ export async function sendNotif(destinataireId, { titre, corps = '', type = 'inf
   // On reconstruit le payload avec les données connues (pas besoin de relire la DB)
   try {
     const { data: fnData, error: fnError } = await supabase.functions.invoke('send-push', {
-      body: { record: { destinataire_id: destinataireId, titre, corps, type, lien } },
+      body: JSON.stringify({ record: { destinataire_id: destinataireId, titre, corps, type, lien } }),
+      headers: { 'Content-Type': 'application/json' },
     })
     if (fnError) console.error('[sendNotif] Edge Function erreur :', fnError)
     else console.log('[sendNotif] Edge Function réponse :', fnData)
