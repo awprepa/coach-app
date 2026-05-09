@@ -138,6 +138,36 @@ export default function Programme() {
     setShowTemplates(false)
   }
 
+  async function testerPushClient() {
+    try {
+      const { data: clientData } = await supabase
+        .from('clients').select('user_id, prenom').eq('id', programme.client_id).single()
+
+      if (!clientData?.user_id) {
+        showToast('❌ clients.user_id est null — le client doit ouvrir l\'app', false)
+        return
+      }
+
+      // Vérifier si une subscription push existe pour ce client
+      const { data: subs, error: subErr } = await supabase
+        .from('push_subscriptions').select('id').eq('user_id', clientData.user_id)
+      if (subErr) { showToast(`❌ push_subscriptions : ${subErr.message}`, false); return }
+      if (!subs?.length) { showToast('❌ Aucune subscription push pour ce client — il doit cliquer "Activer les notifications"', false); return }
+
+      // Envoyer une notif de test
+      const result = await sendNotif(clientData.user_id, {
+        titre: '🧪 Test push',
+        corps: 'Si tu vois cette notification sur ton téléphone, les push fonctionnent !',
+        type: 'info',
+        lien: '/client/notifications',
+      })
+      if (result?.ok) showToast('✓ Notif test envoyée — vérifie le téléphone', true)
+      else showToast(`❌ ${result?.reason}`, false)
+    } catch (e) {
+      showToast(`❌ Erreur : ${e.message}`, false)
+    }
+  }
+
   async function supprimerProgramme() {
     if (!window.confirm('Supprimer ce cycle et toutes ses séances ?')) return
     const { error } = await supabase.from('programmes').delete().eq('id', id)
@@ -173,7 +203,12 @@ export default function Programme() {
           {notifToast.msg}
         </div>
       )}
-      <button onClick={() => navigate(`/client/${programme.client_id}`)} style={styles.backBtn}>← Retour</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={() => navigate(`/client/${programme.client_id}`)} style={styles.backBtn}>← Retour</button>
+        <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer' }}>
+          🧪 Test push
+        </button>
+      </div>
 
       {/* En-tête programme */}
       {editProgramme ? (
