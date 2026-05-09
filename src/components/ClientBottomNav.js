@@ -54,31 +54,36 @@ export default function ClientBottomNav() {
       borderTop: '1px solid #f0f0f0',
       boxShadow: '0 -4px 20px rgba(0,0,0,0.07)',
       display: 'flex',
-      paddingBottom: 'env(safe-area-inset-bottom)',
+      flexDirection: 'column',
     }}>
-      {tabs.map(({ label, Icon, active, to }) => (
-        <button key={label} onClick={() => navigate(to)}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: '4px', padding: '10px 0',
-            background: 'none', border: 'none', cursor: 'pointer',
-          }}>
-          <div style={{
-            width: 40, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 10,
-            background: active ? '#f0f0f0' : 'transparent',
-            transition: 'background 0.15s',
-          }}>
-            <Icon active={active} />
-          </div>
-          <span style={{
-            fontSize: '0.63rem', fontWeight: active ? '700' : '500',
-            color: active ? '#1a1a1a' : '#b0b8c1',
-            letterSpacing: '0.01em',
-          }}>{label}</span>
-        </button>
-      ))}
+      {/* Zone boutons */}
+      <div style={{ display: 'flex' }}>
+        {tabs.map(({ label, Icon, active, to }) => (
+          <button key={label} onClick={() => navigate(to)}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: '5px', padding: '12px 0 10px',
+              background: 'none', border: 'none', cursor: 'pointer',
+            }}>
+            <div style={{
+              width: 44, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 11,
+              background: active ? '#f0f0f0' : 'transparent',
+              transition: 'background 0.15s',
+            }}>
+              <Icon active={active} />
+            </div>
+            <span style={{
+              fontSize: '0.63rem', fontWeight: active ? '700' : '500',
+              color: active ? '#1a1a1a' : '#b0b8c1',
+              letterSpacing: '0.01em',
+            }}>{label}</span>
+          </button>
+        ))}
+      </div>
+      {/* Zone safe-area iPhone (barre Apple) */}
+      <div style={{ height: 'env(safe-area-inset-bottom)', minHeight: 16, background: 'white' }} />
     </div>
   )
 }

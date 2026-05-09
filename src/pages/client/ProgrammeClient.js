@@ -162,7 +162,7 @@ const styles = {
     minHeight: '100vh',
     background: '#efefef',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    paddingBottom: 90,
+    paddingBottom: 110,
   },
   centered: {
     minHeight: '100vh',

@@ -145,7 +145,7 @@ export default function WellnessClient() {
 }
 
 const S = {
-  page:        { minHeight: '100vh', background: '#f0f0f0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 80 },
+  page:        { minHeight: '100vh', background: '#f0f0f0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
   header:      { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1rem 1rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   backBtn:     { background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' },
   headerTitle: { color: 'white', fontWeight: '800', fontSize: '1rem' },
