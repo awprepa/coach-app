@@ -19,10 +19,15 @@ export default function MessagesClient() {
         setClientId(userId)
 
         const { data: setting, error } = await supabase
-          .from('app_settings').select('value').eq('key', 'coach_user_id').single()
+          .from('app_settings').select('value').eq('key', 'coach_user_id').maybeSingle()
 
-        if (error || !setting?.value) {
-          console.error('[MessagesClient] app_settings inaccessible :', error?.message)
+        if (error) {
+          console.error('[MessagesClient] app_settings erreur :', error?.message)
+          setLoadError(true)
+          return
+        }
+        if (!setting?.value) {
+          console.warn('[MessagesClient] coach_user_id absent de app_settings — coach doit ouvrir le Dashboard')
           setLoadError(true)
           return
         }
