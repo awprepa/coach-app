@@ -10,7 +10,6 @@ export function useMessages(myId, otherId) {
     if (!myId || !otherId) return
     fetchMessages()
 
-    // Realtime : nouveaux messages entre ces 2 utilisateurs
     const channel = supabase.channel(`messages-${[myId, otherId].sort().join('-')}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
         const m = payload.new
@@ -18,7 +17,14 @@ export function useMessages(myId, otherId) {
           (m.from_id === myId && m.to_id === otherId) ||
           (m.from_id === otherId && m.to_id === myId)
         ) {
-          setMessages(prev => [...prev, m])
+          // Remplacer le message optimiste temporaire s'il existe
+          setMessages(prev => {
+            const hasTemp = prev.some(p => p._temp && p.corps === m.corps && p.from_id === m.from_id)
+            if (hasTemp) return prev.map(p => (p._temp && p.corps === m.corps && p.from_id === m.from_id) ? m : p)
+            // Éviter les doublons
+            if (prev.some(p => p.id === m.id)) return prev
+            return [...prev, m]
+          })
         }
       })
       .subscribe()
@@ -30,24 +36,43 @@ export function useMessages(myId, otherId) {
 
   async function fetchMessages() {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .select('*')
       .or(`and(from_id.eq.${myId},to_id.eq.${otherId}),and(from_id.eq.${otherId},to_id.eq.${myId})`)
       .order('created_at', { ascending: true })
       .limit(100)
-    setMessages(data || [])
+    if (!error) setMessages(data || [])
     setLoading(false)
   }
 
   async function sendMessage(corps) {
-    if (!corps?.trim() || !myId || !otherId) return
-    const { error } = await supabase.from('messages').insert([{
-      from_id: myId,
-      to_id: otherId,
+    if (!corps?.trim() || !myId || !otherId) return false
+
+    // Mise à jour optimiste immédiate
+    const tempId = `temp-${Date.now()}`
+    const tempMsg = {
+      id: tempId, _temp: true,
+      from_id: myId, to_id: otherId,
       corps: corps.slice(0, 500),
-    }])
-    return !error
+      lu: false,
+      created_at: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, tempMsg])
+
+    const { data, error } = await supabase.from('messages')
+      .insert([{ from_id: myId, to_id: otherId, corps: corps.slice(0, 500) }])
+      .select().single()
+
+    if (error) {
+      // Annuler le message optimiste si erreur
+      setMessages(prev => prev.filter(m => m.id !== tempId))
+      console.error('[useMessages] sendMessage error:', error.message)
+      return false
+    }
+    // Remplacer le temp par la vraie donnée DB
+    setMessages(prev => prev.map(m => m.id === tempId ? data : m))
+    return true
   }
 
   async function markRead() {
@@ -57,6 +82,7 @@ export function useMessages(myId, otherId) {
       .eq('to_id', myId)
       .eq('from_id', otherId)
       .eq('lu', false)
+    setMessages(prev => prev.map(m => m.from_id === otherId && m.to_id === myId ? { ...m, lu: true } : m))
   }
 
   const unread = messages.filter(m => m.to_id === myId && !m.lu).length
