@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [clients, setClients]         = useState([])
   const [categories, setCategories]   = useState([])
   const [weekEvents, setWeekEvents]   = useState([])
+  const [programmes, setProgrammes]   = useState([])
   const [search, setSearch]           = useState('')
   const [activeCat, setActiveCat]     = useState(null)
   const [showCatForm, setShowCatForm] = useState(false)
@@ -90,12 +91,14 @@ export default function Dashboard() {
       { data: wData },
       { data: evts },
       { data: catsData },
+      { data: progsData },
     ] = await Promise.all([
       supabase.from('clients').select('*, categories(id, nom, couleur)').order('prenom'),
       supabase.from('wellness').select('*').gte('date', start).lte('date', end),
       supabase.from('evenements').select('*, clients(prenom, nom)')
         .gte('date', start).lte('date', end).order('date', { ascending: true }),
       supabase.from('categories').select('*').order('created_at'),
+      supabase.from('programmes').select('id, client_id, nom, semaines, date_debut'),
     ])
 
     const withWellness = (clientsData || []).map(c => {
@@ -109,6 +112,7 @@ export default function Dashboard() {
     setClients(withWellness)
     setCategories(catsData || [])
     setWeekEvents(evts || [])
+    setProgrammes(progsData || [])
     setLoading(false)
   }
 
@@ -159,8 +163,34 @@ export default function Dashboard() {
     return { ...c, daysLeft: Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24)) }
   })
 
+  // Programmes se terminant dans les 7 prochains jours
+  const progFinBientot = programmes.filter(p => {
+    if (!p.date_debut) return false
+    const fin = new Date(p.date_debut + 'T00:00:00')
+    fin.setDate(fin.getDate() + p.semaines * 7)
+    const days = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
+    return days >= 0 && days <= 7
+  }).map(p => {
+    const fin = new Date(p.date_debut + 'T00:00:00')
+    fin.setDate(fin.getDate() + p.semaines * 7)
+    const daysLeft = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
+    const client = clients.find(c => c.id === p.client_id)
+    return { ...p, daysLeft, clientNom: client ? `${client.prenom} ${client.nom}` : '—', clientId: p.client_id }
+  })
+
+  // Clients sans wellness depuis 3+ jours
+  const trois = new Date(todayDate); trois.setDate(trois.getDate() - 3)
+  const troisStr = trois.toISOString().slice(0, 10)
+  const sansWellness = clients.filter(c => {
+    const lastEntry = c.wellness_week?.sort((a, b) => b.date.localeCompare(a.date))[0]
+    return !lastEntry || lastEntry.date < troisStr
+  })
+
+  // Séances prévues aujourd'hui
+  const seancesAujourdhui = weekEvents.filter(e => e.date === today)
+
   const nouveaux = clients.filter(c => c.coach_notifie === false)
-  const totalAlertes = wellnessAlertes.length + expirations.length + nouveaux.length
+  const totalAlertes = wellnessAlertes.length + expirations.length + nouveaux.length + progFinBientot.length
 
   // Bilan hebdo
   const { start: wStart, end: wEnd } = getWeekBounds()
@@ -259,6 +289,51 @@ export default function Dashboard() {
               <button onClick={() => marquerVu(c.id)} style={{ ...S.btnSmall, background: '#f3f4f6', color: '#6b7280' }}>✓ Vu</button>
             </div>
           ))}
+          {progFinBientot.map(p => (
+            <div key={p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.alertCard, borderLeft: '4px solid #0ea5e9' }}>
+              <div style={{ ...S.alertAvatar, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
+              <div style={{ flex: 1 }}>
+                <p style={S.alertName}>{p.clientNom}</p>
+                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Cycle : {p.nom}</p>
+              </div>
+              <span style={{ background: '#e0f2fe', color: '#0284c7', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                ⏳ Fin dans {p.daysLeft}j
+              </span>
+              <span style={S.chevron}>›</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Aujourd'hui ─────────────────────────────────────────── */}
+      {(seancesAujourdhui.length > 0 || sansWellness.length > 0) && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <p style={{ ...S.sectionTitle, marginBottom: '0.75rem' }}>Aujourd'hui</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {seancesAujourdhui.length > 0 && (
+              <div style={{ background: '#333333', borderRadius: 12, padding: '0.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.1rem' }}>📅</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: 'white' }}>{seancesAujourdhui.length} séance{seancesAujourdhui.length > 1 ? 's' : ''} planifiée{seancesAujourdhui.length > 1 ? 's' : ''}</p>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
+                    {seancesAujourdhui.map(e => e.clients?.prenom).join(', ')}
+                  </p>
+                </div>
+                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#e4f816', background: 'rgba(228,248,22,0.15)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>
+              </div>
+            )}
+            {sansWellness.length > 0 && (
+              <div style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                <span style={{ fontSize: '1.1rem' }}>🔕</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#374151' }}>{sansWellness.length} client{sansWellness.length > 1 ? 's' : ''} sans wellness depuis 3j+</p>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>
+                    {sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

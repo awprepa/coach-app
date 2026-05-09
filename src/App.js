@@ -23,6 +23,7 @@ import SeanceProjection from './pages/SeanceProjection'
 import EchauffementsTemplates from './pages/EchauffementsTemplates'
 import ImportClientExcel from './pages/ImportClientExcel'
 import NotificationsClient from './pages/client/NotificationsClient'
+import MessagesClient from './pages/client/MessagesClient'
 import { NotifProvider } from './context/NotifContext'
 
 function WithNav({ children }) {
@@ -48,6 +49,7 @@ function App() {
           <Route path="/client/mon-programme"  element={<WithNotifs><MonProgrammeClient /></WithNotifs>} />
           <Route path="/client/accueil"        element={<WithNotifs><Home /></WithNotifs>} />
           <Route path="/client/notifications"  element={<WithNotifs><NotificationsClient /></WithNotifs>} />
+          <Route path="/client/messages"       element={<WithNotifs><MessagesClient /></WithNotifs>} />
           <Route path="/login"                 element={<Login />} />
 
           {/* Unified home — coach voit Dashboard, client voit AccueilClient */}

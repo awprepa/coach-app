@@ -1,9 +1,9 @@
-const CACHE_NAME = 'awprepa-v1'
-const urlsToCache = ['/']
+const CACHE_NAME = 'awprepa-v2'
+const STATIC_URLS = ['/']
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_URLS))
   )
   self.skipWaiting()
 })
@@ -18,10 +18,42 @@ self.addEventListener('activate', event => {
 })
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  )
+  const { request } = event
+  if (request.method !== 'GET') return
+
+  const url = new URL(request.url)
+
+  // Supabase API → network-first, fallback cache
+  if (url.hostname.includes('supabase.co')) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then(cache => cache.put(request, clone))
+          }
+          return response
+        })
+        .catch(() => caches.match(request))
+    )
+    return
+  }
+
+  // Assets statiques → cache-first
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(request).then(cached => {
+        const networkFetch = fetch(request).then(response => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then(cache => cache.put(request, clone))
+          }
+          return response
+        })
+        return cached || networkFetch
+      })
+    )
+  }
 })
 
 self.addEventListener('push', event => {

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
+import ChatBox from '../components/ChatBox'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 
 const OFFRES = {
@@ -68,6 +70,14 @@ export default function FicheClient() {
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [wellness, setWellness] = useState([])
   const [showAllWellness, setShowAllWellness] = useState(false)
+  const [activeTab, setActiveTab] = useState('profil') // 'profil' | 'progression' | 'messages'
+  const [progression, setProgression] = useState([]) // charges max par exercice/semaine
+  const [dupliquerLoading, setDupliquerLoading] = useState(null)
+  const [coachId, setCoachId] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => { if (user) setCoachId(user.id) })
+  }, [])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness() }, [])
@@ -131,6 +141,82 @@ export default function FicheClient() {
     })
     if (error) alert(error.message)
     else alert(`Email envoyé à ${client.email}`)
+  }
+
+  async function dupliquerProgramme(prog) {
+    if (!window.confirm(`Dupliquer le cycle "${prog.nom}" ?`)) return
+    setDupliquerLoading(prog.id)
+    try {
+      // 1. Créer le nouveau programme
+      const { data: newProg, error: e1 } = await supabase.from('programmes')
+        .insert([{ client_id: id, nom: prog.nom + ' (copie)', semaines: prog.semaines, date_debut: null }])
+        .select().single()
+      if (e1) throw e1
+
+      // 2. Récupérer les séances originales
+      const { data: seancesOrig } = await supabase.from('seances')
+        .select('*').eq('programme_id', prog.id).order('ordre')
+
+      for (const s of (seancesOrig || [])) {
+        // 3. Créer la séance
+        const { data: newSeance } = await supabase.from('seances')
+          .insert([{ programme_id: newProg.id, nom: s.nom, ordre: s.ordre, echauffement: s.echauffement }])
+          .select().single()
+
+        // 4. Récupérer et copier les exercices
+        const { data: exos } = await supabase.from('exercices')
+          .select('*').eq('seance_id', s.id).order('ordre')
+
+        for (const ex of (exos || [])) {
+          const { data: newEx } = await supabase.from('exercices')
+            .insert([{ seance_id: newSeance.id, code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions, tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite, valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id }])
+            .select().single()
+
+          // 5. Copier les charges
+          const { data: charges } = await supabase.from('charges').select('*').eq('exercice_id', ex.id)
+          if (charges?.length) {
+            await supabase.from('charges').insert(charges.map(c => ({ exercice_id: newEx.id, semaine: c.semaine, charge: c.charge, rpe_reel: c.rpe_reel })))
+          }
+        }
+      }
+      await fetchCycles()
+      alert(`Cycle "${newProg.nom}" créé avec succès !`)
+    } catch (e) {
+      alert('Erreur : ' + e.message)
+    }
+    setDupliquerLoading(null)
+  }
+
+  async function fetchProgression() {
+    // Récupère toutes les séries trackées pour ce client pour dessiner les courbes de progression
+    const { data: progs } = await supabase.from('programmes').select('id').eq('client_id', id)
+    if (!progs?.length) return
+    const { data: seancesAll } = await supabase.from('seances').select('id, nom').in('programme_id', progs.map(p => p.id))
+    if (!seancesAll?.length) return
+    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id').in('seance_id', seancesAll.map(s => s.id))
+    if (!exosAll?.length) return
+    const { data: tracking } = await supabase.from('serie_tracking').select('exercice_id, semaine, poids, valide').in('exercice_id', exosAll.map(e => e.id)).eq('valide', true)
+    if (!tracking?.length) return
+
+    // Grouper par nom d'exercice → max poids par semaine
+    const byExo = {}
+    tracking.forEach(t => {
+      const exo = exosAll.find(e => e.id === t.exercice_id)
+      if (!exo || !t.poids) return
+      const key = exo.nom
+      if (!byExo[key]) byExo[key] = {}
+      const sem = `S${t.semaine}`
+      if (!byExo[key][sem] || t.poids > byExo[key][sem]) byExo[key][sem] = t.poids
+    })
+
+    // Convertir en tableau pour Recharts
+    const result = Object.entries(byExo).map(([nom, semaines]) => ({
+      nom,
+      data: Object.entries(semaines).sort((a, b) => parseInt(a[0].slice(1)) - parseInt(b[0].slice(1)))
+        .map(([sem, poids]) => ({ semaine: sem, poids }))
+    })).filter(e => e.data.length >= 2) // au moins 2 points pour une courbe
+
+    setProgression(result)
   }
 
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
@@ -234,6 +320,72 @@ export default function FicheClient() {
         </>
       )}
 
+      {/* Onglets navigation */}
+      <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 12, padding: 3, gap: 3, marginTop: '1.5rem' }}>
+        {[
+          { k: 'profil', l: '📋 Données' },
+          { k: 'progression', l: '📈 Progression' },
+          { k: 'messages', l: '💬 Messages' },
+        ].map(t => (
+          <button key={t.k} onClick={() => { setActiveTab(t.k); if (t.k === 'progression' && progression.length === 0) fetchProgression() }} style={{
+            flex: 1, padding: '0.45rem 0.5rem', border: 'none', borderRadius: 9, fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer',
+            background: activeTab === t.k ? 'white' : 'transparent',
+            color: activeTab === t.k ? '#333333' : '#9ca3af',
+            boxShadow: activeTab === t.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            whiteSpace: 'nowrap',
+          }}>{t.l}</button>
+        ))}
+      </div>
+
+      {/* Contenu onglet Messages */}
+      {activeTab === 'messages' && (
+        <div style={{ marginTop: '1rem', background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          {!client.user_id ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>Le client doit ouvrir l'app au moins une fois pour activer la messagerie.</p>
+          ) : (
+            <ChatBox myId={coachId} otherId={client.user_id} myLabel="Coach" />
+          )}
+        </div>
+      )}
+
+      {/* Contenu onglet Progression */}
+      {activeTab === 'progression' && (
+        <div style={{ marginTop: '1rem' }}>
+          {progression.length === 0 ? (
+            <div style={styles.emptyCard}>Chargement… ou aucune série trackée pour ce client.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {progression.map(({ nom, data }) => (
+                <div key={nom} style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.88rem', color: '#333' }}>{nom}</p>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="semaine" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                      <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} unit=" kg" />
+                      <Tooltip formatter={(v) => [`${v} kg`, 'Charge max']} />
+                      <Line type="monotone" dataKey="poids" stroke="#333333" strokeWidth={2.5}
+                        dot={{ fill: '#e4f816', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Début : <strong style={{ color: '#333' }}>{data[0]?.poids} kg</strong></span>
+                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>→</span>
+                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Actuel : <strong style={{ color: data[data.length-1]?.poids > data[0]?.poids ? '#16a34a' : '#dc2626' }}>{data[data.length-1]?.poids} kg</strong></span>
+                    {data[data.length-1]?.poids > data[0]?.poids && (
+                      <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700' }}>+{(data[data.length-1]?.poids - data[0]?.poids).toFixed(1)} kg ↑</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Onglet Données (profil) */}
+      {activeTab === 'profil' && <>
+
       {/* Cycles */}
       <div style={{ marginTop: '1.5rem' }}>
         <div style={styles.sectionHeader}>
@@ -259,20 +411,29 @@ export default function FicheClient() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {visibles.map((prog, i) => {
                     const termine = isCycleTermine(prog)
+                    const loading = dupliquerLoading === prog.id
                     return (
-                      <div key={prog.id} onClick={() => navigate(`/programme/${prog.id}`)} style={{
-                        ...styles.progCard,
-                        borderLeft: `4px solid ${termine ? '#d1d5db' : i === 0 ? '#e4f816' : '#e5e7eb'}`,
-                        opacity: termine ? 0.6 : 1,
-                      }}>
-                        <div>
-                          <p style={styles.progNom}>{prog.nom}</p>
-                          <p style={styles.progMeta}>
-                            {prog.semaines} semaines
-                            {termine && <span style={{ marginLeft: '0.5rem', color: '#9ca3af' }}>· Terminé</span>}
-                          </p>
+                      <div key={prog.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div onClick={() => navigate(`/programme/${prog.id}`)} style={{
+                          ...styles.progCard, flex: 1,
+                          borderLeft: `4px solid ${termine ? '#d1d5db' : i === 0 ? '#e4f816' : '#e5e7eb'}`,
+                          opacity: termine ? 0.6 : 1,
+                        }}>
+                          <div>
+                            <p style={styles.progNom}>{prog.nom}</p>
+                            <p style={styles.progMeta}>
+                              {prog.semaines} semaines
+                              {termine && <span style={{ marginLeft: '0.5rem', color: '#9ca3af' }}>· Terminé</span>}
+                            </p>
+                          </div>
+                          <span style={styles.chevron}>›</span>
                         </div>
-                        <span style={styles.chevron}>›</span>
+                        <button
+                          onClick={() => dupliquerProgramme(prog)}
+                          disabled={loading}
+                          title="Dupliquer ce cycle"
+                          style={{ background: '#f3f4f6', border: 'none', borderRadius: 10, padding: '0.5rem 0.65rem', cursor: 'pointer', fontSize: '0.85rem', color: '#6b7280', flexShrink: 0 }}
+                        >{loading ? '⏳' : '⧉'}</button>
                       </div>
                     )
                   })}
@@ -338,7 +499,8 @@ export default function FicheClient() {
                     </p>
                     {isToday && <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{latest.date}</p>}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {latest.poids && <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: 999 }}>⚖️ {latest.poids} kg</span>}
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: scoreColor(Math.round(avg)) }} />
                     <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#374151' }}>{avg.toFixed(1)}/4</span>
                   </div>
@@ -368,15 +530,16 @@ export default function FicheClient() {
                     <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
                   </div>
                   {/* Légende colonnes */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr 1fr 40px', gap: '0.25rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 48px 36px', gap: '0.25rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}>
                     <span style={styles.colLabel}>Date</span>
-                    {INDICATORS.map(i => <span key={i.key} style={styles.colLabel}>{i.emoji} {i.label.slice(0,3)}</span>)}
+                    {INDICATORS.map(i => <span key={i.key} style={styles.colLabel}>{i.emoji}</span>)}
+                    <span style={styles.colLabel}>⚖️ kg</span>
                     <span style={styles.colLabel}>Moy.</span>
                   </div>
                   {visible.slice(1).map(w => {
                     const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
                     return (
-                      <div key={w.id} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr 1fr 40px', gap: '0.25rem', padding: '0.5rem 1rem', borderBottom: '1px solid #f9fafb', alignItems: 'center' }}>
+                      <div key={w.id} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 48px 36px', gap: '0.25rem', padding: '0.5rem 1rem', borderBottom: '1px solid #f9fafb', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
                           {new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         </span>
@@ -387,6 +550,7 @@ export default function FicheClient() {
                             ))}
                           </div>
                         ))}
+                        <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>{w.poids ?? '—'}</span>
                         <span style={{ fontSize: '0.75rem', fontWeight: '700', color: scoreColor(Math.round(a)) }}>{a.toFixed(1)}</span>
                       </div>
                     )
@@ -403,6 +567,9 @@ export default function FicheClient() {
           )
         })()}
       </div>
+
+      </> /* fin onglet profil */}
+
     </div>
   )
 }

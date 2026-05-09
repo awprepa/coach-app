@@ -43,6 +43,15 @@ function IconGPS({ active }) {
   )
 }
 
+function IconChat({ active }) {
+  const s = active ? '#1a1a1a' : '#b0b8c1'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
 export default function ClientBottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -52,13 +61,15 @@ export default function ClientBottomNav() {
   const isHome      = p === '/' || p === '/client/accueil'
   const isProgramme = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'
   const isNotifs    = p === '/client/notifications'
+  const isMessages  = p === '/client/messages'
   const isGPS       = p.startsWith('/client/gps')
 
   const tabs = [
-    { label: 'Accueil',     Icon: IconHome,      active: isHome,      to: '/' },
-    { label: 'Programme',   Icon: IconProgramme, active: isProgramme, to: '/client/mon-programme' },
-    { label: 'Notifs',      Icon: IconBell,      active: isNotifs,    to: '/client/notifications', badge: unread },
-    { label: 'GPS',         Icon: IconGPS,       active: isGPS,       to: '/client/gps' },
+    { label: 'Accueil',   Icon: IconHome,      active: isHome,      to: '/' },
+    { label: 'Programme', Icon: IconProgramme, active: isProgramme, to: '/client/mon-programme' },
+    { label: 'Notifs',    Icon: IconBell,      active: isNotifs,    to: '/client/notifications', badge: unread },
+    { label: 'Messages',  Icon: IconChat,      active: isMessages,  to: '/client/messages' },
+    { label: 'GPS',       Icon: IconGPS,       active: isGPS,       to: '/client/gps' },
   ]
 
   return (

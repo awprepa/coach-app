@@ -121,6 +121,7 @@ const I = {
 
 function WellnessOverlay({ clientId, clientName, onDone }) {
   const [vals, setVals]     = useState({ sommeil: 0, fatigue: 0, douleurs: 0, stress: 0 })
+  const [poids, setPoids]   = useState('')
   const [saving, setSaving] = useState(false)
   const allFilled = Object.values(vals).every(v => v > 0)
 
@@ -128,10 +129,9 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
     if (!allFilled) return
     setSaving(true)
     const today = new Date().toISOString().slice(0, 10)
-    await supabase.from('wellness').upsert(
-      { client_id: clientId, date: today, ...vals },
-      { onConflict: 'client_id,date' }
-    )
+    const payload = { client_id: clientId, date: today, ...vals }
+    if (poids !== '' && !isNaN(parseFloat(poids))) payload.poids = parseFloat(poids)
+    await supabase.from('wellness').upsert(payload, { onConflict: 'client_id,date' })
     // Notifier le coach
     try {
       const coachId = await getCoachId()
@@ -172,6 +172,18 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
             </div>
           </div>
         ))}
+        {/* Poids (optionnel) */}
+        <div style={{ marginBottom: '1.1rem' }}>
+          <p style={W.qLabel}>⚖️ Poids <span style={{ fontWeight: '400', color: '#9ca3af', fontSize: '0.75rem' }}>(optionnel)</span></p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="number" placeholder="ex : 75.5" value={poids}
+              onChange={e => setPoids(e.target.value)}
+              style={{ flex: 1, padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '1rem', fontWeight: '700', outline: 'none', textAlign: 'center' }}
+            />
+            <span style={{ fontWeight: '700', color: '#9ca3af', fontSize: '0.9rem' }}>kg</span>
+          </div>
+        </div>
         <button onClick={submit} disabled={!allFilled || saving}
           style={{ ...W.submitBtn, background: allFilled ? '#333333' : '#e5e7eb', color: allFilled ? '#e4f816' : '#9ca3af', cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider mon bilan'}
