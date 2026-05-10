@@ -5,17 +5,42 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { useMessages } from '../../hooks/useMessages'
 import { sendPushOnly } from '../../notifs'
 
-// Hauteurs fixes
-const HEADER_H  = 58   // px
-const INPUT_H   = 60   // px
-const NAV_H     = 82   // px — boutons (~66px) + safe-area minHeight 16px
+const HEADER_H = 58
+const INPUT_H  = 60
+const NAV_H    = 82
+
+// Détecte la hauteur du clavier virtuel via visualViewport
+function useKeyboardHeight() {
+  const [kbH, setKbH] = useState(0)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      const diff = window.innerHeight - vv.height - vv.offsetTop
+      setKbH(Math.max(0, diff))
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+  return kbH
+}
 
 function ChatInner({ clientId, coachId }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
-  const [texte, setTexte] = useState('')
+  const [texte, setTexte]   = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
+  const kbH = useKeyboardHeight()
+
+  // Quand clavier ouvert : barre juste au-dessus du clavier
+  // Quand clavier fermé  : barre au-dessus de la bottom nav
+  const inputBottom  = kbH > 0 ? kbH : NAV_H
+  const msgsBottom   = inputBottom + INPUT_H
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -39,12 +64,12 @@ function ChatInner({ clientId, coachId }) {
 
   return (
     <>
-      {/* ── Messages (scroll) ─────────────────────────────────────── */}
+      {/* ── Messages ──────────────────────────────────────────── */}
       <div style={{
         position: 'fixed',
         top: HEADER_H,
         left: 0, right: 0,
-        bottom: `calc(${INPUT_H}px + ${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
+        bottom: msgsBottom,
         overflowY: 'auto',
         background: '#f5f5f5',
         padding: '0.75rem 0.75rem 0.25rem',
@@ -81,11 +106,11 @@ function ChatInner({ clientId, coachId }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* ── Barre de saisie ───────────────────────────────────────── */}
+      {/* ── Barre de saisie ───────────────────────────────────── */}
       <div style={{
         position: 'fixed',
         left: 0, right: 0,
-        bottom: `calc(${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
+        bottom: inputBottom,
         height: INPUT_H,
         background: 'white',
         borderTop: '1px solid #f0f0f0',
@@ -167,7 +192,7 @@ export default function MessagesClient() {
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
+      {/* ── Header ───────────────────────────────────────────────── */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0,
         height: HEADER_H,
@@ -188,25 +213,15 @@ export default function MessagesClient() {
         <div style={{ width: 32 }} />
       </div>
 
-      {/* ── Contenu ─────────────────────────────────────────────────── */}
+      {/* ── Contenu ──────────────────────────────────────────────── */}
       {loadError ? (
-        <div style={{
-          position: 'fixed', top: HEADER_H, left: 0, right: 0,
-          bottom: `calc(${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: '#f5f5f5', gap: '0.5rem',
-        }}>
+        <div style={{ position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: NAV_H, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', gap: '0.5rem' }}>
           <p style={{ fontSize: '1.5rem', margin: 0 }}>💬</p>
           <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
           <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Contacte ton coach pour activer la messagerie.</p>
         </div>
       ) : !clientId || !coachId ? (
-        <div style={{
-          position: 'fixed', top: HEADER_H, left: 0, right: 0,
-          bottom: `calc(${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: '#f5f5f5',
-        }}>
+        <div style={{ position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: NAV_H, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
           <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
         </div>
       ) : (
