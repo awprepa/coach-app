@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMessages } from '../hooks/useMessages'
 
-export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend }) {
+export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend, fullscreen = false }) {
   const { messages, loading, sendMessage, markRead } = useMessages(myId, otherId)
   const [texte, setTexte] = useState('')
   const [sending, setSending] = useState(false)
@@ -29,9 +29,9 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend })
   if (loading) return <p style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>Chargement…</p>
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 300 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: fullscreen ? '100%' : undefined, minHeight: fullscreen ? 0 : 300 }}>
       {/* Zone messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 380 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: fullscreen ? undefined : 380 }}>
         {messages.length === 0 ? (
           <p style={{ textAlign: 'center', color: '#d1d5db', fontSize: '0.82rem', padding: '2rem' }}>Aucun message. Commencez la conversation !</p>
         ) : (

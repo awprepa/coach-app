@@ -50,54 +50,61 @@ export default function MessagesClient() {
 
   return (
     <div style={S.page}>
+      {/* Header */}
       <div style={S.header}>
         <button onClick={() => navigate(-1)} style={S.backBtn}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <span style={S.headerTitle}>💬 Messages</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={S.avatar}>A</div>
+          <span style={S.headerTitle}>Arthur</span>
+        </div>
         <div style={{ width: 32 }} />
       </div>
 
-      <div style={S.content}>
+      {/* Zone chat : flex: 1 → prend tout l'espace restant entre header et bottom nav */}
+      <div style={S.chatZone}>
         {loadError ? (
-          <div style={{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>💬</p>
-            <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Messagerie indisponible</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Contacte ton coach pour activer la messagerie.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.5rem' }}>
+            <p style={{ fontSize: '1.5rem', margin: 0 }}>💬</p>
+            <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Contacte ton coach pour activer la messagerie.</p>
           </div>
         ) : !clientId || !coachId ? (
-          <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem', fontSize: '0.88rem' }}>Chargement…</p>
-        ) : (
-          <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ padding: '0.75rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: '#e4f816' }}>A</div>
-              <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>Arthur</p>
-            </div>
-            <ChatBox
-              myId={clientId}
-              otherId={coachId}
-              myLabel="Moi"
-              onAfterSend={(msg) => sendPushOnly(coachId, {
-                titre: 'Message d\'un client',
-                corps: msg,
-                lien: '/messages',
-              })}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
           </div>
+        ) : (
+          <ChatBox
+            myId={clientId}
+            otherId={coachId}
+            myLabel="Moi"
+            fullscreen
+            onAfterSend={(msg) => sendPushOnly(coachId, {
+              titre: 'Message d\'un client',
+              corps: msg,
+              lien: '/messages',
+            })}
+          />
         )}
       </div>
 
-      <ClientBottomNav />
+      {/* Bottom nav : toujours en bas, ne grossit jamais */}
+      <div style={S.navWrapper}>
+        <ClientBottomNav />
+      </div>
     </div>
   )
 }
 
 const S = {
-  page:        { minHeight: '100vh', background: '#f0f0f0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
-  header:      { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  backBtn:     { background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' },
-  headerTitle: { color: 'white', fontWeight: '800', fontSize: '1rem' },
-  content:     { padding: '1rem' },
+  page:       { height: '100dvh', display: 'flex', flexDirection: 'column', background: 'white', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', overflow: 'hidden' },
+  header:     { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
+  backBtn:    { background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' },
+  avatar:     { width: 30, height: 30, borderRadius: '50%', background: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: '#333333' },
+  headerTitle:{ color: 'white', fontWeight: '700', fontSize: '0.95rem' },
+  chatZone:   { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' },
+  navWrapper: { flexShrink: 0 },
 }
