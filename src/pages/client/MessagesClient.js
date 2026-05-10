@@ -18,20 +18,27 @@ export default function MessagesClient() {
         if (!userId) { setLoadError(true); return }
         setClientId(userId)
 
-        const { data: setting, error } = await supabase
-          .from('app_settings').select('value').eq('key', 'coach_user_id').maybeSingle()
+        let foundCoachId = null
 
-        if (error) {
-          console.error('[MessagesClient] app_settings erreur :', error?.message)
+        // 1. Chercher le coachId dans les messages déjà reçus (le plus fiable)
+        const { data: msgRecu } = await supabase
+          .from('messages').select('from_id').eq('to_id', userId).limit(1)
+        if (msgRecu?.length) {
+          foundCoachId = msgRecu[0].from_id
+        }
+
+        // 2. Fallback : app_settings
+        if (!foundCoachId) {
+          const { data: setting } = await supabase
+            .from('app_settings').select('value').eq('key', 'coach_user_id').maybeSingle()
+          if (setting?.value) foundCoachId = setting.value
+        }
+
+        if (!foundCoachId) {
           setLoadError(true)
           return
         }
-        if (!setting?.value) {
-          console.warn('[MessagesClient] coach_user_id absent de app_settings — coach doit ouvrir le Dashboard')
-          setLoadError(true)
-          return
-        }
-        setCoachId(setting.value)
+        setCoachId(foundCoachId)
       } catch (e) {
         console.error('[MessagesClient] erreur load :', e)
         setLoadError(true)
