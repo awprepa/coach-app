@@ -60,9 +60,8 @@ export function useMessages(myId, otherId) {
     }
     setMessages(prev => [...prev, tempMsg])
 
-    const { data, error } = await supabase.from('messages')
+    const { error } = await supabase.from('messages')
       .insert([{ from_id: myId, to_id: otherId, corps: corps.slice(0, 500) }])
-      .select().single()
 
     if (error) {
       // Annuler le message optimiste si erreur
@@ -70,8 +69,7 @@ export function useMessages(myId, otherId) {
       console.error('[useMessages] sendMessage error:', error.message)
       return false
     }
-    // Remplacer le temp par la vraie donnée DB
-    setMessages(prev => prev.map(m => m.id === tempId ? data : m))
+    // Le message temp reste affiché, Realtime le remplacera par la vraie entrée DB
     return true
   }
 

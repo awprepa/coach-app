@@ -19,9 +19,10 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend })
   async function envoyer() {
     if (!texte.trim()) return
     setSending(true)
-    const ok = await sendMessage(texte)
-    if (ok && onAfterSend) onAfterSend()
-    setTexte('')
+    const corps = texte
+    setTexte('') // vider immédiatement pour UX
+    sendMessage(corps) // fire-and-forget, l'optimistic update gère l'affichage
+    if (onAfterSend) onAfterSend() // toujours notifier, indépendamment du résultat DB
     setSending(false)
   }
 
