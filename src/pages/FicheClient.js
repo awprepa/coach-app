@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import ChatBox from '../components/ChatBox'
-import { sendNotif } from '../notifs'
+import { sendPushOnly } from '../notifs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 
@@ -348,10 +348,9 @@ export default function FicheClient() {
               myId={coachId}
               otherId={client.user_id}
               myLabel="Coach"
-              onAfterSend={() => sendNotif(client.user_id, {
+              onAfterSend={() => sendPushOnly(client.user_id, {
                 titre: '💬 Message de ton coach',
                 corps: 'Tu as reçu un nouveau message',
-                type: 'info',
                 lien: '/client/messages',
               })}
             />

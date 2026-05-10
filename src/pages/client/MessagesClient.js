@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import ChatBox from '../../components/ChatBox'
-import { sendNotif } from '../../notifs'
+import { sendPushOnly } from '../../notifs'
 
 export default function MessagesClient() {
   const navigate = useNavigate()
@@ -79,11 +79,10 @@ export default function MessagesClient() {
               myId={clientId}
               otherId={coachId}
               myLabel="Moi"
-              onAfterSend={() => sendNotif(coachId, {
-                titre: '💬 Message d\'un client',
-                corps: 'Tu as reçu un nouveau message',
-                type: 'info',
-                lien: '/',
+              onAfterSend={() => sendPushOnly(coachId, {
+                titre: '💬 Nouveau message',
+                corps: 'Un client t\'a envoyé un message',
+                lien: '/messages',
               })}
             />
           </div>

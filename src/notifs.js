@@ -35,3 +35,16 @@ export async function sendNotif(destinataireId, { titre, corps = '', type = 'inf
 
   return { ok: true }
 }
+
+// Push uniquement — sans entrée dans l'onglet 🔔 (utilisé pour les messages)
+export async function sendPushOnly(destinataireId, { titre, corps = '', lien = '' }) {
+  if (!destinataireId) return
+  try {
+    await supabase.functions.invoke('send-push', {
+      body: JSON.stringify({ record: { destinataire_id: destinataireId, titre, corps, type: 'info', lien } }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (e) {
+    console.warn('[sendPushOnly] Push non envoyé :', e?.message)
+  }
+}

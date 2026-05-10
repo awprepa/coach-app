@@ -24,6 +24,7 @@ import EchauffementsTemplates from './pages/EchauffementsTemplates'
 import ImportClientExcel from './pages/ImportClientExcel'
 import NotificationsClient from './pages/client/NotificationsClient'
 import MessagesClient from './pages/client/MessagesClient'
+import CoachMessages from './pages/CoachMessages'
 import { NotifProvider } from './context/NotifContext'
 
 function WithNav({ children }) {
@@ -69,6 +70,7 @@ function App() {
           <Route path="/gps"                          element={<WithNav><GPS /></WithNav>} />
           <Route path="/tests"                        element={<WithNav><Tests /></WithNav>} />
           <Route path="/modeles"                      element={<WithNav><SeanceTemplates /></WithNav>} />
+          <Route path="/messages"                     element={<WithNav><CoachMessages /></WithNav>} />
         </Routes>
       </AuthGate>
     </BrowserRouter>

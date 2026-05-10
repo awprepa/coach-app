@@ -39,6 +39,7 @@ export default function CoachNav() {
         <Link to="/tests" style={navLink}>Tests</Link>
         <Link to="/modeles" style={navLink}>Modèles de séances</Link>
         <Link to="/echauffements" style={navLink}>Échauffements</Link>
+        <Link to="/messages" style={navLink}>💬 Messagerie</Link>
       </div>
       <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
     </nav>
