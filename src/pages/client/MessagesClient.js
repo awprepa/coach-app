@@ -91,10 +91,7 @@ export default function MessagesClient() {
         )}
       </div>
 
-      {/* Bottom nav : toujours en bas, ne grossit jamais */}
-      <div style={S.navWrapper}>
-        <ClientBottomNav />
-      </div>
+      <ClientBottomNav />
     </div>
   )
 }
@@ -105,6 +102,5 @@ const S = {
   backBtn:    { background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' },
   avatar:     { width: 30, height: 30, borderRadius: '50%', background: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: '#333333' },
   headerTitle:{ color: 'white', fontWeight: '700', fontSize: '0.95rem' },
-  chatZone:   { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' },
-  navWrapper: { flexShrink: 0 },
+  chatZone:   { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', paddingBottom: 65 },
 }

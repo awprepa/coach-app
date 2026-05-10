@@ -29,9 +29,9 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend, f
   if (loading) return <p style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>Chargement…</p>
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: fullscreen ? '100%' : undefined, minHeight: fullscreen ? 0 : 300 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: fullscreen ? 1 : undefined, minHeight: fullscreen ? 0 : 300 }}>
       {/* Zone messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: fullscreen ? undefined : 380 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: fullscreen ? undefined : 380 }}>
         {messages.length === 0 ? (
           <p style={{ textAlign: 'center', color: '#d1d5db', fontSize: '0.82rem', padding: '2rem' }}>Aucun message. Commencez la conversation !</p>
         ) : (
