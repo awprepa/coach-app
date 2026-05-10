@@ -51,7 +51,7 @@ export default function GPSClient() {
       if (!userId) { navigate('/login'); return }
 
       const { data: client } = await supabase
-        .from('clients').select('id, prenom, nom').eq('user_id', userId).single()
+        .from('clients').select('id, prenom, nom').eq('user_id', userId).maybeSingle()
       if (!client) { setLoading(false); return }
       setClientId(client.id)
 

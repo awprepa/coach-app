@@ -26,7 +26,7 @@ export default function TestsClient() {
     if (!user) return
 
     const { data: clientData } = await supabase
-      .from('clients').select('id, prenom, nom').eq('user_id', user.id).single()
+      .from('clients').select('id, prenom, nom').eq('user_id', user.id).maybeSingle()
     if (!clientData) { setLoading(false); return }
     setClient(clientData)
 

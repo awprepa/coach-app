@@ -37,7 +37,7 @@ export default function WellnessClient() {
       const { data: sess } = await supabase.auth.getSession()
       const userId = sess?.session?.user?.id
       if (!userId) return
-      const { data: client } = await supabase.from('clients').select('id').eq('user_id', userId).single()
+      const { data: client } = await supabase.from('clients').select('id').eq('user_id', userId).maybeSingle()
       if (!client) return
       const { data } = await supabase.from('wellness')
         .select('*').eq('client_id', client.id)

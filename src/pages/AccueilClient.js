@@ -228,12 +228,12 @@ export default function AccueilClient() {
 
       // Chercher par user_id d'abord
       let { data: clientData } = await supabase
-        .from('clients').select('*').eq('user_id', user.id).single()
+        .from('clients').select('*').eq('user_id', user.id).maybeSingle()
 
       // Fallback : chercher par email et renseigner user_id si manquant
       if (!clientData && user.email) {
         const { data: byEmail } = await supabase
-          .from('clients').select('*').eq('email', user.email).single()
+          .from('clients').select('*').eq('email', user.email).maybeSingle()
         if (byEmail) {
           // Renseigne user_id pour les prochaines fois
           await supabase.from('clients').update({ user_id: user.id }).eq('id', byEmail.id)

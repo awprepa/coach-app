@@ -20,7 +20,7 @@ export default function MonProgrammeClient() {
       if (!userId) { navigate('/login'); return }
 
       const { data: client } = await supabase
-        .from('clients').select('id').eq('user_id', userId).single()
+        .from('clients').select('id').eq('user_id', userId).maybeSingle()
       if (!client) { navigate('/'); return }
 
       const { data: progs } = await supabase

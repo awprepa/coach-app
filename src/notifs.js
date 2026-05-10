@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 
 export async function getCoachId() {
-  const { data } = await supabase.from('app_settings').select('value').eq('key', 'coach_user_id').single()
+  const { data } = await supabase.from('app_settings').select('value').eq('key', 'coach_user_id').maybeSingle()
   return data?.value || null
 }
 
