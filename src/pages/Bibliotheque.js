@@ -2,11 +2,13 @@ import { useState } from 'react'
 import BibliothequeExercices from './BibliothequeExercices'
 import EchauffementsTemplates from './EchauffementsTemplates'
 import SeanceTemplates from './SeanceTemplates'
+import CycleTemplates from './CycleTemplates'
 
 const TABS = [
   { key: 'exercices',      label: 'Exercices' },
   { key: 'echauffements',  label: 'Échauffements' },
   { key: 'modeles',        label: 'Modèles de séances' },
+  { key: 'cycles',         label: 'Templates de cycles' },
 ]
 
 export default function Bibliotheque() {
@@ -33,6 +35,9 @@ export default function Bibliotheque() {
       </div>
       <div style={{ display: tab === 'modeles' ? 'block' : 'none' }}>
         <SeanceTemplates />
+      </div>
+      <div style={{ display: tab === 'cycles' ? 'block' : 'none' }}>
+        <CycleTemplates />
       </div>
     </div>
   )

@@ -23,6 +23,8 @@ import ImportClientExcel from './pages/ImportClientExcel'
 import NotificationsClient from './pages/client/NotificationsClient'
 import MessagesClient from './pages/client/MessagesClient'
 import CoachMessages from './pages/CoachMessages'
+import ChargeEntrainement from './pages/ChargeEntrainement'
+import Paiements from './pages/Paiements'
 import { NotifProvider } from './context/NotifContext'
 
 function WithNav({ children }) {
@@ -67,6 +69,8 @@ function App() {
           <Route path="/gps"                          element={<WithNav><GPS /></WithNav>} />
           <Route path="/tests"                        element={<WithNav><Tests /></WithNav>} />
           <Route path="/messages"                     element={<WithNav><CoachMessages /></WithNav>} />
+          <Route path="/charge"                       element={<WithNav><ChargeEntrainement /></WithNav>} />
+          <Route path="/paiements"                    element={<WithNav><Paiements /></WithNav>} />
         </Routes>
       </AuthGate>
     </BrowserRouter>
