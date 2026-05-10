@@ -93,7 +93,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
       const evs = eventsMap[ds] || []; const inCycle = !!cycleW
       cells.push(
         <div key={ds} onClick={() => onDayClick(day)} style={{
-          height: 72, overflow: 'hidden', boxSizing: 'border-box',
+          height: 46, overflow: 'hidden', boxSizing: 'border-box',
           background: isSel ? '#333333' : inCycle ? '#fffef5' : 'white',
           borderRadius: 8, padding: '5px 4px', cursor: 'pointer',
           border: isToday ? '2px solid #e4f816' : inCycle ? '1px solid #f0ead0' : '1px solid #f3f4f6',
@@ -194,8 +194,8 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
 }
 
 export default function Calendrier({ clientId, readOnly = false, programmeDebut, programmeSemaines = 8, seances = [], onViewSeance }) {
-  const [vue, setVue]                 = useState(programmeDebut ? 'periode' : 'mois')
-  const [currentDate, setCurrentDate] = useState(programmeDebut ? new Date(programmeDebut + 'T00:00:00') : new Date())
+  const [vue, setVue]                 = useState('mois')
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [evenements, setEvenements]   = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
   const [form, setForm]               = useState({ type: 'seance', titre: '', seanceId: '', description: '' })
