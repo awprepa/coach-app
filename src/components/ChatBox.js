@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMessages } from '../hooks/useMessages'
 
-export default function ChatBox({ myId, otherId, myLabel = 'Moi' }) {
+export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend }) {
   const { messages, loading, sendMessage, markRead } = useMessages(myId, otherId)
   const [texte, setTexte] = useState('')
   const [sending, setSending] = useState(false)
@@ -19,7 +19,8 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi' }) {
   async function envoyer() {
     if (!texte.trim()) return
     setSending(true)
-    await sendMessage(texte)
+    const ok = await sendMessage(texte)
+    if (ok && onAfterSend) onAfterSend()
     setTexte('')
     setSending(false)
   }

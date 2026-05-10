@@ -10,8 +10,26 @@ export function usePush() {
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !VAPID_PUBLIC_KEY) return
     navigator.serviceWorker.ready.then(reg => {
-      reg.pushManager.getSubscription().then(sub => {
-        setSubscribed(!!sub)
+      reg.pushManager.getSubscription().then(async sub => {
+        if (sub) {
+          setSubscribed(true)
+          // Vérifier que la subscription est bien enregistrée en base (peut être perdue après update SW)
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: existing } = await supabase
+              .from('push_subscriptions').select('id').eq('user_id', user.id)
+            if (!existing?.length) {
+              // Subscription présente dans le browser mais absente en base → re-sauvegarder
+              await supabase.from('push_subscriptions').upsert([{
+                user_id: user.id,
+                subscription: sub.toJSON()
+              }], { onConflict: 'user_id' })
+              console.log('[usePush] Subscription re-sauvegardée en base après update SW')
+            }
+          }
+        } else {
+          setSubscribed(false)
+        }
       })
     })
   }, [])

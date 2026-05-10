@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import ChatBox from '../components/ChatBox'
+import { sendNotif } from '../notifs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 
@@ -343,7 +344,17 @@ export default function FicheClient() {
           {!client.user_id ? (
             <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>Le client doit ouvrir l'app au moins une fois pour activer la messagerie.</p>
           ) : (
-            <ChatBox myId={coachId} otherId={client.user_id} myLabel="Coach" />
+            <ChatBox
+              myId={coachId}
+              otherId={client.user_id}
+              myLabel="Coach"
+              onAfterSend={() => sendNotif(client.user_id, {
+                titre: '💬 Message de ton coach',
+                corps: 'Tu as reçu un nouveau message',
+                type: 'info',
+                lien: '/client/messages',
+              })}
+            />
           )}
         </div>
       )}

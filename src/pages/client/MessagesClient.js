@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import ChatBox from '../../components/ChatBox'
+import { sendNotif } from '../../notifs'
 
 export default function MessagesClient() {
   const navigate = useNavigate()
@@ -74,7 +75,17 @@ export default function MessagesClient() {
               <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: '#e4f816' }}>C</div>
               <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>Votre coach</p>
             </div>
-            <ChatBox myId={clientId} otherId={coachId} myLabel="Moi" />
+            <ChatBox
+              myId={clientId}
+              otherId={coachId}
+              myLabel="Moi"
+              onAfterSend={() => sendNotif(coachId, {
+                titre: '💬 Message d\'un client',
+                corps: 'Tu as reçu un nouveau message',
+                type: 'info',
+                lien: '/',
+              })}
+            />
           </div>
         )}
       </div>
