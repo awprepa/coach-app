@@ -29,13 +29,12 @@ function useKeyboardHeight() {
   return kbH
 }
 
-function ChatInner({ clientId, coachId }) {
+function ChatInner({ clientId, coachId, kbH }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
   const [texte, setTexte]   = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
-  const kbH = useKeyboardHeight()
 
   // Quand clavier ouvert : barre juste au-dessus du clavier
   // Quand clavier fermé  : barre au-dessus de la bottom nav
@@ -159,6 +158,8 @@ export default function MessagesClient() {
   const [clientId, setClientId] = useState(null)
   const [coachId,  setCoachId]  = useState(null)
   const [loadError, setLoadError] = useState(false)
+  const kbH = useKeyboardHeight()
+  const keyboardOpen = kbH > 50 // seuil pour éviter les faux positifs
 
   useEffect(() => {
     async function load() {
@@ -225,10 +226,11 @@ export default function MessagesClient() {
           <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
         </div>
       ) : (
-        <ChatInner clientId={clientId} coachId={coachId} />
+        <ChatInner clientId={clientId} coachId={coachId} kbH={kbH} />
       )}
 
-      <ClientBottomNav />
+      {/* Masquée quand le clavier est ouvert pour ne pas apparaître entre la barre et le clavier */}
+      {!keyboardOpen && <ClientBottomNav />}
     </div>
   )
 }
