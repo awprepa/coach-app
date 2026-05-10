@@ -178,10 +178,10 @@ export default function CoachMessages() {
                   myId={coachId}
                   otherId={selected}
                   myLabel="Coach"
-                  onAfterSend={() => {
+                  onAfterSend={(msg) => {
                     sendPushOnly(selected, {
-                      titre: '💬 Message de ton coach',
-                      corps: 'Tu as reçu un nouveau message',
+                      titre: '💬 Message de Arthur',
+                      corps: msg,
                       lien: '/client/messages',
                     })
                     // Rafraîchir la liste des conversations pour mettre à jour le lastMsg

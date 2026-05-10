@@ -22,7 +22,7 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend })
     const corps = texte
     setTexte('') // vider immédiatement pour UX
     sendMessage(corps) // fire-and-forget, l'optimistic update gère l'affichage
-    if (onAfterSend) onAfterSend() // toujours notifier, indépendamment du résultat DB
+    if (onAfterSend) onAfterSend(corps) // passer le contenu pour la notif push
     setSending(false)
   }
 

@@ -348,9 +348,9 @@ export default function FicheClient() {
               myId={coachId}
               otherId={client.user_id}
               myLabel="Coach"
-              onAfterSend={() => sendPushOnly(client.user_id, {
-                titre: '💬 Message de ton coach',
-                corps: 'Tu as reçu un nouveau message',
+              onAfterSend={(msg) => sendPushOnly(client.user_id, {
+                titre: '💬 Message de Arthur',
+                corps: msg,
                 lien: '/client/messages',
               })}
             />

@@ -72,16 +72,16 @@ export default function MessagesClient() {
         ) : (
           <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div style={{ padding: '0.75rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: '#e4f816' }}>C</div>
-              <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>Votre coach</p>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: '#e4f816' }}>A</div>
+              <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>Arthur</p>
             </div>
             <ChatBox
               myId={clientId}
               otherId={coachId}
               myLabel="Moi"
-              onAfterSend={() => sendPushOnly(coachId, {
-                titre: '💬 Nouveau message',
-                corps: 'Un client t\'a envoyé un message',
+              onAfterSend={(msg) => sendPushOnly(coachId, {
+                titre: '💬 Message d\'un client',
+                corps: msg,
                 lien: '/messages',
               })}
             />
