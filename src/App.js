@@ -8,10 +8,9 @@ import FicheClient from './pages/FicheClient'
 import NouveauProgramme from './pages/NouveauProgramme'
 import Programme from './pages/Programme'
 import Seance from './pages/Seance'
-import BibliothequeExercices from './pages/BibliothequeExercices'
+import Bibliotheque from './pages/Bibliotheque'
 import GPS from './pages/GPS'
 import Tests from './pages/Tests'
-import SeanceTemplates from './pages/SeanceTemplates'
 import Login from './pages/Login'
 import ProgrammeClient from './pages/client/ProgrammeClient'
 import SeanceClient from './pages/client/SeanceClient'
@@ -20,7 +19,6 @@ import MonProgrammeClient from './pages/client/MonProgrammeClient'
 import WellnessClient from './pages/client/WellnessClient'
 import GPSClient from './pages/client/GPSClient'
 import SeanceProjection from './pages/SeanceProjection'
-import EchauffementsTemplates from './pages/EchauffementsTemplates'
 import ImportClientExcel from './pages/ImportClientExcel'
 import NotificationsClient from './pages/client/NotificationsClient'
 import MessagesClient from './pages/client/MessagesClient'
@@ -65,11 +63,9 @@ function App() {
           <Route path="/programme/:id"                element={<WithNav><Programme /></WithNav>} />
           <Route path="/seance/:id"                   element={<WithNav><Seance /></WithNav>} />
           <Route path="/seance/:id/projection"        element={<SeanceProjection />} />
-          <Route path="/echauffements"                element={<WithNav><EchauffementsTemplates /></WithNav>} />
-          <Route path="/bibliotheque"                 element={<WithNav><BibliothequeExercices /></WithNav>} />
+          <Route path="/bibliotheque"                 element={<WithNav><Bibliotheque /></WithNav>} />
           <Route path="/gps"                          element={<WithNav><GPS /></WithNav>} />
           <Route path="/tests"                        element={<WithNav><Tests /></WithNav>} />
-          <Route path="/modeles"                      element={<WithNav><SeanceTemplates /></WithNav>} />
           <Route path="/messages"                     element={<WithNav><CoachMessages /></WithNav>} />
         </Routes>
       </AuthGate>
