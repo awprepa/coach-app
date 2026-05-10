@@ -180,7 +180,7 @@ export default function CoachMessages() {
                   myLabel="Coach"
                   onAfterSend={(msg) => {
                     sendPushOnly(selected, {
-                      titre: '💬 Message de Arthur',
+                      titre: 'Message de Arthur',
                       corps: msg,
                       lien: '/client/messages',
                     })

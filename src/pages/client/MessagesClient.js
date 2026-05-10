@@ -80,7 +80,7 @@ export default function MessagesClient() {
               otherId={coachId}
               myLabel="Moi"
               onAfterSend={(msg) => sendPushOnly(coachId, {
-                titre: '💬 Message d\'un client',
+                titre: 'Message d\'un client',
                 corps: msg,
                 lien: '/messages',
               })}
