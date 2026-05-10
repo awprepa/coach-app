@@ -8,9 +8,7 @@ import { sendPushOnly } from '../../notifs'
 // Hauteurs fixes
 const HEADER_H  = 58   // px
 const INPUT_H   = 60   // px
-// La ClientBottomNav est fixed bottom:0, sa hauteur = ~65px boutons + safe-area (~20px min)
-// On utilise env(safe-area-inset-bottom) en CSS directement via style inline string → impossible
-// On passe par une variable CSS dans l'élément racine
+const NAV_H     = 82   // px — boutons (~66px) + safe-area minHeight 16px
 
 function ChatInner({ clientId, coachId }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
@@ -46,7 +44,7 @@ function ChatInner({ clientId, coachId }) {
         position: 'fixed',
         top: HEADER_H,
         left: 0, right: 0,
-        bottom: `calc(${INPUT_H}px + 65px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(${INPUT_H}px + ${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
         overflowY: 'auto',
         background: '#f5f5f5',
         padding: '0.75rem 0.75rem 0.25rem',
@@ -87,7 +85,7 @@ function ChatInner({ clientId, coachId }) {
       <div style={{
         position: 'fixed',
         left: 0, right: 0,
-        bottom: `calc(65px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
         height: INPUT_H,
         background: 'white',
         borderTop: '1px solid #f0f0f0',
@@ -194,7 +192,7 @@ export default function MessagesClient() {
       {loadError ? (
         <div style={{
           position: 'fixed', top: HEADER_H, left: 0, right: 0,
-          bottom: `calc(65px + env(safe-area-inset-bottom, 0px))`,
+          bottom: `calc(${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           background: '#f5f5f5', gap: '0.5rem',
         }}>
@@ -205,7 +203,7 @@ export default function MessagesClient() {
       ) : !clientId || !coachId ? (
         <div style={{
           position: 'fixed', top: HEADER_H, left: 0, right: 0,
-          bottom: `calc(65px + env(safe-area-inset-bottom, 0px))`,
+          bottom: `calc(${NAV_H}px + env(safe-area-inset-bottom, 0px))`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: '#f5f5f5',
         }}>
