@@ -20,7 +20,7 @@ export default function GlobalTimerBubble() {
       onClick={() => seanceId && navigate(`/client/seance/${seanceId}`)}
       style={{
         position: 'fixed',
-        top: 'calc(env(safe-area-inset-top, 0px) + 100px)',
+        top: 'calc(env(safe-area-inset-top, 0px) + 130px)',
         right: 14,
         zIndex: 999,
         background: isDone ? '#14532d' : '#1a1a1a',

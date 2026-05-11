@@ -71,16 +71,17 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close()
   const lien = event.notification.data?.lien || '/'
+  const fullUrl = new URL(lien, self.location.origin).href
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.focus()
-          client.navigate(lien)
+          if ('navigate' in client) client.navigate(fullUrl)
           return
         }
       }
-      return clients.openWindow(lien)
+      return clients.openWindow(fullUrl)
     })
   )
 })
