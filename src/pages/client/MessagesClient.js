@@ -33,10 +33,10 @@ function ChatInner({ clientId, coachId }) {
   const inputRef  = useRef(null)
   const keyboardOpen = useKeyboardOpen()
 
-  // Clavier ouvert : barre collée en bas de l'écran visible (le navigateur la remonte auto)
-  // Clavier fermé  : barre au-dessus de la bottom nav
+  // Clavier ouvert → barre à bottom:0 (iOS la place juste au-dessus du clavier)
+  // Clavier fermé  → barre au-dessus de la bottom nav
   const inputBottom = keyboardOpen ? 0 : NAV_H
-  const msgsBottom  = inputBottom + INPUT_H
+  const msgsBottom  = INPUT_H + (keyboardOpen ? 0 : NAV_H)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -155,7 +155,6 @@ export default function MessagesClient() {
   const [clientId, setClientId] = useState(null)
   const [coachId,  setCoachId]  = useState(null)
   const [loadError, setLoadError] = useState(false)
-  const keyboardOpen = useKeyboardOpen()
 
   useEffect(() => {
     async function load() {
@@ -225,8 +224,7 @@ export default function MessagesClient() {
         <ChatInner clientId={clientId} coachId={coachId} />
       )}
 
-      {/* Masquée quand le clavier est ouvert pour ne pas apparaître entre la barre et le clavier */}
-      {!keyboardOpen && <ClientBottomNav />}
+      <ClientBottomNav />
     </div>
   )
 }

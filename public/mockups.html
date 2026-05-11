@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockups Séance Client</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a1a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px 20px; display: flex; gap: 40px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+
+  .phone { width: 375px; background: #efefef; border-radius: 40px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.5); border: 8px solid #222; }
+  .phone-label { color: #888; font-size: 13px; font-weight: 700; text-align: center; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .version-tag { color: #e4f816; font-size: 11px; font-weight: 800; text-align: center; margin-bottom: 20px; background: #333; display: inline-block; padding: 4px 12px; border-radius: 999px; }
+
+  /* HEADER COMMUN */
+  .header { background: linear-gradient(135deg, #333 0%, #1f2937 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .back-btn { background: rgba(255,255,255,0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .logo { color: white; font-weight: 800; font-size: 16px; }
+  .logo span { color: #e4f816; }
+
+  /* ============= VERSION A ============= */
+  .va { font-family: inherit; }
+  .va-toggle { display: flex; margin: 16px; background: white; border-radius: 12px; padding: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .va-toggle-btn { flex: 1; padding: 8px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .va-toggle-active { background: #333; color: #e4f816; }
+  .va-toggle-inactive { background: transparent; color: #9ca3af; }
+
+  .va-progress { margin: 0 16px 12px; }
+  .va-progress-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .va-progress-bar { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .va-progress-fill { height: 100%; background: linear-gradient(90deg, #333, #555); border-radius: 999px; width: 45%; }
+
+  .va-bloc { margin: 0 16px 12px; background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .va-bloc-header { background: #333; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .va-bloc-code { background: #e4f816; color: #333; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; }
+  .va-bloc-nom { color: white; font-size: 14px; font-weight: 700; flex: 1; margin-left: 8px; }
+  .va-bloc-done { background: #16a34a; color: white; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
+
+  .va-params { display: flex; gap: 6px; padding: 10px 14px 0; }
+  .va-chip { background: #f3f4f6; border-radius: 8px; padding: 5px 10px; text-align: center; }
+  .va-chip-label { font-size: 9px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; display: block; }
+  .va-chip-value { font-size: 16px; font-weight: 900; color: #333; display: block; }
+
+  .va-series { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .va-serie { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 10px; padding: 8px 10px; border: 1.5px solid #e5e7eb; }
+  .va-serie-done { background: #f0fdf4; border-color: #86efac; }
+  .va-serie-num { background: #333; color: #e4f816; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .va-serie-input { width: 56px; height: 34px; border: 1.5px solid #e5e7eb; border-radius: 8px; text-align: center; font-size: 14px; font-weight: 700; color: #333; outline: none; background: white; }
+  .va-serie-unit { font-size: 11px; color: #9ca3af; font-weight: 600; }
+  .va-serie-val { margin-left: auto; background: #333; color: #e4f816; border: none; border-radius: 7px; padding: 6px 12px; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .va-serie-check { margin-left: auto; background: #16a34a; color: white; border-radius: 7px; padding: 6px 10px; font-size: 13px; font-weight: 800; }
+
+  .va-recup-btn { margin: 0 14px 14px; width: calc(100% - 28px); background: #1f2937; color: #e4f816; border: none; border-radius: 10px; padding: 12px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  .va-bloc2 { margin: 0 16px 12px; background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); border: 2px solid #86efac; opacity: .65; }
+  .va-bloc2-header { background: #16a34a; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+
+  /* ============= VERSION B ============= */
+  .vb { font-family: inherit; }
+  .vb-steps { margin: 12px 16px; display: flex; align-items: center; gap: 0; }
+  .vb-step { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; flex-shrink: 0; }
+  .vb-step-done { background: #16a34a; color: white; }
+  .vb-step-current { background: #333; color: #e4f816; }
+  .vb-step-todo { background: #e5e7eb; color: #9ca3af; }
+  .vb-line { flex: 1; height: 3px; }
+  .vb-line-done { background: #16a34a; }
+  .vb-line-todo { background: #e5e7eb; }
+
+  .vb-card { margin: 0 16px; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,.08); overflow: hidden; }
+  .vb-card-img { width: 100%; height: 140px; object-fit: cover; background: linear-gradient(135deg, #333 0%, #555 100%); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.2); font-size: 48px; }
+  .vb-card-body { padding: 16px; }
+  .vb-card-code { background: #333; color: #e4f816; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; display: inline-block; margin-bottom: 6px; }
+  .vb-card-nom { font-size: 20px; font-weight: 800; color: #333; margin-bottom: 12px; }
+  .vb-params { display: flex; gap: 8px; margin-bottom: 16px; }
+  .vb-param { flex: 1; background: #f3f4f6; border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .vb-param-label { font-size: 9px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; display: block; }
+  .vb-param-value { font-size: 22px; font-weight: 900; color: #333; display: block; }
+
+  .vb-series { display: flex; flex-direction: column; gap: 8px; }
+  .vb-serie { display: flex; align-items: center; gap: 8px; border: 2px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; }
+  .vb-serie-active { border-color: #333; background: #fffef5; }
+  .vb-serie-done { border-color: #86efac; background: #f0fdf4; }
+  .vb-serie-num { background: #333; color: #e4f816; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+  .vb-serie-inputs { display: flex; gap: 6px; flex: 1; }
+  .vb-serie-inp-wrap { flex: 1; }
+  .vb-serie-inp-label { font-size: 9px; color: #9ca3af; font-weight: 700; display: block; text-align: center; text-transform: uppercase; margin-bottom: 2px; }
+  .vb-serie-inp { width: 100%; height: 38px; border: 1.5px solid #e5e7eb; border-radius: 8px; text-align: center; font-size: 15px; font-weight: 700; color: #333; outline: none; background: white; }
+  .vb-serie-check { background: #16a34a; color: white; border: none; border-radius: 10px; width: 38px; height: 38px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .vb-serie-val { background: #333; color: #e4f816; border: none; border-radius: 10px; width: 38px; height: 38px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .vb-nav { display: flex; gap: 10px; margin: 14px 16px; }
+  .vb-nav-prev { flex: 1; border: 2px solid #e5e7eb; background: white; color: #333; border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .vb-nav-next { flex: 2; background: #333; color: #e4f816; border: none; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 800; cursor: pointer; }
+
+  /* ============= VERSION C ============= */
+  .vc { font-family: inherit; }
+  .vc-progress-wrap { background: white; margin: 12px 16px; border-radius: 14px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; align-items: center; gap: 12px; }
+  .vc-progress-bar { flex: 1; height: 10px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+  .vc-progress-fill { height: 100%; background: linear-gradient(90deg, #333, #4b5563); border-radius: 999px; }
+  .vc-progress-text { font-size: 13px; font-weight: 800; color: #333; white-space: nowrap; }
+
+  .vc-ex { margin: 0 16px 10px; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .vc-ex-header { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 8px; }
+  .vc-ex-code { background: #333; color: #e4f816; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; }
+  .vc-ex-nom { font-size: 15px; font-weight: 700; color: #333; flex: 1; }
+  .vc-ex-badge { background: #f3f4f6; color: #374151; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+
+  .vc-ex-params { display: flex; padding: 10px 14px; gap: 6px; border-bottom: 1px solid #f3f4f6; }
+  .vc-param { flex: 1; text-align: center; }
+  .vc-param-label { font-size: 9px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; }
+  .vc-param-value { font-size: 18px; font-weight: 900; color: #333; display: block; }
+
+  .vc-week-focus { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; }
+  .vc-week-label { font-size: 10px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+  .vc-week-hist { font-size: 10px; color: #6366f1; font-weight: 700; cursor: pointer; }
+  .vc-series { display: flex; flex-direction: column; gap: 6px; }
+  .vc-serie { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 10px; padding: 8px 10px; border: 1.5px solid #e5e7eb; }
+  .vc-serie-done { background: #f0fdf4; border-color: #86efac; }
+  .vc-serie-num { background: #333; color: #e4f816; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .vc-inp { width: 54px; height: 34px; border: 1.5px solid #e5e7eb; border-radius: 8px; text-align: center; font-size: 14px; font-weight: 700; color: #333; outline: none; }
+  .vc-unit { font-size: 11px; color: #9ca3af; }
+  .vc-val-btn { margin-left: auto; background: #333; color: #e4f816; border: none; border-radius: 7px; padding: 6px 12px; font-size: 11px; font-weight: 800; cursor: pointer; }
+  .vc-check { margin-left: auto; background: #16a34a; color: white; border-radius: 7px; padding: 6px 10px; font-size: 13px; }
+  .vc-recup { margin: 8px 14px 0; background: #1f2937; color: #e4f816; border: none; border-radius: 10px; padding: 11px 14px; width: calc(100% - 28px); font-size: 13px; font-weight: 800; cursor: pointer; margin-bottom: 12px; }
+
+  .vc-hist-toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; border-top: 1px solid #f3f4f6; }
+  .vc-hist-label { font-size: 11px; font-weight: 700; color: #9ca3af; display: flex; align-items: center; gap: 6px; }
+  .vc-hist-arrow { color: #d1d5db; font-size: 14px; }
+
+  .vc-ex-collapsed { margin: 0 16px 8px; background: white; border-radius: 12px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.04); display: flex; align-items: center; gap: 8px; border: 1.5px solid #86efac; }
+  .vc-collapsed-check { color: #16a34a; font-size: 16px; }
+  .vc-collapsed-code { background: #16a34a; color: white; padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 900; }
+  .vc-collapsed-nom { font-size: 13px; font-weight: 700; color: #374151; flex: 1; }
+  .vc-collapsed-detail { font-size: 11px; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<!-- VERSION A -->
+<div>
+  <div class="phone-label">VERSION A</div>
+  <div style="text-align:center;margin-bottom:8px"><span class="version-tag">Mode Entraînement / Historique</span></div>
+  <div class="phone">
+    <div class="header">
+      <div class="back-btn">‹</div>
+      <span class="logo">AW<span>prepa</span></span>
+      <div style="width:32px"></div>
+    </div>
+    <div class="va">
+      <div style="padding:16px 16px 0">
+        <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Force — Cycle 1</div>
+        <div style="font-size:22px;font-weight:800;color:#333;margin:2px 0 6px">Séance A — Jambes</div>
+        <span style="background:#333;color:#e4f816;padding:3px 12px;border-radius:999px;font-size:12px;font-weight:700">S3 en cours</span>
+      </div>
+
+      <!-- Toggle -->
+      <div class="va-toggle">
+        <button class="va-toggle-btn va-toggle-active">🏋️ Entraînement</button>
+        <button class="va-toggle-btn va-toggle-inactive">📊 Historique</button>
+      </div>
+
+      <!-- Progress -->
+      <div class="va-progress">
+        <div class="va-progress-label">
+          <span>Progression séance</span>
+          <span style="color:#333;font-weight:800">2 / 5 blocs</span>
+        </div>
+        <div class="va-progress-bar"><div class="va-progress-fill"></div></div>
+      </div>
+
+      <!-- Bloc terminé -->
+      <div class="va-bloc2">
+        <div class="va-bloc2-header">
+          <span style="background:#e4f816;color:#333;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:900">A</span>
+          <span style="color:white;font-size:14px;font-weight:700;flex:1;margin-left:8px">Squat barre</span>
+          <span style="background:rgba(255,255,255,.2);color:white;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px">✓ Terminé</span>
+        </div>
+        <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;">
+          <div class="va-chip"><span class="va-chip-label">SÉRIES</span><span style="font-size:15px;font-weight:800;color:#16a34a">4✓</span></div>
+          <div class="va-chip"><span class="va-chip-label">REPS</span><span class="va-chip-value" style="font-size:15px">6-8</span></div>
+          <div class="va-chip"><span class="va-chip-label">CHARGE</span><span style="font-size:15px;font-weight:800;color:#16a34a">80 kg</span></div>
+        </div>
+      </div>
+
+      <!-- Bloc en cours -->
+      <div class="va-bloc">
+        <div class="va-bloc-header">
+          <span class="va-bloc-code">B</span>
+          <span class="va-bloc-nom">Leg press 45°</span>
+        </div>
+        <div class="va-params">
+          <div class="va-chip"><span class="va-chip-label">SÉRIES</span><span class="va-chip-value">4</span></div>
+          <div class="va-chip"><span class="va-chip-label">REPS</span><span class="va-chip-value">10</span></div>
+          <div class="va-chip"><span class="va-chip-label">TEMPO</span><span class="va-chip-value">3-0-1</span></div>
+          <div class="va-chip"><span class="va-chip-label">RÉCUP</span><span class="va-chip-value">2'</span></div>
+        </div>
+        <div class="va-series">
+          <div class="va-serie va-serie-done">
+            <div class="va-serie-num">1</div>
+            <input class="va-serie-input" value="100" disabled>
+            <span class="va-serie-unit">kg</span>
+            <input class="va-serie-input" value="10" disabled style="width:48px">
+            <span class="va-serie-unit">reps</span>
+            <span class="va-serie-check">✓</span>
+          </div>
+          <div class="va-serie va-serie-done">
+            <div class="va-serie-num">2</div>
+            <input class="va-serie-input" value="100" disabled>
+            <span class="va-serie-unit">kg</span>
+            <input class="va-serie-input" value="9" disabled style="width:48px">
+            <span class="va-serie-unit">reps</span>
+            <span class="va-serie-check">✓</span>
+          </div>
+          <div class="va-serie" style="border-color:#333;background:#fffef5">
+            <div class="va-serie-num">3</div>
+            <input class="va-serie-input" placeholder="kg" style="border-color:#333">
+            <span class="va-serie-unit">kg</span>
+            <input class="va-serie-input" placeholder="reps" style="width:48px;border-color:#333">
+            <span class="va-serie-unit">reps</span>
+            <button class="va-serie-val">Valider</button>
+          </div>
+          <div class="va-serie" style="opacity:.5">
+            <div class="va-serie-num">4</div>
+            <input class="va-serie-input" placeholder="kg" disabled>
+            <span class="va-serie-unit">kg</span>
+            <input class="va-serie-input" placeholder="reps" style="width:48px" disabled>
+            <span class="va-serie-unit">reps</span>
+            <button class="va-serie-val" disabled style="opacity:.5">Valider</button>
+          </div>
+        </div>
+        <button class="va-recup-btn">⏱ Lancer récup · 2'00</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- VERSION B -->
+<div>
+  <div class="phone-label">VERSION B</div>
+  <div style="text-align:center;margin-bottom:8px"><span class="version-tag">Un exercice à la fois</span></div>
+  <div class="phone">
+    <div class="header">
+      <div class="back-btn">‹</div>
+      <span class="logo">AW<span>prepa</span></span>
+      <span style="color:rgba(255,255,255,.6);font-size:12px;font-weight:700">2 / 5</span>
+    </div>
+    <div class="vb">
+      <!-- Stepper -->
+      <div class="vb-steps">
+        <div style="width:16px"></div>
+        <div class="vb-step vb-step-done">✓</div>
+        <div class="vb-line vb-line-done"></div>
+        <div class="vb-step vb-step-current">B</div>
+        <div class="vb-line vb-line-todo"></div>
+        <div class="vb-step vb-step-todo">C</div>
+        <div class="vb-line vb-line-todo"></div>
+        <div class="vb-step vb-step-todo">D</div>
+        <div class="vb-line vb-line-todo"></div>
+        <div class="vb-step vb-step-todo">E</div>
+        <div style="width:16px"></div>
+      </div>
+
+      <!-- Card exercice -->
+      <div class="vb-card">
+        <div class="vb-card-img">💪</div>
+        <div class="vb-card-body">
+          <div class="vb-card-code">B1</div>
+          <div class="vb-card-nom">Leg press 45°</div>
+          <div class="vb-params">
+            <div class="vb-param"><span class="vb-param-label">Séries</span><span class="vb-param-value">4</span></div>
+            <div class="vb-param"><span class="vb-param-label">Reps</span><span class="vb-param-value">10</span></div>
+            <div class="vb-param"><span class="vb-param-label">Récup</span><span class="vb-param-value">2'</span></div>
+          </div>
+
+          <div class="vb-series">
+            <div class="vb-serie vb-serie-done">
+              <div class="vb-serie-num">1</div>
+              <div class="vb-serie-inputs">
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">kg</span><input class="vb-serie-inp" value="100" disabled></div>
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">reps</span><input class="vb-serie-inp" value="10" disabled></div>
+              </div>
+              <div class="vb-serie-check">✓</div>
+            </div>
+            <div class="vb-serie vb-serie-done">
+              <div class="vb-serie-num">2</div>
+              <div class="vb-serie-inputs">
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">kg</span><input class="vb-serie-inp" value="100" disabled></div>
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">reps</span><input class="vb-serie-inp" value="9" disabled></div>
+              </div>
+              <div class="vb-serie-check">✓</div>
+            </div>
+            <div class="vb-serie vb-serie-active">
+              <div class="vb-serie-num">3</div>
+              <div class="vb-serie-inputs">
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">kg</span><input class="vb-serie-inp" placeholder="—"></div>
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">reps</span><input class="vb-serie-inp" placeholder="—"></div>
+              </div>
+              <div class="vb-serie-val">✓</div>
+            </div>
+            <div class="vb-serie" style="opacity:.45">
+              <div class="vb-serie-num">4</div>
+              <div class="vb-serie-inputs">
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">kg</span><input class="vb-serie-inp" placeholder="—" disabled></div>
+                <div class="vb-serie-inp-wrap"><span class="vb-serie-inp-label">reps</span><input class="vb-serie-inp" placeholder="—" disabled></div>
+              </div>
+              <div class="vb-serie-val" style="opacity:.3">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="vb-nav">
+        <button class="vb-nav-prev">← Squat</button>
+        <button class="vb-nav-next">Exercice suivant → <span style="opacity:.6;font-size:11px;font-weight:600">Fentes</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- VERSION C -->
+<div>
+  <div class="phone-label">VERSION C</div>
+  <div style="text-align:center;margin-bottom:8px"><span class="version-tag">Semaine actuelle + collapse auto</span></div>
+  <div class="phone">
+    <div class="header">
+      <div class="back-btn">‹</div>
+      <span class="logo">AW<span>prepa</span></span>
+      <div style="width:32px"></div>
+    </div>
+    <div class="vc">
+      <div style="padding:14px 16px 8px">
+        <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Force — Cycle 1</div>
+        <div style="font-size:20px;font-weight:800;color:#333;margin:2px 0 6px">Séance A — Jambes</div>
+        <span style="background:#333;color:#e4f816;padding:3px 12px;border-radius:999px;font-size:12px;font-weight:700">S3 en cours</span>
+      </div>
+
+      <!-- Barre de progression -->
+      <div class="vc-progress-wrap">
+        <div class="vc-progress-bar"><div class="vc-progress-fill" style="width:40%"></div></div>
+        <span class="vc-progress-text">2 / 5 ✓</span>
+      </div>
+
+      <!-- Exercice terminé (collapsé) -->
+      <div class="vc-ex-collapsed">
+        <span class="vc-collapsed-check">✓</span>
+        <span class="vc-collapsed-code">A</span>
+        <span class="vc-collapsed-nom">Squat barre</span>
+        <span class="vc-collapsed-detail">4×6 · 80kg</span>
+      </div>
+
+      <!-- Exercice en cours -->
+      <div class="vc-ex">
+        <div class="vc-ex-header">
+          <span class="vc-ex-code">B</span>
+          <span class="vc-ex-nom">Leg press 45°</span>
+          <span class="vc-ex-badge">S3</span>
+        </div>
+        <div class="vc-ex-params">
+          <div class="vc-param"><span class="vc-param-label">Séries</span><span class="vc-param-value">4</span></div>
+          <div class="vc-param"><span class="vc-param-label">Reps</span><span class="vc-param-value">10</span></div>
+          <div class="vc-param"><span class="vc-param-label">Tempo</span><span class="vc-param-value">3-0-1</span></div>
+          <div class="vc-param"><span class="vc-param-label">Récup</span><span class="vc-param-value">2'</span></div>
+        </div>
+        <div class="vc-week-focus">
+          <div class="vc-week-label">
+            <span>Séries · Semaine 3</span>
+            <span class="vc-week-hist">📈 Voir historique</span>
+          </div>
+          <div class="vc-series">
+            <div class="vc-serie vc-serie-done">
+              <div class="vc-serie-num">1</div>
+              <input class="vc-inp" value="100" disabled>
+              <span class="vc-unit">kg</span>
+              <input class="vc-inp" value="10" disabled style="width:48px">
+              <span class="vc-unit">reps</span>
+              <span class="vc-check">✓</span>
+            </div>
+            <div class="vc-serie vc-serie-done">
+              <div class="vc-serie-num">2</div>
+              <input class="vc-inp" value="100" disabled>
+              <span class="vc-unit">kg</span>
+              <input class="vc-inp" value="9" disabled style="width:48px">
+              <span class="vc-unit">reps</span>
+              <span class="vc-check">✓</span>
+            </div>
+            <div class="vc-serie" style="border-color:#333;background:#fffef5">
+              <div class="vc-serie-num">3</div>
+              <input class="vc-inp" placeholder="kg" style="border-color:#333">
+              <span class="vc-unit">kg</span>
+              <input class="vc-inp" placeholder="reps" style="width:48px;border-color:#333">
+              <span class="vc-unit">reps</span>
+              <button class="vc-val-btn">Valider</button>
+            </div>
+            <div class="vc-serie" style="opacity:.5">
+              <div class="vc-serie-num">4</div>
+              <input class="vc-inp" placeholder="kg" disabled>
+              <span class="vc-unit">kg</span>
+              <input class="vc-inp" placeholder="reps" style="width:48px" disabled>
+              <span class="vc-unit">reps</span>
+            </div>
+          </div>
+        </div>
+        <button class="vc-recup" style="display:block;width:calc(100% - 28px);margin:0 14px 14px">⏱ Récup · 2'00</button>
+        <div class="vc-hist-toggle">
+          <span class="vc-hist-label">📊 Intensité & historique toutes semaines</span>
+          <span class="vc-hist-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- Exercice suivant (pas encore commencé) -->
+      <div class="vc-ex" style="margin:0 16px 10px;opacity:.6">
+        <div class="vc-ex-header">
+          <span class="vc-ex-code">C</span>
+          <span class="vc-ex-nom">Fentes marchées</span>
+          <span class="vc-ex-badge">4×12</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

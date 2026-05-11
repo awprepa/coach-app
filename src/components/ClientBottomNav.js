@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useNotifCtx } from '../context/NotifContext'
 
@@ -57,6 +58,25 @@ export default function ClientBottomNav() {
   const navigate = useNavigate()
   const p = location.pathname
   const { unread } = useNotifCtx()
+
+  // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
+  const [kbOpen, setKbOpen] = useState(false)
+  useEffect(() => {
+    const show = () => setTimeout(() => setKbOpen(false), 80)
+    const hide = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        setKbOpen(true)
+      }
+    }
+    window.addEventListener('focusin',  hide)
+    window.addEventListener('focusout', show)
+    return () => {
+      window.removeEventListener('focusin',  hide)
+      window.removeEventListener('focusout', show)
+    }
+  }, [])
+
+  if (kbOpen) return null
 
   const isHome      = p === '/' || p === '/client/accueil'
   const isProgramme = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'

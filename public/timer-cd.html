@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Options C et D</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #e5e7eb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 1.5rem 1rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 900px; margin: 0 auto; }
+  .option { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+  .option-label { padding: 1rem 1.25rem; font-weight: 700; font-size: 0.9rem; color: #111827; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 0.5rem; }
+  .badge { background: #333; color: #e4f816; border-radius: 6px; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 800; }
+  .phone { position: relative; background: #f5f5f5; height: 420px; overflow: hidden; }
+  .phone-header { background: linear-gradient(135deg,#333 0%,#1f2937 100%); height: 52px; display: flex; align-items: center; padding: 0 1rem; gap: 0.5rem; }
+  .phone-header .back { color: white; font-size: 1.2rem; }
+  .phone-header .title { color: white; font-weight: 700; font-size: 0.9rem; }
+  .phone-header .badge-seance { background: rgba(228,248,22,0.2); color: #e4f816; border-radius: 6px; padding: 0.1rem 0.5rem; font-size: 0.65rem; font-weight: 700; margin-left: auto; }
+  .phone-content { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .exercise-card { background: white; border-radius: 12px; padding: 0.75rem; border: 1px solid #e5e7eb; }
+  .ex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  .ex-name { font-weight: 700; font-size: 0.8rem; color: #111827; }
+  .ex-params { display: flex; gap: 0.35rem; }
+  .chip { background: #f3f4f6; color: #374151; border-radius: 6px; padding: 0.15rem 0.4rem; font-size: 0.6rem; font-weight: 600; }
+  .series-row { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
+  .serie-btn { flex: 1; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 0.35rem; text-align: center; font-size: 0.65rem; color: #6b7280; }
+  .serie-btn.done { background: #dcfce7; border-color: #22c55e; color: #16a34a; font-weight: 700; }
+  .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #f0f0f0; display: flex; padding: 8px 0 6px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .nav-icon { font-size: 1.1rem; opacity: 0.4; }
+  .nav-icon.active { opacity: 1; }
+  .nav-label { font-size: 0.5rem; color: #9ca3af; font-weight: 500; }
+  .nav-label.active { color: #111827; font-weight: 700; }
+
+  /* C - PiP */
+  .pip { position: absolute; bottom: 72px; right: 12px; width: 72px; height: 72px; background: #333333; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; z-index: 50; border: 2px solid rgba(228,248,22,0.4); }
+  .pip .pip-time { font-size: 1.15rem; font-weight: 900; color: #e4f816; line-height: 1; }
+  .pip .pip-label { font-size: 0.45rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.06em; }
+  .pip .pip-ring { width: 52px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; margin-top: 4px; }
+  .pip .pip-fill { width: 55%; height: 100%; background: #e4f816; border-radius: 999px; }
+
+  /* D - Inline */
+  .inline-timer { background: #1a1a2e; border-radius: 10px; padding: 0.55rem 0.75rem; display: flex; align-items: center; gap: 0.65rem; margin-top: 0.5rem; }
+  .it-left .it-label { font-size: 0.5rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; }
+  .it-left .it-time { font-size: 1.35rem; font-weight: 900; color: #e4f816; line-height: 1.1; }
+  .it-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; }
+  .it-bar-fill { width: 55%; height: 100%; background: #e4f816; border-radius: 999px; }
+  .it-stop { background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.5); width: 26px; height: 26px; border-radius: 50%; font-size: 0.65rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="grid">
+
+  <!-- C -->
+  <div class="option">
+    <div class="option-label"><span class="badge">C</span> Bulle PiP — coin bas droit</div>
+    <div class="phone">
+      <div class="phone-header"><span class="back">‹</span><span class="title">Séance du jour</span><span class="badge-seance">S3 · J2</span></div>
+      <div class="phone-content">
+        <div class="exercise-card">
+          <div class="ex-header"><span class="ex-name">A1 · Squat barre</span><div class="ex-params"><span class="chip">4×8</span><span class="chip">Intensité</span><span class="chip">90s</span></div></div>
+          <div class="series-row"><div class="serie-btn done">✓ 80kg</div><div class="serie-btn done">✓ 80kg</div><div class="serie-btn">— kg</div><div class="serie-btn">— kg</div></div>
+        </div>
+        <div class="exercise-card">
+          <div class="ex-header"><span class="ex-name">B1 · Développé couché</span><div class="ex-params"><span class="chip">3×10</span><span class="chip">75%</span></div></div>
+          <div class="series-row"><div class="serie-btn">— kg</div><div class="serie-btn">— kg</div><div class="serie-btn">— kg</div></div>
+        </div>
+      </div>
+      <div class="pip"><div class="pip-time">0:45</div><div class="pip-label">Récup</div><div class="pip-ring"><div class="pip-fill"></div></div></div>
+      <div class="bottom-nav">
+        <div class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Accueil</span></div>
+        <div class="nav-item"><span class="nav-icon active">📋</span><span class="nav-label active">Programme</span></div>
+        <div class="nav-item"><span class="nav-icon">🔔</span><span class="nav-label">Notifs</span></div>
+        <div class="nav-item"><span class="nav-icon">💬</span><span class="nav-label">Messages</span></div>
+        <div class="nav-item"><span class="nav-icon">📍</span><span class="nav-label">GPS</span></div>
+      </div>
+    </div>
+    <div style="padding:0.75rem 1rem;font-size:0.75rem;color:#6b7280;line-height:1.5;">✅ Compact · Style app native · Ne gêne pas la nav<br>⚠️ Petit → moins lisible pendant l'effort</div>
+  </div>
+
+  <!-- D -->
+  <div class="option">
+    <div class="option-label"><span class="badge">D</span> Intégré dans la carte d'exercice</div>
+    <div class="phone">
+      <div class="phone-header"><span class="back">‹</span><span class="title">Séance du jour</span><span class="badge-seance">S3 · J2</span></div>
+      <div class="phone-content">
+        <div class="exercise-card">
+          <div class="ex-header"><span class="ex-name">A1 · Squat barre</span><div class="ex-params"><span class="chip">4×8</span><span class="chip">Intensité</span><span class="chip">90s</span></div></div>
+          <div class="series-row"><div class="serie-btn done">✓ 80kg</div><div class="serie-btn done">✓ 80kg</div><div class="serie-btn">— kg</div><div class="serie-btn">— kg</div></div>
+          <div class="inline-timer">
+            <div class="it-left"><div class="it-label">Récupération</div><div class="it-time">0:45</div></div>
+            <div class="it-bar"><div class="it-bar-fill"></div></div>
+            <button class="it-stop">✕</button>
+          </div>
+        </div>
+        <div class="exercise-card">
+          <div class="ex-header"><span class="ex-name">B1 · Développé couché</span><div class="ex-params"><span class="chip">3×10</span><span class="chip">75%</span></div></div>
+          <div class="series-row"><div class="serie-btn">— kg</div><div class="serie-btn">— kg</div><div class="serie-btn">— kg</div></div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Accueil</span></div>
+        <div class="nav-item"><span class="nav-icon active">📋</span><span class="nav-label active">Programme</span></div>
+        <div class="nav-item"><span class="nav-icon">🔔</span><span class="nav-label">Notifs</span></div>
+        <div class="nav-item"><span class="nav-icon">💬</span><span class="nav-label">Messages</span></div>
+        <div class="nav-item"><span class="nav-icon">📍</span><span class="nav-label">GPS</span></div>
+      </div>
+    </div>
+    <div style="padding:0.75rem 1rem;font-size:0.75rem;color:#6b7280;line-height:1.5;">✅ Contexte clair · Tout au même endroit<br>⚠️ Invisible si tu scrolles loin de la carte active</div>
+  </div>
+
+</div>
+</body>
+</html>
