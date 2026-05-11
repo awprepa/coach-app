@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
+import { sendPushOnly } from '../../notifs'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell as RechartsCell, LineChart, Line, Legend } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
 
@@ -60,15 +61,22 @@ export default function SeanceClient() {
   const [timerSecs, setTimerSecs] = useState(0)
   const [timerTotal, setTimerTotal] = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
+  const [clientId, setClientId] = useState(null)
   const [histoOpen, setHistoOpen] = useState({})
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
   const timerRef = useRef(null)
+  const notifTimeoutRef = useRef(null)
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchSeance() }, [])
+  useEffect(() => {
+    fetchSeance()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) setClientId(session.user.id)
+    })
+  }, [])
 
   async function fetchSeance() {
     const { data, error } = await supabase
@@ -186,11 +194,29 @@ export default function SeanceClient() {
     setRpeSeances(map)
   }
 
-  useEffect(() => () => clearInterval(timerRef.current), [])
+  useEffect(() => () => {
+    clearInterval(timerRef.current)
+    clearTimeout(notifTimeoutRef.current)
+  }, [])
 
   function startTimer(secs) {
     clearInterval(timerRef.current)
+    clearTimeout(notifTimeoutRef.current)
     setTimerTotal(secs); setTimerSecs(secs); setTimerRunning(true)
+
+    // Notif push à la fin du timer (si l'app est en arrière-plan)
+    if (clientId) {
+      notifTimeoutRef.current = setTimeout(() => {
+        if (document.visibilityState === 'hidden') {
+          sendPushOnly(clientId, {
+            titre: '🔔 Récupération terminée',
+            corps: "C'est reparti !",
+            lien: `/client/seance/${id}`,
+          })
+        }
+      }, secs * 1000)
+    }
+
     timerRef.current = setInterval(() => {
       setTimerSecs(prev => {
         if (prev <= 1) {
@@ -204,7 +230,11 @@ export default function SeanceClient() {
     }, 1000)
   }
 
-  function stopTimer() { clearInterval(timerRef.current); setTimerRunning(false); setTimerSecs(0); setTimerTotal(0) }
+  function stopTimer() {
+    clearInterval(timerRef.current)
+    clearTimeout(notifTimeoutRef.current)
+    setTimerRunning(false); setTimerSecs(0); setTimerTotal(0)
+  }
 
   function updateTrackingField(exId, serieIdx, field, value) {
     setTracking(prev => {
@@ -541,19 +571,31 @@ export default function SeanceClient() {
         ✓ Enregistré
       </div>
 
-      {/* Timer récup — bannière fixe bas */}
+      {/* Timer récup — bulle flottante coin haut droit */}
       {timerTotal > 0 && (
-        <div style={{ ...S.timerBanner, background: timerSecs === 0 ? '#14532d' : '#333333' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={S.timerCount}>{timerSecs === 0 ? '✓ GO !' : formatTimer(timerSecs)}</span>
-            <span style={S.timerLabel}>{timerSecs === 0 ? 'Récup terminée' : 'RÉCUPÉRATION'}</span>
+        <div style={{
+          position: 'fixed', top: 14, right: 12, zIndex: 300,
+          background: timerSecs === 0 ? '#14532d' : '#1a1a1a',
+          borderRadius: 999,
+          padding: '0.3rem 0.5rem 0.3rem 0.85rem',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          boxShadow: '0 3px 16px rgba(0,0,0,0.35)',
+          border: `1.5px solid ${timerSecs === 0 ? '#22c55e' : 'rgba(228,248,22,0.3)'}`,
+        }}>
+          <div>
+            <div style={{ fontSize: '0.5rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1 }}>
+              {timerSecs === 0 ? 'Terminée' : 'Récup'}
+            </div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: timerSecs === 0 ? '#4ade80' : '#e4f816', lineHeight: 1.1 }}>
+              {timerSecs === 0 ? '✓ GO !' : formatTimer(timerSecs)}
+            </div>
           </div>
           {timerSecs > 0 && (
-            <div style={S.timerBar}>
-              <div style={{ ...S.timerProgress, width: `${(1 - timerSecs / timerTotal) * 100}%` }} />
+            <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: '#e4f816', borderRadius: 999, transition: 'width 1s linear', width: `${(1 - timerSecs / timerTotal) * 100}%` }} />
             </div>
           )}
-          <button onClick={stopTimer} style={S.timerStop}>✕</button>
+          <button onClick={stopTimer} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'rgba(255,255,255,0.6)', width: 22, height: 22, borderRadius: '50%', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
         </div>
       )}
 
@@ -900,11 +942,5 @@ const S = {
   supersetConnector:{ background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
   supersetLine:   { flex: 1, height: '1px', background: '#e4f816', opacity: 0.4 },
   supersetTag:    { fontSize: '0.68rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
-  // Timer
-  timerBanner: { position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' },
-  timerCount:  { fontSize: '2rem', fontWeight: '900', color: 'white', lineHeight: 1 },
-  timerLabel:  { fontSize: '0.62rem', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.15rem' },
-  timerBar:    { flex: 1, height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' },
-  timerProgress:{ height: '100%', background: '#e4f816', borderRadius: 999, transition: 'width 1s linear' },
-  timerStop:   { background: 'rgba(255,255,255,0.12)', border: 'none', color: 'white', width: 36, height: 36, borderRadius: 999, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // Timer (styles inlinés directement dans le JSX)
 }
