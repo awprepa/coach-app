@@ -9,37 +9,34 @@ const HEADER_H = 58
 const INPUT_H  = 60
 const NAV_H    = 82
 
-// Détecte la hauteur du clavier virtuel via visualViewport
-function useKeyboardHeight() {
-  const [kbH, setKbH] = useState(0)
+// Détecte si le clavier est ouvert via focus/blur — fiable sur iOS Safari
+function useKeyboardOpen() {
+  const [open, setOpen] = useState(false)
   useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => {
-      const diff = window.innerHeight - vv.height - vv.offsetTop
-      setKbH(Math.max(0, diff))
-    }
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
+    const onFocus = () => setOpen(true)
+    const onBlur  = () => setTimeout(() => setOpen(false), 50)
+    window.addEventListener('focusin',  onFocus)
+    window.addEventListener('focusout', onBlur)
     return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
+      window.removeEventListener('focusin',  onFocus)
+      window.removeEventListener('focusout', onBlur)
     }
   }, [])
-  return kbH
+  return open
 }
 
-function ChatInner({ clientId, coachId, kbH }) {
+function ChatInner({ clientId, coachId }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
   const [texte, setTexte]   = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
+  const keyboardOpen = useKeyboardOpen()
 
-  // Quand clavier ouvert : barre juste au-dessus du clavier
-  // Quand clavier fermé  : barre au-dessus de la bottom nav
-  const inputBottom  = kbH > 0 ? kbH : NAV_H
-  const msgsBottom   = inputBottom + INPUT_H
+  // Clavier ouvert : barre collée en bas de l'écran visible (le navigateur la remonte auto)
+  // Clavier fermé  : barre au-dessus de la bottom nav
+  const inputBottom = keyboardOpen ? 0 : NAV_H
+  const msgsBottom  = inputBottom + INPUT_H
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -158,8 +155,7 @@ export default function MessagesClient() {
   const [clientId, setClientId] = useState(null)
   const [coachId,  setCoachId]  = useState(null)
   const [loadError, setLoadError] = useState(false)
-  const kbH = useKeyboardHeight()
-  const keyboardOpen = kbH > 50 // seuil pour éviter les faux positifs
+  const keyboardOpen = useKeyboardOpen()
 
   useEffect(() => {
     async function load() {
@@ -226,7 +222,7 @@ export default function MessagesClient() {
           <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
         </div>
       ) : (
-        <ChatInner clientId={clientId} coachId={coachId} kbH={kbH} />
+        <ChatInner clientId={clientId} coachId={coachId} />
       )}
 
       {/* Masquée quand le clavier est ouvert pour ne pas apparaître entre la barre et le clavier */}

@@ -26,6 +26,8 @@ import CoachMessages from './pages/CoachMessages'
 import ChargeEntrainement from './pages/ChargeEntrainement'
 import Paiements from './pages/Paiements'
 import { NotifProvider } from './context/NotifContext'
+import { TimerProvider } from './context/TimerContext'
+import GlobalTimerBubble from './components/GlobalTimerBubble'
 
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -40,6 +42,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthGate>
+        <TimerProvider>
+        <GlobalTimerBubble />
         <Routes>
           {/* Client-facing — enveloppés dans NotifProvider pour un seul channel Realtime */}
           <Route path="/client/programme/:id"  element={<WithNotifs><ProgrammeClient /></WithNotifs>} />
@@ -72,6 +76,7 @@ function App() {
           <Route path="/charge"                       element={<WithNav><ChargeEntrainement /></WithNav>} />
           <Route path="/paiements"                    element={<WithNav><Paiements /></WithNav>} />
         </Routes>
+        </TimerProvider>
       </AuthGate>
     </BrowserRouter>
   )
