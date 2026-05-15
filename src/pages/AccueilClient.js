@@ -6,6 +6,7 @@ import ClientBottomNav from '../components/ClientBottomNav'
 import ClientProfileMenu from '../components/ClientProfileMenu'
 import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
+import { useNotifCtx } from '../context/NotifContext'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -216,6 +217,7 @@ export default function AccueilClient() {
   const [showInstall, setShowInstall]     = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useState(true)
+  const { unread } = useNotifCtx()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClientData() }, [])
@@ -315,7 +317,32 @@ export default function AccueilClient() {
 
       <div style={styles.header}>
         <span style={styles.logo}>AW<span style={{ color: '#e4f816' }}>prepa</span></span>
-        <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>{initiales}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <button
+            onClick={() => navigate('/client/notifications')}
+            style={{
+              position: 'relative', width: 38, height: 38, borderRadius: 999,
+              background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            aria-label="Notifications"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {unread > 0 && (
+              <span style={{
+                position: 'absolute', top: 2, right: 2,
+                background: '#ef4444', color: 'white',
+                borderRadius: 999, fontSize: '0.6rem', fontWeight: '800',
+                minWidth: 16, height: 16, padding: '0 4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+              }}>{unread > 9 ? '9+' : unread}</span>
+            )}
+          </button>
+          <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>{initiales}</div>
+        </div>
       </div>
       {showProfileMenu && <ClientProfileMenu client={client} onClose={() => setShowProfileMenu(false)} />}
 

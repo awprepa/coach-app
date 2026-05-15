@@ -23,6 +23,8 @@ import SeanceProjection from './pages/SeanceProjection'
 import ImportClientExcel from './pages/ImportClientExcel'
 import NotificationsClient from './pages/client/NotificationsClient'
 import MessagesClient from './pages/client/MessagesClient'
+import NutritionClient from './pages/client/NutritionClient'
+import AjouterRepas from './pages/client/AjouterRepas'
 import CoachMessages from './pages/CoachMessages'
 import ChargeEntrainement from './pages/ChargeEntrainement'
 import Paiements from './pages/Paiements'
@@ -83,6 +85,8 @@ function App() {
           <Route path="/client/accueil"        element={<WithNotifs><Home /></WithNotifs>} />
           <Route path="/client/notifications"  element={<WithNotifs><NotificationsClient /></WithNotifs>} />
           <Route path="/client/messages"       element={<WithNotifs><MessagesClient /></WithNotifs>} />
+          <Route path="/client/nutrition"         element={<WithNotifs><NutritionClient /></WithNotifs>} />
+          <Route path="/client/nutrition/ajouter" element={<WithNotifs><AjouterRepas /></WithNotifs>} />
           <Route path="/login"                 element={<Login />} />
 
           {/* Unified home — coach voit Dashboard, client voit AccueilClient */}

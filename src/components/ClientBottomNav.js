@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useNotifCtx } from '../context/NotifContext'
 
 function IconHome({ active }) {
   const s = active ? '#1a1a1a' : '#b0b8c1'
@@ -24,12 +23,20 @@ function IconProgramme({ active }) {
   )
 }
 
-function IconBell({ active }) {
+function IconNutrition({ active }) {
   const s = active ? '#1a1a1a' : '#b0b8c1'
+  const fill = active ? '#1a1a1a' : 'none'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      {/* Fourchette à 3 dents */}
+      <path d="M6 2v6" />
+      <path d="M9 2v6" />
+      <path d="M12 2v6" />
+      <path d="M9 8v14" />
+      <path d="M6 2v6a3 3 0 0 0 6 0V2" fill={fill} />
+      {/* Cuillère */}
+      <path d="M17 22v-7" />
+      <ellipse cx="17" cy="6" rx="3" ry="5" fill={fill} />
     </svg>
   )
 }
@@ -57,7 +64,6 @@ export default function ClientBottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const p = location.pathname
-  const { unread } = useNotifCtx()
 
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
@@ -80,14 +86,14 @@ export default function ClientBottomNav() {
 
   const isHome      = p === '/' || p === '/client/accueil'
   const isProgramme = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'
-  const isNotifs    = p === '/client/notifications'
+  const isNutrition = p.startsWith('/client/nutrition')
   const isMessages  = p === '/client/messages'
   const isGPS       = p.startsWith('/client/gps')
 
   const tabs = [
     { label: 'Accueil',   Icon: IconHome,      active: isHome,      to: '/' },
     { label: 'Programme', Icon: IconProgramme, active: isProgramme, to: '/client/mon-programme' },
-    { label: 'Notifs',    Icon: IconBell,      active: isNotifs,    to: '/client/notifications', badge: unread },
+    { label: 'Nutrition', Icon: IconNutrition, active: isNutrition, to: '/client/nutrition' },
     { label: 'Messages',  Icon: IconChat,      active: isMessages,  to: '/client/messages' },
     { label: 'GPS',       Icon: IconGPS,       active: isGPS,       to: '/client/gps' },
   ]
