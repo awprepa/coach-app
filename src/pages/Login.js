@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
-const REDIRECT = 'https://awprepa.app'
-
 export default function Login() {
-  const [mode, setMode]         = useState('connexion') // 'connexion' | 'inscription' | 'reset'
+  const [mode, setMode]         = useState('connexion') // 'connexion' | 'inscription' | 'reset' | 'update-password'
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [prenom, setPrenom]     = useState('')
   const [nom, setNom]           = useState('')
   const [error, setError]       = useState('')
@@ -14,6 +14,18 @@ export default function Login() {
   const [loading, setLoading]   = useState(false)
 
   function switchMode(m) { setMode(m); setError(''); setSuccess('') }
+
+  // Détecter l'événement PASSWORD_RECOVERY (l'utilisateur arrive depuis le lien email)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMode('update-password')
+        setError('')
+        setSuccess('')
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function handleConnexion(e) {
     e.preventDefault()
@@ -55,11 +67,30 @@ export default function Login() {
     setPrenom(''); setNom(''); setEmail(''); setPassword('')
   }
 
+  async function handleUpdatePassword(e) {
+    e.preventDefault()
+    if (newPassword.length < 8) { setError('Le mot de passe doit faire au moins 8 caractères.'); return }
+    if (newPassword !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return }
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess('Mot de passe mis à jour ! Tu peux maintenant te connecter.')
+      await supabase.auth.signOut()
+      setNewPassword(''); setConfirmPassword('')
+      setTimeout(() => switchMode('connexion'), 2000)
+    }
+    setLoading(false)
+  }
+
   async function handleReset(e) {
     e.preventDefault()
     if (!email) { setError('Entre ton adresse email.'); return }
     setLoading(true); setError('')
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: REDIRECT })
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/login',
+    })
     if (error) setError(error.message)
     else setSuccess('Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.')
     setLoading(false)
@@ -73,7 +104,7 @@ export default function Login() {
       </div>
 
       <div style={styles.card}>
-        {mode !== 'reset' && (
+        {mode !== 'reset' && mode !== 'update-password' && (
           <div style={styles.toggle}>
             <button onClick={() => switchMode('connexion')}
               style={{ ...styles.toggleBtn, ...(mode === 'connexion' ? styles.toggleActive : {}) }}>
@@ -139,6 +170,28 @@ export default function Login() {
               {loading ? 'Création...' : 'Créer mon compte'}
             </button>
             <p style={styles.hint}>En créant un compte, tu seras visible par ton coach qui pourra te contacter et t'assigner des séances.</p>
+          </form>
+        )}
+
+        {mode === 'update-password' && (
+          <form onSubmit={handleUpdatePassword}>
+            <p style={{ fontSize: '0.9rem', color: '#374151', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Choisis ton nouveau mot de passe.
+            </p>
+            <div style={styles.field}>
+              <label style={styles.label}>Nouveau mot de passe</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                required placeholder="8 caractères minimum" minLength={8} style={styles.input} autoFocus />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Confirmer le mot de passe</label>
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                required placeholder="••••••••" style={styles.input} />
+            </div>
+            {error && <p style={styles.error}>{error}</p>}
+            <button type="submit" disabled={loading} style={styles.btn}>
+              {loading ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}
+            </button>
           </form>
         )}
 

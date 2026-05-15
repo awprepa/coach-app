@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
 import Home from './pages/Home'
@@ -35,31 +34,6 @@ import { NotifProvider } from './context/NotifContext'
 import { TimerProvider } from './context/TimerContext'
 import GlobalTimerBubble from './components/GlobalTimerBubble'
 
-// Overlay paysage — bloque la rotation sur mobile via JS (fiable sur iOS Safari)
-function PortraitGuard() {
-  const [landscape, setLandscape] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(orientation: landscape)')
-    const check = (e) => setLandscape(e.matches)
-    setLandscape(mq.matches)
-    mq.addEventListener('change', check)
-    return () => mq.removeEventListener('change', check)
-  }, [])
-  if (!landscape) return null
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 99999,
-      background: '#1f2937',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      gap: '1rem',
-    }}>
-      <div style={{ fontSize: '2.5rem' }}>📱</div>
-      <div style={{ color: 'white', fontWeight: '700', fontSize: '1.1rem' }}>Tourne ton téléphone</div>
-      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Cette app fonctionne en mode portrait</div>
-    </div>
-  )
-}
 
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -75,7 +49,6 @@ function App() {
     <BrowserRouter>
       <AuthGate>
         <TimerProvider>
-        <PortraitGuard />
         <GlobalTimerBubble />
         <Routes>
           {/* Client-facing — enveloppés dans NotifProvider pour un seul channel Realtime */}

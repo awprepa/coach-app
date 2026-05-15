@@ -21,6 +21,14 @@ export default function AuthGate({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Si l'URL contient un token de récupération de mot de passe, rester sur /login
+    const isRecovery = window.location.hash.includes('type=recovery')
+    if (isRecovery) {
+      if (window.location.pathname !== '/login') navigate('/login')
+      setLoading(false)
+      return
+    }
+
     // 1. Vérifier la session existante d'abord (évite le flash /login sur deep link)
     supabase.auth.getSession().then(({ data: { session } }) => {
       redirect(navigate, session?.user, window.location.pathname)
@@ -31,6 +39,11 @@ export default function AuthGate({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       // Ne pas rediriger lors du premier INITIAL_SESSION (déjà géré par getSession)
       if (_event === 'INITIAL_SESSION') return
+      // Flux de récupération de mot de passe → rester sur /login
+      if (_event === 'PASSWORD_RECOVERY') {
+        if (window.location.pathname !== '/login') navigate('/login')
+        return
+      }
       redirect(navigate, session?.user, window.location.pathname)
     })
 
