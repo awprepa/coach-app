@@ -227,10 +227,12 @@ export default function AjouterRepas() {
   const [editableItems,  setEditableItems]  = useState([])
 
   // ── Photo ─────────────────────────────────────────────────────────────────
-  const photoInputRef = useRef(null)
+  const photoInputRef   = useRef(null)
+  const galleryInputRef = useRef(null)
 
   // ── Vocal ─────────────────────────────────────────────────────────────────
-  const recognitionRef  = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef   = useRef([])
   const [isRecording,    setIsRecording]    = useState(false)
   const [transcript,     setTranscript]     = useState('')
   const [voiceSupported, setVoiceSupported] = useState(true)
@@ -240,7 +242,7 @@ export default function AjouterRepas() {
 
   // ── Init ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    setVoiceSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition))
+    setVoiceSupported(!!(navigator.mediaDevices?.getUserMedia))
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
       supabase.from('clients').select('id,offre').eq('user_id', session.user.id).maybeSingle()
@@ -372,33 +374,83 @@ export default function AjouterRepas() {
     setAnalyzingAI(false)
   }
 
-  // ── Vocal : Web Speech API ────────────────────────────────────────────────
+  // ── Vocal : MediaRecorder + Groq Whisper ─────────────────────────────────
   function startRecording() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return
-    const rec = new SR()
-    rec.lang = 'fr-FR'
-    rec.continuous = false
-    rec.interimResults = false
-    rec.onresult = (e) => {
-      const text = e.results[0][0].transcript
-      setTranscript(text)
-      setIsRecording(false)
-      callParseVoice(text)
+    setAiError(null)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setVoiceSupported(false)
+      return
     }
-    rec.onerror  = () => { setIsRecording(false) }
-    rec.onend    = () => { setIsRecording(false) }
-    recognitionRef.current = rec
-    rec.start()
-    setIsRecording(true)
-    setTranscript('')
-    setAiAnalysis(null)
-    setEditableItems([])
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        // Choisir le format supporté (iOS : mp4, Chrome : webm)
+        const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+          .find(t => { try { return MediaRecorder.isTypeSupported(t) } catch { return false } }) || ''
+
+        let recorder
+        try {
+          recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+        } catch {
+          recorder = new MediaRecorder(stream)
+        }
+
+        audioChunksRef.current = []
+
+        recorder.ondataavailable = (e) => {
+          if (e.data?.size > 0) audioChunksRef.current.push(e.data)
+        }
+
+        recorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop())
+          const finalMime = recorder.mimeType || mimeType || 'audio/webm'
+          const blob = new Blob(audioChunksRef.current, { type: finalMime })
+          transcribeAndParse(blob, finalMime)
+        }
+
+        mediaRecorderRef.current = recorder
+        recorder.start(500)
+        setIsRecording(true)
+        setTranscript('')
+        setAiAnalysis(null)
+        setEditableItems([])
+      })
+      .catch(err => {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setAiError('Accès micro refusé — autorise le micro dans les réglages de ton navigateur')
+        } else {
+          setAiError('Micro inaccessible — utilise la saisie texte ci-dessous')
+        }
+      })
   }
 
   function stopRecording() {
-    try { recognitionRef.current?.stop() } catch { /* ignore */ }
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop()
+    }
     setIsRecording(false)
+  }
+
+  async function transcribeAndParse(blob, mimeType) {
+    setAnalyzingAI(true)
+    setAiError(null)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result.split(',')[1])
+        reader.onerror   = reject
+        reader.readAsDataURL(blob)
+      })
+      const { data, error } = await supabase.functions.invoke('nutrition-transcribe-voice', {
+        body: { audio_base64: base64, mime_type: mimeType.split(';')[0] },
+      })
+      if (error || !data?.ok) throw new Error(data?.error || 'Transcription échouée')
+      setTranscript(data.text)
+      // Enchaîne directement avec le parsing IA
+      await callParseVoice(data.text)
+    } catch (err) {
+      setAnalyzingAI(false)
+      setAiError(err.message || 'Transcription impossible — utilise la saisie texte')
+    }
   }
 
   async function callParseVoice(text) {
@@ -762,22 +814,28 @@ export default function AjouterRepas() {
         {/* ══ MODE PHOTO ══════════════════════════════════════════════ */}
         {mode === 'photo' && (
           <div style={S.card}>
+            {/* Input caméra */}
             <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
+              style={{ display: 'none' }} onChange={handlePhotoCapture} />
+            {/* Input galerie (sans capture pour accéder aux photos existantes) */}
+            <input ref={galleryInputRef} type="file" accept="image/*"
               style={{ display: 'none' }} onChange={handlePhotoCapture} />
 
             {!aiAnalysis && !analyzingAI && !aiError && (
-              <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+              <div style={{ textAlign: 'center', padding: '1.25rem 1rem' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '0.6rem' }}>📷</div>
                 <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Analyse photo IA</p>
                 <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.2rem' }}>
-                  Prends en photo ton repas — Gemini Flash identifie les aliments et estime les macros automatiquement.
+                  Prends en photo ton repas ou sélectionne une image — l'IA identifie les aliments et calcule les macros.
                 </p>
-                <button onClick={() => photoInputRef.current?.click()} style={S.btnPrimary}>
-                  📷 Prendre une photo
-                </button>
-                <p style={{ fontSize: '0.68rem', color: '#b0b8c1', marginTop: '0.5rem' }}>
-                  Ou choisir depuis la galerie
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <button onClick={() => photoInputRef.current?.click()} style={{ ...S.btnPrimary, width: '100%' }}>
+                    📷 Prendre une photo
+                  </button>
+                  <button onClick={() => galleryInputRef.current?.click()} style={{ ...S.btnSecondary, width: '100%' }}>
+                    🖼️ Choisir depuis la galerie
+                  </button>
+                </div>
               </div>
             )}
             {analyzingAI && <AILoading label="Analyse de la photo…" />}
@@ -791,73 +849,92 @@ export default function AjouterRepas() {
         {/* ══ MODE VOCAL ══════════════════════════════════════════════ */}
         {mode === 'vocal' && (
           <div style={S.card}>
+            {/* Non supporté */}
             {!voiceSupported && (
               <div style={{ textAlign: 'center', padding: '1.5rem' }}>
                 <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🎤</p>
-                <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Non disponible</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>La reconnaissance vocale n'est pas supportée par ce navigateur.</p>
-              </div>
-            )}
-
-            {voiceSupported && !aiAnalysis && !analyzingAI && !aiError && (
-              <div style={{ padding: '0.25rem 0' }}>
-                <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.3rem', fontSize: '0.95rem' }}>Saisie vocale IA</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
-                  Parle ou tape ton repas — Gemini identifie les aliments et calcule les macros.
-                </p>
-
-                {/* Bouton micro */}
-                <button onClick={isRecording ? stopRecording : startRecording} style={{
-                  width: '100%', padding: '0.8rem', border: 'none', borderRadius: 14,
-                  background: isRecording ? '#ef4444' : '#1a1a1a',
-                  color: isRecording ? 'white' : '#e4f816',
-                  fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                }}>
-                  <span style={{ filter: isRecording ? 'drop-shadow(0 0 6px rgba(255,255,255,0.5))' : 'none' }}>🎤</span>
-                  {isRecording ? 'Arrêter l\'enregistrement' : 'Parler'}
-                </button>
-                {isRecording && (
-                  <p style={{ color: '#ef4444', fontSize: '0.75rem', textAlign: 'center', marginTop: '0.4rem', fontWeight: 600 }}>
-                    ● Enregistrement en cours… parle maintenant
-                  </p>
-                )}
-
-                {/* Séparateur */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.9rem 0' }}>
-                  <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
-                  <span style={{ fontSize: '0.72rem', color: '#b0b8c1', fontWeight: 600 }}>ou tape ton repas</span>
-                  <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
-                </div>
-
-                {/* Textarea toujours visible (fallback iOS / préférence) */}
+                <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Micro non disponible</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Utilise la saisie texte ci-dessous.</p>
                 <textarea
-                  value={transcript}
-                  onChange={e => setTranscript(e.target.value)}
-                  placeholder="Ex : poulet grillé 180g, riz basmati 120g, salade verte…"
-                  rows={3}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    padding: '0.7rem 0.875rem',
-                    border: '1.5px solid #e5e7eb', borderRadius: 12,
-                    fontSize: '0.88rem', outline: 'none', resize: 'none',
-                    background: '#f9fafb', color: '#1a1a1a', fontFamily: 'inherit',
-                    lineHeight: 1.5,
-                  }}
+                  value={transcript} onChange={e => setTranscript(e.target.value)}
+                  placeholder="Ex : poulet grillé 180g, riz basmati 120g, salade verte…" rows={3}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'0.7rem', border:'1.5px solid #e5e7eb', borderRadius:12, fontSize:'0.88rem', outline:'none', resize:'none', background:'#f9fafb', color:'#1a1a1a', fontFamily:'inherit', lineHeight:1.5, marginTop:'0.75rem' }}
                 />
-
-                {transcript.trim().length > 4 && !isRecording && (
-                  <button onClick={() => callParseVoice(transcript)} style={{
-                    ...S.btnPrimary, width: '100%', marginTop: '0.6rem',
-                  }}>
+                {transcript.trim().length > 4 && (
+                  <button onClick={() => callParseVoice(transcript)} style={{ ...S.btnPrimary, width:'100%', marginTop:'0.6rem' }}>
                     🤖 Analyser ce repas
                   </button>
                 )}
               </div>
             )}
 
-            {analyzingAI && <AILoading label="Analyse du repas vocal…" />}
-            {aiError && !analyzingAI && <AIError error={aiError} onRetry={() => { setAiError(null); setTranscript('') }} />}
+            {/* Interface vocale principale */}
+            {voiceSupported && !aiAnalysis && !analyzingAI && (
+              <div style={{ padding: '0.25rem 0' }}>
+                <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.3rem', fontSize: '0.95rem' }}>Saisie vocale IA</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                  Parle ou tape ton repas — l'IA identifie les aliments et calcule les macros.
+                </p>
+
+                {/* Bouton micro */}
+                <button onClick={isRecording ? stopRecording : startRecording} style={{
+                  width: '100%', padding: '0.85rem', border: 'none', borderRadius: 14,
+                  background: isRecording ? '#ef4444' : '#1a1a1a',
+                  color: isRecording ? 'white' : '#e4f816',
+                  fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                }}>
+                  <span>🎤</span>
+                  {isRecording ? '⏹ Arrêter l\'enregistrement' : 'Parler'}
+                </button>
+
+                {isRecording && (
+                  <p style={{ color: '#ef4444', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.5rem', fontWeight: 600 }}>
+                    ● Enregistrement en cours… appuie sur Stop quand tu as fini
+                  </p>
+                )}
+
+                {/* Erreur inline (ne cache pas l'interface) */}
+                {aiError && (
+                  <div style={{
+                    background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10,
+                    padding: '0.6rem 0.75rem', marginTop: '0.6rem',
+                    fontSize: '0.8rem', color: '#dc2626', lineHeight: 1.4,
+                  }}>
+                    ⚠️ {aiError}
+                  </div>
+                )}
+
+                {/* Séparateur */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.85rem 0' }}>
+                  <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+                  <span style={{ fontSize: '0.72rem', color: '#b0b8c1', fontWeight: 600 }}>ou tape ton repas</span>
+                  <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+                </div>
+
+                {/* Textarea */}
+                <textarea
+                  value={transcript}
+                  onChange={e => setTranscript(e.target.value)}
+                  placeholder="Ex : poulet grillé 180g, riz basmati 120g, salade verte…"
+                  rows={3}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.875rem',
+                    border: '1.5px solid #e5e7eb', borderRadius: 12,
+                    fontSize: '0.88rem', outline: 'none', resize: 'none',
+                    background: '#f9fafb', color: '#1a1a1a', fontFamily: 'inherit', lineHeight: 1.5,
+                  }}
+                />
+
+                {transcript.trim().length > 4 && !isRecording && (
+                  <button onClick={() => callParseVoice(transcript)} style={{ ...S.btnPrimary, width: '100%', marginTop: '0.6rem' }}>
+                    🤖 Analyser ce repas
+                  </button>
+                )}
+              </div>
+            )}
+
+            {analyzingAI && <AILoading label="Analyse en cours…" />}
             {aiAnalysis && !analyzingAI && (
               <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} />
             )}

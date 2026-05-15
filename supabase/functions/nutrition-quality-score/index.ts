@@ -2,6 +2,9 @@
  * nutrition-quality-score
  * POST { meals: Meal[], goals: Goals|null, water_ml: number }
  * → { ok, score, verdict, commentaire }
+ *
+ * Utilise Groq (llama-3.1-8b-instant) en priorité — 14 400 req/jour gratuit.
+ * Fallback Gemini si GROQ_API_KEY absent.
  */
 
 const CORS = {
@@ -30,9 +33,9 @@ function buildPrompt(meals: Meal[], goals: Goals | null, water_ml: number): stri
 - Glucides : ${goals.carbs_g ?? "non défini"} g
 - Lipides : ${goals.fat_g ?? "non défini"} g
 - Hydratation : ${goals.hydration_ml ?? 2000} ml`
-    : `Aucun objectif personnalisé défini. Évalue la qualité nutritionnelle globale.`;
+    : `Aucun objectif personnalisé. Évalue la qualité nutritionnelle globale.`;
 
-  return `Tu es un nutritionniste expert et bienveillant. Évalue la journée alimentaire de cet athlète.
+  return `Tu es un nutritionniste expert et bienveillant. Évalue cette journée alimentaire.
 
 ${goalsBlock}
 
@@ -44,7 +47,7 @@ Consommé aujourd'hui :
 - Hydratation : ${water_ml} ml
 - Nombre de repas : ${meals.length}
 
-Donne une note de 0 à 10 (décimale permise), un verdict court (3-5 mots) et un commentaire personnalisé encourageant de 1-2 phrases maximum en français.
+Donne une note de 0 à 10 (décimale permise), un verdict court (3-5 mots) et un commentaire encourageant de 1-2 phrases en français.
 
 Réponds UNIQUEMENT avec ce JSON valide :
 {
@@ -54,42 +57,85 @@ Réponds UNIQUEMENT avec ce JSON valide :
 }`;
 }
 
+// ── Groq ─────────────────────────────────────────────────────────────────────
+async function callGroq(key: string, messages: unknown[]): Promise<Record<string, unknown>> {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    body: JSON.stringify({
+      model: "llama-3.1-8b-instant",
+      messages,
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+      max_tokens: 256,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    if (res.status === 429) throw new Error("Quota Groq atteint — réessaie dans quelques secondes");
+    throw new Error(`Groq ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return JSON.parse(data.choices[0].message.content);
+}
+
+// ── Gemini fallback ───────────────────────────────────────────────────────────
+async function callGemini(key: string, prompt: string): Promise<Record<string, unknown>> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  let res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json", temperature: 0.3 },
+    }),
+  });
+  if (res.status === 429) {
+    await new Promise(r => setTimeout(r, 2000));
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.3 },
+      }),
+    });
+  }
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Quota Gemini dépassé — configure GROQ_API_KEY dans les secrets Supabase");
+    throw new Error(`Gemini ${res.status}`);
+  }
+  const data = await res.json();
+  return JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}");
+}
+
+// ── Handler ───────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
+    const GROQ_KEY   = Deno.env.get("GROQ_API_KEY");
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_KEY) {
+
+    if (!GROQ_KEY && !GEMINI_KEY) {
       return new Response(
-        JSON.stringify({ ok: false, error: "GEMINI_API_KEY non configurée" }),
+        JSON.stringify({ ok: false, error: "Aucune clé IA configurée" }),
         { status: 500, headers: JSON_CT }
       );
     }
 
     const { meals, goals, water_ml = 0 } = await req.json();
     if (!meals?.length) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "Aucun repas fourni" }),
-        { headers: JSON_CT }
-      );
+      return new Response(JSON.stringify({ ok: false, error: "Aucun repas fourni" }), { headers: JSON_CT });
     }
 
-    const G_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
-    const G_BODY = JSON.stringify({ contents: [{ parts: [{ text: buildPrompt(meals, goals, water_ml) }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.3 } });
-    let res = await fetch(G_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: G_BODY });
-    if (res.status === 429) {
-      await new Promise(r => setTimeout(r, 2000));
-      res = await fetch(G_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: G_BODY });
-    }
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      const isQuota = errBody.includes("quota") || errBody.includes("RESOURCE_EXHAUSTED");
-      if (res.status === 429) throw new Error(isQuota ? "Quota journalier Gemini dépassé" : "Trop de requêtes — réessaie");
-      throw new Error(`Gemini ${res.status}`);
-    }
-    const data = await res.json();
-    const parsed = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}");
+    const prompt = buildPrompt(meals, goals, water_ml);
+    const parsed = GROQ_KEY
+      ? await callGroq(GROQ_KEY, [
+          { role: "system", content: "Tu es un nutritionniste expert. Tu réponds UNIQUEMENT avec du JSON valide." },
+          { role: "user",   content: prompt },
+        ])
+      : await callGemini(GEMINI_KEY!, prompt);
 
     return new Response(JSON.stringify({ ok: true, ...parsed }), { headers: JSON_CT });
   } catch (e) {

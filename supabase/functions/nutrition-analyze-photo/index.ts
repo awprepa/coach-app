@@ -2,6 +2,9 @@
  * nutrition-analyze-photo
  * POST { photo_base64: string, mime_type?: string }
  * → { ok, repas_nom, items, total_kcal, total_prot_g, total_carbs_g, total_fat_g, confiance, note_ia }
+ *
+ * Utilise Groq Vision (llama-3.2-11b-vision-preview) en priorité — gratuit.
+ * Fallback Gemini si GROQ_API_KEY absent.
  */
 
 const CORS = {
@@ -10,23 +13,15 @@ const CORS = {
 };
 const JSON_CT = { ...CORS, "Content-Type": "application/json" };
 
-const PROMPT = `Tu es un expert en nutrition. Analyse cette photo de repas.
-Identifie chaque aliment visible et estime les quantités et valeurs nutritionnelles.
+const VISION_PROMPT = `Tu es un expert en nutrition. Analyse cette photo de repas.
+Identifie chaque aliment visible, estime les quantités et valeurs nutritionnelles.
 Sois précis mais conservateur dans tes estimations.
 
 Réponds UNIQUEMENT avec ce JSON valide (sans texte autour) :
 {
   "repas_nom": "nom court du repas en français",
   "items": [
-    {
-      "name": "nom de l'aliment",
-      "quantity": 150,
-      "unit": "g",
-      "kcal": 200,
-      "prot_g": 15.0,
-      "carbs_g": 20.0,
-      "fat_g": 5.0
-    }
+    { "name": "nom de l'aliment", "quantity": 150, "unit": "g", "kcal": 200, "prot_g": 15.0, "carbs_g": 20.0, "fat_g": 5.0 }
   ],
   "total_kcal": 350,
   "total_prot_g": 25.0,
@@ -39,18 +34,74 @@ Réponds UNIQUEMENT avec ce JSON valide (sans texte autour) :
 Les valeurs "unit" acceptées : "g", "ml", "pièce".
 Si tu ne peux pas identifier un aliment, utilise "Aliment non identifié".`;
 
-async function callGemini(key: string, parts: unknown[]) {
+// ── Groq Vision ───────────────────────────────────────────────────────────────
+async function callGroqVision(key: string, base64: string, mimeType: string): Promise<Record<string, unknown>> {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    body: JSON.stringify({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64}` },
+            },
+            { type: "text", text: VISION_PROMPT },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      max_tokens: 1024,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    if (res.status === 429) throw new Error("Quota Groq atteint — réessaie dans quelques secondes");
+    throw new Error(`Groq Vision ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return JSON.parse(data.choices[0].message.content);
+}
+
+// ── Gemini Vision (fallback) ──────────────────────────────────────────────────
+async function callGeminiVision(key: string, base64: string, mimeType: string): Promise<Record<string, unknown>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  const body = JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } });
-  let res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+  let res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { inlineData: { mimeType, data: base64 } },
+          { text: VISION_PROMPT },
+        ],
+      }],
+      generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+    }),
+  });
   if (res.status === 429) {
     await new Promise(r => setTimeout(r, 2000));
-    res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { inlineData: { mimeType, data: base64 } },
+            { text: VISION_PROMPT },
+          ],
+        }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+      }),
+    });
   }
   if (!res.ok) {
+    if (res.status === 429) throw new Error("Quota Gemini dépassé — configure GROQ_API_KEY dans les secrets Supabase");
     const txt = await res.text().catch(() => "");
-    const isQuota = txt.includes("quota") || txt.includes("RESOURCE_EXHAUSTED");
-    if (res.status === 429) throw new Error(isQuota ? "Quota journalier Gemini dépassé" : "Trop de requêtes — réessaie dans quelques secondes");
     throw new Error(`Gemini ${res.status}: ${txt.slice(0, 200)}`);
   }
   const data = await res.json();
@@ -58,30 +109,29 @@ async function callGemini(key: string, parts: unknown[]) {
   return JSON.parse(text);
 }
 
+// ── Handler ───────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
+    const GROQ_KEY   = Deno.env.get("GROQ_API_KEY");
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_KEY) {
+
+    if (!GROQ_KEY && !GEMINI_KEY) {
       return new Response(
-        JSON.stringify({ ok: false, error: "GEMINI_API_KEY non configurée" }),
+        JSON.stringify({ ok: false, error: "Aucune clé IA configurée" }),
         { status: 500, headers: JSON_CT }
       );
     }
 
     const { photo_base64, mime_type = "image/jpeg" } = await req.json();
     if (!photo_base64) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "photo_base64 manquant" }),
-        { headers: JSON_CT }
-      );
+      return new Response(JSON.stringify({ ok: false, error: "photo_base64 manquant" }), { headers: JSON_CT });
     }
 
-    const result = await callGemini(GEMINI_KEY, [
-      { inlineData: { mimeType: mime_type, data: photo_base64 } },
-      { text: PROMPT },
-    ]);
+    const result = GROQ_KEY
+      ? await callGroqVision(GROQ_KEY, photo_base64, mime_type)
+      : await callGeminiVision(GEMINI_KEY!, photo_base64, mime_type);
 
     return new Response(JSON.stringify({ ok: true, ...result }), { headers: JSON_CT });
   } catch (e) {
