@@ -12,6 +12,7 @@ export default function Login() {
   const [error, setError]       = useState('')
   const [success, setSuccess]   = useState('')
   const [loading, setLoading]   = useState(false)
+  const [showPwd, setShowPwd]   = useState(false)
 
   function switchMode(m) { setMode(m); setError(''); setSuccess('') }
 
@@ -128,8 +129,13 @@ export default function Login() {
             </div>
             <div style={styles.field}>
               <label style={styles.label}>Mot de passe</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required placeholder="••••••••" style={styles.input} />
+              <div style={styles.pwdWrap}>
+                <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                  required placeholder="••••••••" style={{ ...styles.input, paddingRight: '2.8rem' }} />
+                <button type="button" onClick={() => setShowPwd(v => !v)} style={styles.eyeBtn} aria-label={showPwd ? 'Masquer' : 'Voir'}>
+                  {showPwd ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
             </div>
             {error && <p style={styles.error}>{error}</p>}
             <button type="submit" disabled={loading} style={styles.btn}>
@@ -162,8 +168,13 @@ export default function Login() {
             </div>
             <div style={styles.field}>
               <label style={styles.label}>Mot de passe *</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required placeholder="8 caractères minimum" minLength={8} style={styles.input} />
+              <div style={styles.pwdWrap}>
+                <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                  required placeholder="8 caractères minimum" minLength={8} style={{ ...styles.input, paddingRight: '2.8rem' }} />
+                <button type="button" onClick={() => setShowPwd(v => !v)} style={styles.eyeBtn} aria-label={showPwd ? 'Masquer' : 'Voir'}>
+                  {showPwd ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
             </div>
             {error && <p style={styles.error}>{error}</p>}
             <button type="submit" disabled={loading} style={styles.btn}>
@@ -180,13 +191,23 @@ export default function Login() {
             </p>
             <div style={styles.field}>
               <label style={styles.label}>Nouveau mot de passe</label>
-              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                required placeholder="8 caractères minimum" minLength={8} style={styles.input} autoFocus />
+              <div style={styles.pwdWrap}>
+                <input type={showPwd ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                  required placeholder="8 caractères minimum" minLength={8} style={{ ...styles.input, paddingRight: '2.8rem' }} autoFocus />
+                <button type="button" onClick={() => setShowPwd(v => !v)} style={styles.eyeBtn} aria-label={showPwd ? 'Masquer' : 'Voir'}>
+                  {showPwd ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
             </div>
             <div style={styles.field}>
               <label style={styles.label}>Confirmer le mot de passe</label>
-              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                required placeholder="••••••••" style={styles.input} />
+              <div style={styles.pwdWrap}>
+                <input type={showPwd ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                  required placeholder="••••••••" style={{ ...styles.input, paddingRight: '2.8rem' }} />
+                <button type="button" onClick={() => setShowPwd(v => !v)} style={styles.eyeBtn} aria-label={showPwd ? 'Masquer' : 'Voir'}>
+                  {showPwd ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
             </div>
             {error && <p style={styles.error}>{error}</p>}
             <button type="submit" disabled={loading} style={styles.btn}>
@@ -219,6 +240,25 @@ export default function Login() {
   )
 }
 
+function Eye() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  )
+}
+
+function EyeOff() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  )
+}
+
 const styles = {
   page:        { minHeight: '100vh', background: '#efefef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   brand:       { textAlign: 'center', marginBottom: '2rem' },
@@ -236,4 +276,6 @@ const styles = {
   btn:         { width: '100%', padding: '0.875rem', background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginTop: '0.5rem' },
   forgotBtn:   { width: '100%', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.8rem', cursor: 'pointer', marginTop: '0.75rem', padding: '0.25rem' },
   hint:        { color: '#9ca3af', fontSize: '0.75rem', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 },
+  pwdWrap:     { position: 'relative' },
+  eyeBtn:      { position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: '0.25rem' },
 }
