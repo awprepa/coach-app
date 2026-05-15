@@ -3,12 +3,14 @@ import BibliothequeExercices from './BibliothequeExercices'
 import EchauffementsTemplates from './EchauffementsTemplates'
 import SeanceTemplates from './SeanceTemplates'
 import CycleTemplates from './CycleTemplates'
+import SciencesNutrition from '../components/SciencesNutrition'
 
 const TABS = [
   { key: 'exercices',      label: 'Exercices' },
   { key: 'echauffements',  label: 'Échauffements' },
   { key: 'modeles',        label: 'Modèles de séances' },
   { key: 'cycles',         label: 'Templates de cycles' },
+  { key: 'sciences',       label: '📚 Sciences' },
 ]
 
 export default function Bibliotheque() {
@@ -39,6 +41,9 @@ export default function Bibliotheque() {
       <div style={{ display: tab === 'cycles' ? 'block' : 'none' }}>
         <CycleTemplates />
       </div>
+      {tab === 'sciences' && (
+        <SciencesNutrition coachMode={true} />
+      )}
     </div>
   )
 }
