@@ -65,7 +65,8 @@ export default function ClientBottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const p = location.pathname
-  const [offre, setOffre] = useState(null)
+  // Initialise depuis le cache sessionStorage → pas de flash au premier rendu
+  const [offre, setOffre] = useState(() => sessionStorage.getItem('clientOffre') || null)
 
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
@@ -92,7 +93,10 @@ export default function ClientBottomNav() {
       if (!userId) return
       const { data: client } = await supabase
         .from('clients').select('offre').eq('user_id', userId).maybeSingle()
-      if (client?.offre) setOffre(client.offre)
+      if (client?.offre) {
+        sessionStorage.setItem('clientOffre', client.offre)
+        setOffre(client.offre)
+      }
     }
     fetchOffre()
   }, [])

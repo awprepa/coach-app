@@ -6,14 +6,14 @@ import { useMessages } from '../../hooks/useMessages'
 import { sendPushOnly } from '../../notifs'
 
 const HEADER_H = 58
-const NAV_H    = 82
+const NAV_H    = 88   // légèrement au-dessus de la bottom nav (82px)
 const INPUT_H  = 62
 
 /**
- * useInputBottom — lit window.visualViewport (fiable sur iOS 15+)
- * au lieu de focusin/focusout qui causait des sauts et des bugs de timing.
- * Quand le clavier est ouvert, retourne la hauteur du clavier.
- * Quand fermé, retourne NAV_H (au-dessus de la bottom nav).
+ * useInputBottom — lit window.visualViewport.
+ * Sur iOS, on soustrait uniquement vv.height (pas vv.offsetTop qui cause des gaps).
+ * Quand clavier ouvert → retourne la hauteur clavier (sans safe-area, la barre se colle au clavier).
+ * Quand fermé → retourne NAV_H.
  */
 function useInputBottom() {
   const [bottom, setBottom] = useState(NAV_H)
@@ -23,8 +23,8 @@ function useInputBottom() {
     if (!vv) return
 
     function update() {
-      // Décalage clavier = différence entre hauteur innerHeight et visual viewport
-      const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      // Sur iOS, vv.offsetTop peut introduire un gap → on l'ignore
+      const kbH = Math.max(0, window.innerHeight - vv.height)
       setBottom(kbH > 80 ? kbH : NAV_H)
     }
 
@@ -169,13 +169,10 @@ function ChatInner({ clientId, coachId }) {
         position: 'fixed',
         left: 0, right: 0,
         bottom: inputBottom,
-        zIndex: 90,
-        background: 'rgba(255,255,255,0.97)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(0,0,0,0.07)',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
-        paddingBottom: inputBottom === NAV_H ? 0 : 'env(safe-area-inset-bottom, 0px)',
+        zIndex: 100,          // au-dessus de la bottom nav (zIndex 90) → pas d'ombre par-dessus
+        background: 'white',
+        borderTop: '1px solid #efefef',
+        boxShadow: 'none',    // pas d'ombre — la bottom nav en a déjà une vers le haut
         display: 'flex',
         alignItems: 'center',
         gap: '0.55rem',

@@ -187,6 +187,10 @@ export default function GPS() {
   const [preview, setPreview]           = useState(null)
   const [clients, setClients]           = useState([])
   const [loading, setLoading]           = useState(true)
+  // Filtres sidebar
+  const [filterSport, setFilterSport]   = useState(null)
+  const [filterType, setFilterType]     = useState(null)
+  const [filterCat, setFilterCat]       = useState(null)
   const [selectedJoueurs, setSelectedJ] = useState(new Set())
   const [dupeModal, setDupeModal]       = useState(null)   // { joueur, rows[] } en cours de résolution
   const [dupeChoices, setDupeChoices]   = useState({})     // joueur → index de la ligne choisie
@@ -383,8 +387,55 @@ export default function GPS() {
 
         {loading ? <p style={S.dimText}>Chargement…</p> : null}
 
+        {/* ── Filtres rapports ── */}
+        {(() => {
+          const allInfos = rapports.map(r => parseGpsNom(r.nom))
+          const sports    = [...new Set(allInfos.map(i => i.sport).filter(Boolean))].sort()
+          const types     = [...new Set(allInfos.map(i => i.type).filter(Boolean))].sort()
+          const cats      = [...new Set(allInfos.map(i => i.categorie).filter(Boolean))].sort()
+          if (!sports.length && !types.length && !cats.length) return null
+          const chip = (label, active, onClick) => (
+            <button key={label} onClick={onClick} style={{
+              padding: '3px 9px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700,
+              background: active ? '#e4f816' : 'rgba(255,255,255,0.12)',
+              color: active ? '#1a1a1a' : '#9ca3af',
+              transition: 'background 0.15s',
+            }}>{label}</button>
+          )
+          return (
+            <div style={{ marginBottom: 10 }}>
+              {sports.length > 1 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+                  {chip('Tous sports', !filterSport, () => setFilterSport(null))}
+                  {sports.map(s => chip(s, filterSport === s, () => setFilterSport(filterSport === s ? null : s)))}
+                </div>
+              )}
+              {types.length > 1 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+                  {chip('Tous types', !filterType, () => setFilterType(null))}
+                  {types.map(t => chip(t, filterType === t, () => setFilterType(filterType === t ? null : t)))}
+                </div>
+              )}
+              {cats.length > 1 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+                  {chip('Toutes catés', !filterCat, () => setFilterCat(null))}
+                  {cats.map(c => chip(c, filterCat === c, () => setFilterCat(filterCat === c ? null : c)))}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
         <div style={S.sideList}>
-          {rapports.map(r => {
+          {rapports
+            .filter(r => {
+              const i = parseGpsNom(r.nom)
+              if (filterSport && i.sport !== filterSport) return false
+              if (filterType  && i.type  !== filterType)  return false
+              if (filterCat   && i.categorie !== filterCat) return false
+              return true
+            })
+            .map(r => {
               const gpsInfo = parseGpsNom(r.nom)
               const nbJoueurs = r.lignes?.filter(l => l.periode_num === 0).length || 0
               const dateStr = r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''
@@ -403,9 +454,8 @@ export default function GPS() {
                   <button onClick={e => { e.stopPropagation(); supprimerRapport(r.id) }} style={S.deleteBtn}>✕</button>
                 </div>
               )
-            }
-
-          )}
+            })
+          }
           {!loading && !rapports.length && <p style={S.dimText}>Aucun rapport. Importez un fichier Catapult.</p>}
         </div>
       </div>
