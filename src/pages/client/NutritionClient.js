@@ -233,12 +233,20 @@ export default function NutritionClient() {
           </svg>
         </button>
         <span style={S.headerTitle}>Nutrition</span>
+        <div style={{ display: 'flex', gap: '0.25rem' }}>
         <button onClick={() => navigate('/client/nutrition/historique')} style={S.backBtn} aria-label="Historique">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="9" />
             <polyline points="12 7 12 12 15 14" />
           </svg>
         </button>
+        <button onClick={() => navigate('/client/nutrition/profil')} style={S.backBtn} aria-label="Mon profil nutritionnel">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+        </button>
+        </div>
       </div>
 
       <div style={S.content}>

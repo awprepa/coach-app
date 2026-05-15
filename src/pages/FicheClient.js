@@ -75,6 +75,11 @@ export default function FicheClient() {
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
   const [coachId, setCoachId] = useState(null)
+  const [nutritionGoals, setNutritionGoals] = useState(null)
+  const [nutritionMeals7, setNutritionMeals7] = useState([])
+  const [nutritionProfile, setNutritionProfile] = useState(null)
+  const [goalsForm, setGoalsForm] = useState({ kcal_target: '', prot_g: '', carbs_g: '', fat_g: '', hydration_ml: '' })
+  const [savingGoals, setSavingGoals] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => { if (user) setCoachId(user.id) })
@@ -220,6 +225,62 @@ export default function FicheClient() {
     setProgression(result)
   }
 
+  async function fetchNutrition() {
+    const today = new Date().toISOString().slice(0, 10)
+    const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+    const [{ data: g }, { data: meals }, { data: profile }] = await Promise.all([
+      supabase.from('nutrition_goals').select('*').eq('client_id', id)
+        .or(`active_to.is.null,active_to.gte.${today}`)
+        .order('active_from', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('nutrition_meals').select('date, kcal').eq('client_id', id)
+        .gte('date', sevenDaysAgo).lte('date', today),
+      supabase.from('nutrition_profile').select('*').eq('client_id', id).maybeSingle(),
+    ])
+
+    setNutritionGoals(g)
+    setGoalsForm({
+      kcal_target: g?.kcal_target ?? '',
+      prot_g:      g?.prot_g      ?? '',
+      carbs_g:     g?.carbs_g     ?? '',
+      fat_g:       g?.fat_g       ?? '',
+      hydration_ml:g?.hydration_ml ?? '',
+    })
+
+    // Agréger kcal par date sur 7 jours
+    const byDate = {}
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      byDate[d] = 0
+    }
+    ;(meals || []).forEach(m => { if (byDate[m.date] !== undefined) byDate[m.date] += (m.kcal || 0) })
+    setNutritionMeals7(Object.entries(byDate).map(([date, kcal]) => ({ date, kcal })))
+
+    setNutritionProfile(profile)
+  }
+
+  async function saveGoals() {
+    setSavingGoals(true)
+    const today = new Date().toISOString().slice(0, 10)
+    // Clôturer les objectifs actifs existants
+    await supabase.from('nutrition_goals').update({ active_to: today })
+      .eq('client_id', id).is('active_to', null)
+    // Créer les nouveaux objectifs
+    const { error } = await supabase.from('nutrition_goals').insert({
+      client_id:    id,
+      kcal_target:  Number(goalsForm.kcal_target)  || null,
+      prot_g:       Number(goalsForm.prot_g)       || null,
+      carbs_g:      Number(goalsForm.carbs_g)      || null,
+      fat_g:        Number(goalsForm.fat_g)        || null,
+      hydration_ml: Number(goalsForm.hydration_ml) || null,
+      active_from:  today,
+      active_to:    null,
+    })
+    if (error) alert(error.message)
+    else await fetchNutrition()
+    setSavingGoals(false)
+  }
+
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
   if (!client) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Client introuvable.</p></div>
 
@@ -327,8 +388,13 @@ export default function FicheClient() {
           { k: 'profil', l: '📋 Données' },
           { k: 'progression', l: '📈 Progression' },
           { k: 'messages', l: '💬 Messages' },
+          { k: 'nutrition', l: '🥗 Nutrition' },
         ].map(t => (
-          <button key={t.k} onClick={() => { setActiveTab(t.k); if (t.k === 'progression' && progression.length === 0) fetchProgression() }} style={{
+          <button key={t.k} onClick={() => {
+            setActiveTab(t.k)
+            if (t.k === 'progression' && progression.length === 0) fetchProgression()
+            if (t.k === 'nutrition') fetchNutrition()
+          }} style={{
             flex: 1, padding: '0.45rem 0.5rem', border: 'none', borderRadius: 9, fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer',
             background: activeTab === t.k ? 'white' : 'transparent',
             color: activeTab === t.k ? '#333333' : '#9ca3af',
@@ -580,6 +646,75 @@ export default function FicheClient() {
 
       </> /* fin onglet profil */}
 
+      {/* ─── Onglet Nutrition ─────────────────────────────────────────── */}
+      {activeTab === 'nutrition' && (
+        <div style={{ marginTop: '1rem' }}>
+
+          {/* Objectifs */}
+          <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
+            <p style={{ ...styles.sectionTitle, marginBottom: '1rem' }}>🎯 Objectifs nutritionnels</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+              <GoalField label="Calories (kcal)" value={goalsForm.kcal_target} onChange={v => setGoalsForm(f => ({ ...f, kcal_target: v }))} />
+              <GoalField label="Protéines (g)"   value={goalsForm.prot_g}      onChange={v => setGoalsForm(f => ({ ...f, prot_g: v }))} />
+              <GoalField label="Glucides (g)"    value={goalsForm.carbs_g}     onChange={v => setGoalsForm(f => ({ ...f, carbs_g: v }))} />
+              <GoalField label="Lipides (g)"     value={goalsForm.fat_g}       onChange={v => setGoalsForm(f => ({ ...f, fat_g: v }))} />
+              <GoalField label="Hydratation (ml)" value={goalsForm.hydration_ml} onChange={v => setGoalsForm(f => ({ ...f, hydration_ml: v }))} />
+            </div>
+            <button onClick={saveGoals} disabled={savingGoals} style={styles.btnPrimary}>
+              {savingGoals ? 'Sauvegarde…' : nutritionGoals ? 'Mettre à jour' : 'Définir les objectifs'}
+            </button>
+          </div>
+
+          {/* 7 derniers jours */}
+          <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
+            <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>📅 7 derniers jours</p>
+            {nutritionMeals7.every(d => d.kcal === 0) ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '0.75rem 0' }}>Aucun repas enregistré.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {nutritionMeals7.map(({ date, kcal }) => {
+                  const target = nutritionGoals?.kcal_target
+                  const pct = target > 0 ? Math.min(kcal / target, 1) : 0
+                  const color = !target ? '#9ca3af' : pct >= 0.85 && pct <= 1.15 ? '#22c55e' : pct >= 0.65 ? '#f97316' : '#ef4444'
+                  const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                  return (
+                    <div key={date} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280', width: 82, flexShrink: 0 }}>{dayLabel}</span>
+                      <div style={{ flex: 1, height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
+                        {kcal > 0 && <div style={{ height: '100%', width: `${pct * 100}%`, background: color, borderRadius: 999 }} />}
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: kcal > 0 ? color : '#d1d5db', width: 56, textAlign: 'right', flexShrink: 0 }}>
+                        {kcal > 0 ? `${Math.round(kcal)} kcal` : '—'}
+                      </span>
+                    </div>
+                  )
+                })}
+                {nutritionGoals?.kcal_target && (
+                  <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.25rem', textAlign: 'center' }}>
+                    Objectif : {nutritionGoals.kcal_target} kcal/jour
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Profil nutritionnel */}
+          {nutritionProfile ? (
+            <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>👤 Profil nutritionnel</p>
+              <div style={styles.infoGrid}>
+                {nutritionProfile.regime && <InfoItem label="Régime" value={nutritionProfile.regime} />}
+                {nutritionProfile.allergenes?.length > 0 && <InfoItem label="Allergènes" value={nutritionProfile.allergenes.join(', ')} full />}
+                {nutritionProfile.exclusions?.length > 0 && <InfoItem label="Exclusions" value={nutritionProfile.exclusions.join(', ')} full />}
+                {nutritionProfile.notes && <InfoItem label="Notes" value={nutritionProfile.notes} full />}
+              </div>
+            </div>
+          ) : (
+            <div style={styles.emptyCard}>Le client n'a pas encore renseigné son profil nutritionnel.</div>
+          )}
+        </div>
+      )}
+
     </div>
   )
 }
@@ -589,6 +724,15 @@ function InfoItem({ label, value, full }) {
     <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
       <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ fontSize: '0.9rem', color: '#333333', margin: 0 }}>{value}</p>
+    </div>
+  )
+}
+
+function GoalField({ label, value, onChange }) {
+  return (
+    <div>
+      <label style={styles.label}>{label}</label>
+      <input type="number" value={value} onChange={e => onChange(e.target.value)} style={styles.input} placeholder="—" min="0" />
     </div>
   )
 }

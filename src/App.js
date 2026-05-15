@@ -25,6 +25,9 @@ import NotificationsClient from './pages/client/NotificationsClient'
 import MessagesClient from './pages/client/MessagesClient'
 import NutritionClient from './pages/client/NutritionClient'
 import AjouterRepas from './pages/client/AjouterRepas'
+import HistoriqueNutrition from './pages/client/HistoriqueNutrition'
+import ProfilNutrition from './pages/client/ProfilNutrition'
+import NutritionCoach from './pages/NutritionCoach'
 import CoachMessages from './pages/CoachMessages'
 import ChargeEntrainement from './pages/ChargeEntrainement'
 import Paiements from './pages/Paiements'
@@ -86,7 +89,9 @@ function App() {
           <Route path="/client/notifications"  element={<WithNotifs><NotificationsClient /></WithNotifs>} />
           <Route path="/client/messages"       element={<WithNotifs><MessagesClient /></WithNotifs>} />
           <Route path="/client/nutrition"         element={<WithNotifs><NutritionClient /></WithNotifs>} />
-          <Route path="/client/nutrition/ajouter" element={<WithNotifs><AjouterRepas /></WithNotifs>} />
+          <Route path="/client/nutrition/ajouter"    element={<WithNotifs><AjouterRepas /></WithNotifs>} />
+          <Route path="/client/nutrition/historique" element={<WithNotifs><HistoriqueNutrition /></WithNotifs>} />
+          <Route path="/client/nutrition/profil"    element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
           <Route path="/login"                 element={<Login />} />
 
           {/* Unified home — coach voit Dashboard, client voit AccueilClient */}
@@ -107,6 +112,7 @@ function App() {
           <Route path="/messages"                     element={<WithNav><CoachMessages /></WithNav>} />
           <Route path="/charge"                       element={<WithNav><ChargeEntrainement /></WithNav>} />
           <Route path="/paiements"                    element={<WithNav><Paiements /></WithNav>} />
+          <Route path="/nutrition-coach"              element={<WithNav><NutritionCoach /></WithNav>} />
         </Routes>
         </TimerProvider>
       </AuthGate>

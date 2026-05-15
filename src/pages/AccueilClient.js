@@ -217,6 +217,8 @@ export default function AccueilClient() {
   const [showInstall, setShowInstall]     = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useState(true)
+  const [kcalGoals, setKcalGoals]         = useState(null)   // nutrition_goals row
+  const [kcalToday, setKcalToday]         = useState(0)      // kcal consommés aujourd'hui
   const { unread } = useNotifCtx()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -245,6 +247,19 @@ export default function AccueilClient() {
 
       if (!clientData) return
       setClient(clientData)
+
+      // Widget nutrition — uniquement si des objectifs existent
+      const todayN = new Date().toISOString().slice(0, 10)
+      const { data: gData } = await supabase
+        .from('nutrition_goals').select('kcal_target').eq('client_id', clientData.id)
+        .or(`active_to.is.null,active_to.gte.${todayN}`)
+        .order('active_from', { ascending: false }).limit(1).maybeSingle()
+      if (gData?.kcal_target) {
+        setKcalGoals(gData)
+        const { data: mData } = await supabase
+          .from('nutrition_meals').select('kcal').eq('client_id', clientData.id).eq('date', todayN)
+        setKcalToday((mData || []).reduce((acc, m) => acc + (m.kcal || 0), 0))
+      }
 
       const { data: progs } = await supabase
         .from('programmes').select('*').eq('client_id', clientData.id).order('created_at', { ascending: false })
@@ -402,6 +417,33 @@ export default function AccueilClient() {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {/* Widget kcal — visible uniquement si des objectifs sont définis */}
+        {kcalGoals && (
+          <div
+            onClick={() => navigate('/client/nutrition')}
+            style={{ ...styles.card, marginBottom: '1.75rem', cursor: 'pointer', padding: '1rem 1.25rem' }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ ...styles.cardTitle, display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.5rem' }}>
+                🥗 Nutrition du jour
+              </p>
+              <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', marginBottom: '0.3rem' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(kcalToday / kcalGoals.kcal_target, 1) * 100}%`,
+                  background: kcalToday >= kcalGoals.kcal_target * 0.85 && kcalToday <= kcalGoals.kcal_target * 1.15 ? '#22c55e' : kcalToday >= kcalGoals.kcal_target * 0.5 ? '#e4f816' : '#f97316',
+                  borderRadius: 999,
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+              <p style={{ ...styles.cardSub, margin: 0 }}>
+                {Math.round(kcalToday)} / {kcalGoals.kcal_target} kcal
+              </p>
+            </div>
+            <span style={styles.chevron}>›</span>
           </div>
         )}
 
