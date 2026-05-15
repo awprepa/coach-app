@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
-import SciencesNutrition from '../../components/SciencesNutrition'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -105,7 +104,7 @@ export default function ProfilNutrition() {
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
   const [error,    setError]    = useState(null)
-  const [tab,      setTab]      = useState('objectifs')  // 'objectifs' | 'preferences' | 'sciences'
+  const [tab,      setTab]      = useState('objectifs')
 
   // Wizard
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -675,12 +674,6 @@ export default function ProfilNutrition() {
         >
           🥗 Préférences
         </button>
-        <button
-          onClick={() => setTab('sciences')}
-          style={{ ...S.tabBtn, ...(tab === 'sciences' ? S.tabBtnActive : {}) }}
-        >
-          📚 Sciences
-        </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -912,15 +905,6 @@ export default function ProfilNutrition() {
           </>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════════════
-            Tab Sciences
-        ══════════════════════════════════════════════════════════════════════ */}
-        {tab === 'sciences' && (
-          <div style={{ margin: '0 -16px' }}>
-            <SciencesNutrition coachMode={false} />
-          </div>
-        )}
-
         <div style={{ height: 20 }} />
       </div>
 
@@ -1023,14 +1007,13 @@ const S = {
   tabBar: {
     display: 'flex', background: 'white',
     borderBottom: '1px solid #f3f4f6',
-    padding: '0 4px',
+    padding: '0 16px',
     position: 'sticky', top: 96, zIndex: 50,
-    overflowX: 'auto', scrollbarWidth: 'none',
   },
   tabBtn: {
-    flexShrink: 0, padding: '12px 14px', border: 'none', background: 'none',
-    fontSize: '0.82rem', fontWeight: 700, color: '#9ca3af', cursor: 'pointer',
-    borderBottom: '2.5px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap',
+    flex: 1, padding: '12px 8px', border: 'none', background: 'none',
+    fontSize: '0.84rem', fontWeight: 700, color: '#9ca3af', cursor: 'pointer',
+    borderBottom: '2.5px solid transparent', transition: 'all 0.15s',
   },
   tabBtnActive: {
     color: '#1a1a1a', borderBottomColor: '#e4f816',
