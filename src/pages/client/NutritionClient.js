@@ -523,7 +523,7 @@ const S = {
   },
   fab: {
     position: 'fixed',
-    bottom: 'calc(89px + env(safe-area-inset-bottom, 16px))',
+    bottom: 'calc(92px + max(env(safe-area-inset-bottom, 0px), 16px))',
     right: 18, zIndex: 80,
     width: 58, height: 58, borderRadius: 999,
     background: '#e4f816', border: 'none',

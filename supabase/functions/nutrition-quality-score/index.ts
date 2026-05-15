@@ -74,19 +74,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: buildPrompt(meals, goals, water_ml) }] }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0.3 },
-        }),
-      }
-    );
+    const G_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+    const G_BODY = JSON.stringify({ contents: [{ parts: [{ text: buildPrompt(meals, goals, water_ml) }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.3 } });
+    let res = await fetch(G_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: G_BODY });
+    if (res.status === 429) {
+      await new Promise(r => setTimeout(r, 2000));
+      res = await fetch(G_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: G_BODY });
+    }
 
-    if (!res.ok) throw new Error(`Gemini ${res.status}`);
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      const isQuota = errBody.includes("quota") || errBody.includes("RESOURCE_EXHAUSTED");
+      if (res.status === 429) throw new Error(isQuota ? "Quota journalier Gemini dépassé" : "Trop de requêtes — réessaie");
+      throw new Error(`Gemini ${res.status}`);
+    }
     const data = await res.json();
     const parsed = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}");
 

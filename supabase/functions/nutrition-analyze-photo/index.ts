@@ -40,19 +40,17 @@ Les valeurs "unit" acceptées : "g", "ml", "pièce".
 Si tu ne peux pas identifier un aliment, utilise "Aliment non identifié".`;
 
 async function callGemini(key: string, parts: unknown[]) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-      }),
-    }
-  );
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  const body = JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } });
+  let res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+  if (res.status === 429) {
+    await new Promise(r => setTimeout(r, 2000));
+    res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+  }
   if (!res.ok) {
-    const txt = await res.text();
+    const txt = await res.text().catch(() => "");
+    const isQuota = txt.includes("quota") || txt.includes("RESOURCE_EXHAUSTED");
+    if (res.status === 429) throw new Error(isQuota ? "Quota journalier Gemini dépassé" : "Trop de requêtes — réessaie dans quelques secondes");
     throw new Error(`Gemini ${res.status}: ${txt.slice(0, 200)}`);
   }
   const data = await res.json();

@@ -58,19 +58,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: buildPrompt(text) }] }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-        }),
-      }
-    );
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+    const GEMINI_OPTS = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: buildPrompt(text) }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+      }),
+    };
 
-    if (!res.ok) throw new Error(`Gemini ${res.status}`);
+    let res = await fetch(GEMINI_URL, GEMINI_OPTS);
+    // Retry une fois si rate limit temporaire (récupère en quelques secondes)
+    if (res.status === 429) {
+      await new Promise(r => setTimeout(r, 2000));
+      res = await fetch(GEMINI_URL, GEMINI_OPTS);
+    }
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      const isQuota = errBody.includes("RESOURCE_EXHAUSTED") || errBody.includes("quota");
+      if (res.status === 429) throw new Error(isQuota ? "Quota IA dépassé pour aujourd'hui — réessaie demain" : "IA temporairement indisponible — réessaie dans quelques secondes");
+      throw new Error(`Gemini erreur ${res.status}`);
+    }
     const data = await res.json();
     const parsed = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}");
 
