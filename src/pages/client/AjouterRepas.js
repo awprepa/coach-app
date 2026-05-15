@@ -10,11 +10,11 @@ const MEAL_TYPES = [
 ]
 
 const MODES = [
-  { key: 'scan',    label: 'Scan',    emoji: '📊' },
-  { key: 'manuel',  label: 'Manuel',  emoji: '✏️' },
-  { key: 'favoris', label: 'Favoris', emoji: '⭐' },
-  { key: 'photo',   label: 'Photo',   emoji: '📷' },
-  { key: 'vocal',   label: 'Vocal',   emoji: '🎤' },
+  { key: 'scan',    label: 'Code-barres', emoji: '▦' },
+  { key: 'manuel',  label: 'Manuel',      emoji: '✏️' },
+  { key: 'photo',   label: 'Photo IA',    emoji: '📷' },
+  { key: 'vocal',   label: 'Vocal IA',    emoji: '🎤' },
+  { key: 'favoris', label: 'Favoris',     emoji: '⭐' },
 ]
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
@@ -520,23 +520,25 @@ export default function AjouterRepas() {
       <div style={S.content}>
 
         {/* ── Type de repas ─────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
           {MEAL_TYPES.map(t => (
             <button key={t.key} onClick={() => setMealType(t.key)} style={{
-              flex: 1, border: 'none', borderRadius: 12, padding: '0.55rem 0.2rem',
-              cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700,
+              flex: 1, border: mealType === t.key ? 'none' : '1.5px solid #e5e7eb',
+              borderRadius: 14, padding: '0.65rem 0.2rem',
+              cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700,
               background: mealType === t.key ? '#1a1a1a' : 'white',
               color: mealType === t.key ? '#e4f816' : '#6b7280',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)', transition: 'all 0.15s',
+              boxShadow: mealType === t.key ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+              transition: 'all 0.15s',
             }}>
-              <div style={{ fontSize: '1.1rem', marginBottom: 2 }}>{t.emoji}</div>
+              <div style={{ fontSize: '1.2rem', marginBottom: 3 }}>{t.emoji}</div>
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* ── Tabs de mode ──────────────────────────────────────────── */}
-        <div style={{ display: 'flex', background: 'white', borderRadius: 14, padding: '0.3rem', gap: '0.2rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        {/* ── Sélecteur de mode ─────────────────────────────────────── */}
+        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '2px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
           {MODES.map(m => (
             <button key={m.key} onClick={() => {
               setMode(m.key)
@@ -544,14 +546,18 @@ export default function AjouterRepas() {
               if (m.key === 'scan') { setFood(null); setScanDone(false); setCameraError(false) }
               if (m.key !== 'photo' && m.key !== 'vocal') resetAI()
             }} style={{
-              flex: 1, border: 'none', borderRadius: 10, padding: '0.45rem 0.15rem',
-              cursor: 'pointer', fontSize: '0.62rem', fontWeight: 700,
-              background: mode === m.key ? '#1a1a1a' : 'transparent',
-              color: mode === m.key ? '#e4f816' : '#9ca3af',
+              flexShrink: 0,
+              padding: '0.55rem 1rem',
+              borderRadius: 24,
+              border: mode === m.key ? 'none' : '1.5px solid #e5e7eb',
+              background: mode === m.key ? '#1a1a1a' : 'white',
+              color: mode === m.key ? '#e4f816' : '#374151',
+              fontSize: '0.82rem', fontWeight: 700,
+              cursor: 'pointer',
               transition: 'all 0.15s',
+              whiteSpace: 'nowrap',
             }}>
-              <div style={{ fontSize: '0.95rem', marginBottom: 1 }}>{m.emoji}</div>
-              {m.label}
+              {m.emoji} {m.label}
             </button>
           ))}
         </div>
@@ -572,10 +578,20 @@ export default function AjouterRepas() {
                   <p style={{ fontSize: '0.78rem', color: '#6b7280', textAlign: 'center', margin: '0 0 0.75rem' }}>
                     Pointe la caméra vers le code-barres
                   </p>
-                  <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '4/3', position: 'relative' }}>
+                  <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '3/4', position: 'relative' }}>
                     <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                      <div style={{ width: '65%', height: '28%', border: '2px solid #e4f816', borderRadius: 8, boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)' }} />
+                      {/* Coin haut-gauche */}
+                      <div style={{ position: 'absolute', width: '82%', height: '36%', pointerEvents: 'none' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '4px 0 0 0' }} />
+                        <div style={{ position: 'absolute', top: 0, right: 0, width: 22, height: 22, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 4px 0 0' }} />
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: 22, height: 22, borderBottom: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '0 0 0 4px' }} />
+                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderBottom: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 0 4px 0' }} />
+                      </div>
+                      {/* Masque sombre autour */}
+                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 9999px rgba(0,0,0,0.42)' }} />
+                      {/* Zone transparente */}
+                      <div style={{ position: 'relative', width: '82%', height: '36%', background: 'transparent', zIndex: 1 }} />
                     </div>
                   </div>
                   <button onClick={() => setMode('manuel')} style={{ ...S.btnSecondary, marginTop: '0.75rem', width: '100%' }}>
@@ -732,42 +748,57 @@ export default function AjouterRepas() {
             )}
 
             {voiceSupported && !aiAnalysis && !analyzingAI && !aiError && (
-              <div style={{ textAlign: 'center', padding: '1.2rem 1rem' }}>
-                <div style={{
-                  fontSize: '3rem', marginBottom: '0.6rem',
-                  display: 'inline-block',
-                  animation: isRecording ? 'none' : 'none',
-                  filter: isRecording ? 'drop-shadow(0 0 10px #ef4444)' : 'none',
-                  transition: 'filter 0.3s',
-                }}>🎤</div>
-                <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Saisie vocale IA</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
-                  Décris ton repas à voix haute — Gemini Flash parse les aliments et calcule les macros.
+              <div style={{ padding: '0.25rem 0' }}>
+                <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.3rem', fontSize: '0.95rem' }}>Saisie vocale IA</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                  Parle ou tape ton repas — Gemini identifie les aliments et calcule les macros.
                 </p>
 
-                {transcript && (
-                  <div style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.85rem', marginBottom: '0.85rem', fontSize: '0.85rem', color: '#374151', textAlign: 'left', lineHeight: 1.5, fontStyle: 'italic' }}>
-                    "{transcript}"
-                  </div>
-                )}
-
+                {/* Bouton micro */}
                 <button onClick={isRecording ? stopRecording : startRecording} style={{
-                  ...S.btnPrimary,
+                  width: '100%', padding: '0.8rem', border: 'none', borderRadius: 14,
                   background: isRecording ? '#ef4444' : '#1a1a1a',
-                  width: '100%',
+                  color: isRecording ? 'white' : '#e4f816',
+                  fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                 }}>
-                  {isRecording ? '⏹ Arrêter l\'enregistrement' : '🎤 Décrire mon repas'}
+                  <span style={{ filter: isRecording ? 'drop-shadow(0 0 6px rgba(255,255,255,0.5))' : 'none' }}>🎤</span>
+                  {isRecording ? 'Arrêter l\'enregistrement' : 'Parler'}
                 </button>
-
                 {isRecording && (
-                  <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.5rem', fontWeight: 600 }}>
-                    Enregistrement en cours… parle maintenant
+                  <p style={{ color: '#ef4444', fontSize: '0.75rem', textAlign: 'center', marginTop: '0.4rem', fontWeight: 600 }}>
+                    ● Enregistrement en cours… parle maintenant
                   </p>
                 )}
 
-                {transcript && !isRecording && (
-                  <button onClick={() => callParseVoice(transcript)} style={{ ...S.btnSecondary, marginTop: '0.6rem', width: '100%' }}>
-                    🤖 Analyser ce texte
+                {/* Séparateur */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.9rem 0' }}>
+                  <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+                  <span style={{ fontSize: '0.72rem', color: '#b0b8c1', fontWeight: 600 }}>ou tape ton repas</span>
+                  <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+                </div>
+
+                {/* Textarea toujours visible (fallback iOS / préférence) */}
+                <textarea
+                  value={transcript}
+                  onChange={e => setTranscript(e.target.value)}
+                  placeholder="Ex : poulet grillé 180g, riz basmati 120g, salade verte…"
+                  rows={3}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '0.7rem 0.875rem',
+                    border: '1.5px solid #e5e7eb', borderRadius: 12,
+                    fontSize: '0.88rem', outline: 'none', resize: 'none',
+                    background: '#f9fafb', color: '#1a1a1a', fontFamily: 'inherit',
+                    lineHeight: 1.5,
+                  }}
+                />
+
+                {transcript.trim().length > 4 && !isRecording && (
+                  <button onClick={() => callParseVoice(transcript)} style={{
+                    ...S.btnPrimary, width: '100%', marginTop: '0.6rem',
+                  }}>
+                    🤖 Analyser ce repas
                   </button>
                 )}
               </div>
@@ -804,10 +835,11 @@ export default function AjouterRepas() {
 
       {/* ── Bouton Ajouter ────────────────────────────────────────────── */}
       {canSave && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 80, background: 'white', borderTop: '1px solid #f0f0f0', padding: '0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom))' }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 80, background: 'white', borderTop: '1px solid #f0f0f0', padding: '0.75rem 1rem', paddingBottom: 'max(1.1rem, calc(0.75rem + env(safe-area-inset-bottom, 20px)))' }}>
           {macros && !(mode === 'photo' || mode === 'vocal') && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a' }}>{macros.kcal} kcal</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', padding: '0.4rem 0.2rem', background: '#f9fafb', borderRadius: 10 }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#1a1a1a', paddingLeft: '0.5rem' }}>{macros.kcal} kcal</span>
+              <div style={{ width: 1, height: 20, background: '#e5e7eb' }} />
               <MacroPill label="Prot"  value={macros.prot}  color="#3b82f6" />
               <MacroPill label="Gluc"  value={macros.carbs} color="#f59e0b" />
               <MacroPill label="Lip"   value={macros.fat}   color="#ef4444" />
@@ -830,43 +862,61 @@ export default function AjouterRepas() {
 
 // ── Composant FoodCard ─────────────────────────────────────────────────────
 function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
+  const unit = food.unit || 'g'
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {/* Nom + badge nutri-score */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.9rem' }}>
+        <div style={{ flex: 1, paddingRight: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 2 }}>
             <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a' }}>{food.name}</span>
             {food.nutri_score && <NutriScoreBadge score={food.nutri_score} />}
           </div>
-          {food.brand && <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '2px 0 0' }}>{food.brand}</p>}
+          {food.brand && <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>{food.brand}</p>}
         </div>
-        <button onClick={onClear} style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+        <button onClick={onClear} style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#6b7280' }}>×</button>
       </div>
-      {food.kcal_100 != null && (
-        <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.6rem' }}>
-          Pour 100g : {Math.round(food.kcal_100)} kcal
-          {food.prot_100 != null && ` · P ${food.prot_100}g`}
-          {food.carbs_100 != null && ` · G ${food.carbs_100}g`}
-          {food.fat_100 != null && ` · L ${food.fat_100}g`}
-        </p>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151', margin: 0, flexShrink: 0 }}>Quantité :</p>
-        <input type="number" inputMode="decimal" value={quantity} onChange={e => setQuantity(e.target.value)}
-          style={{ ...S.input, width: 80, textAlign: 'center', padding: '0.4rem 0.5rem', fontWeight: 700 }} />
-        <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontWeight: 600 }}>{food.unit || 'g'}</span>
-        {food.serving_g && (
-          <button onClick={() => setQuantity(String(food.serving_g))} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer' }}>
-            1 portion ({food.serving_g}{food.unit || 'g'})
-          </button>
-        )}
+
+      {/* Sélecteur de quantité */}
+      <div style={{ background: '#f9fafb', borderRadius: 12, padding: '0.8rem', marginBottom: '0.85rem' }}>
+        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Quantité</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <input type="number" inputMode="decimal" value={quantity} onChange={e => setQuantity(e.target.value)}
+            style={{ width: 80, padding: '0.45rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '1rem', fontWeight: 800, textAlign: 'center', outline: 'none', background: 'white' }} />
+          <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>{unit}</span>
+          {/* Raccourcis */}
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
+            {food.serving_g && food.serving_g !== 100 && (
+              <button onClick={() => setQuantity(String(food.serving_g))}
+                style={{ background: parseFloat(quantity) === food.serving_g ? '#1a1a1a' : 'white', color: parseFloat(quantity) === food.serving_g ? '#e4f816' : '#374151', border: parseFloat(quantity) === food.serving_g ? 'none' : '1.5px solid #e5e7eb', borderRadius: 20, padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Portion {food.serving_g}{unit}
+              </button>
+            )}
+            <button onClick={() => setQuantity('100')}
+              style={{ background: parseFloat(quantity) === 100 ? '#1a1a1a' : 'white', color: parseFloat(quantity) === 100 ? '#e4f816' : '#374151', border: parseFloat(quantity) === 100 ? 'none' : '1.5px solid #e5e7eb', borderRadius: 20, padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+              100{unit}
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Valeurs pour la quantité choisie */}
       {macros && (
-        <div style={{ display: 'flex', background: '#f9fafb', borderRadius: 10, padding: '0.6rem', gap: '0.5rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a', marginRight: '0.25rem' }}>{macros.kcal} kcal</span>
-          <MacroPill label="Prot"  value={macros.prot}  color="#3b82f6" />
-          <MacroPill label="Gluc"  value={macros.carbs} color="#f59e0b" />
-          <MacroPill label="Lip"   value={macros.fat}   color="#ef4444" />
+        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '0.75rem 0.9rem' }}>
+          <p style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.45rem' }}>
+            Valeurs pour {quantity}{unit}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#e4f816' }}>{macros.kcal} kcal</span>
+            <MacroPill label="Prot"  value={macros.prot}  color="#60a5fa" />
+            <MacroPill label="Gluc"  value={macros.carbs} color="#fbbf24" />
+            <MacroPill label="Lip"   value={macros.fat}   color="#f87171" />
+          </div>
+          {food.kcal_100 != null && parseFloat(quantity) !== 100 && (
+            <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.3)', margin: '0.35rem 0 0' }}>
+              Réf. 100{unit} : {Math.round(food.kcal_100)} kcal · P {food.prot_100 ?? '—'}g · G {food.carbs_100 ?? '—'}g · L {food.fat_100 ?? '—'}g
+            </p>
+          )}
         </div>
       )}
     </div>
