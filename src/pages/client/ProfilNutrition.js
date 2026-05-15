@@ -131,19 +131,30 @@ export default function ProfilNutrition() {
   const [exclusionInput, setExclusionInput] = useState('')
   const [savingPrefs,    setSavingPrefs]    = useState(false)
   const [savedPrefs,     setSavedPrefs]     = useState(false)
+  const [errorPrefs,     setErrorPrefs]     = useState(null)
 
   // ── Chargement ──────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       const { data: sess } = await supabase.auth.getSession()
       const userId = sess?.session?.user?.id
+      const email  = sess?.session?.user?.email
       if (!userId) { setLoading(false); return }
 
-      const { data: c } = await supabase
+      // Lookup par user_id, fallback par email si user_id non renseigné
+      let { data: c } = await supabase
         .from('clients')
         .select('id, prenom')
         .eq('user_id', userId)
         .maybeSingle()
+      if (!c && email) {
+        const { data: c2 } = await supabase
+          .from('clients')
+          .select('id, prenom')
+          .eq('email', email)
+          .maybeSingle()
+        c = c2
+      }
       if (!c) { setLoading(false); return }
       setClient(c)
 
@@ -286,8 +297,12 @@ export default function ProfilNutrition() {
 
   // ── Sauvegarde des préférences ────────────────────────────────────────────────
   async function savePreferences() {
-    if (!client) return
+    if (!client) {
+      setErrorPrefs('Profil introuvable — reconnecte-toi.')
+      return
+    }
     setSavingPrefs(true)
+    setErrorPrefs(null)
 
     const { error: err } = await supabase
       .from('nutrition_profile')
@@ -302,7 +317,9 @@ export default function ProfilNutrition() {
       }, { onConflict: 'client_id' })
 
     setSavingPrefs(false)
-    if (!err) {
+    if (err) {
+      setErrorPrefs(`Erreur : ${err.message}`)
+    } else {
       setSavedPrefs(true)
       setTimeout(() => setSavedPrefs(false), 2500)
     }
@@ -900,6 +917,16 @@ export default function ProfilNutrition() {
                 style={S.textarea}
               />
             </div>
+
+            {/* Message d'erreur préférences */}
+            {errorPrefs && (
+              <div style={{
+                background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12,
+                padding: '12px 14px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600,
+              }}>
+                {errorPrefs}
+              </div>
+            )}
 
             <div style={{ height: 140 }} />
           </>
