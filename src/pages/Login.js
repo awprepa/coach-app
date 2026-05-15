@@ -49,7 +49,7 @@ export default function Login() {
       email,
       password,
       options: {
-        emailRedirectTo: REDIRECT,
+        emailRedirectTo: window.location.origin + '/login',
         data: {
           prenom: prenom.trim(),
           nom: nom.trim().toUpperCase(),
