@@ -18,6 +18,44 @@ function formatDate(date) {
     .replace(/^./, c => c.toUpperCase())
 }
 
+// ─── Score local par repas (sans appel IA) ──────────────────────────────────
+function scoreMeal(items) {
+  if (!items.length) return null
+  const prot  = sum(items, 'prot_g')
+  const carbs = sum(items, 'carbs_g')
+  const fat   = sum(items, 'fat_g')
+  const kcal  = sum(items, 'kcal')
+
+  const protKcal  = prot * 4
+  const carbsKcal = carbs * 4
+  const fatKcal   = fat * 9
+  const total = protKcal + carbsKcal + fatKcal
+  if (total === 0) return null
+
+  const protPct  = protKcal  / total * 100
+  const fatPct   = fatKcal   / total * 100
+  const carbsPct = carbsKcal / total * 100
+
+  let score = 5
+  // Protéines
+  if (protPct >= 30) score += 2
+  else if (protPct >= 20) score += 1
+  else if (protPct < 10) score -= 1
+  // Lipides
+  if (fatPct > 50) score -= 1.5
+  else if (fatPct <= 30) score += 0.5
+  // Glucides
+  if (carbsPct > 75) score -= 1
+  // Volume
+  if (kcal < 80) score -= 1
+  if (kcal > 900) score -= 0.5
+
+  const s = Math.max(2, Math.min(10, Math.round(score * 10) / 10))
+  const color = s >= 7 ? '#16a34a' : s >= 5 ? '#d97706' : '#dc2626'
+  const label = s >= 7 ? 'Excellent' : s >= 5 ? 'Correct' : 'À améliorer'
+  return { score: s, color, label }
+}
+
 export default function NutritionClient() {
   const navigate = useNavigate()
   const [client,  setClient]  = useState(null)
@@ -32,11 +70,16 @@ export default function NutritionClient() {
   const [favoriteName,  setFavoriteName]  = useState('')
   const [savingFav,     setSavingFav]     = useState(false)
 
-  // Score IA
+  // Score IA journée
   const [qualityResult,  setQualityResult]  = useState(null)
   const [loadingQuality, setLoadingQuality] = useState(false)
 
-  // Charger client + goals une seule fois
+  // Edition d'un plat
+  const [editModal,  setEditModal]  = useState(null) // { meal }
+  const [editForm,   setEditForm]   = useState({})
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  // Charger client + goals
   useEffect(() => {
     async function loadClient() {
       const { data: sess } = await supabase.auth.getSession()
@@ -72,15 +115,13 @@ export default function NutritionClient() {
   }, [client, viewDate])
 
   function changeDay(delta) {
-    const d = new Date(viewDate)
-    d.setDate(d.getDate() + delta)
-    if (d > new Date()) return // pas dans le futur
+    const d = new Date(viewDate); d.setDate(d.getDate() + delta)
+    if (d > new Date()) return
     setViewDate(d)
   }
-
   const isToday = toISO(viewDate) === toISO(new Date())
 
-  // Hydratation
+  // ─── Hydratation ──────────────────────────────────────────────────────────
   async function updateWater(delta) {
     if (!client) return
     const newMl = Math.max(0, (water.ml || 0) + delta)
@@ -91,13 +132,13 @@ export default function NutritionClient() {
     )
   }
 
-  // Supprimer un repas
+  // ─── Supprimer un repas ───────────────────────────────────────────────────
   async function deleteMeal(id) {
     setMeals(prev => prev.filter(m => m.id !== id))
     await supabase.from('nutrition_meals').delete().eq('id', id)
   }
 
-  // Favori
+  // ─── Favori ───────────────────────────────────────────────────────────────
   async function saveFavorite() {
     if (!client || !favoriteModal || !favoriteName.trim()) return
     setSavingFav(true)
@@ -109,7 +150,56 @@ export default function NutritionClient() {
     setSavingFav(false); setFavoriteModal(null); setFavoriteName('')
   }
 
-  // Score IA
+  // ─── Édition d'un plat ────────────────────────────────────────────────────
+  function openEdit(meal) {
+    setEditModal({ meal })
+    setEditForm({
+      name:       meal.name       || '',
+      quantity_g: meal.quantity_g != null ? String(meal.quantity_g) : '',
+      kcal:       String(Math.round(meal.kcal    || 0)),
+      prot_g:     String(Math.round((meal.prot_g  || 0) * 10) / 10),
+      carbs_g:    String(Math.round((meal.carbs_g || 0) * 10) / 10),
+      fat_g:      String(Math.round((meal.fat_g   || 0) * 10) / 10),
+    })
+  }
+
+  function handleQtyChange(newQty) {
+    const orig = editModal.meal
+    const oldQty = orig.quantity_g
+    setEditForm(f => {
+      if (oldQty && Number(newQty) > 0) {
+        const ratio = Number(newQty) / oldQty
+        return {
+          ...f,
+          quantity_g: newQty,
+          kcal:   String(Math.round((orig.kcal    || 0) * ratio)),
+          prot_g: String(Math.round((orig.prot_g  || 0) * ratio * 10) / 10),
+          carbs_g:String(Math.round((orig.carbs_g || 0) * ratio * 10) / 10),
+          fat_g:  String(Math.round((orig.fat_g   || 0) * ratio * 10) / 10),
+        }
+      }
+      return { ...f, quantity_g: newQty }
+    })
+  }
+
+  async function saveEdit() {
+    if (!editModal || savingEdit) return
+    setSavingEdit(true)
+    const updates = {
+      name:       editForm.name,
+      quantity_g: editForm.quantity_g ? Number(editForm.quantity_g) : null,
+      kcal:       Number(editForm.kcal)    || 0,
+      prot_g:     Number(editForm.prot_g)  || 0,
+      carbs_g:    Number(editForm.carbs_g) || 0,
+      fat_g:      Number(editForm.fat_g)   || 0,
+    }
+    await supabase.from('nutrition_meals').update(updates).eq('id', editModal.meal.id)
+    setMeals(prev => prev.map(m => m.id === editModal.meal.id ? { ...m, ...updates } : m))
+    setSavingEdit(false)
+    setEditModal(null)
+  }
+
+  // ─── Score IA journée ─────────────────────────────────────────────────────
   async function analyzeQuality() {
     if (!meals.length || loadingQuality) return
     setLoadingQuality(true); setQualityResult(null)
@@ -125,11 +215,12 @@ export default function NutritionClient() {
     setLoadingQuality(false)
   }
 
+  // ─── Render loading ───────────────────────────────────────────────────────
   if (loading) return (
     <div style={S.page}>
       <div style={S.header}>
         <div style={{ width: 32 }} />
-        <span style={S.headerTitle}>Nutrition</span>
+        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white' }}>Nutrition</span>
         <div style={{ width: 32 }} />
       </div>
       <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem', fontSize: '0.9rem' }}>Chargement…</p>
@@ -160,14 +251,11 @@ export default function NutritionClient() {
             <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
           </svg>
         </button>
-
-        {/* Navigation de date */}
         <div style={S.dateNav}>
           <button onClick={() => changeDay(-1)} style={S.dateArrow}>‹</button>
           <span style={S.dateLabel}>{isToday ? "Aujourd'hui" : formatDate(viewDate)}</span>
           <button onClick={() => changeDay(+1)} style={{ ...S.dateArrow, opacity: isToday ? 0.25 : 1 }} disabled={isToday}>›</button>
         </div>
-
         <button onClick={() => navigate('/client/nutrition/profil')} style={S.iconBtn} aria-label="Profil nutrition">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
@@ -200,7 +288,6 @@ export default function NutritionClient() {
             )}
           </div>
 
-          {/* Barre kcal */}
           {goals && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
@@ -216,7 +303,6 @@ export default function NutritionClient() {
             </div>
           )}
 
-          {/* Macros */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
               { icon: '🥩', name: 'Prot',  val: totals.prot,  target: goals?.prot_g,  color: '#60a5fa' },
@@ -225,7 +311,7 @@ export default function NutritionClient() {
             ].map(m => (
               <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: '0.82rem', width: 20, textAlign: 'center' }}>{m.icon}</span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', width: 28, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{m.name}</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', width: 28, textTransform: 'uppercase' }}>{m.name}</span>
                 <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden' }}>
                   <div style={{ height: '100%', background: m.color, borderRadius: 999, width: `${m.target ? Math.min(m.val / m.target * 100, 100) : 0}%`, transition: 'width 0.4s ease' }} />
                 </div>
@@ -237,39 +323,33 @@ export default function NutritionClient() {
           </div>
         </div>
 
-        {/* ── Note IA (en haut, juste après le résumé) ────────────── */}
+        {/* ── Note IA journée ─────────────────────────────────────── */}
         {meals.length > 0 && (
           <div style={S.scoreCard}>
             {!qualityResult && !loadingQuality && (
               <button onClick={analyzeQuality} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', width: '100%', padding: 0, textAlign: 'left' }}>
-                <div style={S.scoreCirclePlaceholder}>✨</div>
+                <div style={S.scoreCircle}>✨</div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 800, color: '#15803d', margin: '0 0 2px', fontSize: '0.88rem' }}>Évaluer ma journée</p>
-                  <p style={{ fontSize: '0.72rem', color: '#166534', margin: 0, opacity: 0.75 }}>Note IA sur 10, conseils personnalisés</p>
+                  <p style={{ fontSize: '0.7rem', color: '#166534', margin: 0, opacity: 0.75 }}>Note IA /10, conseils personnalisés</p>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6"/>
                 </svg>
               </button>
             )}
-
             {loadingQuality && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={S.scoreCirclePlaceholder}>⏳</div>
+                <div style={S.scoreCircle}>⏳</div>
                 <p style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 600, margin: 0 }}>Analyse en cours…</p>
               </div>
             )}
-
             {qualityResult && !loadingQuality && (() => {
               const sc = qualityResult.score
               const color = sc >= 7 ? '#16a34a' : sc >= 5 ? '#d97706' : '#dc2626'
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-                    border: `3px solid ${color}`,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: `3px solid ${color}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ fontSize: '1.05rem', fontWeight: 900, color, lineHeight: 1 }}>{sc ?? '—'}</span>
                     <span style={{ fontSize: '0.5rem', color: '#9ca3af', fontWeight: 600 }}>/10</span>
                   </div>
@@ -277,7 +357,7 @@ export default function NutritionClient() {
                     <p style={{ fontWeight: 800, color: '#15803d', margin: '0 0 2px', fontSize: '0.88rem' }}>{qualityResult.verdict}</p>
                     <p style={{ fontSize: '0.7rem', color: '#166534', margin: 0, lineHeight: 1.4, opacity: 0.85 }}>{qualityResult.commentaire}</p>
                   </div>
-                  <button onClick={() => setQualityResult(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.8rem', flexShrink: 0 }}>↺</button>
+                  <button onClick={() => setQualityResult(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.9rem', flexShrink: 0 }}>↺</button>
                 </div>
               )
             })()}
@@ -285,76 +365,105 @@ export default function NutritionClient() {
         )}
 
         {/* ── Sections repas ─────────────────────────────────────── */}
-        {goals || meals.length > 0 ? (
-          MEAL_TYPES.map(t => {
-            const items = mealsByType[t.key]
-            const kcalSection = sum(items, 'kcal')
-            return (
-              <div key={t.key} style={S.mealSection}>
-                {/* En-tête section */}
-                <div style={S.mealHeader}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>{t.emoji}</span>
-                    <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a1a1a' }}>{t.label}</span>
-                    {kcalSection > 0 && (
-                      <span style={S.kcalBadge}>{Math.round(kcalSection)} kcal</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => navigate('/client/nutrition/ajouter', { state: { meal_type: t.key } })}
-                    style={S.addBtn}
-                    aria-label={`Ajouter ${t.label}`}
-                  >+</button>
+        {(goals || meals.length > 0) ? MEAL_TYPES.map(t => {
+          const items = mealsByType[t.key]
+          const kcalSection = sum(items, 'kcal')
+          const mealNote = scoreMeal(items)
+
+          return (
+            <div key={t.key} style={S.mealSection}>
+              {/* En-tête section */}
+              <div style={S.mealHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: '1.2rem' }}>{t.emoji}</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a1a1a' }}>{t.label}</span>
+                  {kcalSection > 0 && (
+                    <span style={S.kcalBadge}>{Math.round(kcalSection)} kcal</span>
+                  )}
+                  {/* Note du repas */}
+                  {mealNote && (
+                    <span style={{
+                      fontSize: '0.66rem', fontWeight: 800,
+                      color: mealNote.color,
+                      background: mealNote.color + '18',
+                      padding: '2px 7px', borderRadius: 20,
+                      border: `1px solid ${mealNote.color}30`,
+                    }}>
+                      {mealNote.score}/10
+                    </span>
+                  )}
                 </div>
-
-                {/* Items */}
-                {items.length > 0 && (
-                  <div style={{ borderTop: '1px solid #f5f5f5' }}>
-                    {items.map(m => (
-                      <div key={m.id} style={S.mealItem}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.86rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {m.name || 'Repas'}
-                          </div>
-                          <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 1 }}>
-                            {[
-                              m.quantity_g ? `${Math.round(m.quantity_g)}g` : null,
-                              m.prot_g  ? `P ${Math.round(m.prot_g)}g` : null,
-                              m.carbs_g ? `G ${Math.round(m.carbs_g)}g` : null,
-                              m.fat_g   ? `L ${Math.round(m.fat_g)}g`   : null,
-                            ].filter(Boolean).join(' · ')}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>{Math.round(m.kcal || 0)} kcal</span>
-                          <button
-                            onClick={() => { setFavoriteModal({ meal: m }); setFavoriteName(m.name || '') }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', padding: 2, lineHeight: 1 }}
-                            title="Sauvegarder en favori"
-                          >⭐</button>
-                          <button
-                            onClick={() => deleteMeal(m.id)}
-                            style={{ width: 22, height: 22, borderRadius: '50%', background: '#f3f4f6', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: '#9ca3af' }}
-                          >✕</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Vide */}
-                {items.length === 0 && (
-                  <div style={{ padding: '0.6rem 1rem 0.8rem', borderTop: '1px solid #f5f5f5' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>
-                      Rien encore — tape + pour ajouter
-                    </p>
-                  </div>
-                )}
+                <button
+                  onClick={() => navigate('/client/nutrition/ajouter', { state: { meal_type: t.key } })}
+                  style={S.addBtn}
+                  aria-label={`Ajouter ${t.label}`}
+                >+</button>
               </div>
-            )
-          })
-        ) : (
-          /* Pas de goals, pas de repas → onboarding minimal */
+
+              {/* Items */}
+              {items.length > 0 && (
+                <div style={{ borderTop: '1px solid #f5f5f5' }}>
+                  {items.map(m => (
+                    <div key={m.id} style={S.mealItem}>
+                      {/* Zone cliquable pour éditer */}
+                      <button
+                        onClick={() => openEdit(m)}
+                        style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                      >
+                        <div style={{ fontSize: '0.86rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.name || 'Repas'}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 1 }}>
+                          {[
+                            m.quantity_g ? `${Math.round(m.quantity_g)}g` : null,
+                            m.prot_g  ? `P ${Math.round(m.prot_g)}g` : null,
+                            m.carbs_g ? `G ${Math.round(m.carbs_g)}g` : null,
+                            m.fat_g   ? `L ${Math.round(m.fat_g)}g`  : null,
+                          ].filter(Boolean).join(' · ')}
+                        </div>
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>{Math.round(m.kcal || 0)} kcal</span>
+                        {/* Crayon édition */}
+                        <button
+                          onClick={() => openEdit(m)}
+                          style={S.actionBtn}
+                          title="Modifier"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        {/* Favori */}
+                        <button
+                          onClick={() => { setFavoriteModal({ meal: m }); setFavoriteName(m.name || '') }}
+                          style={S.actionBtn}
+                          title="Favori"
+                        >⭐</button>
+                        {/* Supprimer */}
+                        <button
+                          onClick={() => deleteMeal(m.id)}
+                          style={{ ...S.actionBtn, fontSize: '0.6rem', color: '#9ca3af' }}
+                          title="Supprimer"
+                        >✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Section vide */}
+              {items.length === 0 && (
+                <div style={{ padding: '0.6rem 1rem 0.8rem', borderTop: '1px solid #f5f5f5' }}>
+                  <p style={{ fontSize: '0.75rem', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>
+                    Rien encore — tape + pour ajouter
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        }) : (
           <div style={{ ...S.mealSection, padding: '1.25rem', textAlign: 'center' }}>
             <p style={{ fontSize: '1.8rem', margin: '0 0 0.4rem' }}>🥗</p>
             <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.3rem' }}>Bienvenue dans ton suivi nutrition</p>
@@ -385,11 +494,10 @@ export default function NutritionClient() {
           </div>
         </div>
 
-        {/* Espace bas */}
         <div style={{ height: 110 }} />
       </div>
 
-      {/* ── Bouton Scanner (fixé juste au-dessus de la bottom nav) ── */}
+      {/* ── Bouton Scanner ─────────────────────────────────────────── */}
       <div style={S.scanCta}>
         <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -402,36 +510,96 @@ export default function NutritionClient() {
         </button>
       </div>
 
-      {/* ── FAB Ajouter ────────────────────────────────────────────── */}
+      {/* ── FAB ────────────────────────────────────────────────────── */}
       <button onClick={() => navigate('/client/nutrition/ajouter')} style={S.fab} aria-label="Ajouter un repas">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
 
-      {/* ── Modal favori ───────────────────────────────────────────── */}
-      {favoriteModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => setFavoriteModal(null)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: 'white', borderRadius: '20px 20px 0 0',
-            padding: '1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom))',
-            width: '100%', boxSizing: 'border-box',
-          }}>
-            <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.8rem', color: '#1a1a1a' }}>⭐ Sauvegarder en favori</p>
-            <input value={favoriteName} onChange={e => setFavoriteName(e.target.value)}
-              placeholder="Ex : Déjeuner poulet-riz" autoFocus style={{
-                width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.9rem',
-                border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.9rem',
-                outline: 'none', marginBottom: '0.85rem',
-              }} />
+      {/* ── Modal : modifier un plat ────────────────────────────────── */}
+      {editModal && (
+        <div style={S.overlay} onClick={() => setEditModal(null)}>
+          <div style={S.sheet} onClick={e => e.stopPropagation()}>
+            {/* Poignée */}
+            <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1.1rem' }} />
+            <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 1rem' }}>✏️ Modifier le plat</p>
+
+            {/* Nom */}
+            <div style={S.fieldGroup}>
+              <label style={S.fieldLabel}>Nom</label>
+              <input
+                value={editForm.name}
+                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                style={S.fieldInput}
+                placeholder="Ex: Poulet grillé"
+              />
+            </div>
+
+            {/* Quantité */}
+            <div style={S.fieldGroup}>
+              <label style={S.fieldLabel}>Quantité (g)</label>
+              <input
+                type="number" inputMode="decimal"
+                value={editForm.quantity_g}
+                onChange={e => handleQtyChange(e.target.value)}
+                style={S.fieldInput}
+                placeholder="Ex: 150"
+              />
+              {editModal.meal.quantity_g && (
+                <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '4px 0 0' }}>
+                  Modifie la quantité → les macros se recalculent automatiquement
+                </p>
+              )}
+            </div>
+
+            {/* Macros sur 2 colonnes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.1rem' }}>
+              {[
+                { key: 'kcal',   label: 'Calories (kcal)', color: '#e4f816' },
+                { key: 'prot_g', label: 'Protéines (g)',   color: '#3b82f6' },
+                { key: 'carbs_g',label: 'Glucides (g)',    color: '#f59e0b' },
+                { key: 'fat_g',  label: 'Lipides (g)',     color: '#ef4444' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ ...S.fieldLabel, color: f.color }}>{f.label}</label>
+                  <input
+                    type="number" inputMode="decimal"
+                    value={editForm[f.key]}
+                    onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                    style={{ ...S.fieldInput, borderColor: f.color + '40' }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Boutons */}
             <div style={{ display: 'flex', gap: '0.6rem' }}>
-              <button onClick={() => setFavoriteModal(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280' }}>Annuler</button>
+              <button onClick={() => setEditModal(null)} style={S.btnCancel}>Annuler</button>
+              <button onClick={saveEdit} disabled={savingEdit} style={S.btnSave}>
+                {savingEdit ? 'Sauvegarde…' : '✓ Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal : favori ─────────────────────────────────────────── */}
+      {favoriteModal && (
+        <div style={S.overlay} onClick={() => setFavoriteModal(null)}>
+          <div style={S.sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1.1rem' }} />
+            <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.8rem', color: '#1a1a1a' }}>⭐ Sauvegarder en favori</p>
+            <input
+              value={favoriteName} onChange={e => setFavoriteName(e.target.value)}
+              placeholder="Ex : Déjeuner poulet-riz" autoFocus style={{ ...S.fieldInput, marginBottom: '0.85rem' }}
+            />
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
+              <button onClick={() => setFavoriteModal(null)} style={S.btnCancel}>Annuler</button>
               <button onClick={saveFavorite} disabled={!favoriteName.trim() || savingFav} style={{
-                flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none',
+                ...S.btnSave,
                 background: favoriteName.trim() ? '#1a1a1a' : '#e5e7eb',
                 color: favoriteName.trim() ? '#e4f816' : '#9ca3af',
-                fontWeight: 800, fontSize: '0.88rem', cursor: favoriteName.trim() ? 'pointer' : 'default',
               }}>{savingFav ? 'Sauvegarde…' : 'Sauvegarder ⭐'}</button>
             </div>
           </div>
@@ -445,120 +613,88 @@ export default function NutritionClient() {
 
 const S = {
   page: { background: '#f5f5f5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-
   header: {
     background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
     padding: '1.1rem 1.25rem',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     position: 'sticky', top: 0, zIndex: 60,
   },
-  headerTitle: { fontSize: '1.05rem', fontWeight: 800, color: 'white' },
   iconBtn: {
     width: 32, height: 32, borderRadius: 999,
     background: 'rgba(255,255,255,0.12)', border: 'none', cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
-  dateNav: {
-    display: 'flex', alignItems: 'center', gap: 10,
-    background: 'rgba(255,255,255,0.1)', borderRadius: 999, padding: '6px 14px',
-  },
+  dateNav: { display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 999, padding: '6px 14px' },
   dateLabel: { color: 'white', fontSize: '0.82rem', fontWeight: 700 },
-  dateArrow: {
-    background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)',
-    fontSize: '1rem', cursor: 'pointer', padding: '0 2px', lineHeight: 1,
-  },
-
-  content: { padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: '10px' },
-
-  // Carte sombre résumé
-  summaryCard: {
-    background: '#1a1a1a', borderRadius: 20,
-    padding: '18px 18px 16px',
-  },
-
-  // Carte score IA verte
+  dateArrow: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', lineHeight: 1 },
+  content: { padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  summaryCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 18px 16px' },
   scoreCard: {
     background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-    border: '1px solid #bbf7d0',
-    borderRadius: 18, padding: '13px 16px',
+    border: '1px solid #bbf7d0', borderRadius: 18, padding: '13px 16px',
   },
-  scoreCirclePlaceholder: {
-    width: 48, height: 48, borderRadius: '50%',
-    background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '1.3rem', flexShrink: 0,
+  scoreCircle: {
+    width: 48, height: 48, borderRadius: '50%', background: '#22c55e',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0,
   },
-
-  // Sections repas
-  mealSection: {
-    background: 'white', borderRadius: 18,
-    overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-  },
-  mealHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '13px 16px',
-  },
-  kcalBadge: {
-    fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af',
-    background: '#f3f4f6', padding: '3px 8px', borderRadius: 20, marginLeft: 4,
-  },
+  mealSection: { background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  mealHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px' },
+  kcalBadge: { fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', background: '#f3f4f6', padding: '3px 8px', borderRadius: 20, marginLeft: 4 },
   addBtn: {
-    width: 30, height: 30, borderRadius: '50%',
-    background: '#e4f816', border: 'none', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '1.2rem', fontWeight: 700, color: '#1a1a1a',
-    flexShrink: 0,
+    width: 30, height: 30, borderRadius: '50%', background: '#e4f816',
+    border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '1.2rem', fontWeight: 700, color: '#1a1a1a', flexShrink: 0,
   },
   mealItem: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '10px 16px', borderBottom: '1px solid #f9f9f9',
-    gap: '0.5rem',
+    padding: '10px 16px', borderBottom: '1px solid #f9f9f9', gap: '0.5rem',
   },
-
-  // Carte eau
-  waterCard: {
-    background: 'white', borderRadius: 18,
-    padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  actionBtn: {
+    width: 26, height: 26, borderRadius: '50%', background: '#f3f4f6',
+    border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0,
   },
-  waterPct: {
-    fontSize: '0.72rem', fontWeight: 700, color: '#3b82f6',
-    background: '#eff6ff', padding: '3px 8px', borderRadius: 20,
-  },
-  waterBtn: {
-    padding: '8px 14px', borderRadius: 12,
-    background: '#eff6ff', border: 'none', cursor: 'pointer',
-    fontSize: '0.8rem', fontWeight: 700, color: '#1d4ed8',
-  },
-
-  // Bouton scanner CTA
+  waterCard: { background: 'white', borderRadius: 18, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  waterPct: { fontSize: '0.72rem', fontWeight: 700, color: '#3b82f6', background: '#eff6ff', padding: '3px 8px', borderRadius: 20 },
+  waterBtn: { padding: '8px 14px', borderRadius: 12, background: '#eff6ff', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#1d4ed8' },
   scanCta: {
     position: 'fixed',
     bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',
-    left: 0, right: 0,
-    padding: '0 14px 10px',
+    left: 0, right: 0, padding: '0 14px 10px',
     background: 'linear-gradient(to top, #f5f5f5 55%, transparent)',
-    zIndex: 70,
-    pointerEvents: 'none',
+    zIndex: 70, pointerEvents: 'none',
   },
   scanCtaBtn: {
-    width: '100%', padding: '0.9rem 1.25rem',
-    background: '#1a1a1a', color: '#e4f816',
-    border: 'none', borderRadius: 16,
-    fontSize: '0.95rem', fontWeight: 800,
-    cursor: 'pointer',
+    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: '#e4f816',
+    border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.22)',
-    pointerEvents: 'all',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',
   },
-
-  // FAB
   fab: {
     position: 'fixed',
     bottom: 'calc(166px + max(env(safe-area-inset-bottom, 0px), 0px))',
     right: 16, zIndex: 75,
-    width: 50, height: 50, borderRadius: '50%',
-    background: '#e4f816', border: 'none',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer',
+    width: 50, height: 50, borderRadius: '50%', background: '#e4f816',
+    border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
   },
+  // Modals
+  overlay: {
+    position: 'fixed', inset: 0, zIndex: 200,
+    background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end',
+  },
+  sheet: {
+    background: 'white', borderRadius: '22px 22px 0 0',
+    padding: '1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom))',
+    width: '100%', boxSizing: 'border-box',
+  },
+  fieldGroup: { marginBottom: '0.85rem' },
+  fieldLabel: { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' },
+  fieldInput: {
+    width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.9rem',
+    border: '1.5px solid #e5e7eb', borderRadius: 12,
+    fontSize: '0.9rem', outline: 'none', color: '#1a1a1a',
+  },
+  btnCancel: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280' },
+  btnSave:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
 }
