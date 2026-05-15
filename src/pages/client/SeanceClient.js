@@ -50,6 +50,7 @@ export default function SeanceClient() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [tracking, setTracking] = useState({})
+  const [warmupTracking, setWarmupTracking] = useState({}) // { exId: [{ serie, poids, reps_reelles }] }
   const [blocsTermines, setBlocsTermines] = useState(new Set())
   const [commentaire, setCommentaire] = useState('')
   const [commentaires, setCommentaires] = useState([])
@@ -122,11 +123,21 @@ export default function SeanceClient() {
       t[ex.id] = Array.from({ length: n }, (_, i) => {
         const saved = rows?.find(r => r.exercice_id === ex.id && r.serie === i + 1)
         return saved
-          ? { poids: saved.poids || '', reps_reelles: saved.reps_reelles?.toString() || '', valide: saved.valide || false }
-          : { poids: '', reps_reelles: '', valide: false }
+          ? { poids: saved.poids || '', reps_reelles: saved.reps_reelles?.toString() || '', valide: saved.valide || false, is_done: saved.is_done || saved.valide || false }
+          : { poids: '', reps_reelles: '', valide: false, is_done: false }
       })
     })
     setTracking(t)
+
+    // Charger les séries d'échauffement depuis les rows DB (serie >= 1000)
+    const wMap = {}
+    data.forEach(ex => {
+      wMap[ex.id] = (rows || [])
+        .filter(r => r.exercice_id === ex.id && r.serie >= 1000)
+        .sort((a, b) => a.serie - b.serie)
+        .map(r => ({ serie: r.serie, poids: r.poids || '', reps_reelles: r.reps_reelles?.toString() || '' }))
+    })
+    setWarmupTracking(wMap)
 
     const done = new Set()
     data.forEach(ex => {
@@ -135,7 +146,7 @@ export default function SeanceClient() {
       const group = data.filter(e => e.code?.match(/^([A-Za-z]+)/)?.[1] === letter)
       const allDone = group.every(e => {
         const tr = t[e.id] || []
-        return tr.length > 0 && tr.every(s => s.valide)
+        return tr.length > 0 && tr.every(s => s.is_done)
       })
       if (allDone) done.add(letter)
     })
@@ -200,14 +211,14 @@ export default function SeanceClient() {
   async function devaliderSerie(exId, serieIdx, groupLetter) {
     const newT = { ...tracking }
     newT[exId] = [...(tracking[exId] || [])]
-    newT[exId][serieIdx] = { ...newT[exId][serieIdx], valide: false }
+    newT[exId][serieIdx] = { ...newT[exId][serieIdx], valide: false, is_done: false }
     setTracking(newT)
     setPendingUnvalidate(null)
     await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: newT[exId][serieIdx].poids || null,
       reps_reelles: newT[exId][serieIdx].reps_reelles ? parseInt(newT[exId][serieIdx].reps_reelles) : null,
-      valide: false
+      valide: false, is_done: false
     }, { onConflict: 'exercice_id,semaine,serie' })
     // Retirer le bloc des terminés si nécessaire
     if (groupLetter) {
@@ -219,33 +230,37 @@ export default function SeanceClient() {
 
   async function saveSerieField(exId, serieIdx) {
     const serie = tracking[exId]?.[serieIdx] || {}
-    if (!serie.valide) return // seulement si déjà validée
+    if (!serie.is_done) return // seulement si déjà done
     await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
       reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
-      valide: true
+      valide: serie.valide, is_done: serie.is_done
     }, { onConflict: 'exercice_id,semaine,serie' })
     flashSaved()
   }
 
-  async function validerSerie(exId, serieIdx, groupLetter, groupItems) {
+  async function validerSerie(exId, serieIdx, groupLetter, groupItems, targetReps) {
     const serie = tracking[exId]?.[serieIdx] || {}
+    // Vérifie si les reps ont été atteintes
+    const repsOk = !targetReps || !serie.reps_reelles ||
+                    parseInt(serie.reps_reelles) >= parseInt(targetReps)
     const newT = { ...tracking }
     newT[exId] = [...(tracking[exId] || [])]
-    newT[exId][serieIdx] = { ...serie, valide: true }
+    newT[exId][serieIdx] = { ...serie, is_done: true, valide: repsOk }
     setTracking(newT)
     flashSaved()
     await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
       reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
-      valide: true
+      valide: repsOk,
+      is_done: true,
     }, { onConflict: 'exercice_id,semaine,serie' })
     if (!groupLetter || !groupItems) return
     const allDone = groupItems.every(ex => {
       const t = newT[ex.id] || []
-      return t.length > 0 && t.every(s => s.valide)
+      return t.length > 0 && t.every(s => s.is_done)
     })
     if (allDone) {
       setBlocsTermines(prev => new Set([...prev, groupLetter]))
@@ -257,31 +272,76 @@ export default function SeanceClient() {
     }
   }
 
+  function addWarmupSet(exId) {
+    setWarmupTracking(prev => {
+      const existing = prev[exId] || []
+      const newSerie = existing.length > 0 ? Math.max(...existing.map(s => s.serie)) + 1 : 1000
+      return { ...prev, [exId]: [...existing, { serie: newSerie, poids: '', reps_reelles: '' }] }
+    })
+  }
+
+  function updateWarmupField(exId, idx, field, value) {
+    setWarmupTracking(prev => {
+      const arr = [...(prev[exId] || [])]
+      arr[idx] = { ...arr[idx], [field]: value }
+      return { ...prev, [exId]: arr }
+    })
+  }
+
+  async function saveWarmupSet(exId, idx) {
+    const set = warmupTracking[exId]?.[idx]
+    if (!set) return
+    await supabase.from('serie_tracking').upsert({
+      exercice_id: exId, semaine: semaineActuelle, serie: set.serie,
+      poids: set.poids || null,
+      reps_reelles: set.reps_reelles ? parseInt(set.reps_reelles) : null,
+      valide: false, is_done: false,
+    }, { onConflict: 'exercice_id,semaine,serie' })
+    flashSaved()
+  }
+
+  async function removeWarmupSet(exId, idx) {
+    const set = warmupTracking[exId]?.[idx]
+    if (set?.serie) {
+      await supabase.from('serie_tracking').delete()
+        .eq('exercice_id', exId).eq('semaine', semaineActuelle).eq('serie', set.serie)
+    }
+    setWarmupTracking(prev => ({
+      ...prev, [exId]: (prev[exId] || []).filter((_, i) => i !== idx)
+    }))
+  }
+
   function flashSaved() { setSaved(true); setTimeout(() => setSaved(false), 1500) }
 
   async function updateCharge(exId, semaine, field, valeur) {
+    // Normaliser : "-", "--", "—", "" → traiter comme vide (ne pas sauvegarder)
+    const cleanVal = (valeur || '').trim().replace(/^[-—]+$/, '')
     const existing = charges[exId]?.[semaine]
+    if (!cleanVal && !existing) return // rien à faire
     if (existing) {
-      const { error } = await supabase.from('charges').update({ [field]: valeur }).eq('id', existing.id)
+      const { error } = await supabase.from('charges').update({ [field]: cleanVal || null }).eq('id', existing.id)
       if (error) alert(error.message)
-      else { setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { ...existing, [field]: valeur } } })); flashSaved() }
+      else { setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { ...existing, [field]: cleanVal } } })); flashSaved() }
     } else {
-      const { data, error } = await supabase.from('charges').insert([{ exercice_id: exId, semaine, [field]: valeur }]).select().single()
+      const { data, error } = await supabase.from('charges').insert([{ exercice_id: exId, semaine, [field]: cleanVal || null }]).select().single()
       if (error) alert(error.message)
-      else { setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: valeur } } })); flashSaved() }
+      else { setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: cleanVal } } })); flashSaved() }
     }
   }
 
   async function updateRpeReel(semaine, valeur) {
+    // Normaliser : "-", "--", "—", "" → traiter comme vide
+    const cleanVal = (valeur || '').trim().replace(/^[-—]+$/, '')
     const existing = rpeSeances[semaine]
+    if (!cleanVal && !existing) return
     if (existing) {
-      const { error } = await supabase.from('rpe_seances').update({ rpe_reel: valeur }).eq('id', existing.id)
+      const { error } = await supabase.from('rpe_seances').update({ rpe_reel: cleanVal || null }).eq('id', existing.id)
       if (error) alert(error.message)
-      else { setRpeSeances(prev => ({ ...prev, [semaine]: { ...existing, rpe_reel: valeur } })); flashSaved() }
+      else { setRpeSeances(prev => ({ ...prev, [semaine]: { ...existing, rpe_reel: cleanVal } })); flashSaved() }
     } else {
-      const { data, error } = await supabase.from('rpe_seances').insert([{ seance_id: id, semaine, rpe_reel: valeur }]).select().single()
+      const { data, error } = await supabase.from('rpe_seances').insert([{ seance_id: id, semaine, rpe_reel: cleanVal || null }]).select().single()
       if (error) alert(error.message)
-      else { setRpeSeances(prev => ({ ...prev, [semaine]: { id: data.id, rpe_cible: null, rpe_reel: valeur } })); flashSaved() }
+      else { setRpeSeances(prev => ({ ...prev, [semaine]: { id: data.id, rpe_cible: null, rpe_reel: cleanVal } })); flashSaved() }
     }
   }
 
@@ -308,7 +368,7 @@ export default function SeanceClient() {
     const ex = groupItems[0]
     const series = ex.series || '?'
     const reps = ex.repetitions || '?'
-    const lastTracked = tracking[ex.id]?.find(s => s.valide && s.poids)
+    const lastTracked = tracking[ex.id]?.find(s => s.is_done && s.poids)
     const kg = lastTracked?.poids ? `· ${lastTracked.poids} kg` : ''
     return `${series}×${reps} ${kg}`.trim()
   }
@@ -447,32 +507,110 @@ export default function SeanceClient() {
               </div>
             )}
 
+            {/* ── Séries d'échauffement ────────────────────── */}
+            {(() => {
+              const warmups = warmupTracking[ex.id] || []
+              return (
+                <div style={{ marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Échauffement {warmups.length > 0 ? `· ${warmups.length} série${warmups.length > 1 ? 's' : ''}` : ''}
+                    </span>
+                    <button onClick={() => addWarmupSet(ex.id)} style={{
+                      background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 6,
+                      color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', padding: '2px 8px',
+                    }}>+ Série</button>
+                  </div>
+                  {warmups.map((ws, wi) => (
+                    <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: '1.5px solid #e5e7eb' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', width: 22, textAlign: 'center', flexShrink: 0 }}>É{wi + 1}</span>
+                      <input type="text" value={ws.poids}
+                        onChange={e => updateWarmupField(ex.id, wi, 'poids', e.target.value)}
+                        onBlur={() => saveWarmupSet(ex.id, wi)}
+                        placeholder="kg"
+                        style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
+                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>kg</span>
+                      <input type="number" value={ws.reps_reelles}
+                        onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
+                        onBlur={() => saveWarmupSet(ex.id, wi)}
+                        placeholder="reps"
+                        style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
+                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>reps</span>
+                      <button onClick={() => removeWarmupSet(ex.id, wi)} style={{
+                        marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
+                      }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
             {seriesList.map((serie, si) => (
-              <div key={si} style={{ ...S.serieRow, ...(serie.valide ? S.serieRowDone : {}) }}>
+              <div key={si} style={{ ...S.serieRow, ...(serie.is_done ? (serie.valide ? S.serieRowDone : S.serieRowWarn) : {}) }}>
                 <span style={S.serieNum}>{si + 1}</span>
                 <input type="text" value={serie.poids}
                   onChange={e => updateTrackingField(ex.id, si, 'poids', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
                   placeholder="kg"
-                  style={{ ...S.serieInput, width: 52, ...(serie.valide ? S.serieInputDone : {}) }} />
+                  readOnly={serie.is_done}
+                  style={{ ...S.serieInput, width: 52, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>kg</span>
                 <input type="number" value={serie.reps_reelles}
                   onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
                   placeholder={ex.repetitions || 'reps'}
-                  style={{ ...S.serieInput, width: 48, ...(serie.valide ? S.serieInputDone : {}) }} />
+                  readOnly={serie.is_done}
+                  style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>reps</span>
-                {serie.valide
+                {serie.is_done
                   ? pendingUnvalidate?.exId === ex.id && pendingUnvalidate?.serieIdx === si
                     ? <>
                         <button onClick={() => setPendingUnvalidate(null)} style={S.unvalCancelBtn}>Non</button>
                         <button onClick={() => devaliderSerie(ex.id, si, groupLetter)} style={S.unvalConfirmBtn}>Oui</button>
                       </>
-                    : <button onClick={() => setPendingUnvalidate({ exId: ex.id, serieIdx: si })} style={S.serieDoneBadge}>✓</button>
-                  : <button onClick={() => validerSerie(ex.id, si, groupLetter, groupItems)} style={S.serieValBtn}>Valider</button>
+                    : <button onClick={() => setPendingUnvalidate({ exId: ex.id, serieIdx: si })}
+                        style={serie.valide ? S.serieDoneBadge : S.serieDoneWarnBadge}>
+                        {serie.valide ? '✓' : '⚠'}
+                      </button>
+                  : <button onClick={() => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions)} style={S.serieValBtn}>Valider</button>
                 }
               </div>
             ))}
+
+            {/* ── Volume & Tonnage ─────────────────────────── */}
+            {(() => {
+              const warmups = warmupTracking[ex.id] || []
+              const doneSeries = seriesList.filter(s => s.is_done)
+              const allForCalc = [
+                ...warmups.map(w => ({ poids: w.poids, reps: parseInt(w.reps_reelles) || 0 })),
+                ...doneSeries.map(s => ({ poids: s.poids, reps: parseInt(s.reps_reelles) || 0 })),
+              ].filter(s => s.reps > 0)
+              if (allForCalc.length === 0) return null
+              const totalReps = allForCalc.reduce((s, x) => s + x.reps, 0)
+              const tonnage = allForCalc.reduce((s, x) => s + ((parseFloat(x.poids) || 0) * x.reps), 0)
+              const warmupCount = warmups.filter(w => (parseInt(w.reps_reelles) || 0) > 0).length
+              const workCount = doneSeries.length
+              return (
+                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                  <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>{totalReps}</span>
+                    <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>VOLUME (reps)</span>
+                  </div>
+                  {tonnage > 0 && (
+                    <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>{Math.round(tonnage)} kg</span>
+                      <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>TONNAGE</span>
+                    </div>
+                  )}
+                  {warmupCount > 0 && (
+                    <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{warmupCount}+{workCount}</span>
+                      <span style={{ fontSize: '0.55rem', color: '#9ca3af', marginTop: 1 }}>ÉCH+TRAV</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Bouton récup */}
             {showRecup && ex.recuperation && (() => {
@@ -848,12 +986,14 @@ const S = {
   histoBtn:    { background: 'none', border: 'none', color: '#6366f1', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', padding: 0 },
   serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
+  serieRowWarn: { background: '#fffbeb', border: '1.5px solid #fbbf24' },
   serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: '#e4f816', background: '#333333', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput:     { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
   serieInputDone: { background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' },
   serieUnit:   { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
   serieValBtn: { marginLeft: 'auto', background: '#333333', color: '#e4f816', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
   serieDoneBadge:  { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
+  serieDoneWarnBadge: { marginLeft: 'auto', background: '#f59e0b', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
   unvalCancelBtn:  { marginLeft: 'auto', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
   unvalConfirmBtn: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
   recupBtn:    { width: '100%', marginTop: '0.5rem', background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
