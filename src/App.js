@@ -28,6 +28,8 @@ import AjouterRepas from './pages/client/AjouterRepas'
 import HistoriqueNutrition from './pages/client/HistoriqueNutrition'
 import ProfilNutrition from './pages/client/ProfilNutrition'
 import NutritionCoach from './pages/NutritionCoach'
+import ScannerArticle from './pages/client/ScannerArticle'
+import HistoriqueScans from './pages/client/HistoriqueScans'
 import CoachMessages from './pages/CoachMessages'
 import ChargeEntrainement from './pages/ChargeEntrainement'
 import Paiements from './pages/Paiements'
@@ -66,6 +68,8 @@ function App() {
           <Route path="/client/nutrition/ajouter"    element={<WithNotifs><AjouterRepas /></WithNotifs>} />
           <Route path="/client/nutrition/historique" element={<WithNotifs><HistoriqueNutrition /></WithNotifs>} />
           <Route path="/client/nutrition/profil"    element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
+          <Route path="/client/nutrition/scanner"   element={<WithNotifs><ScannerArticle /></WithNotifs>} />
+          <Route path="/client/nutrition/scans"     element={<WithNotifs><HistoriqueScans /></WithNotifs>} />
           <Route path="/login"                 element={<Login />} />
           <Route path="/reset-password"        element={<ResetPassword />} />
 

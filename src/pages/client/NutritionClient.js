@@ -282,6 +282,73 @@ export default function NutritionClient() {
           </div>
         )}
 
+        {/* ─── Score qualité IA (EN HAUT, après le résumé) ────────────── */}
+        {meals.length > 0 && (
+          <div style={S.card}>
+            <div style={S.cardHeader}>
+              <span style={S.cardTitle}>🤖 Analyse IA du jour</span>
+              {qualityResult && (
+                <button onClick={() => setQualityResult(null)} style={{ background: 'none', border: 'none', fontSize: '0.72rem', color: '#9ca3af', cursor: 'pointer' }}>
+                  Réinitialiser
+                </button>
+              )}
+            </div>
+
+            {!qualityResult && !loadingQuality && (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.85rem', lineHeight: 1.5 }}>
+                  Fais évaluer ta journée par l'IA : note /10, points forts et conseils.
+                </p>
+                <button onClick={analyzeQuality} style={{
+                  padding: '0.65rem 1.4rem', borderRadius: 12, border: 'none',
+                  background: '#1a1a1a', color: '#e4f816',
+                  fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
+                }}>
+                  ✨ Évaluer ma journée
+                </button>
+              </div>
+            )}
+
+            {loadingQuality && (
+              <div style={{ textAlign: 'center', padding: '0.75rem 0' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>Analyse en cours…</p>
+              </div>
+            )}
+
+            {qualityResult && !loadingQuality && (
+              <div>
+                {qualityResult.score != null && (() => {
+                  const sc = qualityResult.score
+                  const color = sc >= 7 ? '#16a34a' : sc >= 5 ? '#d97706' : '#dc2626'
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{
+                        width: 60, height: 60, borderRadius: '50%', flexShrink: 0,
+                        border: `4px solid ${color}`,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: '1.2rem', fontWeight: 900, color, lineHeight: 1 }}>{sc}</span>
+                        <span style={{ fontSize: '0.52rem', color: '#9ca3af', fontWeight: 600 }}>/10</span>
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.2rem', fontSize: '0.92rem' }}>
+                          {qualityResult.verdict}
+                        </p>
+                        <p style={{ color: '#6b7280', fontSize: '0.78rem', margin: 0, lineHeight: 1.5 }}>
+                          {qualityResult.commentaire}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {qualityResult.score == null && (
+                  <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>{qualityResult.commentaire}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ─── Hydratation ────────────────────────────────────────────── */}
         <div style={S.card}>
           <div style={S.cardHeader}>
@@ -356,75 +423,28 @@ export default function NutritionClient() {
           )}
         </div>
 
-        {/* ─── Score qualité IA ────────────────────────────────────── */}
-        {meals.length > 0 && (
-          <div style={S.card}>
-            <div style={S.cardHeader}>
-              <span style={S.cardTitle}>🤖 Analyse IA</span>
-              {qualityResult && (
-                <button onClick={() => setQualityResult(null)} style={{ background: 'none', border: 'none', fontSize: '0.72rem', color: '#9ca3af', cursor: 'pointer' }}>
-                  Réinitialiser
-                </button>
-              )}
-            </div>
+        {/* Espace pour le FAB + bouton scanner */}
+        <div style={{ height: 100 }} />
+      </div>
 
-            {!qualityResult && !loadingQuality && (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.85rem', lineHeight: 1.5 }}>
-                  Fais évaluer ta journée par Gemini : note /10, points forts et conseils.
-                </p>
-                <button onClick={analyzeQuality} style={{
-                  padding: '0.65rem 1.4rem', borderRadius: 12, border: 'none',
-                  background: '#1a1a1a', color: '#e4f816',
-                  fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
-                }}>
-                  ✨ Évaluer ma journée
-                </button>
-              </div>
-            )}
-
-            {loadingQuality && (
-              <div style={{ textAlign: 'center', padding: '0.75rem 0' }}>
-                <p style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>Gemini analyse ta journée…</p>
-              </div>
-            )}
-
-            {qualityResult && !loadingQuality && (
-              <div>
-                {qualityResult.score != null && (() => {
-                  const sc = qualityResult.score
-                  const color = sc >= 7 ? '#16a34a' : sc >= 5 ? '#d97706' : '#dc2626'
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                      <div style={{
-                        width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
-                        border: `4px solid ${color}`,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <span style={{ fontSize: '1.3rem', fontWeight: 900, color, lineHeight: 1 }}>{sc}</span>
-                        <span style={{ fontSize: '0.55rem', color: '#9ca3af', fontWeight: 600 }}>/10</span>
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.2rem', fontSize: '0.95rem' }}>
-                          {qualityResult.verdict}
-                        </p>
-                        <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0, lineHeight: 1.5 }}>
-                          {qualityResult.commentaire}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })()}
-                {qualityResult.score == null && (
-                  <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>{qualityResult.commentaire}</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Espace pour le FAB */}
-        <div style={{ height: 80 }} />
+      {/* ─── Bouton Scanner un article ──────────────────────────────── */}
+      <div style={S.scanCta}>
+        <button
+          onClick={() => navigate('/client/nutrition/scanner')}
+          style={S.scanCtaBtn}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="3" height="3" rx="0.5" />
+            <line x1="18" y1="14" x2="21" y2="14" />
+            <line x1="21" y1="17" x2="21" y2="21" />
+            <line x1="17" y1="21" x2="21" y2="21" />
+            <line x1="14" y1="18" x2="14" y2="21" />
+          </svg>
+          Scanner un article
+        </button>
       </div>
 
       {/* ─── FAB Ajouter un repas ───────────────────────────────────── */}
@@ -523,12 +543,39 @@ const S = {
   },
   fab: {
     position: 'fixed',
-    bottom: 'calc(120px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    bottom: 'calc(170px + max(env(safe-area-inset-bottom, 0px), 0px))',
     right: 18, zIndex: 80,
-    width: 58, height: 58, borderRadius: 999,
+    width: 52, height: 52, borderRadius: 999,
     background: '#e4f816', border: 'none',
     boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer',
+  },
+  scanCta: {
+    position: 'fixed',
+    bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    left: 0, right: 0,
+    padding: '0 1rem 0.75rem',
+    zIndex: 75,
+    background: 'linear-gradient(to top, #fafafa 60%, transparent)',
+    pointerEvents: 'none',
+  },
+  scanCtaBtn: {
+    width: '100%',
+    padding: '0.9rem 1.25rem',
+    background: '#1a1a1a',
+    color: '#e4f816',
+    border: 'none',
+    borderRadius: 16,
+    fontSize: '0.95rem',
+    fontWeight: 800,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.6rem',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.22)',
+    pointerEvents: 'all',
+    letterSpacing: '0.01em',
   },
 }
