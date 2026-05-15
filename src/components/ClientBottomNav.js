@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { supabase } from '../supabase'
 
 function IconHome({ active }) {
   const s = active ? '#1a1a1a' : '#b0b8c1'
@@ -64,6 +65,7 @@ export default function ClientBottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const p = location.pathname
+  const [offre, setOffre] = useState(null)
 
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
@@ -82,6 +84,19 @@ export default function ClientBottomNav() {
     }
   }, [])
 
+  // Récupère l'offre du client pour afficher GPS seulement en prépa physique
+  useEffect(() => {
+    async function fetchOffre() {
+      const { data: sess } = await supabase.auth.getSession()
+      const userId = sess?.session?.user?.id
+      if (!userId) return
+      const { data: client } = await supabase
+        .from('clients').select('offre').eq('user_id', userId).maybeSingle()
+      if (client?.offre) setOffre(client.offre)
+    }
+    fetchOffre()
+  }, [])
+
   if (kbOpen) return null
 
   const isHome      = p === '/' || p === '/client/accueil'
@@ -90,12 +105,14 @@ export default function ClientBottomNav() {
   const isMessages  = p === '/client/messages'
   const isGPS       = p.startsWith('/client/gps')
 
+  const isPrepaPhysique = offre === 'preparation_physique'
+
   const tabs = [
     { label: 'Accueil',   Icon: IconHome,      active: isHome,      to: '/' },
     { label: 'Programme', Icon: IconProgramme, active: isProgramme, to: '/client/mon-programme' },
     { label: 'Nutrition', Icon: IconNutrition, active: isNutrition, to: '/client/nutrition' },
     { label: 'Messages',  Icon: IconChat,      active: isMessages,  to: '/client/messages' },
-    { label: 'GPS',       Icon: IconGPS,       active: isGPS,       to: '/client/gps' },
+    ...(isPrepaPhysique ? [{ label: 'GPS', Icon: IconGPS, active: isGPS, to: '/client/gps' }] : []),
   ]
 
   return (

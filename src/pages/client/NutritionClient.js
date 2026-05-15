@@ -710,7 +710,7 @@ const S = {
   },
   scanCta: {
     position: 'fixed',
-    bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    bottom: 'calc(94px + max(env(safe-area-inset-bottom, 0px), 0px))',
     left: 0, right: 0, padding: '0 14px 10px',
     background: 'linear-gradient(to top, #f5f5f5 55%, transparent)',
     zIndex: 70, pointerEvents: 'none',

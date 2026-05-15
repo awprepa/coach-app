@@ -35,7 +35,7 @@ function buildPrompt(meals: Meal[], goals: Goals | null, water_ml: number): stri
 - Hydratation : ${goals.hydration_ml ?? 2000} ml`
     : `Aucun objectif personnalisé. Évalue la qualité nutritionnelle globale.`;
 
-  return `Tu es un nutritionniste expert et bienveillant. Évalue cette journée alimentaire.
+  return `Tu es un nutritionniste expert et rigoureux travaillant avec des sportifs de haut niveau. Évalue cette journée alimentaire avec précision — ne sois PAS trop indulgent.
 
 ${goalsBlock}
 
@@ -47,13 +47,22 @@ Consommé aujourd'hui :
 - Hydratation : ${water_ml} ml
 - Nombre de repas : ${meals.length}
 
-Donne une note de 0 à 10 (décimale permise), un verdict court (3-5 mots) et un commentaire encourageant de 1-2 phrases en français.
+Barème de notation (sois strict) :
+- 1-3 : journée nutritionnellement pauvre, objectifs très loin d'être atteints
+- 4-5 : journée moyenne, écarts significatifs aux objectifs (>30%), améliorations importantes nécessaires
+- 6-7 : journée correcte, quelques écarts mineurs (<20%) aux objectifs
+- 8-9 : journée excellente, objectifs quasiment atteints
+- 10 : journée parfaite (très rare)
 
-Réponds UNIQUEMENT avec ce JSON valide :
+Si les calories sont inférieures à 60% ou supérieures à 140% de l'objectif, la note ne peut PAS dépasser 5.
+Si les protéines sont inférieures à 70% de l'objectif, enlève au moins 1,5 point.
+Si l'hydratation est inférieure à 1000 ml, enlève 0,5 point.
+
+Réponds UNIQUEMENT avec ce JSON valide (commentaire constructif, 1-2 phrases) :
 {
-  "score": 7.5,
-  "verdict": "Bonne journée !",
-  "commentaire": "Tes protéines sont bien réparties. Pense à t'hydrater un peu plus demain."
+  "score": 5.5,
+  "verdict": "Journée moyenne",
+  "commentaire": "Tes protéines sont insuffisantes par rapport à ton objectif. Ajoute une source protéique à chaque repas."
 }`;
 }
 

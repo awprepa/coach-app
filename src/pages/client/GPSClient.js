@@ -3,6 +3,22 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 
+function parseGpsNom(nom) {
+  if (!nom) return {}
+  const m = nom.toLowerCase().match(/^s(\d+)-([a-z]+)-([a-z]+)-([a-z0-9]+)-(\d{2})(\d{2})(\d{4})$/)
+  if (m) {
+    const [, sem, sport, type, categorie, dd, mm, yyyy] = m
+    return {
+      semaine:   parseInt(sem, 10),
+      sport:     sport.charAt(0).toUpperCase() + sport.slice(1),
+      type:      type === 'vitesse' ? 'Vitesse' : type === 'volume' ? 'Volume' : type.charAt(0).toUpperCase() + type.slice(1),
+      categorie: categorie.toUpperCase(),
+      date:      `${yyyy}-${mm}-${dd}`,
+    }
+  }
+  return {}
+}
+
 const METRICS = [
   { key: 'distance',  label: 'Distance', unit: 'm' },
   { key: 'm_min',     label: 'm/min',    unit: '' },
@@ -206,38 +222,45 @@ export default function GPSClient() {
             )
           })()
         ) : (
-          /* ── Liste sessions ── */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {sessions.map(s => {
-              const hasData = !!s.moi
-              return (
-                <div key={s.id} onClick={() => setSelected(s.id)} style={{
-                  ...S.sessionCard,
-                  opacity: hasData ? 1 : 0.6,
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: '0 0 0.15rem', fontWeight: '700', fontSize: '0.9rem', color: '#1a1a1a' }}>{s.nom}</p>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af' }}>
-                      {new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      {s.type && ` · ${s.type}`}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
-                    {hasData ? (
-                      <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700' }}>
-                        ✓ Présent
-                      </span>
-                    ) : (
-                      <span style={{ background: '#f3f4f6', color: '#9ca3af', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '600' }}>
-                        Absent
-                      </span>
-                    )}
-                    <span style={{ color: '#d1d5db', fontSize: '1.1rem' }}>›</span>
-                  </div>
+          /* ── Liste sessions — uniquement celles où le client est présent ── */
+          (() => {
+            const presentSessions = sessions.filter(s => !!s.moi)
+            if (!presentSessions.length) return (
+              <div style={S.empty}>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2C8.5 2 5.5 5 5.5 8.5c0 5 6.5 13.5 6.5 13.5S18.5 13.5 18.5 8.5C18.5 5 15.5 2 12 2z" />
+                    <circle cx="12" cy="8.5" r="2.5" />
+                  </svg>
                 </div>
-              )
-            })}
-          </div>
+                <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.3rem' }}>Aucune donnée GPS</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Tes données apparaîtront ici dès qu'elles seront importées.</p>
+              </div>
+            )
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {presentSessions.map(s => {
+                  const info = parseGpsNom(s.nom)
+                  const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                  return (
+                    <div key={s.id} onClick={() => setSelected(s.id)} style={S.sessionCard}>
+                      <div style={{ flex: 1 }}>
+                        {/* Badges semaine / sport / type / catégorie */}
+                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
+                          {info.semaine   && <span style={S.badge}>S{info.semaine}</span>}
+                          {info.sport     && <span style={{ ...S.badge, background: '#e0f2fe', color: '#0369a1' }}>{info.sport}</span>}
+                          {info.type      && <span style={{ ...S.badge, background: '#f0fdf4', color: '#15803d' }}>{info.type}</span>}
+                          {info.categorie && <span style={{ ...S.badge, background: '#faf5ff', color: '#7c3aed' }}>{info.categorie}</span>}
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af' }}>{dateStr}</p>
+                      </div>
+                      <span style={{ color: '#d1d5db', fontSize: '1.3rem' }}>›</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()
         )}
       </div>
 
@@ -254,6 +277,7 @@ const S = {
   content:     { padding: '1rem' },
   empty:       { background: 'white', borderRadius: 16, padding: '3rem 1.5rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   sessionCard: { background: 'white', borderRadius: 14, padding: '0.9rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  badge:       { fontSize: '0.65rem', fontWeight: '700', padding: '2px 8px', borderRadius: 20, background: '#f3f4f6', color: '#374151' },
   detailCard:  { background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   backBtn:     { display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', padding: '0 0 0.85rem', marginLeft: '-0.1rem' },
 }

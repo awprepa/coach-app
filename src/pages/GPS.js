@@ -97,15 +97,50 @@ function parseSheet(ws) {
   return rows
 }
 
-function deriveSessionInfo(sheetName, fileName) {
-  // e.g. "s10-rugby-volume-u16-04032025"
-  const match = sheetName?.match(/(\d{2})(\d{2})(\d{4})$/)
-  if (match) {
-    const date = `${match[3]}-${match[2]}-${match[1]}`
-    const type = sheetName.includes('vitesse') ? 'Vitesse' : sheetName.includes('volume') ? 'Volume' : ''
-    return { date, type, nom: sheetName }
+/**
+ * Parsing de la convention de nommage GPS :
+ * Format : s{semaine}-{sport}-{type}-{catégorie}-{DDMMYYYY}
+ * Exemple : "s15-rugby-volume-u16-08042025"
+ */
+function parseGpsNom(nom) {
+  if (!nom) return {}
+  const m = nom.toLowerCase().match(/^s(\d+)-([a-z]+)-([a-z]+)-([a-z0-9]+)-(\d{2})(\d{2})(\d{4})$/)
+  if (m) {
+    const [, sem, sport, type, categorie, dd, mm, yyyy] = m
+    return {
+      semaine:   parseInt(sem, 10),
+      sport:     sport.charAt(0).toUpperCase() + sport.slice(1),
+      type:      type === 'vitesse' ? 'Vitesse' : type === 'volume' ? 'Volume' : type.charAt(0).toUpperCase() + type.slice(1),
+      categorie: categorie.toUpperCase(),
+      date:      `${yyyy}-${mm}-${dd}`,
+    }
   }
-  return { date: new Date().toISOString().slice(0, 10), type: '', nom: fileName.replace(/\.[^.]+$/, '') }
+  // Fallback : date en fin de nom
+  const d = nom.match(/(\d{2})(\d{2})(\d{4})$/)
+  if (d) {
+    const type = nom.toLowerCase().includes('vitesse') ? 'Vitesse' : nom.toLowerCase().includes('volume') ? 'Volume' : ''
+    return { date: `${d[3]}-${d[2]}-${d[1]}`, type }
+  }
+  return {}
+}
+
+function deriveSessionInfo(sheetName, fileName) {
+  const parsed = parseGpsNom(sheetName)
+  if (parsed.date) {
+    return {
+      nom:       sheetName,
+      date:      parsed.date,
+      type:      parsed.type || '',
+      semaine:   parsed.semaine || null,
+      sport:     parsed.sport  || null,
+      categorie: parsed.categorie || null,
+    }
+  }
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    type: '', nom: (fileName || '').replace(/\.[^.]+$/, ''),
+    semaine: null, sport: null, categorie: null,
+  }
 }
 
 async function parseFile(file) {
@@ -349,17 +384,28 @@ export default function GPS() {
         {loading ? <p style={S.dimText}>Chargement…</p> : null}
 
         <div style={S.sideList}>
-          {rapports.map(r => (
-            <div key={r.id} onClick={() => { setSelected(r); setMode('tableau') }}
-              style={{ ...S.sideItem, ...(selected?.id === r.id ? S.sideItemActive : {}) }}>
-              <div style={S.sideItemName}>{r.nom}</div>
-              <div style={S.sideItemMeta}>
-                {r.date} {r.type ? `· ${r.type}` : ''}
-                · {r.lignes?.filter(l => l.periode_num === 0).length || 0} joueurs
-              </div>
-              <button onClick={e => { e.stopPropagation(); supprimerRapport(r.id) }} style={S.deleteBtn}>✕</button>
-            </div>
-          ))}
+          {rapports.map(r => {
+              const gpsInfo = parseGpsNom(r.nom)
+              const nbJoueurs = r.lignes?.filter(l => l.periode_num === 0).length || 0
+              const dateStr = r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''
+              return (
+                <div key={r.id} onClick={() => { setSelected(r); setMode('tableau') }}
+                  style={{ ...S.sideItem, ...(selected?.id === r.id ? S.sideItemActive : {}) }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 3 }}>
+                    {gpsInfo.semaine && <span style={S.sideBadge}>S{gpsInfo.semaine}</span>}
+                    {gpsInfo.sport   && <span style={{ ...S.sideBadge, background: '#e0f2fe', color: '#0369a1' }}>{gpsInfo.sport}</span>}
+                    {gpsInfo.type    && <span style={{ ...S.sideBadge, background: '#f0fdf4', color: '#15803d' }}>{gpsInfo.type}</span>}
+                    {gpsInfo.categorie && <span style={{ ...S.sideBadge, background: '#faf5ff', color: '#7c3aed' }}>{gpsInfo.categorie}</span>}
+                  </div>
+                  <div style={S.sideItemMeta}>
+                    {dateStr} · {nbJoueurs} joueur{nbJoueurs > 1 ? 's' : ''}
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); supprimerRapport(r.id) }} style={S.deleteBtn}>✕</button>
+                </div>
+              )
+            }
+
+          )}
           {!loading && !rapports.length && <p style={S.dimText}>Aucun rapport. Importez un fichier Catapult.</p>}
         </div>
       </div>
@@ -648,6 +694,7 @@ const S = {
   sideItemActive:{ background: 'rgba(228,248,22,0.1)', border: '1px solid rgba(228,248,22,0.3)' },
   sideItemName:  { color: 'white', fontWeight: '700', fontSize: '0.82rem', marginBottom: '0.2rem', paddingRight: '1.5rem' },
   sideItemMeta:  { color: '#6b7280', fontSize: '0.73rem' },
+  sideBadge:     { fontSize: '0.62rem', fontWeight: '700', padding: '2px 7px', borderRadius: 20, background: '#374151', color: '#e4f816' },
   deleteBtn:     { position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'transparent', border: 'none', color: '#4b5563', fontSize: '0.75rem', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px' },
   previewBox:    { margin: '0.75rem', background: '#1f2937', borderRadius: '10px', padding: '0.9rem' },
   previewTitle:  { color: '#e4f816', fontWeight: '700', fontSize: '0.8rem', marginBottom: '0.5rem' },

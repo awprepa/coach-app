@@ -170,14 +170,16 @@ function ChatInner({ clientId, coachId }) {
         left: 0, right: 0,
         bottom: inputBottom,
         zIndex: 90,
-        background: 'white',
-        borderTop: '1px solid #ebebeb',
-        // Couvre toute la zone jusqu'en bas (safe area incluse)
+        background: 'rgba(255,255,255,0.97)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderTop: '1px solid rgba(0,0,0,0.07)',
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
         paddingBottom: inputBottom === NAV_H ? 0 : 'env(safe-area-inset-bottom, 0px)',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        padding: '0.6rem 0.75rem',
+        gap: '0.55rem',
+        padding: '0.55rem 0.9rem',
         minHeight: INPUT_H,
         boxSizing: 'border-box',
       }}>
@@ -191,44 +193,51 @@ function ChatInner({ clientId, coachId }) {
               envoyer()
             }
           }}
-          placeholder="Votre message…"
+          placeholder="Écris un message…"
           maxLength={500}
           autoComplete="off"
           style={{
             flex: 1,
-            padding: '0.6rem 0.9rem',
-            border: '1.5px solid #e5e7eb',
-            borderRadius: 999,
-            fontSize: '0.9rem',
+            padding: '0.65rem 1rem',
+            border: 'none',
+            borderRadius: 22,
+            fontSize: '0.92rem',
             outline: 'none',
-            background: '#f9fafb',
+            background: '#f0f0f0',
             color: '#1a1a1a',
             lineHeight: 1.4,
-            // Pas de box-shadow sur l'input — c'est ce qui causait les ombres visibles
             boxShadow: 'none',
             WebkitAppearance: 'none',
           }}
         />
         <button
-          // onPointerDown + preventDefault : empêche l'input de perdre le focus
-          // quand on tape "Envoyer" → le clavier reste ouvert, la barre ne bouge pas
           onPointerDown={e => e.preventDefault()}
           onClick={envoyer}
           disabled={!texte.trim() || sending}
           style={{
-            width: 40, height: 40,
+            width: 42, height: 42,
             borderRadius: '50%',
-            background: texte.trim() && !sending ? '#333333' : '#e5e7eb',
-            color: texte.trim() && !sending ? '#e4f816' : '#9ca3af',
+            background: texte.trim() && !sending
+              ? 'linear-gradient(135deg, #333333 0%, #1f2937 100%)'
+              : '#e5e7eb',
+            color: texte.trim() && !sending ? '#e4f816' : '#b0b7c3',
             border: 'none',
             cursor: texte.trim() && !sending ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.2rem', flexShrink: 0,
-            transition: 'background 0.15s, color 0.15s',
+            flexShrink: 0,
+            transition: 'background 0.18s, color 0.18s, transform 0.1s',
             WebkitTapHighlightColor: 'transparent',
+            boxShadow: texte.trim() && !sending ? '0 3px 10px rgba(0,0,0,0.22)' : 'none',
           }}
         >
-          {sending ? '…' : '↑'}
+          {sending ? (
+            <span style={{ fontSize: '0.85rem' }}>…</span>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          )}
         </button>
       </div>
     </>
