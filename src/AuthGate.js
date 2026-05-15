@@ -4,15 +4,27 @@ import { supabase } from './supabase'
 
 const COACH_EMAIL = 'wehrey.arthur@gmail.com'
 
+// Chemins publics (accessibles sans auth, jamais redirigés)
+const PUBLIC_PATHS = ['/login', '/reset-password']
+
 function redirect(navigate, user, path) {
+  // Ne jamais rediriger depuis les pages publiques (login, reset-password)
+  if (PUBLIC_PATHS.includes(path)) {
+    // Si connecté normalement et pas en train de réinitialiser → rediriger vers l'app
+    // (mais seulement sur /login, pas /reset-password qui doit rester accessible)
+    if (user && path === '/login') {
+      if (user.email === COACH_EMAIL) navigate('/')
+      else navigate('/client/accueil')
+    }
+    return
+  }
   if (!user) {
-    if (path !== '/login') navigate('/login')
+    navigate('/login')
   } else if (user.email === COACH_EMAIL) {
-    if (path === '/login') navigate('/')
+    // coach : OK partout sauf /client/*
   } else {
-    // Client : OK sur /client/*, sur / ou sur /login → accueil client
+    // Client : OK sur /client/*, / → accueil client sinon
     if (!path.startsWith('/client/') && path !== '/') navigate('/client/accueil')
-    if (path === '/login') navigate('/client/accueil')
   }
 }
 
@@ -21,10 +33,8 @@ export default function AuthGate({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Si l'URL contient un token de récupération de mot de passe, rester sur /login
-    const isRecovery = window.location.hash.includes('type=recovery')
-    if (isRecovery) {
-      if (window.location.pathname !== '/login') navigate('/login')
+    // Si on est sur /reset-password → ne rien faire, laisser la page gérer
+    if (window.location.pathname === '/reset-password') {
       setLoading(false)
       return
     }
@@ -39,11 +49,8 @@ export default function AuthGate({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       // Ne pas rediriger lors du premier INITIAL_SESSION (déjà géré par getSession)
       if (_event === 'INITIAL_SESSION') return
-      // Flux de récupération de mot de passe → rester sur /login
-      if (_event === 'PASSWORD_RECOVERY') {
-        if (window.location.pathname !== '/login') navigate('/login')
-        return
-      }
+      // Flux de récupération → la page /reset-password gère elle-même
+      if (_event === 'PASSWORD_RECOVERY') return
       redirect(navigate, session?.user, window.location.pathname)
     })
 

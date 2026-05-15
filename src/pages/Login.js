@@ -89,7 +89,7 @@ export default function Login() {
     if (!email) { setError('Entre ton adresse email.'); return }
     setLoading(true); setError('')
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/login',
+      redirectTo: window.location.origin + '/reset-password',
     })
     if (error) setError(error.message)
     else setSuccess('Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.')

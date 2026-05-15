@@ -12,6 +12,7 @@ import Bibliotheque from './pages/Bibliotheque'
 import GPS from './pages/GPS'
 import Tests from './pages/Tests'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import ProgrammeClient from './pages/client/ProgrammeClient'
 import SeanceClient from './pages/client/SeanceClient'
 import TestsClient from './pages/client/TestsClient'
@@ -66,6 +67,7 @@ function App() {
           <Route path="/client/nutrition/historique" element={<WithNotifs><HistoriqueNutrition /></WithNotifs>} />
           <Route path="/client/nutrition/profil"    element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
           <Route path="/login"                 element={<Login />} />
+          <Route path="/reset-password"        element={<ResetPassword />} />
 
           {/* Unified home — coach voit Dashboard, client voit AccueilClient */}
           <Route path="/" element={<WithNotifs><Home /></WithNotifs>} />
