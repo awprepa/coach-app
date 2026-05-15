@@ -90,6 +90,9 @@ export default function NutritionClient() {
   const [favoriteModal, setFavoriteModal] = useState(null) // { meal }
   const [favoriteName, setFavoriteName]   = useState('')
   const [savingFav, setSavingFav]         = useState(false)
+  // Score qualité IA
+  const [qualityResult,  setQualityResult]  = useState(null) // { score, verdict, commentaire }
+  const [loadingQuality, setLoadingQuality] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -171,6 +174,23 @@ export default function NutritionClient() {
   }
 
   const handleAddMeal = () => navigate('/client/nutrition/ajouter')
+
+  // ─── Score qualité IA ─────────────────────────────────────────────────────
+  async function analyzeQuality() {
+    if (!meals.length || loadingQuality) return
+    setLoadingQuality(true)
+    setQualityResult(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('nutrition-quality-score', {
+        body: { meals, goals, water_ml: water.ml || 0 },
+      })
+      if (!error && data?.ok) setQualityResult(data)
+      else setQualityResult({ score: null, verdict: 'Indisponible', commentaire: data?.error || 'Réessaie plus tard.' })
+    } catch (e) {
+      setQualityResult({ score: null, verdict: 'Erreur', commentaire: e.message })
+    }
+    setLoadingQuality(false)
+  }
 
   if (loading) {
     return (
@@ -327,6 +347,73 @@ export default function NutritionClient() {
             </div>
           )}
         </div>
+
+        {/* ─── Score qualité IA ────────────────────────────────────── */}
+        {meals.length > 0 && (
+          <div style={S.card}>
+            <div style={S.cardHeader}>
+              <span style={S.cardTitle}>🤖 Analyse IA</span>
+              {qualityResult && (
+                <button onClick={() => setQualityResult(null)} style={{ background: 'none', border: 'none', fontSize: '0.72rem', color: '#9ca3af', cursor: 'pointer' }}>
+                  Réinitialiser
+                </button>
+              )}
+            </div>
+
+            {!qualityResult && !loadingQuality && (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.85rem', lineHeight: 1.5 }}>
+                  Fais évaluer ta journée par Gemini : note /10, points forts et conseils.
+                </p>
+                <button onClick={analyzeQuality} style={{
+                  padding: '0.65rem 1.4rem', borderRadius: 12, border: 'none',
+                  background: '#1a1a1a', color: '#e4f816',
+                  fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
+                }}>
+                  ✨ Évaluer ma journée
+                </button>
+              </div>
+            )}
+
+            {loadingQuality && (
+              <div style={{ textAlign: 'center', padding: '0.75rem 0' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>Gemini analyse ta journée…</p>
+              </div>
+            )}
+
+            {qualityResult && !loadingQuality && (
+              <div>
+                {qualityResult.score != null && (() => {
+                  const sc = qualityResult.score
+                  const color = sc >= 7 ? '#16a34a' : sc >= 5 ? '#d97706' : '#dc2626'
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                      <div style={{
+                        width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
+                        border: `4px solid ${color}`,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: '1.3rem', fontWeight: 900, color, lineHeight: 1 }}>{sc}</span>
+                        <span style={{ fontSize: '0.55rem', color: '#9ca3af', fontWeight: 600 }}>/10</span>
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.2rem', fontSize: '0.95rem' }}>
+                          {qualityResult.verdict}
+                        </p>
+                        <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0, lineHeight: 1.5 }}>
+                          {qualityResult.commentaire}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {qualityResult.score == null && (
+                  <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>{qualityResult.commentaire}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Espace pour le FAB */}
         <div style={{ height: 80 }} />

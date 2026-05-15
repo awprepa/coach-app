@@ -19,6 +19,7 @@ const MODES = [
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 
+// ── Helpers UI ───────────────────────────────────────────────────────────────
 function MacroPill({ label, value, color }) {
   if (value == null) return null
   return (
@@ -36,49 +37,193 @@ function NutriScoreBadge({ score }) {
     <span style={{
       background: colors[score.toLowerCase()] || '#9ca3af',
       color: 'white', fontSize: '0.7rem', fontWeight: 900,
-      padding: '2px 7px', borderRadius: 4,
-      textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 4, textTransform: 'uppercase',
     }}>
       {score.toUpperCase()}
     </span>
   )
 }
 
+// ── Compression image (canvas → JPEG base64) ────────────────────────────────
+function compressImage(file, maxSide = 1024) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxSide || height > maxSide) {
+          if (width > height) { height = Math.round(height * maxSide / width); width = maxSide }
+          else                { width  = Math.round(width  * maxSide / height); height = maxSide }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1])
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+// ── Composant résultats IA (photo + vocal) ───────────────────────────────────
+function AIResults({ analysis, items, onUpdateQty, onReset }) {
+  const totalKcal  = items.reduce((s, i) => s + (i.kcal   || 0), 0)
+  const totalProt  = items.reduce((s, i) => s + (i.prot_g  || 0), 0)
+  const totalCarbs = items.reduce((s, i) => s + (i.carbs_g || 0), 0)
+  const totalFat   = items.reduce((s, i) => s + (i.fat_g   || 0), 0)
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+        <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a', margin: 0 }}>
+          {analysis.repas_nom || 'Repas analysé'}
+        </p>
+        <button onClick={onReset} style={{
+          background: 'none', border: '1px solid #e5e7eb', borderRadius: 8,
+          padding: '3px 8px', fontSize: '0.68rem', color: '#9ca3af', cursor: 'pointer',
+        }}>
+          Recommencer
+        </button>
+      </div>
+
+      {analysis.note_ia && (
+        <div style={{
+          background: '#f0fdf4', borderRadius: 10, padding: '0.55rem 0.75rem',
+          fontSize: '0.78rem', color: '#166534', marginBottom: '0.7rem', lineHeight: 1.4,
+        }}>🤖 {analysis.note_ia}</div>
+      )}
+
+      {analysis.confiance && (
+        <p style={{ fontSize: '0.66rem', color: '#9ca3af', margin: '0 0 0.5rem' }}>
+          Confiance IA : {analysis.confiance}
+        </p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+        {items.map((item, idx) => (
+          <div key={idx} style={{
+            border: '1px solid #f0f0f0', borderRadius: 10,
+            padding: '0.6rem 0.75rem', background: '#fafafa',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', flex: 1 }}>{item.name}</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6b7280', flexShrink: 0 }}>
+                {item.kcal} kcal
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <input
+                type="number" inputMode="decimal"
+                value={item.quantity}
+                onChange={e => onUpdateQty(idx, parseFloat(e.target.value) || 0)}
+                style={{
+                  width: 62, padding: '0.3rem 0.45rem',
+                  border: '1.5px solid #e5e7eb', borderRadius: 8,
+                  fontSize: '0.82rem', textAlign: 'center', outline: 'none', background: 'white',
+                }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{item.unit || 'g'}</span>
+              <span style={{ fontSize: '0.68rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                P {Math.round((item.prot_g || 0) * 10) / 10}g ·
+                G {Math.round((item.carbs_g || 0) * 10) / 10}g ·
+                L {Math.round((item.fat_g || 0) * 10) / 10}g
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Total */}
+      <div style={{
+        marginTop: '0.75rem', background: '#1a1a1a', borderRadius: 12,
+        padding: '0.65rem 0.9rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
+      }}>
+        <span style={{ fontSize: '1rem', fontWeight: 900, color: '#e4f816', flexShrink: 0 }}>
+          {Math.round(totalKcal)} kcal
+        </span>
+        <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
+          P {Math.round(totalProt * 10) / 10}g ·
+          G {Math.round(totalCarbs * 10) / 10}g ·
+          L {Math.round(totalFat * 10) / 10}g
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function AILoading({ label }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤖</div>
+      <p style={{ fontWeight: 700, color: '#374151', margin: 0 }}>{label}</p>
+      <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>Gemini Flash analyse…</p>
+    </div>
+  )
+}
+
+function AIError({ error, onRetry }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+      <div style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>⚠️</div>
+      <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>Analyse échouée</p>
+      <p style={{ color: '#9ca3af', fontSize: '0.78rem', marginBottom: '1rem' }}>{error}</p>
+      <button onClick={onRetry} style={S.btnSecondary}>Réessayer</button>
+    </div>
+  )
+}
+
+// ── Page principale ──────────────────────────────────────────────────────────
 export default function AjouterRepas() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const initType = searchParams.get('type')
 
-  const [client, setClient]     = useState(null)
-  const [mealType, setMealType] = useState(initType || 'dejeuner')
-  const [mode, setMode]         = useState('scan')
-  const [saving, setSaving]     = useState(false)
+  const [client,   setClient]   = useState(null)
+  const [mealType, setMealType] = useState(searchParams.get('type') || 'dejeuner')
+  const [mode,     setMode]     = useState('scan')
+  const [saving,   setSaving]   = useState(false)
 
-  // ── Scan ────────────────────────────────────────────────────────────────
+  // ── Scan code-barres ─────────────────────────────────────────────────────
   const videoRef        = useRef(null)
   const scanControlsRef = useRef(null)
-  const [cameraError, setCameraError]     = useState(false)
+  const [cameraError,    setCameraError]    = useState(false)
   const [loadingBarcode, setLoadingBarcode] = useState(false)
-  const [scanDone, setScanDone]           = useState(false) // produit trouvé ou non trouvé
+  const [scanDone,       setScanDone]       = useState(false)
 
-  // ── Produit sélectionné (scan ou recherche) ──────────────────────────
-  const [food, setFood]         = useState(null) // objet nutrition_foods ou template
+  // ── Produit catalogue (scan ou recherche manuelle) ───────────────────────
+  const [food,     setFood]     = useState(null)
   const [quantity, setQuantity] = useState('100')
 
-  // ── Saisie manuelle ────────────────────────────────────────────────────
-  const [manualForm, setManualForm] = useState({ name: '', kcal: '', prot: '', carbs: '', fat: '' })
-  const [searchTerm, setSearchTerm] = useState('')
+  // ── Saisie manuelle libre ────────────────────────────────────────────────
+  const [manualForm,    setManualForm]    = useState({ name: '', kcal: '', prot: '', carbs: '', fat: '' })
+  const [searchTerm,    setSearchTerm]    = useState('')
   const [searchResults, setSearchResults] = useState([])
-  const [searching, setSearching]   = useState(false)
+  const [searching,     setSearching]     = useState(false)
 
-  // ── Favoris ─────────────────────────────────────────────────────────────
+  // ── Favoris ───────────────────────────────────────────────────────────────
   const [templates, setTemplates] = useState([])
 
-  // ── workout tag (prépa physique seulement) ───────────────────────────
+  // ── IA partagée (photo + vocal) ───────────────────────────────────────────
+  const [aiAnalysis,     setAiAnalysis]     = useState(null)
+  const [analyzingAI,    setAnalyzingAI]    = useState(false)
+  const [aiError,        setAiError]        = useState(null)
+  const [editableItems,  setEditableItems]  = useState([])
+
+  // ── Photo ─────────────────────────────────────────────────────────────────
+  const photoInputRef = useRef(null)
+
+  // ── Vocal ─────────────────────────────────────────────────────────────────
+  const recognitionRef  = useRef(null)
+  const [isRecording,    setIsRecording]    = useState(false)
+  const [transcript,     setTranscript]     = useState('')
+  const [voiceSupported, setVoiceSupported] = useState(true)
+
+  // ── workout tag ──────────────────────────────────────────────────────────
   const [workoutTag, setWorkoutTag] = useState(null)
 
-  // ── Init client ─────────────────────────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────────────────────
   useEffect(() => {
+    setVoiceSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition))
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
       supabase.from('clients').select('id,offre').eq('user_id', session.user.id).maybeSingle()
@@ -95,7 +240,7 @@ export default function AjouterRepas() {
       .then(({ data }) => setTemplates(data || []))
   }, [mode, client])
 
-  // ── Caméra : démarrage / arrêt ───────────────────────────────────────────
+  // ── Caméra barcode ────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
     if (scanControlsRef.current) {
       try { scanControlsRef.current.stop?.() } catch { /* ignore */ }
@@ -105,9 +250,7 @@ export default function AjouterRepas() {
 
   useEffect(() => {
     if (mode !== 'scan' || scanDone || cameraError) { stopCamera(); return }
-
     let mounted = true
-
     async function startCamera() {
       try {
         const { BrowserMultiFormatReader } = await import('@zxing/browser')
@@ -116,20 +259,18 @@ export default function AjouterRepas() {
         const controls = await reader.decodeFromConstraints(
           { video: { facingMode: { ideal: 'environment' } } },
           videoRef.current,
-          async (result, err) => {
+          async (result) => {
             if (!mounted || !result) return
-            stopCamera()
-            setScanDone(true)
+            stopCamera(); setScanDone(true)
             await handleBarcode(result.getText())
           }
         )
         if (mounted) scanControlsRef.current = controls
       } catch (e) {
-        console.error('[AjouterRepas] camera:', e)
+        console.error('[scan] camera:', e)
         if (mounted) setCameraError(true)
       }
     }
-
     startCamera()
     return () => { mounted = false; stopCamera() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,31 +279,20 @@ export default function AjouterRepas() {
   async function handleBarcode(barcode) {
     setLoadingBarcode(true)
     try {
-      const { data, error } = await supabase.functions.invoke('nutrition-barcode-lookup', {
-        body: { barcode },
-      })
+      const { data, error } = await supabase.functions.invoke('nutrition-barcode-lookup', { body: { barcode } })
       if (!error && data?.found && data.food) {
         setFood(data.food)
         setQuantity(String(data.food.serving_g || 100))
       } else {
-        // Produit introuvable → bascule en mode manuel
         setMode('manuel')
-        setManualForm(f => ({ ...f, name: '' }))
       }
-    } catch (e) {
-      console.error('[handleBarcode]', e)
-    }
+    } catch (e) { console.error('[barcode]', e) }
     setLoadingBarcode(false)
   }
 
-  function rescan() {
-    setFood(null)
-    setQuantity('100')
-    setScanDone(false)
-    setCameraError(false)
-  }
+  function rescan() { setFood(null); setQuantity('100'); setScanDone(false); setCameraError(false) }
 
-  // ── Recherche produit ────────────────────────────────────────────────────
+  // ── Recherche catalogue ───────────────────────────────────────────────────
   useEffect(() => {
     if (mode !== 'manuel' || food || searchTerm.length < 2) { setSearchResults([]); return }
     const t = setTimeout(async () => {
@@ -176,128 +306,206 @@ export default function AjouterRepas() {
     return () => clearTimeout(t)
   }, [searchTerm, mode, food])
 
-  function pickFood(f) {
-    setFood(f)
-    setQuantity(String(f.serving_g || 100))
-    setSearchResults([])
-    setSearchTerm('')
-  }
+  function pickFood(f) { setFood(f); setQuantity(String(f.serving_g || 100)); setSearchResults([]); setSearchTerm('') }
+  function pickTemplate(t) { setFood({ _isTemplate: true, ...t }); setMealType(t.meal_type || mealType) }
+  function clearFood() { setFood(null); setQuantity('100'); setSearchTerm(''); setSearchResults([]); rescan() }
 
-  function pickTemplate(t) {
-    setFood({ _isTemplate: true, ...t })
-    setMealType(t.meal_type || mealType)
-  }
-
-  function clearFood() {
-    setFood(null)
-    setQuantity('100')
-    setSearchTerm('')
-    setSearchResults([])
-    rescan()
-  }
-
-  // ── Calcul macros depuis food + quantité ─────────────────────────────────
+  // ── Macros catalogue ──────────────────────────────────────────────────────
   const macros = (() => {
     if (!food) return null
-    if (food._isTemplate) return {
-      name: food.name, kcal: food.kcal,
-      prot: food.prot_g, carbs: food.carbs_g, fat: food.fat_g,
-    }
+    if (food._isTemplate) return { name: food.name, kcal: food.kcal, prot: food.prot_g, carbs: food.carbs_g, fat: food.fat_g }
     const qty = parseFloat(quantity) || 0
     if (!food.kcal_100 || qty === 0) return null
     const r = qty / 100
     return {
       name: food.name,
-      kcal:  Math.round(food.kcal_100 * r),
+      kcal:  Math.round(food.kcal_100  * r),
       prot:  food.prot_100  != null ? Math.round(food.prot_100  * r * 10) / 10 : null,
       carbs: food.carbs_100 != null ? Math.round(food.carbs_100 * r * 10) / 10 : null,
       fat:   food.fat_100   != null ? Math.round(food.fat_100   * r * 10) / 10 : null,
     }
   })()
 
-  // ── Validation ───────────────────────────────────────────────────────────
-  const canSave = (() => {
-    if (mode === 'manuel' && !food) {
-      return manualForm.name.trim().length > 0 &&
-        (manualForm.kcal || manualForm.prot || manualForm.carbs || manualForm.fat)
+  // ── Photo : capture + analyse ─────────────────────────────────────────────
+  async function handlePhotoCapture(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAnalyzingAI(true); setAiError(null)
+    try {
+      const base64 = await compressImage(file)
+      const { data, error } = await supabase.functions.invoke('nutrition-analyze-photo', {
+        body: { photo_base64: base64, mime_type: file.type || 'image/jpeg' },
+      })
+      if (error || !data?.ok) throw new Error(data?.error || 'Analyse échouée')
+      handleAIResult(data)
+    } catch (err) {
+      setAiError(err.message || 'Analyse impossible')
     }
+    setAnalyzingAI(false)
+  }
+
+  // ── Vocal : Web Speech API ────────────────────────────────────────────────
+  function startRecording() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+    const rec = new SR()
+    rec.lang = 'fr-FR'
+    rec.continuous = false
+    rec.interimResults = false
+    rec.onresult = (e) => {
+      const text = e.results[0][0].transcript
+      setTranscript(text)
+      setIsRecording(false)
+      callParseVoice(text)
+    }
+    rec.onerror  = () => { setIsRecording(false) }
+    rec.onend    = () => { setIsRecording(false) }
+    recognitionRef.current = rec
+    rec.start()
+    setIsRecording(true)
+    setTranscript('')
+    setAiAnalysis(null)
+    setEditableItems([])
+  }
+
+  function stopRecording() {
+    try { recognitionRef.current?.stop() } catch { /* ignore */ }
+    setIsRecording(false)
+  }
+
+  async function callParseVoice(text) {
+    setAnalyzingAI(true); setAiError(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('nutrition-parse-voice', { body: { text } })
+      if (error || !data?.ok) throw new Error(data?.error || 'Parsing échoué')
+      handleAIResult(data)
+    } catch (err) {
+      setAiError(err.message || 'Analyse impossible')
+    }
+    setAnalyzingAI(false)
+  }
+
+  // ── Résultat IA → état éditable ───────────────────────────────────────────
+  function handleAIResult(data) {
+    if (!data?.items?.length) { setAiError('Aucun aliment détecté'); return }
+    setAiAnalysis(data)
+    setEditableItems(data.items.map(item => ({
+      ...item,
+      _origKcal:  item.kcal,
+      _origProt:  item.prot_g,
+      _origCarbs: item.carbs_g,
+      _origFat:   item.fat_g,
+      _origQty:   item.quantity,
+    })))
+  }
+
+  function updateItemQuantity(idx, newQty) {
+    setEditableItems(items => items.map((item, i) => {
+      if (i !== idx) return item
+      const ratio = newQty / (item._origQty || 100)
+      return {
+        ...item,
+        quantity: newQty,
+        kcal:    Math.round((item._origKcal  || 0) * ratio),
+        prot_g:  Math.round((item._origProt  || 0) * ratio * 10) / 10,
+        carbs_g: Math.round((item._origCarbs || 0) * ratio * 10) / 10,
+        fat_g:   Math.round((item._origFat   || 0) * ratio * 10) / 10,
+      }
+    }))
+  }
+
+  function resetAI() { setAiAnalysis(null); setEditableItems([]); setAiError(null); setTranscript('') }
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  const canSave = (() => {
+    if (mode === 'photo' || mode === 'vocal') return editableItems.length > 0
+    if (mode === 'manuel' && !food)
+      return manualForm.name.trim().length > 0 && (manualForm.kcal || manualForm.prot || manualForm.carbs || manualForm.fat)
     if (food?._isTemplate) return true
     return !!macros
   })()
 
-  // ── Sauvegarde ───────────────────────────────────────────────────────────
+  // ── Sauvegarde ────────────────────────────────────────────────────────────
   async function handleSave() {
     if (!client || saving || !canSave) return
     setSaving(true)
     try {
-      const now   = new Date()
-      const time  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
-      const today = todayISO()
-      const wt    = workoutTag || null
+      const now  = new Date()
+      const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+      const wt   = workoutTag || null
+      let row, insertItems = null
 
-      let row
-      if (mode === 'manuel' && !food) {
+      if (mode === 'photo' || mode === 'vocal') {
+        const totKcal  = editableItems.reduce((s, i) => s + (i.kcal   || 0), 0)
+        const totProt  = editableItems.reduce((s, i) => s + (i.prot_g  || 0), 0)
+        const totCarbs = editableItems.reduce((s, i) => s + (i.carbs_g || 0), 0)
+        const totFat   = editableItems.reduce((s, i) => s + (i.fat_g   || 0), 0)
         row = {
-          client_id: client.id, date: today, time,
-          meal_type: mealType, source: 'manual',
-          name:   manualForm.name.trim(),
-          kcal:   parseInt(manualForm.kcal)    || null,
+          client_id: client.id, date: todayISO(), time, meal_type: mealType,
+          source: mode === 'photo' ? 'photo_ai' : 'voice_ai',
+          name: aiAnalysis?.repas_nom || (mode === 'photo' ? 'Repas photo IA' : 'Repas vocal IA'),
+          kcal: Math.round(totKcal),
+          prot_g: Math.round(totProt * 10) / 10,
+          carbs_g: Math.round(totCarbs * 10) / 10,
+          fat_g: Math.round(totFat * 10) / 10,
+          workout_tag: wt,
+        }
+        insertItems = editableItems.map((item, i) => ({
+          name: item.name, quantity: item.quantity, unit: item.unit || 'g',
+          kcal: item.kcal, prot_g: item.prot_g, carbs_g: item.carbs_g, fat_g: item.fat_g, ordre: i,
+        }))
+      } else if (mode === 'manuel' && !food) {
+        row = {
+          client_id: client.id, date: todayISO(), time, meal_type: mealType, source: 'manual',
+          name: manualForm.name.trim(),
+          kcal: parseInt(manualForm.kcal)    || null,
           prot_g: parseFloat(manualForm.prot)  || null,
-          carbs_g:parseFloat(manualForm.carbs) || null,
-          fat_g:  parseFloat(manualForm.fat)   || null,
+          carbs_g: parseFloat(manualForm.carbs) || null,
+          fat_g: parseFloat(manualForm.fat)   || null,
           workout_tag: wt,
         }
       } else if (food?._isTemplate) {
         row = {
-          client_id: client.id, date: today, time,
-          meal_type: mealType, source: 'template',
-          name: food.name, kcal: food.kcal,
-          prot_g: food.prot_g, carbs_g: food.carbs_g,
-          fat_g: food.fat_g, fibre_g: food.fibre_g,
-          workout_tag: wt,
+          client_id: client.id, date: todayISO(), time, meal_type: mealType, source: 'template',
+          name: food.name, kcal: food.kcal, prot_g: food.prot_g,
+          carbs_g: food.carbs_g, fat_g: food.fat_g, fibre_g: food.fibre_g, workout_tag: wt,
         }
-        await supabase.from('nutrition_meal_templates')
-          .update({ use_count: (food.use_count || 0) + 1 }).eq('id', food.id)
+        await supabase.from('nutrition_meal_templates').update({ use_count: (food.use_count || 0) + 1 }).eq('id', food.id)
       } else if (macros) {
-        const src = mode === 'scan' ? 'barcode' : 'manual'
         row = {
-          client_id: client.id, date: today, time,
-          meal_type: mealType, source: src,
+          client_id: client.id, date: todayISO(), time, meal_type: mealType,
+          source: mode === 'scan' ? 'barcode' : 'manual',
           name: food.brand ? `${food.name} (${food.brand})` : food.name,
-          kcal: macros.kcal, prot_g: macros.prot,
-          carbs_g: macros.carbs, fat_g: macros.fat,
+          kcal: macros.kcal, prot_g: macros.prot, carbs_g: macros.carbs, fat_g: macros.fat,
           workout_tag: wt,
         }
       }
 
       if (!row) { setSaving(false); return }
 
-      const { data: meal, error } = await supabase
-        .from('nutrition_meals').insert(row).select().single()
+      const { data: meal, error } = await supabase.from('nutrition_meals').insert(row).select().single()
       if (error) { console.error(error); setSaving(false); return }
 
-      // Insert item si vient du catalogue
+      // Items depuis catalogue
       if (food?.id && !food._isTemplate) {
         await supabase.from('nutrition_meal_items').insert({
           meal_id: meal.id, food_id: food.id,
-          name: food.name, quantity: parseFloat(quantity),
-          unit: food.unit || 'g',
-          kcal: macros.kcal, prot_g: macros.prot,
-          carbs_g: macros.carbs, fat_g: macros.fat,
+          name: food.name, quantity: parseFloat(quantity), unit: food.unit || 'g',
+          kcal: macros.kcal, prot_g: macros.prot, carbs_g: macros.carbs, fat_g: macros.fat,
         })
+      }
+      // Items depuis IA
+      if (insertItems?.length) {
+        await supabase.from('nutrition_meal_items').insert(insertItems.map(it => ({ ...it, meal_id: meal.id })))
       }
 
       navigate('/client/nutrition')
-    } catch (e) {
-      console.error('[handleSave]', e)
-      setSaving(false)
-    }
+    } catch (e) { console.error('[save]', e); setSaving(false) }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={S.page}>
-
       {/* Header */}
       <div style={S.header}>
         <button onClick={() => navigate(-1)} style={S.iconBtn}>
@@ -311,16 +519,15 @@ export default function AjouterRepas() {
 
       <div style={S.content}>
 
-        {/* ── Sélecteur type de repas ────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: '0.5rem', padding: '0 0.25rem' }}>
+        {/* ── Type de repas ─────────────────────────────────────────── */}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
           {MEAL_TYPES.map(t => (
             <button key={t.key} onClick={() => setMealType(t.key)} style={{
-              flex: 1, border: 'none', borderRadius: 12, padding: '0.55rem 0.25rem',
+              flex: 1, border: 'none', borderRadius: 12, padding: '0.55rem 0.2rem',
               cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700,
               background: mealType === t.key ? '#1a1a1a' : 'white',
               color: mealType === t.key ? '#e4f816' : '#6b7280',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              transition: 'all 0.15s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)', transition: 'all 0.15s',
             }}>
               <div style={{ fontSize: '1.1rem', marginBottom: 2 }}>{t.emoji}</div>
               {t.label}
@@ -329,14 +536,15 @@ export default function AjouterRepas() {
         </div>
 
         {/* ── Tabs de mode ──────────────────────────────────────────── */}
-        <div style={{
-          display: 'flex', background: 'white', borderRadius: 14,
-          padding: '0.3rem', gap: '0.2rem',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-        }}>
+        <div style={{ display: 'flex', background: 'white', borderRadius: 14, padding: '0.3rem', gap: '0.2rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           {MODES.map(m => (
-            <button key={m.key} onClick={() => { setMode(m.key); if (m.key !== 'scan') stopCamera(); if (m.key === 'scan') { setFood(null); setScanDone(false); setCameraError(false) } }} style={{
-              flex: 1, border: 'none', borderRadius: 10, padding: '0.45rem 0.2rem',
+            <button key={m.key} onClick={() => {
+              setMode(m.key)
+              stopCamera()
+              if (m.key === 'scan') { setFood(null); setScanDone(false); setCameraError(false) }
+              if (m.key !== 'photo' && m.key !== 'vocal') resetAI()
+            }} style={{
+              flex: 1, border: 'none', borderRadius: 10, padding: '0.45rem 0.15rem',
               cursor: 'pointer', fontSize: '0.62rem', fontWeight: 700,
               background: mode === m.key ? '#1a1a1a' : 'transparent',
               color: mode === m.key ? '#e4f816' : '#9ca3af',
@@ -348,143 +556,90 @@ export default function AjouterRepas() {
           ))}
         </div>
 
-        {/* ══════════════════════════════════════════════════════════ */}
-        {/* MODE : SCAN                                               */}
-        {/* ══════════════════════════════════════════════════════════ */}
+        {/* ══ MODE SCAN ═══════════════════════════════════════════════ */}
         {mode === 'scan' && (
           <div style={S.card}>
             {!food && !loadingBarcode && (
-              <>
-                {cameraError ? (
-                  <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📷</div>
-                    <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Caméra inaccessible</p>
-                    <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                      Vérifie les permissions caméra dans les réglages
-                    </p>
-                    <button onClick={() => setMode('manuel')} style={S.btnSecondary}>Saisie manuelle</button>
-                  </div>
-                ) : (
-                  <>
-                    <p style={{ fontSize: '0.78rem', color: '#6b7280', textAlign: 'center', margin: '0 0 0.75rem' }}>
-                      Pointe la caméra vers le code-barres
-                    </p>
-                    <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '4/3', position: 'relative' }}>
-                      <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      {/* Viseur */}
-                      <div style={{
-                        position: 'absolute', inset: 0, display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-                      }}>
-                        <div style={{
-                          width: '65%', height: '28%', border: '2px solid #e4f816',
-                          borderRadius: 8, boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
-                        }} />
-                      </div>
+              cameraError ? (
+                <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+                  <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>📷</p>
+                  <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Caméra inaccessible</p>
+                  <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>Vérifie les permissions caméra</p>
+                  <button onClick={() => setMode('manuel')} style={S.btnSecondary}>Saisie manuelle</button>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.78rem', color: '#6b7280', textAlign: 'center', margin: '0 0 0.75rem' }}>
+                    Pointe la caméra vers le code-barres
+                  </p>
+                  <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '4/3', position: 'relative' }}>
+                    <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <div style={{ width: '65%', height: '28%', border: '2px solid #e4f816', borderRadius: 8, boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)' }} />
                     </div>
-                    <button onClick={() => setMode('manuel')} style={{ ...S.btnSecondary, marginTop: '0.75rem', width: '100%' }}>
-                      Saisir manuellement à la place
-                    </button>
-                  </>
-                )}
-              </>
+                  </div>
+                  <button onClick={() => setMode('manuel')} style={{ ...S.btnSecondary, marginTop: '0.75rem', width: '100%' }}>
+                    Saisir manuellement
+                  </button>
+                </>
+              )
             )}
-
             {loadingBarcode && (
-              <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+              <div style={{ textAlign: 'center', padding: '2.5rem' }}>
+                <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🔍</p>
                 <p style={{ color: '#6b7280', fontWeight: 600 }}>Recherche du produit…</p>
               </div>
             )}
-
-            {food && !loadingBarcode && <FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={rescan} />}
+            {food && !loadingBarcode && (
+              <FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={rescan} />
+            )}
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════ */}
-        {/* MODE : MANUEL                                             */}
-        {/* ══════════════════════════════════════════════════════════ */}
+        {/* ══ MODE MANUEL ═════════════════════════════════════════════ */}
         {mode === 'manuel' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-
-            {/* Recherche catalogue */}
             {!food && (
               <div style={S.card}>
                 <p style={S.cardLabel}>🔍 Rechercher dans le catalogue</p>
                 <div style={{ position: 'relative' }}>
-                  <input
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    placeholder="Ex : yaourt nature, poulet…"
-                    style={S.input}
-                  />
-                  {searching && (
-                    <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#9ca3af' }}>…</div>
-                  )}
+                  <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Ex : yaourt nature, poulet…" style={S.input} />
+                  {searching && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.75rem' }}>…</span>}
                 </div>
                 {searchResults.length > 0 && (
                   <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     {searchResults.map(f => (
-                      <button key={f.id} onClick={() => pickFood(f)} style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '0.55rem 0.7rem', borderRadius: 10, border: '1px solid #f3f4f6',
-                        background: 'white', cursor: 'pointer', textAlign: 'left',
-                      }}>
+                      <button key={f.id} onClick={() => pickFood(f)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.7rem', borderRadius: 10, border: '1px solid #f3f4f6', background: 'white', cursor: 'pointer', textAlign: 'left' }}>
                         <div>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a' }}>{f.name}</div>
                           {f.brand && <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{f.brand}</div>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                           {f.nutri_score && <NutriScoreBadge score={f.nutri_score} />}
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>
-                            {Math.round(f.kcal_100 || 0)} kcal/100g
-                          </span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>{Math.round(f.kcal_100 || 0)} kcal/100g</span>
                         </div>
                       </button>
                     ))}
                   </div>
                 )}
-                {searchTerm.length >= 2 && searchResults.length === 0 && !searching && (
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center', margin: '0.5rem 0 0' }}>
-                    Aucun résultat — saisie libre ci-dessous
-                  </p>
+                {searchTerm.length >= 2 && !searchResults.length && !searching && (
+                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center', margin: '0.5rem 0 0' }}>Aucun résultat — saisie libre ci-dessous</p>
                 )}
               </div>
             )}
-
-            {/* Produit sélectionné depuis catalogue */}
-            {food && (
-              <div style={S.card}>
-                <FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={clearFood} />
-              </div>
-            )}
-
-            {/* Saisie libre */}
+            {food && <div style={S.card}><FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={clearFood} /></div>}
             {!food && (
               <div style={S.card}>
                 <p style={S.cardLabel}>✏️ Saisie libre</p>
-                <input
-                  value={manualForm.name}
-                  onChange={e => setManualForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Nom du repas *"
-                  style={{ ...S.input, marginBottom: '0.5rem', fontWeight: 700 }}
-                />
+                <input value={manualForm.name} onChange={e => setManualForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Nom du repas *" style={{ ...S.input, marginBottom: '0.5rem', fontWeight: 700 }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  {[
-                    { key: 'kcal',  label: 'Calories (kcal)', type: 'number' },
-                    { key: 'prot',  label: 'Protéines (g)',   type: 'decimal' },
-                    { key: 'carbs', label: 'Glucides (g)',     type: 'decimal' },
-                    { key: 'fat',   label: 'Lipides (g)',      type: 'decimal' },
-                  ].map(({ key, label, type }) => (
-                    <div key={key}>
-                      <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '0 0 3px', fontWeight: 600 }}>{label}</p>
-                      <input
-                        value={manualForm[key]}
-                        onChange={e => setManualForm(f => ({ ...f, [key]: e.target.value }))}
-                        type="number" inputMode={type === 'decimal' ? 'decimal' : 'numeric'}
-                        placeholder="0"
-                        style={{ ...S.input, padding: '0.5rem 0.7rem' }}
-                      />
+                  {[['kcal','Calories (kcal)','numeric'],['prot','Protéines (g)','decimal'],['carbs','Glucides (g)','decimal'],['fat','Lipides (g)','decimal']].map(([k, l, im]) => (
+                    <div key={k}>
+                      <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '0 0 3px', fontWeight: 600 }}>{l}</p>
+                      <input value={manualForm[k]} onChange={e => setManualForm(f => ({ ...f, [k]: e.target.value }))}
+                        type="number" inputMode={im} placeholder="0" style={{ ...S.input, padding: '0.5rem 0.7rem' }} />
                     </div>
                   ))}
                 </div>
@@ -493,44 +648,25 @@ export default function AjouterRepas() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════ */}
-        {/* MODE : FAVORIS                                            */}
-        {/* ══════════════════════════════════════════════════════════ */}
+        {/* ══ MODE FAVORIS ════════════════════════════════════════════ */}
         {mode === 'favoris' && (
           <div style={S.card}>
             {templates.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
+              <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+                <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>⭐</p>
                 <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Aucun favori</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>
-                  Sauvegarde un repas depuis l'onglet Nutrition pour le retrouver ici.
-                </p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Sauvegarde un repas depuis l'onglet Nutrition pour le retrouver ici.</p>
               </div>
             ) : (
               <>
                 <p style={S.cardLabel}>⭐ Mes repas favoris</p>
-                {food?._isTemplate && (
-                  <div style={{
-                    background: '#f0fdf4', border: '1px solid #bbf7d0',
-                    borderRadius: 12, padding: '0.75rem', marginBottom: '0.75rem',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <p style={{ fontWeight: 800, color: '#1a1a1a', margin: 0, fontSize: '0.9rem' }}>{food.name}</p>
-                        <p style={{ color: '#6b7280', margin: '2px 0 0', fontSize: '0.75rem' }}>✅ Sélectionné</p>
-                      </div>
-                      <button onClick={clearFood} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer' }}>×</button>
-                    </div>
-                  </div>
-                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {templates.map(t => (
                     <button key={t.id} onClick={() => pickTemplate(t)} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '0.7rem 0.85rem', borderRadius: 12,
                       border: food?.id === t.id ? '2px solid #1a1a1a' : '1px solid #f3f4f6',
-                      background: food?.id === t.id ? '#f9f9f9' : 'white',
-                      cursor: 'pointer', textAlign: 'left',
+                      background: food?.id === t.id ? '#f9f9f9' : 'white', cursor: 'pointer', textAlign: 'left',
                     }}>
                       <div>
                         <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1a1a' }}>{t.name}</div>
@@ -540,7 +676,7 @@ export default function AjouterRepas() {
                         </div>}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#e4f816', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#e4f816', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
                           {t.kcal || '—'} kcal
                         </div>
                         <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
@@ -555,34 +691,105 @@ export default function AjouterRepas() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════ */}
-        {/* MODE : PHOTO / VOCAL (placeholders)                      */}
-        {/* ══════════════════════════════════════════════════════════ */}
-        {(mode === 'photo' || mode === 'vocal') && (
-          <div style={{ ...S.card, textAlign: 'center', padding: '2.5rem 1.5rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{mode === 'photo' ? '📷' : '🎤'}</div>
-            <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>
-              {mode === 'photo' ? 'Analyse photo IA' : 'Saisie vocale IA'}
-            </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: 0 }}>
-              🚧 Disponible en Phase 3 — bientôt !
-            </p>
+        {/* ══ MODE PHOTO ══════════════════════════════════════════════ */}
+        {mode === 'photo' && (
+          <div style={S.card}>
+            <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
+              style={{ display: 'none' }} onChange={handlePhotoCapture} />
+
+            {!aiAnalysis && !analyzingAI && !aiError && (
+              <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.6rem' }}>📷</div>
+                <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Analyse photo IA</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.2rem' }}>
+                  Prends en photo ton repas — Gemini Flash identifie les aliments et estime les macros automatiquement.
+                </p>
+                <button onClick={() => photoInputRef.current?.click()} style={S.btnPrimary}>
+                  📷 Prendre une photo
+                </button>
+                <p style={{ fontSize: '0.68rem', color: '#b0b8c1', marginTop: '0.5rem' }}>
+                  Ou choisir depuis la galerie
+                </p>
+              </div>
+            )}
+            {analyzingAI && <AILoading label="Analyse de la photo…" />}
+            {aiError && !analyzingAI && <AIError error={aiError} onRetry={() => { setAiError(null); setAiAnalysis(null) }} />}
+            {aiAnalysis && !analyzingAI && (
+              <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} />
+            )}
           </div>
         )}
 
-        {/* ── Tag entraînement (prépa physique) ─────────────────── */}
+        {/* ══ MODE VOCAL ══════════════════════════════════════════════ */}
+        {mode === 'vocal' && (
+          <div style={S.card}>
+            {!voiceSupported && (
+              <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+                <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🎤</p>
+                <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Non disponible</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>La reconnaissance vocale n'est pas supportée par ce navigateur.</p>
+              </div>
+            )}
+
+            {voiceSupported && !aiAnalysis && !analyzingAI && !aiError && (
+              <div style={{ textAlign: 'center', padding: '1.2rem 1rem' }}>
+                <div style={{
+                  fontSize: '3rem', marginBottom: '0.6rem',
+                  display: 'inline-block',
+                  animation: isRecording ? 'none' : 'none',
+                  filter: isRecording ? 'drop-shadow(0 0 10px #ef4444)' : 'none',
+                  transition: 'filter 0.3s',
+                }}>🎤</div>
+                <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Saisie vocale IA</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                  Décris ton repas à voix haute — Gemini Flash parse les aliments et calcule les macros.
+                </p>
+
+                {transcript && (
+                  <div style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.85rem', marginBottom: '0.85rem', fontSize: '0.85rem', color: '#374151', textAlign: 'left', lineHeight: 1.5, fontStyle: 'italic' }}>
+                    "{transcript}"
+                  </div>
+                )}
+
+                <button onClick={isRecording ? stopRecording : startRecording} style={{
+                  ...S.btnPrimary,
+                  background: isRecording ? '#ef4444' : '#1a1a1a',
+                  width: '100%',
+                }}>
+                  {isRecording ? '⏹ Arrêter l\'enregistrement' : '🎤 Décrire mon repas'}
+                </button>
+
+                {isRecording && (
+                  <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.5rem', fontWeight: 600 }}>
+                    Enregistrement en cours… parle maintenant
+                  </p>
+                )}
+
+                {transcript && !isRecording && (
+                  <button onClick={() => callParseVoice(transcript)} style={{ ...S.btnSecondary, marginTop: '0.6rem', width: '100%' }}>
+                    🤖 Analyser ce texte
+                  </button>
+                )}
+              </div>
+            )}
+
+            {analyzingAI && <AILoading label="Analyse du repas vocal…" />}
+            {aiError && !analyzingAI && <AIError error={aiError} onRetry={() => { setAiError(null); setTranscript('') }} />}
+            {aiAnalysis && !analyzingAI && (
+              <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} />
+            )}
+          </div>
+        )}
+
+        {/* ── Tag entraînement ──────────────────────────────────────── */}
         {canSave && client?.offre === 'preparation_physique' && (
           <div style={S.card}>
             <p style={S.cardLabel}>🏋️ Lié à l'entraînement ?</p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {[
-                { key: null,   label: 'Non' },
-                { key: 'pre',  label: 'Pré-séance' },
-                { key: 'post', label: 'Post-séance' },
-              ].map(({ key, label }) => (
+              {[{ key: null, label: 'Non' }, { key: 'pre', label: 'Pré-séance' }, { key: 'post', label: 'Post-séance' }].map(({ key, label }) => (
                 <button key={String(key)} onClick={() => setWorkoutTag(key)} style={{
-                  flex: 1, padding: '0.5rem', borderRadius: 10, border: 'none',
-                  cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                  flex: 1, padding: '0.5rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  fontSize: '0.75rem', fontWeight: 700,
                   background: workoutTag === key ? '#1a1a1a' : '#f3f4f6',
                   color: workoutTag === key ? '#e4f816' : '#6b7280',
                   transition: 'all 0.15s',
@@ -592,30 +799,26 @@ export default function AjouterRepas() {
           </div>
         )}
 
-        <div style={{ height: 80 }} />
+        <div style={{ height: 100 }} />
       </div>
 
-      {/* ── Bouton Ajouter ─────────────────────────────────────────── */}
+      {/* ── Bouton Ajouter ────────────────────────────────────────────── */}
       {canSave && (
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 80,
-          background: 'white', borderTop: '1px solid #f0f0f0',
-          padding: '0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom))',
-        }}>
-          {macros && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 80, background: 'white', borderTop: '1px solid #f0f0f0', padding: '0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom))' }}>
+          {macros && !(mode === 'photo' || mode === 'vocal') && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.6rem' }}>
               <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a' }}>{macros.kcal} kcal</span>
-              <MacroPill label="Prot" value={macros.prot}  color="#3b82f6" />
-              <MacroPill label="Gluc" value={macros.carbs} color="#f59e0b" />
-              <MacroPill label="Lip"  value={macros.fat}   color="#ef4444" />
+              <MacroPill label="Prot"  value={macros.prot}  color="#3b82f6" />
+              <MacroPill label="Gluc"  value={macros.carbs} color="#f59e0b" />
+              <MacroPill label="Lip"   value={macros.fat}   color="#ef4444" />
             </div>
           )}
           <button onClick={handleSave} disabled={saving} style={{
             width: '100%', padding: '0.9rem',
             background: saving ? '#d1d5db' : '#1a1a1a',
             color: saving ? '#9ca3af' : '#e4f816',
-            border: 'none', borderRadius: 14,
-            fontWeight: 800, fontSize: '1rem', cursor: saving ? 'default' : 'pointer',
+            border: 'none', borderRadius: 14, fontWeight: 800, fontSize: '1rem',
+            cursor: saving ? 'default' : 'pointer',
           }}>
             {saving ? 'Enregistrement…' : '+ Ajouter ce repas'}
           </button>
@@ -625,7 +828,7 @@ export default function AjouterRepas() {
   )
 }
 
-// ── Composant : carte produit ────────────────────────────────────────────────
+// ── Composant FoodCard ─────────────────────────────────────────────────────
 function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
   return (
     <div>
@@ -637,52 +840,30 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
           </div>
           {food.brand && <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '2px 0 0' }}>{food.brand}</p>}
         </div>
-        <button onClick={onClear} style={{
-          background: '#f3f4f6', border: 'none', borderRadius: '50%',
-          width: 28, height: 28, cursor: 'pointer', fontSize: '0.9rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>×</button>
+        <button onClick={onClear} style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
       </div>
-
-      {/* Pour 100g */}
       {food.kcal_100 != null && (
         <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.6rem' }}>
           Pour 100g : {Math.round(food.kcal_100)} kcal
-          {food.prot_100  != null && ` · P ${food.prot_100}g`}
+          {food.prot_100 != null && ` · P ${food.prot_100}g`}
           {food.carbs_100 != null && ` · G ${food.carbs_100}g`}
-          {food.fat_100   != null && ` · L ${food.fat_100}g`}
+          {food.fat_100 != null && ` · L ${food.fat_100}g`}
         </p>
       )}
-
-      {/* Quantité */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
         <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151', margin: 0, flexShrink: 0 }}>Quantité :</p>
-        <input
-          type="number" inputMode="decimal"
-          value={quantity}
-          onChange={e => setQuantity(e.target.value)}
-          style={{ ...S.input, width: 80, textAlign: 'center', padding: '0.4rem 0.5rem', fontWeight: 700 }}
-        />
+        <input type="number" inputMode="decimal" value={quantity} onChange={e => setQuantity(e.target.value)}
+          style={{ ...S.input, width: 80, textAlign: 'center', padding: '0.4rem 0.5rem', fontWeight: 700 }} />
         <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontWeight: 600 }}>{food.unit || 'g'}</span>
         {food.serving_g && (
-          <button onClick={() => setQuantity(String(food.serving_g))} style={{
-            background: '#f3f4f6', border: 'none', borderRadius: 8, padding: '0.3rem 0.6rem',
-            fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer',
-          }}>
+          <button onClick={() => setQuantity(String(food.serving_g))} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer' }}>
             1 portion ({food.serving_g}{food.unit || 'g'})
           </button>
         )}
       </div>
-
-      {/* Macros calculées */}
       {macros && (
-        <div style={{
-          display: 'flex', background: '#f9fafb', borderRadius: 10,
-          padding: '0.6rem', gap: '0.5rem', alignItems: 'center',
-        }}>
-          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a', marginRight: '0.25rem' }}>
-            {macros.kcal} kcal
-          </span>
+        <div style={{ display: 'flex', background: '#f9fafb', borderRadius: 10, padding: '0.6rem', gap: '0.5rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a', marginRight: '0.25rem' }}>{macros.kcal} kcal</span>
           <MacroPill label="Prot"  value={macros.prot}  color="#3b82f6" />
           <MacroPill label="Gluc"  value={macros.carbs} color="#f59e0b" />
           <MacroPill label="Lip"   value={macros.fat}   color="#ef4444" />
@@ -693,33 +874,14 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
 }
 
 const S = {
-  page: { background: '#fafafa', minHeight: '100dvh', paddingBottom: '90px' },
-  header: {
-    background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
-    padding: '1.1rem 1.25rem',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  },
+  page: { background: '#fafafa', minHeight: '100dvh' },
+  header: { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: '1.05rem', fontWeight: 800, color: 'white', letterSpacing: '0.01em' },
-  iconBtn: {
-    width: 32, height: 32, borderRadius: 999,
-    background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
+  iconBtn: { width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   content: { padding: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
-  card: {
-    background: 'white', borderRadius: 16, padding: '1rem',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-  },
-  cardLabel: { fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
-  input: {
-    width: '100%', boxSizing: 'border-box',
-    padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb',
-    borderRadius: 10, fontSize: '0.88rem', outline: 'none',
-    background: '#f9fafb', color: '#1a1a1a',
-  },
-  btnSecondary: {
-    padding: '0.55rem 1.2rem', border: '1.5px solid #e5e7eb',
-    borderRadius: 10, background: 'white', color: '#374151',
-    fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
-  },
+  card: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  cardLabel: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  input: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', background: '#f9fafb', color: '#1a1a1a' },
+  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
+  btnSecondary: { padding: '0.55rem 1.2rem', border: '1.5px solid #e5e7eb', borderRadius: 10, background: 'white', color: '#374151', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' },
 }
