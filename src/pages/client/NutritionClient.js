@@ -241,6 +241,12 @@ export default function NutritionClient() {
   const waterTarget = goals?.hydration_ml || 2000
   const waterPct    = Math.min((water.ml / waterTarget) * 100, 100)
 
+  // Si les objectifs macros ne sont pas définis, on les dérive des kcal (30% prot / 45% gluc / 25% lip)
+  const kcalRef = goals?.kcal_target || null
+  const derivedProt  = goals?.prot_g  || (kcalRef ? Math.round(kcalRef * 0.30 / 4)  : null)
+  const derivedCarbs = goals?.carbs_g || (kcalRef ? Math.round(kcalRef * 0.45 / 4)  : null)
+  const derivedFat   = goals?.fat_g   || (kcalRef ? Math.round(kcalRef * 0.25 / 9)  : null)
+
   return (
     <div style={S.page}>
 
@@ -305,9 +311,9 @@ export default function NutritionClient() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { icon: '🥩', name: 'Prot',  val: totals.prot,  target: goals?.prot_g,  color: '#60a5fa' },
-              { icon: '🌾', name: 'Gluc',  val: totals.carbs, target: goals?.carbs_g, color: '#fbbf24' },
-              { icon: '🥑', name: 'Lip',   val: totals.fat,   target: goals?.fat_g,   color: '#f87171' },
+              { icon: '🥩', name: 'Prot',  val: totals.prot,  target: derivedProt,  color: '#60a5fa' },
+              { icon: '🌾', name: 'Gluc',  val: totals.carbs, target: derivedCarbs, color: '#fbbf24' },
+              { icon: '🥑', name: 'Lip',   val: totals.fat,   target: derivedFat,   color: '#f87171' },
             ].map(m => (
               <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: '0.82rem', width: 20, textAlign: 'center' }}>{m.icon}</span>
