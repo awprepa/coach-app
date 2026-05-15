@@ -14,14 +14,14 @@ const CATS = [
   { key: 'wellness',    label: 'Bien-être' },
 ]
 
-const CAT_COLOR = {
-  metabolisme:  { fg: '#fb923c', bg: '#fff7ed' },
-  proteines:    { fg: '#60a5fa', bg: '#eff6ff' },
-  nutrition:    { fg: '#4ade80', bg: '#f0fdf4' },
-  hydratation:  { fg: '#22d3ee', bg: '#ecfeff' },
-  aliments:     { fg: '#c084fc', bg: '#faf5ff' },
-  charge:       { fg: '#e4f816', bg: '#1a1a1a' },
-  wellness:     { fg: '#f472b6', bg: '#fdf2f8' },
+const CAT = {
+  metabolisme:  { fg: '#fb923c', bg: '#fff7ed', dot: '#fb923c' },
+  proteines:    { fg: '#60a5fa', bg: '#eff6ff', dot: '#60a5fa' },
+  nutrition:    { fg: '#4ade80', bg: '#f0fdf4', dot: '#4ade80' },
+  hydratation:  { fg: '#22d3ee', bg: '#ecfeff', dot: '#22d3ee' },
+  aliments:     { fg: '#c084fc', bg: '#faf5ff', dot: '#c084fc' },
+  charge:       { fg: '#e4f816', bg: '#1f2937', dot: '#e4f816' },
+  wellness:     { fg: '#f472b6', bg: '#fdf2f8', dot: '#f472b6' },
 }
 
 const ETUDES = [
@@ -29,10 +29,11 @@ const ETUDES = [
     n: '01', cat: 'metabolisme',
     titre: 'Formule de Mifflin-St Jeor',
     auteur: 'Mifflin MD, St Jeor ST et al.',
-    journal: 'American Journal of Clinical Nutrition',
+    journal: 'Am J Clin Nutr',
     annee: 1990,
-    stat: '±5 %', stat_label: "d'erreur vs calorimétrie indirecte",
-    courte: 'La formule la plus précise pour estimer ton métabolisme de repos (BMR) à partir du sexe, âge, taille et poids. Base de tous les calculs caloriques.',
+    stat: '±5 %',
+    stat_label: "d'erreur vs calorimétrie indirecte",
+    courte: 'La formule la plus précise pour estimer le métabolisme de repos (BMR) à partir du sexe, âge, taille et poids. Validée sur 498 adultes, recommandée par l\'Academy of Nutrition and Dietetics. Base de tous les calculs caloriques de l\'app.',
     formule: 'Homme : 10×poids + 6,25×taille − 5×âge + 5\nFemme : 10×poids + 6,25×taille − 5×âge − 161',
     app: 'Calcul du BMR → objectifs caloriques',
     doi: '10.1093/ajcn/51.2.241',
@@ -41,23 +42,25 @@ const ETUDES = [
     n: '02', cat: 'metabolisme',
     titre: 'Compendium des activités physiques',
     auteur: 'Ainsworth BE, Haskell WL et al.',
-    journal: 'Medicine & Science in Sports & Exercise',
+    journal: 'Med Sci Sports Exerc',
     annee: 2011,
-    stat: '×1,9', stat_label: 'max — sportif intensif (vs ×1,2 sédentaire)',
-    courte: 'Répertoire mondial de +800 activités et leur coût énergétique. Les multiplicateurs d\'activité convertissent le BMR en dépense réelle (TDEE).',
-    formule: 'TDEE = BMR × PAL\n1,2 (sédentaire) → 1,375 → 1,55 → 1,725 → 1,9',
+    stat: '×1,2 → ×1,9',
+    stat_label: 'plage des multiplicateurs d\'activité (PAL)',
+    courte: 'Répertoire mondial de plus de 800 activités et leur coût énergétique (valeur MET). Les multiplicateurs PAL convertissent le BMR en dépense énergétique totale réelle (TDEE).',
+    formule: 'TDEE = BMR × PAL\nSédentaire 1,2 · Léger 1,375 · Modéré 1,55 · Actif 1,725 · Intensif 1,9',
     app: 'Multiplicateurs d\'activité → TDEE',
     doi: '10.1249/MSS.0b013e31821ece12',
   },
   {
     n: '03', cat: 'proteines',
-    titre: 'Protéines & gains musculaires — Méta-analyse',
+    titre: 'Protéines & gains musculaires',
     auteur: 'Morton RW, Schoenfeld BJ, Helms E et al.',
-    journal: 'British Journal of Sports Medicine',
+    journal: 'Br J Sports Med',
     annee: 2018,
-    stat: '1,62 g/kg', stat_label: 'seuil où les gains musculaires plafonnent',
-    courte: 'Méta-analyse de 49 études (n=1 863). Au-delà de 1,62 g/kg/j, les apports supplémentaires en protéines n\'augmentent plus la masse musculaire. En déficit, la dose est relevée pour protéger le muscle.',
-    formule: '1,6 g/kg (maintien)  ·  1,8 (masse)\n2,0 (recomposition)  ·  2,2 (perte de poids)',
+    stat: '1,62 g/kg',
+    stat_label: 'seuil au-delà duquel les gains musculaires plafonnent',
+    courte: 'Méta-analyse de 49 études randomisées (n=1 863). Au-delà de 1,62 g/kg/j, les protéines supplémentaires n\'augmentent plus la masse musculaire. En déficit calorique, la dose est relevée pour limiter la fonte musculaire.',
+    formule: '1,6 g/kg · maintien\n1,8 g/kg · prise de masse\n2,0 g/kg · recomposition\n2,2 g/kg · perte de poids',
     app: 'Objectifs protéiques personnalisés',
     doi: '10.1136/bjsports-2017-097608',
   },
@@ -65,22 +68,24 @@ const ETUDES = [
     n: '04', cat: 'nutrition',
     titre: 'Références nutritionnelles ANSES — Lipides',
     auteur: 'Agence nationale de sécurité sanitaire (ANSES)',
-    journal: 'Rapport d\'expertise PNNS',
+    journal: 'Rapport PNNS',
     annee: 2019,
-    stat: '25–30 %', stat_label: 'des apports totaux recommandés en lipides',
-    courte: 'Mise à jour officielle des repères nutritionnels français. Les lipides sont essentiels pour les hormones, le cerveau et les vitamines liposolubles. Ni trop, ni trop peu.',
+    stat: '25–30 %',
+    stat_label: 'des apports totaux recommandés en lipides',
+    courte: 'Mise à jour officielle des repères nutritionnels français. Les lipides sont essentiels pour les hormones, le cerveau et l\'absorption des vitamines A, D, E, K. L\'app utilise 27 % comme valeur centrale, portée à 28 % en perte de poids.',
     formule: 'Lipides (g) = kcal × 27 % ÷ 9\n28 % en perte de poids (soutien hormonal)',
     app: 'Objectifs lipidiques quotidiens',
     doi: 'anses.fr — Novembre 2019',
   },
   {
     n: '05', cat: 'hydratation',
-    titre: 'Références européennes pour l\'eau (EFSA)',
-    auteur: 'EFSA Panel on Dietetic Products, Nutrition & Allergies',
+    titre: 'Références européennes pour l\'eau',
+    auteur: 'EFSA Panel on Dietetic Products & Allergies',
     journal: 'EFSA Journal',
     annee: 2010,
-    stat: '35 ml/kg', stat_label: 'par jour pour les adultes actifs',
-    courte: 'Valeurs de référence officielles pour l\'Union Européenne. L\'hydratation cible varie selon le poids — plus tu pèses et transpires, plus tu dois boire.',
+    stat: '35 ml/kg',
+    stat_label: 'par jour pour les adultes actifs',
+    courte: 'Valeurs de référence officielles de l\'Union Européenne pour l\'hydratation. L\'objectif est personnalisé selon le poids corporel : plus tu pèses et transpires, plus ta cible est élevée.',
     formule: 'Eau (ml) = Poids (kg) × 35\n→ arrondi à la centaine de ml',
     app: 'Objectif eau quotidien personnalisé',
     doi: '10.2903/j.efsa.2010.1459',
@@ -89,11 +94,12 @@ const ETUDES = [
     n: '06', cat: 'aliments',
     titre: 'Nutri-Score — Notation A à E',
     auteur: 'Hercberg S, Touvier M, Salas-Salvadó J',
-    journal: 'Journal of Urban Health',
+    journal: 'J Urban Health',
     annee: 2017,
-    stat: '7 pays', stat_label: 'européens ont adopté le Nutri-Score officiellement',
-    courte: 'Validation du système de notation nutritionnelle A–E des aliments. Score calculé sur les éléments favorables (fibres, protéines, fruits) et défavorables (sucres, graisses saturées, sel).',
-    formule: 'A (score ≤ −1)  ·  B (0–2)  ·  C (3–10)\nD (11–18)  ·  E (≥ 19)',
+    stat: '7 pays',
+    stat_label: 'européens ont adopté le Nutri-Score officiellement',
+    courte: 'Validation du système de notation nutritionnelle A–E des aliments. Le score est calculé à partir des éléments favorables (fibres, protéines, fruits) et défavorables (sucres, graisses saturées, sel, énergie).',
+    formule: 'A (score ≤ −1) · B (0–2) · C (3–10)\nD (11–18) · E (≥ 19)',
     app: 'Note A–E sur chaque produit scanné',
     doi: '10.1007/s11524-017-0137-y',
   },
@@ -101,111 +107,125 @@ const ETUDES = [
     n: '07', cat: 'aliments',
     titre: 'Classification NOVA — Transformation alimentaire',
     auteur: 'Monteiro CA, Cannon G, Levy RB et al.',
-    journal: 'Public Health Nutrition',
+    journal: 'Public Health Nutr',
     annee: 2019,
-    stat: '+25 %', stat_label: 'de risque cardiovasculaire pour les ultra-transformés (G4)',
-    courte: 'Classifie les aliments en 4 groupes selon leur degré de transformation industrielle. Les aliments ultra-transformés (G4) augmentent les risques de maladies, même à calories identiques.',
-    formule: 'G1–2 : neutre\nG3 : signal négatif  ·  G4 : signal négatif fort',
+    stat: '+25 %',
+    stat_label: 'risque cardiovasculaire pour les ultra-transformés (G4)',
+    courte: 'Classifie les aliments en 4 groupes selon leur degré de transformation industrielle. Les ultra-transformés augmentent les risques de maladies même à calories équivalentes.',
+    formule: 'G1–2 : neutre\nG3 : signal négatif\nG4 (ultra-transformé) : signal négatif fort',
     app: 'Pénalités dans le score qualité au scanner',
     doi: '10.1017/S1368980018003762',
   },
   {
     n: '08', cat: 'charge',
-    titre: 'Session RPE — Méthode de mesure de la charge',
+    titre: 'Session RPE — Mesure de la charge',
     auteur: 'Foster C, Florhaug JA, Franklin J et al.',
-    journal: 'Journal of Strength & Conditioning Research',
+    journal: 'J Strength Cond Res',
     annee: 2001,
-    stat: 'r = 0,89', stat_label: 'corrélation avec les données physiologiques objectives',
-    courte: 'Valide la méthode sRPE : charge d\'entraînement = RPE ressenti × durée. Simple, sans capteur, et aussi fiable que la fréquence cardiaque ou le lactate pour quantifier l\'effort.',
+    stat: 'r = 0,89',
+    stat_label: 'corrélation avec les données physiologiques objectives',
+    courte: 'Valide la méthode sRPE : charge = RPE ressenti × durée. Aussi fiable que la fréquence cardiaque ou le lactate pour quantifier l\'effort, sans aucun capteur.',
     formule: 'Charge (UA) = RPE (1–10) × durée (min)\nCharge hebdo = Σ charges de la semaine',
-    app: 'Suivi de la charge hebdomadaire par client',
+    app: 'Suivi de la charge hebdomadaire',
     doi: '10.1519/00124278-200102000-00014',
   },
   {
     n: '09', cat: 'charge',
     titre: 'ACWR — Ratio charge aiguë / chronique',
     auteur: 'Gabbett TJ',
-    journal: 'British Journal of Sports Medicine',
+    journal: 'Br J Sports Med',
     annee: 2016,
-    stat: '×2', stat_label: 'risque de blessure si ACWR > 1,5',
-    courte: 'L\'ACWR compare la charge des 7 derniers jours à la moyenne des 4 dernières semaines. Un ratio entre 0,8 et 1,3 correspond à la zone verte : ni sous-entraîné, ni en surcharge.',
-    formule: 'ACWR = Charge semaine N ÷ Moy.(4 sem.)\n< 0,8 sous-charge  ·  0,8–1,3 optimal  ·  > 1,5 risque',
-    app: 'Code couleur charge d\'entraînement (coach)',
+    stat: '×2',
+    stat_label: 'risque de blessure si ACWR > 1,5',
+    courte: 'L\'ACWR compare la charge des 7 derniers jours à la moyenne des 4 dernières semaines. Zone verte 0,8–1,3 : ni sous-entraîné, ni en surcharge. Au-delà de 1,5 : risque de blessure doublé.',
+    formule: 'ACWR = Charge semaine N ÷ Moy. 4 semaines\n< 0,8 sous-charge · 0,8–1,3 optimal · > 1,5 risque',
+    app: 'Code couleur charge d\'entraînement',
     doi: '10.1136/bjsports-2015-095788',
   },
   {
     n: '10', cat: 'wellness',
-    titre: 'Questionnaire de bien-être — Détection surentraînement',
+    titre: 'Détection du surentraînement par questionnaire',
     auteur: 'Hooper SL, Mackinnon LT',
     journal: 'Sports Medicine',
     annee: 1995,
-    stat: '2–3 sem.', stat_label: 'avant les marqueurs biologiques — détection précoce',
-    courte: '4 indicateurs simples (sommeil, fatigue, stress, douleurs) suffisent à détecter le surentraînement avant les analyses de sang. Validé sur des nageurs de compétition de haut niveau.',
-    formule: 'Score bien-être = (sommeil + fatigue + stress + douleurs) ÷ 4\n1 = très mauvais  ·  5 = excellent',
-    app: 'Questionnaire wellness quotidien du client',
+    stat: '2–3 sem.',
+    stat_label: 'avant les marqueurs biologiques — détection précoce',
+    courte: '4 indicateurs simples (sommeil, fatigue, stress, douleurs) détectent le surentraînement bien avant les analyses sanguines. Validé sur des nageurs de compétition de haut niveau.',
+    formule: 'Score = (sommeil + fatigue + stress + douleurs) ÷ 4\n1 = très mauvais · 5 = excellent',
+    app: 'Questionnaire wellness quotidien',
     doi: '10.2165/00007256-199519050-00004',
   },
   {
     n: '11', cat: 'wellness',
-    titre: 'Échelle de Borg — Perception de l\'effort (RPE)',
+    titre: 'Échelle de Borg — Perception de l\'effort',
     auteur: 'Borg GAV',
-    journal: 'Medicine & Science in Sports & Exercise',
+    journal: 'Med Sci Sports Exerc',
     annee: 1982,
-    stat: 'r = 0,88', stat_label: 'corrélation avec la fréquence cardiaque',
-    courte: 'La perception de l\'effort (RPE) est subjective mais scientifiquement corrélée aux données physiologiques. Elle intègre la fatigue, l\'acidose, la glycémie et l\'état psychologique — plus holistique que la FC seule.',
-    formule: '1–2 très léger  ·  3–4 léger\n5–6 modéré  ·  7–8 difficile  ·  9–10 maximal',
+    stat: 'r = 0,88',
+    stat_label: 'corrélation avec la fréquence cardiaque',
+    courte: 'La perception de l\'effort est subjective mais scientifiquement corrélée aux données physiologiques. Elle intègre fatigue, acidose et état psychologique — plus holistique que la fréquence cardiaque seule.',
+    formule: '1–2 très léger · 3–4 léger · 5–6 modéré\n7–8 difficile · 9 très difficile · 10 maximal',
     app: 'Note RPE après chaque séance',
     doi: '10.1249/00005768-198205000-00012',
   },
 ]
 
-// ── Composant principal ────────────────────────────────────────────────────────
+// ── Composant ─────────────────────────────────────────────────────────────────
 
 export default function SciencesClient() {
-  const navigate   = useNavigate()
-  const [cat, setCat]     = useState('all')
-  const [open, setOpen]   = useState(null)
+  const navigate = useNavigate()
+  const [cat,  setCat]  = useState('all')
+  const [open, setOpen] = useState(null)
 
   const list = cat === 'all' ? ETUDES : ETUDES.filter(e => e.cat === cat)
 
   return (
     <div style={S.root}>
 
-      {/* ── Header ── */}
+      {/* ── Header ────────────────────────────────────────────────────────── */}
       <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
 
+        {/* Rangée bouton retour — propre, pas de position absolute */}
+        <div style={S.headerNav}>
+          <button onClick={() => navigate(-1)} style={S.backBtn}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Corps texte */}
         <div style={S.headerBody}>
-          <div style={S.headerEyebrow}>BASE SCIENTIFIQUE</div>
-          <h1 style={S.headerTitle}>Les études derrière l'app</h1>
+          <p style={S.eyebrow}>BASE SCIENTIFIQUE</p>
+          <h1 style={S.h1}>Les études derrière l'app</h1>
           <p style={S.headerSub}>
-            Chaque algorithme — nutrition, charge d'entraînement, bien-être — s'appuie sur des recherches publiées dans des revues internationales à comité de lecture.
+            Chaque algorithme — nutrition, charge d'entraînement, bien-être —
+            s'appuie sur des recherches publiées dans des revues internationales
+            à comité de lecture.
           </p>
 
           {/* Compteurs */}
           <div style={S.counters}>
-            <Counter n="11" label="Études" />
-            <div style={S.counterDiv} />
-            <Counter n="7" label="Revues" />
-            <div style={S.counterDiv} />
-            <Counter n="1982–2019" label="Publications" />
+            <Ctr n="11" label="Études" />
+            <div style={S.sep} />
+            <Ctr n="7" label="Revues" />
+            <div style={S.sep} />
+            <Ctr n="1982–2019" label="Période" />
           </div>
         </div>
       </div>
 
-      {/* ── Filtres ── */}
+      {/* ── Filtres (sticky) ──────────────────────────────────────────────── */}
       <div style={S.filters}>
         {CATS.map(c => {
           const active = cat === c.key
-          const color  = CAT_COLOR[c.key]
+          const color  = CAT[c.key]
           return (
             <button
               key={c.key}
-              onClick={() => setCat(c.key)}
+              onClick={() => { setCat(c.key); setOpen(null) }}
               style={{
                 ...S.chip,
                 background:  active ? '#1a1a1a' : 'white',
@@ -215,10 +235,8 @@ export default function SciencesClient() {
             >
               {c.key !== 'all' && (
                 <span style={{
-                  display: 'inline-block',
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: active ? (c.key === 'charge' ? '#e4f816' : 'rgba(255,255,255,0.6)') : (color?.fg || '#9ca3af'),
-                  flexShrink: 0,
+                  width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                  background: active ? 'rgba(255,255,255,0.5)' : color?.dot,
                 }} />
               )}
               {c.label}
@@ -227,78 +245,84 @@ export default function SciencesClient() {
         })}
       </div>
 
-      {/* ── Liste ── */}
+      {/* ── Liste ────────────────────────────────────────────────────────── */}
       <div style={S.list}>
         {list.map(e => {
           const isOpen = open === e.n
-          const c = CAT_COLOR[e.cat] || { fg: '#9ca3af', bg: '#f9fafb' }
-          const catLabel = CATS.find(x => x.key === e.cat)?.label
+          const c      = CAT[e.cat] || { fg: '#9ca3af', bg: '#f9fafb' }
+          const catLabel = CATS.find(x => x.key === e.cat)?.label || ''
 
           return (
             <div key={e.n} style={S.card}>
 
-              {/* Ligne haute : numéro + catégorie */}
-              <div style={S.cardTop}>
-                <span style={S.cardNum}>{e.n}</span>
-                <span style={{
-                  ...S.catBadge,
-                  background: e.cat === 'charge' ? '#1a1a1a' : c.bg,
-                  color: c.fg,
-                }}>
-                  {catLabel}
-                </span>
-              </div>
-
-              {/* Bouton principal (cliquable) */}
+              {/* Toute la partie cliquable : numéro + badge + contenu + chevron */}
               <button
                 onClick={() => setOpen(isOpen ? null : e.n)}
                 style={S.cardBtn}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Bande colorée gauche */}
+                <div style={{ ...S.colorBar, background: c.fg }} />
+
+                {/* Contenu */}
+                <div style={S.cardInner}>
+
+                  {/* Ligne haute : numéro + catégorie */}
+                  <div style={S.cardTopRow}>
+                    <span style={S.cardNum}>{e.n}</span>
+                    <span style={{
+                      ...S.catChip,
+                      background: e.cat === 'charge' ? '#1f2937' : c.bg,
+                      color: c.fg,
+                    }}>
+                      {catLabel}
+                    </span>
+                  </div>
+
                   {/* Titre */}
                   <p style={S.cardTitle}>{e.titre}</p>
 
-                  {/* Auteur + journal */}
+                  {/* Auteur · journal · année */}
                   <p style={S.cardMeta}>
-                    {e.auteur} · <em>{e.journal}</em>, {e.annee}
+                    {e.auteur}&ensp;·&ensp;<em>{e.journal}</em>,&ensp;{e.annee}
                   </p>
 
                   {/* Stat clé */}
-                  <div style={S.statBox}>
+                  <div style={S.statRow}>
                     <span style={{ ...S.statNum, color: c.fg }}>{e.stat}</span>
                     <span style={S.statLabel}>{e.stat_label}</span>
                   </div>
+
                 </div>
 
                 {/* Chevron */}
                 <div style={{
                   ...S.chevron,
-                  transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                  transform: isOpen ? 'rotate(90deg)' : 'none',
                 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8cdd4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="#c8cdd4" strokeWidth="2.5"
+                    strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </div>
               </button>
 
-              {/* Contenu étendu */}
+              {/* ── Détail ── */}
               {isOpen && (
-                <div style={S.cardDetail}>
-
-                  {/* Séparateur */}
-                  <div style={{ height: 1, background: '#f3f4f6', margin: '0 0 16px' }} />
+                <div style={S.detail}>
+                  <div style={S.detailDivider} />
 
                   {/* Explication */}
                   <p style={S.detailText}>{e.courte}</p>
 
                   {/* Formule */}
                   <div style={S.formulaBox}>
-                    <div style={S.formulaLabel}>Formule utilisée</div>
+                    <p style={S.formulaLabel}>FORMULE UTILISÉE</p>
                     {e.formule.split('\n').map((line, i) => (
                       <p key={i} style={{
                         ...S.formulaLine,
-                        color: i === 0 ? '#e4f816' : 'rgba(228,248,22,0.55)',
-                        marginTop: i === 0 ? 0 : 4,
+                        color: i === 0 ? '#e4f816' : 'rgba(228,248,22,0.5)',
+                        marginTop: i === 0 ? 0 : 5,
                       }}>
                         {line}
                       </p>
@@ -306,13 +330,15 @@ export default function SciencesClient() {
                   </div>
 
                   {/* Utilisation + DOI */}
-                  <div style={S.detailFooter}>
-                    <div style={S.appUsage}>
-                      <span style={S.appUsageDot} />
-                      <span>Dans l'app : <strong>{e.app}</strong></span>
+                  <div style={S.detailMeta}>
+                    <div style={S.appRow}>
+                      <span style={{ ...S.appDot, background: c.fg }} />
+                      <span style={S.appText}>
+                        <strong>Dans l'app : </strong>{e.app}
+                      </span>
                     </div>
                     <div style={S.doiRow}>
-                      <span style={S.doiLabel}>DOI</span>
+                      <span style={S.doiTag}>DOI</span>
                       <span style={S.doiVal}>{e.doi}</span>
                     </div>
                   </div>
@@ -327,22 +353,23 @@ export default function SciencesClient() {
       {/* Footer */}
       <div style={S.footer}>
         <p style={S.footerText}>
-          Ces références sont choisies pour leur rigueur méthodologique et leur reconnaissance dans la communauté scientifique internationale. Elles ne remplacent pas l'avis d'un professionnel de santé.
+          Ces références sont sélectionnées pour leur rigueur méthodologique et leur
+          reconnaissance dans la communauté scientifique internationale. Elles ne
+          remplacent pas l'avis d'un professionnel de santé.
         </p>
       </div>
 
-      <div style={{ height: 90 }} />
+      <div style={{ height: 40 }} />
     </div>
   )
 }
 
-// ── Sous-composants ───────────────────────────────────────────────────────────
-
-function Counter({ n, label }) {
+// ── Sous-composant ────────────────────────────────────────────────────────────
+function Ctr({ n, label }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>{n}</span>
-      <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 3 }}>{label}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>{n}</span>
+      <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{label}</span>
     </div>
   )
 }
@@ -351,172 +378,186 @@ function Counter({ n, label }) {
 const S = {
   root: {
     minHeight: '100dvh',
-    background: '#f4f5f7',
+    background: '#f0f2f5',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
 
-  // Header
+  // ── Header
   header: {
-    background: 'linear-gradient(160deg, #111111 0%, #1c2333 100%)',
-    padding: '0 0 28px',
-    position: 'relative',
+    background: 'linear-gradient(160deg, #0f1117 0%, #1c2333 100%)',
+  },
+  headerNav: {
+    padding: '52px 16px 0',          // respecte safe-area iOS
   },
   backBtn: {
-    position: 'absolute', top: 52, left: 16,
     width: 34, height: 34, borderRadius: '50%',
-    background: 'rgba(255,255,255,0.08)', border: 'none',
+    background: 'rgba(255,255,255,0.09)', border: 'none',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: 'white', cursor: 'pointer', flexShrink: 0,
+    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
   },
   headerBody: {
-    padding: '56px 20px 0 20px',
+    padding: '14px 20px 28px',
   },
-  headerEyebrow: {
-    fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.15em',
-    color: '#e4f816', marginBottom: 10,
+  eyebrow: {
+    fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.16em',
+    color: '#e4f816', margin: '0 0 10px',
   },
-  headerTitle: {
-    fontSize: '1.65rem', fontWeight: 900, color: 'white', margin: '0 0 10px',
-    lineHeight: 1.15, letterSpacing: '-0.03em',
+  h1: {
+    fontSize: '1.65rem', fontWeight: 900, color: 'white',
+    margin: '0 0 10px', lineHeight: 1.15, letterSpacing: '-0.03em',
   },
   headerSub: {
-    fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)',
-    lineHeight: 1.65, margin: '0 0 24px',
+    fontSize: '0.82rem', color: 'rgba(255,255,255,0.42)',
+    lineHeight: 1.65, margin: '0 0 20px',
   },
   counters: {
-    display: 'flex', alignItems: 'center', gap: 20,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-around',
     background: 'rgba(255,255,255,0.05)',
-    borderRadius: 14, padding: '14px 20px',
-    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: 14, padding: '14px 16px',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
-  counterDiv: {
-    width: 1, height: 28, background: 'rgba(255,255,255,0.1)',
+  sep: {
+    width: 1, height: 26, background: 'rgba(255,255,255,0.1)',
   },
 
-  // Filtres
+  // ── Filtres
   filters: {
     display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none',
-    padding: '14px 16px',
+    padding: '12px 14px',
     background: 'white',
-    borderBottom: '1px solid #eef0f3',
+    borderBottom: '1px solid #eaecf0',
     position: 'sticky', top: 0, zIndex: 40,
   },
   chip: {
     display: 'flex', alignItems: 'center', gap: 5,
     padding: '6px 12px', borderRadius: 999,
-    border: '1.5px solid', fontSize: '0.73rem', fontWeight: 700,
+    border: '1.5px solid', fontSize: '0.72rem', fontWeight: 700,
     cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
     transition: 'all 0.15s',
   },
 
-  // Liste
+  // ── Liste
   list: {
-    padding: '16px 14px',
-    display: 'flex', flexDirection: 'column', gap: 10,
+    padding: '14px 12px',
+    display: 'flex', flexDirection: 'column', gap: 8,
   },
 
-  // Card
+  // ── Card
   card: {
-    background: 'white', borderRadius: 16,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
+    background: 'white',
+    borderRadius: 16,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
     overflow: 'hidden',
   },
-  cardTop: {
+  cardBtn: {
+    display: 'flex', alignItems: 'stretch',
+    width: '100%', background: 'none', border: 'none',
+    cursor: 'pointer', textAlign: 'left', padding: 0,
+  },
+  colorBar: {
+    width: 4, flexShrink: 0,
+  },
+  cardInner: {
+    flex: 1, minWidth: 0,
+    padding: '12px 10px 14px 12px',
+  },
+  cardTopRow: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '12px 14px 0',
+    marginBottom: 6,
   },
   cardNum: {
-    fontSize: '0.62rem', fontWeight: 800, color: '#c8cdd4',
-    letterSpacing: '0.06em',
+    fontSize: '0.6rem', fontWeight: 800, color: '#c8cdd4', letterSpacing: '0.06em',
   },
-  catBadge: {
-    padding: '3px 9px', borderRadius: 999,
-    fontSize: '0.62rem', fontWeight: 800,
-    letterSpacing: '0.03em',
-  },
-  cardBtn: {
-    display: 'flex', alignItems: 'flex-start', gap: 10,
-    padding: '10px 14px 14px',
-    width: '100%', background: 'none', border: 'none',
-    cursor: 'pointer', textAlign: 'left',
+  catChip: {
+    padding: '2px 8px', borderRadius: 999,
+    fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.03em',
   },
   cardTitle: {
-    fontWeight: 800, fontSize: '0.92rem', color: '#111827',
+    fontWeight: 800, fontSize: '0.9rem', color: '#111827',
     margin: '0 0 4px', lineHeight: 1.3, letterSpacing: '-0.01em',
   },
   cardMeta: {
-    fontSize: '0.68rem', color: '#9ca3af', fontWeight: 500,
+    fontSize: '0.67rem', color: '#9ca3af', fontWeight: 500,
     margin: '0 0 10px', lineHeight: 1.5,
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
-  statBox: {
-    display: 'flex', alignItems: 'baseline', gap: 6,
-    background: '#f9fafb', borderRadius: 10, padding: '8px 12px',
+  statRow: {
+    display: 'flex', alignItems: 'flex-start', gap: 8,
+    background: '#f9fafb', borderRadius: 10, padding: '8px 10px',
   },
   statNum: {
-    fontSize: '1.05rem', fontWeight: 900, lineHeight: 1, flexShrink: 0,
+    fontSize: '1rem', fontWeight: 900, lineHeight: 1.1, flexShrink: 0,
   },
   statLabel: {
-    fontSize: '0.7rem', color: '#6b7280', fontWeight: 500, lineHeight: 1.35,
+    fontSize: '0.68rem', color: '#6b7280', fontWeight: 500,
+    lineHeight: 1.35, paddingTop: 1,
   },
   chevron: {
-    flexShrink: 0, width: 26, height: 26, marginTop: 2,
+    width: 38, flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     transition: 'transform 0.2s ease',
   },
 
-  // Détail
-  cardDetail: {
-    padding: '0 14px 16px',
+  // ── Détail
+  detail: {
+    padding: '0 14px 16px 16px',
+  },
+  detailDivider: {
+    height: 1, background: '#f3f4f6', margin: '0 0 14px',
   },
   detailText: {
-    fontSize: '0.82rem', color: '#374151', lineHeight: 1.7,
+    fontSize: '0.81rem', color: '#374151', lineHeight: 1.7,
     margin: '0 0 14px',
   },
   formulaBox: {
     background: '#111827', borderRadius: 12,
     padding: '12px 14px', marginBottom: 14,
+    overflow: 'hidden',
   },
   formulaLabel: {
-    fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)',
-    textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8,
+    fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)',
+    textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px',
   },
   formulaLine: {
-    fontSize: '0.76rem', fontFamily: 'monospace',
+    fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace',
     lineHeight: 1.5, margin: 0,
+    wordBreak: 'break-word',
   },
-  detailFooter: {
+  detailMeta: {
     display: 'flex', flexDirection: 'column', gap: 8,
     borderTop: '1px solid #f3f4f6', paddingTop: 12,
   },
-  appUsage: {
-    display: 'flex', alignItems: 'center', gap: 7,
-    fontSize: '0.75rem', color: '#6b7280', lineHeight: 1.4,
+  appRow: {
+    display: 'flex', alignItems: 'flex-start', gap: 7,
   },
-  appUsageDot: {
-    width: 6, height: 6, borderRadius: '50%',
-    background: '#e4f816', flexShrink: 0,
+  appDot: {
+    width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 4,
+  },
+  appText: {
+    fontSize: '0.74rem', color: '#6b7280', lineHeight: 1.5,
   },
   doiRow: {
-    display: 'flex', gap: 8, alignItems: 'flex-start',
+    display: 'flex', gap: 7, alignItems: 'flex-start',
   },
-  doiLabel: {
-    fontSize: '0.6rem', fontWeight: 800, color: '#d1d5db',
-    letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4,
-    background: '#f3f4f6', flexShrink: 0,
+  doiTag: {
+    fontSize: '0.58rem', fontWeight: 800, color: '#9ca3af',
+    letterSpacing: '0.08em', padding: '2px 6px',
+    background: '#f3f4f6', borderRadius: 4, flexShrink: 0,
   },
   doiVal: {
-    fontSize: '0.68rem', color: '#9ca3af', fontFamily: 'monospace',
+    fontSize: '0.67rem', color: '#9ca3af',
+    fontFamily: 'ui-monospace, monospace',
     lineHeight: 1.5, wordBreak: 'break-all',
   },
 
-  // Footer
+  // ── Footer
   footer: {
-    padding: '0 20px 20px',
+    padding: '4px 14px 16px',
   },
   footerText: {
     fontSize: '0.72rem', color: '#9ca3af', lineHeight: 1.65,
     textAlign: 'center', fontStyle: 'italic', margin: 0,
     background: 'white', borderRadius: 12, padding: '14px 16px',
-    border: '1px solid #f0f0f0',
+    border: '1px solid #eaecf0',
   },
 }
