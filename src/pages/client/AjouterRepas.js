@@ -9,6 +9,18 @@ const MEAL_TYPES = [
   { key: 'diner',     label: 'Dîner',     emoji: '🌙' },
 ]
 
+const CATEGORIES = [
+  { key: 'viandes_poissons',   label: 'Viandes & Poissons', emoji: '🥩' },
+  { key: 'feculents',          label: 'Féculents',           emoji: '🍚' },
+  { key: 'legumes',            label: 'Légumes',             emoji: '🥦' },
+  { key: 'fruits',             label: 'Fruits',              emoji: '🍎' },
+  { key: 'laitiers',           label: 'Laitiers',            emoji: '🥛' },
+  { key: 'oeufs_legumineuses', label: 'Œufs & Légumineuses', emoji: '🥚' },
+  { key: 'matieres_grasses',   label: 'Matières grasses',    emoji: '🥑' },
+  { key: 'snacks',             label: 'Snacks',              emoji: '🍫' },
+  { key: 'boissons',           label: 'Boissons',            emoji: '💧' },
+]
+
 const MODES = [
   { key: 'scan',    label: 'Code-barres', emoji: '▦' },
   { key: 'manuel',  label: 'Manuel',      emoji: '✏️' },
@@ -200,6 +212,11 @@ export default function AjouterRepas() {
   const [searchResults, setSearchResults] = useState([])
   const [searching,     setSearching]     = useState(false)
 
+  // ── BDD aliments : navigation par catégorie ──────────────────────────────
+  const [selectedCat,  setSelectedCat]  = useState(null)
+  const [catFoods,     setCatFoods]     = useState([])
+  const [loadingCat,   setLoadingCat]   = useState(false)
+
   // ── Favoris ───────────────────────────────────────────────────────────────
   const [templates, setTemplates] = useState([])
 
@@ -306,9 +323,20 @@ export default function AjouterRepas() {
     return () => clearTimeout(t)
   }, [searchTerm, mode, food])
 
-  function pickFood(f) { setFood(f); setQuantity(String(f.serving_g || 100)); setSearchResults([]); setSearchTerm('') }
+  function pickFood(f) { setFood(f); setQuantity(String(f.serving_g || 100)); setSearchResults([]); setSearchTerm(''); setCatFoods([]); setSelectedCat(null) }
   function pickTemplate(t) { setFood({ _isTemplate: true, ...t }); setMealType(t.meal_type || mealType) }
-  function clearFood() { setFood(null); setQuantity('100'); setSearchTerm(''); setSearchResults([]); rescan() }
+  function clearFood() { setFood(null); setQuantity('100'); setSearchTerm(''); setSearchResults([]); setSelectedCat(null); setCatFoods([]); rescan() }
+
+  // ── Chargement d'une catégorie ────────────────────────────────────────────
+  async function loadCategory(cat) {
+    if (selectedCat === cat) { setSelectedCat(null); setCatFoods([]); return }
+    setSelectedCat(cat); setLoadingCat(true)
+    const { data } = await supabase.from('nutrition_foods')
+      .select('id,name,brand,kcal_100,prot_100,carbs_100,fat_100,serving_g,nutri_score,unit')
+      .eq('category', cat).order('name').limit(30)
+    setCatFoods(data || [])
+    setLoadingCat(false)
+  }
 
   // ── Macros catalogue ──────────────────────────────────────────────────────
   const macros = (() => {
@@ -619,28 +647,52 @@ export default function AjouterRepas() {
               <div style={S.card}>
                 <p style={S.cardLabel}>🔍 Rechercher dans le catalogue</p>
                 <div style={{ position: 'relative' }}>
-                  <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  <input value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setSelectedCat(null); setCatFoods([]) }}
                     placeholder="Ex : yaourt nature, poulet…" style={S.input} />
                   {searching && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.75rem' }}>…</span>}
                 </div>
+
+                {/* Résultats de recherche */}
                 {searchResults.length > 0 && (
                   <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     {searchResults.map(f => (
-                      <button key={f.id} onClick={() => pickFood(f)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.7rem', borderRadius: 10, border: '1px solid #f3f4f6', background: 'white', cursor: 'pointer', textAlign: 'left' }}>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a' }}>{f.name}</div>
-                          {f.brand && <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{f.brand}</div>}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                          {f.nutri_score && <NutriScoreBadge score={f.nutri_score} />}
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>{Math.round(f.kcal_100 || 0)} kcal/100g</span>
-                        </div>
-                      </button>
+                      <FoodRow key={f.id} f={f} onPick={pickFood} />
                     ))}
                   </div>
                 )}
                 {searchTerm.length >= 2 && !searchResults.length && !searching && (
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center', margin: '0.5rem 0 0' }}>Aucun résultat — saisie libre ci-dessous</p>
+                )}
+
+                {/* ── Navigation par catégories (visible quand pas de saisie) ── */}
+                {searchTerm.length < 2 && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 0.5rem' }}>Parcourir par catégorie</p>
+                    <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+                      {CATEGORIES.map(cat => (
+                        <button key={cat.key} onClick={() => loadCategory(cat.key)} style={{
+                          flexShrink: 0, padding: '0.4rem 0.75rem', borderRadius: 20,
+                          border: selectedCat === cat.key ? 'none' : '1.5px solid #e5e7eb',
+                          background: selectedCat === cat.key ? '#1a1a1a' : 'white',
+                          color: selectedCat === cat.key ? '#e4f816' : '#374151',
+                          fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}>
+                          {cat.emoji} {cat.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Liste aliments de la catégorie */}
+                    {selectedCat && (
+                      <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        {loadingCat ? (
+                          <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', padding: '0.75rem' }}>Chargement…</p>
+                        ) : catFoods.map(f => (
+                          <FoodRow key={f.id} f={f} onPick={pickFood} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -857,6 +909,26 @@ export default function AjouterRepas() {
         </div>
       )}
     </div>
+  )
+}
+
+// ── Composant FoodRow (liste catalogue) ────────────────────────────────────
+function FoodRow({ f, onPick }) {
+  return (
+    <button onClick={() => onPick(f)} style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '0.55rem 0.7rem', borderRadius: 10, border: '1px solid #f3f4f6',
+      background: 'white', cursor: 'pointer', textAlign: 'left', width: '100%',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+        {f.brand && <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{f.brand}</div>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+        {f.nutri_score && <NutriScoreBadge score={f.nutri_score} />}
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280' }}>{Math.round(f.kcal_100 || 0)} kcal</span>
+      </div>
+    </button>
   )
 }
 
