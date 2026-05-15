@@ -481,26 +481,51 @@ export default function NutritionClient() {
 
         {/* ── Hydratation ────────────────────────────────────────── */}
         <div style={S.waterCard}>
+          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1a1a1a' }}>💧 Hydratation</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>💧 Hydratation</span>
             <span style={S.waterPct}>{Math.round(waterPct)}%</span>
           </div>
-          <div style={{ height: 8, background: '#eff6ff', borderRadius: 999, overflow: 'hidden', marginBottom: 12 }}>
-            <div style={{ height: '100%', background: '#3b82f6', borderRadius: 999, width: `${waterPct}%`, transition: 'width 0.3s ease' }} />
+
+          {/* Barre de progression */}
+          <div style={{ height: 8, background: '#eff6ff', borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ height: '100%', background: '#3b82f6', borderRadius: 999, width: `${Math.min(waterPct, 100)}%`, transition: 'width 0.3s ease' }} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button onClick={() => updateWater(-250)} style={S.waterBtn}>−250ml</button>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#1a1a1a' }}>
-                {water.ml >= 1000 ? `${(water.ml / 1000).toFixed(1).replace('.', ',')} L` : `${water.ml} ml`}
+
+          {/* Contrôles : − / volume / + */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            {/* Bouton − */}
+            <button onClick={() => updateWater(-250)} style={S.waterBtnMinus} aria-label="Retirer 250 ml">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2, letterSpacing: '0.01em' }}>250 ml</span>
+            </button>
+
+            {/* Volume central */}
+            <div style={{ textAlign: 'center', flex: 1 }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                {water.ml >= 1000
+                  ? `${(water.ml / 1000).toFixed(1).replace('.', ',')} L`
+                  : `${water.ml} ml`}
               </div>
-              <div style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 600 }}>/ {waterTarget} ml</div>
+              <div style={{ fontSize: '0.65rem', color: '#93c5fd', fontWeight: 600, marginTop: 3 }}>
+                objectif : {waterTarget >= 1000 ? `${(waterTarget / 1000).toFixed(1).replace('.', ',')} L` : `${waterTarget} ml`}
+              </div>
             </div>
-            <button onClick={() => updateWater(+250)} style={{ ...S.waterBtn, background: '#dbeafe', color: '#1d4ed8' }}>+250ml</button>
+
+            {/* Bouton + */}
+            <button onClick={() => updateWater(+250)} style={S.waterBtnPlus} aria-label="Ajouter 250 ml">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2, letterSpacing: '0.01em' }}>250 ml</span>
+            </button>
           </div>
         </div>
 
-        <div style={{ height: 110 }} />
+        {/* Espace pour scroller sous la barre scanner fixe + FAB */}
+        <div style={{ height: 230 }} />
       </div>
 
       {/* ── Bouton Scanner ─────────────────────────────────────────── */}
@@ -660,9 +685,29 @@ const S = {
     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
     justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0,
   },
-  waterCard: { background: 'white', borderRadius: 18, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  waterPct: { fontSize: '0.72rem', fontWeight: 700, color: '#3b82f6', background: '#eff6ff', padding: '3px 8px', borderRadius: 20 },
-  waterBtn: { padding: '8px 14px', borderRadius: 12, background: '#eff6ff', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#1d4ed8' },
+  waterCard: {
+    background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+    borderRadius: 18, padding: '16px 16px 18px',
+    boxShadow: '0 4px 16px rgba(29,78,216,0.25)',
+  },
+  waterPct: {
+    fontSize: '0.72rem', fontWeight: 700,
+    background: 'rgba(255,255,255,0.25)', padding: '3px 9px', borderRadius: 20,
+    color: 'white',
+  },
+  waterBtnMinus: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 2, width: 72, height: 60, borderRadius: 16,
+    background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
+    color: 'white', cursor: 'pointer', flexShrink: 0,
+  },
+  waterBtnPlus: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 2, width: 72, height: 60, borderRadius: 16,
+    background: 'rgba(255,255,255,0.9)', border: 'none',
+    color: '#1d4ed8', cursor: 'pointer', flexShrink: 0,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+  },
   scanCta: {
     position: 'fixed',
     bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',

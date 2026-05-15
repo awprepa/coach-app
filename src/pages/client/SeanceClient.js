@@ -72,16 +72,17 @@ export default function SeanceClient() {
   async function fetchSeance() {
     const { data, error } = await supabase
       .from('seances')
-      .select('*, programmes(id, nom, semaines, date_debut, clients(date_debut))')
+      .select('*, programmes(id, nom, semaines, date_debut, created_at)')
       .eq('id', id).single()
     if (error) { console.log(error); setLoading(false); return }
     setSeance(data)
     setEchauffement(data.echauffement || [])
     const total = data.programmes.semaines
     setSemaines(total)
-    const dateDebut = data.programmes.date_debut || data.programmes.clients?.date_debut
+    // date_debut du programme ; fallback sur created_at si non renseigné
+    const dateDebut = data.programmes.date_debut || data.programmes.created_at
     if (dateDebut) setSemaineActuelle(getSemaineActuelle(dateDebut, total))
-    await fetchExercices(data.programmes.semaines, data.programmes.date_debut || data.programmes.clients?.date_debut)
+    await fetchExercices(data.programmes.semaines, dateDebut)
     await fetchRpeSeances()
     await fetchCommentaires()
     setLoading(false)

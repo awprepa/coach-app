@@ -28,14 +28,15 @@ export default function ProgrammeClient() {
   async function fetchData() {
     const { data: prog, error } = await supabase
       .from('programmes')
-      .select('*, clients(date_debut)')
+      .select('*')
       .eq('id', id)
       .single()
     if (error) { console.log(error); setLoading(false); return }
 
     setProgramme(prog)
 
-    const dateDebut = prog.clients?.date_debut
+    // date_debut est celle du programme lui-même ; fallback sur created_at si non renseigné
+    const dateDebut = prog.date_debut || prog.created_at
     const semaine = dateDebut ? getSemaineActuelle(dateDebut, prog.semaines) : 1
     setSemaineActuelle(semaine)
 

@@ -93,7 +93,7 @@ export default function Login() {
       redirectTo: window.location.origin + '/reset-password',
     })
     if (error) setError(error.message)
-    else setSuccess('Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.')
+    else setSuccess('Email envoyé ! Vérifie ta boîte mail (et tes spams / courriers indésirables) pour réinitialiser ton mot de passe.')
     setLoading(false)
   }
 
