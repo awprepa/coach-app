@@ -64,7 +64,6 @@ export default function SeanceClient() {
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
-  const [trackingPrev, setTrackingPrev] = useState({}) // { exId: { semaine: { reps, poidsSum, count } } }
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,23 +103,8 @@ export default function SeanceClient() {
 
     const sem = dateDebut ? getSemaineActuelle(dateDebut, totalSem || 4) : 1
     const exIds = data.map(e => e.id)
-    // Charger TOUTES les semaines pour historique + semaine actuelle
-    const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds)
-    const rows = (allRows || []).filter(r => r.semaine === sem)
-
-    // Agréger les données réelles des semaines passées pour la table
-    const prevMap = {}
-    data.forEach(ex => { prevMap[ex.id] = {} });
-    (allRows || [])
-      .filter(r => r.serie < 1000 && r.is_done) // exclure échauffement
-      .forEach(r => {
-        if (!prevMap[r.exercice_id]) prevMap[r.exercice_id] = {}
-        if (!prevMap[r.exercice_id][r.semaine]) prevMap[r.exercice_id][r.semaine] = { reps: 0, poidsSum: 0, count: 0 }
-        prevMap[r.exercice_id][r.semaine].reps     += (r.reps_reelles || 0)
-        prevMap[r.exercice_id][r.semaine].poidsSum += (parseFloat(r.poids) || 0)
-        prevMap[r.exercice_id][r.semaine].count    += 1
-      })
-    setTrackingPrev(prevMap)
+    const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
+    const rows = allRows || []
 
     const groupMap = {}
     data.forEach(ex => {
@@ -671,49 +655,6 @@ export default function SeanceClient() {
               ))}
             </div>
 
-            {/* Fait réel : poids moyen + reps totales par semaine */}
-            {(() => {
-              const hasPrev = cols.some(s => (trackingPrev[ex.id]?.[s]?.count || 0) > 0)
-              if (!hasPrev) return null
-              const cellStyle = (s) => ({
-                width: COL, height: 36, flexShrink: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', borderRadius: 8,
-                background: (trackingPrev[ex.id]?.[s]?.count || 0) > 0 ? '#f0fdf4' : '#f9fafb',
-                border: '1px solid #e5e7eb',
-              })
-              return (
-                <>
-                  <div style={{ height: 4 }} />
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <div style={{ ...labelStyle, color: '#15803d' }}>✓ kg</div>
-                    {cols.map(s => {
-                      const h = trackingPrev[ex.id]?.[s]
-                      const avgKg = h?.count > 0 ? Math.round(h.poidsSum / h.count * 10) / 10 : null
-                      return (
-                        <div key={`fkg-${ex.id}-${s}`} style={cellStyle(s)}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: avgKg ? '#15803d' : '#d1d5db' }}>
-                            {avgKg ?? '—'}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }}>
-                    <div style={{ ...labelStyle, color: '#15803d' }}>{tempsMode ? '✓ s' : '✓ rep'}</div>
-                    {cols.map(s => {
-                      const h = trackingPrev[ex.id]?.[s]
-                      return (
-                        <div key={`frep-${ex.id}-${s}`} style={cellStyle(s)}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: h?.reps > 0 ? '#15803d' : '#d1d5db' }}>
-                            {h?.reps > 0 ? h.reps : '—'}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </>
-              )
-            })()}
           </div>
         </div>
       </div>
