@@ -229,7 +229,7 @@ export default function FicheClient() {
     const today = new Date().toISOString().slice(0, 10)
     const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-    const [{ data: g }, { data: meals }, { data: profile }] = await Promise.all([
+    const [goalsRes, mealsRes, profileRes] = await Promise.all([
       supabase.from('nutrition_goals').select('*').eq('client_id', id)
         .or(`active_to.is.null,active_to.gte.${today}`)
         .order('active_from', { ascending: false }).limit(1).maybeSingle(),
@@ -237,6 +237,13 @@ export default function FicheClient() {
         .gte('date', sevenDaysAgo).lte('date', today),
       supabase.from('nutrition_profile').select('*').eq('client_id', id).maybeSingle(),
     ])
+
+    if (profileRes.error) console.error('[fetchNutrition] profil:', profileRes.error)
+    if (goalsRes.error)   console.error('[fetchNutrition] goals:',  goalsRes.error)
+
+    const g       = goalsRes.data
+    const meals   = mealsRes.data
+    const profile = profileRes.data
 
     setNutritionGoals(g)
     setGoalsForm({
@@ -704,43 +711,47 @@ export default function FicheClient() {
               <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>👤 Profil nutritionnel</p>
 
               {/* Données physiques renseignées par le client via le wizard */}
-              {(nutritionProfile.poids_kg || nutritionProfile.taille_cm || nutritionProfile.age_ans) && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
-                    Données physiques
-                  </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                    {nutritionProfile.poids_kg   && <InfoItem label="Poids"   value={`${nutritionProfile.poids_kg} kg`} />}
-                    {nutritionProfile.taille_cm  && <InfoItem label="Taille"  value={`${nutritionProfile.taille_cm} cm`} />}
-                    {nutritionProfile.age_ans    && <InfoItem label="Âge"     value={`${nutritionProfile.age_ans} ans`} />}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                    {nutritionProfile.sexe && (
-                      <InfoItem label="Sexe" value={nutritionProfile.sexe === 'homme' ? '♂ Homme' : '♀ Femme'} />
-                    )}
-                    {nutritionProfile.niveau_activite && (
-                      <InfoItem label="Activité" value={{
-                        sedentaire: 'Sédentaire',
-                        leger: 'Légèrement actif',
-                        modere: 'Modérément actif',
-                        actif: 'Actif',
-                        tres_actif: 'Très actif',
-                      }[nutritionProfile.niveau_activite] || nutritionProfile.niveau_activite} />
-                    )}
-                    {nutritionProfile.objectif_physique && (
-                      <InfoItem label="Objectif" value={{
-                        prise_masse: 'Prise de masse',
-                        perte_poids: 'Perte de poids',
-                        performance: 'Performance',
-                        sante: 'Santé générale',
-                      }[nutritionProfile.objectif_physique] || nutritionProfile.objectif_physique} full />
-                    )}
-                    {nutritionProfile.goals_source && (
-                      <InfoItem label="Objectifs calculés par" value={nutritionProfile.goals_source === 'auto' ? '🤖 Algorithme scientifique' : '✏️ Saisie manuelle'} full />
-                    )}
-                  </div>
-                </div>
-              )}
+              <div style={{ marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
+                  Données physiques
+                </p>
+                {(nutritionProfile.poids_kg || nutritionProfile.taille_cm || nutritionProfile.age_ans) ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                      {nutritionProfile.poids_kg   && <InfoItem label="Poids"   value={`${nutritionProfile.poids_kg} kg`} />}
+                      {nutritionProfile.taille_cm  && <InfoItem label="Taille"  value={`${nutritionProfile.taille_cm} cm`} />}
+                      {nutritionProfile.age_ans    && <InfoItem label="Âge"     value={`${nutritionProfile.age_ans} ans`} />}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                      {nutritionProfile.sexe && (
+                        <InfoItem label="Sexe" value={nutritionProfile.sexe === 'homme' ? '♂ Homme' : '♀ Femme'} />
+                      )}
+                      {nutritionProfile.niveau_activite && (
+                        <InfoItem label="Activité" value={{
+                          sedentaire: 'Sédentaire',
+                          leger: 'Légèrement actif',
+                          modere: 'Modérément actif',
+                          actif: 'Actif',
+                          tres_actif: 'Très actif',
+                        }[nutritionProfile.niveau_activite] || nutritionProfile.niveau_activite} />
+                      )}
+                      {nutritionProfile.objectif_physique && (
+                        <InfoItem label="Objectif" value={{
+                          masse:         'Prise de masse',
+                          perte:         'Perte de poids',
+                          maintien:      'Maintien du poids',
+                          recomposition: 'Recomposition corporelle',
+                        }[nutritionProfile.objectif_physique] || nutritionProfile.objectif_physique} full />
+                      )}
+                      {nutritionProfile.goals_source && (
+                        <InfoItem label="Objectifs calculés par" value={nutritionProfile.goals_source === 'auto' ? '🤖 Algorithme scientifique' : '✏️ Saisie manuelle'} full />
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>Questionnaire physique non renseigné (le client doit compléter son profil dans l'app).</p>
+                )}
+              </div>
 
               {/* Préférences alimentaires */}
               {(nutritionProfile.regime || nutritionProfile.allergenes?.length > 0 || nutritionProfile.exclusions?.length > 0 || nutritionProfile.notes) && (
