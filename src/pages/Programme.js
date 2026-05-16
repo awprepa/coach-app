@@ -19,6 +19,9 @@ export default function Programme() {
   const [editProgramme, setEditProgramme] = useState(false)
   const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '' })
   const [notifToast, setNotifToast] = useState(null) // { msg, ok }
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateForm, setTemplateForm] = useState({ nom: '', description: '' })
+  const [savingTemplate, setSavingTemplate] = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchProgramme(); fetchSeances() }, [])
@@ -170,6 +173,56 @@ export default function Programme() {
     else navigate(`/client/${programme.client_id}`)
   }
 
+  async function sauvegarderCommeTemplate() {
+    if (!templateForm.nom.trim()) return
+    setSavingTemplate(true)
+    try {
+      // 1. Créer le template
+      const { data: tpl, error: tplErr } = await supabase
+        .from('programme_templates')
+        .insert({ nom: templateForm.nom.trim(), semaines: programme.semaines, description: templateForm.description || null })
+        .select('id').single()
+      if (tplErr) throw tplErr
+
+      // 2. Pour chaque séance, récupérer ses exercices et insérer dans programme_template_seances
+      if (seances.length > 0) {
+        const { data: exos } = await supabase
+          .from('exercices')
+          .select('*')
+          .in('seance_id', seances.map(s => s.id))
+          .order('ordre', { ascending: true })
+
+        const bySeance = {}
+        ;(exos || []).forEach(ex => {
+          if (!bySeance[ex.seance_id]) bySeance[ex.seance_id] = []
+          bySeance[ex.seance_id].push({
+            code: ex.code, nom: ex.nom, series: ex.series,
+            repetitions: ex.repetitions, tempo: ex.tempo,
+            recuperation: ex.recuperation, type_intensite: ex.type_intensite,
+            valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
+            bibliotheque_id: ex.bibliotheque_id || null,
+          })
+        })
+
+        await supabase.from('programme_template_seances').insert(
+          seances.map((s, idx) => ({
+            template_id: tpl.id,
+            nom: s.nom,
+            jour: idx + 1,
+            ordre: s.ordre || idx + 1,
+            exercices: bySeance[s.id] || [],
+          }))
+        )
+      }
+
+      setShowSaveTemplate(false)
+      showToast(`Template "${templateForm.nom}" enregistré ✓`, true)
+    } catch (e) {
+      showToast(`Erreur : ${e.message}`, false)
+    }
+    setSavingTemplate(false)
+  }
+
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
   if (!programme) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Programme introuvable.</p></div>
 
@@ -237,10 +290,52 @@ export default function Programme() {
             <span style={styles.metaBadge}>{seances.length} séance{seances.length > 1 ? 's' : ''}</span>
             {programme.date_debut && <span style={styles.metaBadge}>Début : {new Date(programme.date_debut + 'T00:00:00').toLocaleDateString('fr-FR')}</span>}
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button onClick={() => setEditProgramme(true)} style={styles.btnSecondary}>Modifier</button>
+            <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>💾 Template</button>
             <button onClick={supprimerProgramme} style={styles.btnDanger}>Supprimer</button>
           </div>
+
+          {/* Modale enregistrer comme template */}
+          {showSaveTemplate && (
+            <div style={{ marginTop: '1rem', background: '#f9fafb', borderRadius: 12, border: '1.5px solid #e5e7eb', padding: '1rem' }}>
+              <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                💾 Enregistrer comme template de cycle
+              </p>
+              <div style={{ marginBottom: '0.65rem' }}>
+                <label style={styles.label}>Nom du template *</label>
+                <input
+                  value={templateForm.nom}
+                  onChange={e => setTemplateForm(f => ({ ...f, nom: e.target.value }))}
+                  style={styles.input}
+                  placeholder="ex: Prépa physique générale 8 semaines"
+                  autoFocus
+                />
+              </div>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <label style={styles.label}>Description (optionnel)</label>
+                <input
+                  value={templateForm.description}
+                  onChange={e => setTemplateForm(f => ({ ...f, description: e.target.value }))}
+                  style={styles.input}
+                  placeholder="Niveau, objectifs, particularités…"
+                />
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.75rem' }}>
+                {seances.length} séance{seances.length > 1 ? 's' : ''} · {programme.semaines} semaines — les exercices seront inclus
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => setShowSaveTemplate(false)} style={styles.btnSecondary}>Annuler</button>
+                <button
+                  onClick={sauvegarderCommeTemplate}
+                  disabled={savingTemplate || !templateForm.nom.trim()}
+                  style={{ ...styles.btnPrimary, opacity: savingTemplate ? 0.7 : 1 }}
+                >
+                  {savingTemplate ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
