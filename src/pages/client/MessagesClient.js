@@ -10,38 +10,27 @@ const NAV_H    = 88
 const INPUT_H  = 62
 
 /**
- * useInputBottom — positionne la barre d'input juste au-dessus du clavier iOS.
+ * useInputBottom — colle la barre au clavier iOS.
  *
- * Stratégie : on lit visualViewport.height. Quand le clavier s'ouvre,
- * vv.height diminue. La barre doit être à (window.innerHeight - vv.height) du bas,
- * MOINS vv.offsetTop (scroll éventuel de la page vers le haut).
- * On utilise requestAnimationFrame pour éviter les valeurs intermédiaires.
+ * Sur iOS PWA, quand le clavier s'ouvre, window.innerHeight DIMINUE
+ * exactement de la hauteur du clavier. On capture la hauteur naturelle
+ * au montage, puis on calcule kbH = naturalH - window.innerHeight.
+ * Pas de visualViewport.offsetTop qui cause le gap visible sur screenshot.
  */
 function useInputBottom() {
   const [bottom, setBottom] = useState(NAV_H)
 
   useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
+    // Hauteur de la fenêtre sans clavier
+    const naturalH = window.innerHeight
 
-    let raf = null
     function update() {
-      if (raf) cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => {
-        // Espace en dessous du visual viewport = clavier + safe-area
-        const kbH = Math.max(0, window.innerHeight - vv.offsetTop - vv.height)
-        setBottom(kbH > 80 ? kbH : NAV_H)
-      })
+      const kbH = naturalH - window.innerHeight
+      setBottom(kbH > 80 ? kbH : NAV_H)
     }
 
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
-    update()
-    return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
-      if (raf) cancelAnimationFrame(raf)
-    }
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   return bottom

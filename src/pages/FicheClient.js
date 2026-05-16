@@ -702,12 +702,60 @@ export default function FicheClient() {
           {nutritionProfile ? (
             <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>👤 Profil nutritionnel</p>
-              <div style={styles.infoGrid}>
-                {nutritionProfile.regime && <InfoItem label="Régime" value={nutritionProfile.regime} />}
-                {nutritionProfile.allergenes?.length > 0 && <InfoItem label="Allergènes" value={nutritionProfile.allergenes.join(', ')} full />}
-                {nutritionProfile.exclusions?.length > 0 && <InfoItem label="Exclusions" value={nutritionProfile.exclusions.join(', ')} full />}
-                {nutritionProfile.notes && <InfoItem label="Notes" value={nutritionProfile.notes} full />}
-              </div>
+
+              {/* Données physiques renseignées par le client via le wizard */}
+              {(nutritionProfile.poids_kg || nutritionProfile.taille_cm || nutritionProfile.age_ans) && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
+                    Données physiques
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                    {nutritionProfile.poids_kg   && <InfoItem label="Poids"   value={`${nutritionProfile.poids_kg} kg`} />}
+                    {nutritionProfile.taille_cm  && <InfoItem label="Taille"  value={`${nutritionProfile.taille_cm} cm`} />}
+                    {nutritionProfile.age_ans    && <InfoItem label="Âge"     value={`${nutritionProfile.age_ans} ans`} />}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                    {nutritionProfile.sexe && (
+                      <InfoItem label="Sexe" value={nutritionProfile.sexe === 'homme' ? '♂ Homme' : '♀ Femme'} />
+                    )}
+                    {nutritionProfile.niveau_activite && (
+                      <InfoItem label="Activité" value={{
+                        sedentaire: 'Sédentaire',
+                        leger: 'Légèrement actif',
+                        modere: 'Modérément actif',
+                        actif: 'Actif',
+                        tres_actif: 'Très actif',
+                      }[nutritionProfile.niveau_activite] || nutritionProfile.niveau_activite} />
+                    )}
+                    {nutritionProfile.objectif_physique && (
+                      <InfoItem label="Objectif" value={{
+                        prise_masse: 'Prise de masse',
+                        perte_poids: 'Perte de poids',
+                        performance: 'Performance',
+                        sante: 'Santé générale',
+                      }[nutritionProfile.objectif_physique] || nutritionProfile.objectif_physique} full />
+                    )}
+                    {nutritionProfile.goals_source && (
+                      <InfoItem label="Objectifs calculés par" value={nutritionProfile.goals_source === 'auto' ? '🤖 Algorithme scientifique' : '✏️ Saisie manuelle'} full />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Préférences alimentaires */}
+              {(nutritionProfile.regime || nutritionProfile.allergenes?.length > 0 || nutritionProfile.exclusions?.length > 0 || nutritionProfile.notes) && (
+                <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
+                    Préférences alimentaires
+                  </p>
+                  <div style={styles.infoGrid}>
+                    {nutritionProfile.regime && <InfoItem label="Régime" value={nutritionProfile.regime} />}
+                    {nutritionProfile.allergenes?.length > 0 && <InfoItem label="Allergènes" value={nutritionProfile.allergenes.join(', ')} full />}
+                    {nutritionProfile.exclusions?.length > 0 && <InfoItem label="Exclusions" value={nutritionProfile.exclusions.join(', ')} full />}
+                    {nutritionProfile.notes && <InfoItem label="Notes" value={nutritionProfile.notes} full />}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div style={styles.emptyCard}>Le client n'a pas encore renseigné son profil nutritionnel.</div>
