@@ -31,6 +31,12 @@ export default function WellnessClient() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('bilan') // 'bilan' | 'poids'
+  const [clientId, setClientId] = useState(null)
+  const [weightInput, setWeightInput] = useState('')
+  const [savingWeight, setSavingWeight] = useState(false)
+  const [weightSaved, setWeightSaved] = useState(false)
+
+  const today = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
     async function load() {
@@ -39,17 +45,44 @@ export default function WellnessClient() {
       if (!userId) return
       const { data: client } = await supabase.from('clients').select('id').eq('user_id', userId).maybeSingle()
       if (!client) return
+      setClientId(client.id)
       const { data } = await supabase.from('wellness')
         .select('*').eq('client_id', client.id)
         .order('date', { ascending: false }).limit(60)
-      setEntries(data || [])
+      const entries = data || []
+      setEntries(entries)
+      // Pré-remplir le poids si déjà renseigné aujourd'hui
+      const todayEntry = entries.find(e => e.date === today)
+      if (todayEntry?.poids) setWeightInput(String(todayEntry.poids))
       setLoading(false)
     }
     load()
   }, [])
 
-  const today = new Date().toISOString().slice(0, 10)
-  const latest = entries[0]
+  async function saveWeight() {
+    const val = parseFloat(weightInput)
+    if (!val || val < 20 || val > 300 || !clientId) return
+    setSavingWeight(true)
+    const todayEntry = entries.find(e => e.date === today)
+    if (todayEntry) {
+      // Entrée existante → update uniquement le poids
+      await supabase.from('wellness').update({ poids: val }).eq('id', todayEntry.id)
+      setEntries(prev => prev.map(e => e.id === todayEntry.id ? { ...e, poids: val } : e))
+    } else {
+      // Pas de bilan aujourd'hui → créer entrée poids seul
+      const { data: newEntry } = await supabase.from('wellness')
+        .upsert({ client_id: clientId, date: today, poids: val }, { onConflict: 'client_id,date' })
+        .select().maybeSingle()
+      if (newEntry) setEntries(prev => [newEntry, ...prev])
+    }
+    setSavingWeight(false)
+    setWeightSaved(true)
+    setTimeout(() => setWeightSaved(false), 2000)
+  }
+
+  // Bilan : entrées avec au moins un indicateur renseigné
+  const bilanEntries = entries.filter(e => e.sommeil || e.fatigue || e.douleurs || e.stress)
+  const latest = bilanEntries[0]
   const poidsEntries = entries.filter(e => e.poids != null).reverse()
 
   return (
@@ -80,13 +113,14 @@ export default function WellnessClient() {
       <div style={S.content}>
         {loading ? (
           <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>Chargement...</p>
-        ) : entries.length === 0 ? (
-          <div style={S.empty}>
-            <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>❤️</p>
-            <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée wellness</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Remplis ton bilan quotidien depuis l'accueil.</p>
-          </div>
         ) : tab === 'bilan' ? (
+          bilanEntries.length === 0 ? (
+            <div style={S.empty}>
+              <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>❤️</p>
+              <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée wellness</p>
+              <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Remplis ton bilan quotidien depuis l'accueil.</p>
+            </div>
+          ) : (
           <>
             {/* Dernière entrée */}
             {latest && (
@@ -122,13 +156,13 @@ export default function WellnessClient() {
             )}
 
             {/* Historique */}
-            {entries.length > 1 && (
+            {bilanEntries.length > 1 && (
               <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
                   <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
                 </div>
                 <div style={{ padding: '0.25rem 0' }}>
-                  {entries.slice(1).map(w => {
+                  {bilanEntries.slice(1).map(w => {
                     const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
                     return (
                       <div key={w.id} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 1rem', borderBottom: '1px solid #f9fafb', gap: '0.75rem' }}>
@@ -155,13 +189,59 @@ export default function WellnessClient() {
               </div>
             )}
           </>
+          )
         ) : (
           /* Onglet Poids */
-          poidsEntries.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+            {/* ── Saisie du poids du jour ── */}
+            <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '2px solid #e4f816' }}>
+              <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.9rem', color: '#1a1a1a' }}>
+                ⚖️ Poids du jour
+              </p>
+              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="20"
+                  max="300"
+                  placeholder="ex : 75.5"
+                  value={weightInput}
+                  onChange={e => setWeightInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && saveWeight()}
+                  style={{
+                    flex: 1, padding: '0.65rem 0.9rem', border: '1.5px solid #e5e7eb',
+                    borderRadius: 12, fontSize: '1rem', color: '#1a1a1a',
+                    outline: 'none', boxSizing: 'border-box', WebkitAppearance: 'none',
+                  }}
+                />
+                <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '600', flexShrink: 0 }}>kg</span>
+                <button
+                  onClick={saveWeight}
+                  disabled={savingWeight || !weightInput}
+                  style={{
+                    padding: '0.65rem 1.1rem', border: 'none', borderRadius: 12,
+                    background: weightSaved ? '#22c55e' : '#333333',
+                    color: weightSaved ? 'white' : '#e4f816',
+                    fontWeight: '700', fontSize: '0.88rem', cursor: 'pointer',
+                    flexShrink: 0, transition: 'background 0.2s',
+                  }}
+                >
+                  {savingWeight ? '…' : weightSaved ? '✓ Enregistré' : 'Enregistrer'}
+                </button>
+              </div>
+              {entries.find(e => e.date === today)?.poids && !weightSaved && (
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                  Poids actuel du jour : {entries.find(e => e.date === today).poids} kg
+                </p>
+              )}
+            </div>
+
+            {poidsEntries.length === 0 ? (
             <div style={S.empty}>
               <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>⚖️</p>
               <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée de poids</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Renseigne ton poids lors du bilan quotidien.</p>
+              <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Enregistre ton premier poids ci-dessus.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -211,7 +291,9 @@ export default function WellnessClient() {
               </div>
             </div>
           )
-        )}
+        }
+        </div>
+      )}
       </div>
 
       <ClientBottomNav />
