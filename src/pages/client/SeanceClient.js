@@ -64,6 +64,7 @@ export default function SeanceClient() {
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
+  const [trackingPrev, setTrackingPrev] = useState({}) // { exId: { semaine: { reps, poidsSum, count } } }
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,7 +104,23 @@ export default function SeanceClient() {
 
     const sem = dateDebut ? getSemaineActuelle(dateDebut, totalSem || 4) : 1
     const exIds = data.map(e => e.id)
-    const { data: rows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
+    // Charger TOUTES les semaines pour historique + semaine actuelle
+    const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds)
+    const rows = (allRows || []).filter(r => r.semaine === sem)
+
+    // Agréger les données réelles des semaines passées pour la table
+    const prevMap = {}
+    data.forEach(ex => { prevMap[ex.id] = {} });
+    (allRows || [])
+      .filter(r => r.serie < 1000 && r.is_done) // exclure échauffement
+      .forEach(r => {
+        if (!prevMap[r.exercice_id]) prevMap[r.exercice_id] = {}
+        if (!prevMap[r.exercice_id][r.semaine]) prevMap[r.exercice_id][r.semaine] = { reps: 0, poidsSum: 0, count: 0 }
+        prevMap[r.exercice_id][r.semaine].reps     += (r.reps_reelles || 0)
+        prevMap[r.exercice_id][r.semaine].poidsSum += (parseFloat(r.poids) || 0)
+        prevMap[r.exercice_id][r.semaine].count    += 1
+      })
+    setTrackingPrev(prevMap)
 
     const groupMap = {}
     data.forEach(ex => {
@@ -412,7 +429,10 @@ export default function SeanceClient() {
     display: 'flex', alignItems: 'center',
   }
 
+  function isTemps(reps) { return typeof reps === 'string' && reps.includes('"') }
+
   function renderExContent(ex, showRecup, showSeries = true, groupLetter = null, groupItems = null) {
+    const tempsMode = isTemps(ex.repetitions)
     const seriesList = tracking[ex.id] || []
     const histoData = Object.entries(charges[ex.id] || {})
       .filter(([, v]) => v.charge && parseFloat(v.charge) > 0)
@@ -450,7 +470,7 @@ export default function SeanceClient() {
             )}
             {ex.repetitions && (
               <div style={S.paramChip}>
-                <span style={S.paramLabel}>REPS</span>
+                <span style={S.paramLabel}>{tempsMode ? 'DURÉE' : 'REPS'}</span>
                 <span style={S.paramValue}>{ex.repetitions}</span>
               </div>
             )}
@@ -534,9 +554,9 @@ export default function SeanceClient() {
                       <input type="number" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
-                        placeholder="reps"
+                        placeholder={tempsMode ? 'sec' : 'reps'}
                         style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>reps</span>
+                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>{tempsMode ? 's' : 'reps'}</span>
                       <button onClick={() => removeWarmupSet(ex.id, wi)} style={{
                         marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
                       }}>×</button>
@@ -559,10 +579,10 @@ export default function SeanceClient() {
                 <input type="number" value={serie.reps_reelles}
                   onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
-                  placeholder={ex.repetitions || 'reps'}
+                  placeholder={tempsMode ? (ex.repetitions?.replace('"', '') || 'sec') : (ex.repetitions || 'reps')}
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />
-                <span style={S.serieUnit}>reps</span>
+                <span style={S.serieUnit}>{tempsMode ? 's' : 'reps'}</span>
                 {serie.is_done
                   ? pendingUnvalidate?.exId === ex.id && pendingUnvalidate?.serieIdx === si
                     ? <>
@@ -595,7 +615,7 @@ export default function SeanceClient() {
                 <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
                   <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>{totalReps}</span>
-                    <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>VOLUME (reps)</span>
+                    <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>{tempsMode ? 'VOLUME (sec)' : 'VOLUME (reps)'}</span>
                   </div>
                   {tonnage > 0 && (
                     <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -650,6 +670,50 @@ export default function SeanceClient() {
                   style={inputStyle(s === semaineActuelle)} placeholder="—" />
               ))}
             </div>
+
+            {/* Fait réel : poids moyen + reps totales par semaine */}
+            {(() => {
+              const hasPrev = cols.some(s => (trackingPrev[ex.id]?.[s]?.count || 0) > 0)
+              if (!hasPrev) return null
+              const cellStyle = (s) => ({
+                width: COL, height: 36, flexShrink: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', borderRadius: 8,
+                background: (trackingPrev[ex.id]?.[s]?.count || 0) > 0 ? '#f0fdf4' : '#f9fafb',
+                border: '1px solid #e5e7eb',
+              })
+              return (
+                <>
+                  <div style={{ height: 4 }} />
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <div style={{ ...labelStyle, color: '#15803d' }}>✓ kg</div>
+                    {cols.map(s => {
+                      const h = trackingPrev[ex.id]?.[s]
+                      const avgKg = h?.count > 0 ? Math.round(h.poidsSum / h.count * 10) / 10 : null
+                      return (
+                        <div key={`fkg-${ex.id}-${s}`} style={cellStyle(s)}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: avgKg ? '#15803d' : '#d1d5db' }}>
+                            {avgKg ?? '—'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }}>
+                    <div style={{ ...labelStyle, color: '#15803d' }}>{tempsMode ? '✓ s' : '✓ rep'}</div>
+                    {cols.map(s => {
+                      const h = trackingPrev[ex.id]?.[s]
+                      return (
+                        <div key={`frep-${ex.id}-${s}`} style={cellStyle(s)}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: h?.reps > 0 ? '#15803d' : '#d1d5db' }}>
+                            {h?.reps > 0 ? h.reps : '—'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       </div>
@@ -855,6 +919,47 @@ export default function SeanceClient() {
             })}
           </div>
         )}
+
+        {/* ── Tonnage total de la séance ───────────────────────────── */}
+        {!nonEffectuee && (() => {
+          let tonnageTotal = 0; let repsTotal = 0; let exosDone = 0
+          exercices.forEach(ex => {
+            const doneSeries = (tracking[ex.id] || []).filter(s => s.is_done)
+            const warmups    = (warmupTracking[ex.id] || [])
+            const all = [
+              ...warmups.map(w => ({ poids: w.poids, reps: parseInt(w.reps_reelles) || 0 })),
+              ...doneSeries.map(s => ({ poids: s.poids, reps: parseInt(s.reps_reelles) || 0 })),
+            ].filter(s => s.reps > 0)
+            if (all.length > 0) exosDone++
+            repsTotal    += all.reduce((t, x) => t + x.reps, 0)
+            tonnageTotal += all.reduce((t, x) => t + (parseFloat(x.poids) || 0) * x.reps, 0)
+          })
+          if (tonnageTotal === 0 && repsTotal === 0) return null
+          return (
+            <div style={{
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #333333 100%)',
+              borderRadius: 16, padding: '1rem 1.25rem', marginTop: '0.75rem', marginBottom: '0.25rem',
+              display: 'flex', gap: '0.5rem', justifyContent: 'space-around', alignItems: 'center',
+            }}>
+              {tonnageTotal > 0 && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#e4f816', lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
+                  <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tonnage total</div>
+                </div>
+              )}
+              {repsTotal > 0 && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#e4f816', lineHeight: 1 }}>{repsTotal}</div>
+                  <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Volume (reps)</div>
+                </div>
+              )}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#e4f816', lineHeight: 1 }}>{exosDone}<span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/{exercices.length}</span></div>
+                <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exos lancés</div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Intensité RPE — section repliable */}
         <div style={{ marginTop: '1.25rem' }}>
