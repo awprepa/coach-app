@@ -33,14 +33,12 @@ export default function CoachNav() {
         <Link to="/" style={navLink}>
           Tableau de bord {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
         </Link>
-        <Link to="/nouveau-client" style={navLink}>Nouveau client</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
         <Link to="/gps" style={navLink}>GPS</Link>
         <Link to="/tests" style={navLink}>Tests</Link>
         <Link to="/messages" style={navLink}>Messagerie</Link>
         <Link to="/charge" style={navLink}>Charge</Link>
         <Link to="/paiements" style={navLink}>Paiements</Link>
-        <Link to="/nutrition-coach" style={navLink}>Nutrition</Link>
       </div>
       <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
     </nav>

@@ -99,20 +99,15 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertErr) {
-      // Race condition: another request inserted first
+      // Race condition ou colonne manquante — essaie le cache, sinon retourne quand même le produit
       const { data: retry } = await supabase
         .from("nutrition_foods")
         .select("*")
         .eq("barcode", barcode)
         .maybeSingle();
-      if (retry) {
-        return new Response(
-          JSON.stringify({ found: true, food: retry }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      // On retourne les données même non-cachées — ne jamais bloquer sur une erreur d'insert
       return new Response(
-        JSON.stringify({ found: false, message: insertErr.message }),
+        JSON.stringify({ found: true, food: retry || food }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

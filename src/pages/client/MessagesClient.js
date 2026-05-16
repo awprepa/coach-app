@@ -6,14 +6,16 @@ import { useMessages } from '../../hooks/useMessages'
 import { sendPushOnly } from '../../notifs'
 
 const HEADER_H = 58
-const NAV_H    = 88   // légèrement au-dessus de la bottom nav (82px)
+const NAV_H    = 88
 const INPUT_H  = 62
 
 /**
- * useInputBottom — lit window.visualViewport.
- * Sur iOS, on soustrait uniquement vv.height (pas vv.offsetTop qui cause des gaps).
- * Quand clavier ouvert → retourne la hauteur clavier (sans safe-area, la barre se colle au clavier).
- * Quand fermé → retourne NAV_H.
+ * useInputBottom — positionne la barre d'input juste au-dessus du clavier iOS.
+ *
+ * Stratégie : on lit visualViewport.height. Quand le clavier s'ouvre,
+ * vv.height diminue. La barre doit être à (window.innerHeight - vv.height) du bas,
+ * MOINS vv.offsetTop (scroll éventuel de la page vers le haut).
+ * On utilise requestAnimationFrame pour éviter les valeurs intermédiaires.
  */
 function useInputBottom() {
   const [bottom, setBottom] = useState(NAV_H)
@@ -22,10 +24,14 @@ function useInputBottom() {
     const vv = window.visualViewport
     if (!vv) return
 
+    let raf = null
     function update() {
-      // Sur iOS, vv.offsetTop peut introduire un gap → on l'ignore
-      const kbH = Math.max(0, window.innerHeight - vv.height)
-      setBottom(kbH > 80 ? kbH : NAV_H)
+      if (raf) cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        // Espace en dessous du visual viewport = clavier + safe-area
+        const kbH = Math.max(0, window.innerHeight - vv.offsetTop - vv.height)
+        setBottom(kbH > 80 ? kbH : NAV_H)
+      })
     }
 
     vv.addEventListener('resize', update)
@@ -34,6 +40,7 @@ function useInputBottom() {
     return () => {
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
+      if (raf) cancelAnimationFrame(raf)
     }
   }, [])
 

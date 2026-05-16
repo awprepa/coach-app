@@ -188,6 +188,7 @@ export default function GPS() {
   const [clients, setClients]           = useState([])
   const [loading, setLoading]           = useState(true)
   // Filtres sidebar
+  const [filterSemaine, setFilterSem]   = useState(null)
   const [filterSport, setFilterSport]   = useState(null)
   const [filterType, setFilterType]     = useState(null)
   const [filterCat, setFilterCat]       = useState(null)
@@ -388,39 +389,56 @@ export default function GPS() {
         {loading ? <p style={S.dimText}>Chargement…</p> : null}
 
         {/* ── Filtres rapports ── */}
-        {(() => {
-          const allInfos = rapports.map(r => parseGpsNom(r.nom))
+        {rapports.length > 0 && (() => {
+          const allInfos  = rapports.map(r => parseGpsNom(r.nom))
+          const semaines  = [...new Set(allInfos.map(i => i.semaine).filter(Boolean))].sort((a,b) => a-b)
           const sports    = [...new Set(allInfos.map(i => i.sport).filter(Boolean))].sort()
           const types     = [...new Set(allInfos.map(i => i.type).filter(Boolean))].sort()
           const cats      = [...new Set(allInfos.map(i => i.categorie).filter(Boolean))].sort()
-          if (!sports.length && !types.length && !cats.length) return null
-          const chip = (label, active, onClick) => (
-            <button key={label} onClick={onClick} style={{
-              padding: '3px 9px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.67rem', fontWeight: 700,
-              background: active ? '#e4f816' : 'rgba(255,255,255,0.12)',
+          if (!semaines.length && !sports.length && !types.length && !cats.length) return null
+
+          const Chip = ({ label, active, onClick }) => (
+            <button onClick={onClick} style={{
+              padding: '4px 10px', borderRadius: 20, border: 'none', cursor: 'pointer',
+              fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
+              background: active ? '#e4f816' : 'rgba(255,255,255,0.1)',
               color: active ? '#1a1a1a' : '#9ca3af',
               transition: 'background 0.15s',
             }}>{label}</button>
           )
+
+          const FilterRow = ({ label, children }) => (
+            <div style={{ marginBottom: 8 }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>{label}</p>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{children}</div>
+            </div>
+          )
+
           return (
-            <div style={{ marginBottom: 10 }}>
-              {sports.length > 1 && (
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-                  {chip('Tous sports', !filterSport, () => setFilterSport(null))}
-                  {sports.map(s => chip(s, filterSport === s, () => setFilterSport(filterSport === s ? null : s)))}
-                </div>
+            <div style={{ marginBottom: 12, padding: '10px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {semaines.length > 0 && (
+                <FilterRow label="Semaine">
+                  <Chip label="Toutes" active={!filterSemaine} onClick={() => setFilterSem(null)} />
+                  {semaines.map(s => <Chip key={s} label={`S${s}`} active={filterSemaine === s} onClick={() => setFilterSem(filterSemaine === s ? null : s)} />)}
+                </FilterRow>
               )}
-              {types.length > 1 && (
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-                  {chip('Tous types', !filterType, () => setFilterType(null))}
-                  {types.map(t => chip(t, filterType === t, () => setFilterType(filterType === t ? null : t)))}
-                </div>
+              {sports.length > 0 && (
+                <FilterRow label="Sport">
+                  <Chip label="Tous" active={!filterSport} onClick={() => setFilterSport(null)} />
+                  {sports.map(s => <Chip key={s} label={s} active={filterSport === s} onClick={() => setFilterSport(filterSport === s ? null : s)} />)}
+                </FilterRow>
               )}
-              {cats.length > 1 && (
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-                  {chip('Toutes catés', !filterCat, () => setFilterCat(null))}
-                  {cats.map(c => chip(c, filterCat === c, () => setFilterCat(filterCat === c ? null : c)))}
-                </div>
+              {types.length > 0 && (
+                <FilterRow label="Type">
+                  <Chip label="Tous" active={!filterType} onClick={() => setFilterType(null)} />
+                  {types.map(t => <Chip key={t} label={t} active={filterType === t} onClick={() => setFilterType(filterType === t ? null : t)} />)}
+                </FilterRow>
+              )}
+              {cats.length > 0 && (
+                <FilterRow label="Catégorie">
+                  <Chip label="Toutes" active={!filterCat} onClick={() => setFilterCat(null)} />
+                  {cats.map(c => <Chip key={c} label={c} active={filterCat === c} onClick={() => setFilterCat(filterCat === c ? null : c)} />)}
+                </FilterRow>
               )}
             </div>
           )
@@ -430,9 +448,10 @@ export default function GPS() {
           {rapports
             .filter(r => {
               const i = parseGpsNom(r.nom)
-              if (filterSport && i.sport !== filterSport) return false
-              if (filterType  && i.type  !== filterType)  return false
-              if (filterCat   && i.categorie !== filterCat) return false
+              if (filterSemaine && i.semaine !== filterSemaine) return false
+              if (filterSport   && i.sport   !== filterSport)   return false
+              if (filterType    && i.type    !== filterType)    return false
+              if (filterCat     && i.categorie !== filterCat)   return false
               return true
             })
             .map(r => {

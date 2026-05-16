@@ -98,27 +98,48 @@ export default function ScannerArticle() {
   // Démarrer le scanner
   useEffect(() => {
     if (phase !== 'scan') return
-    const reader = new BrowserMultiFormatReader()
-    readerRef.current = reader
+    let active = true
 
-    reader.decodeFromVideoDevice(undefined, videoRef.current, async (result, err) => {
-      if (result) {
-        stopScanner()
-        await lookupBarcode(result.getText())
-      } else if (err && !(err instanceof NotFoundException)) {
-        console.warn('[scanner]', err)
+    // Laisser le temps à la caméra d'être libérée si on rescanne
+    const timer = setTimeout(async () => {
+      if (!active) return
+      const reader = new BrowserMultiFormatReader()
+      readerRef.current = reader
+
+      try {
+        await reader.decodeFromVideoDevice(undefined, videoRef.current, async (result, err) => {
+          if (!active) return
+          if (result) {
+            active = false
+            stopScanner()
+            await lookupBarcode(result.getText())
+          } else if (err && !(err instanceof NotFoundException)) {
+            console.warn('[scanner]', err)
+          }
+        })
+      } catch (e) {
+        console.error('[scanner init]', e)
+        if (active) setCamError(true)
       }
-    }).catch(e => {
-      console.error('[scanner init]', e)
-      setCamError(true)
-    })
+    }, 300)   // 300ms pour laisser la caméra se libérer au rescan
 
-    return () => stopScanner()
+    return () => {
+      active = false
+      clearTimeout(timer)
+      stopScanner()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
   function stopScanner() {
     try { BrowserMultiFormatReader.releaseAllStreams() } catch {}
+    // Libère aussi le flux vidéo du tag <video> directement
+    try {
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(t => t.stop())
+        videoRef.current.srcObject = null
+      }
+    } catch {}
   }
 
   const lookupBarcode = useCallback(async (barcode) => {

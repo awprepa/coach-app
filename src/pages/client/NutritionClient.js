@@ -715,7 +715,7 @@ const S = {
     left: 0, right: 0,
     /* paddingBottom = 12px pour garder le bouton à la même hauteur visuelle qu'avant */
     padding: '0 14px 22px',
-    background: 'linear-gradient(to top, white 45%, transparent)',
+    background: 'transparent',
     zIndex: 70, pointerEvents: 'none',
   },
   scanCtaBtn: {
