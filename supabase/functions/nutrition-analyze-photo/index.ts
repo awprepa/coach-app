@@ -13,26 +13,82 @@ const CORS = {
 };
 const JSON_CT = { ...CORS, "Content-Type": "application/json" };
 
-const VISION_PROMPT = `Tu es un expert en nutrition. Analyse cette photo de repas.
-Identifie chaque aliment visible, estime les quantités et valeurs nutritionnelles.
-Sois précis mais conservateur dans tes estimations.
+const VISION_PROMPT = `Tu es un nutritionniste du sport expert en analyse de photos de repas. Ton objectif est de donner des valeurs PRÉCISES et RÉALISTES.
+
+═══ MÉTHODE D'ESTIMATION DES QUANTITÉS ═══
+Utilise ces repères visuels pour estimer les grammes :
+- Assiette standard = 26 cm de diamètre (repère de base)
+- Paume de main = ~120-150 g de viande/poisson
+- Poing fermé = ~150-200 g de féculents cuits (riz, pâtes)
+- Pouce = ~15 g de fromage, beurre ou sauce
+- Cuillère à soupe bombée = 15-20 g (huile = 10 ml ≈ 9 g)
+- Tranche de pain standard = 30-35 g
+- Œuf entier = 55-60 g
+- Verre de jus / lait = 200-250 ml
+- Pot de yaourt = 125 g
+
+═══ VALEURS NUTRITIONNELLES DE RÉFÉRENCE (pour 100 g) ═══
+Viandes/Poissons :
+- Poulet grillé/rôti : 165 kcal | P:31 G:0 L:3.6
+- Steak bœuf (5% MG) : 145 kcal | P:22 G:0 L:6
+- Steak haché (15% MG) : 235 kcal | P:17 G:0 L:18
+- Saumon : 208 kcal | P:20 G:0 L:13
+- Thon au naturel : 116 kcal | P:26 G:0 L:1
+- Œuf entier : 155 kcal | P:13 G:1 L:11
+
+Féculents (cuits) :
+- Riz blanc cuit : 130 kcal | P:2.7 G:28 L:0.3
+- Pâtes cuites : 158 kcal | P:5.8 G:31 L:0.9
+- Pomme de terre cuite : 87 kcal | P:1.9 G:20 L:0.1
+- Quinoa cuit : 120 kcal | P:4.4 G:21 L:1.9
+- Pain blanc/baguette : 265 kcal | P:9 G:51 L:3
+- Pain complet : 247 kcal | P:9 G:45 L:3
+
+Légumes (cuits ou crus) :
+- Légumes verts (brocoli, courgette, haricots...) : 25-35 kcal | P:2 G:4 L:0.3
+- Salade verte : 15 kcal | P:1.5 G:1.5 L:0.2
+- Tomate : 18 kcal | P:0.9 G:3.5 L:0.2
+- Carottes : 41 kcal | P:0.9 G:9.6 L:0.2
+
+Produits laitiers :
+- Yaourt nature : 61 kcal | P:3.5 G:4.7 L:3.3
+- Fromage blanc 0% : 44 kcal | P:7.5 G:4 L:0.2
+- Emmental/Gruyère : 380 kcal | P:28 G:0 L:30
+- Camembert : 300 kcal | P:20 G:0 L:24
+
+Matières grasses :
+- Huile d'olive/tournesol : 900 kcal | P:0 G:0 L:100
+- Beurre : 750 kcal | P:0.6 G:0.4 L:83
+
+Divers :
+- Lentilles cuites : 116 kcal | P:9 G:20 L:0.4
+- Pois chiches cuits : 164 kcal | P:8.9 G:27 L:2.6
+- Avocat : 160 kcal | P:2 G:9 L:15
+- Banane : 89 kcal | P:1.1 G:23 L:0.3
+
+═══ INSTRUCTIONS ═══
+1. Identifie CHAQUE aliment visible séparément
+2. Estime la quantité avec les repères ci-dessus
+3. Calcule kcal/macros depuis les valeurs de référence × quantité
+4. Les TOTAUX doivent être la SOMME EXACTE des items
+5. confiance = "élevé" si photo claire et aliments identifiables / "moyen" si estimation difficile / "faible" si photo trop floue
 
 Réponds UNIQUEMENT avec ce JSON valide (sans texte autour) :
 {
   "repas_nom": "nom court du repas en français",
   "items": [
-    { "name": "nom de l'aliment", "quantity": 150, "unit": "g", "kcal": 200, "prot_g": 15.0, "carbs_g": 20.0, "fat_g": 5.0 }
+    { "name": "nom précis de l'aliment", "quantity": 150, "unit": "g", "kcal": 248, "prot_g": 46.5, "carbs_g": 0.0, "fat_g": 5.4 }
   ],
-  "total_kcal": 350,
-  "total_prot_g": 25.0,
-  "total_carbs_g": 30.0,
-  "total_fat_g": 8.0,
+  "total_kcal": 248,
+  "total_prot_g": 46.5,
+  "total_carbs_g": 0.0,
+  "total_fat_g": 5.4,
   "confiance": "élevé",
-  "note_ia": "Commentaire court en français (1 phrase)"
+  "note_ia": "Commentaire nutritionnel en 1 phrase (ex: richesse en protéines, aliment à surveiller)"
 }
 
 Les valeurs "unit" acceptées : "g", "ml", "pièce".
-Si tu ne peux pas identifier un aliment, utilise "Aliment non identifié".`;
+Si un aliment n'est pas identifiable, note "Aliment non identifié" et estime à 100 kcal par défaut.`;
 
 // ── Groq Vision ───────────────────────────────────────────────────────────────
 async function callGroqVision(key: string, base64: string, mimeType: string): Promise<Record<string, unknown>> {

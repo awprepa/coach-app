@@ -492,53 +492,65 @@ export default function NutritionClient() {
             <div style={{ height: '100%', background: '#3b82f6', borderRadius: 999, width: `${Math.min(waterPct, 100)}%`, transition: 'width 0.3s ease' }} />
           </div>
 
-          {/* Contrôles : − / volume / + */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            {/* Bouton − */}
-            <button onClick={() => updateWater(-250)} style={S.waterBtnMinus} aria-label="Retirer 250 ml">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2, letterSpacing: '0.01em' }}>250 ml</span>
-            </button>
+          {/* Contrôles : − / verres / + */}
+          {(() => {
+            const verres = Math.round(water.ml / 250)
+            const targetVerres = Math.round(waterTarget / 250)
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                {/* Bouton − */}
+                <button onClick={() => updateWater(-250)} style={S.waterBtnMinus} aria-label="Retirer 1 verre">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2 }}>1 verre</span>
+                </button>
 
-            {/* Volume central */}
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
-                {water.ml >= 1000
-                  ? `${(water.ml / 1000).toFixed(1).replace('.', ',')} L`
-                  : `${water.ml} ml`}
-              </div>
-              <div style={{ fontSize: '0.65rem', color: '#93c5fd', fontWeight: 600, marginTop: 3 }}>
-                objectif : {waterTarget >= 1000 ? `${(waterTarget / 1000).toFixed(1).replace('.', ',')} L` : `${waterTarget} ml`}
-              </div>
-            </div>
+                {/* Volume central */}
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                    {verres} <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>verre{verres > 1 ? 's' : ''}</span>
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: '#93c5fd', fontWeight: 600, marginTop: 3 }}>
+                    {water.ml} ml · objectif {targetVerres} verres ({waterTarget >= 1000 ? `${(waterTarget / 1000).toFixed(1).replace('.', ',')} L` : `${waterTarget} ml`})
+                  </div>
+                </div>
 
-            {/* Bouton + */}
-            <button onClick={() => updateWater(+250)} style={S.waterBtnPlus} aria-label="Ajouter 250 ml">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2, letterSpacing: '0.01em' }}>250 ml</span>
-            </button>
-          </div>
+                {/* Bouton + */}
+                <button onClick={() => updateWater(+250)} style={S.waterBtnPlus} aria-label="Ajouter 1 verre">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2 }}>1 verre</span>
+                </button>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Espace pour scroller sous la barre scanner fixe + FAB */}
         <div style={{ height: 230 }} />
       </div>
 
-      {/* ── Bouton Scanner ─────────────────────────────────────────── */}
+      {/* ── Bouton Scanner + Historique ────────────────────────────── */}
       <div style={S.scanCta}>
-        <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
-            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
-            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
-          </svg>
-          Scanner un article
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+          <button onClick={() => navigate('/client/nutrition/scanner')} style={{ ...S.scanCtaBtn, flex: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
+              <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
+              <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
+            </svg>
+            Scanner
+          </button>
+          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.scanCtaBtn, background: 'rgba(228,248,22,0.12)', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.25)', flexShrink: 0, paddingLeft: '1rem', paddingRight: '1rem' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+            </svg>
+            Historique
+          </button>
+        </div>
       </div>
 
       {/* ── FAB ────────────────────────────────────────────────────── */}
