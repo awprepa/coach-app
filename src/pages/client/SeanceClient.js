@@ -443,41 +443,30 @@ export default function SeanceClient() {
           <span style={S.semBadge}>S{semaineActuelle}</span>
         </div>
 
-        {/* Chips paramètres */}
-        {((showSeries && ex.series) || ex.repetitions || ex.tempo || (showRecup && ex.recuperation)) && (
-          <div style={S.paramsRow}>
-            {showSeries && ex.series && (
-              <div style={S.paramChip}>
-                <span style={S.paramLabel}>SÉRIES</span>
-                <span style={S.paramValue}>{ex.series}</span>
-              </div>
-            )}
-            {ex.repetitions && (
-              <div style={S.paramChip}>
-                <span style={S.paramLabel}>{tempsMode ? 'DURÉE' : 'REPS'}</span>
-                <span style={S.paramValue}>{ex.repetitions}</span>
-              </div>
-            )}
-            {ex.tempo && (
-              <div style={S.paramChip}>
-                <span style={S.paramLabel}>TEMPO</span>
-                <span style={S.paramValue}>{ex.tempo}</span>
-              </div>
-            )}
-            {showRecup && ex.recuperation && (
-              <div style={S.paramChip}>
-                <span style={S.paramLabel}>RÉCUP</span>
-                <span style={S.paramValue}>{ex.recuperation}</span>
-              </div>
-            )}
-            {ex.type_intensite && (
-              <div style={S.paramChip}>
-                <span style={S.paramLabel}>Intensité</span>
-                <span style={S.paramValue}>{ex.valeur_intensite || ex.type_intensite}</span>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Barre paramètres */}
+        {(() => {
+          const params = [
+            showSeries && ex.series       ? { label: 'SÉRIES',              val: ex.series }                          : null,
+            ex.repetitions                ? { label: tempsMode ? 'DURÉE' : 'REPS', val: ex.repetitions }             : null,
+            ex.tempo                      ? { label: 'TEMPO',               val: ex.tempo }                           : null,
+            showRecup && ex.recuperation  ? { label: 'RÉCUP',               val: ex.recuperation }                    : null,
+            ex.type_intensite             ? { label: 'INTENSITÉ',           val: ex.valeur_intensite || ex.type_intensite } : null,
+          ].filter(Boolean)
+          if (!params.length) return null
+          return (
+            <div style={S.paramsBar}>
+              {params.map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  {i > 0 && <div style={S.paramDivider} />}
+                  <div style={S.paramItem}>
+                    <span style={S.paramLabel}>{p.label}</span>
+                    <span style={S.paramValue}>{p.val}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Séries tracking */}
         {seriesList.length > 0 && (
@@ -1023,10 +1012,11 @@ const S = {
   blocDoneBadge:{ background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block' },
   collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '700', cursor: 'pointer' },
   // Paramètres
-  paramsRow:   { display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' },
-  paramChip:   { background: '#f3f4f6', borderRadius: '10px', padding: '0.4rem 0.7rem', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '52px' },
-  paramLabel:  { fontSize: '0.55rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
-  paramValue:  { fontSize: '1rem', fontWeight: '800', color: '#111827', lineHeight: 1.3 },
+  paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
+  paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
+  paramDivider: { width: 1, height: 26, background: '#e5e7eb', flexShrink: 0 },
+  paramLabel:   { fontSize: '0.52rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
+  paramValue:   { fontSize: '0.95rem', fontWeight: '800', color: '#111827', lineHeight: 1.3, whiteSpace: 'nowrap' },
   // Séries tracker
   seriesTracker:{ background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.6rem' },
   seriesTrackerLabel:{ fontSize: '0.62rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
