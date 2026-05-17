@@ -67,7 +67,11 @@ export default function ClientBottomNav() {
   const navigate = useNavigate()
   const p = location.pathname
   // Initialise depuis le cache sessionStorage → pas de flash au premier rendu
-  const [offre, setOffre] = useState(() => sessionStorage.getItem('clientOffre') || null)
+  const [offre, setOffre] = useState(() => {
+    const cached = localStorage.getItem('aw_client_offre')
+    const cachedAt = parseInt(localStorage.getItem('aw_client_offre_at') || '0', 10)
+    return (cached && Date.now() - cachedAt < 24 * 60 * 60 * 1000) ? cached : null
+  })
 
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
@@ -86,16 +90,24 @@ export default function ClientBottomNav() {
     }
   }, [])
 
-  // Récupère l'offre du client pour afficher GPS seulement en prépa physique
+  // Récupère l'offre du client — cache localStorage 24h pour éviter une requête à chaque navigation
   useEffect(() => {
     async function fetchOffre() {
+      const cached = localStorage.getItem('aw_client_offre')
+      const cachedAt = parseInt(localStorage.getItem('aw_client_offre_at') || '0', 10)
+      const TTL = 24 * 60 * 60 * 1000 // 24h
+      if (cached && Date.now() - cachedAt < TTL) {
+        setOffre(cached)
+        return
+      }
       const { data: sess } = await supabase.auth.getSession()
       const userId = sess?.session?.user?.id
       if (!userId) return
       const { data: client } = await supabase
         .from('clients').select('offre').eq('user_id', userId).maybeSingle()
       if (client?.offre) {
-        sessionStorage.setItem('clientOffre', client.offre)
+        localStorage.setItem('aw_client_offre', client.offre)
+        localStorage.setItem('aw_client_offre_at', String(Date.now()))
         setOffre(client.offre)
       }
     }
