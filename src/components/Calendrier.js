@@ -339,7 +339,21 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
           <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#333333', minWidth: 160, textAlign: 'center' }}>{headerLabel}</span>
           <button onClick={next} style={S.navBtn}>›</button>
           <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, fontSize: '0.72rem' }}>Auj.</button>
-          <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ Exporter</button>
+          <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ .ics</button>
+          {clientId && (
+            <button
+              onClick={() => {
+                const base = process.env.REACT_APP_SUPABASE_URL?.replace('https://', '')
+                const fnUrl = `webcal://${base}/functions/v1/calendar-ics?client_id=${clientId}`
+                // Copier + ouvrir le lien webcal
+                navigator.clipboard?.writeText(fnUrl.replace('webcal://', 'https://'))
+                window.open(fnUrl, '_blank')
+              }}
+              style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700', background: '#e4f816', color: '#1a1a1a', border: 'none' }}
+            >
+              📅 S'abonner
+            </button>
+          )}
         </div>
       </div>
 
