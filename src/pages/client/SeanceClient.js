@@ -7,6 +7,9 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQueue'
 import { saveSeanceLocally, loadSeanceLocally, formatSavedAt } from '../../utils/localDB'
+import { createPortal } from 'react-dom'
+import MuscleMap from '../../components/MuscleMap'
+import { findMuscles } from '../../data/muscleData'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -72,6 +75,7 @@ export default function SeanceClient() {
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
   const [localSavedAt, setLocalSavedAt] = useState(null)
+  const [muscleSheet, setMuscleSheet] = useState(null)   // { nom, primary, secondary }
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -557,6 +561,12 @@ export default function SeanceClient() {
 
   function isTemps(reps) { return typeof reps === 'string' && reps.includes('"') }
 
+  function openMuscleSheet(ex) {
+    const result = findMuscles(ex.nom)
+    if (!result) return
+    setMuscleSheet({ nom: ex.nom, primary: result.primary, secondary: result.secondary })
+  }
+
   function renderExContent(ex, showRecup, showSeries = true, groupLetter = null, groupItems = null) {
     const tempsMode = isTemps(ex.repetitions)
     const seriesList = tracking[ex.id] || []
@@ -578,6 +588,9 @@ export default function SeanceClient() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={S.exCode}>{ex.code}</span>
             <span style={S.exNom}>{ex.nom}</span>
+            {findMuscles(ex.nom) && (
+              <button onClick={() => openMuscleSheet(ex)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', opacity: 0.45, padding: '0 2px', lineHeight: 1, flexShrink: 0 }}>💪</button>
+            )}
           </div>
           <span style={S.semBadge}>S{semaineActuelle}</span>
         </div>
@@ -822,7 +835,7 @@ export default function SeanceClient() {
     )
   }
 
-  return (
+  const main = (
     <div style={S.page}>
       {/* Bandeau hors ligne */}
       {offlineMode && (
@@ -1158,6 +1171,42 @@ export default function SeanceClient() {
       </div>
       <ClientBottomNav />
     </div>
+  )
+
+  // ── Bottom sheet muscles ────────────────────────────────────────────────────
+  return (
+    <>
+      {main}
+      {muscleSheet && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setMuscleSheet(null)}
+        >
+          <div
+            style={{ background: 'white', borderRadius: '22px 22px 0 0', padding: '1.25rem 1.25rem calc(1.75rem + env(safe-area-inset-bottom))', width: '100%', boxSizing: 'border-box', maxHeight: '85vh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1rem' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <p style={{ fontWeight: 800, fontSize: '1rem', margin: 0, color: '#1a1a1a' }}>💪 {muscleSheet.nom}</p>
+              <button onClick={() => setMuscleSheet(null)} style={{ background: 'none', border: 'none', fontSize: '1.1rem', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <MuscleMap primary={muscleSheet.primary} secondary={muscleSheet.secondary} size={180} />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {muscleSheet.primary.map(m => (
+                <span key={m} style={{ background: '#dc2626', color: 'white', padding: '0.25rem 0.7rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 700 }}>{m.replace(/_/g, '-')}</span>
+              ))}
+              {muscleSheet.secondary.map(m => (
+                <span key={m} style={{ background: '#f97316', color: 'white', padding: '0.25rem 0.7rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 700 }}>{m.replace(/_/g, '-')}</span>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
 
