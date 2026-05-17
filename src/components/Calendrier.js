@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 
 const EVENT_TYPES = [
@@ -324,7 +325,8 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
 
       {/* Barre de contrôle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        {/* Groupe vue + bouton sync aligné */}
         <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3, gap: 2 }}>
           {[{ k: 'mois', l: 'Mois' }, { k: 'semaine', l: 'Semaine' }, { k: 'periode', l: 'Cycle' }].map(v => (
             <button key={v.k} onClick={() => setVue(v.k)} style={{
@@ -334,21 +336,20 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
               boxShadow: vue === v.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}>{v.l}</button>
           ))}
+          {clientId && (
+            <button onClick={() => setShowSyncModal(true)} style={{
+              padding: '0.3rem 0.7rem', borderRadius: 7, border: 'none', fontSize: '0.78rem', fontWeight: '700',
+              cursor: 'pointer', background: '#e4f816', color: '#1a1a1a',
+            }}>📅</button>
+          )}
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
           <button onClick={prev} style={S.navBtn}>‹</button>
           <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#333333', minWidth: 160, textAlign: 'center' }}>{headerLabel}</span>
           <button onClick={next} style={S.navBtn}>›</button>
           <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, fontSize: '0.72rem' }}>Auj.</button>
           <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ .ics</button>
-          {clientId && (
-            <button
-              onClick={() => setShowSyncModal(true)}
-              style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700', background: '#e4f816', color: '#1a1a1a', border: 'none' }}
-            >
-              📅 Sync. Agenda
-            </button>
-          )}
         </div>
       </div>
 
@@ -426,59 +427,51 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
           )}
         </div>
       )}
-      {/* ── Modal synchronisation agenda ────────────────────────────── */}
-      {showSyncModal && clientId && (() => {
-        const base    = process.env.REACT_APP_SUPABASE_URL?.replace('https://', '')
+      {/* ── Modal synchronisation agenda — via portal ───────────────── */}
+      {showSyncModal && clientId && createPortal((() => {
+        const base      = process.env.REACT_APP_SUPABASE_URL?.replace('https://', '')
         const webcalUrl = `webcal://${base}/functions/v1/calendar-ics?client_id=${clientId}`
         const httpsUrl  = `https://${base}/functions/v1/calendar-ics?client_id=${clientId}`
         const googleUrl = `https://www.google.com/calendar/render?cid=${encodeURIComponent(httpsUrl)}`
 
-        function openWebcal() {
-          // Créer un lien <a> et le cliquer — seule méthode fiable pour webcal://
-          const a = document.createElement('a')
-          a.href = webcalUrl
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-        }
-
         return (
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }}
             onClick={() => setShowSyncModal(false)}
           >
             <div
               style={{ background: 'white', borderRadius: '22px 22px 0 0', padding: '1.25rem 1.25rem calc(1.75rem + env(safe-area-inset-bottom))', width: '100%', boxSizing: 'border-box' }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Poignée */}
               <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1.1rem' }} />
               <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.4rem', color: '#1a1a1a' }}>📅 Synchroniser avec ton agenda</p>
               <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
-                Les événements se mettent à jour automatiquement dans ton agenda — ajouts et suppressions compris.
+                Les événements se mettent à jour automatiquement — ajouts et suppressions compris.
               </p>
 
-              {/* Apple Calendar */}
-              <button
-                onClick={openWebcal}
-                style={{ width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+              {/* Apple Calendar — vrai <a> cliqué par l'utilisateur */}
+              <a
+                href={webcalUrl}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
+                onClick={() => setShowSyncModal(false)}
               >
                 <span style={{ fontSize: '1.2rem' }}>🍎</span>
-                <span>Ajouter à Apple Calendrier</span>
-              </button>
+                <span>Apple Calendrier</span>
+              </a>
 
               {/* Google Calendar */}
               <a
                 href={googleUrl} target="_blank" rel="noreferrer"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: '#f8f9fa', color: '#1a1a1a', border: '1.5px solid #e5e7eb', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
+                onClick={() => setShowSyncModal(false)}
               >
                 <span style={{ fontSize: '1.2rem' }}>📆</span>
-                <span>Ajouter à Google Agenda</span>
+                <span>Google Agenda</span>
               </a>
 
               {/* Copier le lien */}
               <button
-                onClick={() => { navigator.clipboard?.writeText(httpsUrl); alert('Lien copié !') }}
+                onClick={() => { navigator.clipboard?.writeText(httpsUrl); setShowSyncModal(false) }}
                 style={{ width: '100%', padding: '0.75rem 1rem', background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 14, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: '#6b7280' }}
               >
                 🔗 Copier le lien (autres agendas)
@@ -486,7 +479,7 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
             </div>
           </div>
         )
-      })()}
+      })(), document.body)}
 
     </div>
   )
