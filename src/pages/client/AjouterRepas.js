@@ -192,7 +192,7 @@ export default function AjouterRepas() {
 
   const [client,   setClient]   = useState(null)
   const [mealType, setMealType] = useState(searchParams.get('type') || 'dejeuner')
-  const [mode,     setMode]     = useState('scan')
+  const [mode,     setMode]     = useState(searchParams.get('mode') || 'scan')
   const [saving,   setSaving]   = useState(false)
 
   // ── Scan code-barres ─────────────────────────────────────────────────────

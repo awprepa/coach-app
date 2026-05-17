@@ -709,23 +709,28 @@ export default function NutritionClient() {
               </div>
 
               {/* 3 boutons de mode */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                <button onClick={() => { setAddSheet(null); navigate('/client/nutrition/ajouter', { state: { meal_type: addSheet.meal_type, mode: 'photo' } }) }}
-                  style={S.modeBtn}>
-                  <span style={{ fontSize: '1.5rem' }}>📷</span>
-                  <span style={S.modeBtnLabel}>Photo IA</span>
-                </button>
-                <button onClick={() => { setAddSheet(null); navigate('/client/nutrition/scanner', { state: { meal_type: addSheet.meal_type } }) }}
-                  style={{ ...S.modeBtn, background: '#1a1a1a', borderColor: '#1a1a1a' }}>
-                  <span style={{ fontSize: '1.5rem' }}>📊</span>
-                  <span style={{ ...S.modeBtnLabel, color: '#e4f816' }}>Code-barre</span>
-                </button>
-                <button onClick={() => { setAddSheet(null); navigate('/client/nutrition/ajouter', { state: { meal_type: addSheet.meal_type, mode: 'manuel' } }) }}
-                  style={S.modeBtn}>
-                  <span style={{ fontSize: '1.5rem' }}>✏️</span>
-                  <span style={S.modeBtnLabel}>Manuel</span>
-                </button>
-              </div>
+              {(() => {
+                const mt = addSheet.meal_type || 'dejeuner'
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    <button onClick={() => { setAddSheet(null); navigate(`/client/nutrition/ajouter?type=${mt}&mode=photo`) }}
+                      style={S.modeBtn}>
+                      <span style={{ fontSize: '1.5rem' }}>📷</span>
+                      <span style={S.modeBtnLabel}>Photo IA</span>
+                    </button>
+                    <button onClick={() => { setAddSheet(null); navigate(`/client/nutrition/scanner?type=${mt}`) }}
+                      style={S.modeBtn}>
+                      <span style={{ fontSize: '1.5rem' }}>📊</span>
+                      <span style={S.modeBtnLabel}>Code-barre</span>
+                    </button>
+                    <button onClick={() => { setAddSheet(null); navigate(`/client/nutrition/ajouter?type=${mt}&mode=manuel`) }}
+                      style={S.modeBtn}>
+                      <span style={{ fontSize: '1.5rem' }}>✏️</span>
+                      <span style={S.modeBtnLabel}>Manuel</span>
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         )
