@@ -79,6 +79,14 @@ export default function NutritionClient() {
   const [editForm,   setEditForm]   = useState({})
   const [savingEdit, setSavingEdit] = useState(false)
 
+  // Bottom sheet d'ajout
+  const [addSheet,      setAddSheet]      = useState(null)  // { meal_type } | null
+  const [sheetSearch,   setSheetSearch]   = useState('')
+  const [recentFoods,   setRecentFoods]   = useState([])    // aliments récents dédupliqués
+  const [templates,     setTemplates]     = useState([])    // favoris (meal_templates)
+  const [sheetTab,      setSheetTab]      = useState('recents') // 'recents' | 'favoris'
+  const [addingFood,    setAddingFood]    = useState(null)  // id en cours d'ajout rapide
+
   // Charger client + goals
   useEffect(() => {
     async function loadClient() {
@@ -197,6 +205,59 @@ export default function NutritionClient() {
     setMeals(prev => prev.map(m => m.id === editModal.meal.id ? { ...m, ...updates } : m))
     setSavingEdit(false)
     setEditModal(null)
+  }
+
+  // ─── Ouvrir la sheet ─────────────────────────────────────────────────────
+  async function openAddSheet(meal_type) {
+    setAddSheet({ meal_type })
+    setSheetSearch('')
+    setSheetTab('recents')
+    if (!client) return
+    // Charger récents (30 derniers jours, dédupliqués par nom)
+    const since = new Date(); since.setDate(since.getDate() - 30)
+    const { data: recent } = await supabase
+      .from('nutrition_meals')
+      .select('name, kcal, prot_g, carbs_g, fat_g, quantity_g')
+      .eq('client_id', client.id)
+      .gte('date', toISO(since))
+      .order('date', { ascending: false })
+      .limit(200)
+    // Dédupliquer par nom, garder la version la plus récente
+    const seen = new Set()
+    const deduped = (recent || []).filter(r => {
+      if (!r.name || seen.has(r.name)) return false
+      seen.add(r.name); return true
+    }).slice(0, 20)
+    setRecentFoods(deduped)
+    // Charger favoris
+    const { data: favs } = await supabase
+      .from('nutrition_meal_templates')
+      .select('*')
+      .eq('client_id', client.id)
+      .order('name')
+    setTemplates(favs || [])
+  }
+
+  // ─── Ajout rapide depuis la sheet ────────────────────────────────────────
+  async function quickAdd(food) {
+    if (!client || !addSheet) return
+    const key = food.name
+    setAddingFood(key)
+    const row = {
+      client_id: client.id,
+      date:       toISO(viewDate),
+      meal_type:  addSheet.meal_type,
+      name:       food.name,
+      kcal:       food.kcal       || 0,
+      prot_g:     food.prot_g     || 0,
+      carbs_g:    food.carbs_g    || 0,
+      fat_g:      food.fat_g      || 0,
+      quantity_g: food.quantity_g || null,
+    }
+    const { data: inserted } = await supabase.from('nutrition_meals').insert(row).select().single()
+    if (inserted) setMeals(prev => [...prev, inserted])
+    setAddingFood(null)
+    setAddSheet(null)
   }
 
   // ─── Score IA journée ─────────────────────────────────────────────────────
@@ -400,7 +461,7 @@ export default function NutritionClient() {
                   )}
                 </div>
                 <button
-                  onClick={() => navigate('/client/nutrition/ajouter', { state: { meal_type: t.key } })}
+                  onClick={() => openAddSheet(t.key)}
                   style={S.addBtn}
                   aria-label={`Ajouter ${t.label}`}
                 >+</button>
@@ -528,29 +589,135 @@ export default function NutritionClient() {
           })()}
         </div>
 
-        {/* Espace pour scroller sous la barre scanner fixe + FAB */}
-        <div style={{ height: 230 }} />
-      </div>
-
-      {/* ── Bouton Scanner ─────────────────────────────────────────── */}
-      <div style={S.scanCta}>
-        <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
-            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
-            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
-          </svg>
-          Scanner un article
-        </button>
+        {/* Espace pour scroller sous le FAB */}
+        <div style={{ height: 140 }} />
       </div>
 
       {/* ── FAB ────────────────────────────────────────────────────── */}
-      <button onClick={() => navigate('/client/nutrition/ajouter')} style={S.fab} aria-label="Ajouter un repas">
+      <button onClick={() => openAddSheet(null)} style={S.fab} aria-label="Ajouter un repas">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
+
+      {/* ── Bottom sheet : ajouter un aliment ─────────────────────── */}
+      {addSheet && (() => {
+        const mealLabel = MEAL_TYPES.find(t => t.key === addSheet.meal_type)
+        const query = sheetSearch.toLowerCase()
+        const sourceList = sheetTab === 'favoris' ? templates : recentFoods
+        const filtered = sourceList.filter(f =>
+          !query || (f.name || '').toLowerCase().includes(query)
+        )
+        return (
+          <div style={S.overlay} onClick={() => setAddSheet(null)}>
+            <div style={S.sheet} onClick={e => e.stopPropagation()}>
+              {/* Poignée */}
+              <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 14px' }} />
+
+              {/* Titre */}
+              <p style={{ fontWeight: 900, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 12px' }}>
+                {mealLabel ? `${mealLabel.emoji} Ajouter au ${mealLabel.label}` : '➕ Ajouter un aliment'}
+              </p>
+
+              {/* Si pas de meal_type : choix du repas */}
+              {!addSheet.meal_type && (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }}>
+                  {MEAL_TYPES.map(t => (
+                    <button key={t.key} onClick={() => setAddSheet({ meal_type: t.key })}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 99, background: 'white', border: '1.5px solid #e5e7eb', fontSize: '0.78rem', fontWeight: 700, color: '#374151', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {t.emoji} {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Barre de recherche */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f3f4f6', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  value={sheetSearch}
+                  onChange={e => setSheetSearch(e.target.value)}
+                  placeholder="Rechercher un aliment ou une recette…"
+                  autoFocus
+                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '0.88rem', color: '#1a1a1a' }}
+                />
+                {sheetSearch && (
+                  <button onClick={() => setSheetSearch('')} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0 }}>✕</button>
+                )}
+              </div>
+
+              {/* Onglets Récents / Favoris */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                {[['recents', '🕐 Récents'], ['favoris', '⭐ Favoris']].map(([key, label]) => (
+                  <button key={key} onClick={() => setSheetTab(key)}
+                    style={{ padding: '5px 12px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: sheetTab === key ? '#1a1a1a' : '#e5e7eb', background: sheetTab === key ? '#1a1a1a' : 'white', color: sheetTab === key ? '#e4f816' : '#6b7280' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Liste récents / favoris */}
+              <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 14, borderRadius: 12, border: '1px solid #f3f4f6', background: 'white' }}>
+                {filtered.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: '#d1d5db', fontSize: '0.78rem', padding: '1rem', margin: 0, fontStyle: 'italic' }}>
+                    {sheetSearch ? 'Aucun résultat' : sheetTab === 'favoris' ? 'Aucun favori enregistré' : 'Aucun aliment récent'}
+                  </p>
+                ) : filtered.map((food, i) => (
+                  <button key={i} onClick={() => quickAdd(food)} disabled={addingFood === food.name}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: addingFood === food.name ? '#f0fdf4' : 'white', border: 'none', borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none', cursor: 'pointer', textAlign: 'left', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {sheetTab === 'favoris' && '⭐ '}{food.name}
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 1 }}>
+                        {[
+                          food.prot_g   ? `P ${Math.round(food.prot_g)}g`   : null,
+                          food.carbs_g  ? `G ${Math.round(food.carbs_g)}g`  : null,
+                          food.fat_g    ? `L ${Math.round(food.fat_g)}g`    : null,
+                        ].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>{Math.round(food.kcal || 0)} kcal</span>
+                      <span style={{ background: addingFood === food.name ? '#16a34a' : '#e4f816', color: '#1a1a1a', borderRadius: 8, padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}>
+                        {addingFood === food.name ? '✓' : '+'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Séparateur */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1, height: 1, background: '#f3f4f6' }} />
+                <span style={{ fontSize: '0.65rem', color: '#d1d5db', fontWeight: 700 }}>AJOUTER AUTREMENT</span>
+                <div style={{ flex: 1, height: 1, background: '#f3f4f6' }} />
+              </div>
+
+              {/* 3 boutons de mode */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <button onClick={() => { setAddSheet(null); navigate('/client/nutrition/ajouter', { state: { meal_type: addSheet.meal_type, mode: 'photo' } }) }}
+                  style={S.modeBtn}>
+                  <span style={{ fontSize: '1.5rem' }}>📷</span>
+                  <span style={S.modeBtnLabel}>Photo IA</span>
+                </button>
+                <button onClick={() => { setAddSheet(null); navigate('/client/nutrition/scanner', { state: { meal_type: addSheet.meal_type } }) }}
+                  style={{ ...S.modeBtn, background: '#1a1a1a', borderColor: '#1a1a1a' }}>
+                  <span style={{ fontSize: '1.5rem' }}>📊</span>
+                  <span style={{ ...S.modeBtnLabel, color: '#e4f816' }}>Code-barre</span>
+                </button>
+                <button onClick={() => { setAddSheet(null); navigate('/client/nutrition/ajouter', { state: { meal_type: addSheet.meal_type, mode: 'manuel' } }) }}
+                  style={S.modeBtn}>
+                  <span style={{ fontSize: '1.5rem' }}>✏️</span>
+                  <span style={S.modeBtnLabel}>Manuel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Modal : modifier un plat ────────────────────────────────── */}
       {editModal && (
@@ -712,28 +879,12 @@ const S = {
     color: '#1d4ed8', cursor: 'pointer', flexShrink: 0,
     boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
   },
-  scanCta: {
-    position: 'fixed',
-    /* descend jusqu'à la bottom nav pour combler la bande grise */
-    bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',
-    left: 0, right: 0,
-    /* paddingBottom = 12px pour garder le bouton à la même hauteur visuelle qu'avant */
-    padding: '0 14px 22px',
-    background: 'transparent',
-    zIndex: 70, pointerEvents: 'none',
-  },
-  scanCtaBtn: {
-    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: '#e4f816',
-    border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',
-  },
   fab: {
     position: 'fixed',
-    bottom: 'calc(166px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    bottom: 'calc(90px + max(env(safe-area-inset-bottom, 0px), 0px))',
     right: 16, zIndex: 75,
-    width: 50, height: 50, borderRadius: '50%', background: '#e4f816',
-    border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+    width: 52, height: 52, borderRadius: '50%', background: '#e4f816',
+    border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
   },
   // Modals
@@ -755,4 +906,6 @@ const S = {
   },
   btnCancel: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280' },
   btnSave:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
+  modeBtn:     { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: '#f8f8f8', border: '1.5px solid #f0f0f0', borderRadius: 14, padding: '13px 8px', cursor: 'pointer' },
+  modeBtnLabel:{ fontSize: '0.68rem', fontWeight: 800, color: '#374151', textAlign: 'center' },
 }
