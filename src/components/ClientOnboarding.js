@@ -6,30 +6,30 @@ const STEPS = [
   {
     emoji: '👋',
     title: 'Bienvenue dans ton espace !',
-    desc: 'Arthur a préparé cet espace pour suivre ta progression. Voici un rapide tour des fonctionnalités.',
+    desc: 'Cet espace a été préparé pour suivre ta progression. Voici un rapide tour des fonctionnalités.',
   },
   {
     emoji: '🏠',
     title: 'Accueil',
-    desc: 'Vue d\'ensemble de ta semaine : prochaines séances, résumé nutrition du jour, et bien-être.',
+    desc: 'Retrouve tes prochaines séances, ton résumé nutrition et tes indicateurs de bien-être en un coup d\'œil.',
     tab: 'accueil',
   },
   {
     emoji: '💪',
-    title: 'Programme',
-    desc: 'Retrouve et réalise tes séances d\'entraînement. Tu peux logguer tes poids et valider chaque série.',
+    title: 'Programmes',
+    desc: 'Retrouve tes programmes et tes séances, et remplis tes poids au fil des semaines.',
     tab: 'programme',
   },
   {
     emoji: '🥗',
     title: 'Nutrition',
-    desc: 'Suis tes repas au quotidien : scan code-barres, photo IA, saisie manuelle ou vocal.',
+    desc: 'Tracke tes calories, scanne tes articles, prends en photo tes plats — l\'IA fait le reste.',
     tab: 'nutrition',
   },
   {
     emoji: '📊',
     title: 'Tests & Wellness',
-    desc: 'Remplis tes indicateurs de bien-être chaque jour (sommeil, fatigue…) pour que ton coach ajuste ta charge.',
+    desc: 'Remplis ton wellness chaque jour — ton coach voit tes données en temps réel et adapte ta charge en conséquence.',
     tab: 'wellness',
   },
 ]
