@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="theme-color" content="#333333" />
+    <meta name="theme-color" content="#1a1a1a" />
     <meta name="description" content="AWprepa - Application de coaching sportif" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,19 +13,59 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>AWprepa</title>
+    <style>
+      /* ── Splash screen — visible immédiatement, avant React ──────────────── */
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #1a1a1a; }
+
+      #splash {
+        position: fixed; inset: 0; z-index: 99999;
+        background: #1a1a1a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        transition: opacity 0.45s ease;
+      }
+      #splash.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .splash-logo {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 2.4rem;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: -0.04em;
+        animation: splashIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .splash-logo span { color: #e4f816; }
+
+      .splash-sub {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.25);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        animation: splashIn 0.55s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      @keyframes splashIn {
+        from { opacity: 0; transform: translateY(12px) scale(0.94); }
+        to   { opacity: 1; transform: translateY(0)    scale(1); }
+      }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <!-- Splash — retiré par React dès que l'auth est vérifiée -->
+    <div id="splash">
+      <div class="splash-logo">AW<span>prepa</span></div>
+      <div class="splash-sub">Coaching sportif</div>
+    </div>
+
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>

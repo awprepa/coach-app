@@ -5,6 +5,7 @@ import { useTimer } from '../../context/TimerContext'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell as RechartsCell, LineChart, Line, Legend } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
+import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQueue'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -67,10 +68,39 @@ export default function SeanceClient() {
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
+  const [pendingSync, setPendingSync] = useState(0)   // nb de charges en attente de sync
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
+
+  // Sync offline → online : rejoue la file dès que la connexion revient
+  useEffect(() => {
+    async function handleOnline() {
+      const synced = await processQueue(supabase)
+      if (synced > 0) {
+        setPendingSync(0)
+        // Recharger les charges pour refléter les données serveur
+        fetchSeance()
+      }
+    }
+    // Au montage : traiter les éventuelles charges en attente
+    pendingCount().then(setPendingSync)
+    if (navigator.onLine) handleOnline()
+
+    // Message du SW quand il détecte le retour en ligne (Background Sync API)
+    function handleSWMessage(e) {
+      if (e.data?.type === 'PROCESS_CHARGE_QUEUE') handleOnline()
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage)
+
+    window.addEventListener('online', handleOnline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function fetchSeance() {
     const { data, error } = await supabase
@@ -347,14 +377,44 @@ export default function SeanceClient() {
     const cleanVal = (valeur || '').trim().replace(/^[-—]+$/, '')
     const existing = charges[exId]?.[semaine]
     if (!cleanVal && !existing) return // rien à faire
+
+    // Mise à jour optimiste immédiate de l'UI (avec ou sans connexion)
+    setCharges(prev => ({
+      ...prev,
+      [exId]: { ...prev[exId], [semaine]: { ...(existing || {}), [field]: cleanVal } },
+    }))
+
+    // Hors ligne → file d'attente
+    if (!navigator.onLine) {
+      await enqueueCharge({
+        exerciceId:       exId,
+        semaine,
+        field,
+        value:            cleanVal,
+        existingChargeId: existing?.id || null,
+      })
+      const n = await pendingCount()
+      setPendingSync(n)
+      // Enregistrer le Background Sync pour Android/Chrome
+      navigator.serviceWorker?.ready.then(sw =>
+        sw.sync?.register('sync-charges').catch(() => {})
+      )
+      flashSaved()   // feedback visuel même hors ligne
+      return
+    }
+
+    // En ligne → sauvegarde directe
     if (existing) {
       const { error } = await supabase.from('charges').update({ [field]: cleanVal || null }).eq('id', existing.id)
       if (error) alert(error.message)
-      else { setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { ...existing, [field]: cleanVal } } })); flashSaved() }
+      else flashSaved()
     } else {
       const { data, error } = await supabase.from('charges').insert([{ exercice_id: exId, semaine, [field]: cleanVal || null }]).select().single()
       if (error) alert(error.message)
-      else { setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: cleanVal } } })); flashSaved() }
+      else {
+        setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: cleanVal } } }))
+        flashSaved()
+      }
     }
   }
 
@@ -709,6 +769,19 @@ export default function SeanceClient() {
 
   return (
     <div style={S.page}>
+      {/* Bandeau hors ligne */}
+      {!navigator.onLine && (
+        <div style={{ background: '#f59e0b', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', position: 'sticky', top: 0, zIndex: 200 }}>
+          ✈️ Mode hors ligne — tes charges sont sauvegardées localement
+        </div>
+      )}
+      {/* Badge charges en attente (visible si online + items en queue) */}
+      {navigator.onLine && pendingSync > 0 && (
+        <div style={{ background: '#22c55e', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px' }}>
+          ↑ Synchronisation de {pendingSync} charge{pendingSync > 1 ? 's' : ''} en cours…
+        </div>
+      )}
+
       {/* Toast */}
       <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: '#333333', color: '#e4f816', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
         ✓ Enregistré

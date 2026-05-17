@@ -113,6 +113,19 @@ async function cacheFirst(request, cacheName) {
   return res
 }
 
+// ── Background Sync — charges offline ────────────────────────────────────────
+// Quand la connexion revient (même app fermée sur Android/Chrome),
+// le SW notifie toutes les fenêtres ouvertes pour qu'elles traitent leur file.
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-charges') {
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+        list.forEach(client => client.postMessage({ type: 'PROCESS_CHARGE_QUEUE' }))
+      })
+    )
+  }
+})
+
 // ── Push notifications ────────────────────────────────────────────────────────
 self.addEventListener('push', event => {
   const data = event.data?.json() || {}

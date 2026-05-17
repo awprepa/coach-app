@@ -43,6 +43,12 @@ export default function AuthGate({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       redirect(navigate, session?.user, window.location.pathname)
       setLoading(false)
+      // Retirer le splash screen natif avec un fondu
+      const splash = document.getElementById('splash')
+      if (splash) {
+        splash.classList.add('hide')
+        setTimeout(() => splash.remove(), 500)
+      }
     })
 
     // 2. Écouter les changements (logout, token refresh…)
