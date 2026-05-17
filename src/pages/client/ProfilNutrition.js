@@ -674,7 +674,14 @@ export default function ProfilNutrition() {
           <p style={{ fontWeight: 800, fontSize: '1.05rem', color: 'white', margin: 0, lineHeight: 1.2 }}>Mon profil nutritionnel</p>
           <p style={{ fontSize: '0.67rem', color: 'rgba(255,255,255,0.4)', margin: 0, fontWeight: 600 }}>Objectifs & préférences alimentaires</p>
         </div>
-        <div style={{ width: 32 }} />
+        <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, background: 'rgba(228,248,22,0.15)', border: '1px solid rgba(228,248,22,0.3)' }} aria-label="Historique scans">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
+            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
+            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
+          </svg>
+        </button>
       </div>
 
       {/* Tab bar */}

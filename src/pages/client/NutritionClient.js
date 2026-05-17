@@ -532,25 +532,17 @@ export default function NutritionClient() {
         <div style={{ height: 230 }} />
       </div>
 
-      {/* ── Bouton Scanner + Historique ────────────────────────────── */}
+      {/* ── Bouton Scanner ─────────────────────────────────────────── */}
       <div style={S.scanCta}>
-        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-          <button onClick={() => navigate('/client/nutrition/scanner')} style={{ ...S.scanCtaBtn, flex: 1 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
-              <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
-              <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
-            </svg>
-            Scanner
-          </button>
-          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.scanCtaBtn, background: 'rgba(228,248,22,0.12)', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.25)', flexShrink: 0, paddingLeft: '1rem', paddingRight: '1rem' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
-            </svg>
-            Historique
-          </button>
-        </div>
+        <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
+            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
+            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
+          </svg>
+          Scanner un article
+        </button>
       </div>
 
       {/* ── FAB ────────────────────────────────────────────────────── */}
