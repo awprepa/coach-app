@@ -41,16 +41,17 @@ function generateICS(events: any[], clientPrenom: string): string {
   ];
 
   for (const ev of events) {
-    lines.push(
+    const evLines = [
       "BEGIN:VEVENT",
       `UID:awprepa-${ev.id}@awprepa.com`,
       `DTSTART;VALUE=DATE:${formatICSDate(ev.date)}`,
       `DTEND;VALUE=DATE:${nextDay(ev.date)}`,
       `SUMMARY:${escapeICS(ev.titre)}`,
-      ev.description ? `DESCRIPTION:${escapeICS(ev.description)}` : "",
       `CATEGORIES:${escapeICS(ev.type || "seance")}`,
-      "END:VEVENT",
-    ).filter(Boolean);
+    ];
+    if (ev.description) evLines.push(`DESCRIPTION:${escapeICS(ev.description)}`);
+    evLines.push("END:VEVENT");
+    lines.push(...evLines);
   }
 
   lines.push("END:VCALENDAR");
