@@ -324,9 +324,8 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
 
-      {/* Barre de contrôle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        {/* Groupe vue + bouton sync aligné */}
+      {/* Barre de contrôle — ligne 1 : vue + sync */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
         <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3, gap: 2 }}>
           {[{ k: 'mois', l: 'Mois' }, { k: 'semaine', l: 'Semaine' }, { k: 'periode', l: 'Cycle' }].map(v => (
             <button key={v.k} onClick={() => setVue(v.k)} style={{
@@ -336,21 +335,23 @@ export default function Calendrier({ clientId, readOnly = false, programmeDebut,
               boxShadow: vue === v.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}>{v.l}</button>
           ))}
-          {clientId && (
-            <button onClick={() => setShowSyncModal(true)} style={{
-              padding: '0.3rem 0.7rem', borderRadius: 7, border: 'none', fontSize: '0.78rem', fontWeight: '700',
-              cursor: 'pointer', background: '#e4f816', color: '#1a1a1a',
-            }}>📅</button>
-          )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          <button onClick={prev} style={S.navBtn}>‹</button>
-          <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#333333', minWidth: 160, textAlign: 'center' }}>{headerLabel}</span>
-          <button onClick={next} style={S.navBtn}>›</button>
-          <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, fontSize: '0.72rem' }}>Auj.</button>
-          <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ .ics</button>
-        </div>
+        {clientId && (
+          <button onClick={() => setShowSyncModal(true)} style={{
+            padding: '0.3rem 0.9rem', borderRadius: 8, border: 'none', fontSize: '0.78rem', fontWeight: '700',
+            cursor: 'pointer', background: '#e4f816', color: '#1a1a1a',
+          }}>📅 Sync. Agenda</button>
+        )}
+      </div>
+
+      {/* Barre de contrôle — ligne 2 : navigation date + export */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <button onClick={prev} style={S.navBtn}>‹</button>
+        <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#333333', flex: 1, textAlign: 'center' }}>{headerLabel}</span>
+        <button onClick={next} style={S.navBtn}>›</button>
+        <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, fontSize: '0.72rem' }}>Auj.</button>
+        <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ .ics</button>
       </div>
 
       {/* Légende */}
