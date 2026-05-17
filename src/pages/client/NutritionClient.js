@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
@@ -596,25 +597,33 @@ export default function NutritionClient() {
         <div style={{ height: 230 }} />
       </div>
 
-      {/* ── Barre scanner fixe ─────────────────────────────────────── */}
-      <div style={S.scanCta}>
-        <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
-            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
-            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
-          </svg>
-          Scanner un article
-        </button>
-      </div>
+      {createPortal(
+        <>
+          {/* ── Barre scanner fixe ───────────────────────────────── */}
+          <div style={S.scanCta}>
+            <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
+                <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
+                <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
+              </svg>
+              Scanner un article
+            </button>
+          </div>
 
-      {/* ── FAB ────────────────────────────────────────────────────── */}
-      <button onClick={() => openAddSheet(null)} style={S.fab} aria-label="Ajouter un repas">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
+          {/* ── FAB ─────────────────────────────────────────────── */}
+          <button onClick={() => openAddSheet(null)} style={S.fab} aria-label="Ajouter un repas">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </>,
+        document.body
+      )}
+
+      {/* ── Modals (via portal — contourne le transform de usePageFade) ─── */}
+      {createPortal(<>
 
       {/* ── Bottom sheet : ajouter un aliment ─────────────────────── */}
       {addSheet && (() => {
@@ -828,6 +837,8 @@ export default function NutritionClient() {
         </div>
       )}
 
+      </>, document.body)}
+
       <ClientBottomNav />
     </div>
   )
@@ -930,6 +941,7 @@ const S = {
     background: 'white', borderRadius: '22px 22px 0 0',
     padding: '1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom))',
     width: '100%', boxSizing: 'border-box',
+    maxHeight: '85vh', overflowY: 'auto',
   },
   fieldGroup: { marginBottom: '0.85rem' },
   fieldLabel: { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' },
