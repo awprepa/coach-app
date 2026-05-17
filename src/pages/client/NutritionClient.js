@@ -589,8 +589,21 @@ export default function NutritionClient() {
           })()}
         </div>
 
-        {/* Espace pour scroller sous le FAB */}
-        <div style={{ height: 140 }} />
+        {/* Espace pour scroller sous la barre scanner + FAB */}
+        <div style={{ height: 230 }} />
+      </div>
+
+      {/* ── Barre scanner fixe ─────────────────────────────────────── */}
+      <div style={S.scanCta}>
+        <button onClick={() => navigate('/client/nutrition/scanner')} style={S.scanCtaBtn}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
+            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
+            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
+          </svg>
+          Scanner un article
+        </button>
       </div>
 
       {/* ── FAB ────────────────────────────────────────────────────── */}
@@ -640,7 +653,6 @@ export default function NutritionClient() {
                   value={sheetSearch}
                   onChange={e => setSheetSearch(e.target.value)}
                   placeholder="Rechercher un aliment ou une recette…"
-                  autoFocus
                   style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '0.88rem', color: '#1a1a1a' }}
                 />
                 {sheetSearch && (
@@ -879,9 +891,23 @@ const S = {
     color: '#1d4ed8', cursor: 'pointer', flexShrink: 0,
     boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
   },
+  scanCta: {
+    position: 'fixed',
+    bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    left: 0, right: 0,
+    padding: '0 14px 22px',
+    background: 'transparent',
+    zIndex: 70, pointerEvents: 'none',
+  },
+  scanCtaBtn: {
+    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: '#e4f816',
+    border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',
+  },
   fab: {
     position: 'fixed',
-    bottom: 'calc(90px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    bottom: 'calc(166px + max(env(safe-area-inset-bottom, 0px), 0px))',
     right: 16, zIndex: 75,
     width: 52, height: 52, borderRadius: '50%', background: '#e4f816',
     border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
