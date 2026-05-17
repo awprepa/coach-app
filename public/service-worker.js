@@ -5,9 +5,9 @@
 //   • API Supabase GET     → stale-while-revalidate (cache immédiat + refresh fond)
 //   • API Supabase POST/PATCH/DELETE → réseau uniquement (mutations)
 
-const CACHE_SHELL   = 'aw-shell-v4'
-const CACHE_API     = 'aw-api-v4'
-const CACHE_PAGES   = 'aw-pages-v4'
+const CACHE_SHELL   = 'aw-shell-v5'
+const CACHE_API     = 'aw-api-v5'
+const CACHE_PAGES   = 'aw-pages-v5'
 
 // ── Install : précache le shell de l'app ─────────────────────────────────────
 self.addEventListener('install', event => {
@@ -86,19 +86,20 @@ self.addEventListener('fetch', event => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Répond depuis le cache immédiatement si dispo, ET lance un fetch en fond pour mettre à jour */
+/** Répond depuis le cache immédiatement si dispo, ET lance un fetch en fond pour mettre à jour.
+ *  Clé de cache = URL uniquement (ignore Authorization qui change à chaque session). */
 async function staleWhileRevalidate(request, cacheName) {
-  const cache  = await caches.open(cacheName)
-  const cached = await cache.match(request)
+  const cache    = await caches.open(cacheName)
+  const cacheKey = request.url   // URL seule — pas de headers dans la clé
+  const cached   = await cache.match(cacheKey)
 
   const networkPromise = fetch(request)
     .then(res => {
-      if (res.ok) cache.put(request, res.clone())
+      if (res.ok) cache.put(cacheKey, res.clone())
       return res
     })
     .catch(() => null)
 
-  // Si on a une réponse en cache → renvoie-la tout de suite, la MAJ se fait en fond
   return cached || networkPromise
 }
 

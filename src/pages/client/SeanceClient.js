@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQueue'
+import { saveSeanceLocally, loadSeanceLocally, formatSavedAt } from '../../utils/localDB'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -68,7 +69,9 @@ export default function SeanceClient() {
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
-  const [pendingSync, setPendingSync] = useState(0)   // nb de charges en attente de sync
+  const [pendingSync, setPendingSync] = useState(0)
+  const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
+  const [localSavedAt, setLocalSavedAt] = useState(null)
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,29 +106,77 @@ export default function SeanceClient() {
   }, [])
 
   async function fetchSeance() {
+    // Si hors ligne → charger depuis IndexedDB
+    if (!navigator.onLine) {
+      const local = await loadSeanceLocally(id)
+      if (local) { restoreFromLocal(local); setOfflineMode(true); setLocalSavedAt(local.savedAt) }
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase
       .from('seances')
       .select('*, programmes(id, nom, semaines, date_debut, created_at)')
       .eq('id', id).single()
-    if (error) { console.log(error); setLoading(false); return }
+    if (error) {
+      const local = await loadSeanceLocally(id)
+      if (local) { restoreFromLocal(local); setOfflineMode(true); setLocalSavedAt(local.savedAt) }
+      setLoading(false)
+      return
+    }
     setSeance(data)
     setEchauffement(data.echauffement || [])
     const total = data.programmes.semaines
     setSemaines(total)
-    // date_debut du programme ; fallback sur created_at si non renseigné
     const dateDebut = data.programmes.date_debut || data.programmes.created_at
-    if (dateDebut) setSemaineActuelle(getSemaineActuelle(dateDebut, total))
-    await fetchExercices(data.programmes.semaines, dateDebut)
-    await fetchRpeSeances()
-    await fetchCommentaires()
+    const semAct = dateDebut ? getSemaineActuelle(dateDebut, total) : 1
+    if (dateDebut) setSemaineActuelle(semAct)
+
+    const exData   = await fetchExercices(data.programmes.semaines, dateDebut, semAct)
+    const rpeData  = await fetchRpeSeances(semAct)
+    const commData = await fetchCommentaires(semAct)
+
+    // Persister tout en local pour le mode offline
+    if (exData) {
+      await saveSeanceLocally(id, {
+        seance:          data,
+        echauffement:    data.echauffement || [],
+        semaines:        total,
+        semaineActuelle: semAct,
+        exercices:       exData.exercices,
+        charges:         exData.charges,
+        tracking:        exData.tracking,
+        warmupTracking:  exData.warmupTracking,
+        blocsTermines:   [...(exData.blocsTermines || [])],
+        rpeSeances:      rpeData || {},
+        commentaires:    commData || [],
+      })
+    }
     setLoading(false)
   }
 
-  async function fetchExercices(totalSem, dateDebut) {
+  function restoreFromLocal(local) {
+    setSeance(local.seance)
+    setEchauffement(local.echauffement || [])
+    setSemaines(local.semaines)
+    setSemaineActuelle(local.semaineActuelle)
+    setExercices(local.exercices || [])
+    setCharges(local.charges || {})
+    setTracking(local.tracking || {})
+    setWarmupTracking(local.warmupTracking || {})
+    setRpeSeances(local.rpeSeances || {})
+    setCommentaires(local.commentaires || [])
+    setBlocsTermines(new Set(local.blocsTermines || []))
+    // Restaurer le commentaire de la semaine actuelle
+    const cur = (local.commentaires || []).find(c => c.semaine === local.semaineActuelle)
+    if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
+  }
+
+  async function fetchExercices(totalSem, dateDebut, semAct) {
     const { data, error } = await supabase
       .from('exercices').select('*, charges(*), bibliotheque_exercices(image_url)')
       .eq('seance_id', id).order('ordre', { ascending: true })
-    if (error) { console.log(error); return }
+    if (error) { console.log(error); return null }
     setExercices(data)
     const map = {}
     data.forEach(ex => {
@@ -134,7 +185,7 @@ export default function SeanceClient() {
     })
     setCharges(map)
 
-    const sem = dateDebut ? getSemaineActuelle(dateDebut, totalSem || 4) : 1
+    const sem = semAct ?? (dateDebut ? getSemaineActuelle(dateDebut, totalSem || 4) : 1)
     const exIds = data.map(e => e.id)
     const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
     const rows = allRows || []
@@ -164,7 +215,6 @@ export default function SeanceClient() {
     })
     setTracking(t)
 
-    // Charger les séries d'échauffement depuis les rows DB (serie >= 1000)
     const wMap = {}
     data.forEach(ex => {
       wMap[ex.id] = (rows || [])
@@ -186,15 +236,19 @@ export default function SeanceClient() {
       if (allDone) done.add(letter)
     })
     setBlocsTermines(done)
+
+    return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done }
   }
 
-  async function fetchCommentaires() {
+  async function fetchCommentaires(semAct) {
     const { data } = await supabase
       .from('seance_commentaires').select('*').eq('seance_id', id).order('semaine', { ascending: false })
-    if (!data) return
+    if (!data) return null
     setCommentaires(data)
-    const cur = data.find(c => c.semaine === semaineActuelle)
+    const sem = semAct ?? semaineActuelle
+    const cur = data.find(c => c.semaine === sem)
     if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
+    return data
   }
 
   async function toggleNonEffectuee() {
@@ -224,10 +278,11 @@ export default function SeanceClient() {
 
   async function fetchRpeSeances() {
     const { data, error } = await supabase.from('rpe_seances').select('*').eq('seance_id', id)
-    if (error) { console.log(error); return }
+    if (error) { console.log(error); return null }
     const map = {}
     data.forEach(r => { map[r.semaine] = { id: r.id, rpe_cible: r.rpe_cible, rpe_reel: r.rpe_reel } })
     setRpeSeances(map)
+    return map
   }
 
   async function lancerTimer(secs) {
@@ -770,9 +825,9 @@ export default function SeanceClient() {
   return (
     <div style={S.page}>
       {/* Bandeau hors ligne */}
-      {!navigator.onLine && (
+      {offlineMode && (
         <div style={{ background: '#f59e0b', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', position: 'sticky', top: 0, zIndex: 200 }}>
-          ✈️ Mode hors ligne — tes charges sont sauvegardées localement
+          ✈️ Mode hors ligne · données locales {localSavedAt ? `(${formatSavedAt(localSavedAt)})` : ''}
         </div>
       )}
       {/* Badge charges en attente (visible si online + items en queue) */}
