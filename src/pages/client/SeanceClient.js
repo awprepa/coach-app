@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { useTimer } from '../../context/TimerContext'
@@ -8,8 +7,6 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQueue'
 import { saveSeanceLocally, loadSeanceLocally, formatSavedAt } from '../../utils/localDB'
-import MuscleMap from '../../components/MuscleMap'
-import { findMuscles, MUSCLES } from '../../data/muscleData'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -75,7 +72,6 @@ export default function SeanceClient() {
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
   const [localSavedAt, setLocalSavedAt] = useState(null)
-  const [muscleSheet, setMuscleSheet] = useState(null) // null ou { nom, primary, secondary }
   const blocRefs = useRef({})
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,7 +174,7 @@ export default function SeanceClient() {
 
   async function fetchExercices(totalSem, dateDebut, semAct) {
     const { data, error } = await supabase
-      .from('exercices').select('*, charges(*), bibliotheque_exercices(image_url, muscles_primaires, muscles_secondaires, description)')
+      .from('exercices').select('*, charges(*), bibliotheque_exercices(image_url)')
       .eq('seance_id', id).order('ordre', { ascending: true })
     if (error) { console.log(error); return null }
     setExercices(data)
@@ -407,32 +403,6 @@ export default function SeanceClient() {
 
   function flashSaved() { setSaved(true); setTimeout(() => setSaved(false), 1500) }
 
-  async function openMuscleSheet(ex) {
-    // Cherche d'abord dans bibliotheque_exercices si muscles stockés
-    let primary = []
-    let secondary = []
-    if (ex.bibliotheque_exercices) {
-      const biblio = ex.bibliotheque_exercices
-      if (biblio.muscles_primaires && Array.isArray(biblio.muscles_primaires) && biblio.muscles_primaires.length > 0) {
-        primary = biblio.muscles_primaires
-        secondary = biblio.muscles_secondaires || []
-      } else if (biblio.description) {
-        try {
-          const parsed = JSON.parse(biblio.description)
-          if (parsed && parsed.p) { primary = parsed.p || []; secondary = parsed.s || [] }
-        } catch (_) {}
-      }
-    }
-    // Fallback : findMuscles
-    if (primary.length === 0) {
-      const result = findMuscles(ex.nom)
-      if (!result) return // pas de résultat → ne rien faire
-      primary = result.primary
-      secondary = result.secondary
-    }
-    setMuscleSheet({ nom: ex.nom, primary, secondary })
-  }
-
   async function toggleHisto(exId) {
     const isOpen = histoOpen[exId]
     setHistoOpen(prev => ({ ...prev, [exId]: !isOpen }))
@@ -608,11 +578,6 @@ export default function SeanceClient() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={S.exCode}>{ex.code}</span>
             <span style={S.exNom}>{ex.nom}</span>
-            <button
-              onClick={() => openMuscleSheet(ex)}
-              style={{ background: 'none', border: 'none', fontSize: '0.85rem', opacity: 0.6, padding: '0 4px', cursor: 'pointer' }}
-              title="Voir les muscles"
-            >💪</button>
           </div>
           <span style={S.semBadge}>S{semaineActuelle}</span>
         </div>
@@ -1192,66 +1157,6 @@ export default function SeanceClient() {
         </div>
       </div>
       <ClientBottomNav />
-
-      {/* Bottom sheet muscles */}
-      {muscleSheet && createPortal(
-        <div
-          onClick={() => setMuscleSheet(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '1.25rem 1.25rem 2rem', width: '100%', maxWidth: '480px', maxHeight: '80vh', overflowY: 'auto' }}
-          >
-            {/* Header sheet */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span style={{ fontWeight: '800', fontSize: '1rem', color: '#333333' }}>{muscleSheet.nom}</span>
-              <button onClick={() => setMuscleSheet(null)} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: '#9ca3af', padding: '0.25rem' }}>✕</button>
-            </div>
-
-            {/* MuscleMap */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-              <MuscleMap
-                primary={muscleSheet.primary}
-                secondary={muscleSheet.secondary}
-                interactive={false}
-                size={170}
-              />
-            </div>
-
-            {/* Chips muscles */}
-            {(muscleSheet.primary.length > 0 || muscleSheet.secondary.length > 0) && (
-              <div>
-                {muscleSheet.primary.length > 0 && (
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <p style={{ fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' }}>Muscles primaires</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                      {muscleSheet.primary.map(k => (
-                        <span key={k} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.15rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' }}>
-                          {MUSCLES[k]?.label || k}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {muscleSheet.secondary.length > 0 && (
-                  <div>
-                    <p style={{ fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' }}>Muscles secondaires</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                      {muscleSheet.secondary.map(k => (
-                        <span key={k} style={{ background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', padding: '0.15rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' }}>
-                          {MUSCLES[k]?.label || k}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   )
 }
