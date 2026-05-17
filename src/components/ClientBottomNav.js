@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
@@ -119,7 +120,7 @@ export default function ClientBottomNav() {
     ...(isPrepaPhysique ? [{ label: 'GPS', Icon: IconGPS, active: isGPS, to: '/client/gps' }] : []),
   ]
 
-  return (
+  return createPortal(
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
       background: 'white',
@@ -165,6 +166,7 @@ export default function ClientBottomNav() {
       </div>
       {/* Zone safe-area iPhone (barre Apple) */}
       <div style={{ height: 'env(safe-area-inset-bottom)', minHeight: 16, background: 'white' }} />
-    </div>
+    </div>,
+    document.body
   )
 }
