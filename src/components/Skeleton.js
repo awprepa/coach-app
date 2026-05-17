@@ -80,4 +80,70 @@ export function NutritionSkeleton() {
   )
 }
 
+// Spinner générique — remplace les "Chargement..." texte brut
+export function PageLoading({ dark = false }) {
+  const bg   = dark ? '#1a1a1a' : '#efefef'
+  const ring = dark ? 'rgba(255,255,255,0.15)' : '#e5e7eb'
+  const top  = dark ? 'rgba(255,255,255,0.7)'  : '#1a1a1a'
+  return (
+    <div style={{
+      minHeight: '100vh', background: bg,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: '50%',
+        border: `3px solid ${ring}`, borderTopColor: top,
+        animation: 'aw-spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes aw-spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
+// Skeleton pour la page Accueil client
+export function AccueilSkeleton() {
+  const ref = useRef(false)
+  if (!ref.current) { injectShimmer(); ref.current = true }
+  return (
+    <div style={{ minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+      {/* Header */}
+      <div style={{ background: 'linear-gradient(135deg,#333 0%,#1f2937 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Skeleton width={100} height={22} borderRadius={6} style={{ background: 'rgba(255,255,255,0.12)' }} />
+        <Skeleton width={38} height={38} borderRadius={19} style={{ background: 'rgba(255,255,255,0.12)' }} />
+      </div>
+      <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Titre */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Skeleton width={80}  height={13} borderRadius={6} />
+          <Skeleton width={160} height={28} borderRadius={8} />
+        </div>
+        {/* Carte prochaine séance */}
+        <div style={{ background: '#1f2937', borderRadius: 16, padding: '1.25rem 1.5rem', borderLeft: '4px solid rgba(228,248,22,0.3)' }}>
+          <Skeleton width={100} height={11} borderRadius={4} style={{ background: 'rgba(255,255,255,0.08)', marginBottom: 10 }} />
+          <Skeleton width={180} height={20} borderRadius={6} style={{ background: 'rgba(255,255,255,0.12)', marginBottom: 8 }} />
+          <Skeleton width={120} height={12} borderRadius={4} style={{ background: 'rgba(255,255,255,0.08)' }} />
+        </div>
+        {/* Section cycles */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Skeleton width={70} height={12} borderRadius={4} />
+            <Skeleton width={40} height={12} borderRadius={4} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[1,2].map(i => (
+              <div key={i} style={{ background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <Skeleton width={140} height={15} borderRadius={5} />
+                  <Skeleton width={80}  height={11} borderRadius={4} />
+                </div>
+                <Skeleton width={16} height={24} borderRadius={4} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default Skeleton

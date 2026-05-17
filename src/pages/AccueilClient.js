@@ -6,6 +6,7 @@ import ClientBottomNav from '../components/ClientBottomNav'
 import ClientProfileMenu from '../components/ClientProfileMenu'
 import ClientOnboarding from '../components/ClientOnboarding'
 import usePageFade from '../hooks/usePageFade'
+import { AccueilSkeleton } from '../components/Skeleton'
 import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
@@ -314,7 +315,7 @@ export default function AccueilClient() {
     navigate('/login')
   }
 
-  if (loading) return <div style={styles.centered}><p style={{ color: '#888' }}>Chargement...</p></div>
+  if (loading) return <AccueilSkeleton />
   if (!client)  return <div style={styles.centered}><p style={{ color: '#888' }}>Aucun profil trouvé.</p></div>
 
   const initiales = `${client.prenom?.[0] || ''}${client.nom?.[0] || ''}`.toUpperCase()

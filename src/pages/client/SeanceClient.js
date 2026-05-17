@@ -4,6 +4,7 @@ import { supabase } from '../../supabase'
 import { useTimer } from '../../context/TimerContext'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell as RechartsCell, LineChart, Line, Legend } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import { PageLoading } from '../../components/Skeleton'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -373,7 +374,7 @@ export default function SeanceClient() {
     }
   }
 
-  if (loading) return <div style={S.centered}><p style={{ color: '#888' }}>Chargement...</p></div>
+  if (loading) return <PageLoading />
   if (!seance) return <div style={S.centered}><p style={{ color: '#888' }}>Séance introuvable.</p></div>
 
   const cols = Array.from({ length: semaines }, (_, i) => i + 1)

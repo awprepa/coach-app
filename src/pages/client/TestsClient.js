@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import { PageLoading } from '../../components/Skeleton'
 
 export default function TestsClient() {
   const navigate = useNavigate()
@@ -78,7 +79,7 @@ export default function TestsClient() {
     }))
   }
 
-  if (loading) return <div style={S.centered}><p style={{ color: '#888' }}>Chargement...</p></div>
+  if (loading) return <PageLoading />
 
   const currentResults = selectedType ? (resultats[selectedType.id] || []) : []
   const graphData = currentResults.map(r => ({ date: r.date, valeur: Number(r.valeur) }))

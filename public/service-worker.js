@@ -1,80 +1,138 @@
-const CACHE_NAME = 'awprepa-v2'
-const STATIC_URLS = ['/']
+// ── AWprepa Service Worker v4 ─────────────────────────────────────────────────
+// Stratégies :
+//   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
+//   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
+//   • API Supabase GET     → stale-while-revalidate (cache immédiat + refresh fond)
+//   • API Supabase POST/PATCH/DELETE → réseau uniquement (mutations)
 
+const CACHE_SHELL   = 'aw-shell-v4'
+const CACHE_API     = 'aw-api-v4'
+const CACHE_PAGES   = 'aw-pages-v4'
+
+// ── Install : précache le shell de l'app ─────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_URLS))
+    caches.open(CACHE_SHELL).then(async cache => {
+      // Récupère la page principale et capture tous les assets (JS, CSS) qu'elle référence
+      const res  = await fetch('/', { credentials: 'same-origin' })
+      const html = await res.clone().text()
+      await cache.put('/', res)
+
+      // Extrait les URLs de scripts et styles depuis le HTML
+      const assetUrls = []
+      const re = /(?:src|href)="(\/static\/[^"]+)"/g
+      let m
+      while ((m = re.exec(html)) !== null) assetUrls.push(m[1])
+
+      // Met en cache chaque asset en parallèle (erreurs silencieuses)
+      await Promise.allSettled(assetUrls.map(url => cache.add(url)))
+    })
   )
   self.skipWaiting()
 })
 
+// ── Activate : purge les anciens caches ──────────────────────────────────────
 self.addEventListener('activate', event => {
+  const KEEP = [CACHE_SHELL, CACHE_API, CACHE_PAGES]
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k)))
     )
   )
   self.clients.claim()
 })
 
+// ── Fetch ─────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const { request } = event
-  if (request.method !== 'GET') return
+  if (request.method !== 'GET') return   // mutations → réseau direct, pas de SW
 
   const url = new URL(request.url)
 
-  // Supabase API → network-first, fallback cache
+  // 1. API Supabase → stale-while-revalidate
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const clone = response.clone()
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clone))
-          }
-          return response
-        })
-        .catch(() => caches.match(request))
-    )
+    event.respondWith(staleWhileRevalidate(request, CACHE_API))
     return
   }
 
-  // Assets statiques → cache-first
-  if (url.origin === self.location.origin) {
+  // 2. Assets statiques (/static/js, /static/css, images, manifests) → cache-first
+  if (
+    url.origin === self.location.origin &&
+    (url.pathname.startsWith('/static/') ||
+     url.pathname.match(/\.(png|jpg|jpeg|svg|ico|webp|woff2?|ttf)$/))
+  ) {
+    event.respondWith(cacheFirst(request, CACHE_SHELL))
+    return
+  }
+
+  // 3. Navigation SPA (HTML) → network-first, fallback vers / (offline shell)
+  if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match(request).then(cached => {
-        const networkFetch = fetch(request).then(response => {
-          if (response.ok) {
-            const clone = response.clone()
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clone))
+      fetch(request)
+        .then(res => {
+          if (res.ok) {
+            const clone = res.clone()
+            caches.open(CACHE_PAGES).then(c => c.put(request, clone))
           }
-          return response
+          return res
         })
-        return cached || networkFetch
-      })
+        .catch(() =>
+          caches.match(request).then(cached => cached || caches.match('/'))
+        )
     )
+    return
   }
 })
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Répond depuis le cache immédiatement si dispo, ET lance un fetch en fond pour mettre à jour */
+async function staleWhileRevalidate(request, cacheName) {
+  const cache  = await caches.open(cacheName)
+  const cached = await cache.match(request)
+
+  const networkPromise = fetch(request)
+    .then(res => {
+      if (res.ok) cache.put(request, res.clone())
+      return res
+    })
+    .catch(() => null)
+
+  // Si on a une réponse en cache → renvoie-la tout de suite, la MAJ se fait en fond
+  return cached || networkPromise
+}
+
+/** Renvoie depuis le cache ; en fond met à jour pour la prochaine fois */
+async function cacheFirst(request, cacheName) {
+  const cache  = await caches.open(cacheName)
+  const cached = await cache.match(request)
+  if (cached) return cached
+
+  const res = await fetch(request)
+  if (res.ok) cache.put(request, res.clone())
+  return res
+}
+
+// ── Push notifications ────────────────────────────────────────────────────────
 self.addEventListener('push', event => {
   const data = event.data?.json() || {}
   event.waitUntil(
-    self.registration.showNotification(data.titre || 'AWPrepa', {
-      body: data.corps || '',
-      icon: '/logo192.png',
+    self.registration.showNotification(data.titre || 'AWprepa', {
+      body:  data.corps || '',
+      icon:  '/logo192.png',
       badge: '/logo192.png',
-      data: { lien: data.lien || '/' },
+      data:  { lien: data.lien || '/' },
     })
   )
 })
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  const lien = event.notification.data?.lien || '/'
+  const lien    = event.notification.data?.lien || '/'
   const fullUrl = new URL(lien, self.location.origin).href
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.focus()
           if ('navigate' in client) client.navigate(fullUrl)

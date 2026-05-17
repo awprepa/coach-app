@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import { PageLoading } from '../../components/Skeleton'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -35,9 +36,6 @@ export default function MonProgrammeClient() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 110 }}>
-      <p style={{ color: '#9ca3af', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Chargement...</p>
-      <ClientBottomNav />
-    </div>
+    <PageLoading />
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import { PageLoading } from '../../components/Skeleton'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -59,11 +60,7 @@ export default function ProgrammeClient() {
     setLoading(false)
   }
 
-  if (loading) return (
-    <div style={styles.centered}>
-      <p style={{ color: '#888' }}>Chargement...</p>
-    </div>
-  )
+  if (loading) return <PageLoading />
 
   if (!programme) return (
     <div style={styles.centered}>
