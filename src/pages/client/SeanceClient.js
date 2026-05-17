@@ -61,6 +61,8 @@ export default function SeanceClient() {
   const [pendingUnvalidate, setPendingUnvalidate] = useState(null) // { exId, serieIdx }
   const { timerSecs, timerTotal, isRunning: timerRunning, isDone: timerDone, startTimer, stopTimer } = useTimer()
   const [histoOpen, setHistoOpen] = useState({})
+  const [histoTracking, setHistoTracking] = useState({}) // { exId: { semaine: [{ poids, reps_reelles, valide, serie }] } }
+  const [histoLoading, setHistoLoading] = useState({})
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
@@ -315,6 +317,30 @@ export default function SeanceClient() {
 
   function flashSaved() { setSaved(true); setTimeout(() => setSaved(false), 1500) }
 
+  async function toggleHisto(exId) {
+    const isOpen = histoOpen[exId]
+    setHistoOpen(prev => ({ ...prev, [exId]: !isOpen }))
+    // Charger les données réelles si pas encore chargées
+    if (!isOpen && !histoTracking[exId]) {
+      setHistoLoading(prev => ({ ...prev, [exId]: true }))
+      const { data } = await supabase
+        .from('serie_tracking')
+        .select('*')
+        .eq('exercice_id', exId)
+        .eq('is_done', true)
+        .lt('serie', 1000) // exclure les séries d'échauffement
+        .order('semaine').order('serie')
+      // Grouper par semaine
+      const grouped = {}
+      ;(data || []).forEach(r => {
+        if (!grouped[r.semaine]) grouped[r.semaine] = []
+        grouped[r.semaine].push(r)
+      })
+      setHistoTracking(prev => ({ ...prev, [exId]: grouped }))
+      setHistoLoading(prev => ({ ...prev, [exId]: false }))
+    }
+  }
+
   async function updateCharge(exId, semaine, field, valeur) {
     // Normaliser : "-", "--", "—", "" → traiter comme vide (ne pas sauvegarder)
     const cleanVal = (valeur || '').trim().replace(/^[-—]+$/, '')
@@ -418,10 +444,7 @@ export default function SeanceClient() {
   function renderExContent(ex, showRecup, showSeries = true, groupLetter = null, groupItems = null) {
     const tempsMode = isTemps(ex.repetitions)
     const seriesList = tracking[ex.id] || []
-    const histoData = Object.entries(charges[ex.id] || {})
-      .filter(([, v]) => v.charge && parseFloat(v.charge) > 0)
-      .map(([sem, v]) => ({ sem: `S${sem}`, kg: parseFloat(v.charge), isCur: parseInt(sem) === semaineActuelle }))
-      .sort((a, b) => parseInt(a.sem.slice(1)) - parseInt(b.sem.slice(1)))
+    const hasAnyCharge = Object.values(charges[ex.id] || {}).some(v => v.charge && parseFloat(v.charge) > 0)
     const isHistoOpen = histoOpen[ex.id]
 
     return (
@@ -473,31 +496,64 @@ export default function SeanceClient() {
           <div style={S.seriesTracker}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={S.seriesTrackerLabel}>SÉRIES · SEMAINE {semaineActuelle}</span>
-              {histoData.length >= 1 && (
-                <button onClick={() => setHistoOpen(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
-                  style={S.histoBtn}>
-                  📈 {isHistoOpen ? 'Masquer' : 'Voir historique'}
-                </button>
-              )}
+              <button onClick={() => toggleHisto(ex.id)} style={S.histoBtn}>
+                📋 {isHistoOpen ? 'Masquer' : 'Historique'}
+              </button>
             </div>
 
-            {/* Historique charges (accordéon) */}
-            {isHistoOpen && histoData.length >= 1 && (
-              <div style={{ marginBottom: '0.75rem', background: 'white', borderRadius: 10, padding: '0.6rem', border: '1px solid #f3f4f6' }}>
-                <ResponsiveContainer width="100%" height={100}>
-                  <BarChart data={histoData} barSize={20} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                    <XAxis dataKey="sem" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '0.78rem' }}
-                      formatter={v => [`${v} kg`, '']} labelStyle={{ fontWeight: '700', color: '#333' }} />
-                    <Bar dataKey="kg" radius={[4, 4, 0, 0]}>
-                      {histoData.map((entry, idx) => (
-                        <RechartsCell key={idx} fill={entry.isCur ? '#333333' : '#e5e7eb'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+            {/* Historique performances réelles (accordéon) */}
+            {isHistoOpen && (
+              <div style={{ marginBottom: '0.75rem', background: 'white', borderRadius: 10, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                {histoLoading[ex.id] ? (
+                  <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Chargement…</p>
+                ) : (() => {
+                  const grouped = histoTracking[ex.id] || {}
+                  const semsPrev = Object.keys(grouped)
+                    .map(Number)
+                    .filter(s => s < semaineActuelle)
+                    .sort((a, b) => b - a) // plus récente en premier
+                  if (!semsPrev.length) return (
+                    <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Aucune donnée enregistrée pour les semaines précédentes.</p>
+                  )
+                  return semsPrev.map((sem, si) => {
+                    const rows = grouped[sem] || []
+                    // résumé : poids min-max et total reps
+                    const poids = rows.map(r => parseFloat(r.poids)).filter(Boolean)
+                    const reps  = rows.map(r => parseInt(r.reps_reelles) || 0)
+                    const poidsLabel = poids.length === 0 ? '—'
+                      : poids.every(p => p === poids[0]) ? `${poids[0]} kg`
+                      : `${Math.min(...poids)}–${Math.max(...poids)} kg`
+                    return (
+                      <div key={sem} style={{ borderBottom: si < semsPrev.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                        {/* En-tête semaine */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.75rem', background: sem === semaineActuelle - 1 ? '#fffef5' : 'white' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ background: sem === semaineActuelle - 1 ? '#333333' : '#f3f4f6', color: sem === semaineActuelle - 1 ? '#e4f816' : '#6b7280', borderRadius: 6, padding: '0.1rem 0.45rem', fontSize: '0.68rem', fontWeight: '900' }}>S{sem}</span>
+                            {sem === semaineActuelle - 1 && <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600 }}>sem. précédente</span>}
+                          </div>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#374151' }}>{poidsLabel}</span>
+                        </div>
+                        {/* Détail séries */}
+                        <div style={{ padding: '0 0.75rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          {rows.map((r, ri) => (
+                            <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#d1d5db', width: 16, textAlign: 'center', flexShrink: 0 }}>{r.serie}</span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1a1a1a', minWidth: 52 }}>
+                                {r.poids ? `${r.poids} kg` : <span style={{ color: '#d1d5db' }}>— kg</span>}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
+                                {r.reps_reelles ? `× ${r.reps_reelles} ${tempsMode ? 's' : 'reps'}` : ''}
+                              </span>
+                              <span style={{ marginLeft: 'auto', fontSize: '0.72rem' }}>
+                                {r.valide ? '✓' : '⚠'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             )}
 
