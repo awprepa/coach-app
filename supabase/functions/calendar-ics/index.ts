@@ -27,6 +27,20 @@ function escapeICS(str: string): string {
   return (str || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
+const EVENT_COLORS: Record<string, string> = {
+  seance:        "#333333",  // Noir AWprepa
+  entrainement:  "#f97316",  // Orange
+  match:         "#d97706",  // Ambre (le jaune #e4f816 serait illisible sur iOS)
+  combat:        "#dc2626",  // Rouge
+  competition:   "#7c3aed",  // Violet
+  repos:         "#9ca3af",  // Gris
+  autre:         "#0f766e",  // Teal
+};
+
+function eventColor(type: string): string {
+  return EVENT_COLORS[type] ?? "#333333";
+}
+
 function generateICS(events: any[], clientPrenom: string): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
@@ -47,6 +61,7 @@ function generateICS(events: any[], clientPrenom: string): string {
       `DTSTART;VALUE=DATE:${formatICSDate(ev.date)}`,
       `DTEND;VALUE=DATE:${nextDay(ev.date)}`,
       `SUMMARY:${escapeICS(ev.titre)}`,
+      `COLOR:${eventColor(ev.type)}`,
       `CATEGORIES:${escapeICS(ev.type || "seance")}`,
     ];
     if (ev.description) evLines.push(`DESCRIPTION:${escapeICS(ev.description)}`);
