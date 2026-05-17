@@ -75,6 +75,10 @@ export default function ProfilNutrition() {
 
   const [existingGoals, setExistingGoals] = useState(null)
   const [physProfile,   setPhysProfile]   = useState(null)
+  const [activeTab,     setActiveTab]     = useState('objectifs')
+  const [scans,         setScans]         = useState([])
+  const [scansLoading,  setScansLoading]  = useState(false)
+  const [scanFilter,    setScanFilter]    = useState('all')
 
   useEffect(() => {
     async function load() {
@@ -171,6 +175,25 @@ export default function ProfilNutrition() {
   }
 
   function openWizard() { setWizardStep(0); setWizardOpen(true) }
+
+  async function loadScans(cid) {
+    setScansLoading(true)
+    const { data } = await supabase
+      .from('nutrition_scan_history')
+      .select('*')
+      .eq('client_id', cid)
+      .order('scanned_at', { ascending: false })
+      .limit(100)
+    setScans(data || [])
+    setScansLoading(false)
+  }
+
+  function handleTabChange(tab) {
+    setActiveTab(tab)
+    if (tab === 'historique' && scans.length === 0 && client) {
+      loadScans(client.id)
+    }
+  }
 
   // ── Loading ───────────────────────────────────────────────────────────────────
   if (loading) {
@@ -385,104 +408,215 @@ export default function ProfilNutrition() {
           <p style={{ fontWeight: 800, fontSize: '1.05rem', color: 'white', margin: 0, lineHeight: 1.2 }}>Mon profil nutritionnel</p>
           <p style={{ fontSize: '0.67rem', color: 'rgba(255,255,255,0.4)', margin: 0, fontWeight: 600 }}>Objectifs caloriques & macros</p>
         </div>
-        <button onClick={() => navigate('/client/nutrition/scans')}
-          style={{ ...S.iconBtn, background: 'rgba(228,248,22,0.12)', border: '1px solid rgba(228,248,22,0.25)' }}
-          aria-label="Historique scans">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
-            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
-            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
-          </svg>
+        <div style={{ width: 34 }} />
+      </div>
+
+      {/* Tab bar */}
+      <div style={S.tabBar}>
+        <button onClick={() => handleTabChange('objectifs')} style={activeTab === 'objectifs' ? S.tabActive : S.tab}>
+          🎯 Objectifs
+        </button>
+        <button onClick={() => handleTabChange('historique')} style={activeTab === 'historique' ? S.tabActive : S.tab}>
+          📦 Mes scans
         </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {saved && (
-          <div style={{ background: '#dcfce7', borderRadius: 12, padding: '12px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.9rem' }}>
-            ✅ Objectifs enregistrés avec succès !
-          </div>
-        )}
-
-        {existingGoals ? (
+        {/* ── Onglet Objectifs ── */}
+        {activeTab === 'objectifs' && (
           <>
-            <div style={S.goalsCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div>
-                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
-                  {physProfile && (
-                    <p style={{ color: '#e4f816', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
-                      {OBJECTIFS.find(o => o.key === physProfile.objectif)?.emoji}{' '}
-                      {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
-                    </p>
-                  )}
-                </div>
-                <button onClick={openWizard} style={S.recalcBtn}>Recalculer</button>
+            {saved && (
+              <div style={{ background: '#dcfce7', borderRadius: 12, padding: '12px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.9rem' }}>
+                ✅ Objectifs enregistrés avec succès !
               </div>
-              <div style={{ textAlign: 'center', padding: '12px 0 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 14 }}>
-                <p style={{ fontSize: '2.9rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                  {(existingGoals.kcal_target || 0).toLocaleString('fr-FR')}
-                </p>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                <MacroCell label="Protéines" val={`${existingGoals.prot_g || '–'}g`}  color="#60a5fa" />
-                <MacroCell label="Glucides"  val={`${existingGoals.carbs_g || '–'}g`} color="#fbbf24" />
-                <MacroCell label="Lipides"   val={`${existingGoals.fat_g || '–'}g`}   color="#f87171" />
-              </div>
-              {existingGoals.hydration_ml != null && (
-                <div style={{ background: 'rgba(96,165,250,0.1)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '1.1rem' }}>💧</span>
-                  <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', fontWeight: 700 }}>
-                    {(existingGoals.hydration_ml / 1000).toFixed(1)} L d'eau / jour
-                  </span>
-                </div>
-              )}
-            </div>
+            )}
 
-            {physProfile && (
-              <div style={S.card}>
-                <h3 style={{ fontWeight: 700, color: '#1a1a1a', fontSize: '0.95rem', margin: '0 0 12px' }}>📊 Profil physique utilisé</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {physProfile.sexe    && <PhysRow icon="🧬" label="Sexe"     val={physProfile.sexe === 'homme' ? 'Homme' : 'Femme'} />}
-                  {physProfile.age     && <PhysRow icon="🗓" label="Âge"      val={`${physProfile.age} ans`} />}
-                  {physProfile.taille  && <PhysRow icon="📏" label="Taille"   val={`${physProfile.taille} cm`} />}
-                  {physProfile.poids   && <PhysRow icon="⚖️" label="Poids"    val={`${physProfile.poids} kg`} />}
-                  {physProfile.activite && (
-                    <div style={{ gridColumn: '1/-1' }}>
-                      <PhysRow icon="🏃" label="Activité" val={ACTIVITES.find(a => a.key === physProfile.activite)?.label} />
+            {existingGoals ? (
+              <>
+                <div style={S.goalsCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                    <div>
+                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
+                      {physProfile && (
+                        <p style={{ color: '#e4f816', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
+                          {OBJECTIFS.find(o => o.key === physProfile.objectif)?.emoji}{' '}
+                          {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
+                        </p>
+                      )}
+                    </div>
+                    <button onClick={openWizard} style={S.recalcBtn}>Recalculer</button>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '12px 0 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 14 }}>
+                    <p style={{ fontSize: '2.9rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
+                      {(existingGoals.kcal_target || 0).toLocaleString('fr-FR')}
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                    <MacroCell label="Protéines" val={`${existingGoals.prot_g || '–'}g`}  color="#60a5fa" />
+                    <MacroCell label="Glucides"  val={`${existingGoals.carbs_g || '–'}g`} color="#fbbf24" />
+                    <MacroCell label="Lipides"   val={`${existingGoals.fat_g || '–'}g`}   color="#f87171" />
+                  </div>
+                  {existingGoals.hydration_ml != null && (
+                    <div style={{ background: 'rgba(96,165,250,0.1)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '1.1rem' }}>💧</span>
+                      <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', fontWeight: 700 }}>
+                        {(existingGoals.hydration_ml / 1000).toFixed(1)} L d'eau / jour
+                      </span>
                     </div>
                   )}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
+
+                {physProfile && (
+                  <div style={S.card}>
+                    <h3 style={{ fontWeight: 700, color: '#1a1a1a', fontSize: '0.95rem', margin: '0 0 12px' }}>📊 Profil physique utilisé</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {physProfile.sexe    && <PhysRow icon="🧬" label="Sexe"     val={physProfile.sexe === 'homme' ? 'Homme' : 'Femme'} />}
+                      {physProfile.age     && <PhysRow icon="🗓" label="Âge"      val={`${physProfile.age} ans`} />}
+                      {physProfile.taille  && <PhysRow icon="📏" label="Taille"   val={`${physProfile.taille} cm`} />}
+                      {physProfile.poids   && <PhysRow icon="⚖️" label="Poids"    val={`${physProfile.poids} kg`} />}
+                      {physProfile.activite && (
+                        <div style={{ gridColumn: '1/-1' }}>
+                          <PhysRow icon="🏃" label="Activité" val={ACTIVITES.find(a => a.key === physProfile.activite)?.label} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
+                      <SourceBadge label="Mifflin-St Jeor 2005" dark />
+                      <SourceBadge label="Morton et al. 2018" dark />
+                      <SourceBadge label="ANSES 2019" dark />
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={S.emptyCard}>
+                <p style={{ fontSize: '3rem', margin: '0 0 12px' }}>🎯</p>
+                <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1.1rem', margin: '0 0 10px', letterSpacing: '-0.02em' }}>Définis tes objectifs nutritionnels</h3>
+                <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.65, margin: '0 0 18px', maxWidth: 280, textAlign: 'center' }}>
+                  En 3 questions, un algorithme basé sur des études scientifiques calcule tes besoins quotidiens en kcal, protéines, glucides, lipides et hydratation.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 }}>
                   <SourceBadge label="Mifflin-St Jeor 2005" dark />
                   <SourceBadge label="Morton et al. 2018" dark />
                   <SourceBadge label="ANSES 2019" dark />
+                  <SourceBadge label="EFSA 2010" dark />
                 </div>
+                <button onClick={openWizard} style={S.ctaBtn}>Calculer mes objectifs →</button>
               </div>
             )}
           </>
-        ) : (
-          <div style={S.emptyCard}>
-            <p style={{ fontSize: '3rem', margin: '0 0 12px' }}>🎯</p>
-            <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1.1rem', margin: '0 0 10px', letterSpacing: '-0.02em' }}>Définis tes objectifs nutritionnels</h3>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.65, margin: '0 0 18px', maxWidth: 280, textAlign: 'center' }}>
-              En 3 questions, un algorithme basé sur des études scientifiques calcule tes besoins quotidiens en kcal, protéines, glucides, lipides et hydratation.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 }}>
-              <SourceBadge label="Mifflin-St Jeor 2005" dark />
-              <SourceBadge label="Morton et al. 2018" dark />
-              <SourceBadge label="ANSES 2019" dark />
-              <SourceBadge label="EFSA 2010" dark />
-            </div>
-            <button onClick={openWizard} style={S.ctaBtn}>Calculer mes objectifs →</button>
-          </div>
+        )}
+
+        {/* ── Onglet Historique scans ── */}
+        {activeTab === 'historique' && (
+          <>
+            {scansLoading ? (
+              <p style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>Chargement…</p>
+            ) : scans.length === 0 ? (
+              <div style={S.emptyCard}>
+                <p style={{ fontSize: '3rem', margin: '0 0 12px' }}>📦</p>
+                <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1rem', margin: '0 0 8px' }}>Aucun scan pour l'instant</h3>
+                <p style={{ color: '#6b7280', fontSize: '0.83rem', textAlign: 'center', lineHeight: 1.5 }}>
+                  Scanne le code-barres d'un produit depuis l'onglet Nutrition pour l'ajouter ici.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <StatCard label="Scans" val={scans.length} />
+                  <StatCard label="Note moy." val={(() => {
+                    const gradeVal = { A: 1, B: 2, C: 3, D: 4, E: 5 }
+                    const avg = scans.reduce((acc, s) => acc + (gradeVal[s.quality_grade] || 3), 0) / scans.length
+                    return ['A','A','B','C','D','E'][Math.round(avg)] || 'B'
+                  })()} color={GRADE_COLORS[(() => {
+                    const gradeVal = { A: 1, B: 2, C: 3, D: 4, E: 5 }
+                    const avg = scans.reduce((acc, s) => acc + (gradeVal[s.quality_grade] || 3), 0) / scans.length
+                    return ['A','A','B','C','D','E'][Math.round(avg)] || 'B'
+                  })()]} />
+                  <StatCard label="À éviter" val={scans.filter(s => ['D','E'].includes(s.quality_grade)).length} color="#dc2626" />
+                </div>
+
+                {/* Filtres */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {[['all','Tous'],['good','Bons'],['bad','À éviter'],['week','7 jours']].map(([k, lbl]) => (
+                    <button key={k} onClick={() => setScanFilter(k)}
+                      style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: scanFilter === k ? '#1a1a1a' : '#e5e7eb', background: scanFilter === k ? '#1a1a1a' : 'white', color: scanFilter === k ? '#e4f816' : '#6b7280' }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Liste */}
+                {scans.filter(s => {
+                  if (scanFilter === 'good') return ['A','B'].includes(s.quality_grade)
+                  if (scanFilter === 'bad')  return ['C','D','E'].includes(s.quality_grade)
+                  if (scanFilter === 'week') { const w = new Date(); w.setDate(w.getDate()-7); return new Date(s.scanned_at) >= w }
+                  return true
+                }).map(scan => (
+                  <ScanCard key={scan.id} scan={scan} />
+                ))}
+              </>
+            )}
+          </>
         )}
 
         <div style={{ height: 20 }} />
       </div>
 
       <ClientBottomNav />
+    </div>
+  )
+}
+
+const GRADE_COLORS = { A: '#16a34a', B: '#65a30d', C: '#ca8a04', D: '#ea580c', E: '#dc2626' }
+
+function formatScanDate(iso) {
+  const d = new Date(iso)
+  const now = new Date()
+  const diff = Math.floor((now - d) / 86400000)
+  if (diff === 0) return `Aujourd'hui · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+  if (diff === 1) return `Hier · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+  if (diff < 7)  return `Il y a ${diff} jours`
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
+function StatCard({ label, val, color }) {
+  return (
+    <div style={{ background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+      <p style={{ fontSize: '1.6rem', fontWeight: 900, color: color || '#1a1a1a', margin: 0, lineHeight: 1 }}>{val}</p>
+      <p style={{ fontSize: '0.62rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
+    </div>
+  )
+}
+
+function ScanCard({ scan }) {
+  const gradeColor = GRADE_COLORS[scan.quality_grade] || '#9ca3af'
+  return (
+    <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      {scan.image_url
+        ? <img src={scan.image_url} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+        : <div style={{ width: 52, height: 52, borderRadius: 10, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>📦</div>
+      }
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+          <p style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a', margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {scan.product_name || 'Produit inconnu'}
+          </p>
+          {scan.quality_grade && (
+            <span style={{ background: gradeColor, color: 'white', fontWeight: 900, fontSize: '0.75rem', borderRadius: 6, padding: '2px 7px', flexShrink: 0 }}>
+              {scan.quality_grade}
+            </span>
+          )}
+        </div>
+        {scan.brand && <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 4px', fontWeight: 600 }}>{scan.brand}</p>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          {scan.kcal_100g != null && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 700 }}>{scan.kcal_100g} kcal</span>}
+          {scan.prot_100g != null && <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontWeight: 700 }}>P {scan.prot_100g}g</span>}
+        </div>
+        <p style={{ fontSize: '0.65rem', color: '#d1d5db', margin: '4px 0 0', fontWeight: 600 }}>{formatScanDate(scan.scanned_at)}</p>
+      </div>
     </div>
   )
 }
@@ -555,6 +689,9 @@ const S = {
   recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
+  tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 88, zIndex: 50 },
+  tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
+  tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid #e4f816' },
   card: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   inputLabel: { fontSize: '0.82rem', fontWeight: 700, color: '#374151', display: 'block' },
   numberInput: { flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', fontSize: '1.1rem', fontWeight: 700, color: '#1a1a1a', background: '#f9fafb', outline: 'none' },
