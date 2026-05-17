@@ -4,6 +4,8 @@ import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import ClientBottomNav from '../components/ClientBottomNav'
 import ClientProfileMenu from '../components/ClientProfileMenu'
+import ClientOnboarding from '../components/ClientOnboarding'
+import usePageFade from '../hooks/usePageFade'
 import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
@@ -206,6 +208,7 @@ const W = {
 
 export default function AccueilClient() {
   const navigate = useNavigate()
+  const fadeStyle = usePageFade()
   const { permission, subscribed, requestAndSubscribe } = usePush()
   const [client, setClient]               = useState(null)
   const [programmes, setProgrammes]       = useState([])
@@ -318,7 +321,7 @@ export default function AccueilClient() {
   const todayStr  = new Date().toISOString().slice(0, 10)
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, ...fadeStyle }}>
       {showInstall && (
         <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />
       )}
@@ -507,6 +510,7 @@ export default function AccueilClient() {
 
         <button onClick={handleLogout} style={styles.logoutBtn}>Se déconnecter</button>
       </div>
+      <ClientOnboarding />
       <ClientBottomNav />
     </div>
   )

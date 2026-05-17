@@ -39,6 +39,7 @@ export default function CoachNav() {
         <Link to="/messages" style={navLink}>Messagerie</Link>
         <Link to="/charge" style={navLink}>Charge d'entraînement</Link>
         <Link to="/paiements" style={navLink}>Paiements</Link>
+        <Link to="/nutrition-coach" style={navLink}>🥗 Nutrition</Link>
       </div>
       <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
     </nav>

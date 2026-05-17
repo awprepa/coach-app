@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import { NutritionSkeleton } from '../../components/Skeleton'
+import usePageFade from '../../hooks/usePageFade'
 
 const MEAL_TYPES = [
   { key: 'petit_dej', label: 'Petit-déj',   emoji: '🥐' },
@@ -58,6 +60,7 @@ function scoreMeal(items) {
 
 export default function NutritionClient() {
   const navigate = useNavigate()
+  const fadeStyle = usePageFade()
   const [client,  setClient]  = useState(null)
   const [goals,   setGoals]   = useState(null)
   const [meals,   setMeals]   = useState([])
@@ -284,7 +287,7 @@ export default function NutritionClient() {
         <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white' }}>Nutrition</span>
         <div style={{ width: 32 }} />
       </div>
-      <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem', fontSize: '0.9rem' }}>Chargement…</p>
+      <NutritionSkeleton />
       <ClientBottomNav />
     </div>
   )
@@ -309,7 +312,7 @@ export default function NutritionClient() {
   const derivedFat   = goals?.fat_g   || (kcalRef ? Math.round(kcalRef * 0.25 / 9)  : null)
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, ...fadeStyle }}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div style={S.header}>

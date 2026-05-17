@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import usePageFade from '../../hooks/usePageFade'
 
 const OBJECTIFS = [
   { key: 'masse',         emoji: '💪', label: 'Prise de masse',          desc: 'Développer muscle et force' },
@@ -56,6 +57,7 @@ function calculateGoals({ objectif, sexe, age, taille, poids, activite }) {
 
 export default function ProfilNutrition() {
   const navigate = useNavigate()
+  const fadeStyle = usePageFade()
 
   const [client,       setClient]       = useState(null)
   const [loading,      setLoading]      = useState(true)
@@ -401,7 +403,7 @@ export default function ProfilNutrition() {
 
   // ── Page principale ───────────────────────────────────────────────────────────
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, ...fadeStyle }}>
       <div style={S.header}>
         <button onClick={() => navigate(-1)} style={S.iconBtn}><ChevronLeft /></button>
         <div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../supabase'
+import usePageFade from '../../hooks/usePageFade'
 
 const MEAL_TYPES = [
   { key: 'petit_dej', label: 'Petit-déj', emoji: '🥐' },
@@ -188,6 +189,7 @@ function AIError({ error, onRetry }) {
 // ── Page principale ──────────────────────────────────────────────────────────
 export default function AjouterRepas() {
   const navigate = useNavigate()
+  const fadeStyle = usePageFade()
   const [searchParams] = useSearchParams()
 
   const [client,   setClient]   = useState(null)
@@ -264,6 +266,13 @@ export default function AjouterRepas() {
     if (scanControlsRef.current) {
       try { scanControlsRef.current.stop?.() } catch { /* ignore */ }
       scanControlsRef.current = null
+    }
+    // Libérer explicitement les pistes vidéo (évite que le témoin caméra reste allumé)
+    if (videoRef.current?.srcObject) {
+      try {
+        videoRef.current.srcObject.getTracks().forEach(t => t.stop())
+        videoRef.current.srcObject = null
+      } catch { /* ignore */ }
     }
   }, [])
 
@@ -585,7 +594,7 @@ export default function AjouterRepas() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, ...fadeStyle }}>
       {/* Header */}
       <div style={S.header}>
         <button onClick={() => navigate(-1)} style={S.iconBtn}>
