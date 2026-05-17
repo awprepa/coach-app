@@ -674,29 +674,19 @@ export default function ProfilNutrition() {
           <p style={{ fontWeight: 800, fontSize: '1.05rem', color: 'white', margin: 0, lineHeight: 1.2 }}>Mon profil nutritionnel</p>
           <p style={{ fontSize: '0.67rem', color: 'rgba(255,255,255,0.4)', margin: 0, fontWeight: 600 }}>Objectifs & préférences alimentaires</p>
         </div>
-        <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, background: 'rgba(228,248,22,0.15)', border: '1px solid rgba(228,248,22,0.3)' }} aria-label="Historique scans">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/>
-            <line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="17" x2="21" y2="21"/>
-            <line x1="17" y1="21" x2="21" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/>
-          </svg>
-        </button>
+        <div style={{ width: 34 }} />
       </div>
 
       {/* Tab bar */}
       <div style={S.tabBar}>
-        <button
-          onClick={() => setTab('objectifs')}
-          style={{ ...S.tabBtn, ...(tab === 'objectifs' ? S.tabBtnActive : {}) }}
-        >
+        <button onClick={() => setTab('objectifs')} style={{ ...S.tabBtn, ...(tab === 'objectifs' ? S.tabBtnActive : {}) }}>
           🎯 Objectifs
         </button>
-        <button
-          onClick={() => setTab('preferences')}
-          style={{ ...S.tabBtn, ...(tab === 'preferences' ? S.tabBtnActive : {}) }}
-        >
+        <button onClick={() => setTab('preferences')} style={{ ...S.tabBtn, ...(tab === 'preferences' ? S.tabBtnActive : {}) }}>
           🥗 Préférences
+        </button>
+        <button onClick={() => navigate('/client/nutrition/scans')} style={S.tabBtn}>
+          📦 Mes scans
         </button>
       </div>
 
@@ -816,17 +806,19 @@ export default function ProfilNutrition() {
           <>
             {/* Régime alimentaire */}
             <div style={S.card}>
-              <h2 style={S.cardTitle}>🥗 Régime alimentaire</h2>
-              <div style={S.pillRow}>
+              <h2 style={S.cardTitle}>Régime alimentaire</h2>
+              <p style={S.cardSub}>Comment tu manges au quotidien</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
                 {REGIMES.map(r => (
                   <button
                     key={r.key}
                     onClick={() => setRegime(regime === r.key ? null : r.key)}
                     style={{
-                      ...S.pill,
-                      background:  regime === r.key ? '#1a1a1a' : '#f3f4f6',
-                      color:       regime === r.key ? '#e4f816' : '#374151',
+                      padding: '9px 18px', borderRadius: 999, border: '1.5px solid',
                       borderColor: regime === r.key ? '#1a1a1a' : '#e5e7eb',
+                      background:  regime === r.key ? '#1a1a1a' : 'white',
+                      color:       regime === r.key ? '#e4f816' : '#374151',
+                      fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer',
                     }}
                   >
                     {r.label}
@@ -835,78 +827,65 @@ export default function ProfilNutrition() {
               </div>
             </div>
 
-            {/* Allergènes */}
+            {/* Restrictions & allergies (fusionné) */}
             <div style={S.card}>
-              <h2 style={S.cardTitle}>⚠️ Allergènes</h2>
-              <p style={S.cardSub}>Allergies avérées (réaction immunitaire)</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <h2 style={S.cardTitle}>Allergies & restrictions</h2>
+              <p style={S.cardSub}>Tape sur ce que tu ne peux pas manger</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
                 {ALLERGENES_LIST.map(item => {
-                  const checked = allergenes.includes(item)
+                  const checked = allergenes.includes(item) || intolerances.includes(item)
                   return (
-                    <label key={item} style={S.checkRow} onClick={() => toggleItem(allergenes, setAllergenes, item)}>
-                      <div style={{ ...S.checkbox, ...(checked ? S.checkboxOn : {}) }}>
-                        {checked && <span style={S.checkmark}>✓</span>}
-                      </div>
-                      <span style={{ fontSize: '0.9rem', color: checked ? '#1a1a1a' : '#6b7280', fontWeight: checked ? 600 : 500 }}>
-                        {item}
-                      </span>
-                    </label>
+                    <button
+                      key={item}
+                      onClick={() => {
+                        if (checked) {
+                          setAllergenes(prev => prev.filter(x => x !== item))
+                          setIntolerances(prev => prev.filter(x => x !== item))
+                        } else {
+                          setAllergenes(prev => [...prev, item])
+                        }
+                      }}
+                      style={{
+                        padding: '9px 18px', borderRadius: 999, border: '1.5px solid',
+                        borderColor: checked ? '#dc2626' : '#e5e7eb',
+                        background:  checked ? '#fef2f2' : 'white',
+                        color:       checked ? '#dc2626' : '#6b7280',
+                        fontWeight:  checked ? 700 : 500,
+                        fontSize: '0.88rem', cursor: 'pointer',
+                      }}
+                    >
+                      {checked ? '✕ ' : ''}{item}
+                    </button>
                   )
                 })}
               </div>
             </div>
 
-            {/* Intolérances */}
+            {/* Ce que je n'aime pas */}
             <div style={S.card}>
-              <h2 style={S.cardTitle}>🚫 Intolérances</h2>
-              <p style={S.cardSub}>Difficultés digestives sans réaction immunitaire</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {ALLERGENES_LIST.map(item => {
-                  const checked = intolerances.includes(item)
-                  return (
-                    <label key={item} style={S.checkRow} onClick={() => toggleItem(intolerances, setIntolerances, item)}>
-                      <div style={{ ...S.checkbox, ...(checked ? S.checkboxOn : {}) }}>
-                        {checked && <span style={S.checkmark}>✓</span>}
-                      </div>
-                      <span style={{ fontSize: '0.9rem', color: checked ? '#1a1a1a' : '#6b7280', fontWeight: checked ? 600 : 500 }}>
-                        {item}
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Aliments à éviter */}
-            <div style={S.card}>
-              <h2 style={S.cardTitle}>🙅 Aliments à éviter</h2>
-              <p style={S.cardSub}>Par préférence personnelle (pas une allergie)</p>
+              <h2 style={S.cardTitle}>Ce que je n'aime pas</h2>
+              <p style={S.cardSub}>Aliments à éviter — par préférence, pas une allergie</p>
               {exclusions.length > 0 && (
-                <div style={S.chipsRow}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   {exclusions.map(item => (
-                    <div key={item} style={S.chip}>
-                      <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>{item}</span>
-                      <button
-                        onClick={() => setExclusions(prev => prev.filter(x => x !== item))}
-                        style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.1rem', fontWeight: 700, lineHeight: 1, cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center' }}
-                      >×</button>
+                    <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f3f4f6', borderRadius: 999, padding: '6px 10px 6px 14px', border: '1.5px solid #e5e7eb' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{item}</span>
+                      <button onClick={() => setExclusions(prev => prev.filter(x => x !== item))}
+                        style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>×</button>
                     </div>
                   ))}
                 </div>
               )}
-              <div style={S.addRow}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   value={exclusionInput}
                   onChange={e => setExclusionInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addExclusion()}
-                  placeholder="Ex : ananas, coriandre…"
-                  style={S.input}
+                  placeholder="Ex : ananas, coriandre, poivron…"
+                  style={{ flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', color: '#1a1a1a', background: '#f9fafb', outline: 'none' }}
                 />
-                <button
-                  onClick={addExclusion}
-                  disabled={!exclusionInput.trim()}
-                  style={{ ...S.addBtn, opacity: exclusionInput.trim() ? 1 : 0.4 }}
-                >
+                <button onClick={addExclusion} disabled={!exclusionInput.trim()}
+                  style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', opacity: exclusionInput.trim() ? 1 : 0.4, flexShrink: 0 }}>
                   Ajouter
                 </button>
               </div>
@@ -914,23 +893,19 @@ export default function ProfilNutrition() {
 
             {/* Notes */}
             <div style={S.card}>
-              <h2 style={S.cardTitle}>📝 Notes pour mon coach</h2>
-              <p style={S.cardSub}>Habitudes, rythme alimentaire, infos utiles…</p>
+              <h2 style={S.cardTitle}>Notes pour mon coach</h2>
+              <p style={S.cardSub}>Rythme alimentaire, habitudes, infos utiles…</p>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Ex : je mange 4 fois par jour, je prépare mes repas le dimanche…"
                 rows={4}
-                style={S.textarea}
+                style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', fontSize: '0.9rem', color: '#1a1a1a', background: '#f9fafb', resize: 'vertical', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box' }}
               />
             </div>
 
-            {/* Message d'erreur préférences */}
             {errorPrefs && (
-              <div style={{
-                background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12,
-                padding: '12px 14px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600,
-              }}>
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12, padding: '12px 14px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
                 {errorPrefs}
               </div>
             )}
