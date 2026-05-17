@@ -136,23 +136,12 @@ function IlluWellness() {
 
 function IlluWelcome() {
   return (
-    <div style={{ width: '100%', borderRadius: 14, background: '#1a1a1a', padding: '18px 16px', marginBottom: 18, textAlign: 'center' }}>
+    <div style={{ width: '100%', borderRadius: 14, background: '#1a1a1a', padding: '28px 16px', marginBottom: 18, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontSize: '2.2rem', marginBottom: 14 }}>👋</div>
       <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', marginBottom: 4 }}>
         AW<span style={{ color: '#e4f816' }}>prepa</span>
       </div>
-      <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)', marginBottom: 16 }}>Ta plateforme de coaching sportif</div>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
-        {[
-          { emoji: '💪', label: 'Programmes' },
-          { emoji: '🥗', label: 'Nutrition' },
-          { emoji: '📊', label: 'Wellness' },
-        ].map(item => (
-          <div key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>{item.emoji}</div>
-            <div style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{item.label}</div>
-          </div>
-        ))}
-      </div>
+      <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>Ta plateforme de coaching sportif</div>
     </div>
   )
 }
@@ -175,7 +164,7 @@ const STEPS = [
   },
   {
     title: 'Nutrition',
-    desc: "Tracke tes calories, scanne tes articles, prends en photo tes plats — l'IA fait le reste.",
+    desc: "Tracke tes calories, scanne tes articles, prends en photo tes plats — l'intelligence artificielle fait le reste.",
     Illustration: IlluNutrition,
   },
   {
