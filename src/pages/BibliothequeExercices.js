@@ -1,7 +1,43 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import MuscleMap from '../components/MuscleMap'
+import { findMuscles, MUSCLES } from '../data/muscleData'
 
 const CATEGORIES = ['Musculation', 'Prépa physique', 'Cardio', 'Mobilité', 'Pliométrie', 'Haltérophilie', 'Gainage', 'Autre']
+
+// Tente de lire les muscles depuis l'exercice (colonnes dédiées ou fallback JSON dans description)
+function parseMuscles(ex) {
+  if (ex.muscles_primaires && Array.isArray(ex.muscles_primaires)) {
+    return { primary: ex.muscles_primaires, secondary: ex.muscles_secondaires || [] }
+  }
+  if (ex.description) {
+    try {
+      const parsed = JSON.parse(ex.description)
+      if (parsed && parsed.p) return { primary: parsed.p || [], secondary: parsed.s || [] }
+    } catch (_) {}
+  }
+  return { primary: [], secondary: [] }
+}
+
+// Encode les muscles pour le stockage (fallback description JSON)
+function encodeMusclesInDescription(primary, secondary, existingDesc) {
+  // Si la description existante est un JSON muscles, on remplace; sinon on encode tout
+  const payload = JSON.stringify({ p: primary, s: secondary })
+  return payload
+}
+
+function MuscleChips({ primary, secondary }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.35rem' }}>
+      {primary.map(k => (
+        <span key={k} style={S.chipPrimary}>{MUSCLES[k]?.label || k}</span>
+      ))}
+      {secondary.map(k => (
+        <span key={k} style={S.chipSecondary}>{MUSCLES[k]?.label || k}</span>
+      ))}
+    </div>
+  )
+}
 
 export default function BibliothequeExercices() {
   const [exercices, setExercices] = useState([])
@@ -9,19 +45,13 @@ export default function BibliothequeExercices() {
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('Tous')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nom: '', categorie: '', description: '' })
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
-  const [uploading, setUploading] = useState(false)
+  const [form, setForm] = useState({ nom: '', categorie: '', primary: [], secondary: [] })
+  const [saving, setSaving] = useState(false)
   const [enEdition, setEnEdition] = useState(null)
   const [formEdit, setFormEdit] = useState({})
-  const [imageFileEdit, setImageFileEdit] = useState(null)
-  const [imagePreviewEdit, setImagePreviewEdit] = useState(null)
-  const fileRef = useRef(null)
-  const fileRefEdit = useRef(null)
   // Ajout à une séance
   const [seances, setSeances] = useState([])
-  const [addingToSeance, setAddingToSeance] = useState(null) // id de l'exercice bibliothèque
+  const [addingToSeance, setAddingToSeance] = useState(null)
   const [addForm, setAddForm] = useState({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
   const [addSaving, setAddSaving] = useState(false)
 
@@ -41,6 +71,26 @@ export default function BibliothequeExercices() {
       .select('id, nom, programmes(nom, clients(prenom, nom))')
       .order('nom')
     setSeances(data || [])
+  }
+
+  // Auto-remplissage muscles au changement de nom
+  function handleNomChange(nom, isEdit = false) {
+    const muscles = findMuscles(nom)
+    if (isEdit) {
+      setFormEdit(prev => ({
+        ...prev,
+        nom,
+        primary:   muscles ? muscles.primary   : prev.primary,
+        secondary: muscles ? muscles.secondary : prev.secondary,
+      }))
+    } else {
+      setForm(prev => ({
+        ...prev,
+        nom,
+        primary:   muscles ? muscles.primary   : prev.primary,
+        secondary: muscles ? muscles.secondary : prev.secondary,
+      }))
+    }
   }
 
   async function ajouterASeance(ex) {
@@ -68,51 +118,82 @@ export default function BibliothequeExercices() {
     setAddForm({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
   }
 
-  async function uploadImage(file) {
-    const ext = file.name.split('.').pop()
-    const path = `${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('exercices').upload(path, file)
-    if (error) throw error
-    const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
-    return publicUrl
-  }
-
   async function ajouterExercice(e) {
     e.preventDefault()
     if (!form.nom.trim()) return
-    setUploading(true)
+    setSaving(true)
     try {
-      let image_url = null
-      if (imageFile) image_url = await uploadImage(imageFile)
+      const musclePayload = {
+        muscles_primaires:   form.primary,
+        muscles_secondaires: form.secondary,
+      }
+      // Essai avec colonnes dédiées d'abord
       const { data, error } = await supabase.from('bibliotheque_exercices').insert({
         nom: form.nom.trim(),
         categorie: form.categorie || null,
-        description: form.description || null,
-        image_url
+        ...musclePayload,
       }).select().single()
-      if (error) { console.error('Insert error:', error); alert('Erreur : ' + error.message); setUploading(false); return }
-      setExercices(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
-      setForm({ nom: '', categorie: '', description: '' })
-      setImageFile(null); setImagePreview(null)
+
+      if (error) {
+        // Fallback : colonnes muscles absentes, on stocke dans description
+        if (error.code === '42703' || error.message?.includes('column')) {
+          const { data: data2, error: error2 } = await supabase.from('bibliotheque_exercices').insert({
+            nom: form.nom.trim(),
+            categorie: form.categorie || null,
+            description: encodeMusclesInDescription(form.primary, form.secondary),
+          }).select().single()
+          if (error2) { alert('Erreur : ' + error2.message); setSaving(false); return }
+          setExercices(prev => [...prev, data2].sort((a, b) => a.nom.localeCompare(b.nom)))
+        } else {
+          alert('Erreur : ' + error.message); setSaving(false); return
+        }
+      } else {
+        setExercices(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
+      }
+      setForm({ nom: '', categorie: '', primary: [], secondary: [] })
       setShowForm(false)
-    } catch (err) { console.error('Catch error:', err); alert('Erreur : ' + err.message) }
-    setUploading(false)
+    } catch (err) { alert('Erreur : ' + err.message) }
+    setSaving(false)
   }
 
   async function sauvegarderEdition(exId) {
-    setUploading(true)
+    setSaving(true)
     try {
-      let image_url = formEdit.image_url
-      if (imageFileEdit) image_url = await uploadImage(imageFileEdit)
+      const musclePayload = {
+        muscles_primaires:   formEdit.primary,
+        muscles_secondaires: formEdit.secondary,
+      }
       const { error } = await supabase.from('bibliotheque_exercices').update({
-        nom: formEdit.nom, categorie: formEdit.categorie || null,
-        description: formEdit.description || null, image_url
+        nom: formEdit.nom,
+        categorie: formEdit.categorie || null,
+        ...musclePayload,
       }).eq('id', exId)
-      if (error) { alert(error.message); setUploading(false); return }
-      setExercices(prev => prev.map(ex => ex.id === exId ? { ...ex, ...formEdit, image_url } : ex))
-      setEnEdition(null); setImageFileEdit(null); setImagePreviewEdit(null)
+
+      if (error) {
+        // Fallback : colonnes muscles absentes
+        if (error.code === '42703' || error.message?.includes('column')) {
+          const { error: error2 } = await supabase.from('bibliotheque_exercices').update({
+            nom: formEdit.nom,
+            categorie: formEdit.categorie || null,
+            description: encodeMusclesInDescription(formEdit.primary, formEdit.secondary),
+          }).eq('id', exId)
+          if (error2) { alert(error2.message); setSaving(false); return }
+          setExercices(prev => prev.map(ex => ex.id === exId
+            ? { ...ex, nom: formEdit.nom, categorie: formEdit.categorie, description: encodeMusclesInDescription(formEdit.primary, formEdit.secondary) }
+            : ex
+          ))
+        } else {
+          alert(error.message); setSaving(false); return
+        }
+      } else {
+        setExercices(prev => prev.map(ex => ex.id === exId
+          ? { ...ex, nom: formEdit.nom, categorie: formEdit.categorie, muscles_primaires: formEdit.primary, muscles_secondaires: formEdit.secondary }
+          : ex
+        ))
+      }
+      setEnEdition(null)
     } catch (err) { alert(err.message) }
-    setUploading(false)
+    setSaving(false)
   }
 
   async function supprimerExercice(exId) {
@@ -120,13 +201,6 @@ export default function BibliothequeExercices() {
     const { error } = await supabase.from('bibliotheque_exercices').delete().eq('id', exId)
     if (error) alert(error.message)
     else setExercices(prev => prev.filter(ex => ex.id !== exId))
-  }
-
-  function handleImageChange(e, isEdit = false) {
-    const file = e.target.files[0]
-    if (!file) return
-    if (isEdit) { setImageFileEdit(file); setImagePreviewEdit(URL.createObjectURL(file)) }
-    else { setImageFile(file); setImagePreview(URL.createObjectURL(file)) }
   }
 
   const allCats = ['Tous', ...CATEGORIES]
@@ -157,8 +231,13 @@ export default function BibliothequeExercices() {
             <div style={S.formRow}>
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <label style={S.label}>Nom *</label>
-                <input value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })}
-                  placeholder="ex : Squat barre" style={S.input} required />
+                <input
+                  value={form.nom}
+                  onChange={e => handleNomChange(e.target.value)}
+                  placeholder="ex : Squat barre"
+                  style={S.input}
+                  required
+                />
               </div>
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <label style={S.label}>Catégorie</label>
@@ -168,24 +247,23 @@ export default function BibliothequeExercices() {
                 </select>
               </div>
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={S.label}>Description (optionnel)</label>
-              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                placeholder="Conseils de réalisation, points clés..." style={S.textarea} rows={2} />
-            </div>
+
+            {/* Muscle map interactive */}
             <div style={{ marginBottom: '1.25rem' }}>
-              <label style={S.label}>Image</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                {imagePreview && <img src={imagePreview} alt="" style={S.imagePreview} />}
-                <button type="button" onClick={() => fileRef.current.click()} style={S.btnUpload}>
-                  {imagePreview ? '🔄 Changer' : '📷 Ajouter une image'}
-                </button>
-                <input ref={fileRef} type="file" accept="image/*"
-                  onChange={e => handleImageChange(e)} style={{ display: 'none' }} />
+              <label style={S.label}>Muscles ciblés <span style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 400, textTransform: 'none' }}>(détecté automatiquement · ajuste si besoin)</span></label>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem' }}>
+                <MuscleMap
+                  primary={form.primary}
+                  secondary={form.secondary}
+                  interactive={true}
+                  size={140}
+                  onChange={({ primary, secondary }) => setForm(prev => ({ ...prev, primary, secondary }))}
+                />
               </div>
             </div>
-            <button type="submit" disabled={uploading} style={S.btnPrimary}>
-              {uploading ? 'Enregistrement...' : '✓ Créer'}
+
+            <button type="submit" disabled={saving} style={S.btnPrimary}>
+              {saving ? 'Enregistrement...' : '✓ Créer'}
             </button>
           </form>
         </div>
@@ -208,7 +286,7 @@ export default function BibliothequeExercices() {
         </div>
       </div>
 
-      {/* Grille */}
+      {/* Liste */}
       {loading ? (
         <p style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
       ) : filtered.length === 0 ? (
@@ -218,126 +296,122 @@ export default function BibliothequeExercices() {
         </div>
       ) : (
         <div style={S.grid}>
-          {filtered.map(ex => (
-            <div key={ex.id} style={S.card}>
-              {enEdition === ex.id ? (
-                <div style={{ padding: '1rem' }}>
-                  <p style={{ ...S.formTitle, marginBottom: '0.875rem' }}>Modifier</p>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <label style={S.label}>Nom</label>
-                    <input value={formEdit.nom} onChange={e => setFormEdit({ ...formEdit, nom: e.target.value })} style={S.input} />
-                  </div>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <label style={S.label}>Catégorie</label>
-                    <select value={formEdit.categorie || ''} onChange={e => setFormEdit({ ...formEdit, categorie: e.target.value })} style={S.select}>
-                      <option value="">— Choisir —</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <label style={S.label}>Description</label>
-                    <textarea value={formEdit.description || ''} onChange={e => setFormEdit({ ...formEdit, description: e.target.value })}
-                      style={S.textarea} rows={2} />
-                  </div>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={S.label}>Image</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      {(imagePreviewEdit || formEdit.image_url) && (
-                        <img src={imagePreviewEdit || formEdit.image_url} alt="" style={S.imagePreview} />
-                      )}
-                      <button type="button" onClick={() => fileRefEdit.current.click()} style={S.btnUpload}>
-                        {(imagePreviewEdit || formEdit.image_url) ? '🔄 Changer' : '📷 Ajouter'}
-                      </button>
-                      <input ref={fileRefEdit} type="file" accept="image/*"
-                        onChange={e => handleImageChange(e, true)} style={{ display: 'none' }} />
+          {filtered.map(ex => {
+            const { primary, secondary } = parseMuscles(ex)
+            return (
+              <div key={ex.id} style={S.card}>
+                {enEdition === ex.id ? (
+                  <div style={{ padding: '1rem' }}>
+                    <p style={{ ...S.formTitle, marginBottom: '0.875rem' }}>Modifier</p>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={S.label}>Nom</label>
+                      <input
+                        value={formEdit.nom}
+                        onChange={e => handleNomChange(e.target.value, true)}
+                        style={S.input}
+                      />
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => sauvegarderEdition(ex.id)} disabled={uploading} style={S.btnPrimary}>
-                      {uploading ? '...' : '✓ Sauvegarder'}
-                    </button>
-                    <button onClick={() => { setEnEdition(null); setImageFileEdit(null); setImagePreviewEdit(null) }} style={S.btnSecondary}>
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div style={S.cardImg}>
-                    {ex.image_url
-                      ? <img src={ex.image_url} alt={ex.nom} style={S.img} />
-                      : <div style={S.imgPlaceholder}><span style={{ fontSize: '2rem' }}>💪</span></div>
-                    }
-                  </div>
-                  <div style={{ padding: '0.875rem', flex: 1 }}>
-                    <p style={S.cardName}>{ex.nom}</p>
-                    {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
-                    {ex.description && <p style={S.cardDesc}>{ex.description}</p>}
-                  </div>
-                  <div style={{ padding: '0 0.875rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {/* Bouton ajouter à une séance */}
-                    <button
-                      onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
-                      style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#333333' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
-                    >
-                      {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
-                    </button>
-
-                    {/* Panel ajout à séance */}
-                    {addingToSeance === ex.id && (
-                      <div style={S.addPanel}>
-                        <select value={addForm.seance_id} onChange={e => setAddForm({ ...addForm, seance_id: e.target.value })} style={S.addInput}>
-                          <option value="">— Choisir une séance —</option>
-                          {seances.map(s => (
-                            <option key={s.id} value={s.id}>
-                              {s.programmes?.clients?.prenom} {s.programmes?.clients?.nom} · {s.programmes?.nom} · {s.nom}
-                            </option>
-                          ))}
-                        </select>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          {[
-                            { key: 'code', ph: 'Code (A1)' },
-                            { key: 'series', ph: 'Séries' },
-                            { key: 'repetitions', ph: 'Reps' },
-                            { key: 'tempo', ph: 'Tempo' },
-                            { key: 'recuperation', ph: 'Récup' },
-                          ].map(f => (
-                            <input key={f.key} value={addForm[f.key]} onChange={e => setAddForm({ ...addForm, [f.key]: e.target.value })}
-                              placeholder={f.ph} style={{ ...S.addInput, flex: 1, minWidth: '60px' }} />
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <select value={addForm.type_intensite} onChange={e => setAddForm({ ...addForm, type_intensite: e.target.value })} style={{ ...S.addInput, flex: 1 }}>
-                            <option value="">Type intensité</option>
-                            <option value="RPE">RPE</option>
-                            <option value="RIR">RIR</option>
-                            <option value="% 1RM">% 1RM</option>
-                            <option value="Vitesse">Vitesse</option>
-                            <option value="Libre">Libre</option>
-                          </select>
-                          <input value={addForm.valeur_intensite} onChange={e => setAddForm({ ...addForm, valeur_intensite: e.target.value })}
-                            placeholder="Valeur" style={{ ...S.addInput, flex: 1 }} />
-                        </div>
-                        <button onClick={() => ajouterASeance(ex)} disabled={addSaving || !addForm.seance_id || !addForm.code}
-                          style={{ ...S.btnPrimary, width: '100%', opacity: (!addForm.seance_id || !addForm.code) ? 0.5 : 1 }}>
-                          {addSaving ? 'Ajout...' : '✓ Ajouter à la séance'}
-                        </button>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={S.label}>Catégorie</label>
+                      <select value={formEdit.categorie || ''} onChange={e => setFormEdit({ ...formEdit, categorie: e.target.value })} style={S.select}>
+                        <option value="">— Choisir —</option>
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={S.label}>Muscles</label>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem' }}>
+                        <MuscleMap
+                          primary={formEdit.primary || []}
+                          secondary={formEdit.secondary || []}
+                          interactive={true}
+                          size={130}
+                          onChange={({ primary: p, secondary: s }) => setFormEdit(prev => ({ ...prev, primary: p, secondary: s }))}
+                        />
                       </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button onClick={() => {
-                        setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
-                        setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', description: ex.description || '', image_url: ex.image_url || null })
-                        setImagePreviewEdit(null)
-                      }} style={S.iconBtn}>✏️ Modifier</button>
-                      <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
+                        {saving ? '...' : '✓ Sauvegarder'}
+                      </button>
+                      <button onClick={() => setEnEdition(null)} style={S.btnSecondary}>
+                        Annuler
+                      </button>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-          ))}
+                ) : (
+                  <>
+                    <div style={{ padding: '0.875rem 0.875rem 0.5rem' }}>
+                      <p style={S.cardName}>{ex.nom}</p>
+                      {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
+                      {(primary.length > 0 || secondary.length > 0) && (
+                        <MuscleChips primary={primary} secondary={secondary} />
+                      )}
+                    </div>
+                    <div style={{ padding: '0 0.875rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {/* Bouton ajouter à une séance */}
+                      <button
+                        onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
+                        style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#333333' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
+                      >
+                        {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
+                      </button>
+
+                      {/* Panel ajout à séance */}
+                      {addingToSeance === ex.id && (
+                        <div style={S.addPanel}>
+                          <select value={addForm.seance_id} onChange={e => setAddForm({ ...addForm, seance_id: e.target.value })} style={S.addInput}>
+                            <option value="">— Choisir une séance —</option>
+                            {seances.map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.programmes?.clients?.prenom} {s.programmes?.clients?.nom} · {s.programmes?.nom} · {s.nom}
+                              </option>
+                            ))}
+                          </select>
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            {[
+                              { key: 'code', ph: 'Code (A1)' },
+                              { key: 'series', ph: 'Séries' },
+                              { key: 'repetitions', ph: 'Reps' },
+                              { key: 'tempo', ph: 'Tempo' },
+                              { key: 'recuperation', ph: 'Récup' },
+                            ].map(f => (
+                              <input key={f.key} value={addForm[f.key]} onChange={e => setAddForm({ ...addForm, [f.key]: e.target.value })}
+                                placeholder={f.ph} style={{ ...S.addInput, flex: 1, minWidth: '60px' }} />
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <select value={addForm.type_intensite} onChange={e => setAddForm({ ...addForm, type_intensite: e.target.value })} style={{ ...S.addInput, flex: 1 }}>
+                              <option value="">Type intensité</option>
+                              <option value="RPE">RPE</option>
+                              <option value="RIR">RIR</option>
+                              <option value="% 1RM">% 1RM</option>
+                              <option value="Vitesse">Vitesse</option>
+                              <option value="Libre">Libre</option>
+                            </select>
+                            <input value={addForm.valeur_intensite} onChange={e => setAddForm({ ...addForm, valeur_intensite: e.target.value })}
+                              placeholder="Valeur" style={{ ...S.addInput, flex: 1 }} />
+                          </div>
+                          <button onClick={() => ajouterASeance(ex)} disabled={addSaving || !addForm.seance_id || !addForm.code}
+                            style={{ ...S.btnPrimary, width: '100%', opacity: (!addForm.seance_id || !addForm.code) ? 0.5 : 1 }}>
+                            {addSaving ? 'Ajout...' : '✓ Ajouter à la séance'}
+                          </button>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button onClick={() => {
+                          setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
+                          setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary })
+                        }} style={S.iconBtn}>✏️ Modifier</button>
+                        <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -355,19 +429,14 @@ const S = {
   label: { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
   input: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   select: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', background: 'white', boxSizing: 'border-box' },
-  textarea: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' },
-  imagePreview: { width: '72px', height: '72px', objectFit: 'cover', borderRadius: '10px', border: '1.5px solid #e5e7eb' },
-  btnUpload: { background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: '10px', padding: '0.6rem 1rem', fontSize: '0.85rem', cursor: 'pointer', color: '#374151', fontWeight: '600' },
   catPill: { padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' },
   empty: { background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' },
   card: { background: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
-  cardImg: { width: '100%', aspectRatio: '4/3', overflow: 'hidden', background: '#f3f4f6' },
-  img: { width: '100%', height: '100%', objectFit: 'cover' },
-  imgPlaceholder: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' },
   cardName: { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.35rem' },
   catTag: { background: '#f3f4f6', color: '#374151', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' },
-  cardDesc: { color: '#9ca3af', fontSize: '0.78rem', margin: '0.5rem 0 0', lineHeight: 1.4 },
+  chipPrimary:   { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.1rem 0.45rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '700' },
+  chipSecondary: { background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', padding: '0.1rem 0.45rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '700' },
   iconBtn: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '600', color: '#374151' },
   iconBtnDanger: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.78rem' },
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
