@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, Component } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
@@ -69,9 +69,34 @@ function PageLoader() {
   )
 }
 
+// Gestion des erreurs de chargement de chunk (après nouveau déploiement)
+class ChunkErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false } }
+  static getDerivedStateFromError(err) {
+    // Chunk introuvable (hash périmé après déploiement) → reload forcé
+    if (err?.name === 'ChunkLoadError' || err?.message?.includes('Loading chunk')) {
+      window.location.reload(true)
+    }
+    return { hasError: true }
+  }
+  render() {
+    if (this.state.hasError) return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', gap: 12 }}>
+        <span style={{ fontSize: '2rem' }}>⚠️</span>
+        <p style={{ fontWeight: 700, color: '#1a1a1a', margin: 0 }}>Une erreur est survenue</p>
+        <button onClick={() => window.location.reload(true)} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 800, cursor: 'pointer' }}>
+          Recharger la page
+        </button>
+      </div>
+    )
+    return this.props.children
+  }
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <ChunkErrorBoundary>
       <AuthGate>
         <TimerProvider>
           <GlobalTimerBubble />
@@ -121,6 +146,7 @@ function App() {
           </Suspense>
         </TimerProvider>
       </AuthGate>
+      </ChunkErrorBoundary>
     </BrowserRouter>
   )
 }
