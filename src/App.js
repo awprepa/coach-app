@@ -43,8 +43,6 @@ const ImportClientExcel    = lazy(() => import('./pages/ImportClientExcel'))
 const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const Paiements            = lazy(() => import('./pages/Paiements'))
-const NutritionCoach       = lazy(() => import('./pages/NutritionCoach'))
-
 // ── Wrappers ──────────────────────────────────────────────────────────────────
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -119,7 +117,6 @@ function App() {
               <Route path="/messages"                    element={<WithNav><CoachMessages /></WithNav>} />
               <Route path="/charge"                      element={<WithNav><ChargeEntrainement /></WithNav>} />
               <Route path="/paiements"                   element={<WithNav><Paiements /></WithNav>} />
-              <Route path="/nutrition-coach"             element={<WithNav><NutritionCoach /></WithNav>} />
             </Routes>
           </Suspense>
         </TimerProvider>
