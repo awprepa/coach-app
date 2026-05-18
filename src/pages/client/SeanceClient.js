@@ -56,6 +56,7 @@ export default function SeanceClient() {
   const [tracking, setTracking] = useState({})
   const [warmupTracking, setWarmupTracking] = useState({}) // { exId: [{ serie, poids, reps_reelles }] }
   const [blocsTermines, setBlocsTermines] = useState(new Set())
+  const [activeBloc, setActiveBloc] = useState(null) // lettre du bloc actif (déplié)
   const [commentaire, setCommentaire] = useState('')
   const [commentaires, setCommentaires] = useState([])
   const [commentSaved, setCommentSaved] = useState(false)
@@ -167,7 +168,12 @@ export default function SeanceClient() {
     setWarmupTracking(local.warmupTracking || {})
     setRpeSeances(local.rpeSeances || {})
     setCommentaires(local.commentaires || [])
-    setBlocsTermines(new Set(local.blocsTermines || []))
+    const restoredDone = new Set(local.blocsTermines || [])
+    setBlocsTermines(restoredDone)
+    // Initialiser le bloc actif : premier bloc non terminé
+    const restoredLetters = [...new Set((local.exercices || []).map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
+    const restoredFirstActive = restoredLetters.find(l => !restoredDone.has(l))
+    setActiveBloc(restoredFirstActive || null)
     // Restaurer le commentaire de la semaine actuelle
     const cur = (local.commentaires || []).find(c => c.semaine === local.semaineActuelle)
     if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
@@ -237,6 +243,11 @@ export default function SeanceClient() {
       if (allDone) done.add(letter)
     })
     setBlocsTermines(done)
+
+    // Initialiser le bloc actif : premier bloc non terminé
+    const allLetters = [...new Set(data.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
+    const firstActive = allLetters.find(l => !done.has(l))
+    setActiveBloc(firstActive || null)
 
     return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done }
   }
@@ -315,6 +326,7 @@ export default function SeanceClient() {
     if (groupLetter) {
       setBlocsTermines(prev => { const s = new Set(prev); s.delete(groupLetter); return s })
       setExpandedDone(prev => { const s = new Set(prev); s.delete(groupLetter); return s })
+      setActiveBloc(groupLetter)
     }
     flashSaved()
   }
@@ -357,7 +369,12 @@ export default function SeanceClient() {
       setBlocsTermines(prev => new Set([...prev, groupLetter]))
       const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
       const idx = letters.indexOf(groupLetter)
-      if (idx < letters.length - 1) {
+      // Passer au bloc suivant non terminé
+      const nextLetter = letters.slice(idx + 1).find(l => !blocsTermines.has(l) && l !== groupLetter)
+      if (nextLetter) {
+        setActiveBloc(nextLetter)
+        setTimeout(() => blocRefs.current[nextLetter]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
+      } else if (idx < letters.length - 1) {
         setTimeout(() => blocRefs.current[letters[idx + 1]]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
       }
     }
@@ -957,6 +974,24 @@ export default function SeanceClient() {
             {groups.map((group, gi) => {
               const isDone = group.letter && blocsTermines.has(group.letter)
               const isExpanded = expandedDone.has(group.letter)
+              const isActive = !group.letter || group.letter === activeBloc
+
+              // Bloc non terminé et non actif → ligne réduite "en attente"
+              if (!isDone && !isActive) {
+                const label = group.items.length === 1
+                  ? group.items[0].nom
+                  : `Superset ${group.letter} (${group.items.length} exos)`
+                return (
+                  <div key={gi}
+                    ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
+                    onClick={() => setActiveBloc(group.letter)}
+                    style={S.pendingRow}>
+                    <span style={S.pendingCode}>{group.letter}</span>
+                    <span style={S.pendingNom}>{label}</span>
+                    <span style={{ color: '#d1d5db', fontSize: '0.85rem' }}>›</span>
+                  </div>
+                )
+              }
 
               // Bloc terminé → ligne compacte (sauf si on a cliqué pour expand)
               if (isDone && !isExpanded) {
@@ -1191,6 +1226,10 @@ const S = {
   exCode:      { background: '#333333', color: '#e4f816', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
   exNom:       { fontWeight: '700', fontSize: '0.92rem', color: '#333333' },
   semBadge:    { background: '#f3f4f6', color: '#6b7280', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', flexShrink: 0 },
+  // Bloc en attente (non actif, non terminé)
+  pendingRow: { background: '#f9fafb', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', border: '1.5px dashed #e5e7eb' },
+  pendingCode: { width: 26, height: 26, borderRadius: 8, background: '#e5e7eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.78rem', color: '#9ca3af', flexShrink: 0 },
+  pendingNom:  { flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   // Exercice collapsé (terminé)
   collapsedRow:{ background: 'white', borderRadius: 12, padding: '0.7rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1.5px solid #86efac' },
   collapsedCheck:{ color: '#16a34a', fontWeight: '900', fontSize: '0.9rem', flexShrink: 0 },
