@@ -1,13 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
 export default function CycleTemplates() {
+  const navigate = useNavigate()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('list') // 'list' | 'edit'
   const [current, setCurrent] = useState(null) // template en cours d'édition
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+
+  // ── Envoyer à un client ──────────────────────────────────────────────────────
+  const [sendModal, setSendModal] = useState(null) // template à envoyer
+  const [clients, setClients] = useState([])
+  const [clientsLoading, setClientsLoading] = useState(false)
+  const [sendForm, setSendForm] = useState({ client_id: '', date_debut: '', nom: '' })
+  const [sending, setSending] = useState(false)
+  const [sendSuccess, setSendSuccess] = useState(null) // nom du client
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -83,6 +93,72 @@ export default function CycleTemplates() {
     load()
   }
 
+  async function openSendModal(t) {
+    setSendModal(t)
+    setSendForm({ client_id: '', date_debut: '', nom: t.nom })
+    setSendSuccess(null)
+    setClientsLoading(true)
+    const { data } = await supabase
+      .from('clients')
+      .select('id, prenom, nom, offre')
+      .order('nom')
+    setClients(data || [])
+    setClientsLoading(false)
+  }
+
+  async function sendToClient() {
+    if (!sendForm.client_id || !sendModal) return
+    setSending(true)
+
+    // 1. Créer le programme pour le client
+    const { data: prog, error } = await supabase
+      .from('programmes')
+      .insert({
+        nom: sendForm.nom || sendModal.nom,
+        semaines: sendModal.semaines,
+        client_id: sendForm.client_id,
+        date_debut: sendForm.date_debut || null,
+      })
+      .select()
+      .single()
+
+    if (error) { alert(error.message); setSending(false); return }
+
+    // 2. Dupliquer les séances du template
+    const seances = [...(sendModal.programme_template_seances || [])]
+      .sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
+
+    for (const [idx, ts] of seances.entries()) {
+      const { data: newSeance } = await supabase
+        .from('seances')
+        .insert({ programme_id: prog.id, nom: ts.nom, ordre: ts.ordre || idx + 1 })
+        .select()
+        .single()
+      if (newSeance && ts.exercices?.length > 0) {
+        await supabase.from('exercices').insert(
+          ts.exercices.map(ex => ({
+            seance_id: newSeance.id,
+            code: ex.code, nom: ex.nom, series: ex.series,
+            repetitions: ex.repetitions, tempo: ex.tempo,
+            recuperation: ex.recuperation, type_intensite: ex.type_intensite,
+            valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
+            bibliotheque_id: ex.bibliotheque_id || null,
+          }))
+        )
+      }
+    }
+
+    const client = clients.find(c => c.id === sendForm.client_id)
+    setSendSuccess(`${client?.prenom} ${client?.nom}`)
+    setSending(false)
+
+    // Naviguer vers le programme créé après 1.5s
+    setTimeout(() => {
+      setSendModal(null)
+      navigate(`/programme/${prog.id}`)
+    }, 1500)
+  }
+
   function addSeance() {
     const seances = current.programme_template_seances
     const maxJour = seances.length > 0 ? Math.max(...seances.map(s => s.jour)) : 0
@@ -151,6 +227,7 @@ export default function CycleTemplates() {
                   </span>
                 </div>
                 <div style={S.cardActions}>
+                  <button style={S.btnPrimary} onClick={() => openSendModal(t)}>📤 Envoyer</button>
                   <button style={S.btnSecondary} onClick={() => editTemplate(t)}>Modifier</button>
                   {deleteConfirm === t.id ? (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -165,8 +242,120 @@ export default function CycleTemplates() {
             ))}
           </div>
         )}
-      </div>
-    )
+
+      {/* ── Modale : Envoyer à un client ──────────────────────────────────── */}
+      {sendModal && (
+        <div style={S.overlay} onClick={() => !sending && setSendModal(null)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+
+            {sendSuccess ? (
+              // Succès
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
+                <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827', marginBottom: '0.4rem' }}>
+                  Cycle envoyé !
+                </div>
+                <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  « {sendModal.nom} » a été créé pour <strong>{sendSuccess}</strong>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                  Redirection vers le programme…
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                  <div>
+                    <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827' }}>📤 Envoyer un cycle</div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
+                      Template : <strong>{sendModal.nom}</strong> · {sendModal.semaines} sem.
+                    </div>
+                  </div>
+                  <button onClick={() => setSendModal(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }}>✕</button>
+                </div>
+
+                {/* Nom du programme */}
+                <div style={S.formGroup}>
+                  <label style={S.label}>Nom du programme</label>
+                  <input
+                    style={S.input}
+                    value={sendForm.nom}
+                    onChange={e => setSendForm(f => ({ ...f, nom: e.target.value }))}
+                    placeholder={sendModal.nom}
+                  />
+                </div>
+
+                {/* Date de début */}
+                <div style={S.formGroup}>
+                  <label style={S.label}>Date de début <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optionnel)</span></label>
+                  <input
+                    style={S.input}
+                    type="date"
+                    value={sendForm.date_debut}
+                    onChange={e => setSendForm(f => ({ ...f, date_debut: e.target.value }))}
+                  />
+                </div>
+
+                {/* Sélection du client */}
+                <div style={S.formGroup}>
+                  <label style={S.label}>Client *</label>
+                  {clientsLoading ? (
+                    <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.5rem 0' }}>Chargement…</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem' }}>
+                      {clients.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => setSendForm(f => ({ ...f, client_id: c.id }))}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '0.6rem 0.75rem', borderRadius: '6px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                            background: sendForm.client_id === c.id ? '#1a1a1a' : 'transparent',
+                            transition: 'background 0.15s',
+                          }}
+                        >
+                          <span style={{ fontWeight: '600', fontSize: '0.875rem', color: sendForm.client_id === c.id ? '#e4f816' : '#111827' }}>
+                            {c.prenom} {c.nom}
+                          </span>
+                          <span style={{
+                            fontSize: '0.7rem', fontWeight: '600', padding: '2px 8px', borderRadius: '20px',
+                            background: sendForm.client_id === c.id ? 'rgba(228,248,22,0.15)' : '#f3f4f6',
+                            color: sendForm.client_id === c.id ? '#e4f816' : '#6b7280',
+                          }}>
+                            {c.offre || 'coaching'}
+                          </span>
+                        </button>
+                      ))}
+                      {clients.length === 0 && (
+                        <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.75rem', textAlign: 'center' }}>
+                          Aucun client trouvé
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <button onClick={() => setSendModal(null)} style={{ ...S.btnSecondary, flex: 1 }}>Annuler</button>
+                  <button
+                    onClick={sendToClient}
+                    disabled={!sendForm.client_id || sending}
+                    style={{
+                      ...S.btnPrimary, flex: 2,
+                      opacity: !sendForm.client_id || sending ? 0.5 : 1,
+                      cursor: !sendForm.client_id || sending ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {sending ? 'Création en cours…' : '📤 Envoyer le cycle'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
   }
 
   // ─── ÉDITEUR ─────────────────────────────────────────────────────────────────
@@ -253,4 +442,14 @@ const S = {
   btnDanger: { background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
   btnRemove: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' },
   btnBack: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem 0' },
+  overlay: {
+    position: 'fixed', inset: 0, zIndex: 1000,
+    background: 'rgba(0,0,0,0.5)', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', padding: '1rem',
+  },
+  modal: {
+    background: 'white', borderRadius: '16px', padding: '1.5rem',
+    width: '100%', maxWidth: '460px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+    maxHeight: '90vh', overflowY: 'auto',
+  },
 }
