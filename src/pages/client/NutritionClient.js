@@ -90,8 +90,9 @@ export default function NutritionClient() {
   const [templates,     setTemplates]     = useState([])    // favoris (meal_templates)
   const [sheetTab,      setSheetTab]      = useState('recents') // 'recents' | 'favoris'
   const [addingFood,    setAddingFood]    = useState(null)  // id en cours d'ajout rapide
+  const [hasProfile,   setHasProfile]    = useState(true)  // false = invite à créer le profil
 
-  // Charger client + goals — rediriger vers le wizard si pas encore de profil
+  // Charger client + goals
   useEffect(() => {
     async function loadClient() {
       const { data: sess } = await supabase.auth.getSession()
@@ -101,12 +102,11 @@ export default function NutritionClient() {
       if (!c) { setLoading(false); return }
       setClient(c)
 
-      // Vérifier si le profil nutritionnel existe
-      const { data: profil } = await supabase.from('nutrition_profile')
+      // Vérifier si le profil nutritionnel existe (sans bloquer si erreur RLS)
+      const { data: profil, error: profilError } = await supabase.from('nutrition_profile')
         .select('id').eq('client_id', c.id).maybeSingle()
-      if (!profil) {
-        navigate('/client/nutrition/profil?setup=1', { replace: true })
-        return
+      if (!profilError && !profil) {
+        setHasProfile(false)
       }
 
       const today = toISO(new Date())
@@ -343,6 +343,27 @@ export default function NutritionClient() {
       </div>
 
       <div style={S.content}>
+
+        {/* ── Invite à créer le profil si absent ──────────────────── */}
+        {!hasProfile && (
+          <div style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderRadius: 18, padding: '18px 18px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.8rem' }}>🎯</span>
+              <div>
+                <p style={{ fontWeight: 900, fontSize: '0.95rem', color: 'white', margin: 0 }}>Configure ton profil</p>
+                <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', margin: '2px 0 0', lineHeight: 1.4 }}>
+                  Réponds à quelques questions pour obtenir tes objectifs nutritionnels personnalisés.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/client/nutrition/profil?setup=1')}
+              style={{ background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', textAlign: 'center' }}
+            >
+              Commencer le questionnaire →
+            </button>
+          </div>
+        )}
 
         {/* ── Carte sombre résumé ─────────────────────────────────── */}
         <div style={S.summaryCard}>
