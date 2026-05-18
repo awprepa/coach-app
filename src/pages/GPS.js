@@ -415,7 +415,7 @@ export default function GPS() {
           )
 
           return (
-            <div style={{ marginBottom: 12, padding: '10px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ marginBottom: 12, padding: '10px 12px 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               {semaines.length > 0 && (
                 <FilterRow label="Semaine">
                   <Chip label="Toutes" active={!filterSemaine} onClick={() => setFilterSem(null)} />
