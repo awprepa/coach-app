@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -57,6 +57,8 @@ function calculateGoals({ objectif, sexe, age, taille, poids, activite }) {
 
 export default function ProfilNutrition() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isSetup = searchParams.get('setup') === '1'
   const fadeStyle = usePageFade()
 
   const [client,       setClient]       = useState(null)
@@ -120,10 +122,15 @@ export default function ProfilNutrition() {
         .eq('client_id', c.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (goals) setExistingGoals(goals)
 
+      // Si premier accès et pas encore de profil physique → ouvrir le wizard directement
+      if (isSetup && !profil?.objectif_physique) {
+        setWizardOpen(true)
+      }
+
       setLoading(false)
     }
     load()
-  }, [])
+  }, [isSetup])
 
   const computed =
     objectif && sexe && age && taille && poids && activite
@@ -173,7 +180,12 @@ export default function ProfilNutrition() {
     setExistingGoals({ kcal_target: computed.kcal, prot_g: computed.prot_g, carbs_g: computed.carbs_g, fat_g: computed.fat_g, hydration_ml: computed.hydration_ml, active_from: today, created_at: new Date().toISOString() })
     setPhysProfile({ objectif, sexe, age, taille, poids, activite })
     setWizardOpen(false); setWizardStep(0)
-    setSaved(true); setTimeout(() => setSaved(false), 3500)
+    setSaved(true)
+    if (isSetup) {
+      setTimeout(() => navigate('/client/nutrition', { replace: true }), 800)
+    } else {
+      setTimeout(() => setSaved(false), 3500)
+    }
   }
 
   function openWizard() { setWizardStep(0); setWizardOpen(true) }
@@ -216,7 +228,7 @@ export default function ProfilNutrition() {
     return (
       <div style={{ ...S.page, background: '#f5f5f5' }}>
         <div style={{ ...S.header, padding: '52px 16px 14px', gap: 10 }}>
-          <button onClick={() => wizardStep > 0 ? setWizardStep(s => s - 1) : setWizardOpen(false)} style={S.iconBtn}>
+          <button onClick={() => wizardStep > 0 ? setWizardStep(s => s - 1) : isSetup ? navigate('/client/accueil', { replace: true }) : setWizardOpen(false)} style={S.iconBtn}>
             <ChevronLeft />
           </button>
           <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' }}>

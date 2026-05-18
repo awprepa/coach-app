@@ -91,7 +91,7 @@ export default function NutritionClient() {
   const [sheetTab,      setSheetTab]      = useState('recents') // 'recents' | 'favoris'
   const [addingFood,    setAddingFood]    = useState(null)  // id en cours d'ajout rapide
 
-  // Charger client + goals
+  // Charger client + goals — rediriger vers le wizard si pas encore de profil
   useEffect(() => {
     async function loadClient() {
       const { data: sess } = await supabase.auth.getSession()
@@ -101,6 +101,14 @@ export default function NutritionClient() {
       if (!c) { setLoading(false); return }
       setClient(c)
 
+      // Vérifier si le profil nutritionnel existe
+      const { data: profil } = await supabase.from('nutrition_profile')
+        .select('id').eq('client_id', c.id).maybeSingle()
+      if (!profil) {
+        navigate('/client/nutrition/profil?setup=1', { replace: true })
+        return
+      }
+
       const today = toISO(new Date())
       const { data: g } = await supabase.from('nutrition_goals').select('*').eq('client_id', c.id)
         .or(`active_to.is.null,active_to.gte.${today}`).order('active_from', { ascending: false }).limit(1).maybeSingle()
@@ -108,7 +116,7 @@ export default function NutritionClient() {
       setLoading(false)
     }
     loadClient()
-  }, [])
+  }, [navigate])
 
   // Recharger repas + eau quand la date change
   useEffect(() => {
