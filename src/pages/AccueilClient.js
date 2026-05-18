@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
@@ -326,12 +327,13 @@ export default function AccueilClient() {
       {showInstall && (
         <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />
       )}
-      {!showInstall && showWellness && (
+      {!showInstall && showWellness && createPortal(
         <WellnessOverlay
           clientId={client.id}
           clientName={`${client.prenom} ${client.nom}`}
           onDone={() => setShowWellness(false)}
-        />
+        />,
+        document.body
       )}
 
       <div style={styles.header}>
