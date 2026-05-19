@@ -348,7 +348,7 @@ export default function AccueilClient() {
     }
   }
 
-  if (loading) return <AccueilSkeleton />
+  if (loading || contratAccepte === null) return <AccueilSkeleton />
   if (!client)  return <div style={styles.centered}><p style={{ color: '#888' }}>Aucun profil trouvé.</p></div>
 
   const initiales = `${client.prenom?.[0] || ''}${client.nom?.[0] || ''}`.toUpperCase()
