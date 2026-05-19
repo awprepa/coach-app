@@ -27,6 +27,7 @@ const ScannerArticle       = lazy(() => import('./pages/client/ScannerArticle'))
 const HistoriqueScans      = lazy(() => import('./pages/client/HistoriqueScans'))
 const SciencesClient       = lazy(() => import('./pages/client/SciencesClient'))
 const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales'))
+const CGV                  = lazy(() => import('./pages/CGV'))
 
 // ── Pages coach — lazy (jamais vues par le client) ───────────────────────────
 const Clients              = lazy(() => import('./pages/Clients'))
@@ -125,6 +126,7 @@ function App() {
               {/* ── Auth ── */}
               <Route path="/login"          element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/cgv"            element={<CGV />} />
 
               {/* ── Home (coach → Dashboard, client → AccueilClient) ── */}
               <Route path="/" element={<WithNotifs><Home /></WithNotifs>} />

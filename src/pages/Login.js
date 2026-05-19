@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
 export default function Login() {
+  const navigate = useNavigate()
   const [mode, setMode]         = useState('connexion') // 'connexion' | 'inscription' | 'reset' | 'update-password'
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -236,6 +238,14 @@ export default function Login() {
           </form>
         )}
       </div>
+
+      {/* Lien CGV */}
+      <p style={styles.cgvHint}>
+        En vous connectant, vous acceptez nos{' '}
+        <button onClick={() => navigate('/cgv')} style={styles.cgvLink}>
+          Conditions Générales de Vente
+        </button>
+      </p>
     </div>
   )
 }
@@ -278,4 +288,6 @@ const styles = {
   hint:        { color: '#9ca3af', fontSize: '0.75rem', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 },
   pwdWrap:     { position: 'relative' },
   eyeBtn:      { position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: '0.25rem' },
+  cgvHint:     { marginTop: '1.5rem', fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center' },
+  cgvLink:     { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
 }

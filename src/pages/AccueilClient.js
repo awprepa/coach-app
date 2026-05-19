@@ -11,6 +11,7 @@ import { AccueilSkeleton } from '../components/Skeleton'
 import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
+import ModaleContrat from '../components/ModaleContrat'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -226,6 +227,8 @@ export default function AccueilClient() {
   const [kcalToday, setKcalToday]         = useState(0)      // kcal consommés aujourd'hui
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [contratAccepte, setContratAccepte] = useState(null) // null=vérif, true=ok, false=à signer
+  const [userId, setUserId] = useState(null)
   const { unread } = useNotifCtx()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -254,6 +257,15 @@ export default function AccueilClient() {
 
       if (!clientData) return
       setClient(clientData)
+      setUserId(user.id)
+
+      // Vérifier acceptation du contrat
+      const { data: contrat } = await supabase
+        .from('acceptations_contrat')
+        .select('id')
+        .eq('client_id', clientData.id)
+        .maybeSingle()
+      setContratAccepte(!!contrat)
 
       // Widget nutrition — uniquement si des objectifs existent
       const todayN = new Date().toISOString().slice(0, 10)
@@ -344,6 +356,16 @@ export default function AccueilClient() {
 
   return (
     <div style={{ ...styles.page, ...fadeStyle }}>
+      {/* Modale contrat — bloque l'accès tant que non signé */}
+      {contratAccepte === false && (
+        <ModaleContrat
+          clientId={client.id}
+          userId={userId}
+          offre={client.offre}
+          onAccepte={() => setContratAccepte(true)}
+        />
+      )}
+
       {showInstall && (
         <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />
       )}
