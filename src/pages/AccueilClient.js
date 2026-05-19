@@ -330,7 +330,7 @@ export default function AccueilClient() {
       navigate('/login')
     } catch (e) {
       console.error('delete-account error:', e)
-      alert('Une erreur est survenue. Contacte arthur.whry@gmail.com pour supprimer ton compte.')
+      alert('Une erreur est survenue. Contacte wehrey.arthur@gmail.com pour supprimer ton compte.')
       setDeletingAccount(false)
       setDeleteConfirm(false)
     }

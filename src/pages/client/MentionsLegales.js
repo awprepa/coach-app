@@ -36,7 +36,7 @@ export default function MentionsLegales() {
         <Section title="Éditeur du site">
           <Para><strong>Arthur Wehrey</strong> — Préparateur physique indépendant</Para>
           <Para>41 rue Fénelon, 31200 Toulouse</Para>
-          <Para>Contact : <strong>arthur.whry@gmail.com</strong></Para>
+          <Para>Contact : <strong>wehrey.arthur@gmail.com</strong></Para>
           <Para>SIRET : en cours d'immatriculation</Para>
         </Section>
 
@@ -50,7 +50,7 @@ export default function MentionsLegales() {
         <Para>Dernière mise à jour : mai 2026</Para>
 
         <Section title="1. Responsable du traitement">
-          <Para>Arthur Wehrey, 41 rue Fénelon, 31200 Toulouse — arthur.whry@gmail.com</Para>
+          <Para>Arthur Wehrey, 41 rue Fénelon, 31200 Toulouse — wehrey.arthur@gmail.com</Para>
         </Section>
 
         <Section title="2. Données collectées et finalités">
@@ -88,7 +88,7 @@ export default function MentionsLegales() {
           <Para>• <strong>Droit à la portabilité</strong> — recevoir tes données dans un format structuré</Para>
           <Para>• <strong>Droit d'opposition</strong> — t'opposer à certains traitements</Para>
           <Para>• <strong>Retrait du consentement</strong> — retirer ton consentement aux données de santé à tout moment, sans que cela remette en cause les traitements antérieurs</Para>
-          <Para>Pour exercer ces droits, envoie un e-mail à <strong>arthur.whry@gmail.com</strong>. Délai de réponse : 30 jours maximum.</Para>
+          <Para>Pour exercer ces droits, envoie un e-mail à <strong>wehrey.arthur@gmail.com</strong>. Délai de réponse : 30 jours maximum.</Para>
         </Section>
 
         <Section title="7. Réclamation auprès de la CNIL">
@@ -107,12 +107,12 @@ export default function MentionsLegales() {
         <div style={S.deleteBox}>
           <p style={S.deleteTitle}>Supprimer mon compte</p>
           <p style={S.deletePara}>
-            Pour demander la suppression définitive de ton compte et de toutes tes données personnelles, envoie un e-mail à <strong>arthur.whry@gmail.com</strong> depuis l'adresse associée à ton compte. Ou utilise directement le bouton dans les paramètres de l'application.
+            Pour demander la suppression définitive de ton compte et de toutes tes données personnelles, envoie un e-mail à <strong>wehrey.arthur@gmail.com</strong> depuis l'adresse associée à ton compte. Ou utilise directement le bouton dans les paramètres de l'application.
           </p>
         </div>
 
         <p style={{ fontSize: '0.75rem', color: '#d1d5db', textAlign: 'center', marginTop: '2rem', marginBottom: '1rem' }}>
-          AWprepa · arthur.whry@gmail.com · Toulouse, France
+          AWprepa · wehrey.arthur@gmail.com · Toulouse, France
         </p>
       </div>
     </div>

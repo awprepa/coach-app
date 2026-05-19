@@ -66,7 +66,7 @@ export default function ConsentSante({ clientId, onConsent }) {
           <p style={S.purposeText}>
             Ces données sont utilisées <strong>uniquement</strong> pour optimiser ton suivi sportif et nutritionnel.
             Elles ne sont ni vendues, ni transmises à des tiers. Tu peux retirer ton consentement à tout moment
-            en contactant <strong>arthur.whry@gmail.com</strong>.
+            en contactant <strong>wehrey.arthur@gmail.com</strong>.
           </p>
         </div>
 
