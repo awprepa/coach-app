@@ -224,6 +224,8 @@ export default function AccueilClient() {
   const [loading, setLoading]             = useState(true)
   const [kcalGoals, setKcalGoals]         = useState(null)   // nutrition_goals row
   const [kcalToday, setKcalToday]         = useState(0)      // kcal consommés aujourd'hui
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const { unread } = useNotifCtx()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -314,6 +316,24 @@ export default function AccueilClient() {
   async function handleLogout() {
     try { await supabase.auth.signOut() } catch (e) { console.error(e) }
     navigate('/login')
+  }
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const { error } = await supabase.functions.invoke('delete-account', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      if (error) throw error
+      await supabase.auth.signOut()
+      navigate('/login')
+    } catch (e) {
+      console.error('delete-account error:', e)
+      alert('Une erreur est survenue. Contacte arthur.whry@gmail.com pour supprimer ton compte.')
+      setDeletingAccount(false)
+      setDeleteConfirm(false)
+    }
   }
 
   if (loading) return <AccueilSkeleton />
@@ -512,7 +532,42 @@ export default function AccueilClient() {
         </div>
 
         <button onClick={handleLogout} style={styles.logoutBtn}>Se déconnecter</button>
+
+        {/* ── Confidentialité & compte ───────────────────────── */}
+        <div style={styles.legalRow}>
+          <button onClick={() => navigate('/client/mentions-legales')} style={styles.legalLink}>
+            Confidentialité & mentions légales
+          </button>
+          <span style={{ color: '#e5e7eb' }}>·</span>
+          <button onClick={() => setDeleteConfirm(true)} style={{ ...styles.legalLink, color: '#ef4444' }}>
+            Supprimer mon compte
+          </button>
+        </div>
       </div>
+
+      {/* Modal suppression de compte */}
+      {deleteConfirm && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>⚠️</p>
+            <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 0.5rem' }}>
+              Supprimer mon compte
+            </p>
+            <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
+              Cette action est <strong>irréversible</strong>. Toutes tes données (entraînements, nutrition, tests, messages) seront définitivement supprimées.
+            </p>
+            <button onClick={handleDeleteAccount} disabled={deletingAccount}
+              style={{ width: '100%', padding: '0.875rem', borderRadius: 12, border: 'none', background: '#ef4444', color: 'white', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', marginBottom: '0.6rem' }}>
+              {deletingAccount ? 'Suppression…' : 'Oui, supprimer définitivement'}
+            </button>
+            <button onClick={() => setDeleteConfirm(false)}
+              style={{ width: '100%', padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
       <ClientOnboarding />
       <ClientBottomNav />
     </div>
@@ -538,6 +593,10 @@ const styles = {
   cardSub:     { color: '#9ca3af', fontSize: '0.8rem', margin: 0 },
   chevron:     { color: '#d1d5db', fontSize: '1.5rem', lineHeight: 1 },
   logoutBtn:   { marginTop: '2.5rem', width: '100%', padding: '0.875rem', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 12, color: '#9ca3af', fontSize: '0.875rem', cursor: 'pointer' },
+  legalRow:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' },
+  legalLink:   { background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
+  modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 0 env(safe-area-inset-bottom)' },
+  modalCard:   { background: 'white', borderRadius: '20px 20px 0 0', padding: '1.75rem 1.5rem', width: '100%', maxWidth: 480, textAlign: 'center' },
   nextCard:    { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid #e4f816' },
   nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
   nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: '#e4f816', margin: '0 0 0.2rem' },

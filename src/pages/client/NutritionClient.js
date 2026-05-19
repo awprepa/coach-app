@@ -5,6 +5,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { NutritionSkeleton } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
+import ConsentSante from '../../components/ConsentSante'
 
 const MEAL_TYPES = [
   { key: 'petit_dej', label: 'Petit-déj',   emoji: '🥐' },
@@ -91,6 +92,7 @@ export default function NutritionClient() {
   const [sheetTab,      setSheetTab]      = useState('recents') // 'recents' | 'favoris'
   const [addingFood,    setAddingFood]    = useState(null)  // id en cours d'ajout rapide
   const [hasProfile,   setHasProfile]    = useState(true)  // false = invite à créer le profil
+  const [consentOk,    setConsentOk]     = useState(null)  // null=chargement, true=ok, false=manquant
 
   // Charger client + goals
   useEffect(() => {
@@ -101,6 +103,12 @@ export default function NutritionClient() {
       const { data: c } = await supabase.from('clients').select('id, prenom, offre').eq('user_id', userId).maybeSingle()
       if (!c) { setLoading(false); return }
       setClient(c)
+
+      // Vérifier le consentement données de santé (RGPD Art. 9)
+      const { data: consent } = await supabase.from('consents')
+        .select('id').eq('client_id', c.id).eq('type', 'sante').maybeSingle()
+      if (!consent) { setConsentOk(false); setLoading(false); return }
+      setConsentOk(true)
 
       // Vérifier si le profil nutritionnel existe (sans bloquer si erreur RLS)
       const { data: profil, error: profilError } = await supabase.from('nutrition_profile')
@@ -287,6 +295,9 @@ export default function NutritionClient() {
     }
     setLoadingQuality(false)
   }
+
+  // ─── Consentement RGPD (données de santé) ────────────────────────────────
+  if (consentOk === false) return <ConsentSante clientId={client?.id} onConsent={() => setConsentOk(true)} />
 
   // ─── Render loading ───────────────────────────────────────────────────────
   if (loading) return (

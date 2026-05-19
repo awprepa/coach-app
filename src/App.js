@@ -26,6 +26,7 @@ const ProfilNutrition      = lazy(() => import('./pages/client/ProfilNutrition')
 const ScannerArticle       = lazy(() => import('./pages/client/ScannerArticle'))
 const HistoriqueScans      = lazy(() => import('./pages/client/HistoriqueScans'))
 const SciencesClient       = lazy(() => import('./pages/client/SciencesClient'))
+const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales'))
 
 // ── Pages coach — lazy (jamais vues par le client) ───────────────────────────
 const Clients              = lazy(() => import('./pages/Clients'))
@@ -119,6 +120,7 @@ function App() {
               <Route path="/client/nutrition/scanner"    element={<WithNotifs><ScannerArticle /></WithNotifs>} />
               <Route path="/client/nutrition/scans"      element={<WithNotifs><HistoriqueScans /></WithNotifs>} />
               <Route path="/client/sciences"             element={<WithNotifs><SciencesClient /></WithNotifs>} />
+              <Route path="/client/mentions-legales"    element={<MentionsLegales />} />
 
               {/* ── Auth ── */}
               <Route path="/login"          element={<Login />} />
