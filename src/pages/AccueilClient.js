@@ -234,6 +234,16 @@ export default function AccueilClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClientData() }, [])
 
+  // Re-fetch quand l'app revient au premier plan (PWA backgroundée puis rouverte)
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchClientData()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function fetchClientData() {
     try {
       const { data } = await supabase.auth.getSession()

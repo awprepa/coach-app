@@ -1,13 +1,15 @@
-// ── AWprepa Service Worker v4 ─────────────────────────────────────────────────
+// ── AWprepa Service Worker v5 ─────────────────────────────────────────────────
 // Stratégies :
 //   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
 //   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
-//   • API Supabase GET     → stale-while-revalidate (cache immédiat + refresh fond)
+//   • API Supabase GET     → network-first (données fraîches), fallback cache si hors-ligne
 //   • API Supabase POST/PATCH/DELETE → réseau uniquement (mutations)
+// IMPORTANT : stale-while-revalidate supprimé pour Supabase — il causait l'affichage
+// de données obsolètes (wellness "non rempli", charges perdues) au retour dans l'app.
 
-const CACHE_SHELL   = 'aw-shell-v5'
-const CACHE_API     = 'aw-api-v5'
-const CACHE_PAGES   = 'aw-pages-v5'
+const CACHE_SHELL   = 'aw-shell-v6'
+const CACHE_API     = 'aw-api-v6'
+const CACHE_PAGES   = 'aw-pages-v6'
 
 // ── Install : précache le shell de l'app ─────────────────────────────────────
 self.addEventListener('install', event => {
@@ -49,9 +51,9 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url)
 
-  // 1. API Supabase → stale-while-revalidate
+  // 1. API Supabase → network-first (toujours fraîches), fallback cache si hors-ligne
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(staleWhileRevalidate(request, CACHE_API))
+    event.respondWith(networkFirst(request, CACHE_API))
     return
   }
 
@@ -86,21 +88,21 @@ self.addEventListener('fetch', event => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Répond depuis le cache immédiatement si dispo, ET lance un fetch en fond pour mettre à jour.
- *  Clé de cache = URL uniquement (ignore Authorization qui change à chaque session). */
-async function staleWhileRevalidate(request, cacheName) {
+/** Réseau d'abord → met en cache la réponse → si hors-ligne, fallback sur le cache.
+ *  Garantit des données fraîches quand on est en ligne. */
+async function networkFirst(request, cacheName) {
   const cache    = await caches.open(cacheName)
-  const cacheKey = request.url   // URL seule — pas de headers dans la clé
-  const cached   = await cache.match(cacheKey)
-
-  const networkPromise = fetch(request)
-    .then(res => {
-      if (res.ok) cache.put(cacheKey, res.clone())
-      return res
+  const cacheKey = request.url
+  try {
+    const res = await fetch(request)
+    if (res.ok) cache.put(cacheKey, res.clone())
+    return res
+  } catch {
+    const cached = await cache.match(cacheKey)
+    return cached || new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503, headers: { 'Content-Type': 'application/json' },
     })
-    .catch(() => null)
-
-  return cached || networkPromise
+  }
 }
 
 /** Renvoie depuis le cache ; en fond met à jour pour la prochaine fois */

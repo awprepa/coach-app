@@ -80,6 +80,54 @@ export default function SeanceClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
 
+  // Re-fetch léger quand l'app revient au premier plan
+  useEffect(() => {
+    async function refreshOnVisible() {
+      if (document.visibilityState !== 'visible') return
+      if (!navigator.onLine) return
+      // Recharge uniquement le tracking et les blocs passés pour la semaine actuelle
+      const exIds = exercices.map(e => e.id)
+      if (!exIds.length) return
+      const sem = semaineActuelle
+      const [{ data: rows }, { data: skipsData }] = await Promise.all([
+        supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem),
+        supabase.from('bloc_skips').select('bloc_lettre').eq('seance_id', id).eq('semaine', sem),
+      ])
+      if (rows) {
+        setTracking(prev => {
+          const next = { ...prev }
+          exercices.forEach(ex => {
+            const n = (prev[ex.id] || []).length
+            next[ex.id] = Array.from({ length: n }, (_, i) => {
+              const saved = rows.find(r => r.exercice_id === ex.id && r.serie === i + 1)
+              return saved
+                ? { poids: saved.poids || '', reps_reelles: saved.reps_reelles?.toString() || '', valide: saved.valide || false, is_done: saved.is_done || saved.valide || false }
+                : (prev[ex.id]?.[i] || { poids: '', reps_reelles: '', valide: false, is_done: false })
+            })
+          })
+          return next
+        })
+        // Recalculer les blocs terminés
+        const done = new Set()
+        exercices.forEach(ex => {
+          const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
+          if (!letter) return
+          const group = exercices.filter(e => e.code?.match(/^([A-Za-z]+)/)?.[1] === letter)
+          const allDone = group.every(e => {
+            const exRows = rows.filter(r => r.exercice_id === e.id && r.serie < 1000)
+            return exRows.length > 0 && exRows.every(r => r.is_done)
+          })
+          if (allDone) done.add(letter)
+        })
+        setBlocsTermines(done)
+      }
+      if (skipsData) setBlocsSkippes(new Set(skipsData.map(s => s.bloc_lettre)))
+    }
+    document.addEventListener('visibilitychange', refreshOnVisible)
+    return () => document.removeEventListener('visibilitychange', refreshOnVisible)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercices, semaineActuelle, id])
+
   // Sync offline → online : rejoue la file dès que la connexion revient
   useEffect(() => {
     async function handleOnline() {
