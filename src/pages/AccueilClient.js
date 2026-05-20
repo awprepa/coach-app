@@ -264,6 +264,7 @@ export default function AccueilClient() {
         .from('acceptations_contrat')
         .select('id')
         .eq('client_id', clientData.id)
+        .limit(1)
         .maybeSingle()
       setContratAccepte(!!contrat)
 
@@ -315,7 +316,7 @@ export default function AccueilClient() {
       // Wellness : afficher si ≥ 7h et pas encore soumis aujourd'hui
       if (new Date().getHours() >= 7) {
         const { data: w } = await supabase
-          .from('wellness').select('id').eq('client_id', clientData.id).eq('date', today).maybeSingle()
+          .from('wellness').select('id').eq('client_id', clientData.id).eq('date', today).limit(1).maybeSingle()
         if (!w) setShowWellness(true)
       }
     } catch (e) {

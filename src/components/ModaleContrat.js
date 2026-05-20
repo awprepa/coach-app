@@ -23,12 +23,12 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
     if (!peutValider) return
     setSaving(true)
     setError(null)
-    const { error: err } = await supabase.from('acceptations_contrat').insert({
+    const { error: err } = await supabase.from('acceptations_contrat').upsert({
       client_id:       clientId,
       user_id:         userId,
       version_contrat: '1.0',
       formule:         offre || null,
-    })
+    }, { onConflict: 'client_id,version_contrat', ignoreDuplicates: true })
     if (err) {
       setError('Une erreur est survenue. Réessaie.')
       setSaving(false)

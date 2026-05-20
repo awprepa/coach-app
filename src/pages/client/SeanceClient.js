@@ -333,12 +333,14 @@ export default function SeanceClient() {
 
   async function saveSerieField(exId, serieIdx) {
     const serie = tracking[exId]?.[serieIdx] || {}
-    if (!serie.is_done) return // seulement si déjà done
+    // Sauvegarder dès la saisie, même avant validation — évite la perte si on quitte l'app
+    if (!serie.poids && !serie.reps_reelles) return // rien à sauvegarder
     await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
       reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
-      valide: serie.valide, is_done: serie.is_done
+      valide: serie.valide || false,
+      is_done: serie.is_done || false,
     }, { onConflict: 'exercice_id,semaine,serie' })
     flashSaved()
   }
