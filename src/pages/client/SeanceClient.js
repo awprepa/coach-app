@@ -56,6 +56,7 @@ export default function SeanceClient() {
   const [tracking, setTracking] = useState({})
   const [warmupTracking, setWarmupTracking] = useState({}) // { exId: [{ serie, poids, reps_reelles }] }
   const [blocsTermines, setBlocsTermines] = useState(new Set())
+  const [blocsSkippes, setBlocsSkippes] = useState(new Set()) // blocs marqués "non effectués"
   const [activeBloc, setActiveBloc] = useState(null) // lettre du bloc actif (déplié)
   const [commentaire, setCommentaire] = useState('')
   const [commentaires, setCommentaires] = useState([])
@@ -150,6 +151,7 @@ export default function SeanceClient() {
         tracking:        exData.tracking,
         warmupTracking:  exData.warmupTracking,
         blocsTermines:   [...(exData.blocsTermines || [])],
+        blocsSkippes:    [...(exData.blocsSkippes || [])],
         rpeSeances:      rpeData || {},
         commentaires:    commData || [],
       })
@@ -170,9 +172,11 @@ export default function SeanceClient() {
     setCommentaires(local.commentaires || [])
     const restoredDone = new Set(local.blocsTermines || [])
     setBlocsTermines(restoredDone)
-    // Initialiser le bloc actif : premier bloc non terminé
+    const restoredSkipped = new Set(local.blocsSkippes || [])
+    setBlocsSkippes(restoredSkipped)
+    // Initialiser le bloc actif : premier bloc non terminé et non passé
     const restoredLetters = [...new Set((local.exercices || []).map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
-    const restoredFirstActive = restoredLetters.find(l => !restoredDone.has(l))
+    const restoredFirstActive = restoredLetters.find(l => !restoredDone.has(l) && !restoredSkipped.has(l))
     setActiveBloc(restoredFirstActive || null)
     // Restaurer le commentaire de la semaine actuelle
     const cur = (local.commentaires || []).find(c => c.semaine === local.semaineActuelle)
@@ -244,12 +248,18 @@ export default function SeanceClient() {
     })
     setBlocsTermines(done)
 
-    // Initialiser le bloc actif : premier bloc non terminé
+    // Charger les blocs passés (non effectués)
+    const { data: skipsData } = await supabase
+      .from('bloc_skips').select('bloc_lettre').eq('seance_id', id).eq('semaine', sem)
+    const skipped = new Set((skipsData || []).map(s => s.bloc_lettre))
+    setBlocsSkippes(skipped)
+
+    // Initialiser le bloc actif : premier bloc non terminé et non passé
     const allLetters = [...new Set(data.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
-    const firstActive = allLetters.find(l => !done.has(l))
+    const firstActive = allLetters.find(l => !done.has(l) && !skipped.has(l))
     setActiveBloc(firstActive || null)
 
-    return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done }
+    return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done, blocsSkippes: skipped }
   }
 
   async function fetchCommentaires(semAct) {
@@ -328,6 +338,27 @@ export default function SeanceClient() {
       setExpandedDone(prev => { const s = new Set(prev); s.delete(groupLetter); return s })
       setActiveBloc(groupLetter)
     }
+    flashSaved()
+  }
+
+  async function skipBloc(letter) {
+    setBlocsSkippes(prev => new Set([...prev, letter]))
+    // Passer au bloc suivant non terminé et non passé
+    const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
+    const nextLetter = letters.find(l => l !== letter && !blocsTermines.has(l) && !blocsSkippes.has(l) && l !== letter)
+    setActiveBloc(nextLetter || null)
+    await supabase.from('bloc_skips').upsert(
+      { seance_id: id, semaine: semaineActuelle, bloc_lettre: letter },
+      { onConflict: 'seance_id,semaine,bloc_lettre', ignoreDuplicates: true }
+    )
+    flashSaved()
+  }
+
+  async function unskipBloc(letter) {
+    setBlocsSkippes(prev => { const s = new Set(prev); s.delete(letter); return s })
+    setActiveBloc(letter)
+    await supabase.from('bloc_skips').delete()
+      .eq('seance_id', id).eq('semaine', semaineActuelle).eq('bloc_lettre', letter)
     flashSaved()
   }
 
@@ -525,7 +556,7 @@ export default function SeanceClient() {
   })
 
   const totalBlocs = groups.length
-  const doneBlocs = groups.filter(g => g.letter && blocsTermines.has(g.letter)).length
+  const doneBlocs = groups.filter(g => g.letter && (blocsTermines.has(g.letter) || blocsSkippes.has(g.letter))).length
 
   // Résumé d'un bloc terminé (ex: "4×6 · 80 kg")
   function blocSummary(groupItems) {
@@ -974,23 +1005,47 @@ export default function SeanceClient() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {groups.map((group, gi) => {
-              const isDone = group.letter && blocsTermines.has(group.letter)
+              const isDone    = group.letter && blocsTermines.has(group.letter)
+              const isSkipped = group.letter && blocsSkippes.has(group.letter)
               const isExpanded = expandedDone.has(group.letter)
               const isActive = !group.letter || group.letter === activeBloc
 
-              // Bloc non terminé et non actif → ligne réduite "en attente"
-              if (!isDone && !isActive) {
+              // Bloc passé (non effectué) → ligne compacte grise avec possibilité d'annuler
+              if (isSkipped && !isExpanded) {
                 const label = group.items.length === 1
                   ? group.items[0].nom
                   : `Superset ${group.letter} (${group.items.length} exos)`
                 return (
                   <div key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
-                    onClick={() => setActiveBloc(group.letter)}
-                    style={S.pendingRow}>
-                    <span style={S.pendingCode}>{group.letter}</span>
-                    <span style={S.pendingNom}>{label}</span>
+                    onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
+                    style={{ ...S.collapsedRow, borderColor: '#e5e7eb', background: '#f9fafb' }}>
+                    <span style={{ ...S.collapsedCheck, background: '#9ca3af' }}>⊘</span>
+                    <span style={S.collapsedCode}>{group.letter}</span>
+                    <span style={{ ...S.collapsedNom, color: '#9ca3af' }}>{label}</span>
+                    <span style={{ ...S.collapsedStats, color: '#d1d5db' }}>Passé</span>
                     <span style={{ color: '#d1d5db', fontSize: '0.85rem' }}>›</span>
+                  </div>
+                )
+              }
+
+              // Bloc non terminé, non passé et non actif → ligne réduite "en attente"
+              if (!isDone && !isSkipped && !isActive) {
+                const label = group.items.length === 1
+                  ? group.items[0].nom
+                  : `Superset ${group.letter} (${group.items.length} exos)`
+                return (
+                  <div key={gi}
+                    ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
+                    style={{ ...S.pendingRow, alignItems: 'center' }}>
+                    <span style={S.pendingCode} onClick={() => setActiveBloc(group.letter)}>{group.letter}</span>
+                    <span style={{ ...S.pendingNom, flex: 1 }} onClick={() => setActiveBloc(group.letter)}>{label}</span>
+                    <button
+                      onClick={e => { e.stopPropagation(); skipBloc(group.letter) }}
+                      style={S.skipBlocBtn}>
+                      Passer
+                    </button>
+                    <span style={{ color: '#d1d5db', fontSize: '0.85rem' }} onClick={() => setActiveBloc(group.letter)}>›</span>
                   </div>
                 )
               }
@@ -1020,12 +1075,29 @@ export default function SeanceClient() {
                 return (
                   <div key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
-                    style={{ ...S.exCard, ...(isDone ? S.exCardDone : {}) }}>
-                    {isDone && (
+                    style={{ ...S.exCard, ...(isDone ? S.exCardDone : {}), ...(isSkipped ? { borderColor: '#e5e7eb', background: '#f9fafb' } : {}) }}>
+                    {(isDone || isSkipped) && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <div style={S.blocDoneBadge}>✓ Bloc terminé</div>
-                        <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
-                          style={S.collapseBtn}>Replier ↑</button>
+                        {isSkipped
+                          ? <div style={{ ...S.blocDoneBadge, background: '#f3f4f6', color: '#9ca3af' }}>⊘ Bloc passé</div>
+                          : <div style={S.blocDoneBadge}>✓ Bloc terminé</div>
+                        }
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          {isSkipped && (
+                            <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280' }}>
+                              Annuler
+                            </button>
+                          )}
+                          <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
+                            style={S.collapseBtn}>Replier ↑</button>
+                        </div>
+                      </div>
+                    )}
+                    {!isDone && !isSkipped && group.letter && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                        <button onClick={() => skipBloc(group.letter)} style={S.skipBlocBtnInline}>
+                          Passer ce bloc
+                        </button>
                       </div>
                     )}
                     {renderExContent(group.items[0], true, true, group.letter, group.items)}
@@ -1037,16 +1109,26 @@ export default function SeanceClient() {
               return (
                 <div key={gi}
                   ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
-                  style={{ ...S.supersetWrapper, ...(isDone ? { borderColor: '#16a34a' } : {}) }}>
-                  <div style={{ ...S.supersetHeader, ...(isDone ? { background: '#14532d' } : {}) }}>
+                  style={{ ...S.supersetWrapper, ...(isDone ? { borderColor: '#16a34a' } : {}), ...(isSkipped ? { borderColor: '#e5e7eb' } : {}) }}>
+                  <div style={{ ...S.supersetHeader, ...(isDone ? { background: '#14532d' } : {}), ...(isSkipped ? { background: '#f3f4f6' } : {}) }}>
                     <span style={S.supersetBadge}>SUPERSET · {group.letter}</span>
-                    {isDone
+                    {isSkipped
                       ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                          <span style={{ color: '#86efac', fontSize: '0.7rem', fontWeight: '700' }}>✓ Terminé</span>
+                          <span style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700' }}>⊘ Passé</span>
+                          <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#9ca3af', borderColor: '#d1d5db' }}>Annuler</button>
                           <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
-                            style={{ ...S.collapseBtn, color: '#86efac', borderColor: '#16a34a' }}>Replier ↑</button>
+                            style={{ ...S.collapseBtn, color: '#9ca3af', borderColor: '#d1d5db' }}>Replier ↑</button>
                         </div>
-                      : <span style={S.supersetHint}>Enchaîner sans récupération</span>
+                      : isDone
+                        ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <span style={{ color: '#86efac', fontSize: '0.7rem', fontWeight: '700' }}>✓ Terminé</span>
+                            <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
+                              style={{ ...S.collapseBtn, color: '#86efac', borderColor: '#16a34a' }}>Replier ↑</button>
+                          </div>
+                        : <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <span style={S.supersetHint}>Enchaîner sans récupération</span>
+                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#9ca3af', borderColor: '#d1d5db', fontSize: '0.65rem' }}>Passer</button>
+                          </div>
                     }
                   </div>
                   {group.items.map((ex, idx) => {
@@ -1240,6 +1322,9 @@ const S = {
   collapsedStats:{ fontSize: '0.78rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
   blocDoneBadge:{ background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block' },
   collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '700', cursor: 'pointer' },
+  // Boutons "Passer ce bloc"
+  skipBlocBtn:      { background: 'none', border: '1px solid #d1d5db', color: '#9ca3af', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  skipBlocBtnInline:{ background: 'none', border: '1px solid #d1d5db', color: '#9ca3af', borderRadius: 6, padding: '0.2rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' },
   // Paramètres
   paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
   paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
