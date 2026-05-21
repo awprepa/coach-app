@@ -104,7 +104,8 @@ export default function FicheClient() {
 
   async function fetchSeancesClient() {
     const { data } = await supabase.from('evenements')
-      .select('*').eq('client_id', id).eq('source', 'client')
+      .select('*, seances_libres_exercices(id, nom, ordre, seances_libres_series(num_serie, poids, reps))')
+      .eq('client_id', id).eq('source', 'client')
       .order('date', { ascending: false }).limit(50)
     setSeancesClient(data || [])
   }
@@ -568,20 +569,44 @@ export default function FicheClient() {
               {visible.map(ev => {
                 const ts = EVENT_TYPES_MAP[ev.type] || EVENT_TYPES_MAP.seance
                 const dateLabel = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+                const exs = (ev.seances_libres_exercices || []).sort((a, b) => a.ordre - b.ordre)
                 return (
-                  <div key={ev.id} style={{ background: 'white', borderRadius: 12, border: '1.5px solid #f3f4f6', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                    {/* Badge type */}
-                    <span style={{ background: ts.bg, color: ts.text, fontSize: '0.68rem', fontWeight: '800', padding: '3px 8px', borderRadius: 6, flexShrink: 0, marginTop: 2 }}>
-                      {ts.label}
-                    </span>
-                    {/* Contenu */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.titre}</p>
-                      <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{dateLabel}</p>
-                      {ev.description && (
-                        <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
-                      )}
+                  <div key={ev.id} style={{ background: 'white', borderRadius: 12, border: '1.5px solid #f3f4f6', padding: '0.75rem 1rem' }}>
+                    {/* En-tête */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                      <span style={{ background: ts.bg, color: ts.text, fontSize: '0.68rem', fontWeight: '800', padding: '3px 8px', borderRadius: 6, flexShrink: 0, marginTop: 2 }}>
+                        {ts.label}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a' }}>{ev.titre}</p>
+                        <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{dateLabel}</p>
+                        {ev.description && (
+                          <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
+                        )}
+                      </div>
                     </div>
+                    {/* Exercices */}
+                    {exs.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        {exs.map(ex => {
+                          const series = (ex.seances_libres_series || []).sort((a, b) => a.num_serie - b.num_serie)
+                          return (
+                            <div key={ex.id}>
+                              <p style={{ margin: '0 0 0.2rem', fontWeight: '700', fontSize: '0.8rem', color: '#374151' }}>{ex.nom}</p>
+                              {series.length > 0 && (
+                                <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                  {series.map(s => (
+                                    <span key={s.num_serie} style={{ background: '#f3f4f6', borderRadius: 6, padding: '2px 7px', fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
+                                      {s.poids != null ? `${s.poids} kg` : '—'} × {s.reps != null ? s.reps : '—'}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}

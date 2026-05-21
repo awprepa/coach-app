@@ -16,7 +16,8 @@ const SeanceClient         = lazy(() => import('./pages/client/SeanceClient'))
 const TestsClient          = lazy(() => import('./pages/client/TestsClient'))
 const WellnessClient       = lazy(() => import('./pages/client/WellnessClient'))
 const GPSClient            = lazy(() => import('./pages/client/GPSClient'))
-const MonProgrammeClient   = lazy(() => import('./pages/client/MonProgrammeClient'))
+const MonProgrammeClient        = lazy(() => import('./pages/client/MonProgrammeClient'))
+const SeancePonctuelleClient    = lazy(() => import('./pages/client/SeancePonctuelleClient'))
 const NotificationsClient  = lazy(() => import('./pages/client/NotificationsClient'))
 const MessagesClient       = lazy(() => import('./pages/client/MessagesClient'))
 const NutritionClient      = lazy(() => import('./pages/client/NutritionClient'))
@@ -227,7 +228,8 @@ function App() {
               <Route path="/client/tests"                element={<WithNotifs><TestsClient /></WithNotifs>} />
               <Route path="/client/wellness"             element={<WithNotifs><WellnessClient /></WithNotifs>} />
               <Route path="/client/gps"                  element={<WithNotifs><GPSClient /></WithNotifs>} />
-              <Route path="/client/mon-programme"        element={<WithNotifs><MonProgrammeClient /></WithNotifs>} />
+              <Route path="/client/mon-programme"           element={<WithNotifs><MonProgrammeClient /></WithNotifs>} />
+              <Route path="/client/seance-ponctuelle/:id" element={<WithNotifs><SeancePonctuelleClient /></WithNotifs>} />
               <Route path="/client/accueil"              element={<WithNotifs><Home /></WithNotifs>} />
               <Route path="/client/notifications"        element={<WithNotifs><NotificationsClient /></WithNotifs>} />
               <Route path="/client/messages"             element={<WithNotifs><MessagesClient /></WithNotifs>} />

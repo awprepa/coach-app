@@ -93,6 +93,7 @@ export default function ProgrammeClient() {
       setFormNotes('')
       setFormDate(new Date().toISOString().slice(0, 10))
       setShowForm(false)
+      navigate(`/client/seance-ponctuelle/${data.id}`)
     }
     setSaving(false)
   }
@@ -198,7 +199,8 @@ export default function ProgrammeClient() {
               {seancesLibres.map(ev => {
                 const dateLabel = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
                 return (
-                  <div key={ev.id} style={styles.libreCard}>
+                  <div key={ev.id} style={{ ...styles.libreCard, cursor: 'pointer' }}
+                    onClick={() => navigate(`/client/seance-ponctuelle/${ev.id}`)}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#374151' }}>{ev.titre}</p>
                       <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{dateLabel}</p>
@@ -206,10 +208,13 @@ export default function ProgrammeClient() {
                         <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => supprimerSeanceLibre(ev.id)}
-                      style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0 0 0 0.5rem', flexShrink: 0 }}
-                    >✕</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                      <span style={{ color: '#d1d5db', fontSize: '1.2rem' }}>›</span>
+                      <button
+                        onClick={e => { e.stopPropagation(); supprimerSeanceLibre(ev.id) }}
+                        style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 0' }}
+                      >✕</button>
+                    </div>
                   </div>
                 )
               })}
@@ -236,7 +241,7 @@ export default function ProgrammeClient() {
                 type="date"
                 value={formDate}
                 onChange={e => setFormDate(e.target.value)}
-                style={{ ...styles.input, marginTop: '0.5rem' }}
+                style={{ ...styles.input, marginTop: '0.5rem', maxWidth: '100%' }}
               />
               <textarea
                 placeholder="Notes (optionnel)"
@@ -445,6 +450,7 @@ const styles = {
     padding: '1rem 1.25rem',
     border: '1.5px solid #e5e7eb',
     boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    overflow: 'hidden',
   },
   input: {
     width: '100%',
