@@ -575,9 +575,9 @@ const S = {
   indRef: { fontSize: '0.67rem', color: '#9ca3af', lineHeight: 1.4 },
 
   // Graphe
-  chartCard: { background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' },
+  chartCard: { background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem', overflow: 'hidden' },
   chartTitle: { fontWeight: '700', color: '#111827', marginBottom: '1.25rem', fontSize: '0.95rem' },
-  chartArea: { display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: '200px', overflowX: 'auto', paddingBottom: '0.5rem' },
+  chartArea: { display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: '240px', overflowX: 'auto', overflowY: 'visible', paddingBottom: '0.5rem', paddingTop: '1.5rem' },
   barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '40px' },
   barValue: { fontSize: '0.65rem', color: '#6b7280', marginBottom: '2px' },
   bar: { width: '28px', borderRadius: '4px 4px 0 0', minHeight: '4px', transition: 'height 0.3s' },

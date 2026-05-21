@@ -121,8 +121,16 @@ export default function SeanceProjection() {
 
         {/* En-têtes colonnes */}
         <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '1rem', padding: '0 1.25rem', marginBottom: '0.6rem' }}>
-          {['Code', 'Exercice', 'Séries', 'Répétitions', 'Tempo', 'Récup', 'Intensité'].map(h => (
-            <span key={h} style={{ fontSize: '0.6rem', fontWeight: '800', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</span>
+          {[
+            { label: 'Code',        align: 'left'   },
+            { label: 'Exercice',    align: 'left'   },
+            { label: 'Séries',      align: 'center' },
+            { label: 'Répétitions', align: 'center' },
+            { label: 'Tempo',       align: 'center' },
+            { label: 'Récup',       align: 'center' },
+            { label: 'Intensité',   align: 'center' },
+          ].map(({ label, align }) => (
+            <span key={label} style={{ fontSize: '0.6rem', fontWeight: '800', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.12em', textAlign: align, display: 'block' }}>{label}</span>
           ))}
         </div>
 
