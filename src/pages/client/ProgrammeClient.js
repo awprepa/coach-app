@@ -237,12 +237,14 @@ export default function ProgrammeClient() {
                 style={styles.input}
                 autoFocus
               />
-              <input
-                type="date"
-                value={formDate}
-                onChange={e => setFormDate(e.target.value)}
-                style={{ ...styles.input, marginTop: '0.5rem', maxWidth: '100%' }}
-              />
+              <div style={{ marginTop: '0.5rem', overflow: 'hidden', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fafafa' }}>
+                <input
+                  type="date"
+                  value={formDate}
+                  onChange={e => setFormDate(e.target.value)}
+                  style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: 'none', outline: 'none', fontSize: '0.88rem', color: '#333', background: 'transparent', WebkitAppearance: 'none', appearance: 'none', minWidth: 0 }}
+                />
+              </div>
               <textarea
                 placeholder="Notes (optionnel)"
                 value={formNotes}
