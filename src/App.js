@@ -1,4 +1,4 @@
-import { lazy, Suspense, Component } from 'react'
+import { lazy, Suspense, Component, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
@@ -45,6 +45,44 @@ const ImportClientExcel    = lazy(() => import('./pages/ImportClientExcel'))
 const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const Paiements            = lazy(() => import('./pages/Paiements'))
+// ── Bannière navigateur intégré (Instagram / TikTok) ─────────────────────────
+function BanniereNavigateur() {
+  const [fermee, setFermee] = useState(false)
+
+  const ua             = navigator.userAgent
+  const isInAppBrowser = /Instagram|FBAN|FBAV|TikTok/i.test(ua)
+  const isIOS          = /iPhone|iPad|iPod/i.test(ua)
+
+  if (!isInAppBrowser || fermee) return null
+
+  const message = isIOS
+    ? "Pour installer AWPrepa sur votre iPhone : appuyez sur ··· en haut à droite puis « Ouvrir dans Safari », ensuite appuyez sur le bouton Partager puis « Sur l'écran d'accueil »."
+    : "Pour installer AWPrepa : appuyez sur ··· puis « Ouvrir dans Chrome », ensuite dans Chrome appuyez sur le menu puis « Ajouter à l'écran d'accueil »."
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999,
+      background: '#FEF9C3', padding: '12px 16px',
+      display: 'flex', alignItems: 'flex-start', gap: '8px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+    }}>
+      <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>⚠️</span>
+      <p style={{
+        margin: 0, flex: 1,
+        fontSize: '13px', color: '#000', lineHeight: '1.5',
+      }}>{message}</p>
+      <button
+        onClick={() => setFermee(true)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: '16px', color: '#555', flexShrink: 0,
+          padding: '0 0 0 4px', lineHeight: 1,
+        }}
+        aria-label="Fermer">✕</button>
+    </div>
+  )
+}
+
 // ── Wrappers ──────────────────────────────────────────────────────────────────
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -98,6 +136,7 @@ class ChunkErrorBoundary extends Component {
 function App() {
   return (
     <BrowserRouter>
+      <BanniereNavigateur />
       <ChunkErrorBoundary>
       <AuthGate>
         <TimerProvider>
