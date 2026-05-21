@@ -80,13 +80,15 @@ export default function FicheClient() {
   const [nutritionMealsDetail, setNutritionMealsDetail] = useState([])
   const [nutritionProfile, setNutritionProfile] = useState(null)
   const [nutritionWater, setNutritionWater] = useState(null)
+  const [seancesClient, setSeancesClient] = useState([])
+  const [showAllSeancesClient, setShowAllSeancesClient] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => { if (user) setCoachId(user.id) })
   }, [])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness() }, [])
+  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient() }, [])
 
   async function fetchCategories() {
     const { data } = await supabase.from('categories').select('*').order('created_at')
@@ -98,6 +100,13 @@ export default function FicheClient() {
       .select('*').eq('client_id', id)
       .order('date', { ascending: false }).limit(60)
     setWellness(data || [])
+  }
+
+  async function fetchSeancesClient() {
+    const { data } = await supabase.from('evenements')
+      .select('*').eq('client_id', id).eq('source', 'client')
+      .order('date', { ascending: false }).limit(50)
+    setSeancesClient(data || [])
   }
 
   async function fetchClient() {
@@ -530,6 +539,63 @@ export default function FicheClient() {
             onViewSeance={sid => navigate(`/seance/${sid}`)}
           />
         </div>
+      </div>
+
+      {/* ── Séances ajoutées par le client ──────────────────────────────── */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <div style={styles.sectionHeader}>
+          <p style={styles.sectionTitle}>👤 Séances ajoutées par {client.prenom}</p>
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
+            {seancesClient.length} séance{seancesClient.length > 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {seancesClient.length === 0 ? (
+          <div style={styles.emptyCard}>Aucune séance ajoutée par {client.prenom} pour l'instant.</div>
+        ) : (() => {
+          const EVENT_TYPES_MAP = {
+            seance:       { label: 'Séance',        bg: '#333333', text: '#e4f816' },
+            entrainement: { label: 'Entraînement',  bg: '#f97316', text: 'white' },
+            match:        { label: 'Match',         bg: '#e4f816', text: '#333333' },
+            combat:       { label: 'Combat',        bg: '#dc2626', text: 'white' },
+            competition:  { label: 'Compétition',   bg: '#7c3aed', text: 'white' },
+            repos:        { label: 'Repos',         bg: '#e5e7eb', text: '#6b7280' },
+            autre:        { label: 'Autre',         bg: '#f0fdfa', text: '#0f766e' },
+          }
+          const visible = showAllSeancesClient ? seancesClient : seancesClient.slice(0, 5)
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {visible.map(ev => {
+                const ts = EVENT_TYPES_MAP[ev.type] || EVENT_TYPES_MAP.seance
+                const dateLabel = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+                return (
+                  <div key={ev.id} style={{ background: 'white', borderRadius: 12, border: '1.5px solid #f3f4f6', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    {/* Badge type */}
+                    <span style={{ background: ts.bg, color: ts.text, fontSize: '0.68rem', fontWeight: '800', padding: '3px 8px', borderRadius: 6, flexShrink: 0, marginTop: 2 }}>
+                      {ts.label}
+                    </span>
+                    {/* Contenu */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.titre}</p>
+                      <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{dateLabel}</p>
+                      {ev.description && (
+                        <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {seancesClient.length > 5 && (
+                <button
+                  onClick={() => setShowAllSeancesClient(v => !v)}
+                  style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.82rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600' }}
+                >
+                  {showAllSeancesClient ? '↑ Réduire' : `↓ Voir toutes (${seancesClient.length})`}
+                </button>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Wellness */}

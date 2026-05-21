@@ -556,6 +556,7 @@ export default function AccueilClient() {
             <Calendrier
               clientId={client.id}
               readOnly={false}
+              eventSource='client'
               programmeDebut={programmes[0]?.date_debut || client.date_debut}
               programmeSemaines={programmes[0]?.semaines || 8}
               seances={seances}

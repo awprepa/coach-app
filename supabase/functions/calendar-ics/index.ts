@@ -27,18 +27,34 @@ function escapeICS(str: string): string {
   return (str || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
+// RFC 7986 COLOR property — noms CSS3 reconnus par Apple Calendar
 const EVENT_COLORS: Record<string, string> = {
-  seance:        "#333333",  // Noir AWprepa
-  entrainement:  "#f97316",  // Orange
-  match:         "#d97706",  // Ambre (le jaune #e4f816 serait illisible sur iOS)
-  combat:        "#dc2626",  // Rouge
-  competition:   "#7c3aed",  // Violet
-  repos:         "#9ca3af",  // Gris
-  autre:         "#0f766e",  // Teal
+  seance:       "black",      // Noir AWprepa
+  entrainement: "orange",     // Orange
+  match:        "yellow",     // Jaune
+  combat:       "red",        // Rouge
+  competition:  "purple",     // Violet
+  repos:        "darkgray",   // Gris
+  autre:        "teal",       // Teal
 };
 
 function eventColor(type: string): string {
-  return EVENT_COLORS[type] ?? "#333333";
+  return EVENT_COLORS[type] ?? "black";
+}
+
+// Émojis en préfixe de titre pour différencier visuellement dans les vues liste
+const EVENT_EMOJIS: Record<string, string> = {
+  seance:       "🏋️",
+  entrainement: "🏃",
+  match:        "⚽",
+  combat:       "🥊",
+  competition:  "🏆",
+  repos:        "😴",
+  autre:        "📅",
+};
+
+function eventEmoji(type: string): string {
+  return EVENT_EMOJIS[type] ?? "📅";
 }
 
 function generateICS(events: any[], clientPrenom: string): string {
@@ -52,6 +68,7 @@ function generateICS(events: any[], clientPrenom: string): string {
     "X-WR-CALDESC:Calendrier d'entraînement AWprepa",
     "X-PUBLISHED-TTL:PT6H",   // Apple Calendar re-poll toutes les 6h
     "REFRESH-INTERVAL;VALUE=DURATION:PT6H",
+    "X-APPLE-CALENDAR-COLOR:#333333",  // Couleur du calendrier AWprepa (niveau global)
   ];
 
   for (const ev of events) {
@@ -60,7 +77,7 @@ function generateICS(events: any[], clientPrenom: string): string {
       `UID:awprepa-${ev.id}@awprepa.com`,
       `DTSTART;VALUE=DATE:${formatICSDate(ev.date)}`,
       `DTEND;VALUE=DATE:${nextDay(ev.date)}`,
-      `SUMMARY:${escapeICS(ev.titre)}`,
+      `SUMMARY:${eventEmoji(ev.type)} ${escapeICS(ev.titre)}`,
       `COLOR:${eventColor(ev.type)}`,
       `CATEGORIES:${escapeICS(ev.type || "seance")}`,
     ];
