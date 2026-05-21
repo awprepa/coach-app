@@ -1,5 +1,5 @@
 import { lazy, Suspense, Component, useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
 import { NotifProvider } from './context/NotifContext'
@@ -47,20 +47,22 @@ const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const Paiements            = lazy(() => import('./pages/Paiements'))
 // ── Bannière navigateur intégré (Instagram / TikTok) ─────────────────────────
 function BanniereNavigateur() {
+  const location       = useLocation()
   const ua             = navigator.userAgent
   const isInAppBrowser = /Instagram|FBAN|FBAV|TikTok/i.test(ua)
   const isIOS          = /iPhone|iPad|iPod/i.test(ua)
   const isAndroid      = /Android/i.test(ua)
   const isStandalone   = window.navigator.standalone === true ||
                          window.matchMedia('(display-mode: standalone)').matches
+  const isLoginPage    = location.pathname === '/login'
 
   // ── Cas 1 : navigateur intégré Instagram / TikTok ────────────────────────
   const [inAppFerme, setInAppFerme] = useState(false)
 
-  // ── Cas 2 : Safari iOS (pas encore installé comme PWA) ───────────────────
+  // ── Cas 2 : Safari iOS / Chrome Android (pas encore installé comme PWA) ──
   const lsKey = 'awprepa_safari_banner_dismissed'
-  function lsGet(k)    { try { return localStorage.getItem(k) }    catch { return null } }
-  function lsSet(k, v) { try { localStorage.setItem(k, v) }        catch {} }
+  function lsGet(k)    { try { return localStorage.getItem(k) }    catch (_e) { return null } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v) }        catch (_e) {} }
 
   const [safariFerme, setSafariFerme] = useState(() => lsGet(lsKey) === '1')
 
@@ -89,8 +91,8 @@ function BanniereNavigateur() {
     )
   }
 
-  // Safari iOS (ou Android Chrome), pas en standalone, bannière non fermée
-  const showInstallBanner = !isInAppBrowser && !isStandalone && !safariFerme && (isIOS || isAndroid)
+  // Safari iOS (ou Android Chrome), pas en standalone, pas sur /login, bannière non fermée
+  const showInstallBanner = !isInAppBrowser && !isStandalone && !safariFerme && !isLoginPage && (isIOS || isAndroid)
   if (!showInstallBanner) return null
 
   return (
