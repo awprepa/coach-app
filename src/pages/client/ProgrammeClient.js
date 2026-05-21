@@ -21,10 +21,16 @@ export default function ProgrammeClient() {
   const [seancesRenseignees, setSeancesRenseignees] = useState({})
   const [loading, setLoading] = useState(true)
 
+  // Séances ponctuelles
+  const [seancesLibres, setSeancesLibres] = useState([])
+  const [showForm, setShowForm] = useState(false)
+  const [formTitre, setFormTitre] = useState('')
+  const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [formNotes, setFormNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    fetchData()
-  }, [])
+  useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
     const { data: prog, error } = await supabase
@@ -36,7 +42,6 @@ export default function ProgrammeClient() {
 
     setProgramme(prog)
 
-    // date_debut est celle du programme lui-même ; fallback sur created_at si non renseigné
     const dateDebut = prog.date_debut || prog.created_at
     const semaine = dateDebut ? getSemaineActuelle(dateDebut, prog.semaines) : 1
     setSemaineActuelle(semaine)
@@ -57,7 +62,44 @@ export default function ProgrammeClient() {
       renseignees[s.id] = aCharge || aRpe
     })
     setSeancesRenseignees(renseignees)
+
+    // Séances libres ajoutées par le client
+    const { data: libres } = await supabase
+      .from('evenements')
+      .select('*')
+      .eq('client_id', prog.client_id)
+      .eq('source', 'client')
+      .order('date', { ascending: false })
+      .limit(30)
+    setSeancesLibres(libres || [])
+
     setLoading(false)
+  }
+
+  async function ajouterSeanceLibre() {
+    if (!formTitre.trim()) return
+    setSaving(true)
+    const { data, error } = await supabase.from('evenements').insert([{
+      client_id: programme.client_id,
+      date: formDate,
+      type: 'seance',
+      titre: formTitre.trim(),
+      description: formNotes.trim() || null,
+      source: 'client',
+    }]).select().single()
+    if (!error && data) {
+      setSeancesLibres(prev => [data, ...prev])
+      setFormTitre('')
+      setFormNotes('')
+      setFormDate(new Date().toISOString().slice(0, 10))
+      setShowForm(false)
+    }
+    setSaving(false)
+  }
+
+  async function supprimerSeanceLibre(evId) {
+    await supabase.from('evenements').delete().eq('id', evId)
+    setSeancesLibres(prev => prev.filter(e => e.id !== evId))
   }
 
   if (loading) return <PageLoading />
@@ -134,10 +176,7 @@ export default function ProgrammeClient() {
                     <div>
                       <p style={styles.cardTitle}>{seance.nom}</p>
                       {semaineActuelle && (
-                        <p style={{
-                          ...styles.cardSub,
-                          color: renseignee ? '#16a34a' : '#f59e0b'
-                        }}>
+                        <p style={{ ...styles.cardSub, color: renseignee ? '#16a34a' : '#f59e0b' }}>
                           {renseignee ? '✓ Renseignée' : 'À compléter'}
                         </p>
                       )}
@@ -149,6 +188,78 @@ export default function ProgrammeClient() {
             })}
           </div>
         )}
+
+        {/* ── Séances ponctuelles ───────────────────────────────────────────── */}
+        <div style={{ marginTop: '2rem' }}>
+
+          {/* Séances libres déjà ajoutées */}
+          {seancesLibres.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              {seancesLibres.map(ev => {
+                const dateLabel = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                return (
+                  <div key={ev.id} style={styles.libreCard}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#374151' }}>{ev.titre}</p>
+                      <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{dateLabel}</p>
+                      {ev.description && (
+                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => supprimerSeanceLibre(ev.id)}
+                      style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0 0 0 0.5rem', flexShrink: 0 }}
+                    >✕</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Bouton discret + formulaire inline */}
+          {!showForm ? (
+            <button onClick={() => setShowForm(true)} style={styles.addBtn}>
+              + Ajouter une séance ponctuelle
+            </button>
+          ) : (
+            <div style={styles.formCard}>
+              <p style={{ margin: '0 0 0.875rem', fontWeight: '700', fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nouvelle séance</p>
+              <input
+                type="text"
+                placeholder="Nom de la séance *"
+                value={formTitre}
+                onChange={e => setFormTitre(e.target.value)}
+                style={styles.input}
+                autoFocus
+              />
+              <input
+                type="date"
+                value={formDate}
+                onChange={e => setFormDate(e.target.value)}
+                style={{ ...styles.input, marginTop: '0.5rem' }}
+              />
+              <textarea
+                placeholder="Notes (optionnel)"
+                value={formNotes}
+                onChange={e => setFormNotes(e.target.value)}
+                rows={2}
+                style={{ ...styles.input, marginTop: '0.5rem', resize: 'none', fontFamily: 'inherit', lineHeight: 1.4 }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                <button
+                  onClick={ajouterSeanceLibre}
+                  disabled={!formTitre.trim() || saving}
+                  style={{ ...styles.submitBtn, opacity: (!formTitre.trim() || saving) ? 0.5 : 1 }}
+                >{saving ? '…' : 'Enregistrer'}</button>
+                <button
+                  onClick={() => { setShowForm(false); setFormTitre(''); setFormNotes('') }}
+                  style={styles.cancelBtn}
+                >Annuler</button>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
       <ClientBottomNav />
     </div>
@@ -306,5 +417,65 @@ const styles = {
     color: '#d1d5db',
     fontSize: '1.5rem',
     lineHeight: 1,
+  },
+  libreCard: {
+    background: 'white',
+    borderRadius: 12,
+    border: '1.5px dashed #e5e7eb',
+    padding: '0.7rem 0.875rem',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '0.5rem',
+  },
+  addBtn: {
+    background: 'none',
+    border: '1.5px dashed #d1d5db',
+    borderRadius: 12,
+    padding: '0.75rem 1rem',
+    width: '100%',
+    textAlign: 'center',
+    color: '#9ca3af',
+    fontSize: '0.82rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  formCard: {
+    background: 'white',
+    borderRadius: 14,
+    padding: '1rem 1.25rem',
+    border: '1.5px solid #e5e7eb',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  input: {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '0.6rem 0.75rem',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: 9,
+    fontSize: '0.88rem',
+    color: '#333',
+    outline: 'none',
+    background: '#fafafa',
+  },
+  submitBtn: {
+    flex: 1,
+    background: '#333333',
+    color: '#e4f816',
+    border: 'none',
+    borderRadius: 9,
+    padding: '0.65rem',
+    fontWeight: '800',
+    fontSize: '0.88rem',
+    cursor: 'pointer',
+  },
+  cancelBtn: {
+    background: 'none',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: 9,
+    padding: '0.65rem 1rem',
+    fontWeight: '600',
+    fontSize: '0.85rem',
+    color: '#9ca3af',
+    cursor: 'pointer',
   },
 }
