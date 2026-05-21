@@ -39,6 +39,7 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
 
   return (
     <div style={S.overlay}>
+      <div style={S.center}>
       <div style={S.modal}>
         {/* En-tête */}
         <div style={S.header}>
@@ -106,13 +107,15 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
           {saving ? 'Enregistrement…' : 'Valider et accéder à mon espace'}
         </button>
       </div>
+      </div>
     </div>
   )
 }
 
 const S = {
-  overlay:      { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9000, overflowY: 'scroll', WebkitOverflowScrolling: 'touch' },
-  modal:        { background: 'white', borderRadius: 20, padding: '1.75rem 1.5rem', width: 'calc(100% - 2rem)', maxWidth: 480, margin: '1rem auto 2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  overlay:      { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9000, overflowY: 'auto', WebkitOverflowScrolling: 'touch' },
+  center:       { minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', boxSizing: 'border-box' },
+  modal:        { background: 'white', borderRadius: 20, padding: '1.75rem 1.5rem', width: '100%', maxWidth: 480, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:       { textAlign: 'center', marginBottom: '1.25rem' },
   logo:         { fontSize: '1.75rem', fontWeight: 900, color: '#333333', letterSpacing: '-0.5px' },
   headerSub:    { fontSize: '0.82rem', color: '#6b7280', margin: '0.25rem 0 0' },
