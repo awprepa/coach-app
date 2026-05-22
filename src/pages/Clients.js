@@ -43,6 +43,7 @@ export default function Clients() {
   const [showCatForm, setShowCatForm] = useState(false)
   const [newCatNom, setNewCatNom] = useState('')
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
+  const [newCatLogo, setNewCatLogo] = useState('')
   const navigate = useNavigate()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,11 +75,12 @@ export default function Clients() {
   async function ajouterCategorie() {
     if (!newCatNom.trim()) return
     const { data, error } = await supabase
-      .from('categories').insert([{ nom: newCatNom, couleur: newCatColor }]).select().single()
+      .from('categories').insert([{ nom: newCatNom, couleur: newCatColor, logo_url: newCatLogo.trim() || null }]).select().single()
     if (error) { alert(error.message); return }
     setCategories([...categories, data])
     setNewCatNom('')
     setNewCatColor(PALETTE_CATS[0])
+    setNewCatLogo('')
     setShowCatForm(false)
   }
 
@@ -161,8 +163,14 @@ export default function Clients() {
               value={newCatNom}
               onChange={e => setNewCatNom(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && ajouterCategorie()}
-              placeholder="Nom..."
-              style={{ padding: '0.35rem 0.65rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', width: 120 }}
+              placeholder="Nom du club..."
+              style={{ padding: '0.35rem 0.65rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', width: 130 }}
+            />
+            <input
+              value={newCatLogo}
+              onChange={e => setNewCatLogo(e.target.value)}
+              placeholder="URL logo (optionnel)"
+              style={{ padding: '0.35rem 0.65rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', width: 170 }}
             />
             <div style={{ display: 'flex', gap: '0.25rem' }}>
               {PALETTE_CATS.map(c => (
