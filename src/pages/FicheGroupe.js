@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
+import CropLogoModal from '../components/CropLogoModal'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -31,6 +32,8 @@ export default function FicheGroupe() {
   const [extractingEditColors, setExtractingEditColors] = useState(false)
   const [editPickingFor, setEditPickingFor] = useState(null) // 'primary' | 'secondary' | null
   const editLogoPickRef = useRef(null)
+  const [editCropSrc, setEditCropSrc]       = useState(null)
+  const [editPendingFile, setEditPendingFile] = useState(null)
 
   const [showAddSG, setShowAddSG]         = useState(false)
   const [newSGNom, setNewSGNom]           = useState('')
@@ -71,17 +74,27 @@ export default function FicheGroupe() {
   }
 
   // ── Édition du groupe ──────────────────────────────────────────────────────
-  async function handleEditLogoChange(e) {
+  function handleEditLogoChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setEditLogoFile(file)
-    setEditLogoPreview(URL.createObjectURL(file))
-    // Extraction automatique des couleurs dominantes
+    setEditPendingFile(file)
+    setEditCropSrc(URL.createObjectURL(file))
+    e.target.value = ''
+  }
+
+  async function handleEditCropConfirm(croppedFile, previewUrl) {
+    setEditCropSrc(null); setEditPendingFile(null)
+    setEditLogoFile(croppedFile)
+    setEditLogoPreview(previewUrl)
     setExtractingEditColors(true)
-    const colors = await extractColorsFromImage(file, 2)
+    const colors = await extractColorsFromImage(croppedFile, 2)
     if (colors[0]) setEditForm(f => ({ ...f, couleur: colors[0] }))
     if (colors[1]) setEditForm(f => ({ ...f, couleur_secondaire: colors[1] }))
     setExtractingEditColors(false)
+  }
+
+  function handleEditCropCancel() {
+    setEditCropSrc(null); setEditPendingFile(null)
   }
 
   function handleEditLogoColorPick(e) {
@@ -593,6 +606,15 @@ export default function FicheGroupe() {
             </div>
           )}
         </Modal>
+      )}
+
+      {/* Modal de recadrage logo */}
+      {editCropSrc && (
+        <CropLogoModal
+          src={editCropSrc}
+          onConfirm={handleEditCropConfirm}
+          onCancel={handleEditCropCancel}
+        />
       )}
     </div>
   )

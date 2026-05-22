@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
+import CropLogoModal from '../components/CropLogoModal'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -74,6 +75,8 @@ export default function Dashboard() {
   const [extractingColors, setExtractingColors] = useState(false)
   const [pickingFor, setPickingFor]         = useState(null) // 'primary' | 'secondary' | null
   const logoPickRef = useRef(null)
+  const [cropSrc, setCropSrc]               = useState(null) // URL brute avant recadrage
+  const [pendingFile, setPendingFile]       = useState(null) // fichier original avant recadrage
 
   useEffect(() => {
     fetchAll()
@@ -157,17 +160,29 @@ export default function Dashboard() {
     if (activeCat === catId) setActiveCat(null)
   }
 
-  async function handleLogoChange(e) {
+  function handleLogoChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setNewGroupeLogoFile(file)
-    setNewGroupeLogoPreview(URL.createObjectURL(file))
-    // Extraction automatique des couleurs dominantes
+    // Ouvrir le recadreur avant tout
+    setPendingFile(file)
+    setCropSrc(URL.createObjectURL(file))
+    // Reset l'input pour permettre de re-sélectionner le même fichier
+    e.target.value = ''
+  }
+
+  async function handleCropConfirm(croppedFile, previewUrl) {
+    setCropSrc(null); setPendingFile(null)
+    setNewGroupeLogoFile(croppedFile)
+    setNewGroupeLogoPreview(previewUrl)
     setExtractingColors(true)
-    const colors = await extractColorsFromImage(file, 2)
+    const colors = await extractColorsFromImage(croppedFile, 2)
     if (colors[0]) setNewGroupeCouleur(colors[0])
     if (colors[1]) setNewGroupeCouleur2(colors[1])
     setExtractingColors(false)
+  }
+
+  function handleCropCancel() {
+    setCropSrc(null); setPendingFile(null)
   }
 
   function handleLogoColorPick(e) {
@@ -775,6 +790,15 @@ export default function Dashboard() {
           })
         )}
       </div>
+
+      {/* Modal de recadrage logo groupe */}
+      {cropSrc && (
+        <CropLogoModal
+          src={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   )
 }
