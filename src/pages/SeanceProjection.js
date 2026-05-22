@@ -2,22 +2,72 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
-// Palette de couleurs pour les blocs A, B, C, D...
-const BLOCK_COLORS = [
-  '#3b82f6', // A — bleu
-  '#10b981', // B — vert
-  '#f59e0b', // C — orange
-  '#a78bfa', // D — violet
-  '#f43f5e', // E — rose-rouge
-  '#06b6d4', // F — cyan
-  '#fb923c', // G — orange clair
-  '#84cc16', // H — vert lime
+// ── Utilitaires couleur ────────────────────────────────────────────────────────
+function hexToHSL(hex) {
+  try {
+    const h = hex.replace('#', '')
+    const r = parseInt(h.substring(0, 2), 16) / 255
+    const g = parseInt(h.substring(2, 4), 16) / 255
+    const b = parseInt(h.substring(4, 6), 16) / 255
+    const max = Math.max(r, g, b), min = Math.min(r, g, b)
+    let hue = 0, sat = 0
+    const light = (max + min) / 2
+    if (max !== min) {
+      const d = max - min
+      sat = light > 0.5 ? d / (2 - max - min) : d / (max + min)
+      switch (max) {
+        case r: hue = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+        case g: hue = ((b - r) / d + 2) / 6; break
+        default: hue = ((r - g) / d + 4) / 6
+      }
+    }
+    return { h: hue * 360, s: sat * 100, l: light * 100 }
+  } catch { return { h: 220, s: 70, l: 55 } }
+}
+
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360
+  s = Math.max(0, Math.min(100, s)) / 100
+  l = Math.max(0, Math.min(100, l)) / 100
+  const a = s * Math.min(l, 1 - l)
+  const f = n => {
+    const k = (n + h / 30) % 12
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    return Math.round(c * 255).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+
+// Génère 8 nuances autour de la couleur du club
+function generateBlockPalette(baseHex) {
+  const { h, s } = hexToHSL(baseHex)
+  const baseS = Math.max(55, Math.min(85, s))
+  // décalages hue / sat / lightness pour 8 blocs distincts mais dans la même famille
+  const shifts = [
+    [  0,   0,  2],  // A – couleur principale
+    [-22,   8, -6],  // B – plus sombre, légèrement décalé
+    [ 18,  -8, 10],  // C – plus clair, légèrement décalé
+    [-38,  12, -4],  // D – décalé froid
+    [ 30,  -4, 14],  // E – décalé chaud clair
+    [-12,  18,-12],  // F – saturé sombre
+    [ 45,   0,  6],  // G – décalé complémentaire proche
+    [-50, -14, 12],  // H – désaturé clair
+  ]
+  return shifts.map(([dh, ds, dl]) =>
+    hslToHex(h + dh, baseS + ds, 54 + dl)
+  )
+}
+
+// Palette par défaut (sans club)
+const DEFAULT_PALETTE = [
+  '#3b82f6','#10b981','#f59e0b','#a78bfa',
+  '#f43f5e','#06b6d4','#fb923c','#84cc16',
 ]
 
-function blockColor(letter) {
+function makeBlockColor(palette, letter) {
   if (!letter) return '#6b7280'
-  const idx = letter.toUpperCase().charCodeAt(0) - 65 // A=0, B=1...
-  return BLOCK_COLORS[Math.max(0, idx) % BLOCK_COLORS.length]
+  const idx = letter.toUpperCase().charCodeAt(0) - 65
+  return palette[Math.max(0, idx) % palette.length]
 }
 
 function SectionLabel({ children, accent }) {
@@ -101,6 +151,13 @@ export default function SeanceProjection() {
   const accentIsLight = isLightColor(ACCENT)
   const accentText = accentIsLight ? '#1a1a1a' : 'white'
 
+  // Palette de blocs : nuances de la couleur du club si disponible
+  const BLOCK_PALETTE = club ? generateBlockPalette(ACCENT) : DEFAULT_PALETTE
+
+  // Fond adapté à la couleur du club
+  const { h: clubH, s: clubS } = hexToHSL(ACCENT)
+  const BG_COLOR = club ? hslToHex(clubH, Math.min(clubS * 0.35, 28), 10) : '#141c2b'
+
   const echauffement = seance.echauffement || []
 
   // Grouper les exercices par lettre (supersets)
@@ -125,12 +182,12 @@ export default function SeanceProjection() {
   const hasWarmup = echauffement.length > 0
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#141c2b' }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: BG_COLOR }}>
       {/* Bande de couleur club en haut — hors du conteneur scalé */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT}55)`, zIndex: 10 }} />
     <div ref={contentRef} style={{
       width: '100vw',
-      background: '#141c2b',
+      background: BG_COLOR,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       padding: '2.5rem 3.5rem',
       boxSizing: 'border-box',
@@ -192,7 +249,7 @@ export default function SeanceProjection() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {groups.map((g, gi) => {
-              const color = blockColor(g.letter)
+              const color = makeBlockColor(BLOCK_PALETTE, g.letter)
               const isSuperset = g.items.length > 1
 
               return (
@@ -236,10 +293,10 @@ export default function SeanceProjection() {
                       <span style={{ fontSize: '1.05rem', fontWeight: '600', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
                         {ex.tempo || <span style={{ color: 'rgba(255,255,255,0.15)' }}>—</span>}
                       </span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: '700', color: '#60a5fa', textAlign: 'center' }}>
+                      <span style={{ fontSize: '1.15rem', fontWeight: '700', color: BLOCK_PALETTE[5] ?? '#60a5fa', textAlign: 'center' }}>
                         {ex.recuperation || <span style={{ color: 'rgba(255,255,255,0.18)' }}>—</span>}
                       </span>
-                      <span style={{ fontSize: '1rem', fontWeight: '700', color: ex.type_intensite ? '#a78bfa' : 'rgba(255,255,255,0.18)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '700', color: ex.type_intensite ? (BLOCK_PALETTE[3] ?? '#a78bfa') : 'rgba(255,255,255,0.18)', textAlign: 'center' }}>
                         {ex.type_intensite ? `${ex.type_intensite}${ex.valeur_intensite ? ' · ' + ex.valeur_intensite : ''}` : '—'}
                       </span>
                     </div>
