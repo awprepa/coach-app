@@ -6,12 +6,25 @@ import { supabase } from '../supabase'
 // - Monotonie d'entraînement — Foster C (1998) : charge moy / écart-type ; >2.0 = risque
 // - Strain d'entraînement — Foster C (1998) : charge × monotonie
 // - Tonnage ACWR — Hulin BT et al. (2016) : charge externe (kg × reps)
+// - GPS Z-scores — Batterham & Hopkins (2006) : limites de référence individuelles par Z-score
+
+// ── Métriques GPS à analyser ──────────────────────────────────────────────────
+const GPS_Z_METRICS = [
+  { key: 'distance',    label: 'Distance',          unit: 'm',    icon: '📏' },
+  { key: 'vmax',        label: 'Vitesse max',        unit: 'km/h', icon: '⚡' },
+  { key: 'player_load', label: 'Player Load',        unit: '',     icon: '🔋' },
+  { key: 'dist_v20',    label: 'Dist. > 20 km/h',   unit: 'm',    icon: '🏃' },
+  { key: 'nb_acc_25',   label: 'Accélérations',      unit: '',     icon: '🚀' },
+  { key: 'nb_dec_25',   label: 'Décélérations',      unit: '',     icon: '🛑' },
+]
 
 export default function ChargeEntrainement() {
   const [clients, setClients] = useState([])
   const [selectedClient, setSelectedClient] = useState(null)
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
+  const [gpsZData, setGpsZData] = useState(null)   // null=not loaded, false=no data
+  const [gpsZLoading, setGpsZLoading] = useState(false)
 
   useEffect(() => {
     supabase.from('clients').select('id, prenom, nom').order('nom')
@@ -174,6 +187,106 @@ export default function ChargeEntrainement() {
     if (selectedClient) loadCharge(selectedClient)
   }, [selectedClient, loadCharge])
 
+  // ─── GPS Z-scores ────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (selectedClient && clients.length > 0) loadGpsZScores(selectedClient, clients)
+  }, [selectedClient, clients]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadGpsZScores(clientId, clientsList) {
+    setGpsZLoading(true)
+    setGpsZData(null)
+
+    const client = clientsList.find(c => c.id === clientId)
+    if (!client) { setGpsZLoading(false); return }
+
+    // Format GPS : "NOM Prenom" (nom en majuscules en premier)
+    const clientKey = `${client.nom} ${client.prenom}`.toUpperCase()
+
+    const { data: rapports } = await supabase
+      .from('gps_rapports')
+      .select('id, nom, date, lignes')
+      .order('date', { ascending: true })
+
+    if (!rapports || rapports.length === 0) {
+      setGpsZData(false)
+      setGpsZLoading(false)
+      return
+    }
+
+    // Collecter les données de ce joueur sur toutes les séances
+    const sessions = []
+    rapports.forEach(r => {
+      const lignes = r.lignes || []
+      // periode_num === 0 = totaux de la séance entière
+      const ligne = lignes.find(l =>
+        (l.joueur || '').toUpperCase() === clientKey && l.periode_num === 0
+      )
+      if (!ligne) return
+      const metrics = {}
+      GPS_Z_METRICS.forEach(({ key }) => {
+        const val = parseFloat(ligne[key])
+        if (!isNaN(val) && val > 0) metrics[key] = val
+      })
+      if (Object.keys(metrics).length > 0) {
+        sessions.push({ date: r.date, nom: r.nom, metrics })
+      }
+    })
+
+    if (sessions.length === 0) {
+      setGpsZData(false)
+      setGpsZLoading(false)
+      return
+    }
+
+    // Calcul Z-scores pour la dernière séance (Batterham & Hopkins 2006)
+    const last = sessions[sessions.length - 1]
+    const zScores = {}
+
+    GPS_Z_METRICS.forEach(({ key }) => {
+      const values = sessions.map(s => s.metrics[key]).filter(v => v !== undefined)
+      const current = last.metrics[key]
+      const n = values.length
+
+      if (n < 5) {
+        zScores[key] = { z: null, mean: null, sd: null, current, n, insufficient: true }
+        return
+      }
+
+      const mean = values.reduce((s, v) => s + v, 0) / n
+      const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / n
+      const sd = Math.sqrt(variance)
+
+      if (sd === 0 || current === undefined) {
+        zScores[key] = { z: null, mean, sd, current, n }
+        return
+      }
+
+      const z = (current - mean) / sd
+      zScores[key] = { z: parseFloat(z.toFixed(2)), mean: parseFloat(mean.toFixed(1)), sd: parseFloat(sd.toFixed(1)), current, n }
+    })
+
+    setGpsZData({ zScores, lastDate: last.date, lastNom: last.nom, nbSessions: sessions.length, clientName: `${client.prenom} ${client.nom}` })
+    setGpsZLoading(false)
+  }
+
+  // Zone Z-score (Batterham & Hopkins : ±1 SD normal, ±2 SD vigilance, >±2 alarme)
+  function zZone(z) {
+    if (z === null || z === undefined) return null
+    if (Math.abs(z) <= 1) return { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅', label: 'Normal' }
+    if (z > 1 && z <= 2)  return { color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', icon: '📈', label: 'Progression' }
+    if (z >= -2 && z < -1) return { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', icon: '📉', label: 'Attention' }
+    return { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', icon: '🚨', label: 'Alarme' }
+  }
+
+  function formatVal(val, unit) {
+    if (val === undefined || val === null) return '—'
+    const v = parseFloat(val)
+    if (isNaN(v)) return '—'
+    const formatted = v >= 1000 ? v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : v % 1 === 0 ? v.toString() : v.toFixed(1)
+    return unit ? `${formatted} ${unit}` : formatted
+  }
+
   // ─── Calculs scientifiques ──────────────────────────────────────────────────
 
   // ACWR RPE (charge interne) — rolling 4 semaines
@@ -327,6 +440,101 @@ export default function ChargeEntrainement() {
           <div style={{ color: '#374151', fontWeight: '600' }}>Aucune donnée RPE</div>
           <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE après les séances</div>
         </div>
+      )}
+
+      {/* ── GPS — Analyse individuelle Z-scores (indépendant des données RPE) ── */}
+      {selectedClient && !loading && (
+        <>
+          {gpsZLoading && (
+            <div style={{ ...S.indicateursSection, color: '#9ca3af', fontSize: '0.85rem' }}>
+              📡 Chargement des données GPS…
+            </div>
+          )}
+
+          {!gpsZLoading && gpsZData && (
+            <div style={S.indicateursSection}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <div style={S.indicateursTitle}>
+                    📡 GPS — Analyse individuelle · {gpsZData.clientName}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>
+                    Dernière séance : {gpsZData.lastNom || gpsZData.lastDate} · {gpsZData.nbSessions} séances analysées
+                  </div>
+                </div>
+                <div style={{ padding: '3px 10px', borderRadius: 999, background: '#f0fdf4', color: '#22c55e', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bbf7d0', whiteSpace: 'nowrap' }}>
+                  Z-score individuel
+                </div>
+              </div>
+
+              <div style={S.indicateursGrid}>
+                {GPS_Z_METRICS.map(({ key, label, unit, icon }) => {
+                  const d = gpsZData.zScores[key]
+                  if (!d) return null
+
+                  if (d.insufficient) {
+                    return (
+                      <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
+                        <div style={S.indLabel}>{icon} {label}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                          Données insuffisantes
+                        </div>
+                        <div style={{ fontSize: '0.62rem', color: '#d1d5db', marginTop: '0.3rem' }}>
+                          {d.n} séance{d.n > 1 ? 's' : ''} · min. 5 requises
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  if (d.z === null) {
+                    return (
+                      <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
+                        <div style={S.indLabel}>{icon} {label}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Pas de donnée</div>
+                      </div>
+                    )
+                  }
+
+                  const zone = zZone(d.z)
+                  return (
+                    <div key={key} style={{ ...S.indCard, background: zone.bg, border: `1px solid ${zone.border}` }}>
+                      <div style={{ ...S.indLabel, color: '#6b7280' }}>{icon} {label}</div>
+                      <div style={{ ...S.indValue, color: zone.color }}>
+                        {d.z > 0 ? '+' : ''}{d.z}
+                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}> SD</span>
+                      </div>
+                      <div style={{ ...S.indBadge, background: zone.color + '20', color: zone.color }}>
+                        {zone.icon} {zone.label}
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.3rem', lineHeight: 1.4 }}>
+                        {formatVal(d.current, unit)} · moy. {formatVal(d.mean, unit)}
+                      </div>
+                      <div style={S.indRef}>{d.n} séances · ±1SD = {formatVal(d.sd, unit)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Légende zones */}
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
+                {[
+                  { icon: '✅', label: 'Normal (±1 SD)',          color: '#22c55e' },
+                  { icon: '📈', label: 'Progression (+1→+2 SD)',  color: '#3b82f6' },
+                  { icon: '📉', label: 'Attention (−2→−1 SD)',    color: '#f59e0b' },
+                  { icon: '🚨', label: 'Alarme (> ±2 SD)',        color: '#ef4444' },
+                ].map(z => (
+                  <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', color: '#6b7280' }}>
+                    <span>{z.icon}</span>
+                    <span style={{ color: z.color, fontWeight: 600 }}>{z.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.4rem' }}>
+                Batterham &amp; Hopkins (2006) · Comparaison du joueur à lui-même sur l'ensemble de ses séances GPS
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {data.length > 0 && (
@@ -544,6 +752,14 @@ export default function ChargeEntrainement() {
               <div style={S.refItem}>
                 <span style={S.refBullet}>•</span>
                 <span><strong>Strain d'entraînement</strong> — Foster C (1998). Charge hebdo × Monotonie. Indicateur du stress physiologique cumulé sur la semaine.</span>
+              </div>
+              <div style={S.refItem}>
+                <span style={S.refBullet}>•</span>
+                <span><strong>GPS — Z-scores individuels</strong> — Batterham &amp; Hopkins (2006). Limites de référence statistiques individuelles : Z = (valeur − µ) / σ. Zones : ±1 SD normal, ±2 SD vigilance, &gt;±2 alarme. Minimum 5 séances requis.</span>
+              </div>
+              <div style={S.refItem}>
+                <span style={S.refBullet}>•</span>
+                <span><strong>GPS — Suivi de charge externe</strong> — Akenhead R &amp; Nassis GP (2016). Player Load, distance haute vitesse, accélérations/décélérations : indicateurs validés du stress mécanique en sports collectifs.</span>
               </div>
             </div>
           </div>
