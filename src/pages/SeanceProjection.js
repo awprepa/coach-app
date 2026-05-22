@@ -38,44 +38,55 @@ function hslToHex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`
 }
 
-// Génère 8 nuances depuis 1 ou 2 couleurs du club
-function generateBlockPalette(primaryHex, secondaryHex) {
-  const { h: h1, s: s1 } = hexToHSL(primaryHex)
-  const baseS1 = Math.max(55, Math.min(85, s1))
+function isLightColor(hex) {
+  try {
+    const h = hex.replace('#', '')
+    const r = parseInt(h.substring(0, 2), 16)
+    const g = parseInt(h.substring(2, 4), 16)
+    const b = parseInt(h.substring(4, 6), 16)
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 140
+  } catch { return false }
+}
 
-  // Décalages pour les 4 premiers blocs (couleur primaire)
-  const shifts1 = [
-    [  0,   0,  2],  // A – principale
-    [-22,   8, -6],  // B – sombre décalé
-    [ 18,  -8, 10],  // C – clair décalé
-    [-10,  18,-10],  // D – saturé sombre
-  ]
+// Retourne une teinte très claire de la couleur (pour le fond des lignes)
+function lightTint(hex, lightness = 94) {
+  const { h, s } = hexToHSL(hex)
+  // Saturation modérée pour que ça reste reconnaissable mais très lisible
+  return hslToHex(h, Math.min(s * 0.55 + 30, 75), lightness)
+}
 
-  if (secondaryHex) {
-    // 4 blocs depuis la secondaire
-    const { h: h2, s: s2 } = hexToHSL(secondaryHex)
-    const baseS2 = Math.max(55, Math.min(85, s2))
-    const shifts2 = [
-      [  0,   0,  2],
-      [-20,   8, -5],
-      [ 16,  -8, 10],
-      [-8,   16,-10],
-    ]
-    return [
-      ...shifts1.map(([dh, ds, dl]) => hslToHex(h1 + dh, baseS1 + ds, 54 + dl)),
-      ...shifts2.map(([dh, ds, dl]) => hslToHex(h2 + dh, baseS2 + ds, 54 + dl)),
-    ]
-  }
+// Retourne la couleur la plus claire entre deux
+function lighterOf(hex1, hex2) {
+  if (!hex2) return hex1
+  const { l: l1 } = hexToHSL(hex1)
+  const { l: l2 } = hexToHSL(hex2)
+  return l1 >= l2 ? hex1 : hex2
+}
 
-  // Sans secondaire : 8 nuances autour de la primaire
+// Retourne la couleur la plus sombre entre deux
+function darkerOf(hex1, hex2) {
+  if (!hex2) return hex1
+  const { l: l1 } = hexToHSL(hex1)
+  const { l: l2 } = hexToHSL(hex2)
+  return l1 <= l2 ? hex1 : hex2
+}
+
+// Génère 8 nuances depuis la couleur la plus claire du club
+function generateBlockPalette(lightColor) {
+  const { h, s } = hexToHSL(lightColor)
+  const baseS = Math.max(55, Math.min(90, s))
+  // 8 décalages de teinte autour de la couleur principale
   const shifts = [
-    ...shifts1,
-    [ 30,  -4, 14],
-    [-38,  12, -4],
-    [ 45,   0,  6],
-    [-50, -14, 12],
+    [  0,   0,  0],
+    [-18,   6, -5],
+    [ 20,  -6,  4],
+    [-35,  10, -8],
+    [ 38,  -4,  6],
+    [-52,   8, -4],
+    [ 55,   0,  8],
+    [-68, -10, -6],
   ]
-  return shifts.map(([dh, ds, dl]) => hslToHex(h1 + dh, baseS1 + ds, 54 + dl))
+  return shifts.map(([dh, ds, dl]) => hslToHex(h + dh, baseS + ds, 58 + dl))
 }
 
 // Palette par défaut (sans club)
@@ -90,22 +101,12 @@ function makeBlockColor(palette, letter) {
   return palette[Math.max(0, idx) % palette.length]
 }
 
-function SectionLabel({ children, accent }) {
-  const color = accent || '#e4f816'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 0 1rem' }}>
-      <span style={{ fontSize: '0.65rem', fontWeight: '900', color, textTransform: 'uppercase', letterSpacing: '0.16em', whiteSpace: 'nowrap' }}>{children}</span>
-      <div style={{ flex: 1, height: 1, background: color + '30' }} />
-    </div>
-  )
-}
-
 export default function SeanceProjection() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [seance, setSeance] = useState(null)
   const [exercices, setExercices] = useState([])
-  const [club, setClub] = useState(null)   // { nom, couleur, logo_url? }
+  const [club, setClub] = useState(null)
   const [loading, setLoading] = useState(true)
   const [scale, setScale] = useState(1)
   const contentRef = useRef(null)
@@ -141,13 +142,11 @@ export default function SeanceProjection() {
     const groupeId = s?.programmes?.groupe_id
     const clientId = s?.programmes?.client_id
 
-    // Priorité 1 : thème depuis le groupe (template ou copie)
     if (groupeId) {
       const { data: g } = await supabase
         .from('groupes').select('nom, couleur, couleur_secondaire, logo_url').eq('id', groupeId).single()
       if (g) setClub({ nom: g.nom, couleur: g.couleur, couleur_secondaire: g.couleur_secondaire || null, logo_url: g.logo_url || null })
     } else if (clientId) {
-      // Priorité 2 : thème depuis la catégorie du client
       const { data: client } = await supabase
         .from('clients')
         .select('categorie_id, categories(id, nom, couleur, logo_url)')
@@ -161,37 +160,37 @@ export default function SeanceProjection() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0d1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'sans-serif' }}>Chargement...</p>
     </div>
   )
   if (!seance) return null
 
-  const ACCENT = club?.couleur || '#e4f816'
-  const accentIsLight = isLightColor(ACCENT)
-  const accentText = accentIsLight ? '#1a1a1a' : 'white'
+  // ── Couleurs ──────────────────────────────────────────────────────────────────
+  const PRIMARY   = club?.couleur            || '#FFD600'
+  const SECONDARY = club?.couleur_secondaire || null
 
-  // Palette de blocs : nuances depuis primaire + secondaire
-  const BLOCK_PALETTE = club
-    ? generateBlockPalette(ACCENT, club.couleur_secondaire)
-    : DEFAULT_PALETTE
+  // La couleur la plus claire sert de base pour les tableaux
+  const LIGHT_COLOR = lighterOf(PRIMARY, SECONDARY)
+  // La couleur la plus sombre sert de base pour le fond
+  const DARK_COLOR  = SECONDARY ? darkerOf(PRIMARY, SECONDARY) : PRIMARY
 
-  // Fond adapté : un peu moins sombre (l=15 au lieu de 10)
-  const { h: clubH, s: clubS } = hexToHSL(ACCENT)
-  const BG_COLOR = club ? hslToHex(clubH, Math.min(clubS * 0.3, 22), 15) : '#1a2236'
+  // Fond : dérivé de la couleur sombre, très désaturé
+  const { h: darkH, s: darkS } = hexToHSL(DARK_COLOR)
+  const BG_COLOR = hslToHex(darkH, Math.min(darkS * 0.15, 12), 12)
 
-  // Fond gradient si couleur secondaire
-  const BG_STYLE = club?.couleur_secondaire
-    ? (() => {
-        const { h: h2, s: s2 } = hexToHSL(club.couleur_secondaire)
-        const bg2 = hslToHex(h2, Math.min(s2 * 0.3, 22), 15)
-        return `linear-gradient(135deg, ${BG_COLOR} 0%, ${bg2} 100%)`
-      })()
-    : BG_COLOR
+  // Barre de gradient en haut si 2 couleurs
+  const TOP_BAR = SECONDARY
+    ? `linear-gradient(90deg, ${PRIMARY}, ${SECONDARY})`
+    : PRIMARY
+
+  // Palette de blocs basée sur la couleur claire
+  const BLOCK_PALETTE = club ? generateBlockPalette(LIGHT_COLOR) : DEFAULT_PALETTE
 
   const echauffement = seance.echauffement || []
+  const hasWarmup = echauffement.length > 0
 
-  // Grouper les exercices par lettre (supersets)
+  // Grouper les exercices par lettre
   const groups = []
   exercices.forEach(ex => {
     const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
@@ -208,209 +207,244 @@ export default function SeanceProjection() {
     else warmGroups.push({ groupe: l.groupe, items: [l] })
   })
 
-  const COLS = '110px 1fr 80px 120px 100px 110px 150px'
-
-  const hasWarmup = echauffement.length > 0
+  const COLS = '100px 1fr 75px 110px 100px 100px 140px'
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: BG_STYLE }}>
-      {/* Bande de couleur club en haut — hors du conteneur scalé */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: club?.couleur_secondaire ? `linear-gradient(90deg, ${ACCENT}, ${club.couleur_secondaire})` : `linear-gradient(90deg, ${ACCENT}, ${ACCENT}55)`, zIndex: 10 }} />
-    <div ref={contentRef} style={{
-      width: '100vw',
-      background: BG_STYLE,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      padding: '2.5rem 3.5rem',
-      boxSizing: 'border-box',
-      transformOrigin: 'top left',
-      transform: `scale(${scale})`,
-    }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: BG_COLOR }}>
+      {/* Bande couleur en haut */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: TOP_BAR, zIndex: 10 }} />
 
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', paddingTop: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+      <div ref={contentRef} style={{
+        width: '100vw',
+        background: BG_COLOR,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        padding: '2rem 3rem',
+        boxSizing: 'border-box',
+        transformOrigin: 'top left',
+        transform: `scale(${scale})`,
+      }}>
 
-          <img
-            src={club?.logo_url || '/logo192.png'}
-            alt={club?.nom || 'AWprepa'}
-            style={{ width: 70, height: 70, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }}
-          />
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-              <p style={{ fontSize: '0.72rem', fontWeight: '900', color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0 }}>
-                {seance.programmes?.nom}
-              </p>
-              {club && (
-                <span style={{ background: ACCENT + '22', color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 20, padding: '0.1rem 0.6rem', fontSize: '0.6rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {club.nom}
-                </span>
-              )}
+        {/* ── Header ── */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: '1.5rem', paddingBottom: '1.25rem',
+          borderBottom: `3px solid ${LIGHT_COLOR}`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <div style={{
+              width: 58, height: 58, borderRadius: 12,
+              background: LIGHT_COLOR,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, overflow: 'hidden',
+            }}>
+              <img
+                src={club?.logo_url || '/logo192.png'}
+                alt={club?.nom || 'AWprepa'}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
-            <h1 style={{ fontSize: '3rem', fontWeight: '900', color: 'white', margin: 0, lineHeight: 1.05, letterSpacing: '-0.02em' }}>
-              {seance.nom}
-            </h1>
-          </div>
-        </div>
-        <button onClick={() => navigate(-1)} style={{
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-          color: 'rgba(255,255,255,0.4)', borderRadius: 10, padding: '0.55rem 1.1rem',
-          cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', fontFamily: 'inherit',
-        }}>✕ Fermer</button>
-      </div>
-
-      {/* ── Corps : Programme + Échauffement côte à côte ── */}
-      <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'flex-start' }}>
-
-        {/* ── Programme principal ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <SectionLabel accent={ACCENT}>Programme</SectionLabel>
-
-          {/* En-têtes colonnes */}
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '1rem', padding: '0 1.5rem', marginBottom: '0.75rem' }}>
-            {['Code', 'Exercice', 'Séries', 'Répétitions', 'Tempo', 'Récup.', 'Intensité'].map((label, i) => (
-              <span key={label} style={{
-                fontSize: '0.58rem', fontWeight: '900',
-                color: i === 0 ? ACCENT : 'rgba(255,255,255,0.22)',
-                textTransform: 'uppercase', letterSpacing: '0.14em',
-                textAlign: i > 1 ? 'center' : 'left', display: 'block',
-              }}>{label}</span>
-            ))}
+            <div>
+              <div style={{ fontSize: '0.7rem', fontWeight: '800', color: LIGHT_COLOR, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 4 }}>
+                {club?.nom || 'AWprepa'}{seance.programmes?.nom ? ` · ${seance.programmes.nom}` : ''}
+              </div>
+              <h1 style={{ fontSize: '2.4rem', fontWeight: '900', color: '#fff', margin: 0, lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+                {seance.nom}
+              </h1>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {groups.map((g, gi) => {
-              const color = makeBlockColor(BLOCK_PALETTE, g.letter)
-              const isSuperset = g.items.length > 1
-
-              return (
-                <div key={gi} style={{
-                  background: color + '0e',
-                  border: `1px solid ${color}35`,
-                  borderLeft: `4px solid ${color}`,
-                  borderRadius: '0 16px 16px 0',
-                  overflow: 'hidden',
-                }}>
-                  {isSuperset && (
-                    <div style={{ background: color + '18', padding: '0.3rem 1.5rem', borderBottom: `1px solid ${color}20` }}>
-                      <span style={{ fontSize: '0.6rem', fontWeight: '900', color, textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-                        Superset · {g.letter}
-                      </span>
-                    </div>
-                  )}
-
-                  {g.items.map((ex, i) => (
-                    <div key={ex.id} style={{
-                      display: 'grid', gridTemplateColumns: COLS, gap: '1rem',
-                      padding: '1rem 1.5rem', alignItems: 'center',
-                      borderTop: i > 0 ? `1px solid ${color}15` : 'none',
-                    }}>
-                      <div>
-                        <span style={{
-                          background: color,
-                          color: isLightColor(color) ? '#1a1a1a' : 'white',
-                          padding: '0.25rem 0.7rem', borderRadius: 8,
-                          fontSize: '1rem', fontWeight: '900', display: 'inline-block',
-                          letterSpacing: '0.04em',
-                        }}>{ex.code}</span>
-                      </div>
-                      <span style={{ fontSize: '1.3rem', fontWeight: '700', color: 'white', letterSpacing: '-0.01em' }}>{ex.nom}</span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: '800', color: color, textAlign: 'center' }}>
-                        {ex.series ? `${ex.series}×` : <span style={{ color: 'rgba(255,255,255,0.18)' }}>—</span>}
-                      </span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'rgba(255,255,255,0.85)', textAlign: 'center' }}>
-                        {ex.repetitions || <span style={{ color: 'rgba(255,255,255,0.18)' }}>—</span>}
-                      </span>
-                      <span style={{ fontSize: '1.05rem', fontWeight: '600', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
-                        {ex.tempo || <span style={{ color: 'rgba(255,255,255,0.15)' }}>—</span>}
-                      </span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: '700', color: BLOCK_PALETTE[5] ?? '#60a5fa', textAlign: 'center' }}>
-                        {ex.recuperation || <span style={{ color: 'rgba(255,255,255,0.18)' }}>—</span>}
-                      </span>
-                      <span style={{ fontSize: '1rem', fontWeight: '700', color: ex.type_intensite ? (BLOCK_PALETTE[3] ?? '#a78bfa') : 'rgba(255,255,255,0.18)', textAlign: 'center' }}>
-                        {ex.type_intensite ? `${ex.type_intensite}${ex.valeur_intensite ? ' · ' + ex.valeur_intensite : ''}` : '—'}
-                      </span>
-                    </div>
-                  ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            {seance.date && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: '700', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 3 }}>
+                  {seance.semaine ? `Semaine ${seance.semaine}` : ''}
                 </div>
-              )
-            })}
+                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: LIGHT_COLOR }}>
+                  {new Date(seance.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </div>
+              </div>
+            )}
+            <button onClick={() => navigate(-1)} style={{
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.4)', borderRadius: 10, padding: '0.5rem 1rem',
+              cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', fontFamily: 'inherit',
+            }}>✕</button>
           </div>
         </div>
 
-        {/* ── Échauffement (sidebar droite) ── */}
-        {hasWarmup && (
-          <div style={{ width: 290, flexShrink: 0 }}>
-            <SectionLabel accent={ACCENT}>Échauffement</SectionLabel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {warmGroups.map((g, gi) => {
-                if (!g.groupe) {
-                  return g.items.map((l, i) => (
-                    <div key={l.id || `${gi}-${i}`} style={{
-                      display: 'flex', alignItems: 'center', gap: '0.75rem',
-                      padding: '0.65rem 1rem',
-                      background: 'rgba(255,255,255,0.04)',
-                      borderLeft: `3px solid ${ACCENT}55`,
-                      borderRadius: '0 10px 10px 0',
-                    }}>
-                      <span style={{ flex: 1, fontSize: '1rem', fontWeight: '700', color: 'white' }}>{l.nom}</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '800', color: ACCENT, whiteSpace: 'nowrap' }}>{l.reps}</span>
+        {/* ── Corps ── */}
+        <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+
+          {/* ── Programme ── */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {groups.map((g, gi) => {
+                const blockColor = makeBlockColor(BLOCK_PALETTE, g.letter)
+                const isSuperset = g.items.length > 1
+                // Texte sur fond de couleur vive (col header)
+                const headerTextColor = isLightColor(blockColor) ? '#111' : '#fff'
+
+                return (
+                  <div key={gi} style={{
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    border: `1px solid ${blockColor}30`,
+                  }}>
+                    {/* Barre fine en haut */}
+                    <div style={{ height: 4, background: blockColor }} />
+
+                    {/* Titre du bloc */}
+                    <div style={{ background: '#1c1c1c', padding: '7px 16px' }}>
+                      <span style={{
+                        fontSize: '10px', fontWeight: '900', letterSpacing: '2px',
+                        color: blockColor, textTransform: 'uppercase',
+                      }}>
+                        {isSuperset ? `Superset · ${g.letter}` : `${g.letter} — ${gi === 0 ? 'Principal' : 'Complément'}`}
+                      </span>
                     </div>
-                  ))
-                }
-                return (() => {
-                  const tours = g.items[0]?.tours
-                  return (
-                    <div key={gi} style={{
-                      display: 'flex', alignItems: 'stretch',
-                      border: `1.5px solid ${ACCENT}28`, borderLeft: `3px solid ${ACCENT}`,
-                      borderRadius: '0 14px 14px 0', background: ACCENT + '07',
+
+                    {/* En-têtes colonnes — fond couleur vive */}
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: COLS, gap: '8px',
+                      background: blockColor, padding: '6px 16px',
                     }}>
-                      <div style={{ flex: 1 }}>
-                        {g.items.map((l, i) => (
-                          <div key={l.id || i} style={{
-                            display: 'flex', alignItems: 'center', gap: '0.75rem',
-                            padding: '0.65rem 1rem',
-                            borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                          }}>
-                            <span style={{ flex: 1, fontSize: '1rem', fontWeight: '700', color: 'white' }}>{l.nom}</span>
-                            <span style={{ fontSize: '1rem', fontWeight: '800', color: ACCENT, whiteSpace: 'nowrap' }}>{l.reps}</span>
+                      {['Code', 'Exercice', 'Séries', 'Répétitions', 'Tempo', 'Récup.', 'Intensité'].map((label, i) => (
+                        <span key={label} style={{
+                          fontSize: '8px', fontWeight: '800', letterSpacing: '1.5px',
+                          color: headerTextColor + (i > 1 ? 'bb' : ''),
+                          textTransform: 'uppercase',
+                          textAlign: i > 1 ? 'center' : 'left',
+                          opacity: i === 0 ? 0 : 1,  // cache "Code" visuellement (badge le remplace)
+                        }}>{label}</span>
+                      ))}
+                    </div>
+
+                    {/* Lignes exercices — fond clair */}
+                    {g.items.map((ex, i) => {
+                      const rowBg = lightTint(blockColor, 95 - i * 3)
+                      return (
+                        <div key={ex.id} style={{
+                          display: 'grid', gridTemplateColumns: COLS, gap: '8px',
+                          alignItems: 'center',
+                          padding: '11px 16px',
+                          background: rowBg,
+                          borderBottom: i < g.items.length - 1 ? `1px solid ${blockColor}30` : 'none',
+                        }}>
+                          {/* Badge code */}
+                          <div>
+                            <span style={{
+                              background: '#1a1a1a',
+                              color: blockColor,
+                              padding: '3px 10px',
+                              borderRadius: 5,
+                              fontSize: '11px', fontWeight: '900',
+                              display: 'inline-block',
+                              letterSpacing: '0.04em',
+                            }}>{ex.code}</span>
                           </div>
-                        ))}
+
+                          {/* Nom */}
+                          <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#111' }}>
+                            {ex.nom}
+                          </span>
+
+                          {/* Séries */}
+                          <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#111', textAlign: 'center' }}>
+                            {ex.series ? `${ex.series}×` : <span style={{ color: '#aaa' }}>—</span>}
+                          </span>
+
+                          {/* Répétitions */}
+                          <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#111', textAlign: 'center' }}>
+                            {ex.repetitions || <span style={{ color: '#aaa' }}>—</span>}
+                          </span>
+
+                          {/* Tempo */}
+                          <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#555', textAlign: 'center' }}>
+                            {ex.tempo || <span style={{ color: '#bbb' }}>—</span>}
+                          </span>
+
+                          {/* Récupération */}
+                          <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#222', textAlign: 'center' }}>
+                            {ex.recuperation || <span style={{ color: '#bbb' }}>—</span>}
+                          </span>
+
+                          {/* Intensité */}
+                          <span style={{ fontSize: '0.95rem', fontWeight: '700', color: '#333', textAlign: 'center' }}>
+                            {ex.type_intensite
+                              ? `${ex.type_intensite}${ex.valeur_intensite ? ' · ' + ex.valeur_intensite : ''}`
+                              : <span style={{ color: '#bbb' }}>—</span>}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ── Échauffement (sidebar droite) ── */}
+          {hasWarmup && (
+            <div style={{ width: 270, flexShrink: 0 }}>
+              <div style={{
+                fontSize: '9px', fontWeight: '900', letterSpacing: '3px',
+                color: LIGHT_COLOR, textTransform: 'uppercase',
+                marginBottom: 14, paddingBottom: 8,
+                borderBottom: `1px solid rgba(255,255,255,0.1)`,
+              }}>Échauffement</div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {warmGroups.map((wg, wgi) => {
+                  if (!wg.groupe) {
+                    return wg.items.map((l, i) => (
+                      <div key={l.id || `${wgi}-${i}`} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '9px 14px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderLeft: `3px solid ${LIGHT_COLOR}60`,
+                        borderRadius: '0 8px 8px 0',
+                      }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '700', color: '#ddd' }}>{l.nom}</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '900', color: LIGHT_COLOR }}>{l.reps}</span>
                       </div>
+                    ))
+                  }
+                  const tours = wg.items[0]?.tours
+                  return (
+                    <div key={wgi} style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${LIGHT_COLOR}20`,
+                      borderLeft: `3px solid ${LIGHT_COLOR}`,
+                      borderRadius: '0 8px 8px 0',
+                      overflow: 'hidden',
+                    }}>
+                      {wg.items.map((l, i) => (
+                        <div key={l.id || i} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '9px 14px',
+                          borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                        }}>
+                          <span style={{ fontSize: '0.95rem', fontWeight: '700', color: '#ddd' }}>{l.nom}</span>
+                          <span style={{ fontSize: '0.95rem', fontWeight: '900', color: LIGHT_COLOR }}>{l.reps}</span>
+                        </div>
+                      ))}
                       {tours && (
-                        <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', paddingRight: '1rem', flexShrink: 0 }}>
-                          <div style={{ borderTop: `2px solid ${ACCENT}`, borderRight: `2px solid ${ACCENT}`, borderBottom: `2px solid ${ACCENT}`, borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
-                          <span style={{ fontSize: '0.8rem', fontWeight: '900', color: ACCENT, paddingLeft: '0.4rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
+                        <div style={{
+                          background: LIGHT_COLOR + '15',
+                          padding: '5px 14px',
+                          borderTop: `1px solid ${LIGHT_COLOR}20`,
+                        }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '900', color: LIGHT_COLOR }}>{tours} tours</span>
                         </div>
                       )}
                     </div>
                   )
-                })()
-              })}
+                })}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer club */}
-      {club && (
-        <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: `1px solid ${ACCENT}20`, display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: 0.4 }}>
-          {club.logo_url && <img src={club.logo_url} alt={club.nom} style={{ width: 20, height: 20, objectFit: 'contain' }} />}
-          <span style={{ fontSize: '0.7rem', fontWeight: '800', color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.16em' }}>{club.nom}</span>
+          )}
         </div>
-      )}
-    </div>
+      </div>
     </div>
   )
-}
-
-function isLightColor(hex) {
-  try {
-    const h = hex.replace('#', '')
-    const r = parseInt(h.substring(0, 2), 16)
-    const g = parseInt(h.substring(2, 4), 16)
-    const b = parseInt(h.substring(4, 6), 16)
-    return (0.299 * r + 0.587 * g + 0.114 * b) > 160
-  } catch { return false }
 }
