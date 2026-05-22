@@ -38,24 +38,44 @@ function hslToHex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`
 }
 
-// Génère 8 nuances autour de la couleur du club
-function generateBlockPalette(baseHex) {
-  const { h, s } = hexToHSL(baseHex)
-  const baseS = Math.max(55, Math.min(85, s))
-  // décalages hue / sat / lightness pour 8 blocs distincts mais dans la même famille
-  const shifts = [
-    [  0,   0,  2],  // A – couleur principale
-    [-22,   8, -6],  // B – plus sombre, légèrement décalé
-    [ 18,  -8, 10],  // C – plus clair, légèrement décalé
-    [-38,  12, -4],  // D – décalé froid
-    [ 30,  -4, 14],  // E – décalé chaud clair
-    [-12,  18,-12],  // F – saturé sombre
-    [ 45,   0,  6],  // G – décalé complémentaire proche
-    [-50, -14, 12],  // H – désaturé clair
+// Génère 8 nuances depuis 1 ou 2 couleurs du club
+function generateBlockPalette(primaryHex, secondaryHex) {
+  const { h: h1, s: s1 } = hexToHSL(primaryHex)
+  const baseS1 = Math.max(55, Math.min(85, s1))
+
+  // Décalages pour les 4 premiers blocs (couleur primaire)
+  const shifts1 = [
+    [  0,   0,  2],  // A – principale
+    [-22,   8, -6],  // B – sombre décalé
+    [ 18,  -8, 10],  // C – clair décalé
+    [-10,  18,-10],  // D – saturé sombre
   ]
-  return shifts.map(([dh, ds, dl]) =>
-    hslToHex(h + dh, baseS + ds, 54 + dl)
-  )
+
+  if (secondaryHex) {
+    // 4 blocs depuis la secondaire
+    const { h: h2, s: s2 } = hexToHSL(secondaryHex)
+    const baseS2 = Math.max(55, Math.min(85, s2))
+    const shifts2 = [
+      [  0,   0,  2],
+      [-20,   8, -5],
+      [ 16,  -8, 10],
+      [-8,   16,-10],
+    ]
+    return [
+      ...shifts1.map(([dh, ds, dl]) => hslToHex(h1 + dh, baseS1 + ds, 54 + dl)),
+      ...shifts2.map(([dh, ds, dl]) => hslToHex(h2 + dh, baseS2 + ds, 54 + dl)),
+    ]
+  }
+
+  // Sans secondaire : 8 nuances autour de la primaire
+  const shifts = [
+    ...shifts1,
+    [ 30,  -4, 14],
+    [-38,  12, -4],
+    [ 45,   0,  6],
+    [-50, -14, 12],
+  ]
+  return shifts.map(([dh, ds, dl]) => hslToHex(h1 + dh, baseS1 + ds, 54 + dl))
 }
 
 // Palette par défaut (sans club)
@@ -124,8 +144,8 @@ export default function SeanceProjection() {
     // Priorité 1 : thème depuis le groupe (template ou copie)
     if (groupeId) {
       const { data: g } = await supabase
-        .from('groupes').select('nom, couleur, logo_url').eq('id', groupeId).single()
-      if (g) setClub({ nom: g.nom, couleur: g.couleur, logo_url: g.logo_url || null })
+        .from('groupes').select('nom, couleur, couleur_secondaire, logo_url').eq('id', groupeId).single()
+      if (g) setClub({ nom: g.nom, couleur: g.couleur, couleur_secondaire: g.couleur_secondaire || null, logo_url: g.logo_url || null })
     } else if (clientId) {
       // Priorité 2 : thème depuis la catégorie du client
       const { data: client } = await supabase
@@ -151,12 +171,23 @@ export default function SeanceProjection() {
   const accentIsLight = isLightColor(ACCENT)
   const accentText = accentIsLight ? '#1a1a1a' : 'white'
 
-  // Palette de blocs : nuances de la couleur du club si disponible
-  const BLOCK_PALETTE = club ? generateBlockPalette(ACCENT) : DEFAULT_PALETTE
+  // Palette de blocs : nuances depuis primaire + secondaire
+  const BLOCK_PALETTE = club
+    ? generateBlockPalette(ACCENT, club.couleur_secondaire)
+    : DEFAULT_PALETTE
 
-  // Fond adapté à la couleur du club
+  // Fond adapté : un peu moins sombre (l=15 au lieu de 10)
   const { h: clubH, s: clubS } = hexToHSL(ACCENT)
-  const BG_COLOR = club ? hslToHex(clubH, Math.min(clubS * 0.35, 28), 10) : '#141c2b'
+  const BG_COLOR = club ? hslToHex(clubH, Math.min(clubS * 0.3, 22), 15) : '#1a2236'
+
+  // Fond gradient si couleur secondaire
+  const BG_STYLE = club?.couleur_secondaire
+    ? (() => {
+        const { h: h2, s: s2 } = hexToHSL(club.couleur_secondaire)
+        const bg2 = hslToHex(h2, Math.min(s2 * 0.3, 22), 15)
+        return `linear-gradient(135deg, ${BG_COLOR} 0%, ${bg2} 100%)`
+      })()
+    : BG_COLOR
 
   const echauffement = seance.echauffement || []
 
@@ -182,12 +213,12 @@ export default function SeanceProjection() {
   const hasWarmup = echauffement.length > 0
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: BG_COLOR }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: BG_STYLE }}>
       {/* Bande de couleur club en haut — hors du conteneur scalé */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT}55)`, zIndex: 10 }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: club?.couleur_secondaire ? `linear-gradient(90deg, ${ACCENT}, ${club.couleur_secondaire})` : `linear-gradient(90deg, ${ACCENT}, ${ACCENT}55)`, zIndex: 10 }} />
     <div ref={contentRef} style={{
       width: '100vw',
-      background: BG_COLOR,
+      background: BG_STYLE,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       padding: '2.5rem 3.5rem',
       boxSizing: 'border-box',

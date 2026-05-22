@@ -65,7 +65,8 @@ export default function Dashboard() {
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
-  const [newGroupeCouleur, setNewGroupeCouleur] = useState('#6366f1')
+  const [newGroupeCouleur, setNewGroupeCouleur]   = useState('#6366f1')
+  const [newGroupeCouleur2, setNewGroupeCouleur2] = useState('')
   const [newGroupeLogoFile, setNewGroupeLogoFile] = useState(null)
   const [newGroupeLogoPreview, setNewGroupeLogoPreview] = useState(null)
   const [uploadingLogo, setUploadingLogo]   = useState(false)
@@ -171,11 +172,12 @@ export default function Dashboard() {
       logoUrl = supabase.storage.from('groupe-logos').getPublicUrl(path).data.publicUrl
     }
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, logo_url: logoUrl }])
+      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, couleur_secondaire: newGroupeCouleur2 || null, logo_url: logoUrl }])
       .select().single()
     if (error) { alert(error.message); setUploadingLogo(false); return }
     setGroupes(prev => [...prev, data])
-    setNewGroupeNom(''); setNewGroupeLogoFile(null); setNewGroupeLogoPreview(null); setNewGroupeCouleur('#6366f1')
+    setNewGroupeNom(''); setNewGroupeLogoFile(null); setNewGroupeLogoPreview(null)
+    setNewGroupeCouleur('#6366f1'); setNewGroupeCouleur2('')
     setShowGroupeForm(false)
     setUploadingLogo(false)
   }
@@ -541,12 +543,21 @@ export default function Dashboard() {
               </label>
             </div>
 
-            {/* Couleur libre */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280' }}>Couleur</label>
-              <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
-                style={{ width: 38, height: 32, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
-              <span style={{ fontSize: '0.8rem', color: '#9ca3af', fontFamily: 'monospace' }}>{newGroupeCouleur}</span>
+            {/* Couleurs */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', whiteSpace: 'nowrap' }}>Couleur principale</label>
+                <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
+                  style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', whiteSpace: 'nowrap' }}>Couleur secondaire</label>
+                <input type="color" value={newGroupeCouleur2 || '#ffffff'} onChange={e => setNewGroupeCouleur2(e.target.value)}
+                  style={{ width: 36, height: 30, border: `1.5px solid ${newGroupeCouleur2 ? '#e5e7eb' : '#d1d5db'}`, borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white', opacity: newGroupeCouleur2 ? 1 : 0.5 }} />
+                {newGroupeCouleur2 && (
+                  <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.8rem', padding: 0 }}>✕</button>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>

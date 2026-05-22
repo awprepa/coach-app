@@ -23,7 +23,7 @@ export default function FicheGroupe() {
 
   // Modales
   const [editOpen, setEditOpen]           = useState(false)
-  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1' })
+  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1', couleur_secondaire: '' })
   const [editLogoFile, setEditLogoFile]   = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
@@ -50,7 +50,7 @@ export default function FicheGroupe() {
       supabase.from('programmes').select('*, seances(count)').eq('groupe_id', id).is('template_id', null).order('created_at', { ascending: false }),
     ])
     setGroupe(g)
-    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1' })
+    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1', couleur_secondaire: g?.couleur_secondaire || '' })
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
@@ -87,6 +87,7 @@ export default function FicheGroupe() {
     const { error } = await supabase.from('groupes').update({
       nom: editForm.nom.trim(),
       couleur: editForm.couleur,
+      couleur_secondaire: editForm.couleur_secondaire || null,
       logo_url: logoUrl,
     }).eq('id', id)
     if (error) { alert(error.message); setSaving(false); return }
@@ -449,11 +450,22 @@ export default function FicheGroupe() {
             <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleEditLogoChange} style={{ display: 'none' }} />
           </label>
 
-          <label style={S.label}>Couleur</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <input type="color" value={editForm.couleur} onChange={e => setEditForm({ ...editForm, couleur: e.target.value })}
-              style={{ width: 42, height: 34, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
-            <span style={{ fontSize: '0.82rem', color: '#6b7280', fontFamily: 'monospace' }}>{editForm.couleur}</span>
+          <label style={S.label}>Couleurs</label>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280' }}>Principale</span>
+              <input type="color" value={editForm.couleur} onChange={e => setEditForm({ ...editForm, couleur: e.target.value })}
+                style={{ width: 38, height: 32, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
+              <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontFamily: 'monospace' }}>{editForm.couleur}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280' }}>Secondaire</span>
+              <input type="color" value={editForm.couleur_secondaire || '#ffffff'} onChange={e => setEditForm({ ...editForm, couleur_secondaire: e.target.value })}
+                style={{ width: 38, height: 32, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white', opacity: editForm.couleur_secondaire ? 1 : 0.5 }} />
+              {editForm.couleur_secondaire && (
+                <button onClick={() => setEditForm({ ...editForm, couleur_secondaire: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.8rem', padding: 0 }}>✕</button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
