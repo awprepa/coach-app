@@ -368,7 +368,7 @@ export default function SciencesClient() {
 function Ctr({ n, label }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-      <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{n}</span>
+      <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{n}</span>
       <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{label}</span>
     </div>
   )
@@ -400,7 +400,7 @@ const S = {
   },
   eyebrow: {
     fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.16em',
-    color: 'var(--accent)', margin: '0 0 10px',
+    color: 'var(--accent-fg)', margin: '0 0 10px',
   },
   h1: {
     fontSize: '1.65rem', fontWeight: 900, color: 'white',

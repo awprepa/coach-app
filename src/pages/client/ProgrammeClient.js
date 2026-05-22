@@ -333,7 +333,7 @@ const styles = {
   },
   badge: {
     background: '#333333',
-    color: 'var(--accent)',
+    color: 'var(--accent-fg)',
     padding: '0.2rem 0.65rem',
     borderRadius: '999px',
     fontSize: '0.75rem',
@@ -407,7 +407,7 @@ const styles = {
   jourNum: {
     fontSize: '0.95rem',
     fontWeight: '800',
-    color: 'var(--accent)',
+    color: 'var(--accent-fg)',
     lineHeight: 1.2,
   },
   cardTitle: {
@@ -469,7 +469,7 @@ const styles = {
   submitBtn: {
     flex: 1,
     background: '#333333',
-    color: 'var(--accent)',
+    color: 'var(--accent-fg)',
     border: 'none',
     borderRadius: 9,
     padding: '0.65rem',

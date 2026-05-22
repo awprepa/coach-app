@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockups thème club — v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 40px 20px 60px;
+  }
+  h1 { text-align:center; font-size:1.1rem; color:#111; font-weight:800; margin-bottom:5px; }
+  .sub { text-align:center; font-size:0.76rem; color:#9ca3af; margin-bottom:50px; }
+
+  .section { margin-bottom:60px; }
+  .sec-title {
+    text-align:center; font-size:0.7rem; font-weight:800; color:#6b7280;
+    text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;
+  }
+  .sec-desc { text-align:center; font-size:0.78rem; color:#374151; margin-bottom:22px; }
+
+  .row { display:flex; gap:28px; justify-content:center; flex-wrap:wrap; }
+
+  /* Phone */
+  .phone { flex-shrink:0; }
+  .phone-label { text-align:center; margin-bottom:10px; }
+  .phone-label strong { font-size:0.82rem; color:#374151; }
+  .shell {
+    width:270px; height:570px;
+    border-radius:34px;
+    box-shadow: 0 20px 56px rgba(0,0,0,0.25), 0 0 0 9px #111, 0 0 0 10px #282828;
+    overflow:hidden; display:flex; flex-direction:column;
+  }
+
+  /* Shared elements */
+  .card { background:white; border-radius:14px; padding:11px 13px; }
+  .ct { font-size:0.75rem; font-weight:800; color:#111; margin-bottom:2px; }
+  .cs { font-size:0.67rem; color:#9ca3af; }
+  .chip { border-radius:999px; padding:2px 9px; font-size:0.6rem; font-weight:700; display:inline-block; }
+  .pbar { height:4px; background:rgba(0,0,0,0.08); border-radius:999px; overflow:hidden; margin:5px 0 3px; }
+  .pfill { height:100%; border-radius:999px; }
+  .row-card { display:flex; align-items:center; justify-content:space-between; }
+  .arr { font-size:1.1rem; font-weight:300; }
+
+
+  /* ══════════════════════════════════════════════════
+     OPTION C — Fond club, cartes flottantes
+     Le background de l'app = couleur du club.
+     Les cartes blanches "flottent" dessus.
+  ══════════════════════════════════════════════════ */
+
+  /* Section Paloise */
+  .sp-c { background: #1b7a3b; }
+  .sp-c .topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:28px 16px 16px; flex-shrink:0;
+  }
+  .sp-c .logo-wrap { display:flex; align-items:center; gap:8px; }
+  .sp-c .logo { width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+  .sp-c .cn { font-size:0.9rem; font-weight:900; color:white; }
+  .sp-c .nb { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .sp-c .greeting { padding:0 16px 20px; flex-shrink:0; }
+  .sp-c .greeting .hello { color:rgba(255,255,255,0.65); font-size:0.7rem; }
+  .sp-c .greeting .name { color:white; font-size:1.05rem; font-weight:900; margin-top:2px; }
+  .sp-c .content-area { flex:1; background:#f2f9f4; border-radius:22px 22px 0 0; padding:16px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; }
+  .sp-c .card { box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+  .sp-c .pfill { background:#1b7a3b; }
+  .sp-c .arr { color:#1b7a3b; }
+  .sp-c .chip-accent { background:#1b7a3b; color:white; }
+  .sp-c .bnav { display:flex; justify-content:space-around; align-items:center; height:54px; background:#f2f9f4; flex-shrink:0; border-top:1px solid rgba(27,122,59,0.12); }
+  .sp-c .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:#9ca3af; }
+  .sp-c .ni.on { color:#1b7a3b; }
+  .sp-c .ni-ic { font-size:1rem; }
+
+  /* CA Brive */
+  .brive-c { background: #1a1a1a; }
+  .brive-c .topbar { display:flex; align-items:center; justify-content:space-between; padding:28px 16px 16px; flex-shrink:0; }
+  .brive-c .logo-wrap { display:flex; align-items:center; gap:8px; }
+  .brive-c .logo { width:34px; height:34px; border-radius:9px; border:1.5px solid #c49a2b; background:#2a2a2a; display:flex; align-items:center; justify-content:center; font-size:0.6rem; font-weight:900; color:#c49a2b; letter-spacing:-0.5px; }
+  .brive-c .cn { font-size:0.9rem; font-weight:900; color:white; }
+  .brive-c .nb { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .brive-c .greeting { padding:0 16px 20px; flex-shrink:0; }
+  .brive-c .greeting .hello { color:rgba(255,255,255,0.4); font-size:0.7rem; }
+  .brive-c .greeting .name { color:white; font-size:1.05rem; font-weight:900; margin-top:2px; }
+  .brive-c .content-area { flex:1; background:#f8f6f1; border-radius:22px 22px 0 0; padding:16px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; }
+  .brive-c .card { box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+  .brive-c .pfill { background:#c49a2b; }
+  .brive-c .arr { color:#c49a2b; }
+  .brive-c .chip-accent { background:#c49a2b; color:white; }
+  .brive-c .bnav { display:flex; justify-content:space-around; align-items:center; height:54px; background:#f8f6f1; flex-shrink:0; border-top:1px solid rgba(196,154,43,0.15); }
+  .brive-c .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:#9ca3af; }
+  .brive-c .ni.on { color:#c49a2b; }
+  .brive-c .ni-ic { font-size:1rem; }
+
+  /* Stade Toulousain */
+  .stade-c { background: #dc2626; }
+  .stade-c .topbar { display:flex; align-items:center; justify-content:space-between; padding:28px 16px 16px; flex-shrink:0; }
+  .stade-c .logo-wrap { display:flex; align-items:center; gap:8px; }
+  .stade-c .logo { width:34px; height:34px; border-radius:9px; background:white; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:900; color:#dc2626; }
+  .stade-c .cn { font-size:0.9rem; font-weight:900; color:white; }
+  .stade-c .nb { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .stade-c .greeting { padding:0 16px 20px; flex-shrink:0; }
+  .stade-c .greeting .hello { color:rgba(255,255,255,0.65); font-size:0.7rem; }
+  .stade-c .greeting .name { color:white; font-size:1.05rem; font-weight:900; margin-top:2px; }
+  .stade-c .content-area { flex:1; background:#fdf2f2; border-radius:22px 22px 0 0; padding:16px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; }
+  .stade-c .card { box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+  .stade-c .pfill { background:#dc2626; }
+  .stade-c .arr { color:#dc2626; }
+  .stade-c .chip-accent { background:#dc2626; color:white; }
+  .stade-c .bnav { display:flex; justify-content:space-around; align-items:center; height:54px; background:#fdf2f2; flex-shrink:0; border-top:1px solid rgba(220,38,38,0.12); }
+  .stade-c .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:#9ca3af; }
+  .stade-c .ni.on { color:#dc2626; }
+  .stade-c .ni-ic { font-size:1rem; }
+
+
+  /* ══════════════════════════════════════════════════
+     OPTION D — Grand hero + contenu blanc
+     Partie haute (40%) = visuel club immersif.
+     Partie basse (60%) = cartes blanches nettes.
+  ══════════════════════════════════════════════════ */
+
+  .sp-d { background:#f9fafb; }
+  .sp-d .hero {
+    flex-shrink:0; height:185px;
+    background:linear-gradient(160deg,#1b7a3b 0%,#0a4020 100%);
+    padding:24px 16px 0; position:relative; overflow:hidden;
+  }
+  .sp-d .hero::before { content:''; position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); width:300px; height:80px; background:#f9fafb; border-radius:50%; }
+  .sp-d .hero-top { display:flex; align-items:center; justify-content:space-between; }
+  .sp-d .logo-big { width:40px; height:40px; border-radius:11px; background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; font-size:1.3rem; }
+  .sp-d .nb { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .sp-d .hero-name { margin-top:12px; color:rgba(255,255,255,0.7); font-size:0.7rem; }
+  .sp-d .hero-name strong { color:white; font-size:0.95rem; font-weight:900; display:block; margin-top:1px; }
+  .sp-d .content-area { flex:1; padding:8px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; background:#f9fafb; }
+  .sp-d .card { box-shadow:0 2px 10px rgba(0,0,0,0.07); }
+  .sp-d .pfill { background:#1b7a3b; }
+  .sp-d .arr { color:#1b7a3b; }
+  .sp-d .chip-accent { background:#1b7a3b; color:white; }
+  .sp-d .bnav { display:flex; justify-content:space-around; align-items:center; height:54px; background:white; border-top:1px solid #f3f4f6; flex-shrink:0; }
+  .sp-d .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:#9ca3af; }
+  .sp-d .ni.on { color:#1b7a3b; }
+  .sp-d .ni-ic { font-size:1rem; }
+
+  .brive-d { background:#f9fafb; }
+  .brive-d .hero {
+    flex-shrink:0; height:185px;
+    background:linear-gradient(160deg,#1a1a1a 30%,#3d2e00 100%);
+    padding:24px 16px 0; position:relative; overflow:hidden;
+  }
+  .brive-d .hero::before { content:''; position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); width:300px; height:80px; background:#f9fafb; border-radius:50%; }
+  .brive-d .hero::after { content:'⭐'; position:absolute; right:20px; top:50px; font-size:3rem; opacity:0.08; }
+  .brive-d .hero-top { display:flex; align-items:center; justify-content:space-between; }
+  .brive-d .logo-big { width:40px; height:40px; border-radius:11px; border:2px solid #c49a2b; background:rgba(196,154,43,0.15); display:flex; align-items:center; justify-content:center; font-size:0.6rem; font-weight:900; color:#c49a2b; letter-spacing:-0.5px; }
+  .brive-d .nb { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .brive-d .hero-name { margin-top:12px; color:rgba(255,255,255,0.5); font-size:0.7rem; }
+  .brive-d .hero-name strong { color:white; font-size:0.95rem; font-weight:900; display:block; margin-top:1px; }
+  .brive-d .content-area { flex:1; padding:8px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; background:#f9fafb; }
+  .brive-d .card { box-shadow:0 2px 10px rgba(0,0,0,0.07); }
+  .brive-d .pfill { background:#c49a2b; }
+  .brive-d .arr { color:#c49a2b; }
+  .brive-d .chip-accent { background:#c49a2b; color:white; }
+  .brive-d .bnav { display:flex; justify-content:space-around; align-items:center; height:54px; background:white; border-top:1px solid #f3f4f6; flex-shrink:0; }
+  .brive-d .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:#9ca3af; }
+  .brive-d .ni.on { color:#c49a2b; }
+  .brive-d .ni-ic { font-size:1rem; }
+
+  .stade-d { background:#f9fafb; }
+  .stade-d .hero {
+    flex-shrink:0; height:185px;
+    background:linear-gradient(160deg,#1a1a1a 0%,#7f1d1d 100%);
+    padding:24px 16px 0; position:relative; overflow:hidden;
+  }
+  .stade-d .hero::before { content:''; position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); width:300px; height:80px; background:#f9fafb; border-radius:50%; }
+  .stade-d .hero-top { display:flex; align-items:center; justify-content:space-between; }
+  .stade-d .logo-big { width:40px; height:40px; border-radius:11px; background:white; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:900; color:#dc2626; }
+  .stade-d .nb { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .stade-d .hero-name { margin-top:12px; color:rgba(255,255,255,0.6); font-size:0.7rem; }
+  .stade-d .hero-name strong { color:white; font-size:0.95rem; font-weight:900; display:block; margin-top:1px; }
+  .stade-d .content-area { flex:1; padding:8px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; background:#f9fafb; }
+  .stade-d .card { box-shadow:0 2px 10px rgba(0,0,0,0.07); }
+  .stade-d .pfill { background:#dc2626; }
+  .stade-d .arr { color:#dc2626; }
+  .stade-d .chip-accent { background:#dc2626; color:white; }
+  .stade-d .bnav { display:flex; justify-content:space-around; align-items:center; height:54px; background:white; border-top:1px solid #f3f4f6; flex-shrink:0; }
+  .stade-d .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:#9ca3af; }
+  .stade-d .ni.on { color:#dc2626; }
+  .stade-d .ni-ic { font-size:1rem; }
+
+
+  /* ══════════════════════════════════════════════════
+     OPTION E — Blanc premium, couleur partout en subtil
+     Fond blanc pur. Header blanc + logo.
+     La couleur club est partout : bg cards, nav, titres.
+     Très épuré mais très marqué.
+  ══════════════════════════════════════════════════ */
+
+  .sp-e { background:#ffffff; }
+  .sp-e .topbar { display:flex; align-items:center; justify-content:space-between; padding:26px 16px 14px; flex-shrink:0; background:white; border-bottom:2.5px solid #1b7a3b; }
+  .sp-e .logo-wrap { display:flex; align-items:center; gap:9px; }
+  .sp-e .logo { width:36px; height:36px; border-radius:9px; background:#e8f5ee; border:2px solid #1b7a3b; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+  .sp-e .cn { font-size:0.88rem; font-weight:900; color:#111; }
+  .sp-e .cn span { font-size:0.62rem; color:#1b7a3b; font-weight:700; display:block; text-transform:uppercase; letter-spacing:0.5px; }
+  .sp-e .nb { width:28px; height:28px; border-radius:50%; background:#e8f5ee; display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .sp-e .wcard { margin:12px 14px 0; background:linear-gradient(135deg,#1b7a3b,#0e5228); border-radius:14px; padding:13px 15px; flex-shrink:0; }
+  .sp-e .wcard .hello { color:rgba(255,255,255,0.7); font-size:0.68rem; }
+  .sp-e .wcard .name { color:white; font-size:0.95rem; font-weight:900; margin-top:1px; }
+  .sp-e .wcard .next { color:rgba(255,255,255,0.55); font-size:0.65rem; margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); }
+  .sp-e .wcard .next strong { color:white; font-weight:700; }
+  .sp-e .content-area { flex:1; padding:10px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; background:#fff; }
+  .sp-e .sec-lbl { font-size:0.65rem; font-weight:800; color:#1b7a3b; text-transform:uppercase; letter-spacing:0.6px; margin:2px 0 -2px; }
+  .sp-e .card { box-shadow:none; border:1.5px solid #f3f4f6; }
+  .sp-e .pfill { background:#1b7a3b; }
+  .sp-e .arr { color:#1b7a3b; }
+  .sp-e .chip-accent { background:#e8f5ee; color:#1b7a3b; border:1px solid #1b7a3b33; }
+  .sp-e .bnav { display:flex; justify-content:space-around; align-items:center; height:56px; background:#1b7a3b; flex-shrink:0; }
+  .sp-e .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:rgba(255,255,255,0.45); }
+  .sp-e .ni.on { color:white; }
+  .sp-e .ni-ic { font-size:1rem; }
+
+  .brive-e { background:#ffffff; }
+  .brive-e .topbar { display:flex; align-items:center; justify-content:space-between; padding:26px 16px 14px; flex-shrink:0; background:white; border-bottom:2.5px solid #c49a2b; }
+  .brive-e .logo-wrap { display:flex; align-items:center; gap:9px; }
+  .brive-e .logo { width:36px; height:36px; border-radius:9px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; font-size:0.6rem; font-weight:900; color:#c49a2b; letter-spacing:-0.5px; }
+  .brive-e .cn { font-size:0.88rem; font-weight:900; color:#111; }
+  .brive-e .cn span { font-size:0.62rem; color:#c49a2b; font-weight:700; display:block; text-transform:uppercase; letter-spacing:0.5px; }
+  .brive-e .nb { width:28px; height:28px; border-radius:50%; background:#f5f0e8; display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .brive-e .wcard { margin:12px 14px 0; background:linear-gradient(135deg,#1a1a1a,#2d2500); border-radius:14px; padding:13px 15px; flex-shrink:0; }
+  .brive-e .wcard .hello { color:rgba(255,255,255,0.5); font-size:0.68rem; }
+  .brive-e .wcard .name { color:white; font-size:0.95rem; font-weight:900; margin-top:1px; }
+  .brive-e .wcard .next { color:rgba(255,255,255,0.45); font-size:0.65rem; margin-top:6px; padding-top:6px; border-top:1px solid rgba(196,154,43,0.3); }
+  .brive-e .wcard .next strong { color:#c49a2b; font-weight:700; }
+  .brive-e .content-area { flex:1; padding:10px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; background:#fff; }
+  .brive-e .sec-lbl { font-size:0.65rem; font-weight:800; color:#c49a2b; text-transform:uppercase; letter-spacing:0.6px; margin:2px 0 -2px; }
+  .brive-e .card { box-shadow:none; border:1.5px solid #f3f4f6; }
+  .brive-e .pfill { background:#c49a2b; }
+  .brive-e .arr { color:#c49a2b; }
+  .brive-e .chip-accent { background:#fdf5e4; color:#c49a2b; border:1px solid #c49a2b33; }
+  .brive-e .bnav { display:flex; justify-content:space-around; align-items:center; height:56px; background:#1a1a1a; flex-shrink:0; }
+  .brive-e .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:rgba(255,255,255,0.35); }
+  .brive-e .ni.on { color:#c49a2b; }
+  .brive-e .ni-ic { font-size:1rem; }
+
+  .stade-e { background:#ffffff; }
+  .stade-e .topbar { display:flex; align-items:center; justify-content:space-between; padding:26px 16px 14px; flex-shrink:0; background:white; border-bottom:2.5px solid #dc2626; }
+  .stade-e .logo-wrap { display:flex; align-items:center; gap:9px; }
+  .stade-e .logo { width:36px; height:36px; border-radius:9px; background:white; border:2px solid #1a1a1a; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:900; color:#dc2626; }
+  .stade-e .cn { font-size:0.88rem; font-weight:900; color:#111; }
+  .stade-e .cn span { font-size:0.62rem; color:#dc2626; font-weight:700; display:block; text-transform:uppercase; letter-spacing:0.5px; }
+  .stade-e .nb { width:28px; height:28px; border-radius:50%; background:#fef2f2; display:flex; align-items:center; justify-content:center; font-size:0.82rem; }
+  .stade-e .wcard { margin:12px 14px 0; background:linear-gradient(135deg,#1a1a1a,#7f1d1d); border-radius:14px; padding:13px 15px; flex-shrink:0; }
+  .stade-e .wcard .hello { color:rgba(255,255,255,0.6); font-size:0.68rem; }
+  .stade-e .wcard .name { color:white; font-size:0.95rem; font-weight:900; margin-top:1px; }
+  .stade-e .wcard .next { color:rgba(255,255,255,0.5); font-size:0.65rem; margin-top:6px; padding-top:6px; border-top:1px solid rgba(220,38,38,0.3); }
+  .stade-e .wcard .next strong { color:#f87171; font-weight:700; }
+  .stade-e .content-area { flex:1; padding:10px 14px 0; display:flex; flex-direction:column; gap:9px; overflow:hidden; background:#fff; }
+  .stade-e .sec-lbl { font-size:0.65rem; font-weight:800; color:#dc2626; text-transform:uppercase; letter-spacing:0.6px; margin:2px 0 -2px; }
+  .stade-e .card { box-shadow:none; border:1.5px solid #f3f4f6; }
+  .stade-e .pfill { background:#dc2626; }
+  .stade-e .arr { color:#dc2626; }
+  .stade-e .chip-accent { background:#fef2f2; color:#dc2626; border:1px solid #dc262633; }
+  .stade-e .bnav { display:flex; justify-content:space-around; align-items:center; height:56px; background:#1a1a1a; flex-shrink:0; }
+  .stade-e .ni { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:0.5rem; font-weight:600; color:rgba(255,255,255,0.35); }
+  .stade-e .ni.on { color:#dc2626; }
+  .stade-e .ni-ic { font-size:1rem; }
+</style>
+</head>
+<body>
+
+<h1>Thème club — 3 nouvelles directions</h1>
+<p class="sub">Dis-moi C, D ou E (ou un mix) → j'implémente</p>
+
+
+<!-- ══ OPTION C ══ -->
+<div class="section">
+  <div class="sec-title">Option C</div>
+  <div class="sec-desc">Fond = couleur du club · Cartes blanches qui flottent dessus · Contenu sur fond légèrement teinté</div>
+  <div class="row">
+
+    <!-- SP-C -->
+    <div class="phone">
+      <div class="phone-label"><strong>Section Paloise</strong></div>
+      <div class="shell sp-c">
+        <div class="topbar">
+          <div class="logo-wrap"><div class="logo">🛡️</div><span class="cn">Section Paloise</span></div>
+          <div class="nb">🔔</div>
+        </div>
+        <div class="greeting"><p class="hello">Bonjour</p><p class="name">Lucas Bertrand 👋</p></div>
+        <div class="content-area">
+          <div class="card"><div class="row-card"><div><div class="ct">⚡ Force — Sem. 3</div><div class="cs">Demain · 10h00</div></div><span class="chip chip-accent">Voir →</span></div></div>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="arr">›</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brive-C -->
+    <div class="phone">
+      <div class="phone-label"><strong>CA Brive</strong></div>
+      <div class="shell brive-c">
+        <div class="topbar">
+          <div class="logo-wrap"><div class="logo">CAB</div><span class="cn">CA Brive</span></div>
+          <div class="nb">🔔</div>
+        </div>
+        <div class="greeting"><p class="hello">Bonjour</p><p class="name">Lucas Bertrand 👋</p></div>
+        <div class="content-area">
+          <div class="card"><div class="row-card"><div><div class="ct">⚡ Force — Sem. 3</div><div class="cs">Demain · 10h00</div></div><span class="chip chip-accent">Voir →</span></div></div>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="arr">›</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stade-C -->
+    <div class="phone">
+      <div class="phone-label"><strong>Stade Toulousain</strong></div>
+      <div class="shell stade-c">
+        <div class="topbar">
+          <div class="logo-wrap"><div class="logo">ST</div><span class="cn">Stade Toulousain</span></div>
+          <div class="nb">🔔</div>
+        </div>
+        <div class="greeting"><p class="hello">Bonjour</p><p class="name">Lucas Bertrand 👋</p></div>
+        <div class="content-area">
+          <div class="card"><div class="row-card"><div><div class="ct">⚡ Force — Sem. 3</div><div class="cs">Demain · 10h00</div></div><span class="chip chip-accent">Voir →</span></div></div>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="arr">›</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ OPTION D ══ -->
+<div class="section">
+  <div class="sec-title">Option D</div>
+  <div class="sec-desc">Grand hero club en haut (logo + nom + bonjour) qui se fond en blanc par le bas · Contenu blanc propre</div>
+  <div class="row">
+
+    <!-- SP-D -->
+    <div class="phone">
+      <div class="phone-label"><strong>Section Paloise</strong></div>
+      <div class="shell sp-d">
+        <div class="hero">
+          <div class="hero-top">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div class="logo-big">🛡️</div>
+              <div>
+                <div style="font-size:0.95rem;font-weight:900;color:white">Section Paloise</div>
+                <div style="font-size:0.62rem;color:rgba(255,255,255,0.6)">Préparation physique</div>
+              </div>
+            </div>
+            <div class="nb">🔔</div>
+          </div>
+          <div class="hero-name">Bonjour <strong>Lucas Bertrand 👋</strong></div>
+        </div>
+        <div class="content-area">
+          <div class="card"><div class="row-card"><div><div class="ct">⚡ Force — Sem. 3</div><div class="cs">Demain · 10h00</div></div><span class="chip chip-accent">Voir →</span></div></div>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="arr">›</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brive-D -->
+    <div class="phone">
+      <div class="phone-label"><strong>CA Brive</strong></div>
+      <div class="shell brive-d">
+        <div class="hero">
+          <div class="hero-top">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div class="logo-big">CAB</div>
+              <div>
+                <div style="font-size:0.95rem;font-weight:900;color:white">CA Brive</div>
+                <div style="font-size:0.62rem;color:rgba(196,154,43,0.7)">Corrèze · Limousin</div>
+              </div>
+            </div>
+            <div class="nb">🔔</div>
+          </div>
+          <div class="hero-name">Bonjour <strong>Lucas Bertrand 👋</strong></div>
+        </div>
+        <div class="content-area">
+          <div class="card"><div class="row-card"><div><div class="ct">⚡ Force — Sem. 3</div><div class="cs">Demain · 10h00</div></div><span class="chip chip-accent">Voir →</span></div></div>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="arr">›</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stade-D -->
+    <div class="phone">
+      <div class="phone-label"><strong>Stade Toulousain</strong></div>
+      <div class="shell stade-d">
+        <div class="hero">
+          <div class="hero-top">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div class="logo-big">ST</div>
+              <div>
+                <div style="font-size:0.95rem;font-weight:900;color:white">Stade Toulousain</div>
+                <div style="font-size:0.62rem;color:rgba(255,255,255,0.5)">Rugby · Top 14</div>
+              </div>
+            </div>
+            <div class="nb">🔔</div>
+          </div>
+          <div class="hero-name">Bonjour <strong>Lucas Bertrand 👋</strong></div>
+        </div>
+        <div class="content-area">
+          <div class="card"><div class="row-card"><div><div class="ct">⚡ Force — Sem. 3</div><div class="cs">Demain · 10h00</div></div><span class="chip chip-accent">Voir →</span></div></div>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="arr">›</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ OPTION E ══ -->
+<div class="section">
+  <div class="sec-title">Option E</div>
+  <div class="sec-desc">Fond blanc pur · Trait couleur sous le header · Carte de bienvenue sombre · Nav couleur en bas · Titres colorés</div>
+  <div class="row">
+
+    <!-- SP-E -->
+    <div class="phone">
+      <div class="phone-label"><strong>Section Paloise</strong></div>
+      <div class="shell sp-e">
+        <div class="topbar">
+          <div class="logo-wrap">
+            <div class="logo">🛡️</div>
+            <div class="cn">Section Paloise <span>Béarn · Pyrénées</span></div>
+          </div>
+          <div class="nb">🔔</div>
+        </div>
+        <div class="wcard">
+          <div class="hello">Bonjour</div>
+          <div class="name">Lucas Bertrand 👋</div>
+          <div class="next">Prochaine séance : <strong>Force · demain 10h</strong></div>
+        </div>
+        <div class="content-area">
+          <p class="sec-lbl">Programme</p>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <p class="sec-lbl">Suivi</p>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="chip chip-accent">Voir</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brive-E -->
+    <div class="phone">
+      <div class="phone-label"><strong>CA Brive</strong></div>
+      <div class="shell brive-e">
+        <div class="topbar">
+          <div class="logo-wrap">
+            <div class="logo">CAB</div>
+            <div class="cn">CA Brive <span>Corrèze · Limousin</span></div>
+          </div>
+          <div class="nb">🔔</div>
+        </div>
+        <div class="wcard">
+          <div class="hello">Bonjour</div>
+          <div class="name">Lucas Bertrand 👋</div>
+          <div class="next">Prochaine séance : <strong>Force · demain 10h</strong></div>
+        </div>
+        <div class="content-area">
+          <p class="sec-lbl">Programme</p>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <p class="sec-lbl">Suivi</p>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="chip chip-accent">Voir</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stade-E -->
+    <div class="phone">
+      <div class="phone-label"><strong>Stade Toulousain</strong></div>
+      <div class="shell stade-e">
+        <div class="topbar">
+          <div class="logo-wrap">
+            <div class="logo">ST</div>
+            <div class="cn">Stade Toulousain <span>Rugby · Top 14</span></div>
+          </div>
+          <div class="nb">🔔</div>
+        </div>
+        <div class="wcard">
+          <div class="hello">Bonjour</div>
+          <div class="name">Lucas Bertrand 👋</div>
+          <div class="next">Prochaine séance : <strong>Force · demain 10h</strong></div>
+        </div>
+        <div class="content-area">
+          <p class="sec-lbl">Programme</p>
+          <div class="card"><div class="ct">🔄 Cycle Pré-saison</div><div class="pbar"><div class="pfill" style="width:65%"></div></div><div class="cs">Sem. 3 sur 6</div></div>
+          <p class="sec-lbl">Suivi</p>
+          <div class="card"><div class="row-card"><div><div class="ct">📊 VMA · 16.2 km/h</div><div class="cs">il y a 12 jours</div></div><span class="chip chip-accent">Voir</span></div></div>
+          <div class="card"><div class="row-card"><div><div class="ct">📍 GPS dernier match</div><div class="cs">8.4 km · 142 accél.</div></div><span class="arr">›</span></div></div>
+        </div>
+        <div class="bnav">
+          <div class="ni on"><div class="ni-ic">🏠</div>Accueil</div>
+          <div class="ni"><div class="ni-ic">📋</div>Séances</div>
+          <div class="ni"><div class="ni-ic">📊</div>Tests</div>
+          <div class="ni"><div class="ni-ic">📍</div>GPS</div>
+          <div class="ni"><div class="ni-ic">🍴</div>Nutri</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p style="text-align:center;font-size:0.72rem;color:#9ca3af;margin-top:10px">C · D · E — ou un mix des deux → dis-moi et j'implémente</p>
+
+</body>
+</html>

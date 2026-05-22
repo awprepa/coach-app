@@ -1,13 +1,17 @@
 /* Palette club par défaut — surchargée dynamiquement par ClientThemeContext */
 :root {
-  --accent:        #333333;
-  --accent2:       #1f2937;
-  --accent-dark:   #1a1a1a;
-  --accent-muted:  #f4f4f4;
-  --accent-nav:    #2a2a2a;
-  --accent-text:   #ffffff;
-  --header-bg:     linear-gradient(135deg, #333333 0%, #1a1a1a 100%);
-  --accent-stripe: #1f2937;
+  --accent:         #333333;
+  --accent2:        #1f2937;
+  --accent-dark:    #1a1a1a;
+  --accent-muted:   #f4f4f4;
+  --accent-nav:     #2a2a2a;
+  --accent-text:    #ffffff;
+  --accent-text2:   #ffffff;
+  --header-bg:      linear-gradient(135deg, #333333 0%, #1a1a1a 100%);
+  --accent-stripe:  #1f2937;
+  --accent-fg:      #333333;
+  --accent2-fg:     #1f2937;
+  --accent-fg-dark: #cccccc;
 }
 
 body {

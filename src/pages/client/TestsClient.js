@@ -247,7 +247,7 @@ const S = {
   emptyCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
   label:    { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' },
   input:    { width: '100%', padding: '0.65rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
-  btn:      { background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },
-  btnPrimary:{ width: '100%', padding: '0.875rem', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' },
+  btn:      { background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },
+  btnPrimary:{ width: '100%', padding: '0.875rem', background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' },
   deleteBtn:{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' },
 }

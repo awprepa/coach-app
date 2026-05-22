@@ -152,7 +152,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset }) {
         marginTop: '0.75rem', background: '#1a1a1a', borderRadius: 12,
         padding: '0.65rem 0.9rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
       }}>
-        <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--accent)', flexShrink: 0 }}>
+        <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--accent-fg)', flexShrink: 0 }}>
           {Math.round(totalKcal)} kcal
         </span>
         <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
@@ -805,7 +805,7 @@ export default function AjouterRepas() {
                         </div>}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-fg)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
                           {t.kcal || '—'} kcal
                         </div>
                         <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
@@ -1065,7 +1065,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
             Valeurs pour {quantity}{unit}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent)' }}>{macros.kcal} kcal</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-fg)' }}>{macros.kcal} kcal</span>
             <MacroPill label="Prot"  value={macros.prot}  color="#60a5fa" />
             <MacroPill label="Gluc"  value={macros.carbs} color="#fbbf24" />
             <MacroPill label="Lip"   value={macros.fat}   color="#f87171" />
@@ -1090,6 +1090,6 @@ const S = {
   card: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   cardLabel: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', background: '#f9fafb', color: '#1a1a1a' },
-  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
+  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
   btnSecondary: { padding: '0.55rem 1.2rem', border: '1.5px solid #e5e7eb', borderRadius: 10, background: 'white', color: '#374151', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' },
 }

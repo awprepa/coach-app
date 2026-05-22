@@ -346,7 +346,7 @@ export default function ProfilNutrition() {
               <div style={S.resultsCard}>
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Profil calculé</p>
-                  <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.4 }}>
+                  <p style={{ color: 'var(--accent-fg)', fontWeight: 700, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.4 }}>
                     {OBJECTIFS.find(o => o.key === objectif)?.label} · {poids} kg · {sexe} · {age} ans
                   </p>
                   <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', margin: '2px 0 0' }}>
@@ -452,7 +452,7 @@ export default function ProfilNutrition() {
                     <div>
                       <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
                       {physProfile && (
-                        <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
+                        <p style={{ color: 'var(--accent-fg)', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
                           {OBJECTIFS.find(o => o.key === physProfile.objectif)?.emoji}{' '}
                           {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
                         </p>
@@ -696,13 +696,13 @@ const S = {
   wizSub:   { fontSize: '0.82rem', color: '#9ca3af', margin: '6px 0 0', lineHeight: 1.5 },
   bigCard: { display: 'flex', alignItems: 'center', gap: 14, background: 'white', borderRadius: 16, padding: '16px', border: '2px solid #f3f4f6', cursor: 'pointer', textAlign: 'left', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'border-color 0.15s, background 0.15s', width: '100%' },
   bigCardActive: { background: '#1a1a1a', borderColor: '#1a1a1a', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' },
-  nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
+  nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
   ghostBtn: { width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', marginTop: -6 },
   resultsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
   goalsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
   recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
+  ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
   tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 88, zIndex: 50 },
   tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
   tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid var(--accent)' },

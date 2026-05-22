@@ -294,7 +294,7 @@ export default function MessagesClient() {
           </svg>
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: '#333' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: 'var(--accent-text)' }}>
             A
           </div>
           <span style={{ color: 'white', fontWeight: '700', fontSize: '0.95rem' }}>Arthur</span>

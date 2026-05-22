@@ -110,7 +110,7 @@ function InstallGuide({ onDone }) {
           </div>
         )}
 
-        <button onClick={onDone} style={{ ...W.submitBtn, background: '#333333', color: 'var(--accent)', cursor: 'pointer', marginTop: '1.25rem' }}>
+        <button onClick={onDone} style={{ ...W.submitBtn, background: '#333333', color: 'var(--accent-fg-dark)', cursor: 'pointer', marginTop: '1.25rem' }}>
           Compris, on y va !
         </button>
         <button onClick={onDone} style={{ width: '100%', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.82rem', cursor: 'pointer', marginTop: '0.5rem', padding: '0.25rem' }}>
@@ -124,7 +124,7 @@ function InstallGuide({ onDone }) {
 const I = {
   steps: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   step:  { display: 'flex', alignItems: 'flex-start', gap: '0.75rem', background: '#f9fafb', borderRadius: 12, padding: '0.75rem' },
-  num:   { width: 24, height: 24, borderRadius: '50%', background: '#333333', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
+  num:   { width: 24, height: 24, borderRadius: '50%', background: '#333333', color: 'var(--accent-fg-dark)', fontSize: '0.72rem', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
   text:  { fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 },
 }
 
@@ -194,7 +194,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
           </div>
         </div>
         <button onClick={submit} disabled={!allFilled || saving}
-          style={{ ...W.submitBtn, background: allFilled ? '#333333' : '#e5e7eb', color: allFilled ? 'var(--accent)' : '#9ca3af', cursor: allFilled ? 'pointer' : 'default' }}>
+          style={{ ...W.submitBtn, background: allFilled ? '#333333' : '#e5e7eb', color: allFilled ? 'var(--accent-fg-dark)' : '#9ca3af', cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider mon bilan'}
         </button>
       </div>
@@ -458,7 +458,7 @@ export default function AccueilClient() {
                       <span style={{ fontSize: '1rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
                     </div>
                     <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'white' : '#333333', flex: 1 }}>{ev.titre}</span>
-                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'var(--accent)', background: 'rgba(228,248,22,0.15)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
+                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'var(--accent-fg)', background: 'rgba(228,248,22,0.15)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
                     {isPast && !isToday && <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: '600' }}>Passé</span>}
                   </div>
                 )
@@ -580,7 +580,7 @@ const styles = {
   title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
   subtitle:    { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.4rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
-  sectionTitle:  { fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', borderLeft: '3px solid var(--accent-stripe)', paddingLeft: '0.5rem' },
+  sectionTitle:  { fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-fg)', textTransform: 'uppercase', letterSpacing: '0.08em', borderLeft: '3px solid var(--accent-stripe)', paddingLeft: '0.5rem' },
   sectionCount:  { color: '#9ca3af', fontSize: '0.8rem' },
   emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   card:        { background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },

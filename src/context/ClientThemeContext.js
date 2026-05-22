@@ -51,11 +51,32 @@ function textOn(hex) {
   return lum > 0.45 ? '#111111' : '#ffffff'
 }
 
+/**
+ * Rend une couleur lisible en tant que TEXTE sur fond blanc/clair.
+ * Si la couleur est trop claire (luminance > 0.5), on l'assombrit fortement.
+ */
+function readableOnLight(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.5 ? darken(hex, 0.55) : hex
+}
+
+/**
+ * Rend une couleur lisible en tant que TEXTE sur fond sombre.
+ * Si la couleur est trop sombre (luminance < 0.4), on l'éclaircit fortement.
+ */
+function readableOnDark(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum < 0.4 ? lighten(hex, 0.6) : hex
+}
+
 /** Applique la palette complète sur :root */
 function applyPalette(primary, secondary) {
   const dark     = darken(primary, 0.28)
   const muted    = lighten(primary, 0.93)   // fond très légèrement teinté
   const onPrim   = textOn(primary)
+  const onSec    = textOn(secondary)
 
   // Si la secondaire est suffisamment distincte de la principale, on l'utilise
   // dans le dégradé du header — sinon on replie sur le dark de la principale.
@@ -73,15 +94,24 @@ function applyPalette(primary, secondary) {
   // Barre décorative (bottom-nav active, titres de section) — la secondaire pure
   const stripe = secondary
 
+  // Versions "lisibles" des couleurs club selon le fond
+  const accentFg   = readableOnLight(primary)    // texte accent sur fond blanc
+  const accent2Fg  = readableOnLight(secondary)  // texte secondaire sur fond blanc
+  const accentFgDk = readableOnDark(primary)     // texte accent sur fond sombre
+
   const vars = {
-    '--accent':      primary,
-    '--accent2':     secondary,
-    '--accent-dark': dark,
-    '--accent-muted':muted,
-    '--accent-nav':  navBg,
-    '--accent-text': onPrim,
-    '--header-bg':   headerBg,
-    '--accent-stripe': stripe,
+    '--accent':         primary,
+    '--accent2':        secondary,
+    '--accent-dark':    dark,
+    '--accent-muted':   muted,
+    '--accent-nav':     navBg,
+    '--accent-text':    onPrim,
+    '--accent-text2':   onSec,
+    '--header-bg':      headerBg,
+    '--accent-stripe':  stripe,
+    '--accent-fg':      accentFg,     // accent lisible sur fond blanc
+    '--accent2-fg':     accent2Fg,    // secondaire lisible sur fond blanc
+    '--accent-fg-dark': accentFgDk,   // accent lisible sur fond sombre
   }
 
   for (const [k, v] of Object.entries(vars)) {

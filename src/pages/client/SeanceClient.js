@@ -859,12 +859,12 @@ export default function SeanceClient() {
               return (
                 <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
                   <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{totalReps}</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{totalReps}</span>
                     <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>{tempsMode ? 'VOLUME (sec)' : 'VOLUME (reps)'}</span>
                   </div>
                   {tonnage > 0 && (
                     <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{Math.round(tonnage)} kg</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnage)} kg</span>
                       <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>TONNAGE</span>
                     </div>
                   )}
@@ -938,7 +938,7 @@ export default function SeanceClient() {
       )}
 
       {/* Toast */}
-      <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: '#333333', color: 'var(--accent)', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
+      <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: '#333333', color: 'var(--accent-fg)', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
         ✓ Enregistré
       </div>
 
@@ -1227,18 +1227,18 @@ export default function SeanceClient() {
             }}>
               {tonnageTotal > 0 && (
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent)', lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
                   <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tonnage total</div>
                 </div>
               )}
               {repsTotal > 0 && (
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent)', lineHeight: 1 }}>{repsTotal}</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{repsTotal}</div>
                   <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Volume (reps)</div>
                 </div>
               )}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent)', lineHeight: 1 }}>{exosDone}<span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/{exercices.length}</span></div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{exosDone}<span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/{exercices.length}</span></div>
                 <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exos lancés</div>
               </div>
             </div>
@@ -1307,7 +1307,7 @@ export default function SeanceClient() {
               style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.88rem', color: '#333333', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button onClick={saveCommentaire}
-                style={{ background: commentSaved ? '#16a34a' : '#333333', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', transition: 'background 0.3s' }}>
+                style={{ background: commentSaved ? '#16a34a' : '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 8, padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', transition: 'background 0.3s' }}>
                 {commentSaved ? '✓ Enregistré' : 'Enregistrer'}
               </button>
             </div>
@@ -1341,7 +1341,7 @@ const S = {
   content:     { padding: '1.25rem 1.25rem', maxWidth: '480px', margin: '0 auto' },
   programmeNom:{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' },
   title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  curBadge:    { background: '#333333', color: 'var(--accent)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+  curBadge:    { background: '#333333', color: 'var(--accent-fg)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
   // Progress bar
   progressCard:{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   progressTrack:{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' },
@@ -1356,7 +1356,7 @@ const S = {
   // Exercice actif
   exCard:      { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   exCardDone:  { border: '2px solid #86efac', background: '#f0fdf4' },
-  exCode:      { background: '#333333', color: 'var(--accent)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
+  exCode:      { background: '#333333', color: 'var(--accent-fg)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
   exNom:       { fontWeight: '700', fontSize: '0.92rem', color: '#333333' },
   semBadge:    { background: '#f3f4f6', color: '#6b7280', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', flexShrink: 0 },
   // Bloc en attente (non actif, non terminé)
@@ -1387,22 +1387,22 @@ const S = {
   serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
   serieRowWarn: { background: '#fffbeb', border: '1.5px solid #fbbf24' },
-  serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: 'var(--accent)', background: '#333333', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: 'var(--accent-fg)', background: '#333333', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput:     { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
   serieInputDone: { background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' },
   serieUnit:   { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
-  serieValBtn: { marginLeft: 'auto', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  serieValBtn: { marginLeft: 'auto', background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
   serieDoneBadge:  { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
   serieDoneWarnBadge: { marginLeft: 'auto', background: '#f59e0b', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
   unvalCancelBtn:  { marginLeft: 'auto', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
   unvalConfirmBtn: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
-  recupBtn:    { width: '100%', marginTop: '0.5rem', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
+  recupBtn:    { width: '100%', marginTop: '0.5rem', background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
   // RPE toggle
   rpeToggle:   { width: '100%', background: 'white', border: 'none', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '700', color: '#374151', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.5rem' },
   // Superset
   supersetWrapper:{ borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--accent)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   supersetHeader: { background: '#333333', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  supersetBadge:  { background: 'var(--accent)', color: '#333333', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.05em' },
+  supersetBadge:  { background: 'var(--accent)', color: 'var(--accent-text)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.05em' },
   supersetHint:   { color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '600' },
   supersetConnector:{ background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
   supersetLine:   { flex: 1, height: '1px', background: 'var(--accent)', opacity: 0.4 },

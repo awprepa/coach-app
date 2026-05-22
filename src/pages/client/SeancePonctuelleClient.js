@@ -155,7 +155,7 @@ export default function SeancePonctuelleClient() {
           </p>
         </div>
         <div style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          {saved && <span style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 700 }}>✓</span>}
+          {saved && <span style={{ fontSize: '0.65rem', color: 'var(--accent-fg)', fontWeight: 700 }}>✓</span>}
         </div>
       </div>
 
@@ -275,7 +275,7 @@ const S = {
   backBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '1.5rem', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, flexShrink: 0 },
   content: { padding: '1.25rem', maxWidth: 480, margin: '0 auto' },
   exCard:  { background: 'white', borderRadius: 16, padding: '1rem 1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  exNum:   { width: 24, height: 24, borderRadius: 6, background: '#333', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  exNum:   { width: 24, height: 24, borderRadius: 6, background: '#333', color: 'var(--accent-fg)', fontSize: '0.72rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: '#d1d5db', padding: '2px 4px' },
   serieHeader: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
   serieRow:  { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' },
@@ -284,6 +284,6 @@ const S = {
   addExBtn: { background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.875rem 1rem', width: '100%', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box' },
   addExForm: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', border: '1.5px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   input: { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.88rem', color: '#333', outline: 'none', background: '#fafafa' },
-  submitBtn: { flex: 1, background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 9, padding: '0.65rem', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
+  submitBtn: { flex: 1, background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 9, padding: '0.65rem', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
   cancelBtn: { background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.65rem 1rem', fontWeight: 600, fontSize: '0.85rem', color: '#9ca3af', cursor: 'pointer' },
 }

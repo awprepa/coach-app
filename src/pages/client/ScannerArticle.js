@@ -217,7 +217,7 @@ export default function ScannerArticle() {
         </button>
         <span style={S.headerTitle}>Scanner un article</span>
         {phase === 'result' ? (
-          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.65rem', fontWeight: 700, color: 'var(--accent)', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
+          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.65rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
             Historique
           </button>
         ) : (
@@ -558,7 +558,7 @@ const S = {
   },
   btnPrimary: {
     width: '100%', padding: '0.9rem', borderRadius: 14,
-    border: 'none', background: '#1a1a1a', color: 'var(--accent)',
+    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
   },
   btnSecondary: {
