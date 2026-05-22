@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
-const PALETTE_GROUPES = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 const OFFRES = {
@@ -66,8 +65,10 @@ export default function Dashboard() {
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
-  const [newGroupeCouleur, setNewGroupeCouleur] = useState(PALETTE_GROUPES[0])
-  const [newGroupeLogo, setNewGroupeLogo]   = useState('')
+  const [newGroupeCouleur, setNewGroupeCouleur] = useState('#6366f1')
+  const [newGroupeLogoFile, setNewGroupeLogoFile] = useState(null)
+  const [newGroupeLogoPreview, setNewGroupeLogoPreview] = useState(null)
+  const [uploadingLogo, setUploadingLogo]   = useState(false)
 
   useEffect(() => {
     fetchAll()
@@ -151,15 +152,32 @@ export default function Dashboard() {
     if (activeCat === catId) setActiveCat(null)
   }
 
+  function handleLogoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setNewGroupeLogoFile(file)
+    setNewGroupeLogoPreview(URL.createObjectURL(file))
+  }
+
   async function creerGroupe() {
     if (!newGroupeNom.trim()) return
+    setUploadingLogo(true)
+    let logoUrl = null
+    if (newGroupeLogoFile) {
+      const ext  = newGroupeLogoFile.name.split('.').pop()
+      const path = `groupe-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('groupe-logos').upload(path, newGroupeLogoFile, { upsert: true })
+      if (upErr) { alert('Erreur upload logo : ' + upErr.message); setUploadingLogo(false); return }
+      logoUrl = supabase.storage.from('groupe-logos').getPublicUrl(path).data.publicUrl
+    }
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, logo_url: newGroupeLogo.trim() || null }])
+      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, logo_url: logoUrl }])
       .select().single()
-    if (error) { alert(error.message); return }
+    if (error) { alert(error.message); setUploadingLogo(false); return }
     setGroupes(prev => [...prev, data])
-    setNewGroupeNom(''); setNewGroupeLogo(''); setNewGroupeCouleur(PALETTE_GROUPES[0])
+    setNewGroupeNom(''); setNewGroupeLogoFile(null); setNewGroupeLogoPreview(null); setNewGroupeCouleur('#6366f1')
     setShowGroupeForm(false)
+    setUploadingLogo(false)
   }
 
   if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
@@ -508,16 +526,33 @@ export default function Dashboard() {
             <input autoFocus value={newGroupeNom} onChange={e => setNewGroupeNom(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && creerGroupe()}
               placeholder="Nom du groupe..." style={{ padding: '0.55rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.875rem', outline: 'none' }} />
-            <input value={newGroupeLogo} onChange={e => setNewGroupeLogo(e.target.value)}
-              placeholder="URL logo (optionnel)..." style={{ padding: '0.55rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.875rem', outline: 'none' }} />
-            <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-              {PALETTE_GROUPES.map(c => (
-                <button key={c} onClick={() => setNewGroupeCouleur(c)}
-                  style={{ width: 20, height: 20, borderRadius: '50%', background: c, border: newGroupeCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
-              ))}
+
+            {/* Logo upload */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.35rem' }}>Logo (PNG)</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                <div style={{ width: 48, height: 48, borderRadius: 10, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: '#f9fafb' }}>
+                  {newGroupeLogoPreview
+                    ? <img src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    : <span style={{ fontSize: '1.25rem' }}>🖼️</span>}
+                </div>
+                <span style={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: '600' }}>{newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir une image...'}</span>
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoChange} style={{ display: 'none' }} />
+              </label>
             </div>
+
+            {/* Couleur libre */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280' }}>Couleur</label>
+              <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
+                style={{ width: 38, height: 32, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
+              <span style={{ fontSize: '0.8rem', color: '#9ca3af', fontFamily: 'monospace' }}>{newGroupeCouleur}</span>
+            </div>
+
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={creerGroupe} style={{ ...S.btnPrimary, flex: 1 }}>Créer</button>
+              <button onClick={creerGroupe} disabled={uploadingLogo} style={{ ...S.btnPrimary, flex: 1, opacity: uploadingLogo ? 0.6 : 1 }}>
+                {uploadingLogo ? 'Envoi...' : 'Créer'}
+              </button>
               <button onClick={() => setShowGroupeForm(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#6b7280', fontWeight: '600', fontSize: '0.85rem' }}>Annuler</button>
             </div>
           </div>

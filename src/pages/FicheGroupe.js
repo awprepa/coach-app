@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
-const PALETTE = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
+const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
 const OFFRES = {
   essai:                { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
@@ -23,7 +23,9 @@ export default function FicheGroupe() {
 
   // Modales
   const [editOpen, setEditOpen]           = useState(false)
-  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1', logo_url: '' })
+  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1' })
+  const [editLogoFile, setEditLogoFile]   = useState(null)
+  const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
 
   const [showAddSG, setShowAddSG]         = useState(false)
@@ -48,7 +50,9 @@ export default function FicheGroupe() {
       supabase.from('programmes').select('*, seances(count)').eq('groupe_id', id).is('template_id', null).order('created_at', { ascending: false }),
     ])
     setGroupe(g)
-    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1', logo_url: g?.logo_url || '' })
+    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1' })
+    setEditLogoFile(null)
+    setEditLogoPreview(null)
     setSousGroupes(sg || [])
     setMembres((gm || []).map(r => r.clients).filter(Boolean))
     setProgrammes(progs || [])
@@ -63,12 +67,27 @@ export default function FicheGroupe() {
   }
 
   // ── Édition du groupe ──────────────────────────────────────────────────────
+  function handleEditLogoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setEditLogoFile(file)
+    setEditLogoPreview(URL.createObjectURL(file))
+  }
+
   async function sauvegarderGroupe() {
     setSaving(true)
+    let logoUrl = groupe?.logo_url || null
+    if (editLogoFile) {
+      const ext  = editLogoFile.name.split('.').pop()
+      const path = `groupe-${id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('groupe-logos').upload(path, editLogoFile, { upsert: true })
+      if (upErr) { alert('Erreur upload : ' + upErr.message); setSaving(false); return }
+      logoUrl = supabase.storage.from('groupe-logos').getPublicUrl(path).data.publicUrl
+    }
     const { error } = await supabase.from('groupes').update({
       nom: editForm.nom.trim(),
       couleur: editForm.couleur,
-      logo_url: editForm.logo_url.trim() || null,
+      logo_url: logoUrl,
     }).eq('id', id)
     if (error) { alert(error.message); setSaving(false); return }
     await load()
@@ -315,12 +334,8 @@ export default function FicheGroupe() {
               onKeyDown={e => e.key === 'Enter' && creerSousGroupe()}
               placeholder="Nom du sous-groupe..." style={S.input}
             />
-            <div style={{ display: 'flex', gap: '0.25rem' }}>
-              {PALETTE.map(c => (
-                <button key={c} onClick={() => setNewSGCouleur(c)}
-                  style={{ width: 20, height: 20, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #333' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
-              ))}
-            </div>
+            <input type="color" value={newSGCouleur} onChange={e => setNewSGCouleur(e.target.value)}
+              style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white', flexShrink: 0 }} />
             <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
             <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
           </div>
@@ -414,18 +429,31 @@ export default function FicheGroupe() {
         <Modal title="Modifier le groupe" onClose={() => setEditOpen(false)}>
           <label style={S.label}>Nom du groupe</label>
           <input value={editForm.nom} onChange={e => setEditForm({ ...editForm, nom: e.target.value })}
-            style={{ ...S.input, marginBottom: '1rem', width: '100%', boxSizing: 'border-box' }} />
+            style={{ ...S.input, marginBottom: '1.25rem', width: '100%', boxSizing: 'border-box' }} />
 
-          <label style={S.label}>URL du logo (optionnel)</label>
-          <input value={editForm.logo_url} onChange={e => setEditForm({ ...editForm, logo_url: e.target.value })}
-            placeholder="https://..." style={{ ...S.input, marginBottom: '1rem', width: '100%', boxSizing: 'border-box' }} />
+          <label style={S.label}>Logo (PNG)</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '1.25rem' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 10, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: '#f9fafb' }}>
+              {editLogoPreview
+                ? <img src={editLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                : groupe?.logo_url
+                  ? <img src={groupe.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  : <span style={{ fontSize: '1.4rem' }}>🖼️</span>}
+            </div>
+            <div>
+              <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: '600', display: 'block' }}>
+                {editLogoFile ? editLogoFile.name : 'Changer le logo...'}
+              </span>
+              {groupe?.logo_url && !editLogoFile && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Logo actuel · cliquer pour remplacer</span>}
+            </div>
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleEditLogoChange} style={{ display: 'none' }} />
+          </label>
 
           <label style={S.label}>Couleur</label>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            {PALETTE.map(c => (
-              <button key={c} onClick={() => setEditForm({ ...editForm, couleur: c })}
-                style={{ width: 26, height: 26, borderRadius: '50%', background: c, border: editForm.couleur === c ? '3px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <input type="color" value={editForm.couleur} onChange={e => setEditForm({ ...editForm, couleur: e.target.value })}
+              style={{ width: 42, height: 34, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
+            <span style={{ fontSize: '0.82rem', color: '#6b7280', fontFamily: 'monospace' }}>{editForm.couleur}</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
