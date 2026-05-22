@@ -72,21 +72,39 @@ function darkerOf(hex1, hex2) {
 }
 
 // Génère 8 nuances depuis la couleur la plus claire du club
-function generateBlockPalette(lightColor) {
-  const { h, s } = hexToHSL(lightColor)
-  const baseS = Math.max(55, Math.min(90, s))
-  // 8 décalages de teinte autour de la couleur principale
+// — varie uniquement luminosité/saturation, JAMAIS la teinte
+function generateBlockPalette(lightColor, darkColor) {
+  const { h: h1, s: s1, l: l1 } = hexToHSL(lightColor)
+  // Saturation fixée à celle de la couleur claire (ou un minimum de 55)
+  const baseS = Math.max(55, Math.min(90, s1))
+  // Luminosité de base = celle de la couleur claire, ramenée entre 50 et 70
+  const baseL = Math.max(50, Math.min(70, l1))
+
+  // 8 nuances : on varie saturation et luminosité autour de la base, même teinte
   const shifts = [
-    [  0,   0,  0],
-    [-18,   6, -5],
-    [ 20,  -6,  4],
-    [-35,  10, -8],
-    [ 38,  -4,  6],
-    [-52,   8, -4],
-    [ 55,   0,  8],
-    [-68, -10, -6],
+    [  0,  0],   // A – identique
+    [  8, -6],   // B – plus saturé, plus sombre
+    [ -6,  8],   // C – moins saturé, plus clair
+    [ 12,-10],   // D
+    [ -4,  5],   // E
+    [ 10, -4],   // F
+    [ -8,  3],   // G
+    [  6, -8],   // H
   ]
-  return shifts.map(([dh, ds, dl]) => hslToHex(h + dh, baseS + ds, 58 + dl))
+
+  // Si couleur secondaire disponible, alterner entre les deux teintes
+  if (darkColor) {
+    const { h: h2, s: s2, l: l2 } = hexToHSL(darkColor)
+    const baseS2 = Math.max(30, Math.min(90, s2))
+    const baseL2 = Math.max(40, Math.min(70, Math.max(l2, 45)))
+    return shifts.map(([ds, dl], i) =>
+      i % 2 === 0
+        ? hslToHex(h1, baseS + ds, baseL + dl)
+        : hslToHex(h2, baseS2 + ds, baseL2 + dl)
+    )
+  }
+
+  return shifts.map(([ds, dl]) => hslToHex(h1, baseS + ds, baseL + dl))
 }
 
 // Palette par défaut (sans club)
@@ -184,8 +202,8 @@ export default function SeanceProjection() {
     ? `linear-gradient(90deg, ${PRIMARY}, ${SECONDARY})`
     : PRIMARY
 
-  // Palette de blocs basée sur la couleur claire
-  const BLOCK_PALETTE = club ? generateBlockPalette(LIGHT_COLOR) : DEFAULT_PALETTE
+  // Palette de blocs basée sur la couleur claire (+ foncée si dispo)
+  const BLOCK_PALETTE = club ? generateBlockPalette(LIGHT_COLOR, SECONDARY ? DARK_COLOR : null) : DEFAULT_PALETTE
 
   const echauffement = seance.echauffement || []
   const hasWarmup = echauffement.length > 0
