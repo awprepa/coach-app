@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
@@ -37,9 +37,28 @@ export default function SeanceProjection() {
   const [exercices, setExercices] = useState([])
   const [club, setClub] = useState(null)   // { nom, couleur, logo_url? }
   const [loading, setLoading] = useState(true)
+  const [scale, setScale] = useState(1)
+  const contentRef = useRef(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (loading) return
+    function computeScale() {
+      const el = contentRef.current
+      if (!el) return
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const cw = el.scrollWidth
+      const ch = el.scrollHeight
+      const s = Math.min(vw / cw, vh / ch, 1)
+      setScale(s)
+    }
+    computeScale()
+    window.addEventListener('resize', computeScale)
+    return () => window.removeEventListener('resize', computeScale)
+  }, [loading, exercices, seance])
 
   async function load() {
     const [{ data: s }, { data: exs }] = await Promise.all([
@@ -97,25 +116,28 @@ export default function SeanceProjection() {
   const COLS = '110px 1fr 80px 120px 100px 110px 150px'
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: club ? `linear-gradient(160deg, #0d1117 0%, ${ACCENT}0d 100%)` : '#0d1117',
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#0d1117' }}>
+      {/* Bande de couleur club en haut — hors du conteneur scalé */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT}55)`, zIndex: 10 }} />
+    <div ref={contentRef} style={{
+      width: '100vw',
+      background: '#0d1117',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      padding: '3rem 4rem',
+      padding: '2.5rem 3.5rem',
       boxSizing: 'border-box',
+      transformOrigin: 'top left',
+      transform: `scale(${scale})`,
     }}>
-
-      {/* Bande de couleur club en haut */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT}55)`, zIndex: 10 }} />
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.75rem', paddingTop: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
 
-          {club?.logo_url && (
-            <img src={club.logo_url} alt={club.nom}
-              style={{ width: 70, height: 70, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }} />
-          )}
+          <img
+            src={club?.logo_url || '/logo192.png'}
+            alt={club?.nom || 'AWprepa'}
+            style={{ width: 70, height: 70, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }}
+          />
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
@@ -291,6 +313,7 @@ export default function SeanceProjection() {
           <span style={{ fontSize: '0.7rem', fontWeight: '800', color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.16em' }}>{club.nom}</span>
         </div>
       )}
+    </div>
     </div>
   )
 }
