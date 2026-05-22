@@ -48,11 +48,16 @@ function isLightColor(hex) {
   } catch { return false }
 }
 
-// Retourne une teinte très claire de la couleur (pour le fond des lignes)
-function lightTint(hex, lightness = 94) {
+// Retourne une teinte pastel très claire (fond des lignes)
+function lightTint(hex, lightness = 93) {
   const { h, s } = hexToHSL(hex)
-  // Saturation modérée pour que ça reste reconnaissable mais très lisible
-  return hslToHex(h, Math.min(s * 0.55 + 30, 75), lightness)
+  return hslToHex(h, Math.min(s * 0.5 + 25, 60), lightness)
+}
+
+// Vrai si une couleur a une teinte significative (pas blanc/noir/gris)
+function hasRealHue(hex) {
+  const { s, l } = hexToHSL(hex)
+  return s > 12 && l > 8 && l < 95
 }
 
 // Retourne la couleur la plus claire entre deux
@@ -71,40 +76,40 @@ function darkerOf(hex1, hex2) {
   return l1 <= l2 ? hex1 : hex2
 }
 
-// Génère 8 nuances depuis la couleur la plus claire du club
-// — varie uniquement luminosité/saturation, JAMAIS la teinte
-function generateBlockPalette(lightColor, darkColor) {
-  const { h: h1, s: s1, l: l1 } = hexToHSL(lightColor)
-  // Saturation fixée à celle de la couleur claire (ou un minimum de 55)
-  const baseS = Math.max(55, Math.min(90, s1))
-  // Luminosité de base = celle de la couleur claire, ramenée entre 50 et 70
-  const baseL = Math.max(50, Math.min(70, l1))
+// Génère 8 nuances pastels depuis les couleurs du club.
+// Utilise la TEINTE de la/les couleur(s) qui ont vraiment une couleur
+// (ignore blanc/noir/gris qui ont hue=0 par défaut).
+function generateBlockPalette(primary, secondary) {
+  // Trouver les couleurs avec une vraie teinte
+  const colorful = [primary, secondary].filter(Boolean).filter(hasRealHue)
 
-  // 8 nuances : on varie saturation et luminosité autour de la base, même teinte
-  const shifts = [
-    [  0,  0],   // A – identique
-    [  8, -6],   // B – plus saturé, plus sombre
-    [ -6,  8],   // C – moins saturé, plus clair
-    [ 12,-10],   // D
-    [ -4,  5],   // E
-    [ 10, -4],   // F
-    [ -8,  3],   // G
-    [  6, -8],   // H
+  if (colorful.length === 0) return DEFAULT_PALETTE
+
+  // Teintes utilisables
+  const hues = colorful.map(c => hexToHSL(c).h)
+  const sats = colorful.map(c => Math.max(45, Math.min(80, hexToHSL(c).s)))
+
+  // 8 variantes pastels — luminosité haute (55-68), même teinte ±5°
+  const variants = [
+    [0, 0, 62],
+    [0, 5, 58],
+    [0,-5, 66],
+    [0, 8, 55],
+    [0,-3, 64],
+    [0, 3, 60],
+    [0, 6, 57],
+    [0,-6, 68],
   ]
 
-  // Si couleur secondaire disponible, alterner entre les deux teintes
-  if (darkColor) {
-    const { h: h2, s: s2, l: l2 } = hexToHSL(darkColor)
-    const baseS2 = Math.max(30, Math.min(90, s2))
-    const baseL2 = Math.max(40, Math.min(70, Math.max(l2, 45)))
-    return shifts.map(([ds, dl], i) =>
-      i % 2 === 0
-        ? hslToHex(h1, baseS + ds, baseL + dl)
-        : hslToHex(h2, baseS2 + ds, baseL2 + dl)
-    )
+  if (hues.length === 1) {
+    return variants.map(([, ds, l]) => hslToHex(hues[0], sats[0] + ds, l))
   }
 
-  return shifts.map(([ds, dl]) => hslToHex(h1, baseS + ds, baseL + dl))
+  // 2 teintes : alterner A=teinte1, B=teinte2, C=teinte1, etc.
+  return variants.map(([, ds, l], i) => {
+    const hi = i % 2
+    return hslToHex(hues[hi], sats[hi] + ds, l)
+  })
 }
 
 // Palette par défaut (sans club)
@@ -202,8 +207,8 @@ export default function SeanceProjection() {
     ? `linear-gradient(90deg, ${PRIMARY}, ${SECONDARY})`
     : PRIMARY
 
-  // Palette de blocs basée sur la couleur claire (+ foncée si dispo)
-  const BLOCK_PALETTE = club ? generateBlockPalette(LIGHT_COLOR, SECONDARY ? DARK_COLOR : null) : DEFAULT_PALETTE
+  // Palette de blocs — utilise les vraies teintes (ignore blanc/noir)
+  const BLOCK_PALETTE = club ? generateBlockPalette(PRIMARY, SECONDARY) : DEFAULT_PALETTE
 
   const echauffement = seance.echauffement || []
   const hasWarmup = echauffement.length > 0
