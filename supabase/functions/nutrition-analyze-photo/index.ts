@@ -189,7 +189,25 @@ Deno.serve(async (req) => {
       ? await callGroqVision(GROQ_KEY, photo_base64, mime_type)
       : await callGeminiVision(GEMINI_KEY!, photo_base64, mime_type);
 
-    return new Response(JSON.stringify({ ok: true, ...result }), { headers: JSON_CT });
+    // Recalcul des totaux côté serveur depuis les items (ne pas faire confiance au modèle)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items: any[] = Array.isArray(result.items) ? result.items : [];
+    const total_kcal    = Math.round(items.reduce((s, i) => s + (Number(i.kcal)    || 0), 0));
+    const total_prot_g  = Math.round(items.reduce((s, i) => s + (Number(i.prot_g)  || 0), 0) * 10) / 10;
+    const total_carbs_g = Math.round(items.reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
+    const total_fat_g   = Math.round(items.reduce((s, i) => s + (Number(i.fat_g)   || 0), 0) * 10) / 10;
+
+    return new Response(JSON.stringify({
+      ok: true,
+      repas_nom:    result.repas_nom,
+      items,
+      total_kcal,
+      total_prot_g,
+      total_carbs_g,
+      total_fat_g,
+      confiance:    result.confiance,
+      note_ia:      result.note_ia,
+    }), { headers: JSON_CT });
   } catch (e) {
     console.error("[analyze-photo]", e);
     return new Response(

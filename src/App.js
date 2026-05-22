@@ -1,4 +1,4 @@
-import { lazy, Suspense, Component, useState } from 'react'
+import { lazy, Suspense, Component, useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
@@ -162,6 +162,24 @@ const numStyle = {
 }
 const txtStyle = { fontSize: '13px', color: '#e5e7eb', lineHeight: 1.45 }
 
+// ── Scroll en haut à chaque changement de route ───────────────────────────────
+// Désactive le scroll restoration natif du navigateur (qui mémorise la position
+// d'une page scrollée et la restaure à la navigation suivante)
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual'
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    // Reset sur tous les conteneurs possibles (window + html + body)
+    window.scrollTo(0, 0)
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [pathname])
+  return null
+}
+
 // ── Wrappers ──────────────────────────────────────────────────────────────────
 function WithNav({ children }) {
   return <><CoachNav />{children}</>
@@ -215,6 +233,7 @@ class ChunkErrorBoundary extends Component {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <BanniereNavigateur />
       <ChunkErrorBoundary>
       <AuthGate>

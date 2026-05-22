@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 const STORAGE_KEY = 'aw_client_onboarded_v1'
@@ -179,11 +179,17 @@ const STEPS = [
 export default function ClientOnboarding() {
   const [step, setStep] = useState(0)
   const [visible, setVisible] = useState(false)
+  const cardRef = useRef(null)
 
   useEffect(() => {
     const done = localStorage.getItem(STORAGE_KEY)
     if (!done) setVisible(true)
   }, [])
+
+  // Revenir en haut de la card à chaque changement de slide
+  useEffect(() => {
+    if (cardRef.current) cardRef.current.scrollTop = 0
+  }, [step])
 
   function finish() {
     localStorage.setItem(STORAGE_KEY, '1')
@@ -199,7 +205,7 @@ export default function ClientOnboarding() {
   // et positionne l'overlay par rapport au vrai viewport
   return createPortal(
     <div style={S.overlay}>
-      <div style={S.card}>
+      <div ref={cardRef} style={S.card}>
 
         {/* Barre de progression */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>

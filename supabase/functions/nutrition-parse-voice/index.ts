@@ -14,12 +14,56 @@ const CORS = {
 };
 const JSON_CT = { ...CORS, "Content-Type": "application/json" };
 
-const SYSTEM = `Tu es un expert en nutrition francophone. Tu réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans markdown.`;
+const SYSTEM = `Tu es un expert en nutrition du sport francophone. Tu réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans markdown.`;
 
 function userPrompt(text: string): string {
   return `L'utilisateur a décrit son repas : "${text}"
 
-Identifie chaque aliment. Pour les produits industriels/de marque connus (KitKat, Oreo, Coca-Cola, Danone, etc.), indique la marque dans le champ "brand" et utilise les vraies valeurs nutritionnelles officielles. Pour les aliments bruts, laisse "brand" à null.
+═══ VALEURS NUTRITIONNELLES DE RÉFÉRENCE (pour 100 g) ═══
+Viandes/Poissons :
+- Poulet grillé/rôti : 165 kcal | P:31 G:0 L:3.6
+- Steak bœuf (5% MG) : 145 kcal | P:22 G:0 L:6
+- Steak haché (15% MG) : 235 kcal | P:17 G:0 L:18
+- Saumon : 208 kcal | P:20 G:0 L:13
+- Thon au naturel : 116 kcal | P:26 G:0 L:1
+- Œuf entier : 155 kcal | P:13 G:1 L:11
+
+Féculents (cuits) :
+- Riz blanc cuit : 130 kcal | P:2.7 G:28 L:0.3
+- Pâtes cuites : 158 kcal | P:5.8 G:31 L:0.9
+- Pomme de terre cuite : 87 kcal | P:1.9 G:20 L:0.1
+- Quinoa cuit : 120 kcal | P:4.4 G:21 L:1.9
+- Pain blanc/baguette : 265 kcal | P:9 G:51 L:3
+- Pain complet : 247 kcal | P:9 G:45 L:3
+
+Légumes :
+- Légumes verts (brocoli, courgette, haricots…) : 30 kcal | P:2 G:4 L:0.3
+- Salade verte : 15 kcal | P:1.5 G:1.5 L:0.2
+- Tomate : 18 kcal | P:0.9 G:3.5 L:0.2
+- Carottes : 41 kcal | P:0.9 G:9.6 L:0.2
+
+Produits laitiers :
+- Yaourt nature : 61 kcal | P:3.5 G:4.7 L:3.3
+- Fromage blanc 0% : 44 kcal | P:7.5 G:4 L:0.2
+- Emmental/Gruyère : 380 kcal | P:28 G:0 L:30
+
+Matières grasses :
+- Huile d'olive/tournesol : 900 kcal | P:0 G:0 L:100
+- Beurre : 750 kcal | P:0.6 G:0.4 L:83
+
+Divers :
+- Lentilles cuites : 116 kcal | P:9 G:20 L:0.4
+- Pois chiches cuits : 164 kcal | P:8.9 G:27 L:2.6
+- Avocat : 160 kcal | P:2 G:9 L:15
+- Banane : 89 kcal | P:1.1 G:23 L:0.3
+
+═══ RÈGLES ═══
+1. Utilise les valeurs de référence ci-dessus pour les aliments bruts courants
+2. Pour les produits industriels/de marque (KitKat, Oreo, Coca-Cola, Danone, etc.), indique la marque dans "brand" et utilise les vraies valeurs officielles
+3. Pour les aliments bruts, laisse "brand" à null
+4. Si aucune quantité n'est précisée, estime une portion réaliste (ex: 150g de viande, 100g de féculents cuits)
+5. Les valeurs kcal/macros doivent être calculées pour la quantité indiquée (pas pour 100g)
+6. Les TOTAUX doivent être la SOMME EXACTE des items
 
 Réponds UNIQUEMENT avec ce JSON valide :
 {
@@ -27,19 +71,19 @@ Réponds UNIQUEMENT avec ce JSON valide :
   "items": [
     {
       "name": "nom de l'aliment",
-      "brand": "Marque ou null",
-      "quantity": 41.5,
+      "brand": null,
+      "quantity": 150,
       "unit": "g",
-      "kcal": 215,
-      "prot_g": 2.8,
-      "carbs_g": 26.6,
-      "fat_g": 10.8
+      "kcal": 248,
+      "prot_g": 46.5,
+      "carbs_g": 0.0,
+      "fat_g": 5.4
     }
   ],
-  "total_kcal": 215,
-  "total_prot_g": 2.8,
-  "total_carbs_g": 26.6,
-  "total_fat_g": 10.8,
+  "total_kcal": 248,
+  "total_prot_g": 46.5,
+  "total_carbs_g": 0.0,
+  "total_fat_g": 5.4,
   "note_ia": "Commentaire bref (1 phrase)"
 }`;
 }
@@ -74,7 +118,7 @@ async function callGroq(key: string, messages: unknown[]): Promise<Record<string
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
     body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model: "llama-3.3-70b-versatile",
       messages,
       response_format: { type: "json_object" },
       temperature: 0.2,

@@ -170,7 +170,7 @@ function AILoading({ label }) {
     <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
       <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤖</div>
       <p style={{ fontWeight: 700, color: '#374151', margin: 0 }}>{label}</p>
-      <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>Gemini Flash analyse…</p>
+      <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>Groq IA analyse…</p>
     </div>
   )
 }
