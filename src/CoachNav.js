@@ -33,6 +33,7 @@ export default function CoachNav() {
         <Link to="/" style={navLink}>
           Tableau de bord {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
         </Link>
+        <Link to="/clients" style={navLink}>Clients</Link>
         <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
         <Link to="/gps" style={navLink}>GPS</Link>
         <Link to="/tests" style={navLink}>Tests</Link>
