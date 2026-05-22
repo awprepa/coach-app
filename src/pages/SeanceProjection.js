@@ -62,15 +62,22 @@ export default function SeanceProjection() {
 
   async function load() {
     const [{ data: s }, { data: exs }] = await Promise.all([
-      supabase.from('seances').select('*, programmes(id, nom, client_id)').eq('id', id).single(),
+      supabase.from('seances').select('*, programmes(id, nom, client_id, groupe_id, template_id)').eq('id', id).single(),
       supabase.from('exercices').select('*').eq('seance_id', id).order('ordre', { ascending: true }),
     ])
     setSeance(s)
     setExercices(exs || [])
 
-    // Charger le club (catégorie) si le programme a un client
+    const groupeId = s?.programmes?.groupe_id
     const clientId = s?.programmes?.client_id
-    if (clientId) {
+
+    // Priorité 1 : thème depuis le groupe (template ou copie)
+    if (groupeId) {
+      const { data: g } = await supabase
+        .from('groupes').select('nom, couleur, logo_url').eq('id', groupeId).single()
+      if (g) setClub({ nom: g.nom, couleur: g.couleur, logo_url: g.logo_url || null })
+    } else if (clientId) {
+      // Priorité 2 : thème depuis la catégorie du client
       const { data: client } = await supabase
         .from('clients')
         .select('categorie_id, categories(id, nom, couleur, logo_url)')

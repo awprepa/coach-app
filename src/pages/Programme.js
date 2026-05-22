@@ -33,7 +33,7 @@ export default function Programme() {
 
   async function fetchProgramme() {
     const { data, error } = await supabase
-      .from('programmes').select('*, clients(prenom, nom)').eq('id', id).single()
+      .from('programmes').select('*, clients(prenom, nom), groupes(id, nom, couleur)').eq('id', id).single()
     if (error) console.log(error)
     else { setProgramme(data); setFormProgramme({ nom: data.nom, semaines: data.semaines, date_debut: data.date_debut || '' }) }
     setLoading(false)
@@ -170,6 +170,7 @@ export default function Programme() {
     if (!window.confirm('Supprimer ce cycle et toutes ses séances ?')) return
     const { error } = await supabase.from('programmes').delete().eq('id', id)
     if (error) alert(error.message)
+    else if (programme.groupe_id) navigate(`/groupe/${programme.groupe_id}`)
     else navigate(`/client/${programme.client_id}`)
   }
 
@@ -252,7 +253,11 @@ export default function Programme() {
         </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={() => navigate(`/client/${programme.client_id}`)} style={styles.backBtn}>← Retour</button>
+        <button onClick={() => {
+          if (programme.groupe_id && !programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
+          else if (programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
+          else navigate(`/client/${programme.client_id}`)
+        }} style={styles.backBtn}>← Retour</button>
         <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer' }}>
           🧪 Test push
         </button>
@@ -283,7 +288,19 @@ export default function Programme() {
         </div>
       ) : (
         <div style={styles.card}>
-          <p style={styles.clientLabel}>{programme.clients.prenom} {programme.clients.nom}</p>
+          {/* Titre selon contexte groupe ou individuel */}
+          {programme.groupe_id && !programme.template_id && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: (programme.groupes?.couleur || '#6366f1') + '18', border: `1px solid ${(programme.groupes?.couleur || '#6366f1')}44`, borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: programme.groupes?.couleur || '#6366f1', display: 'inline-block' }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: programme.groupes?.couleur || '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Template · {programme.groupes?.nom}</span>
+            </div>
+          )}
+          {programme.template_id && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Copie de groupe · {programme.groupes?.nom}</span>
+            </div>
+          )}
+          {programme.clients && <p style={styles.clientLabel}>{programme.clients.prenom} {programme.clients.nom}</p>}
           <h1 style={styles.progTitle}>{programme.nom}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
             <span style={styles.metaBadge}>{programme.semaines} semaines</span>

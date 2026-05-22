@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
 export default function NouveauProgramme() {
-  const { id } = useParams()
+  const { id: clientId, groupeId } = useParams()
+  const id = clientId   // compat avec le reste du fichier (client context)
   const navigate = useNavigate()
   const [form, setForm] = useState({ nom: '', semaines: 4, date_debut: '' })
   const [templates, setTemplates] = useState([])
@@ -31,7 +32,9 @@ export default function NouveauProgramme() {
   async function handleSubmit(e) {
     e.preventDefault()
     setCreating(true)
-    const payload = { ...form, client_id: id, date_debut: form.date_debut || null }
+    const payload = groupeId
+      ? { ...form, groupe_id: groupeId, date_debut: form.date_debut || null }
+      : { ...form, client_id: id, date_debut: form.date_debut || null }
     const { data: prog, error } = await supabase.from('programmes').insert([payload]).select().single()
     if (error) { alert(error.message); setCreating(false); return }
 
@@ -65,11 +68,11 @@ export default function NouveauProgramme() {
 
   return (
     <div style={styles.page}>
-      <button onClick={() => navigate(`/client/${id}`)} style={styles.backBtn}>← Retour</button>
+      <button onClick={() => groupeId ? navigate(`/groupe/${groupeId}`) : navigate(`/client/${id}`)} style={styles.backBtn}>← Retour</button>
 
       <div style={styles.header}>
-        <h1 style={styles.title}>Nouveau cycle</h1>
-        <p style={styles.subtitle}>Définissez les paramètres du cycle</p>
+        <h1 style={styles.title}>Nouveau cycle{groupeId ? ' de groupe' : ''}</h1>
+        <p style={styles.subtitle}>{groupeId ? 'Programme template — pourra être envoyé à tous les membres' : 'Définissez les paramètres du cycle'}</p>
       </div>
 
       {/* Sélecteur de template */}
