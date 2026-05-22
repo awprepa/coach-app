@@ -387,7 +387,7 @@ const styles = {
     justifyContent: 'space-between',
   },
   jourBadge: {
-    background: '#333333',
+    background: 'var(--accent)',
     borderRadius: '10px',
     padding: '0.3rem 0.55rem',
     display: 'flex',
@@ -399,7 +399,8 @@ const styles = {
   jourLabel: {
     fontSize: '0.5rem',
     fontWeight: '800',
-    color: '#9ca3af',
+    color: 'var(--accent-text)',
+    opacity: 0.65,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     lineHeight: 1.2,
@@ -407,7 +408,7 @@ const styles = {
   jourNum: {
     fontSize: '0.95rem',
     fontWeight: '800',
-    color: 'var(--accent-fg)',
+    color: 'var(--accent-text)',
     lineHeight: 1.2,
   },
   cardTitle: {
