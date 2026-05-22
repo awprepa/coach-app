@@ -332,8 +332,8 @@ const styles = {
     fontSize: '0.85rem',
   },
   badge: {
-    background: '#333333',
-    color: 'var(--accent-fg)',
+    background: 'var(--accent)',
+    color: 'var(--accent-text)',
     padding: '0.2rem 0.65rem',
     borderRadius: '999px',
     fontSize: '0.75rem',
@@ -468,8 +468,8 @@ const styles = {
   },
   submitBtn: {
     flex: 1,
-    background: '#333333',
-    color: 'var(--accent-fg)',
+    background: 'var(--accent)',
+    color: 'var(--accent-text)',
     border: 'none',
     borderRadius: 9,
     padding: '0.65rem',

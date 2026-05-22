@@ -357,7 +357,7 @@ export default function NutritionClient() {
 
         {/* ── Invite à créer le profil si absent ──────────────────── */}
         {!hasProfile && (
-          <div style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderRadius: 18, padding: '18px 18px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ background: 'var(--header-bg)', borderRadius: 18, padding: '18px 18px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: '1.8rem' }}>🎯</span>
               <div>
@@ -380,7 +380,7 @@ export default function NutritionClient() {
         <div style={S.summaryCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: '2.6rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1, letterSpacing: '-1px' }}>
+              <div style={{ fontSize: '2.6rem', fontWeight: 900, color: 'var(--accent-text)', lineHeight: 1, letterSpacing: '-1px' }}>
                 {Math.round(totals.kcal)}
               </div>
               <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
@@ -716,7 +716,7 @@ export default function NutritionClient() {
               <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                 {[['recents', '🕐 Récents'], ['favoris', '⭐ Favoris']].map(([key, label]) => (
                   <button key={key} onClick={() => setSheetTab(key)}
-                    style={{ padding: '5px 12px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: sheetTab === key ? '#1a1a1a' : '#e5e7eb', background: sheetTab === key ? '#1a1a1a' : 'white', color: sheetTab === key ? 'var(--accent)' : '#6b7280' }}>
+                    style={{ padding: '5px 12px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: sheetTab === key ? '#1a1a1a' : '#e5e7eb', background: sheetTab === key ? 'var(--accent)' : 'white', color: sheetTab === key ? 'var(--accent-text)' : '#6b7280' }}>
                     {label}
                   </button>
                 ))}
@@ -745,7 +745,7 @@ export default function NutritionClient() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>{Math.round(food.kcal || 0)} kcal</span>
-                      <span style={{ background: addingFood === food.name ? '#16a34a' : 'var(--accent)', color: '#1a1a1a', borderRadius: 8, padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}>
+                      <span style={{ background: addingFood === food.name ? '#16a34a' : 'var(--accent)', color: 'var(--accent-text)', borderRadius: 8, padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}>
                         {addingFood === food.name ? '✓' : '+'}
                       </span>
                     </div>
@@ -901,7 +901,7 @@ const S = {
   dateLabel: { color: 'white', fontSize: '0.82rem', fontWeight: 700 },
   dateArrow: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', lineHeight: 1 },
   content: { padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' },
-  summaryCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 18px 16px' },
+  summaryCard: { background: 'var(--header-bg)', borderRadius: 20, padding: '18px 18px 16px' },
   scoreCard: {
     background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
     border: '1px solid #bbf7d0', borderRadius: 18, padding: '13px 16px',
@@ -959,7 +959,7 @@ const S = {
     zIndex: 70, pointerEvents: 'none',
   },
   scanCtaBtn: {
-    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent-fg)',
+    width: '100%', padding: '0.9rem 1.25rem', background: 'var(--accent)', color: 'var(--accent-text)',
     border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
     boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',
@@ -991,7 +991,7 @@ const S = {
     fontSize: '0.9rem', outline: 'none', color: '#1a1a1a',
   },
   btnCancel: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280' },
-  btnSave:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
+  btnSave:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: 'var(--accent)', color: 'var(--accent-text)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
   modeBtn:     { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: '#f8f8f8', border: '1.5px solid #f0f0f0', borderRadius: 14, padding: '13px 8px', cursor: 'pointer' },
   modeBtnLabel:{ fontSize: '0.68rem', fontWeight: 800, color: '#374151', textAlign: 'center' },
 }
