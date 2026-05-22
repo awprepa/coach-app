@@ -152,7 +152,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset }) {
         marginTop: '0.75rem', background: '#1a1a1a', borderRadius: 12,
         padding: '0.65rem 0.9rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
       }}>
-        <span style={{ fontSize: '1rem', fontWeight: 900, color: '#e4f816', flexShrink: 0 }}>
+        <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--accent)', flexShrink: 0 }}>
           {Math.round(totalKcal)} kcal
         </span>
         <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
@@ -616,7 +616,7 @@ export default function AjouterRepas() {
               borderRadius: 14, padding: '0.65rem 0.2rem',
               cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700,
               background: mealType === t.key ? '#1a1a1a' : 'white',
-              color: mealType === t.key ? '#e4f816' : '#6b7280',
+              color: mealType === t.key ? 'var(--accent)' : '#6b7280',
               boxShadow: mealType === t.key ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
               transition: 'all 0.15s',
             }}>
@@ -640,7 +640,7 @@ export default function AjouterRepas() {
               borderRadius: 24,
               border: mode === m.key ? 'none' : '1.5px solid #e5e7eb',
               background: mode === m.key ? '#1a1a1a' : 'white',
-              color: mode === m.key ? '#e4f816' : '#374151',
+              color: mode === m.key ? 'var(--accent)' : '#374151',
               fontSize: '0.82rem', fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.15s',
@@ -672,10 +672,10 @@ export default function AjouterRepas() {
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                       {/* Coin haut-gauche */}
                       <div style={{ position: 'absolute', width: '82%', height: '36%', pointerEvents: 'none' }}>
-                        <div style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '4px 0 0 0' }} />
-                        <div style={{ position: 'absolute', top: 0, right: 0, width: 22, height: 22, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 4px 0 0' }} />
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: 22, height: 22, borderBottom: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '0 0 0 4px' }} />
-                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderBottom: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 0 4px 0' }} />
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '4px 0 0 0' }} />
+                        <div style={{ position: 'absolute', top: 0, right: 0, width: 22, height: 22, borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 4px 0 0' }} />
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: 22, height: 22, borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '0 0 0 4px' }} />
+                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderBottom: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 0 4px 0' }} />
                       </div>
                       {/* Masque sombre autour */}
                       <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 9999px rgba(0,0,0,0.42)' }} />
@@ -735,7 +735,7 @@ export default function AjouterRepas() {
                           flexShrink: 0, padding: '0.4rem 0.75rem', borderRadius: 20,
                           border: selectedCat === cat.key ? 'none' : '1.5px solid #e5e7eb',
                           background: selectedCat === cat.key ? '#1a1a1a' : 'white',
-                          color: selectedCat === cat.key ? '#e4f816' : '#374151',
+                          color: selectedCat === cat.key ? 'var(--accent)' : '#374151',
                           fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                         }}>
                           {cat.emoji} {cat.label}
@@ -805,7 +805,7 @@ export default function AjouterRepas() {
                         </div>}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#e4f816', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
                           {t.kcal || '—'} kcal
                         </div>
                         <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
@@ -889,7 +889,7 @@ export default function AjouterRepas() {
                 <button onClick={isRecording ? stopRecording : startRecording} style={{
                   width: '100%', padding: '0.85rem', border: 'none', borderRadius: 14,
                   background: isRecording ? '#ef4444' : '#1a1a1a',
-                  color: isRecording ? 'white' : '#e4f816',
+                  color: isRecording ? 'white' : 'var(--accent)',
                   fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                 }}>
@@ -960,7 +960,7 @@ export default function AjouterRepas() {
                   flex: 1, padding: '0.5rem', borderRadius: 10, border: 'none', cursor: 'pointer',
                   fontSize: '0.75rem', fontWeight: 700,
                   background: workoutTag === key ? '#1a1a1a' : '#f3f4f6',
-                  color: workoutTag === key ? '#e4f816' : '#6b7280',
+                  color: workoutTag === key ? 'var(--accent)' : '#6b7280',
                   transition: 'all 0.15s',
                 }}>{label}</button>
               ))}
@@ -986,7 +986,7 @@ export default function AjouterRepas() {
           <button onClick={handleSave} disabled={saving} style={{
             width: '100%', padding: '0.9rem',
             background: saving ? '#d1d5db' : '#1a1a1a',
-            color: saving ? '#9ca3af' : '#e4f816',
+            color: saving ? '#9ca3af' : 'var(--accent)',
             border: 'none', borderRadius: 14, fontWeight: 800, fontSize: '1rem',
             cursor: saving ? 'default' : 'pointer',
           }}>
@@ -1046,12 +1046,12 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
           <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
             {food.serving_g && food.serving_g !== 100 && (
               <button onClick={() => setQuantity(String(food.serving_g))}
-                style={{ background: parseFloat(quantity) === food.serving_g ? '#1a1a1a' : 'white', color: parseFloat(quantity) === food.serving_g ? '#e4f816' : '#374151', border: parseFloat(quantity) === food.serving_g ? 'none' : '1.5px solid #e5e7eb', borderRadius: 20, padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                style={{ background: parseFloat(quantity) === food.serving_g ? '#1a1a1a' : 'white', color: parseFloat(quantity) === food.serving_g ? 'var(--accent)' : '#374151', border: parseFloat(quantity) === food.serving_g ? 'none' : '1.5px solid #e5e7eb', borderRadius: 20, padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 Portion {food.serving_g}{unit}
               </button>
             )}
             <button onClick={() => setQuantity('100')}
-              style={{ background: parseFloat(quantity) === 100 ? '#1a1a1a' : 'white', color: parseFloat(quantity) === 100 ? '#e4f816' : '#374151', border: parseFloat(quantity) === 100 ? 'none' : '1.5px solid #e5e7eb', borderRadius: 20, padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+              style={{ background: parseFloat(quantity) === 100 ? '#1a1a1a' : 'white', color: parseFloat(quantity) === 100 ? 'var(--accent)' : '#374151', border: parseFloat(quantity) === 100 ? 'none' : '1.5px solid #e5e7eb', borderRadius: 20, padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
               100{unit}
             </button>
           </div>
@@ -1065,7 +1065,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
             Valeurs pour {quantity}{unit}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#e4f816' }}>{macros.kcal} kcal</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent)' }}>{macros.kcal} kcal</span>
             <MacroPill label="Prot"  value={macros.prot}  color="#60a5fa" />
             <MacroPill label="Gluc"  value={macros.carbs} color="#fbbf24" />
             <MacroPill label="Lip"   value={macros.fat}   color="#f87171" />
@@ -1090,6 +1090,6 @@ const S = {
   card: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   cardLabel: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', background: '#f9fafb', color: '#1a1a1a' },
-  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
+  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
   btnSecondary: { padding: '0.55rem 1.2rem', border: '1.5px solid #e5e7eb', borderRadius: 10, background: 'white', color: '#374151', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' },
 }

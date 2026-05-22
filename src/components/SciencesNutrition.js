@@ -21,7 +21,7 @@ const CAT_COLOR = {
   nutrition:    '#22c55e',
   hydratation:  '#06b6d4',
   aliments:     '#a855f7',
-  charge:       '#e4f816',
+  charge:       'var(--accent)',
   wellness:     '#ec4899',
 }
 
@@ -270,7 +270,7 @@ export default function SciencesNutrition({ coachMode = false }) {
         background: 'linear-gradient(135deg, #1a1a1a 0%, #1f2937 100%)',
         padding: coachMode ? '20px 24px 18px' : '18px 16px 16px',
       }}>
-        <p style={{ color: '#e4f816', fontWeight: 800, fontSize: '0.95rem', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+        <p style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '0.95rem', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
           📚 Base scientifique de l'app
         </p>
         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.76rem', margin: '0 0 12px', lineHeight: 1.6 }}>
@@ -313,7 +313,7 @@ export default function SciencesNutrition({ coachMode = false }) {
               fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               background:  catFilter === c.key ? '#1a1a1a' : 'white',
               borderColor: catFilter === c.key ? '#1a1a1a' : '#e5e7eb',
-              color:       catFilter === c.key ? '#e4f816' : '#6b7280',
+              color:       catFilter === c.key ? 'var(--accent)' : '#6b7280',
               flexShrink: 0,
             }}
           >
@@ -397,7 +397,7 @@ export default function SciencesNutrition({ coachMode = false }) {
                     <div style={{ background: '#1a1a1a', borderRadius: 10, padding: '10px 14px' }}>
                       {etude.formule.split('\n').map((line, i) => (
                         <p key={i} style={{
-                          fontSize: '0.73rem', color: i === 0 ? '#e4f816' : 'rgba(228,248,22,0.6)',
+                          fontSize: '0.73rem', color: i === 0 ? 'var(--accent)' : 'rgba(228,248,22,0.6)',
                           margin: i === 0 ? 0 : '3px 0 0', lineHeight: 1.4,
                           fontFamily: 'monospace',
                         }}>

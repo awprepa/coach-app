@@ -4,6 +4,7 @@ import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
 import { NotifProvider } from './context/NotifContext'
 import { TimerProvider } from './context/TimerContext'
+import { ClientThemeProvider } from './context/ClientThemeContext'
 import GlobalTimerBubble from './components/GlobalTimerBubble'
 
 // ── Pages chargées immédiatement (Auth critique) ──────────────────────────────
@@ -237,6 +238,7 @@ function App() {
       <ScrollToTop />
       <BanniereNavigateur />
       <ChunkErrorBoundary>
+      <ClientThemeProvider>
       <AuthGate>
         <TimerProvider>
           <GlobalTimerBubble />
@@ -291,6 +293,7 @@ function App() {
           </Suspense>
         </TimerProvider>
       </AuthGate>
+      </ClientThemeProvider>
       </ChunkErrorBoundary>
     </BrowserRouter>
   )

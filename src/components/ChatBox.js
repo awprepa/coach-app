@@ -74,7 +74,7 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend, f
         <button
           onClick={envoyer}
           disabled={!texte.trim() || sending}
-          style={{ background: texte.trim() ? '#333333' : '#e5e7eb', color: texte.trim() ? '#e4f816' : '#9ca3af', border: 'none', borderRadius: 10, padding: '0.55rem 1rem', fontWeight: '700', fontSize: '0.85rem', cursor: texte.trim() ? 'pointer' : 'default' }}
+          style={{ background: texte.trim() ? '#333333' : '#e5e7eb', color: texte.trim() ? 'var(--accent)' : '#9ca3af', border: 'none', borderRadius: 10, padding: '0.55rem 1rem', fontWeight: '700', fontSize: '0.85rem', cursor: texte.trim() ? 'pointer' : 'default' }}
         >{sending ? '…' : '↑'}</button>
       </div>
     </div>

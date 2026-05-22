@@ -1,3 +1,9 @@
+/* Couleurs accent par défaut — surchargées dynamiquement par ClientThemeContext */
+:root {
+  --accent:  #e4f816;
+  --accent2: #6b7280;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

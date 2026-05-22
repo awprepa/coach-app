@@ -1,3 +1,4 @@
+import AppLogo from '../../components/AppLogo'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
@@ -100,7 +101,7 @@ export default function TestsClient() {
       {/* Header */}
       <div style={S.header}>
         <button onClick={() => navigate('/client/accueil')} style={S.backBtn}>‹</button>
-        <span style={S.logo}>AW<span style={{ color: '#e4f816' }}>prepa</span></span>
+        <AppLogo />
         <div style={{ width: 32 }} />
       </div>
 
@@ -118,7 +119,7 @@ export default function TestsClient() {
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
               {types.map(t => (
                 <button key={t.id} onClick={() => { setSelectedType(t); setShowForm(false) }}
-                  style={{ ...S.typeTab, background: selectedType?.id === t.id ? '#333333' : 'white', color: selectedType?.id === t.id ? '#e4f816' : '#6b7280', border: selectedType?.id === t.id ? 'none' : '1.5px solid #e5e7eb' }}>
+                  style={{ ...S.typeTab, background: selectedType?.id === t.id ? '#333333' : 'white', color: selectedType?.id === t.id ? 'var(--accent)' : '#6b7280', border: selectedType?.id === t.id ? 'none' : '1.5px solid #e5e7eb' }}>
                   {t.nom}{t.unite ? ` (${t.unite})` : ''}
                 </button>
               ))}
@@ -154,7 +155,7 @@ export default function TestsClient() {
                         <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.8rem' }} formatter={v => [`${v} ${selectedType.unite || ''}`, 'Résultat']} />
-                        <Line type="monotone" dataKey="valeur" stroke="#333333" strokeWidth={2.5} dot={{ r: 5, fill: '#e4f816', stroke: '#333333', strokeWidth: 2 }} connectNulls />
+                        <Line type="monotone" dataKey="valeur" stroke="#333333" strokeWidth={2.5} dot={{ r: 5, fill: 'var(--accent)', stroke: '#333333', strokeWidth: 2 }} connectNulls />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -246,7 +247,7 @@ const S = {
   emptyCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
   label:    { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' },
   input:    { width: '100%', padding: '0.65rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
-  btn:      { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },
-  btnPrimary:{ width: '100%', padding: '0.875rem', background: '#333333', color: '#e4f816', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' },
+  btn:      { background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },
+  btnPrimary:{ width: '100%', padding: '0.875rem', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' },
   deleteBtn:{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' },
 }

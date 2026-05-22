@@ -136,7 +136,7 @@ export default function WellnessClient() {
           <>
             {/* Dernière entrée */}
             {latest && (
-              <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', marginBottom: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: latest.date === today ? '2px solid #e4f816' : '2px solid transparent' }}>
+              <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', marginBottom: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: latest.date === today ? '2px solid var(--accent)' : '2px solid transparent' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
                   <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#1a1a1a' }}>
                     {latest.date === today ? "Aujourd'hui" : new Date(latest.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -207,7 +207,7 @@ export default function WellnessClient() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
             {/* ── Saisie du poids du jour ── */}
-            <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '2px solid #e4f816' }}>
+            <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '2px solid var(--accent)' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.9rem', color: '#1a1a1a' }}>
                 ⚖️ Poids du jour
               </p>
@@ -234,7 +234,7 @@ export default function WellnessClient() {
                   style={{
                     padding: '0.65rem 1.1rem', border: 'none', borderRadius: 12,
                     background: weightSaved ? '#22c55e' : '#333333',
-                    color: weightSaved ? 'white' : '#e4f816',
+                    color: weightSaved ? 'white' : 'var(--accent)',
                     fontWeight: '700', fontSize: '0.88rem', cursor: 'pointer',
                     flexShrink: 0, transition: 'background 0.2s',
                   }}
@@ -282,7 +282,7 @@ export default function WellnessClient() {
                     <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
                     <Tooltip formatter={(v) => [`${v} kg`, 'Poids']}
                       labelFormatter={d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} />
-                    <Line type="monotone" dataKey="poids" stroke="#333333" strokeWidth={2.5} dot={{ fill: '#e4f816', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="poids" stroke="#333333" strokeWidth={2.5} dot={{ fill: 'var(--accent)', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

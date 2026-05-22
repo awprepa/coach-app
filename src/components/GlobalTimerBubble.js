@@ -47,7 +47,7 @@ export default function GlobalTimerBubble() {
         </div>
         <div style={{
           fontSize: '1.2rem', fontWeight: 900, lineHeight: 1,
-          color: isDone ? '#4ade80' : '#e4f816',
+          color: isDone ? '#4ade80' : 'var(--accent)',
         }}>
           {isDone ? '✓ GO !' : fmt(timerSecs)}
         </div>
@@ -61,7 +61,7 @@ export default function GlobalTimerBubble() {
           borderRadius: 999, overflow: 'hidden',
         }}>
           <div style={{
-            height: '100%', background: '#e4f816',
+            height: '100%', background: 'var(--accent)',
             borderRadius: 999,
             width: `${pct}%`,
             transition: 'width 0.5s linear',

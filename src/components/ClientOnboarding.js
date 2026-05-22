@@ -1,3 +1,4 @@
+import AppLogo from './AppLogo'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -24,10 +25,10 @@ function IlluAccueil() {
         </div>
         {/* Carte nutrition */}
         <div style={{ background: '#1a1a1a', borderRadius: 10, padding: '8px 10px' }}>
-          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>1 840</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>1 840</div>
           <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>kcal aujourd'hui</div>
           <div style={{ height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 999, marginTop: 6, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: '72%', background: '#e4f816', borderRadius: 999 }} />
+            <div style={{ height: '100%', width: '72%', background: 'var(--accent)', borderRadius: 999 }} />
           </div>
         </div>
       </div>
@@ -48,7 +49,7 @@ function IlluProgramme() {
           { name: 'Épaules haltères', sets: '3×12', weight: '—', done: false },
         ].map((ex, i) => (
           <div key={i} style={{ background: 'white', borderRadius: 8, padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: ex.done ? '#e4f816' : '#f3f4f6', border: ex.done ? 'none' : '1.5px solid #e5e7eb', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: ex.done ? 'var(--accent)' : '#f3f4f6', border: ex.done ? 'none' : '1.5px solid #e5e7eb', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {ex.done && <div style={{ fontSize: '0.5rem' }}>✓</div>}
             </div>
             <div style={{ flex: 1 }}>
@@ -73,7 +74,7 @@ function IlluNutrition() {
         <div style={{ background: '#1a1a1a', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
             <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>1 840</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>1 840</div>
               <div style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.4)' }}>kcal mangés</div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -99,7 +100,7 @@ function IlluNutrition() {
         {/* Barre scanner */}
         <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ fontSize: '0.65rem' }}>▦</div>
-          <div style={{ fontSize: '0.58rem', color: '#e4f816', fontWeight: 700 }}>Scanner un article</div>
+          <div style={{ fontSize: '0.58rem', color: 'var(--accent)', fontWeight: 700 }}>Scanner un article</div>
         </div>
       </div>
     </div>
@@ -139,7 +140,7 @@ function IlluWelcome() {
     <div style={{ width: '100%', borderRadius: 14, background: '#1a1a1a', padding: '28px 16px', marginBottom: 18, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontSize: '2.2rem', marginBottom: 14 }}>👋</div>
       <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', marginBottom: 4 }}>
-        AW<span style={{ color: '#e4f816' }}>prepa</span>
+        <AppLogo size={48} />
       </div>
       <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>Ta plateforme de coaching sportif</div>
     </div>
@@ -212,7 +213,7 @@ export default function ClientOnboarding() {
           {STEPS.map((_, i) => (
             <div key={i} style={{
               flex: 1, height: 3, borderRadius: 999,
-              background: i <= step ? '#e4f816' : 'rgba(255,255,255,0.15)',
+              background: i <= step ? 'var(--accent)' : 'rgba(255,255,255,0.15)',
               transition: 'background 0.35s',
             }} />
           ))}
@@ -267,7 +268,7 @@ const S = {
   },
   btnPrimary: {
     flex: 1, padding: '14px', border: 'none', borderRadius: 14,
-    background: '#e4f816', color: '#1a1a1a',
+    background: 'var(--accent)', color: '#1a1a1a',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
   },
   btnSecondary: {

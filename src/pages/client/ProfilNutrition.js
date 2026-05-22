@@ -232,7 +232,7 @@ export default function ProfilNutrition() {
             <ChevronLeft />
           </button>
           <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${((wizardStep + 1) / 4) * 100}%`, background: '#e4f816', borderRadius: 999, transition: 'width 0.35s ease' }} />
+            <div style={{ height: '100%', width: `${((wizardStep + 1) / 4) * 100}%`, background: 'var(--accent)', borderRadius: 999, transition: 'width 0.35s ease' }} />
           </div>
           <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem', fontWeight: 700, minWidth: 28, textAlign: 'right' }}>
             {wizardStep + 1}/4
@@ -253,7 +253,7 @@ export default function ProfilNutrition() {
                   style={{ ...S.bigCard, ...(objectif === o.key ? S.bigCardActive : {}) }}>
                   <span style={{ fontSize: '1.9rem', flexShrink: 0 }}>{o.emoji}</span>
                   <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: objectif === o.key ? '#e4f816' : '#1a1a1a', lineHeight: 1.2 }}>{o.label}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: objectif === o.key ? 'var(--accent)' : '#1a1a1a', lineHeight: 1.2 }}>{o.label}</div>
                     <div style={{ fontSize: '0.76rem', color: objectif === o.key ? 'rgba(228,248,22,0.65)' : '#9ca3af', marginTop: 3 }}>{o.desc}</div>
                   </div>
                   {objectif === o.key && <CheckCircle />}
@@ -281,7 +281,7 @@ export default function ProfilNutrition() {
                       flex: 1, padding: '12px', borderRadius: 12, border: '2px solid',
                       borderColor: sexe === s.key ? '#1a1a1a' : '#e5e7eb',
                       background:  sexe === s.key ? '#1a1a1a' : '#f9fafb',
-                      color:       sexe === s.key ? '#e4f816' : '#374151',
+                      color:       sexe === s.key ? 'var(--accent)' : '#374151',
                       fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
                     }}>{s.label}</button>
                   ))}
@@ -322,7 +322,7 @@ export default function ProfilNutrition() {
                   style={{ ...S.bigCard, ...(activite === a.key ? S.bigCardActive : {}) }}>
                   <span style={{ fontSize: '1.7rem', flexShrink: 0 }}>{a.emoji}</span>
                   <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: activite === a.key ? '#e4f816' : '#1a1a1a', lineHeight: 1.2 }}>{a.label}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: activite === a.key ? 'var(--accent)' : '#1a1a1a', lineHeight: 1.2 }}>{a.label}</div>
                     <div style={{ fontSize: '0.74rem', color: activite === a.key ? 'rgba(228,248,22,0.65)' : '#9ca3af', marginTop: 3 }}>{a.desc}</div>
                     <div style={{ fontSize: '0.64rem', color: activite === a.key ? 'rgba(228,248,22,0.4)' : '#d1d5db', marginTop: 2, fontWeight: 600 }}>× {a.mult} BMR</div>
                   </div>
@@ -346,7 +346,7 @@ export default function ProfilNutrition() {
               <div style={S.resultsCard}>
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Profil calculé</p>
-                  <p style={{ color: '#e4f816', fontWeight: 700, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.4 }}>
+                  <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.4 }}>
                     {OBJECTIFS.find(o => o.key === objectif)?.label} · {poids} kg · {sexe} · {age} ans
                   </p>
                   <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', margin: '2px 0 0' }}>
@@ -452,7 +452,7 @@ export default function ProfilNutrition() {
                     <div>
                       <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
                       {physProfile && (
-                        <p style={{ color: '#e4f816', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
+                        <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
                           {OBJECTIFS.find(o => o.key === physProfile.objectif)?.emoji}{' '}
                           {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
                         </p>
@@ -556,7 +556,7 @@ export default function ProfilNutrition() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {[['all','Tous'],['good','Bons'],['bad','À éviter'],['week','7 jours']].map(([k, lbl]) => (
                     <button key={k} onClick={() => setScanFilter(k)}
-                      style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: scanFilter === k ? '#1a1a1a' : '#e5e7eb', background: scanFilter === k ? '#1a1a1a' : 'white', color: scanFilter === k ? '#e4f816' : '#6b7280' }}>
+                      style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: scanFilter === k ? '#1a1a1a' : '#e5e7eb', background: scanFilter === k ? '#1a1a1a' : 'white', color: scanFilter === k ? 'var(--accent)' : '#6b7280' }}>
                       {lbl}
                     </button>
                   ))}
@@ -680,7 +680,7 @@ function ChevronLeft() {
 
 function CheckCircle() {
   return (
-    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12" />
       </svg>
@@ -696,16 +696,16 @@ const S = {
   wizSub:   { fontSize: '0.82rem', color: '#9ca3af', margin: '6px 0 0', lineHeight: 1.5 },
   bigCard: { display: 'flex', alignItems: 'center', gap: 14, background: 'white', borderRadius: 16, padding: '16px', border: '2px solid #f3f4f6', cursor: 'pointer', textAlign: 'left', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'border-color 0.15s, background 0.15s', width: '100%' },
   bigCardActive: { background: '#1a1a1a', borderColor: '#1a1a1a', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' },
-  nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
+  nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
   ghostBtn: { width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', marginTop: -6 },
   resultsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
   goalsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
   recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
+  ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
   tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 88, zIndex: 50 },
   tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
-  tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid #e4f816' },
+  tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid var(--accent)' },
   card: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   inputLabel: { fontSize: '0.82rem', fontWeight: 700, color: '#374151', display: 'block' },
   numberInput: { flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', fontSize: '1.1rem', fontWeight: 700, color: '#1a1a1a', background: '#f9fafb', outline: 'none' },

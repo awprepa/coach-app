@@ -42,7 +42,7 @@ export default function ClientProfileMenu({ client, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
               width: 42, height: 42, borderRadius: '50%',
-              background: '#333333', color: '#e4f816',
+              background: '#333333', color: 'var(--accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: '800', fontSize: '0.95rem', flexShrink: 0,
             }}>{initiales}</div>

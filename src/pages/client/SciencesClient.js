@@ -20,7 +20,7 @@ const CAT = {
   nutrition:    { fg: '#4ade80', bg: '#f0fdf4', dot: '#4ade80' },
   hydratation:  { fg: '#22d3ee', bg: '#ecfeff', dot: '#22d3ee' },
   aliments:     { fg: '#c084fc', bg: '#faf5ff', dot: '#c084fc' },
-  charge:       { fg: '#e4f816', bg: '#1f2937', dot: '#e4f816' },
+  charge:       { fg: 'var(--accent)', bg: '#1f2937', dot: 'var(--accent)' },
   wellness:     { fg: '#f472b6', bg: '#fdf2f8', dot: '#f472b6' },
 }
 
@@ -230,7 +230,7 @@ export default function SciencesClient() {
                 ...S.chip,
                 background:  active ? '#1a1a1a' : 'white',
                 borderColor: active ? '#1a1a1a' : '#e5e7eb',
-                color:       active ? (c.key === 'charge' ? '#e4f816' : 'white') : '#6b7280',
+                color:       active ? (c.key === 'charge' ? 'var(--accent)' : 'white') : '#6b7280',
               }}
             >
               {c.key !== 'all' && (
@@ -321,7 +321,7 @@ export default function SciencesClient() {
                     {e.formule.split('\n').map((line, i) => (
                       <p key={i} style={{
                         ...S.formulaLine,
-                        color: i === 0 ? '#e4f816' : 'rgba(228,248,22,0.5)',
+                        color: i === 0 ? 'var(--accent)' : 'rgba(228,248,22,0.5)',
                         marginTop: i === 0 ? 0 : 5,
                       }}>
                         {line}
@@ -368,7 +368,7 @@ export default function SciencesClient() {
 function Ctr({ n, label }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-      <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#e4f816', lineHeight: 1 }}>{n}</span>
+      <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{n}</span>
       <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{label}</span>
     </div>
   )
@@ -400,7 +400,7 @@ const S = {
   },
   eyebrow: {
     fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.16em',
-    color: '#e4f816', margin: '0 0 10px',
+    color: 'var(--accent)', margin: '0 0 10px',
   },
   h1: {
     fontSize: '1.65rem', fontWeight: 900, color: 'white',

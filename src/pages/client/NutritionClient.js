@@ -369,7 +369,7 @@ export default function NutritionClient() {
             </div>
             <button
               onClick={() => navigate('/client/nutrition/profil?setup=1')}
-              style={{ background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', textAlign: 'center' }}
+              style={{ background: 'var(--accent)', color: '#1a1a1a', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', textAlign: 'center' }}
             >
               Commencer le questionnaire →
             </button>
@@ -380,7 +380,7 @@ export default function NutritionClient() {
         <div style={S.summaryCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: '2.6rem', fontWeight: 900, color: '#e4f816', lineHeight: 1, letterSpacing: '-1px' }}>
+              <div style={{ fontSize: '2.6rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1, letterSpacing: '-1px' }}>
                 {Math.round(totals.kcal)}
               </div>
               <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
@@ -403,7 +403,7 @@ export default function NutritionClient() {
             <div style={{ marginBottom: 14 }}>
               <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
                 <div style={{
-                  height: '100%', borderRadius: 999, background: '#e4f816',
+                  height: '100%', borderRadius: 999, background: 'var(--accent)',
                   width: `${Math.min(totals.kcal / (goals.kcal_target || 1) * 100, 100)}%`,
                   transition: 'width 0.5s ease',
                 }} />
@@ -716,7 +716,7 @@ export default function NutritionClient() {
               <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                 {[['recents', '🕐 Récents'], ['favoris', '⭐ Favoris']].map(([key, label]) => (
                   <button key={key} onClick={() => setSheetTab(key)}
-                    style={{ padding: '5px 12px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: sheetTab === key ? '#1a1a1a' : '#e5e7eb', background: sheetTab === key ? '#1a1a1a' : 'white', color: sheetTab === key ? '#e4f816' : '#6b7280' }}>
+                    style={{ padding: '5px 12px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: sheetTab === key ? '#1a1a1a' : '#e5e7eb', background: sheetTab === key ? '#1a1a1a' : 'white', color: sheetTab === key ? 'var(--accent)' : '#6b7280' }}>
                     {label}
                   </button>
                 ))}
@@ -745,7 +745,7 @@ export default function NutritionClient() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>{Math.round(food.kcal || 0)} kcal</span>
-                      <span style={{ background: addingFood === food.name ? '#16a34a' : '#e4f816', color: '#1a1a1a', borderRadius: 8, padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}>
+                      <span style={{ background: addingFood === food.name ? '#16a34a' : 'var(--accent)', color: '#1a1a1a', borderRadius: 8, padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800 }}>
                         {addingFood === food.name ? '✓' : '+'}
                       </span>
                     </div>
@@ -827,7 +827,7 @@ export default function NutritionClient() {
             {/* Macros sur 2 colonnes */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.1rem' }}>
               {[
-                { key: 'kcal',   label: 'Calories (kcal)', color: '#e4f816' },
+                { key: 'kcal',   label: 'Calories (kcal)', color: 'var(--accent)' },
                 { key: 'prot_g', label: 'Protéines (g)',   color: '#3b82f6' },
                 { key: 'carbs_g',label: 'Glucides (g)',    color: '#f59e0b' },
                 { key: 'fat_g',  label: 'Lipides (g)',     color: '#ef4444' },
@@ -870,7 +870,7 @@ export default function NutritionClient() {
               <button onClick={saveFavorite} disabled={!favoriteName.trim() || savingFav} style={{
                 ...S.btnSave,
                 background: favoriteName.trim() ? '#1a1a1a' : '#e5e7eb',
-                color: favoriteName.trim() ? '#e4f816' : '#9ca3af',
+                color: favoriteName.trim() ? 'var(--accent)' : '#9ca3af',
               }}>{savingFav ? 'Sauvegarde…' : 'Sauvegarder ⭐'}</button>
             </div>
           </div>
@@ -914,7 +914,7 @@ const S = {
   mealHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px' },
   kcalBadge: { fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', background: '#f3f4f6', padding: '3px 8px', borderRadius: 20, marginLeft: 4 },
   addBtn: {
-    width: 30, height: 30, borderRadius: '50%', background: '#e4f816',
+    width: 30, height: 30, borderRadius: '50%', background: 'var(--accent)',
     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '1.2rem', fontWeight: 700, color: '#1a1a1a', flexShrink: 0,
   },
@@ -959,7 +959,7 @@ const S = {
     zIndex: 70, pointerEvents: 'none',
   },
   scanCtaBtn: {
-    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: '#e4f816',
+    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)',
     border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
     boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',
@@ -968,7 +968,7 @@ const S = {
     position: 'fixed',
     bottom: 'calc(166px + max(env(safe-area-inset-bottom, 0px), 0px))',
     right: 16, zIndex: 75,
-    width: 52, height: 52, borderRadius: '50%', background: '#e4f816',
+    width: 52, height: 52, borderRadius: '50%', background: 'var(--accent)',
     border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
   },
@@ -991,7 +991,7 @@ const S = {
     fontSize: '0.9rem', outline: 'none', color: '#1a1a1a',
   },
   btnCancel: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280' },
-  btnSave:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
+  btnSave:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: '#1a1a1a', color: 'var(--accent)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
   modeBtn:     { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: '#f8f8f8', border: '1.5px solid #f0f0f0', borderRadius: 14, padding: '13px 8px', cursor: 'pointer' },
   modeBtnLabel:{ fontSize: '0.68rem', fontWeight: 800, color: '#374151', textAlign: 'center' },
 }

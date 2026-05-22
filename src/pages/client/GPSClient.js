@@ -1,3 +1,4 @@
+import AppLogo from '../../components/AppLogo'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
@@ -131,7 +132,7 @@ export default function GPSClient() {
     <div style={S.page}>
       {/* Header */}
       <div style={S.header}>
-        <span style={S.logo}>AW<span style={{ color: '#e4f816' }}>prepa</span></span>
+        <AppLogo />
         <span style={S.headerTitle}>GPS</span>
         <div style={{ width: 60 }} />
       </div>

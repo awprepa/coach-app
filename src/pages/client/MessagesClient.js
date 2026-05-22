@@ -213,7 +213,7 @@ function ChatInner({ clientId, coachId }) {
             background: texte.trim() && !sending
               ? 'linear-gradient(135deg, #333333 0%, #1f2937 100%)'
               : '#e5e7eb',
-            color: texte.trim() && !sending ? '#e4f816' : '#b0b7c3',
+            color: texte.trim() && !sending ? 'var(--accent)' : '#b0b7c3',
             border: 'none',
             cursor: texte.trim() && !sending ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -294,7 +294,7 @@ export default function MessagesClient() {
           </svg>
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: '#333' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: '#333' }}>
             A
           </div>
           <span style={{ color: 'white', fontWeight: '700', fontSize: '0.95rem' }}>Arthur</span>

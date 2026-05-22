@@ -1,3 +1,4 @@
+import AppLogo from '../../components/AppLogo'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
@@ -122,7 +123,7 @@ export default function ProgrammeClient() {
         <button onClick={() => navigate('/client/accueil')} style={styles.backBtn}>
           ‹
         </button>
-        <span style={styles.logo}>AW<span style={{ color: '#e4f816' }}>prepa</span></span>
+        <AppLogo />
         <div style={{ width: 32 }} />
       </div>
 
@@ -332,7 +333,7 @@ const styles = {
   },
   badge: {
     background: '#333333',
-    color: '#e4f816',
+    color: 'var(--accent)',
     padding: '0.2rem 0.65rem',
     borderRadius: '999px',
     fontSize: '0.75rem',
@@ -346,7 +347,7 @@ const styles = {
   },
   progressFill: {
     height: '100%',
-    background: '#e4f816',
+    background: 'var(--accent)',
     borderRadius: '999px',
     transition: 'width 0.4s ease',
   },
@@ -406,7 +407,7 @@ const styles = {
   jourNum: {
     fontSize: '0.95rem',
     fontWeight: '800',
-    color: '#e4f816',
+    color: 'var(--accent)',
     lineHeight: 1.2,
   },
   cardTitle: {
@@ -468,7 +469,7 @@ const styles = {
   submitBtn: {
     flex: 1,
     background: '#333333',
-    color: '#e4f816',
+    color: 'var(--accent)',
     border: 'none',
     borderRadius: 9,
     padding: '0.65rem',

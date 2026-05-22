@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 
 const EVENT_TYPES = [
-  { value: 'seance',       label: 'Séance',        bg: '#333333', text: '#e4f816' },
+  { value: 'seance',       label: 'Séance',        bg: '#333333', text: 'var(--accent)' },
   { value: 'entrainement', label: 'Entraînement',  bg: '#f97316', text: 'white'   },
-  { value: 'match',        label: 'Match',         bg: '#e4f816', text: '#333333' },
+  { value: 'match',        label: 'Match',         bg: 'var(--accent)', text: '#333333' },
   { value: 'combat',       label: 'Combat',        bg: '#dc2626', text: 'white'   },
   { value: 'competition',  label: 'Compétition',   bg: '#7c3aed', text: 'white'   },
   { value: 'repos',        label: 'Repos',         bg: '#e5e7eb', text: '#6b7280' },
@@ -85,7 +85,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
     cells.push(
       <div key={`sw-${row}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: cycleW ? '#333333' : '#f9fafb', borderRadius: 7 }}>
         {cycleW
-          ? <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#e4f816', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.05em' }}>S{cycleW}</span>
+          ? <span style={{ fontSize: '0.6rem', fontWeight: '900', color: 'var(--accent)', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.05em' }}>S{cycleW}</span>
           : <span style={{ width: 2, height: '60%', background: '#e5e7eb', borderRadius: 2 }} />}
       </div>
     )
@@ -97,10 +97,10 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
           height: 46, overflow: 'hidden', boxSizing: 'border-box',
           background: isSel ? '#333333' : inCycle ? '#fffef5' : 'white',
           borderRadius: 8, padding: '5px 4px', cursor: 'pointer',
-          border: isToday ? '2px solid #e4f816' : inCycle ? '1px solid #f0ead0' : '1px solid #f3f4f6',
+          border: isToday ? '2px solid var(--accent)' : inCycle ? '1px solid #f0ead0' : '1px solid #f3f4f6',
           opacity: day.getMonth() === month ? 1 : 0.35,
         }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: isToday ? '800' : '500', color: isSel ? '#e4f816' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: isToday ? '800' : '500', color: isSel ? 'var(--accent)' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
             {evs.slice(0, 2).map(ev => <EventChip key={ev.id} ev={ev} tiny />)}
             {evs.length > 2 && <span style={{ fontSize: '0.55rem', color: isSel ? 'rgba(228,248,22,0.7)' : '#9ca3af', fontWeight: '700' }}>+{evs.length - 2} →</span>}
@@ -121,11 +121,11 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
         <div style={{ background: '#333333', borderRadius: 12, padding: '0.875rem 1.25rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div>
             <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.62rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cycle en cours</p>
-            <p style={{ color: '#e4f816', fontSize: '1.05rem', fontWeight: '900', margin: '0.2rem 0 0' }}>Semaine {cycleW} <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: '400' }}>/ {programmeSemaines}</span></p>
+            <p style={{ color: 'var(--accent)', fontSize: '1.05rem', fontWeight: '900', margin: '0.2rem 0 0' }}>Semaine {cycleW} <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: '400' }}>/ {programmeSemaines}</span></p>
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: '#e4f816', borderRadius: 999, width: `${Math.round((cycleW / programmeSemaines) * 100)}%` }} />
+              <div style={{ height: '100%', background: 'var(--accent)', borderRadius: 999, width: `${Math.round((cycleW / programmeSemaines) * 100)}%` }} />
             </div>
             <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', margin: '0.3rem 0 0', textAlign: 'right' }}>{Math.round((cycleW / programmeSemaines) * 100)}%</p>
           </div>
@@ -140,11 +140,11 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
               height: 150, overflow: 'hidden', boxSizing: 'border-box',
               background: isSel ? '#333333' : cycleW ? '#fffef5' : 'white',
               borderRadius: 12, padding: '10px 6px', cursor: 'pointer',
-              border: isToday ? '2px solid #e4f816' : cycleW ? '1px solid #f0ead0' : '1px solid #f3f4f6',
+              border: isToday ? '2px solid var(--accent)' : cycleW ? '1px solid #f0ead0' : '1px solid #f3f4f6',
             }}>
               <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                <p style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? '#e4f816' : '#9ca3af', margin: '0 0 2px', textTransform: 'uppercase' }}>{JOURS[i]}</p>
-                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: isSel ? '#e4f816' : isToday ? '#333333' : '#374151' }}>{day.getDate()}</span>
+                <p style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? 'var(--accent)' : '#9ca3af', margin: '0 0 2px', textTransform: 'uppercase' }}>{JOURS[i]}</p>
+                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: isSel ? 'var(--accent)' : isToday ? '#333333' : '#374151' }}>{day.getDate()}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
                 {evs.slice(0, 3).map(ev => <EventChip key={ev.id} ev={ev} />)}
@@ -169,7 +169,7 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
       {weeks.map((week, wi) => (
         <div key={wi} style={{ display: 'grid', gridTemplateColumns: '36px repeat(7,1fr)', gap: 3, marginBottom: 4, alignItems: 'stretch', minWidth: 560 }}>
           <div style={{ background: '#333333', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.62rem', fontWeight: '900', color: '#e4f816', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>S{wi + 1}</span>
+            <span style={{ fontSize: '0.62rem', fontWeight: '900', color: 'var(--accent)', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>S{wi + 1}</span>
           </div>
           {week.map((day, di) => {
             const ds = formatDate(day); const isToday = ds === todayStr; const isSel = ds === selectedStr
@@ -178,9 +178,9 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
               <div key={di} onClick={() => onDayClick(day)} style={{
                 height: 64, overflow: 'hidden', boxSizing: 'border-box',
                 background: isSel ? '#333333' : '#fffef5', borderRadius: 7, padding: '5px',
-                cursor: 'pointer', border: isToday ? '2px solid #e4f816' : '1px solid #f0ead0',
+                cursor: 'pointer', border: isToday ? '2px solid var(--accent)' : '1px solid #f0ead0',
               }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? '#e4f816' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}/{day.getMonth()+1}</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? 'var(--accent)' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}/{day.getMonth()+1}</span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
                   {evs.slice(0, 2).map(ev => <EventChip key={ev.id} ev={ev} tiny />)}
                   {evs.length > 2 && <span style={{ fontSize: '0.55rem', color: isSel ? 'rgba(228,248,22,0.7)' : '#9ca3af', fontWeight: '700' }}>+{evs.length-2} →</span>}
@@ -341,7 +341,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
         {clientId && (
           <button onClick={() => setShowSyncModal(true)} style={{
             padding: '0.3rem 0.9rem', borderRadius: 8, border: 'none', fontSize: '0.78rem', fontWeight: '700',
-            cursor: 'pointer', background: '#e4f816', color: '#1a1a1a',
+            cursor: 'pointer', background: 'var(--accent)', color: '#1a1a1a',
           }}>📅 Sync. Agenda</button>
         )}
       </div>
@@ -374,7 +374,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
             <p style={{ fontWeight: '800', fontSize: '0.9rem', color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {selectedDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {getCycleWeek(selectedDay, programmeDebut, programmeSemaines) && (
-                <span style={{ fontSize: '0.72rem', background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 6, fontWeight: '800' }}>
+                <span style={{ fontSize: '0.72rem', background: '#333333', color: 'var(--accent)', padding: '2px 8px', borderRadius: 6, fontWeight: '800' }}>
                   S{getCycleWeek(selectedDay, programmeDebut, programmeSemaines)}
                 </span>
               )}
@@ -494,5 +494,5 @@ const S = {
   navBtn:    { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '4px 10px', fontSize: '1rem', cursor: 'pointer', color: '#374151' },
   panel:     { marginTop: '1rem', background: '#f9fafb', borderRadius: 14, padding: '1rem 1.25rem', border: '1px solid #e5e7eb' },
   formInput: { padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', color: '#333333', outline: 'none', background: 'white' },
-  addBtn:    { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
+  addBtn:    { background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
 }

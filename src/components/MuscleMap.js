@@ -238,11 +238,11 @@ export default function MuscleMap({
       {/* Toggle avant / arrière */}
       <div style={{ display: 'flex', gap: '0.3rem' }}>
         <button
-          style={{ ...btnBase, background: !showBack ? '#333333' : '#f3f4f6', color: !showBack ? '#e4f816' : '#374151' }}
+          style={{ ...btnBase, background: !showBack ? '#333333' : '#f3f4f6', color: !showBack ? 'var(--accent)' : '#374151' }}
           onClick={() => setShowBack(false)}
         >Avant</button>
         <button
-          style={{ ...btnBase, background: showBack ? '#333333' : '#f3f4f6', color: showBack ? '#e4f816' : '#374151' }}
+          style={{ ...btnBase, background: showBack ? '#333333' : '#f3f4f6', color: showBack ? 'var(--accent)' : '#374151' }}
           onClick={() => setShowBack(true)}
         >Arrière</button>
       </div>

@@ -45,7 +45,7 @@ function CustomTooltip({ active, payload, label, kcalTarget }) {
       padding: '0.5rem 0.75rem', fontSize: '0.78rem', lineHeight: 1.6,
       boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
     }}>
-      <div style={{ fontWeight: 800, color: '#e4f816', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontWeight: 800, color: 'var(--accent)', marginBottom: 2 }}>{label}</div>
       <div>{Math.round(kcal)} kcal</div>
       {kcalTarget > 0 && (
         <div style={{ color: '#9ca3af' }}>
@@ -320,9 +320,9 @@ export default function HistoriqueNutrition() {
                 <Line
                   type="monotone"
                   dataKey="kcal"
-                  stroke="#e4f816"
+                  stroke="var(--accent)"
                   strokeWidth={2.5}
-                  dot={{ fill: '#e4f816', r: 3, strokeWidth: 0 }}
+                  dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }}
                   activeDot={{ fill: 'white', r: 4, strokeWidth: 0 }}
                 />
               </LineChart>

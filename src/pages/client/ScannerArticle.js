@@ -217,7 +217,7 @@ export default function ScannerArticle() {
         </button>
         <span style={S.headerTitle}>Scanner un article</span>
         {phase === 'result' ? (
-          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.65rem', fontWeight: 700, color: '#e4f816', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
+          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.65rem', fontWeight: 700, color: 'var(--accent)', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
             Historique
           </button>
         ) : (
@@ -265,24 +265,24 @@ export default function ScannerArticle() {
                 {/* Cadre de visée */}
                 <div style={{
                   width: 260, height: 180,
-                  border: '2.5px solid #e4f816',
+                  border: '2.5px solid var(--accent)',
                   borderRadius: 18,
                   boxShadow: '0 0 0 4px rgba(228,248,22,0.15)',
                   position: 'relative',
                 }}>
                   {/* Coins accentués */}
                   {[
-                    { top: -2, left: -2, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '10px 0 0 0' },
-                    { top: -2, right: -2, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 10px 0 0' },
-                    { bottom: -2, left: -2, borderBottom: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '0 0 0 10px' },
-                    { bottom: -2, right: -2, borderBottom: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 0 10px 0' },
+                    { top: -2, left: -2, borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '10px 0 0 0' },
+                    { top: -2, right: -2, borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 10px 0 0' },
+                    { bottom: -2, left: -2, borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '0 0 0 10px' },
+                    { bottom: -2, right: -2, borderBottom: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 0 10px 0' },
                   ].map((st, i) => (
                     <div key={i} style={{ position: 'absolute', width: 24, height: 24, ...st }} />
                   ))}
                   {/* Ligne de scan animée */}
                   <div style={{
                     position: 'absolute', left: 0, right: 0,
-                    height: 2, background: '#e4f816',
+                    height: 2, background: 'var(--accent)',
                     opacity: 0.75,
                     animation: 'scanLine 2s ease-in-out infinite',
                     top: '50%',
@@ -387,7 +387,7 @@ export default function ScannerArticle() {
 
             {/* Macros chips */}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-              {food.kcal_100 != null && <Chip label={`${Math.round(food.kcal_100)} kcal`} bg="#e4f816" color="#1a1a1a" />}
+              {food.kcal_100 != null && <Chip label={`${Math.round(food.kcal_100)} kcal`} bg="var(--accent)" color="#1a1a1a" />}
               {food.prot_100 != null  && <Chip label={`P ${Math.round(food.prot_100)}g`}  bg="#3b82f6" color="white" />}
               {food.carbs_100 != null && <Chip label={`G ${Math.round(food.carbs_100)}g`} bg="#f59e0b" color="white" />}
               {food.fat_100 != null   && <Chip label={`L ${Math.round(food.fat_100)}g`}   bg="#ef4444" color="white" />}
@@ -543,7 +543,7 @@ const S = {
   spinner: {
     width: 40, height: 40, borderRadius: '50%',
     border: '3px solid #f3f4f6',
-    borderTopColor: '#e4f816',
+    borderTopColor: 'var(--accent)',
     animation: 'spin 0.8s linear infinite',
   },
   card: {
@@ -558,7 +558,7 @@ const S = {
   },
   btnPrimary: {
     width: '100%', padding: '0.9rem', borderRadius: 14,
-    border: 'none', background: '#1a1a1a', color: '#e4f816',
+    border: 'none', background: '#1a1a1a', color: 'var(--accent)',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
   },
   btnSecondary: {

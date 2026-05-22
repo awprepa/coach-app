@@ -1,3 +1,4 @@
+import AppLogo from './AppLogo'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
@@ -43,7 +44,7 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
       <div style={S.modal}>
         {/* En-tête */}
         <div style={S.header}>
-          <span style={S.logo}>AW<span style={{ color: '#e4f816' }}>prepa</span></span>
+          <AppLogo />
           <p style={S.headerSub}>Contrat de prestation de services</p>
         </div>
 
@@ -130,7 +131,7 @@ const S = {
   checkLabel:   { display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', marginBottom: '1.1rem' },
   checkbox:     { width: 22, height: 22, borderRadius: 6, border: '2px solid #d1d5db', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 1, transition: 'all 0.15s' },
   checkboxOn:   { background: '#1a1a1a', borderColor: '#1a1a1a' },
-  checkmark:    { color: '#e4f816', fontWeight: 900, fontSize: '0.8rem' },
+  checkmark:    { color: 'var(--accent)', fontWeight: 900, fontSize: '0.8rem' },
   checkText:    { fontSize: '0.83rem', color: '#374151', lineHeight: 1.55 },
   mentionWrap:  { marginBottom: '1.25rem' },
   mentionLabel: { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
@@ -140,6 +141,6 @@ const S = {
   mentionHint:  { fontSize: '0.75rem', color: '#ef4444', margin: '0.3rem 0 0' },
   error:        { color: '#dc2626', fontSize: '0.8rem', marginBottom: '0.75rem', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: 8 },
   btn:          { width: '100%', padding: '0.9rem', borderRadius: 12, border: 'none', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', transition: 'opacity 0.15s' },
-  btnOn:        { background: '#333333', color: '#e4f816', cursor: 'pointer' },
+  btnOn:        { background: '#333333', color: 'var(--accent)', cursor: 'pointer' },
   btnOff:       { background: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed' },
 }
