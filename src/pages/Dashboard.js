@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { extractColorsFromImage } from '../utils/colorExtract'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -153,11 +154,15 @@ export default function Dashboard() {
     if (activeCat === catId) setActiveCat(null)
   }
 
-  function handleLogoChange(e) {
+  async function handleLogoChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setNewGroupeLogoFile(file)
     setNewGroupeLogoPreview(URL.createObjectURL(file))
+    // Extraction automatique des couleurs dominantes
+    const colors = await extractColorsFromImage(file, 2)
+    if (colors[0]) setNewGroupeCouleur(colors[0])
+    if (colors[1]) setNewGroupeCouleur2(colors[1])
   }
 
   async function creerGroupe() {

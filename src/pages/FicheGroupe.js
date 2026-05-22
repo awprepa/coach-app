@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { extractColorsFromImage } from '../utils/colorExtract'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -67,11 +68,15 @@ export default function FicheGroupe() {
   }
 
   // ── Édition du groupe ──────────────────────────────────────────────────────
-  function handleEditLogoChange(e) {
+  async function handleEditLogoChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setEditLogoFile(file)
     setEditLogoPreview(URL.createObjectURL(file))
+    // Extraction automatique des couleurs dominantes
+    const colors = await extractColorsFromImage(file, 2)
+    if (colors[0]) setEditForm(f => ({ ...f, couleur: colors[0] }))
+    if (colors[1]) setEditForm(f => ({ ...f, couleur_secondaire: colors[1] }))
   }
 
   async function sauvegarderGroupe() {
