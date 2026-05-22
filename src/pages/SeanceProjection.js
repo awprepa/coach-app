@@ -300,106 +300,96 @@ export default function SeanceProjection() {
 
           {/* ── Programme ── */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+            {/* En-têtes colonnes — une seule fois, neutres */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: COLS, gap: '8px',
+              padding: '0 16px 8px 16px',
+            }}>
+              {['', 'Exercice', 'Séries', 'Répétitions', 'Tempo', 'Récup.', 'Intensité'].map((label, i) => (
+                <span key={i} style={{
+                  fontSize: '8px', fontWeight: '700', letterSpacing: '1.5px',
+                  color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
+                  textAlign: i > 1 ? 'center' : 'left',
+                }}>{label}</span>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {groups.map((g, gi) => {
                 const blockColor = makeBlockColor(BLOCK_PALETTE, g.letter)
                 const isSuperset = g.items.length > 1
-                // Texte sur fond de couleur vive (col header)
-                const headerTextColor = isLightColor(blockColor) ? '#111' : '#fff'
 
                 return (
                   <div key={gi} style={{
                     borderRadius: 8,
                     overflow: 'hidden',
-                    border: `1px solid ${blockColor}30`,
+                    background: '#242424',
+                    borderLeft: `3px solid ${blockColor}`,
                   }}>
-                    {/* Barre fine en haut */}
-                    <div style={{ height: 4, background: blockColor }} />
+                    {/* Label bloc si superset */}
+                    {isSuperset && (
+                      <div style={{ padding: '5px 16px', background: '#1e1e1e', borderBottom: '1px solid #2a2a2a' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '800', letterSpacing: '2px', color: blockColor, textTransform: 'uppercase' }}>
+                          Superset · {g.letter}
+                        </span>
+                      </div>
+                    )}
 
-                    {/* Titre du bloc */}
-                    <div style={{ background: '#1c1c1c', padding: '7px 16px' }}>
-                      <span style={{
-                        fontSize: '10px', fontWeight: '900', letterSpacing: '2px',
-                        color: blockColor, textTransform: 'uppercase',
+                    {/* Lignes exercices — fond neutre, couleur en accents seulement */}
+                    {g.items.map((ex, i) => (
+                      <div key={ex.id} style={{
+                        display: 'grid', gridTemplateColumns: COLS, gap: '8px',
+                        alignItems: 'center',
+                        padding: '11px 16px',
+                        background: i % 2 === 0 ? '#242424' : '#212121',
+                        borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
                       }}>
-                        {isSuperset ? `Superset · ${g.letter}` : `${g.letter} — ${gi === 0 ? 'Principal' : 'Complément'}`}
-                      </span>
-                    </div>
-
-                    {/* En-têtes colonnes — fond couleur vive */}
-                    <div style={{
-                      display: 'grid', gridTemplateColumns: COLS, gap: '8px',
-                      background: blockColor, padding: '6px 16px',
-                    }}>
-                      {['Code', 'Exercice', 'Séries', 'Répétitions', 'Tempo', 'Récup.', 'Intensité'].map((label, i) => (
-                        <span key={label} style={{
-                          fontSize: '8px', fontWeight: '800', letterSpacing: '1.5px',
-                          color: headerTextColor + (i > 1 ? 'bb' : ''),
-                          textTransform: 'uppercase',
-                          textAlign: i > 1 ? 'center' : 'left',
-                          opacity: i === 0 ? 0 : 1,  // cache "Code" visuellement (badge le remplace)
-                        }}>{label}</span>
-                      ))}
-                    </div>
-
-                    {/* Lignes exercices — fond clair */}
-                    {g.items.map((ex, i) => {
-                      const rowBg = lightTint(blockColor, 95 - i * 3)
-                      return (
-                        <div key={ex.id} style={{
-                          display: 'grid', gridTemplateColumns: COLS, gap: '8px',
-                          alignItems: 'center',
-                          padding: '11px 16px',
-                          background: rowBg,
-                          borderBottom: i < g.items.length - 1 ? `1px solid ${blockColor}30` : 'none',
-                        }}>
-                          {/* Badge code */}
-                          <div>
-                            <span style={{
-                              background: '#1a1a1a',
-                              color: blockColor,
-                              padding: '3px 10px',
-                              borderRadius: 5,
-                              fontSize: '11px', fontWeight: '900',
-                              display: 'inline-block',
-                              letterSpacing: '0.04em',
-                            }}>{ex.code}</span>
-                          </div>
-
-                          {/* Nom */}
-                          <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#111' }}>
-                            {ex.nom}
-                          </span>
-
-                          {/* Séries */}
-                          <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#111', textAlign: 'center' }}>
-                            {ex.series ? `${ex.series}×` : <span style={{ color: '#aaa' }}>—</span>}
-                          </span>
-
-                          {/* Répétitions */}
-                          <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#111', textAlign: 'center' }}>
-                            {ex.repetitions || <span style={{ color: '#aaa' }}>—</span>}
-                          </span>
-
-                          {/* Tempo */}
-                          <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#555', textAlign: 'center' }}>
-                            {ex.tempo || <span style={{ color: '#bbb' }}>—</span>}
-                          </span>
-
-                          {/* Récupération */}
-                          <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#222', textAlign: 'center' }}>
-                            {ex.recuperation || <span style={{ color: '#bbb' }}>—</span>}
-                          </span>
-
-                          {/* Intensité */}
-                          <span style={{ fontSize: '0.95rem', fontWeight: '700', color: '#333', textAlign: 'center' }}>
-                            {ex.type_intensite
-                              ? `${ex.type_intensite}${ex.valeur_intensite ? ' · ' + ex.valeur_intensite : ''}`
-                              : <span style={{ color: '#bbb' }}>—</span>}
-                          </span>
+                        {/* Badge */}
+                        <div>
+                          <span style={{
+                            background: blockColor + '22',
+                            color: blockColor,
+                            border: `1px solid ${blockColor}55`,
+                            padding: '3px 9px', borderRadius: 5,
+                            fontSize: '11px', fontWeight: '900',
+                            display: 'inline-block', letterSpacing: '0.04em',
+                          }}>{ex.code}</span>
                         </div>
-                      )
-                    })}
+
+                        {/* Nom */}
+                        <span style={{ fontSize: '1.05rem', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                          {ex.nom}
+                        </span>
+
+                        {/* Séries */}
+                        <span style={{ fontSize: '1.15rem', fontWeight: '900', color: blockColor, textAlign: 'center' }}>
+                          {ex.series ? `${ex.series}×` : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        </span>
+
+                        {/* Répétitions */}
+                        <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'rgba(255,255,255,0.85)', textAlign: 'center' }}>
+                          {ex.repetitions || <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        </span>
+
+                        {/* Tempo */}
+                        <span style={{ fontSize: '0.95rem', fontWeight: '500', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                          {ex.tempo || '—'}
+                        </span>
+
+                        {/* Récupération */}
+                        <span style={{ fontSize: '1.05rem', fontWeight: '700', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+                          {ex.recuperation || <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        </span>
+
+                        {/* Intensité */}
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+                          {ex.type_intensite
+                            ? `${ex.type_intensite}${ex.valeur_intensite ? ' · ' + ex.valeur_intensite : ''}`
+                            : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )
               })}
