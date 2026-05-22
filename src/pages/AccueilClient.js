@@ -452,13 +452,13 @@ export default function AccueilClient() {
                 const isToday = ev.date === todayStr
                 const isPast  = ev.date < todayStr
                 return (
-                  <div key={ev.id} style={{ ...styles.weekRow, background: isToday ? '#333333' : 'white', opacity: isPast && !isToday ? 0.55 : 1 }}>
+                  <div key={ev.id} style={{ ...styles.weekRow, background: isToday ? 'var(--accent)' : 'white', opacity: isPast && !isToday ? 0.55 : 1 }}>
                     <div style={{ ...styles.weekDay, background: isToday ? 'rgba(228,248,22,0.15)' : '#f3f4f6', color: isToday ? 'var(--accent)' : '#6b7280' }}>
                       <span style={{ fontSize: '0.58rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
                       <span style={{ fontSize: '1rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
                     </div>
-                    <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'white' : '#333333', flex: 1 }}>{ev.titre}</span>
-                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'var(--accent-fg)', background: 'rgba(228,248,22,0.15)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
+                    <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'var(--accent-text)' : '#333333', flex: 1 }}>{ev.titre}</span>
+                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'var(--accent-text)', background: 'var(--accent-stripe)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
                     {isPast && !isToday && <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: '600' }}>Passé</span>}
                   </div>
                 )
