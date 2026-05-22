@@ -183,7 +183,7 @@ export default function SeanceProjection() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'sans-serif' }}>Chargement...</p>
     </div>
   )
@@ -198,9 +198,9 @@ export default function SeanceProjection() {
   // La couleur la plus sombre sert de base pour le fond
   const DARK_COLOR  = SECONDARY ? darkerOf(PRIMARY, SECONDARY) : PRIMARY
 
-  // Fond : dérivé de la couleur sombre, très désaturé
+  // Fond : dérivé de la couleur sombre, très désaturé — luminosité relevée
   const { h: darkH, s: darkS } = hexToHSL(DARK_COLOR)
-  const BG_COLOR = hslToHex(darkH, Math.min(darkS * 0.15, 12), 12)
+  const BG_COLOR = hslToHex(darkH, Math.min(darkS * 0.15, 10), 22)
 
   // Barre de gradient en haut si 2 couleurs
   const TOP_BAR = SECONDARY
@@ -324,12 +324,12 @@ export default function SeanceProjection() {
                   <div key={gi} style={{
                     borderRadius: 8,
                     overflow: 'hidden',
-                    background: '#242424',
+                    background: '#2e2e2e',
                     borderLeft: `3px solid ${blockColor}`,
                   }}>
                     {/* Label bloc si superset */}
                     {isSuperset && (
-                      <div style={{ padding: '5px 16px', background: '#1e1e1e', borderBottom: '1px solid #2a2a2a' }}>
+                      <div style={{ padding: '5px 16px', background: '#272727', borderBottom: '1px solid #333' }}>
                         <span style={{ fontSize: '9px', fontWeight: '800', letterSpacing: '2px', color: blockColor, textTransform: 'uppercase' }}>
                           Superset · {g.letter}
                         </span>
@@ -342,8 +342,8 @@ export default function SeanceProjection() {
                         display: 'grid', gridTemplateColumns: COLS, gap: '8px',
                         alignItems: 'center',
                         padding: '11px 16px',
-                        background: i % 2 === 0 ? '#242424' : '#212121',
-                        borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                        background: i % 2 === 0 ? '#2e2e2e' : '#2a2a2a',
+                        borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                       }}>
                         {/* Badge */}
                         <div>
