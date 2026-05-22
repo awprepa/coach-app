@@ -690,7 +690,7 @@ function CheckCircle() {
 
 const S = {
   page: { minHeight: '100dvh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', display: 'flex', flexDirection: 'column' },
-  header: { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '52px 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 60 },
+  header: { background: 'var(--header-bg)', padding: '52px 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 60 },
   iconBtn: { width: 34, height: 34, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 },
   wizTitle: { fontSize: '1.4rem', fontWeight: 900, color: '#1a1a1a', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' },
   wizSub:   { fontSize: '0.82rem', color: '#9ca3af', margin: '6px 0 0', lineHeight: 1.5 },

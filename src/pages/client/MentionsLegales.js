@@ -121,7 +121,7 @@ export default function MentionsLegales() {
 
 const S = {
   page:        { background: '#f5f5f5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:      { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 60 },
+  header:      { background: 'var(--header-bg)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 60 },
   backBtn:     { background: 'none', border: 'none', color: 'white', fontSize: '1.6rem', cursor: 'pointer', width: 32, lineHeight: 1 },
   headerTitle: { fontSize: '0.95rem', fontWeight: 800, color: 'white' },
   content:     { padding: '1.5rem 1.25rem', maxWidth: 600, margin: '0 auto', paddingBottom: '3rem' },

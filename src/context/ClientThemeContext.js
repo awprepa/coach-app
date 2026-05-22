@@ -2,14 +2,98 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 const DEFAULT = {
-  accent:   '#e4f816',
-  accent2:  '#6b7280',
+  accent:   '#333333',
+  accent2:  '#1f2937',
   logoUrl:  null,
   clubName: null,
   loaded:   false,
 }
 
 const ClientThemeContext = createContext(DEFAULT)
+
+// ── Utilitaires palette ─────────────────────────────────────────────────────
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '')
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  }
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b]
+    .map(v => Math.min(255, Math.max(0, Math.round(v))).toString(16).padStart(2, '0'))
+    .join('')
+}
+
+/** Assombrit une couleur (amount entre 0 et 1) */
+function darken(hex, amount = 0.25) {
+  const { r, g, b } = hexToRgb(hex)
+  return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount))
+}
+
+/** Mélange avec du blanc pour obtenir un tint très léger */
+function lighten(hex, factor = 0.92) {
+  const { r, g, b } = hexToRgb(hex)
+  return rgbToHex(
+    r * (1 - factor) + 255 * factor,
+    g * (1 - factor) + 255 * factor,
+    b * (1 - factor) + 255 * factor,
+  )
+}
+
+/** Blanc ou noir selon la luminance du fond */
+function textOn(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.45 ? '#111111' : '#ffffff'
+}
+
+/** Applique la palette complète sur :root */
+function applyPalette(primary, secondary) {
+  const dark     = darken(primary, 0.28)
+  const muted    = lighten(primary, 0.93)   // fond très légèrement teinté
+  const onPrim   = textOn(primary)
+
+  // Si la secondaire est suffisamment distincte de la principale, on l'utilise
+  // dans le dégradé du header — sinon on replie sur le dark de la principale.
+  const { r: r1, g: g1, b: b1 } = hexToRgb(primary)
+  const { r: r2, g: g2, b: b2 } = hexToRgb(secondary)
+  const dist = Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2)
+  const gradEnd   = dist > 60 ? secondary : dark
+  const headerBg  = `linear-gradient(135deg, ${primary} 0%, ${gradEnd} 100%)`
+
+  // Nav : mélange léger de primary et secondary pour un effet bicolore subtil
+  const navBg = dist > 60
+    ? `linear-gradient(90deg, ${darken(primary, 0.12)} 0%, ${darken(secondary, 0.12)} 100%)`
+    : darken(primary, 0.15)
+
+  // Barre décorative (bottom-nav active, titres de section) — la secondaire pure
+  const stripe = secondary
+
+  const vars = {
+    '--accent':      primary,
+    '--accent2':     secondary,
+    '--accent-dark': dark,
+    '--accent-muted':muted,
+    '--accent-nav':  navBg,
+    '--accent-text': onPrim,
+    '--header-bg':   headerBg,
+    '--accent-stripe': stripe,
+  }
+
+  for (const [k, v] of Object.entries(vars)) {
+    document.documentElement.style.setProperty(k, v)
+  }
+
+  // Barre système mobile
+  const metaTheme = document.querySelector('meta[name="theme-color"]')
+  if (metaTheme) metaTheme.setAttribute('content', primary)
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 
 export function ClientThemeProvider({ children }) {
   const [theme, setTheme] = useState(DEFAULT)
@@ -34,7 +118,6 @@ export function ClientThemeProvider({ children }) {
       if (byUserId?.id) {
         client = byUserId
       } else {
-        // fallback par email
         const { data: byEmail } = await supabase
           .from('clients')
           .select('id')
@@ -71,13 +154,7 @@ export function ClientThemeProvider({ children }) {
       const accent  = groupe.couleur            || DEFAULT.accent
       const accent2 = groupe.couleur_secondaire || DEFAULT.accent2
 
-      // ── Appliquer les CSS variables sur :root ────────────────────────────────
-      document.documentElement.style.setProperty('--accent',  accent)
-      document.documentElement.style.setProperty('--accent2', accent2)
-
-      // Couleur barre système mobile
-      const metaTheme = document.querySelector('meta[name="theme-color"]')
-      if (metaTheme) metaTheme.setAttribute('content', accent)
+      applyPalette(accent, accent2)
 
       setTheme({
         accent,

@@ -21,6 +21,9 @@ export function extractColorsFromImage(file, count = 2) {
       canvas.width = SIZE
       canvas.height = SIZE
       const ctx = canvas.getContext('2d')
+      // Fond blanc : les pixels transparents deviennent blancs (et seront filtrés comme "quasi-blanc")
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, SIZE, SIZE)
       ctx.drawImage(img, 0, 0, SIZE, SIZE)
 
       const { data } = ctx.getImageData(0, 0, SIZE, SIZE)
@@ -32,9 +35,9 @@ export function extractColorsFromImage(file, count = 2) {
         // Ignorer les pixels transparents
         if (a < 100) continue
 
-        // Ignorer quasi-blanc (avg > 230) et quasi-noir (avg < 20)
+        // Ignorer quasi-blanc (avg > 230) — le noir EST une couleur de club valide
         const avg = (r + g + b) / 3
-        if (avg > 230 || avg < 20) continue
+        if (avg > 230) continue
 
         // Quantiser par paliers de 24 pour regrouper les teintes proches
         const Q = 24

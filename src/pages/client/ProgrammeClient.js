@@ -290,7 +290,7 @@ const styles = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   header: {
-    background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
+    background: 'var(--header-bg)',
     padding: '1.25rem 1.5rem',
     display: 'flex',
     justifyContent: 'space-between',

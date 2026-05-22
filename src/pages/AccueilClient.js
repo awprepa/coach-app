@@ -226,8 +226,6 @@ export default function AccueilClient() {
   const [showInstall, setShowInstall]     = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useState(true)
-  const [kcalGoals, setKcalGoals]         = useState(null)   // nutrition_goals row
-  const [kcalToday, setKcalToday]         = useState(0)      // kcal consommés aujourd'hui
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [contratAccepte, setContratAccepte] = useState(null) // null=vérif, true=ok, false=à signer
@@ -280,19 +278,6 @@ export default function AccueilClient() {
         .limit(1)
         .maybeSingle()
       setContratAccepte(!!contrat)
-
-      // Widget nutrition — uniquement si des objectifs existent
-      const todayN = new Date().toISOString().slice(0, 10)
-      const { data: gData } = await supabase
-        .from('nutrition_goals').select('kcal_target').eq('client_id', clientData.id)
-        .or(`active_to.is.null,active_to.gte.${todayN}`)
-        .order('active_from', { ascending: false }).limit(1).maybeSingle()
-      if (gData?.kcal_target) {
-        setKcalGoals(gData)
-        const { data: mData } = await supabase
-          .from('nutrition_meals').select('kcal').eq('client_id', clientData.id).eq('date', todayN)
-        setKcalToday((mData || []).reduce((acc, m) => acc + (m.kcal || 0), 0))
-      }
 
       const { data: progs } = await supabase
         .from('programmes').select('*').eq('client_id', clientData.id).order('created_at', { ascending: false })
@@ -448,7 +433,7 @@ export default function AccueilClient() {
                 {new Date(prochaineSeance.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               {prochaineSeance.seance_id && (
-                <span style={{ color: 'var(--accent)', fontSize: '0.78rem', fontWeight: '700' }}>Ouvrir →</span>
+                <span style={{ color: 'var(--accent-text)', opacity: 0.85, fontSize: '0.78rem', fontWeight: '700' }}>Ouvrir →</span>
               )}
             </div>
           </div>
@@ -479,33 +464,6 @@ export default function AccueilClient() {
                 )
               })}
             </div>
-          </div>
-        )}
-
-        {/* Widget kcal — visible uniquement si des objectifs sont définis */}
-        {kcalGoals && (
-          <div
-            onClick={() => navigate('/client/nutrition')}
-            style={{ ...styles.card, marginBottom: '1.75rem', cursor: 'pointer', padding: '1rem 1.25rem' }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ ...styles.cardTitle, display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.5rem' }}>
-                🥗 Nutrition du jour
-              </p>
-              <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', marginBottom: '0.3rem' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${Math.min(kcalToday / kcalGoals.kcal_target, 1) * 100}%`,
-                  background: kcalToday >= kcalGoals.kcal_target * 0.85 && kcalToday <= kcalGoals.kcal_target * 1.15 ? '#22c55e' : kcalToday >= kcalGoals.kcal_target * 0.5 ? 'var(--accent)' : '#f97316',
-                  borderRadius: 999,
-                  transition: 'width 0.3s ease',
-                }} />
-              </div>
-              <p style={{ ...styles.cardSub, margin: 0 }}>
-                {Math.round(kcalToday)} / {kcalGoals.kcal_target} kcal
-              </p>
-            </div>
-            <span style={styles.chevron}>›</span>
           </div>
         )}
 
@@ -612,17 +570,17 @@ export default function AccueilClient() {
 }
 
 const styles = {
-  page:        { minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
+  page:        { minHeight: '100vh', background: 'var(--accent-muted)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
   centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:      { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  header:      { background: 'var(--header-bg)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.25rem', letterSpacing: '-0.5px' },
-  avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'var(--accent)', color: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
+  avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
   content:     { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
   label:       { color: '#888', fontSize: '0.875rem', margin: '0 0 0.2rem' },
   title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
   subtitle:    { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.4rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
-  sectionTitle:  { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  sectionTitle:  { fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', borderLeft: '3px solid var(--accent-stripe)', paddingLeft: '0.5rem' },
   sectionCount:  { color: '#9ca3af', fontSize: '0.8rem' },
   emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   card:        { background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -634,10 +592,10 @@ const styles = {
   legalLink:   { background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 0 env(safe-area-inset-bottom)' },
   modalCard:   { background: 'white', borderRadius: '20px 20px 0 0', padding: '1.75rem 1.5rem', width: '100%', maxWidth: 480, textAlign: 'center' },
-  nextCard:    { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent)' },
-  nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
-  nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent)', margin: '0 0 0.2rem' },
-  nextDate:    { fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', margin: 0 },
+  nextCard:    { background: 'var(--header-bg)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid rgba(255,255,255,0.35)' },
+  nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'var(--accent-text)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
+  nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-text)', margin: '0 0 0.2rem' },
+  nextDate:    { fontSize: '0.82rem', color: 'var(--accent-text)', opacity: 0.7, margin: 0 },
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
   weekRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 12, padding: '0.65rem 1rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },

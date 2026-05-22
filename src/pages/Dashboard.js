@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
@@ -71,6 +71,9 @@ export default function Dashboard() {
   const [newGroupeLogoFile, setNewGroupeLogoFile] = useState(null)
   const [newGroupeLogoPreview, setNewGroupeLogoPreview] = useState(null)
   const [uploadingLogo, setUploadingLogo]   = useState(false)
+  const [extractingColors, setExtractingColors] = useState(false)
+  const [pickingFor, setPickingFor]         = useState(null) // 'primary' | 'secondary' | null
+  const logoPickRef = useRef(null)
 
   useEffect(() => {
     fetchAll()
@@ -160,9 +163,33 @@ export default function Dashboard() {
     setNewGroupeLogoFile(file)
     setNewGroupeLogoPreview(URL.createObjectURL(file))
     // Extraction automatique des couleurs dominantes
+    setExtractingColors(true)
     const colors = await extractColorsFromImage(file, 2)
     if (colors[0]) setNewGroupeCouleur(colors[0])
     if (colors[1]) setNewGroupeCouleur2(colors[1])
+    setExtractingColors(false)
+  }
+
+  function handleLogoColorPick(e) {
+    if (!pickingFor || !logoPickRef.current) return
+    const img = logoPickRef.current
+    const rect = img.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth || rect.width
+    canvas.height = img.naturalHeight || rect.height
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const px = Math.round(x * scaleX)
+    const py = Math.round(y * scaleY)
+    const d = ctx.getImageData(px, py, 1, 1).data
+    const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('')
+    if (pickingFor === 'primary') setNewGroupeCouleur(hex)
+    else setNewGroupeCouleur2(hex)
+    setPickingFor(null)
   }
 
   async function creerGroupe() {
@@ -536,38 +563,97 @@ export default function Dashboard() {
 
             {/* Logo upload */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.35rem' }}>Logo (PNG)</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 10, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: '#f9fafb' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.35rem' }}>Logo du club</label>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: 9, padding: '0.45rem 0.85rem', border: '1.5px solid #e5e7eb' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
                   {newGroupeLogoPreview
                     ? <img src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    : <span style={{ fontSize: '1.25rem' }}>🖼️</span>}
+                    : <span style={{ fontSize: '1rem' }}>📂</span>}
                 </div>
-                <span style={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: '600' }}>{newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir une image...'}</span>
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoChange} style={{ display: 'none' }} />
+                <span style={{ fontSize: '0.82rem', color: newGroupeLogoFile ? '#374151' : '#9ca3af', fontWeight: '600' }}>
+                  {extractingColors ? '⏳ Analyse couleurs...' : newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir un logo...'}
+                </span>
+                <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
               </label>
             </div>
 
-            {/* Couleurs */}
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', whiteSpace: 'nowrap' }}>Couleur principale</label>
-                <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
-                  style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
+            {/* Zone pipette — visible uniquement quand un logo est chargé */}
+            {newGroupeLogoPreview && (
+              <div style={{ background: pickingFor ? '#fffbeb' : '#f9fafb', borderRadius: 11, padding: '0.65rem', border: `1.5px solid ${pickingFor ? '#f59e0b' : '#e5e7eb'}`, transition: 'all 0.15s' }}>
+                {pickingFor && (
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>
+                    🎨 Cliquez sur le logo pour choisir la couleur {pickingFor === 'primary' ? 'principale' : 'secondaire'}
+                  </p>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <img
+                    ref={logoPickRef}
+                    src={newGroupeLogoPreview}
+                    alt="logo"
+                    onClick={pickingFor ? handleLogoColorPick : undefined}
+                    crossOrigin="anonymous"
+                    style={{
+                      height: pickingFor ? 100 : 56,
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      borderRadius: 8,
+                      cursor: pickingFor ? 'crosshair' : 'default',
+                      transition: 'height 0.2s',
+                      outline: pickingFor ? '2px solid #f59e0b' : 'none',
+                      outlineOffset: 3,
+                    }}
+                  />
+                </div>
+                {pickingFor && (
+                  <button onClick={() => setPickingFor(null)} style={{ display: 'block', margin: '0.45rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#9ca3af' }}>Annuler</button>
+                )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', whiteSpace: 'nowrap' }}>Couleur secondaire</label>
-                <input type="color" value={newGroupeCouleur2 || '#ffffff'} onChange={e => setNewGroupeCouleur2(e.target.value)}
-                  style={{ width: 36, height: 30, border: `1.5px solid ${newGroupeCouleur2 ? '#e5e7eb' : '#d1d5db'}`, borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white', opacity: newGroupeCouleur2 ? 1 : 0.5 }} />
+            )}
+
+            {/* Couleurs */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
+                  style={{ width: 32, height: 28, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
+                <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Principale</span>
+                {newGroupeLogoPreview && (
+                  <button onClick={() => setPickingFor(pickingFor === 'primary' ? null : 'primary')}
+                    title="Pipette — cliquer sur le logo"
+                    style={{ background: pickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
+                    🎨
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="color" value={newGroupeCouleur2 || '#cccccc'} onChange={e => setNewGroupeCouleur2(e.target.value)}
+                  style={{ width: 32, height: 28, border: `1.5px solid ${newGroupeCouleur2 ? '#e5e7eb' : '#d1d5db'}`, borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white', opacity: newGroupeCouleur2 ? 1 : 0.45 }} />
+                <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Secondaire</span>
+                {newGroupeLogoPreview && (
+                  <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')}
+                    title="Pipette — cliquer sur le logo"
+                    style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
+                    🎨
+                  </button>
+                )}
                 {newGroupeCouleur2 && (
-                  <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.8rem', padding: 0 }}>✕</button>
+                  <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
                 )}
               </div>
             </div>
 
+            {/* Aperçu live */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.6rem 0.9rem', borderRadius: 11, background: '#f9fafb', borderLeft: `4px solid ${newGroupeCouleur}` }}>
+              {newGroupeLogoPreview
+                ? <img src={newGroupeLogoPreview} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
+                : <div style={{ width: 26, height: 26, borderRadius: 7, background: newGroupeCouleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
+              }
+              <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{newGroupeNom || 'Nom du groupe'}</span>
+              <span style={{ background: newGroupeCouleur + '18', color: newGroupeCouleur, border: `1px solid ${newGroupeCouleur}33`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: '700' }}>Groupe</span>
+            </div>
+
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={creerGroupe} disabled={uploadingLogo} style={{ ...S.btnPrimary, flex: 1, opacity: uploadingLogo ? 0.6 : 1 }}>
-                {uploadingLogo ? 'Envoi...' : 'Créer'}
+              <button onClick={creerGroupe} disabled={uploadingLogo || extractingColors} style={{ ...S.btnPrimary, flex: 1, opacity: (uploadingLogo || extractingColors) ? 0.6 : 1 }}>
+                {uploadingLogo ? 'Envoi...' : extractingColors ? 'Analyse...' : 'Créer'}
               </button>
               <button onClick={() => setShowGroupeForm(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#6b7280', fontWeight: '600', fontSize: '0.85rem' }}>Annuler</button>
             </div>

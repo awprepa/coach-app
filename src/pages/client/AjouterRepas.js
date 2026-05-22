@@ -1083,7 +1083,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
 
 const S = {
   page: { background: '#fafafa', minHeight: '100dvh' },
-  header: { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  header: { background: 'var(--header-bg)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: '1.05rem', fontWeight: 800, color: 'white', letterSpacing: '0.01em' },
   iconBtn: { width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   content: { padding: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' },

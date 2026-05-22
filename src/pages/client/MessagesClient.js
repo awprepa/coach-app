@@ -211,7 +211,7 @@ function ChatInner({ clientId, coachId }) {
             width: 42, height: 42,
             borderRadius: '50%',
             background: texte.trim() && !sending
-              ? 'linear-gradient(135deg, #333333 0%, #1f2937 100%)'
+              ? 'var(--header-bg)'
               : '#e5e7eb',
             color: texte.trim() && !sending ? 'var(--accent)' : '#b0b7c3',
             border: 'none',
@@ -280,7 +280,7 @@ export default function MessagesClient() {
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0,
         height: HEADER_H,
-        background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
+        background: 'var(--header-bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 1rem',
         zIndex: 100,

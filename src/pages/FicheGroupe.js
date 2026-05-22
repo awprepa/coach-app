@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
@@ -28,6 +28,9 @@ export default function FicheGroupe() {
   const [editLogoFile, setEditLogoFile]   = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
+  const [extractingEditColors, setExtractingEditColors] = useState(false)
+  const [editPickingFor, setEditPickingFor] = useState(null) // 'primary' | 'secondary' | null
+  const editLogoPickRef = useRef(null)
 
   const [showAddSG, setShowAddSG]         = useState(false)
   const [newSGNom, setNewSGNom]           = useState('')
@@ -74,9 +77,33 @@ export default function FicheGroupe() {
     setEditLogoFile(file)
     setEditLogoPreview(URL.createObjectURL(file))
     // Extraction automatique des couleurs dominantes
+    setExtractingEditColors(true)
     const colors = await extractColorsFromImage(file, 2)
     if (colors[0]) setEditForm(f => ({ ...f, couleur: colors[0] }))
     if (colors[1]) setEditForm(f => ({ ...f, couleur_secondaire: colors[1] }))
+    setExtractingEditColors(false)
+  }
+
+  function handleEditLogoColorPick(e) {
+    if (!editPickingFor || !editLogoPickRef.current) return
+    const img = editLogoPickRef.current
+    const rect = img.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth || rect.width
+    canvas.height = img.naturalHeight || rect.height
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const px = Math.round(x * scaleX)
+    const py = Math.round(y * scaleY)
+    const d = ctx.getImageData(px, py, 1, 1).data
+    const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('')
+    if (editPickingFor === 'primary') setEditForm(f => ({ ...f, couleur: hex }))
+    else setEditForm(f => ({ ...f, couleur_secondaire: hex }))
+    setEditPickingFor(null)
   }
 
   async function sauvegarderGroupe() {
@@ -437,45 +464,99 @@ export default function FicheGroupe() {
           <input value={editForm.nom} onChange={e => setEditForm({ ...editForm, nom: e.target.value })}
             style={{ ...S.input, marginBottom: '1.25rem', width: '100%', boxSizing: 'border-box' }} />
 
-          <label style={S.label}>Logo (PNG)</label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '1.25rem' }}>
-            <div style={{ width: 52, height: 52, borderRadius: 10, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: '#f9fafb' }}>
+          <label style={S.label}>Logo du club</label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', marginBottom: (editLogoPreview || groupe?.logo_url) ? '0.65rem' : '1.25rem', background: '#f3f4f6', borderRadius: 9, padding: '0.45rem 0.85rem', border: '1.5px solid #e5e7eb' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
               {editLogoPreview
                 ? <img src={editLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 : groupe?.logo_url
                   ? <img src={groupe.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                  : <span style={{ fontSize: '1.4rem' }}>🖼️</span>}
+                  : <span style={{ fontSize: '1.1rem' }}>📂</span>}
             </div>
-            <div>
-              <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: '600', display: 'block' }}>
-                {editLogoFile ? editLogoFile.name : 'Changer le logo...'}
-              </span>
-              {groupe?.logo_url && !editLogoFile && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Logo actuel · cliquer pour remplacer</span>}
-            </div>
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleEditLogoChange} style={{ display: 'none' }} />
+            <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: '600' }}>
+              {extractingEditColors ? '⏳ Analyse couleurs...' : editLogoFile ? editLogoFile.name : groupe?.logo_url ? 'Changer le logo...' : 'Choisir un logo...'}
+            </span>
+            <input type="file" accept="image/*" onChange={handleEditLogoChange} style={{ display: 'none' }} />
           </label>
 
-          <label style={S.label}>Couleurs</label>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280' }}>Principale</span>
-              <input type="color" value={editForm.couleur} onChange={e => setEditForm({ ...editForm, couleur: e.target.value })}
-                style={{ width: 38, height: 32, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white' }} />
-              <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontFamily: 'monospace' }}>{editForm.couleur}</span>
+          {/* Zone pipette — visible uniquement quand un logo est disponible */}
+          {(editLogoPreview || groupe?.logo_url) && (
+            <div style={{ background: editPickingFor ? '#fffbeb' : '#f9fafb', borderRadius: 11, padding: '0.65rem', border: `1.5px solid ${editPickingFor ? '#f59e0b' : '#e5e7eb'}`, marginBottom: '1.25rem', transition: 'all 0.15s' }}>
+              {editPickingFor && (
+                <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>
+                  🎨 Cliquez sur le logo pour choisir la couleur {editPickingFor === 'primary' ? 'principale' : 'secondaire'}
+                </p>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <img
+                  ref={editLogoPickRef}
+                  src={editLogoPreview || groupe.logo_url}
+                  alt="logo"
+                  onClick={editPickingFor ? handleEditLogoColorPick : undefined}
+                  crossOrigin="anonymous"
+                  style={{
+                    height: editPickingFor ? 100 : 56,
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                    borderRadius: 8,
+                    cursor: editPickingFor ? 'crosshair' : 'default',
+                    transition: 'height 0.2s',
+                    outline: editPickingFor ? '2px solid #f59e0b' : 'none',
+                    outlineOffset: 3,
+                  }}
+                />
+              </div>
+              {editPickingFor && (
+                <button onClick={() => setEditPickingFor(null)} style={{ display: 'block', margin: '0.45rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#9ca3af' }}>Annuler</button>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280' }}>Secondaire</span>
-              <input type="color" value={editForm.couleur_secondaire || '#ffffff'} onChange={e => setEditForm({ ...editForm, couleur_secondaire: e.target.value })}
-                style={{ width: 38, height: 32, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white', opacity: editForm.couleur_secondaire ? 1 : 0.5 }} />
+          )}
+
+          <label style={S.label}>Couleurs</label>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input type="color" value={editForm.couleur} onChange={e => setEditForm({ ...editForm, couleur: e.target.value })}
+                style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280' }}>Principale</span>
+              <span style={{ fontSize: '0.7rem', color: '#d1d5db', fontFamily: 'monospace' }}>{editForm.couleur}</span>
+              {(editLogoPreview || groupe?.logo_url) && (
+                <button onClick={() => setEditPickingFor(editPickingFor === 'primary' ? null : 'primary')}
+                  title="Pipette — cliquer sur le logo"
+                  style={{ background: editPickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${editPickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
+                  🎨
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input type="color" value={editForm.couleur_secondaire || '#cccccc'} onChange={e => setEditForm({ ...editForm, couleur_secondaire: e.target.value })}
+                style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white', opacity: editForm.couleur_secondaire ? 1 : 0.45 }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280' }}>Secondaire</span>
+              {(editLogoPreview || groupe?.logo_url) && (
+                <button onClick={() => setEditPickingFor(editPickingFor === 'secondary' ? null : 'secondary')}
+                  title="Pipette — cliquer sur le logo"
+                  style={{ background: editPickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${editPickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
+                  🎨
+                </button>
+              )}
               {editForm.couleur_secondaire && (
-                <button onClick={() => setEditForm({ ...editForm, couleur_secondaire: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.8rem', padding: 0 }}>✕</button>
+                <button onClick={() => setEditForm({ ...editForm, couleur_secondaire: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
               )}
             </div>
           </div>
 
+          {/* Aperçu live */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.55rem 0.9rem', borderRadius: 11, background: '#f9fafb', borderLeft: `4px solid ${editForm.couleur}`, marginBottom: '1.25rem' }}>
+            {(editLogoPreview || groupe?.logo_url)
+              ? <img src={editLogoPreview || groupe.logo_url} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
+              : <div style={{ width: 26, height: 26, borderRadius: 7, background: editForm.couleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
+            }
+            <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{editForm.nom || groupe?.nom || 'Nom du groupe'}</span>
+            <span style={{ background: editForm.couleur + '18', color: editForm.couleur, border: `1px solid ${editForm.couleur}33`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: '700' }}>Groupe</span>
+          </div>
+
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={sauvegarderGroupe} disabled={saving} style={{ ...S.btnPrimary, flex: 1 }}>
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            <button onClick={sauvegarderGroupe} disabled={saving || extractingEditColors} style={{ ...S.btnPrimary, flex: 1, opacity: (saving || extractingEditColors) ? 0.6 : 1 }}>
+              {saving ? 'Enregistrement...' : extractingEditColors ? 'Analyse...' : 'Enregistrer'}
             </button>
             <button onClick={() => setEditOpen(false)} style={{ ...S.btnSecondary, flex: 1 }}>Annuler</button>
           </div>

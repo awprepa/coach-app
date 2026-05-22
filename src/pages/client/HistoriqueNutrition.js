@@ -403,7 +403,7 @@ const S = {
     paddingBottom: '90px',
   },
   header: {
-    background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
+    background: 'var(--header-bg)',
     padding: '1.1rem 1.25rem',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     color: 'white',
