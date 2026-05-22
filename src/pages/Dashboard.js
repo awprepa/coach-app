@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
-const PALETTE_CATS = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
+const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
+const PALETTE_GROUPES = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 const OFFRES = {
@@ -60,6 +61,13 @@ export default function Dashboard() {
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
   const [showWeek, setShowWeek]       = useState(false)
   const [showBilan, setShowBilan]     = useState(true)
+  // Groupes
+  const [groupes, setGroupes]               = useState([])
+  const [groupMemberIds, setGroupMemberIds] = useState(new Set())
+  const [showGroupeForm, setShowGroupeForm] = useState(false)
+  const [newGroupeNom, setNewGroupeNom]     = useState('')
+  const [newGroupeCouleur, setNewGroupeCouleur] = useState(PALETTE_GROUPES[0])
+  const [newGroupeLogo, setNewGroupeLogo]   = useState('')
 
   useEffect(() => {
     fetchAll()
@@ -92,6 +100,8 @@ export default function Dashboard() {
       { data: evts },
       { data: catsData },
       { data: progsData },
+      { data: groupesData },
+      { data: membresData },
     ] = await Promise.all([
       supabase.from('clients').select('*, categories(id, nom, couleur)').order('prenom'),
       supabase.from('wellness').select('*').gte('date', start).lte('date', end),
@@ -99,6 +109,8 @@ export default function Dashboard() {
         .gte('date', start).lte('date', end).order('date', { ascending: true }),
       supabase.from('categories').select('*').order('created_at'),
       supabase.from('programmes').select('id, client_id, nom, semaines, date_debut'),
+      supabase.from('groupes').select('*').is('parent_id', null).order('created_at'),
+      supabase.from('groupe_membres').select('client_id'),
     ])
 
     const withWellness = (clientsData || []).map(c => {
@@ -113,6 +125,8 @@ export default function Dashboard() {
     setCategories(catsData || [])
     setWeekEvents(evts || [])
     setProgrammes(progsData || [])
+    setGroupes(groupesData || [])
+    setGroupMemberIds(new Set((membresData || []).map(m => m.client_id)))
     setLoading(false)
   }
 
@@ -135,6 +149,17 @@ export default function Dashboard() {
     await supabase.from('categories').delete().eq('id', catId)
     setCategories(prev => prev.filter(c => c.id !== catId))
     if (activeCat === catId) setActiveCat(null)
+  }
+
+  async function creerGroupe() {
+    if (!newGroupeNom.trim()) return
+    const { data, error } = await supabase.from('groupes')
+      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, logo_url: newGroupeLogo.trim() || null }])
+      .select().single()
+    if (error) { alert(error.message); return }
+    setGroupes(prev => [...prev, data])
+    setNewGroupeNom(''); setNewGroupeLogo(''); setNewGroupeCouleur(PALETTE_GROUPES[0])
+    setShowGroupeForm(false)
   }
 
   if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
@@ -209,16 +234,19 @@ export default function Dashboard() {
     return 0
   })
 
+  // Clients individuels (pas membres d'un groupe)
+  const clientsIndividuels = clients.filter(c => !groupMemberIds.has(c.id))
+
   // Filtrage clients
-  const filtered = clients.filter(c => {
+  const filtered = clientsIndividuels.filter(c => {
     const matchSearch = `${c.prenom} ${c.nom}`.toLowerCase().includes(search.toLowerCase())
     const matchCat = activeCat === null ? true : c.categorie_id === activeCat
     return matchSearch && matchCat
   })
 
-  const nbEssai = clients.filter(c => c.offre === 'essai').length
-  const nbPrepa = clients.filter(c => c.offre === 'preparation_physique').length
-  const nbCoach = clients.filter(c => c.offre === 'coaching').length
+  const nbEssai = clientsIndividuels.filter(c => c.offre === 'essai').length
+  const nbPrepa = clientsIndividuels.filter(c => c.offre === 'preparation_physique').length
+  const nbCoach = clientsIndividuels.filter(c => c.offre === 'coaching').length
 
   return (
     <div style={S.page}>
@@ -446,10 +474,65 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* ── Groupes ─────────────────────────────────────────────── */}
+      {groupes.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {groupes.map(g => (
+              <div key={g.id}
+                onClick={() => navigate(`/groupe/${g.id}`)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {g.logo_url
+                    ? <img src={g.logo_url} alt={g.nom} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                    : <div style={{ width: 32, height: 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
+                  }
+                  <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#1a1a1a' }}>{g.nom}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ background: g.couleur + '18', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.7rem', fontWeight: '700' }}>Groupe</span>
+                  <span style={S.chevron}>›</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bouton nouveau groupe */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        {showGroupeForm ? (
+          <div style={{ background: 'white', borderRadius: 14, padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <p style={{ margin: 0, fontWeight: '800', fontSize: '0.88rem', color: '#1a1a1a' }}>Nouveau groupe</p>
+            <input autoFocus value={newGroupeNom} onChange={e => setNewGroupeNom(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && creerGroupe()}
+              placeholder="Nom du groupe..." style={{ padding: '0.55rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.875rem', outline: 'none' }} />
+            <input value={newGroupeLogo} onChange={e => setNewGroupeLogo(e.target.value)}
+              placeholder="URL logo (optionnel)..." style={{ padding: '0.55rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.875rem', outline: 'none' }} />
+            <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+              {PALETTE_GROUPES.map(c => (
+                <button key={c} onClick={() => setNewGroupeCouleur(c)}
+                  style={{ width: 20, height: 20, borderRadius: '50%', background: c, border: newGroupeCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={creerGroupe} style={{ ...S.btnPrimary, flex: 1 }}>Créer</button>
+              <button onClick={() => setShowGroupeForm(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#6b7280', fontWeight: '600', fontSize: '0.85rem' }}>Annuler</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowGroupeForm(true)}
+            style={{ width: '100%', background: 'white', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.65rem', fontSize: '0.85rem', fontWeight: '700', color: '#6b7280', cursor: 'pointer' }}>
+            🏆 Nouveau groupe
+          </button>
+        )}
+      </div>
+
       {/* ── Clients ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <p style={S.sectionTitle}>Mes clients</p>
-        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clients.length} client{clients.length !== 1 ? 's' : ''}</span>
+        <p style={S.sectionTitle}>Clients individuels</p>
+        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsIndividuels.length} client{clientsIndividuels.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Recherche */}
@@ -496,7 +579,7 @@ export default function Dashboard() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {[
-          { label: 'Total', value: clients.length },
+          { label: 'Individuels', value: clientsIndividuels.length },
           { label: 'Essai', value: nbEssai },
           { label: 'Prépa physique', value: nbPrepa },
           { label: 'Coaching', value: nbCoach },
