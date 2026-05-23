@@ -15,6 +15,7 @@
   --accent-fg-dark: #e4f816;   /* jaune, lisible sur fond sombre */
   --chip-bg:        #333333;   /* fond badges/boutons (sombre en thème base) */
   --chip-text:      #e4f816;   /* texte badges/boutons (jaune en thème base) */
+  --header-text:    #ffffff;   /* texte sur le dégradé du header */
 }
 
 body {

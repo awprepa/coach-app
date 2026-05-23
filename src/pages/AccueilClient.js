@@ -433,7 +433,7 @@ export default function AccueilClient() {
                 {new Date(prochaineSeance.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               {prochaineSeance.seance_id && (
-                <span style={{ color: 'var(--accent-text)', opacity: 0.85, fontSize: '0.78rem', fontWeight: '700' }}>Ouvrir →</span>
+                <span style={{ color: 'var(--header-text)', opacity: 0.85, fontSize: '0.78rem', fontWeight: '700' }}>Ouvrir →</span>
               )}
             </div>
           </div>
@@ -452,13 +452,13 @@ export default function AccueilClient() {
                 const isToday = ev.date === todayStr
                 const isPast  = ev.date < todayStr
                 return (
-                  <div key={ev.id} style={{ ...styles.weekRow, background: isToday ? 'var(--accent)' : 'white', opacity: isPast && !isToday ? 0.55 : 1 }}>
-                    <div style={{ ...styles.weekDay, background: isToday ? 'rgba(228,248,22,0.15)' : '#f3f4f6', color: isToday ? 'var(--accent)' : '#6b7280' }}>
+                  <div key={ev.id} style={{ ...styles.weekRow, background: isToday ? 'var(--chip-bg)' : 'white', opacity: isPast && !isToday ? 0.55 : 1 }}>
+                    <div style={{ ...styles.weekDay, background: isToday ? 'rgba(255,255,255,0.12)' : '#f3f4f6', color: isToday ? 'var(--chip-text)' : '#6b7280' }}>
                       <span style={{ fontSize: '0.58rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
                       <span style={{ fontSize: '1rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
                     </div>
-                    <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'var(--accent-text)' : '#333333', flex: 1 }}>{ev.titre}</span>
-                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'var(--accent-text)', background: 'var(--accent-stripe)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
+                    <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'var(--chip-text)' : '#333333', flex: 1 }}>{ev.titre}</span>
+                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#111111', background: 'var(--accent-stripe)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
                     {isPast && !isToday && <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: '600' }}>Passé</span>}
                   </div>
                 )
@@ -574,7 +574,7 @@ const styles = {
   centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:      { background: 'var(--header-bg)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.25rem', letterSpacing: '-0.5px' },
-  avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
+  avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'var(--header-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
   content:     { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
   label:       { color: '#888', fontSize: '0.875rem', margin: '0 0 0.2rem' },
   title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
@@ -593,9 +593,9 @@ const styles = {
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 0 env(safe-area-inset-bottom)' },
   modalCard:   { background: 'white', borderRadius: '20px 20px 0 0', padding: '1.75rem 1.5rem', width: '100%', maxWidth: 480, textAlign: 'center' },
   nextCard:    { background: 'var(--header-bg)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid rgba(255,255,255,0.35)' },
-  nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'var(--accent-text)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
-  nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-text)', margin: '0 0 0.2rem' },
-  nextDate:    { fontSize: '0.82rem', color: 'var(--accent-text)', opacity: 0.7, margin: 0 },
+  nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'var(--header-text)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
+  nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: 'var(--header-text)', margin: '0 0 0.2rem' },
+  nextDate:    { fontSize: '0.82rem', color: 'var(--header-text)', opacity: 0.7, margin: 0 },
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
   weekRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 12, padding: '0.65rem 1rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },

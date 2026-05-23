@@ -19,10 +19,17 @@ export default function CropLogoModal({ src, onConfirm, onCancel }) {
   // Initialise le recadrage au centre en 1:1 à l'ouverture
   function onImageLoad(e) {
     const { naturalWidth: w, naturalHeight: h } = e.currentTarget
-    const c = centerCrop(
-      makeAspectCrop({ unit: '%', width: 80 }, 1, w, h),
-      w, h
-    )
+    // Sélection libre centrée sur 80% de la largeur, sans aspect ratio imposé
+    const pct = 80
+    const cropW = pct
+    const cropH = Math.round(pct * h / w)
+    const c = {
+      unit: '%',
+      x: (100 - cropW) / 2,
+      y: Math.max(0, (100 - cropH) / 2),
+      width: cropW,
+      height: Math.min(100, cropH),
+    }
     setCrop(c)
     setCompletedCrop(c)
   }
@@ -95,7 +102,6 @@ export default function CropLogoModal({ src, onConfirm, onCancel }) {
             crop={crop}
             onChange={c => setCrop(c)}
             onComplete={c => setCompletedCrop(c)}
-            aspect={1}
             minWidth={40}
             minHeight={40}
             keepSelection
