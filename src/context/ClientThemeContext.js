@@ -128,7 +128,11 @@ export function ClientThemeProvider({ children }) {
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const user = sessionData?.session?.user
-      if (!user) { setTheme(t => ({ ...t, loaded: true })); return }
+      if (!user) {
+        applyPalette(DEFAULT.accent, DEFAULT.accent2)
+        setTheme(t => ({ ...t, loaded: true }))
+        return
+      }
 
       // ── Trouver le client (user_id en priorité, email en fallback) ──────────
       let client = null
@@ -150,7 +154,11 @@ export function ClientThemeProvider({ children }) {
         client = byEmail
       }
 
-      if (!client?.id) { setTheme(t => ({ ...t, loaded: true })); return }
+      if (!client?.id) {
+        applyPalette(DEFAULT.accent, DEFAULT.accent2)
+        setTheme(t => ({ ...t, loaded: true }))
+        return
+      }
 
       // ── Trouver son groupe (.limit(1) pour éviter l'erreur si multi-groupes) ─
       const { data: membres } = await supabase
@@ -160,7 +168,11 @@ export function ClientThemeProvider({ children }) {
         .limit(1)
 
       const groupeId = membres?.[0]?.groupe_id
-      if (!groupeId) { setTheme(t => ({ ...t, loaded: true })); return }
+      if (!groupeId) {
+        applyPalette(DEFAULT.accent, DEFAULT.accent2)
+        setTheme(t => ({ ...t, loaded: true }))
+        return
+      }
 
       // ── Charger les couleurs et logo du groupe ───────────────────────────────
       const { data: groupe, error: groupeErr } = await supabase
