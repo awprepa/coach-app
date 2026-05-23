@@ -242,15 +242,17 @@ export default function ProgressionClient() {
         // Map exercice_id → { nom, seance_id }
         const exMap = Object.fromEntries(exercices.map(e => [e.id, e]))
 
-        // 5. Serie_tracking valide (poids > 0, reps 1-15, validé)
+        // 5. Serie_tracking : séries effectuées (is_done=true) avec poids renseigné
+        // On utilise is_done plutôt que valide : valide=false si les reps cibles ne sont
+        // pas atteintes, mais la série a quand même été faite et le poids est réel.
         const { data: series } = await supabase
           .from('serie_tracking')
-          .select('exercice_id, semaine, serie, poids, reps_reelles, valide')
+          .select('exercice_id, semaine, serie, poids, reps_reelles, valide, is_done')
           .in('exercice_id', exIds)
-          .eq('valide', true)
+          .eq('is_done', true)
+          .not('poids', 'is', null)
+          .not('reps_reelles', 'is', null)
           .gt('poids', 0)
-          .gt('reps_reelles', 0)
-          .lte('reps_reelles', 15)
 
         // 6. Charges / RPE par exercice et semaine
         const { data: charges } = await supabase
@@ -273,6 +275,13 @@ export default function ProgressionClient() {
         ;(series || []).forEach(s => {
           const ex = exMap[s.exercice_id]
           if (!ex) return
+
+          // Convertir et valider poids + reps (reps_reelles peut être stocké en string)
+          const poids = parseFloat(s.poids)
+          const reps  = parseInt(s.reps_reelles)
+          if (!poids || !reps || poids <= 0 || reps <= 0 || reps > 20) return
+          // Remplacer s.poids et s.reps_reelles par les valeurs numériques propres
+          s = { ...s, poids, reps_reelles: reps }
 
           // Calcul de la date réelle de la semaine
           const progId = seanceProg[ex.seance_id]
@@ -325,7 +334,7 @@ export default function ProgressionClient() {
         Object.entries(byName).forEach(([nom, d]) => {
           const points = Object.values(d.pointsByDate)
             .sort((a, b) => a.date.localeCompare(b.date))
-          if (points.length < 2) return  // Pas assez de données
+          if (points.length < 1) return  // Aucune donnée
           result[nom] = {
             config: d.config,
             points,
@@ -335,9 +344,16 @@ export default function ProgressionClient() {
 
         setExercicesData(result)
 
-        // Sélectionner le premier exercice par défaut
-        const firstKey = Object.keys(result)[0]
-        if (firstKey) setSelected(firstKey)
+        // Sélectionner en priorité : exercice avec formule 1RM ET le plus de points
+        const keys = Object.keys(result)
+        const bestKey = keys
+          .sort((a, b) => {
+            const aHas = result[a].config ? 1 : 0
+            const bHas = result[b].config ? 1 : 0
+            if (bHas !== aHas) return bHas - aHas
+            return result[b].points.length - result[a].points.length
+          })[0]
+        if (bestKey) setSelected(bestKey)
 
       } catch (e) {
         console.error('[ProgressionClient]', e)
