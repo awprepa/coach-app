@@ -78,18 +78,12 @@ function applyPalette(primary, secondary) {
   const onPrim   = textOn(primary)
   const onSec    = textOn(secondary)
 
-  // Si la secondaire est suffisamment distincte de la principale, on l'utilise
-  // dans le dégradé du header — sinon on replie sur le dark de la principale.
-  const { r: r1, g: g1, b: b1 } = hexToRgb(primary)
-  const { r: r2, g: g2, b: b2 } = hexToRgb(secondary)
-  const dist = Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2)
-  const gradEnd   = dist > 60 ? secondary : dark
-  const headerBg  = `linear-gradient(135deg, ${primary} 0%, ${gradEnd} 100%)`
+  // Le dégradé du header va toujours de primary vers secondary
+  // (c'était le comportement original : #333333 → #1f2937)
+  const headerBg = `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`
 
-  // Nav : mélange léger de primary et secondary pour un effet bicolore subtil
-  const navBg = dist > 60
-    ? `linear-gradient(90deg, ${darken(primary, 0.12)} 0%, ${darken(secondary, 0.12)} 100%)`
-    : darken(primary, 0.15)
+  // Nav : fond uni légèrement assombri
+  const navBg = darken(primary, 0.15)
 
   // Barre décorative (bottom-nav active, titres de section) — la secondaire pure
   const stripe = secondary
