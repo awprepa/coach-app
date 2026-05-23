@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 
 const DEFAULT = {
   accent:   '#333333',
-  accent2:  '#1f2937',
+  accent2:  '#e4f816',
   logoUrl:  null,
   clubName: null,
   loaded:   false,
