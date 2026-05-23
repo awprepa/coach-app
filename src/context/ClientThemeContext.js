@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 const DEFAULT = {
-  accent:   '#333333',
+  accent:   '#e4f816',
   accent2:  '#1f2937',
   logoUrl:  null,
   clubName: null,
