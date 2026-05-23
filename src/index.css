@@ -1,16 +1,16 @@
 /* Palette club par défaut — surchargée dynamiquement par ClientThemeContext */
 :root {
   --accent:         #333333;
-  --accent2:        #e4f816;
+  --accent2:        #1f2937;
   --accent-dark:    #1a1a1a;
   --accent-muted:   #f4f4f4;
   --accent-nav:     #2a2a2a;
   --accent-text:    #ffffff;
-  --accent-text2:   #111111;
-  --header-bg:      linear-gradient(135deg, #333333 0%, #e4f816 100%);
+  --accent-text2:   #ffffff;
+  --header-bg:      linear-gradient(135deg, #333333 0%, #1f2937 100%);
   --accent-stripe:  #e4f816;
   --accent-fg:      #333333;
-  --accent2-fg:     #727a0b;
+  --accent2-fg:     #1f2937;
   --accent-fg-dark: #e4f816;
 }
 

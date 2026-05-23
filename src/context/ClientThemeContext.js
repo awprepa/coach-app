@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 
 const DEFAULT = {
   accent:   '#333333',
-  accent2:  '#e4f816',
+  accent2:  '#1f2937',
   logoUrl:  null,
   clubName: null,
   loaded:   false,
@@ -71,6 +71,20 @@ function readableOnDark(hex) {
   return lum < 0.4 ? lighten(hex, 0.6) : hex
 }
 
+/** Réinitialise :root aux valeurs CSS par défaut (supprime les overrides inline) */
+function resetToDefaults() {
+  const props = [
+    '--accent', '--accent2', '--accent-dark', '--accent-muted', '--accent-nav',
+    '--accent-text', '--accent-text2', '--header-bg', '--accent-stripe',
+    '--accent-fg', '--accent2-fg', '--accent-fg-dark',
+  ]
+  for (const p of props) {
+    document.documentElement.style.removeProperty(p)
+  }
+  const metaTheme = document.querySelector('meta[name="theme-color"]')
+  if (metaTheme) metaTheme.setAttribute('content', '#333333')
+}
+
 /** Applique la palette complète sur :root */
 function applyPalette(primary, secondary) {
   const dark     = darken(primary, 0.28)
@@ -129,7 +143,7 @@ export function ClientThemeProvider({ children }) {
       const { data: sessionData } = await supabase.auth.getSession()
       const user = sessionData?.session?.user
       if (!user) {
-        applyPalette(DEFAULT.accent, DEFAULT.accent2)
+        resetToDefaults()
         setTheme(t => ({ ...t, loaded: true }))
         return
       }
@@ -155,7 +169,7 @@ export function ClientThemeProvider({ children }) {
       }
 
       if (!client?.id) {
-        applyPalette(DEFAULT.accent, DEFAULT.accent2)
+        resetToDefaults()
         setTheme(t => ({ ...t, loaded: true }))
         return
       }
@@ -169,7 +183,7 @@ export function ClientThemeProvider({ children }) {
 
       const groupeId = membres?.[0]?.groupe_id
       if (!groupeId) {
-        applyPalette(DEFAULT.accent, DEFAULT.accent2)
+        resetToDefaults()
         setTheme(t => ({ ...t, loaded: true }))
         return
       }
