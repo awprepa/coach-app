@@ -28,6 +28,7 @@ const ProfilNutrition      = lazy(() => import('./pages/client/ProfilNutrition')
 const ScannerArticle       = lazy(() => import('./pages/client/ScannerArticle'))
 const HistoriqueScans      = lazy(() => import('./pages/client/HistoriqueScans'))
 const SciencesClient       = lazy(() => import('./pages/client/SciencesClient'))
+const ProgressionClient    = lazy(() => import('./pages/client/ProgressionClient'))
 const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales'))
 const CGV                  = lazy(() => import('./pages/CGV'))
 
@@ -35,6 +36,7 @@ const CGV                  = lazy(() => import('./pages/CGV'))
 const Clients              = lazy(() => import('./pages/Clients'))
 const NouveauClient        = lazy(() => import('./pages/NouveauClient'))
 const FicheClient          = lazy(() => import('./pages/FicheClient'))
+const RapportClient        = lazy(() => import('./pages/RapportClient'))
 const NouveauProgramme     = lazy(() => import('./pages/NouveauProgramme'))
 const Programme            = lazy(() => import('./pages/Programme'))
 const Seance               = lazy(() => import('./pages/Seance'))
@@ -262,6 +264,7 @@ function App() {
               <Route path="/client/nutrition/scanner"    element={<WithNotifs><ScannerArticle /></WithNotifs>} />
               <Route path="/client/nutrition/scans"      element={<WithNotifs><HistoriqueScans /></WithNotifs>} />
               <Route path="/client/sciences"             element={<WithNotifs><SciencesClient /></WithNotifs>} />
+              <Route path="/client/progression"          element={<WithNotifs><ProgressionClient /></WithNotifs>} />
               <Route path="/client/mentions-legales"    element={<MentionsLegales />} />
 
               {/* ── Auth ── */}
@@ -276,6 +279,7 @@ function App() {
               <Route path="/clients"                     element={<WithNav><Clients /></WithNav>} />
               <Route path="/nouveau-client"              element={<WithNav><NouveauClient /></WithNav>} />
               <Route path="/client/:id"                  element={<WithNav><FicheClient /></WithNav>} />
+              <Route path="/rapport/:clientId"           element={<WithNav><RapportClient /></WithNav>} />
               <Route path="/client/:id/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/client/:id/import-excel"     element={<WithNav><ImportClientExcel /></WithNav>} />
               <Route path="/programme/:id"               element={<WithNav><Programme /></WithNav>} />

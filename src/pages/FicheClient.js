@@ -464,6 +464,9 @@ export default function FicheClient() {
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Cycles</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => navigate(`/rapport/${id}`)} style={styles.btnSecondary} title="Rapport mensuel PDF">
+              📄 Rapport
+            </button>
             <button onClick={() => navigate(`/client/${id}/import-excel`)} style={styles.btnSecondary} title="Importer depuis Excel">
               📥 Excel
             </button>

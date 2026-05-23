@@ -1,0 +1,796 @@
+import { useEffect, useState, useMemo } from 'react'
+import { supabase } from '../../supabase'
+import ClientBottomNav from '../../components/ClientBottomNav'
+import { PageLoading } from '../../components/Skeleton'
+import usePageFade from '../../hooks/usePageFade'
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, ReferenceLine,
+} from 'recharts'
+
+// ─── Formules 1RM ────────────────────────────────────────────────────────────
+
+/** Détermine la formule 1RM selon le nom de l'exercice.
+ *  Retourne null si pas d'estimation pertinente (ex. isolation machine). */
+function getFormulaConfig(nom) {
+  const n = (nom || '').toLowerCase()
+
+  // Soulevé de terre / Deadlift — correction +6% (biais mécanique documenté)
+  if (
+    n.includes('soulevé') || n.includes('deadlift') || n.includes('sdt') ||
+    n.includes('roumain') || n.includes('sumo') || n.includes('jefferson')
+  )
+    return { formula: 'weight_dependent', correction: 0.06, label: 'SportRxiv 2024 +6%' }
+
+  // Développé couché / Bench → Lombardi 1989 (meilleur pour bench)
+  if (
+    n.includes('couché') || n.includes('bench') ||
+    n.includes('incliné') || n.includes('décliné')
+  )
+    return { formula: 'lombardi', correction: 0, label: 'Lombardi 1989' }
+
+  // Squat et variantes
+  if (n.includes('squat') && !n.includes('face pull'))
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Développé militaire / OHP
+  if (
+    n.includes('militaire') || n.includes('overhead') || n.includes('ohp') ||
+    n.includes('push press') || n.includes('push jerk')
+  )
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Haltérophilie
+  if (
+    n.includes('arraché') || n.includes('snatch') ||
+    n.includes('épaulé') || n.includes('clean') || n.includes('jerk')
+  )
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Hip thrust / Pont fessier
+  if (
+    n.includes('hip thrust') || n.includes('pont fessier') ||
+    n.includes('hip extension')
+  )
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Leg press / Presse jambes
+  if (n.includes('leg press') || (n.includes('presse') && n.includes('jambe')))
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Tractions lestées uniquement
+  if (
+    (n.includes('traction') || n.includes('pull-up') || n.includes('chin')) &&
+    n.includes('lest')
+  )
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Autres exercices (isolation, câbles, etc.) — pas d'estimation 1RM
+  return null
+}
+
+/** Calcule le 1RM estimé à partir du poids et des reps.
+ *  Retourne null si les valeurs sont invalides ou hors plage. */
+function calculate1RM(w, r, formula, correction = 0) {
+  if (!w || !r || w <= 0 || r <= 0) return null
+  // Reps > 15 exclues (trop incertaines)
+  if (r > 15) return null
+  if (r === 1) return w * (1 + (correction || 0))
+
+  let rm
+  if (formula === 'weight_dependent') {
+    // SportRxiv 2024 — calibré sur 303 494 séries near-failure, 388 exercices
+    const denominator = -2.55 + 4.58 * Math.log(w)
+    if (denominator <= 0 || w < 20) {
+      // Fallback Epley si poids trop léger pour la formule log
+      rm = w * (1 + r / 30)
+    } else {
+      rm = w * (1 + Math.pow(r - 1, 0.85) / denominator)
+    }
+  } else if (formula === 'lombardi') {
+    // Lombardi 1989 — meilleur pour bench press
+    rm = w * Math.pow(r, 0.10)
+  } else {
+    // Epley fallback universel
+    rm = w * (1 + r / 30)
+  }
+
+  if (correction) rm = rm * (1 + correction)
+  return Math.round(rm * 2) / 2  // arrondi au 0.5 kg
+}
+
+/** Correction RPE selon Helms/Zourdos 2016-2023.
+ *  ~3% par RIR (reps in reserve = 10 - rpe), validé jusqu'à RIR 3. */
+function applyRpeCorrection(rm, rpe) {
+  if (!rpe || rpe >= 10) return rm
+  const rir = 10 - rpe
+  const corr = Math.max(0.85, 1 - rir * 0.03)
+  return Math.round(rm * corr * 2) / 2
+}
+
+// ─── Formatage dates ──────────────────────────────────────────────────────────
+
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
+function formatDateFull(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+// ─── Tooltip Recharts personnalisé ───────────────────────────────────────────
+
+function CustomTooltip({ active, payload, label, hasFormula }) {
+  if (!active || !payload || !payload.length) return null
+  return (
+    <div style={{
+      background: '#1a1a1a', borderRadius: 10, padding: '10px 14px',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.25)', fontSize: '0.82rem',
+    }}>
+      <div style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>{formatDateFull(label)}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ color: p.color, fontWeight: 700, marginBottom: 2 }}>
+          {p.name} : <span style={{ color: 'white' }}>{p.value} kg</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Skeleton pour la page ───────────────────────────────────────────────────
+
+function ProgressionSkeleton() {
+  return (
+    <div style={{ animation: 'aw-spin 0s linear' }}>
+      {/* Header */}
+      <div style={{ background: 'linear-gradient(135deg,#333 0%,#1f2937 100%)', padding: '52px 20px 20px', borderLeft: '4px solid rgba(228,248,22,0.5)', marginBottom: 0 }}>
+        <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 6, height: 20, width: 120, marginBottom: 8 }} />
+        <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 4, height: 12, width: 200 }} />
+      </div>
+      {/* Chips */}
+      <div style={{ display: 'flex', gap: 8, padding: '14px 16px', overflowX: 'auto' }}>
+        {[100, 120, 90, 110, 80].map((w, i) => (
+          <div key={i} style={{ background: '#e5e7eb', borderRadius: 20, height: 32, width: w, flexShrink: 0 }} className="aw-skeleton" />
+        ))}
+      </div>
+      {/* Cards */}
+      <div style={{ padding: '0 16px', display: 'flex', gap: 10, marginBottom: 16 }}>
+        {[1, 2, 3].map(i => (
+          <div key={i} style={{ flex: 1, background: 'white', borderRadius: 14, padding: '14px 10px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: '#f0f0f0', borderRadius: 4, height: 10, width: '60%', marginBottom: 8 }} className="aw-skeleton" />
+            <div style={{ background: '#e0e0e0', borderRadius: 6, height: 22, width: '80%' }} className="aw-skeleton" />
+          </div>
+        ))}
+      </div>
+      {/* Graphe */}
+      <div style={{ margin: '0 16px', background: 'white', borderRadius: 16, height: 240, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }} className="aw-skeleton" />
+      <style>{`@keyframes aw-shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } } .aw-skeleton { background: linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%); background-size: 800px 100%; animation: aw-shimmer 1.4s infinite linear; }`}</style>
+    </div>
+  )
+}
+
+// ─── Composant principal ──────────────────────────────────────────────────────
+
+export default function ProgressionClient() {
+  const fadeStyle = usePageFade()
+
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
+  // Données brutes
+  const [exercicesData, setExercicesData] = useState({}) // { nomEx: { config, points: [{date, rm, poids}], sets: [...] } }
+  // Exercice sélectionné
+  const [selected, setSelected]     = useState(null)
+
+  // ── Chargement des données ────────────────────────────────────────────────
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true)
+
+        // 1. Résolution client (pattern standard AccueilClient)
+        const { data: sessionData } = await supabase.auth.getSession()
+        const user = sessionData?.session?.user
+        if (!user) { setError('Non connecté'); setLoading(false); return }
+
+        let client = null
+        const { data: byUserId } = await supabase
+          .from('clients').select('id,prenom,nom')
+          .eq('user_id', user.id).maybeSingle()
+        if (byUserId?.id) {
+          client = byUserId
+        } else {
+          const { data: byEmail } = await supabase
+            .from('clients').select('id,prenom,nom')
+            .eq('email', user.email).maybeSingle()
+          client = byEmail
+        }
+        if (!client?.id) { setError('Client introuvable'); setLoading(false); return }
+
+        // 2. Programmes du client
+        const { data: progs } = await supabase
+          .from('programmes')
+          .select('id, date_debut, created_at, semaines')
+          .eq('client_id', client.id)
+        if (!progs?.length) { setLoading(false); return }
+
+        const progIds = progs.map(p => p.id)
+        // Map programme_id → { date_debut, created_at }
+        const progMap = Object.fromEntries(progs.map(p => [p.id, p]))
+
+        // 3. Séances
+        const { data: seances } = await supabase
+          .from('seances')
+          .select('id, programme_id')
+          .in('programme_id', progIds)
+        if (!seances?.length) { setLoading(false); return }
+
+        const seanceIds = seances.map(s => s.id)
+        // Map seance_id → programme_id
+        const seanceProg = Object.fromEntries(seances.map(s => [s.id, s.programme_id]))
+
+        // 4. Exercices avec catégorie biblio
+        const { data: exercices } = await supabase
+          .from('exercices')
+          .select('id, nom, seance_id, bibliotheque_exercices(categorie, muscles_primaires)')
+          .in('seance_id', seanceIds)
+        if (!exercices?.length) { setLoading(false); return }
+
+        const exIds = exercices.map(e => e.id)
+        // Map exercice_id → { nom, seance_id }
+        const exMap = Object.fromEntries(exercices.map(e => [e.id, e]))
+
+        // 5. Serie_tracking valide (poids > 0, reps 1-15, validé)
+        const { data: series } = await supabase
+          .from('serie_tracking')
+          .select('exercice_id, semaine, serie, poids, reps_reelles, valide')
+          .in('exercice_id', exIds)
+          .eq('valide', true)
+          .gt('poids', 0)
+          .gt('reps_reelles', 0)
+          .lte('reps_reelles', 15)
+
+        // 6. Charges / RPE par exercice et semaine
+        const { data: charges } = await supabase
+          .from('charges')
+          .select('exercice_id, semaine, rpe_reel')
+          .in('exercice_id', exIds)
+
+        // Map RPE : exercice_id + semaine → rpe_reel
+        const rpeMap = {}
+        ;(charges || []).forEach(c => {
+          rpeMap[`${c.exercice_id}_${c.semaine}`] = c.rpe_reel
+        })
+
+        // ── Transformation des données ──────────────────────────────────────
+
+        // Regrouper par nom d'exercice
+        // Pour chaque date, on garde le meilleur 1RM et le poids max brut
+        const byName = {}  // { nomEx: { config, pointsByDate: {date: {rm, poids}}, rawSets: [...] } }
+
+        ;(series || []).forEach(s => {
+          const ex = exMap[s.exercice_id]
+          if (!ex) return
+
+          // Calcul de la date réelle de la semaine
+          const progId = seanceProg[ex.seance_id]
+          const prog = progMap[progId]
+          if (!prog) return
+          const dateDebut = prog.date_debut || prog.created_at
+          const weekDate = new Date(dateDebut + 'T00:00:00')
+          weekDate.setDate(weekDate.getDate() + (s.semaine - 1) * 7)
+          const dateStr = weekDate.toISOString().split('T')[0]
+
+          const nom = ex.nom || 'Exercice'
+          if (!byName[nom]) {
+            byName[nom] = {
+              config: getFormulaConfig(nom),
+              pointsByDate: {},
+              rawSets: [],
+            }
+          }
+
+          // 1RM estimé avec correction RPE éventuelle
+          const cfg = byName[nom].config
+          let rm = null
+          if (cfg) {
+            const rmBase = calculate1RM(s.poids, s.reps_reelles, cfg.formula, cfg.correction)
+            const rpe = rpeMap[`${s.exercice_id}_${s.semaine}`]
+            rm = rmBase !== null ? applyRpeCorrection(rmBase, rpe) : null
+          }
+
+          // Mettre à jour le meilleur point de la date
+          const prev = byName[nom].pointsByDate[dateStr]
+          const betterRm  = rm  !== null && (prev?.rm  === undefined || rm  > (prev.rm  || 0))
+          const betterPds = s.poids > (prev?.poids || 0)
+          byName[nom].pointsByDate[dateStr] = {
+            date:  dateStr,
+            rm:    betterRm  ? rm  : (prev?.rm  ?? null),
+            poids: betterPds ? s.poids : (prev?.poids || 0),
+          }
+
+          // Conserver le set brut pour la liste "Dernières séances"
+          byName[nom].rawSets.push({
+            date: dateStr,
+            poids: s.poids,
+            reps: s.reps_reelles,
+            rm,
+          })
+        })
+
+        // Construire la structure finale : seulement exercices avec ≥ 2 points de données
+        const result = {}
+        Object.entries(byName).forEach(([nom, d]) => {
+          const points = Object.values(d.pointsByDate)
+            .sort((a, b) => a.date.localeCompare(b.date))
+          if (points.length < 2) return  // Pas assez de données
+          result[nom] = {
+            config: d.config,
+            points,
+            rawSets: d.rawSets.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30),
+          }
+        })
+
+        setExercicesData(result)
+
+        // Sélectionner le premier exercice par défaut
+        const firstKey = Object.keys(result)[0]
+        if (firstKey) setSelected(firstKey)
+
+      } catch (e) {
+        console.error('[ProgressionClient]', e)
+        setError('Erreur lors du chargement')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  // ── Données de l'exercice sélectionné ────────────────────────────────────
+
+  const currentData = useMemo(() => {
+    if (!selected || !exercicesData[selected]) return null
+    return exercicesData[selected]
+  }, [selected, exercicesData])
+
+  // Métriques calculées
+  const metrics = useMemo(() => {
+    if (!currentData) return null
+    const { config, points, rawSets } = currentData
+
+    const lastPoint  = points[points.length - 1]
+    const firstPoint = points[0]
+
+    if (config) {
+      // Mode 1RM
+      const rmPoints = points.filter(p => p.rm !== null)
+      const currentRm  = rmPoints.length ? rmPoints[rmPoints.length - 1].rm : null
+      const firstRm    = rmPoints.length ? rmPoints[0].rm : null
+      const progression = currentRm !== null && firstRm !== null
+        ? Math.round((currentRm - firstRm) * 2) / 2
+        : null
+      const maxRm = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
+
+      // Warning si majorité > 8 reps
+      const repsGt8 = rawSets.filter(s => s.reps > 8).length
+      const showWarning = repsGt8 > rawSets.length * 0.5
+
+      return {
+        mode: '1rm',
+        currentRm,
+        progression,
+        nbSeances: points.length,
+        maxRm,
+        showWarning,
+      }
+    } else {
+      // Mode poids max
+      const poidsMax = points.reduce((max, p) => p.poids > max ? p.poids : max, 0)
+      const volumeTotal = rawSets.reduce((acc, s) => acc + s.poids * s.reps, 0)
+      return {
+        mode: 'poids',
+        poidsMax,
+        volumeTotal: Math.round(volumeTotal),
+        nbSeances: points.length,
+      }
+    }
+  }, [currentData])
+
+  // ── Rendu ─────────────────────────────────────────────────────────────────
+
+  if (loading) return <ProgressionSkeleton />
+
+  if (error) return (
+    <div style={{ ...S.page, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+      <span style={{ fontSize: '2rem' }}>⚠️</span>
+      <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>{error}</p>
+      <ClientBottomNav />
+    </div>
+  )
+
+  const exNames = Object.keys(exercicesData)
+
+  if (!exNames.length) return (
+    <div style={{ ...S.page, ...fadeStyle }}>
+      {/* Header */}
+      <div style={S.header}>
+        <h1 style={S.headerTitle}>📈 Progression</h1>
+        <p style={S.headerSub}>Évolution de tes performances</p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, minHeight: 'calc(100vh - 160px)', padding: '2rem' }}>
+        <span style={{ fontSize: '3rem' }}>💪</span>
+        <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1a1a1a', margin: 0 }}>Aucune donnée encore</p>
+        <p style={{ fontSize: '0.85rem', color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
+          Commence ta première séance pour voir ta progression ici 💪
+        </p>
+      </div>
+      <ClientBottomNav />
+    </div>
+  )
+
+  const cfg    = currentData?.config
+  const points = currentData?.points || []
+
+  // Données graphe : pour Recharts
+  const chartData = points.map(p => ({
+    date:  p.date,
+    rm:    p.rm,
+    poids: p.poids,
+  }))
+
+  // Max 1RM pour ReferenceLine
+  const maxRm = metrics?.maxRm || null
+
+  // 5 derniers sets
+  const derniersSets = (currentData?.rawSets || []).slice(0, 5)
+
+  return (
+    <div style={{ ...S.page, ...fadeStyle }}>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div style={S.header}>
+        <h1 style={S.headerTitle}>📈 Progression</h1>
+        <p style={S.headerSub}>Évolution de tes performances</p>
+      </div>
+
+      {/* ── Chips de sélection d'exercice ──────────────────────────────────── */}
+      <div style={S.chipsWrapper}>
+        {exNames.map(nom => (
+          <button
+            key={nom}
+            onClick={() => setSelected(nom)}
+            style={{
+              ...S.chip,
+              ...(selected === nom ? S.chipActive : S.chipInactive),
+            }}
+          >
+            {nom}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Métriques ──────────────────────────────────────────────────────── */}
+      {metrics && (
+        <div style={S.metricsRow}>
+          {metrics.mode === '1rm' ? (
+            <>
+              <MetricCard
+                label="1RM estimé"
+                value={metrics.currentRm !== null ? `${metrics.currentRm} kg` : '—'}
+                accent
+              />
+              <MetricCard
+                label="Progression"
+                value={
+                  metrics.progression !== null
+                    ? `${metrics.progression > 0 ? '+' : ''}${metrics.progression} kg`
+                    : '—'
+                }
+                positive={metrics.progression > 0}
+                negative={metrics.progression < 0}
+              />
+              <MetricCard label="Séances" value={metrics.nbSeances} />
+            </>
+          ) : (
+            <>
+              <MetricCard
+                label="Poids max"
+                value={metrics.poidsMax ? `${metrics.poidsMax} kg` : '—'}
+                accent
+              />
+              <MetricCard
+                label="Volume total"
+                value={metrics.volumeTotal ? `${(metrics.volumeTotal / 1000).toFixed(1)}t` : '—'}
+              />
+              <MetricCard label="Séances" value={metrics.nbSeances} />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Warning reps > 8 ────────────────────────────────────────────────── */}
+      {metrics?.showWarning && (
+        <div style={S.warningBanner}>
+          ⚠️ La plupart de tes séries dépassent 8 reps — l'estimation 1RM est moins précise au-delà de 8 reps.
+        </div>
+      )}
+
+      {/* ── Graphe Recharts ─────────────────────────────────────────────────── */}
+      {chartData.length >= 2 && (
+        <div style={S.chartCard}>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={chartData} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDateShort}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickLine={false}
+                axisLine={false}
+                unit=" kg"
+                width={46}
+              />
+              <Tooltip content={<CustomTooltip hasFormula={!!cfg} />} />
+
+              {/* Ligne 1RM estimé (jaune accent, si formule) */}
+              {cfg && (
+                <Line
+                  type="monotone"
+                  dataKey="rm"
+                  name="1RM estimé"
+                  stroke="var(--chip-text, #e4f816)"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: 'var(--chip-text, #e4f816)', strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls
+                />
+              )}
+
+              {/* Ligne poids brut (grise, pointillée) */}
+              <Line
+                type="monotone"
+                dataKey="poids"
+                name="Poids max"
+                stroke="#9ca3af"
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                dot={false}
+                activeDot={{ r: 4 }}
+                connectNulls
+              />
+
+              {/* ReferenceLine sur le 1RM max atteint */}
+              {cfg && maxRm && (
+                <ReferenceLine
+                  y={maxRm}
+                  stroke="var(--chip-text, #e4f816)"
+                  strokeDasharray="6 3"
+                  strokeOpacity={0.4}
+                  strokeWidth={1}
+                />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* Note scientifique */}
+          <p style={S.sciNote}>
+            {cfg
+              ? `Formule ${cfg.label} · Fiable 3–8 reps`
+              : 'Progression du poids utilisé (1RM non estimé pour cet exercice)'
+            }
+          </p>
+        </div>
+      )}
+
+      {/* ── Dernières séances ───────────────────────────────────────────────── */}
+      {derniersSets.length > 0 && (
+        <div style={S.section}>
+          <h2 style={S.sectionTitle}>Dernières séances</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {derniersSets.map((s, i) => (
+              <div key={i} style={S.setRow}>
+                <span style={S.setDate}>{formatDateFull(s.date)}</span>
+                <div style={S.setRight}>
+                  <span style={S.setPoids}>{s.poids} kg × {s.reps}</span>
+                  {s.rm !== null && (
+                    <span style={S.setRm}>≈ {s.rm} kg 1RM</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Padding bottom pour la bottom nav */}
+      <div style={{ height: 100 }} />
+      <ClientBottomNav />
+    </div>
+  )
+}
+
+// ─── Composant MetricCard ─────────────────────────────────────────────────────
+
+function MetricCard({ label, value, accent, positive, negative }) {
+  let valueColor = '#1a1a1a'
+  if (positive) valueColor = '#16a34a'
+  if (negative) valueColor = '#dc2626'
+  if (accent)   valueColor = 'var(--accent-fg, #1a1a1a)'
+
+  return (
+    <div style={S.metricCard}>
+      <span style={S.metricLabel}>{label}</span>
+      <span style={{ ...S.metricValue, color: valueColor }}>{value}</span>
+    </div>
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const S = {
+  page: {
+    background: '#f5f5f5',
+    minHeight: '100vh',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+
+  // Header
+  header: {
+    background: 'var(--header-bg)',
+    padding: '52px 20px 20px',
+    borderLeft: '4px solid var(--accent-stripe)',
+  },
+  headerTitle: {
+    color: 'var(--accent-fg-dark)',
+    fontWeight: 900,
+    fontSize: '1.15rem',
+    margin: '0 0 2px',
+  },
+  headerSub: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: '0.78rem',
+    margin: 0,
+  },
+
+  // Chips
+  chipsWrapper: {
+    display: 'flex',
+    gap: 8,
+    padding: '14px 16px',
+    overflowX: 'auto',
+    scrollbarWidth: 'none',
+    WebkitOverflowScrolling: 'touch',
+  },
+  chip: {
+    flexShrink: 0,
+    border: 'none',
+    borderRadius: 20,
+    padding: '6px 14px',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s',
+  },
+  chipActive: {
+    background: 'var(--chip-bg)',
+    color: 'var(--chip-text)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+  },
+  chipInactive: {
+    background: 'white',
+    color: '#6b7280',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+  },
+
+  // Métriques
+  metricsRow: {
+    display: 'flex',
+    gap: 10,
+    padding: '0 16px 14px',
+  },
+  metricCard: {
+    flex: 1,
+    background: 'white',
+    borderRadius: 14,
+    padding: '12px 10px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  metricLabel: {
+    fontSize: '0.68rem',
+    fontWeight: 600,
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  metricValue: {
+    fontSize: '1.1rem',
+    fontWeight: 800,
+    lineHeight: 1.1,
+  },
+
+  // Warning
+  warningBanner: {
+    margin: '0 16px 14px',
+    background: '#fef9c3',
+    border: '1px solid #fbbf24',
+    borderRadius: 10,
+    padding: '8px 12px',
+    fontSize: '0.78rem',
+    color: '#92400e',
+    lineHeight: 1.5,
+  },
+
+  // Graphe
+  chartCard: {
+    margin: '0 16px 16px',
+    background: 'white',
+    borderRadius: 16,
+    padding: '16px 4px 12px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  sciNote: {
+    margin: '8px 12px 0',
+    fontSize: '0.7rem',
+    color: '#9ca3af',
+    fontStyle: 'italic',
+  },
+
+  // Section dernières séances
+  section: {
+    margin: '0 16px 16px',
+    background: 'white',
+    borderRadius: 16,
+    padding: '16px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  sectionTitle: {
+    fontSize: '0.82rem',
+    fontWeight: 700,
+    color: '#374151',
+    margin: '0 0 12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  setRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 12px',
+    background: '#f9fafb',
+    borderRadius: 10,
+  },
+  setDate: {
+    fontSize: '0.78rem',
+    color: '#6b7280',
+    flex: 1,
+  },
+  setRight: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  setPoids: {
+    fontSize: '0.88rem',
+    fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  setRm: {
+    fontSize: '0.72rem',
+    color: 'var(--accent-fg, #6b7280)',
+    fontWeight: 600,
+  },
+}

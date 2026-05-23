@@ -268,6 +268,15 @@ export default function ProgrammeClient() {
           )}
         </div>
 
+        {/* Bouton progression */}
+        <button
+          onClick={() => navigate('/client/progression')}
+          style={{ width: '100%', padding: '0.85rem', background: 'var(--chip-bg)', color: 'var(--chip-text)',
+                   border: 'none', borderRadius: 14, fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+          📈 Voir ma progression
+        </button>
+
       </div>
       <ClientBottomNav />
     </div>
