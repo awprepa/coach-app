@@ -13,6 +13,8 @@
   --accent-fg:      #727a0b;   /* jaune assombri, lisible sur fond blanc */
   --accent2-fg:     #1f2937;   /* navy, lisible sur fond blanc */
   --accent-fg-dark: #e4f816;   /* jaune, lisible sur fond sombre */
+  --chip-bg:        #333333;   /* fond badges/boutons (sombre en thème base) */
+  --chip-text:      #e4f816;   /* texte badges/boutons (jaune en thème base) */
 }
 
 body {

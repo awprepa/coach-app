@@ -76,7 +76,7 @@ function resetToDefaults() {
   const props = [
     '--accent', '--accent2', '--accent-dark', '--accent-muted', '--accent-nav',
     '--accent-text', '--accent-text2', '--header-bg', '--accent-stripe',
-    '--accent-fg', '--accent2-fg', '--accent-fg-dark',
+    '--accent-fg', '--accent2-fg', '--accent-fg-dark', '--chip-bg', '--chip-text',
   ]
   for (const p of props) {
     document.documentElement.style.removeProperty(p)
@@ -120,6 +120,8 @@ function applyPalette(primary, secondary) {
     '--accent-fg':      accentFg,     // accent lisible sur fond blanc
     '--accent2-fg':     accent2Fg,    // secondaire lisible sur fond blanc
     '--accent-fg-dark': accentFgDk,   // accent lisible sur fond sombre
+    '--chip-bg':        primary,
+    '--chip-text':      onPrim,
   }
 
   for (const [k, v] of Object.entries(vars)) {

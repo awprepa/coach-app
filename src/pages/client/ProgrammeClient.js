@@ -332,8 +332,8 @@ const styles = {
     fontSize: '0.85rem',
   },
   badge: {
-    background: 'var(--accent)',
-    color: 'var(--accent-text)',
+    background: 'var(--chip-bg)',
+    color: 'var(--chip-text)',
     padding: '0.2rem 0.65rem',
     borderRadius: '999px',
     fontSize: '0.75rem',
@@ -347,7 +347,7 @@ const styles = {
   },
   progressFill: {
     height: '100%',
-    background: 'var(--accent)',
+    background: 'var(--chip-bg)',
     borderRadius: '999px',
     transition: 'width 0.4s ease',
   },
@@ -387,7 +387,7 @@ const styles = {
     justifyContent: 'space-between',
   },
   jourBadge: {
-    background: 'var(--accent)',
+    background: 'var(--chip-bg)',
     borderRadius: '10px',
     padding: '0.3rem 0.55rem',
     display: 'flex',
@@ -399,7 +399,7 @@ const styles = {
   jourLabel: {
     fontSize: '0.5rem',
     fontWeight: '800',
-    color: 'var(--accent-text)',
+    color: 'var(--chip-text)',
     opacity: 0.65,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -408,7 +408,7 @@ const styles = {
   jourNum: {
     fontSize: '0.95rem',
     fontWeight: '800',
-    color: 'var(--accent-text)',
+    color: 'var(--chip-text)',
     lineHeight: 1.2,
   },
   cardTitle: {
@@ -469,8 +469,8 @@ const styles = {
   },
   submitBtn: {
     flex: 1,
-    background: 'var(--accent)',
-    color: 'var(--accent-text)',
+    background: 'var(--chip-bg)',
+    color: 'var(--chip-text)',
     border: 'none',
     borderRadius: 9,
     padding: '0.65rem',
