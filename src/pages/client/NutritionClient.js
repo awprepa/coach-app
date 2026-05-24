@@ -401,7 +401,7 @@ export default function NutritionClient() {
 
           {goals && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ height: 6, background: 'rgba(255,255,255,0.18)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
                 <div style={{
                   height: '100%', borderRadius: 999, background: 'var(--chip-bg)',
                   width: `${Math.min(totals.kcal / (goals.kcal_target || 1) * 100, 100)}%`,
@@ -423,7 +423,7 @@ export default function NutritionClient() {
               <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: '0.82rem', width: 20, textAlign: 'center' }}>{m.icon}</span>
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', width: 28, textTransform: 'uppercase' }}>{m.name}</span>
-                <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.18)', borderRadius: 999, overflow: 'hidden' }}>
                   <div style={{ height: '100%', background: m.color, borderRadius: 999, width: `${m.target ? Math.min(m.val / m.target * 100, 100) : 0}%`, transition: 'width 0.4s ease' }} />
                 </div>
                 <span style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.4)', width: 68, textAlign: 'right', fontWeight: 600 }}>

@@ -121,7 +121,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset }) {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', flex: 1 }}>{item.name}</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6b7280', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#e4f816', background: '#1a1a1a', borderRadius: 6, padding: '2px 7px', flexShrink: 0 }}>
                 {item.kcal} kcal
               </span>
             </div>
@@ -1090,6 +1090,6 @@ const S = {
   card: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   cardLabel: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', background: '#f9fafb', color: '#1a1a1a' },
-  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
+  btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
   btnSecondary: { padding: '0.55rem 1.2rem', border: '1.5px solid #e5e7eb', borderRadius: 10, background: 'white', color: '#374151', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' },
 }

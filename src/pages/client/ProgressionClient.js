@@ -131,11 +131,14 @@ function calculate1RM(w, r, formula, correction = 0) {
 }
 
 /** Correction RPE selon Helms/Zourdos 2016-2023.
- *  ~3% par RIR (reps in reserve = 10 - rpe), validé jusqu'à RIR 3. */
+ *  Chaque RIR supplémentaire → +3% sur l'estimation 1RM.
+ *  Ex : RPE 7 (3 RIR) → ×1.09 ; RPE 6 (4 RIR) → ×1.12. */
 function applyRpeCorrection(rm, rpe) {
   if (!rpe || rpe >= 10) return rm
   const rir = 10 - rpe
-  const corr = Math.max(0.85, 1 - rir * 0.03)
+  if (rir <= 0) return rm
+  // Effort sub-maximal → le vrai 1RM est PLUS élevé qu'estimé à partir des reps
+  const corr = 1 + rir * 0.03
   return Math.round(rm * corr * 2) / 2
 }
 

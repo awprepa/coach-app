@@ -339,10 +339,17 @@ export default function SeanceClient() {
 
   async function saveCommentaire() {
     if (!commentaire.trim()) return
-    await supabase.from('seance_commentaires').upsert(
+    const { error } = await supabase.from('seance_commentaires').upsert(
       { seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() },
       { onConflict: 'seance_id,semaine' }
     )
+    if (error) {
+      // Fallback : delete-then-insert si la contrainte unique est absente
+      await supabase.from('seance_commentaires')
+        .delete().eq('seance_id', id).eq('semaine', semaineActuelle)
+      await supabase.from('seance_commentaires')
+        .insert({ seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() })
+    }
     setCommentaires(prev => {
       const others = prev.filter(c => c.semaine !== semaineActuelle)
       return [{ seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() }, ...others]
@@ -815,7 +822,10 @@ export default function SeanceClient() {
               )
             })()}
 
-            {seriesList.map((serie, si) => (
+            {seriesList.map((serie, si) => {
+              const prevSerie = si > 0 ? seriesList[si - 1] : null
+              const canCopy = !serie.is_done && prevSerie && (prevSerie.poids || prevSerie.reps_reelles)
+              return (
               <div key={si} style={{ ...S.serieRow, ...(serie.is_done ? (serie.valide ? S.serieRowDone : S.serieRowWarn) : {}) }}>
                 <span style={S.serieNum}>{si + 1}</span>
                 <input type="text" value={serie.poids}
@@ -832,6 +842,23 @@ export default function SeanceClient() {
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>{tempsMode ? 's' : 'reps'}</span>
+                {canCopy && (
+                  <button
+                    onClick={() => {
+                      if (prevSerie.poids) updateTrackingField(ex.id, si, 'poids', prevSerie.poids)
+                      if (prevSerie.reps_reelles) updateTrackingField(ex.id, si, 'reps_reelles', prevSerie.reps_reelles)
+                    }}
+                    title="Reprendre les valeurs de la série précédente"
+                    style={{
+                      background: '#f3f4f6', border: 'none', borderRadius: 6,
+                      padding: '0.28rem 0.45rem', cursor: 'pointer', flexShrink: 0,
+                      fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ↩
+                  </button>
+                )}
                 {serie.is_done
                   ? pendingUnvalidate?.exId === ex.id && pendingUnvalidate?.serieIdx === si
                     ? <>
@@ -845,7 +872,8 @@ export default function SeanceClient() {
                   : <button onClick={() => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions)} style={S.serieValBtn}>Valider</button>
                 }
               </div>
-            ))}
+              )
+            })}
 
             {/* ── Volume & Tonnage ─────────────────────────── */}
             {(() => {
@@ -1305,13 +1333,24 @@ export default function SeanceClient() {
         {/* Notes */}
         <div style={{ marginTop: '1rem' }}>
           <p style={{ ...S.sectionLabel, marginBottom: '0.6rem' }}>Notes · S{semaineActuelle}</p>
-          <div style={{ background: 'white', borderRadius: 14, padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          <div style={{
+            background: 'white', borderRadius: 14, padding: '1rem 1.1rem',
+            boxShadow: commentSaved ? '0 0 0 2px #16a34a' : '0 1px 3px rgba(0,0,0,0.06)',
+            transition: 'box-shadow 0.35s ease',
+          }}>
             <textarea value={commentaire} onChange={e => setCommentaire(e.target.value)}
               onBlur={saveCommentaire} rows={3} placeholder="Laisse une note sur cette séance..."
               style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.88rem', color: '#333333', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button onClick={saveCommentaire}
-                style={{ background: commentSaved ? '#16a34a' : 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 8, padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', transition: 'background 0.3s' }}>
+                style={{
+                  background: commentSaved ? '#16a34a' : 'var(--chip-bg)',
+                  color: commentSaved ? 'white' : 'var(--chip-text)',
+                  border: 'none', borderRadius: 8, padding: '0.4rem 1rem',
+                  fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  transform: commentSaved ? 'scale(1.06)' : 'scale(1)',
+                }}>
                 {commentSaved ? '✓ Enregistré' : 'Enregistrer'}
               </button>
             </div>
