@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -30,6 +32,7 @@ export default function ProfilClient() {
   const navigate  = useNavigate()
   const fadeStyle = usePageFade()
   const fileRef   = useRef()
+  const imgRef    = useRef()
 
   const [client,       setClient]       = useState(null)
   const [loading,      setLoading]      = useState(true)
@@ -37,6 +40,12 @@ export default function ProfilClient() {
   const [uploading,    setUploading]    = useState(false)
   const [savingNutri,  setSavingNutri]  = useState(false)
   const [savedMsg,     setSavedMsg]     = useState(false)
+
+  // Recadrage photo
+  const [cropSrc,       setCropSrc]       = useState(null)
+  const [crop,          setCrop]          = useState()
+  const [completedCrop, setCompletedCrop] = useState(null)
+  const [cropping,      setCropping]      = useState(false)
 
   // Champs nutrition
   const [sexe,     setSexe]     = useState('')
@@ -78,23 +87,70 @@ export default function ProfilClient() {
     load()
   }, [navigate])
 
-  async function handlePhotoChange(e) {
+  // Ouvre le recadreur (ne uploade pas encore)
+  function handlePhotoChange(e) {
     const file = e.target.files?.[0]
     if (!file || !client) return
-    setUploading(true)
+    e.target.value = ''  // reset pour pouvoir resélectionner le même fichier
+    const reader = new FileReader()
+    reader.addEventListener('load', () => setCropSrc(reader.result?.toString() || ''))
+    reader.readAsDataURL(file)
+  }
+
+  // Initialise le crop centré au chargement de l'image
+  function onImageLoad(e) {
+    const { naturalWidth: width, naturalHeight: height } = e.currentTarget
+    const c = centerCrop(
+      makeAspectCrop({ unit: '%', width: 85 }, 1, width, height),
+      width, height
+    )
+    setCrop(c)
+  }
+
+  // Extrait le carré recadré via canvas → Blob JPEG
+  function getCroppedBlob() {
+    const image = imgRef.current
+    if (!image || !completedCrop) return Promise.resolve(null)
+    const canvas = document.createElement('canvas')
+    const SIZE = 400
+    canvas.width = SIZE
+    canvas.height = SIZE
+    const ctx = canvas.getContext('2d')
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0, 0, SIZE, SIZE
+    )
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92))
+  }
+
+  // Confirmer le recadrage → upload
+  async function handleCropConfirm() {
+    if (!completedCrop || !client) return
+    setCropping(true)
     try {
-      const ext  = file.name.split('.').pop()
-      const path = `${client.id}/avatar.${ext}`
-      const { error: upErr } = await supabase.storage.from('profile-photos').upload(path, file, { upsert: true })
+      const blob = await getCroppedBlob()
+      if (!blob) return
+      const path = `${client.id}/avatar.jpg`
+      const { error: upErr } = await supabase.storage
+        .from('profile-photos').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
       if (upErr) throw upErr
       const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path)
       const url = urlData.publicUrl + '?t=' + Date.now()
       await supabase.from('clients').update({ avatar_url: url }).eq('id', client.id)
       setAvatarUrl(url)
+      setCropSrc(null)
+      setCompletedCrop(null)
+      setCrop(undefined)
     } catch (err) {
-      console.error('Upload avatar:', err)
+      console.error('Upload avatar recadré:', err)
     } finally {
-      setUploading(false)
+      setCropping(false)
     }
   }
 
@@ -135,6 +191,78 @@ export default function ProfilClient() {
 
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
+
+      {/* ── Modal de recadrage ─────────────────────────────────────────────── */}
+      {cropSrc && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: '#000',
+          display: 'flex', flexDirection: 'column',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        }}>
+          {/* Barre haute */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px',
+            paddingTop: 'max(16px, env(safe-area-inset-top))',
+            flexShrink: 0,
+          }}>
+            <button
+              onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined) }}
+              style={{ color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+            >
+              Annuler
+            </button>
+            <span style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>Recadrer la photo</span>
+            <button
+              onClick={handleCropConfirm}
+              disabled={!completedCrop || cropping}
+              style={{
+                background: completedCrop && !cropping ? '#e4f816' : 'rgba(255,255,255,0.2)',
+                color: '#111', border: 'none', borderRadius: 10,
+                padding: '8px 16px', fontWeight: 800, fontSize: '0.88rem',
+                cursor: completedCrop && !cropping ? 'pointer' : 'default',
+                transition: 'background 0.2s',
+              }}
+            >
+              {cropping ? '…' : 'Confirmer'}
+            </button>
+          </div>
+
+          {/* Zone de recadrage */}
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', padding: '0 0 8px',
+          }}>
+            <ReactCrop
+              crop={crop}
+              onChange={(_, pct) => setCrop(pct)}
+              onComplete={(c) => setCompletedCrop(c)}
+              aspect={1}
+              circularCrop
+              style={{ maxHeight: '68vh', maxWidth: '100%' }}
+            >
+              <img
+                ref={imgRef}
+                src={cropSrc}
+                alt="Recadrage"
+                onLoad={onImageLoad}
+                style={{ maxHeight: '68vh', maxWidth: '100%', display: 'block' }}
+              />
+            </ReactCrop>
+          </div>
+
+          {/* Hint */}
+          <p style={{
+            color: 'rgba(255,255,255,0.35)', textAlign: 'center',
+            fontSize: '0.72rem', padding: '8px 20px',
+            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+            flexShrink: 0, margin: 0,
+          }}>
+            Glisse pour repositionner · Pincer pour zoomer
+          </p>
+        </div>
+      )}
 
       {/* Header */}
       <div style={S.header}>
