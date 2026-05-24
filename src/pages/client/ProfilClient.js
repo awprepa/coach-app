@@ -330,7 +330,7 @@ export default function ProfilClient() {
                 fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
-                <span style={{ fontSize: '1rem', lineHeight: 1, position: 'relative', top: '-1px' }}>{s === 'homme' ? '♂' : '♀'}</span>
+                <span style={{ fontSize: '1rem', display: 'inline-block', transform: 'translateY(2px)' }}>{s === 'homme' ? '♂' : '♀'}</span>
                 <span style={{ lineHeight: 1 }}>{s === 'homme' ? 'Homme' : 'Femme'}</span>
               </button>
             ))}

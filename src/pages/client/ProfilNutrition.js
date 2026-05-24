@@ -276,14 +276,18 @@ export default function ProfilNutrition() {
               <div style={S.card}>
                 <label style={S.inputLabel}>Sexe biologique</label>
                 <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                  {[{ key: 'homme', label: '♂ Homme' }, { key: 'femme', label: '♀ Femme' }].map(s => (
+                  {[{ key: 'homme', symbol: '♂', label: 'Homme' }, { key: 'femme', symbol: '♀', label: 'Femme' }].map(s => (
                     <button key={s.key} onClick={() => setSexe(s.key)} style={{
                       flex: 1, padding: '12px', borderRadius: 12, border: '2px solid',
                       borderColor: sexe === s.key ? '#1a1a1a' : '#e5e7eb',
                       background:  sexe === s.key ? '#1a1a1a' : '#f9fafb',
                       color:       sexe === s.key ? 'var(--accent)' : '#374151',
                       fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                    }}>{s.label}</button>
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    }}>
+                      <span style={{ display: 'inline-block', transform: 'translateY(2px)' }}>{s.symbol}</span>
+                      <span style={{ lineHeight: 1 }}>{s.label}</span>
+                    </button>
                   ))}
                 </div>
               </div>
