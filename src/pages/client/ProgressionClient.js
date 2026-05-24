@@ -242,17 +242,18 @@ export default function ProgressionClient() {
         // Map exercice_id → { nom, seance_id }
         const exMap = Object.fromEntries(exercices.map(e => [e.id, e]))
 
-        // 5. Serie_tracking : séries effectuées (is_done=true) avec poids renseigné
-        // On utilise is_done plutôt que valide : valide=false si les reps cibles ne sont
-        // pas atteintes, mais la série a quand même été faite et le poids est réel.
-        const { data: series } = await supabase
+        // 5. Serie_tracking : toutes les séries avec poids ET reps renseignés
+        // On n'utilise ni is_done ni valide car ces colonnes peuvent être null ou false
+        // sur les anciennes séances. On se base uniquement sur la présence des données.
+        const { data: series, error: seriesError } = await supabase
           .from('serie_tracking')
           .select('exercice_id, semaine, serie, poids, reps_reelles, valide, is_done')
           .in('exercice_id', exIds)
-          .eq('is_done', true)
           .not('poids', 'is', null)
           .not('reps_reelles', 'is', null)
           .gt('poids', 0)
+
+        console.log('[Progression] exercices:', exercices?.length, '| exIds:', exIds?.length, '| series brutes:', series?.length, seriesError)
 
         // 6. Charges / RPE par exercice et semaine
         const { data: charges } = await supabase
