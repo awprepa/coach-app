@@ -344,7 +344,10 @@ export default function FicheClient() {
           {/* Profil */}
           <div style={styles.profileCard}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
-              <div style={{ ...styles.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+              {client.avatar_url
+                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatar, objectFit: 'cover' }} />
+                : <div style={{ ...styles.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+              }
               <div>
                 <h1 style={styles.clientName}>{client.prenom} {client.nom}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

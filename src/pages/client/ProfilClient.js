@@ -328,10 +328,9 @@ export default function ProfilClient() {
                 background: sexe === s ? 'var(--chip-bg)' : '#f3f4f6',
                 color: sexe === s ? 'var(--chip-text)' : '#6b7280',
                 fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                lineHeight: 1,
               }}>
-                <span style={{ fontSize: '1rem', display: 'inline-block', transform: 'translateY(2px)' }}>{s === 'homme' ? '♂' : '♀'}</span>
-                <span style={{ lineHeight: 1 }}>{s === 'homme' ? 'Homme' : 'Femme'}</span>
+                {s === 'homme' ? '♂ Homme' : '♀ Femme'}
               </button>
             ))}
           </div>

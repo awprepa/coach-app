@@ -463,7 +463,10 @@ export default function Dashboard() {
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   {/* Nom */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
+                    {c.avatar_url
+                      ? <img src={c.avatar_url} alt={c.prenom} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
+                    }
                     <span style={{ fontWeight: '600', fontSize: '0.88rem', color: '#333333' }}>{c.prenom} {c.nom}</span>
                   </div>
                   {/* Wellness moy */}
@@ -761,7 +764,10 @@ export default function Dashboard() {
                 style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <div style={{ position: 'relative' }}>
-                    <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+                    {client.avatar_url
+                      ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
+                      : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+                    }
                     {cat && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 11, height: 11, borderRadius: '50%', background: cat.couleur, border: '2px solid white' }} />}
                   </div>
                   <div>

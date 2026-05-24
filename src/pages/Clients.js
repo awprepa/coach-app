@@ -342,7 +342,10 @@ export default function Clients() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <div style={{ position: 'relative' }}>
-                    <div style={{ ...styles.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+                    {client.avatar_url
+                      ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatar, objectFit: 'cover' }} />
+                      : <div style={{ ...styles.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+                    }
                     {cat && (
                       <span style={{ position: 'absolute', bottom: -1, right: -1, width: 11, height: 11, borderRadius: '50%', background: cat.couleur, border: '2px solid white' }} />
                     )}

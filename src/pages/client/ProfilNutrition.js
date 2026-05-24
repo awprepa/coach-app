@@ -282,12 +282,8 @@ export default function ProfilNutrition() {
                       borderColor: sexe === s.key ? '#1a1a1a' : '#e5e7eb',
                       background:  sexe === s.key ? '#1a1a1a' : '#f9fafb',
                       color:       sexe === s.key ? 'var(--accent)' : '#374151',
-                      fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                    }}>
-                      <span style={{ display: 'inline-block', transform: 'translateY(2px)' }}>{s.symbol}</span>
-                      <span style={{ lineHeight: 1 }}>{s.label}</span>
-                    </button>
+                      fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', lineHeight: 1,
+                    }}>{s.symbol} {s.label}</button>
                   ))}
                 </div>
               </div>
