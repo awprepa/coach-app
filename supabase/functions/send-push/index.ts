@@ -16,6 +16,15 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // ── Vérification service role — seul Supabase peut appeler cette fonction ─
+  // Les webhooks DB Supabase envoient le service role key en Authorization
+  const authHeader = req.headers.get("Authorization") ?? ""
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  if (!serviceRoleKey || authHeader !== `Bearer ${serviceRoleKey}`) {
+    console.error("[send-push] ✗ Appel non autorisé (header Authorization invalide)")
+    return new Response("Forbidden", { status: 403, headers: corsHeaders })
+  }
+
   console.error("[send-push] ► invoquée, method:", req.method);
   try {
     const body = await req.json();

@@ -189,6 +189,20 @@ async function enrichItems(items: any[]): Promise<any[]> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
+  // ── Vérification JWT — rejette les appels non authentifiés ───────────────
+  const authHeader = req.headers.get("Authorization")
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ ok: false, error: "Non authentifié" }), { status: 401, headers: JSON_CT })
+  }
+  {
+    const { createClient } = await import("npm:@supabase/supabase-js@2")
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const { data: { user: _u } } = await _sb.auth.getUser()
+    if (!_u) return new Response(JSON.stringify({ ok: false, error: "Non authentifié" }), { status: 401, headers: JSON_CT })
+  }
+
   try {
     const GROQ_KEY   = Deno.env.get("GROQ_API_KEY");
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");

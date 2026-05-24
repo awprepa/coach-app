@@ -15,6 +15,20 @@ const JSON_CT = { ...CORS, "Content-Type": "application/json" };
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
+  // ── Vérification JWT — rejette les appels non authentifiés ───────────────
+  const authHeader = req.headers.get("Authorization")
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ ok: false, error: "Non authentifié" }), { status: 401, headers: JSON_CT })
+  }
+  {
+    const { createClient } = await import("npm:@supabase/supabase-js@2")
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const { data: { user: _u } } = await _sb.auth.getUser()
+    if (!_u) return new Response(JSON.stringify({ ok: false, error: "Non authentifié" }), { status: 401, headers: JSON_CT })
+  }
+
   try {
     const GROQ_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_KEY) {
@@ -25,9 +39,9 @@ Deno.serve(async (req) => {
     }
 
     const { audio_base64, mime_type = "audio/webm" } = await req.json();
-    if (!audio_base64) {
+    if (!audio_base64 || audio_base64.length > 5_000_000) {
       return new Response(
-        JSON.stringify({ ok: false, error: "audio_base64 manquant" }),
+        JSON.stringify({ ok: false, error: !audio_base64 ? "audio_base64 manquant" : "Audio trop volumineux (max ~3.7 Mo)" }),
         { headers: JSON_CT }
       );
     }
