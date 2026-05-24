@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
@@ -10,30 +11,53 @@ import {
 
 // ─── Formules 1RM ────────────────────────────────────────────────────────────
 
+/** Détecte si un exercice est unilatéral (un seul membre à la fois).
+ *  Pour ces exercices, le 1RM bilatéral n'est pas comparable → pas d'estimation. */
+function isUnilateral(nom) {
+  const n = (nom || '').toLowerCase()
+  return (
+    n.includes('unilatéral') || n.includes('unilateral') || n.includes('uni ') ||
+    n.includes('1 jambe') || n.includes('une jambe') || n.includes('un bras') ||
+    n.includes('1 bras') || n.includes('single') || n.includes('alternée') ||
+    n.includes('alterné') || n.includes('bulgare') || n.includes('bulgarian') ||
+    n.includes('split squat') || n.includes('pistol') || n.includes('single leg') ||
+    n.includes('sl ') || // "SL RDL", "SL hip thrust"…
+    // Fentes/lunges = unilatéral par nature
+    n.includes('fente') || n.includes('lunge')
+  )
+}
+
 /** Détermine la formule 1RM selon le nom de l'exercice.
- *  Retourne null si pas d'estimation pertinente (ex. isolation machine). */
+ *  Retourne null si pas d'estimation pertinente :
+ *  - exercice isolation / monoarticulaire
+ *  - exercice unilatéral (charge non comparable au bilan bilatéral) */
 function getFormulaConfig(nom) {
+  // Unilatéral → jamais d'estimation 1RM (charge non comparable)
+  if (isUnilateral(nom)) return null
+
   const n = (nom || '').toLowerCase()
 
   // Soulevé de terre / Deadlift — correction +6% (biais mécanique documenté)
   if (
-    n.includes('soulevé') || n.includes('deadlift') || n.includes('sdt') ||
-    n.includes('roumain') || n.includes('sumo') || n.includes('jefferson')
+    n.includes('soulevé') || n.includes('souleve') ||
+    n.includes('deadlift') || n.includes('sdt') ||
+    n.includes('roumain') || n.includes('sumo') || n.includes('jefferson') ||
+    n.includes('rdl') || n.includes('good morning')
   )
     return { formula: 'weight_dependent', correction: 0.06, label: 'SportRxiv 2024 +6%' }
 
   // Développé couché / Bench → Lombardi 1989 (meilleur pour bench)
   if (
-    n.includes('couché') || n.includes('bench') ||
-    n.includes('incliné') || n.includes('décliné')
+    n.includes('couché') || n.includes('couche') ||
+    n.includes('bench') || n.includes('décliné') || n.includes('decline')
   )
     return { formula: 'lombardi', correction: 0, label: 'Lombardi 1989' }
 
-  // Squat et variantes
-  if (n.includes('squat') && !n.includes('face pull'))
+  // Squat et variantes bilatérales
+  if (n.includes('squat') || n.includes('hack squat') || n.includes('goblet'))
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 
-  // Développé militaire / OHP
+  // Développé militaire / OHP bilatéral
   if (
     n.includes('militaire') || n.includes('overhead') || n.includes('ohp') ||
     n.includes('push press') || n.includes('push jerk')
@@ -43,29 +67,36 @@ function getFormulaConfig(nom) {
   // Haltérophilie
   if (
     n.includes('arraché') || n.includes('snatch') ||
-    n.includes('épaulé') || n.includes('clean') || n.includes('jerk')
+    n.includes('épaulé') || n.includes('epaule') ||
+    n.includes('clean') || n.includes('jerk')
   )
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 
-  // Hip thrust / Pont fessier
+  // Hip thrust / Pont fessier bilatéral
   if (
-    n.includes('hip thrust') || n.includes('pont fessier') ||
-    n.includes('hip extension')
+    n.includes('hip thrust') || n.includes('pont fessier') || n.includes('hip extension')
   )
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 
-  // Leg press / Presse jambes
+  // Leg press / Presse jambes (bilatérale)
   if (n.includes('leg press') || (n.includes('presse') && n.includes('jambe')))
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 
-  // Tractions lestées uniquement
+  // Tractions lestées uniquement (bodyweight non lestées → non pertinent)
   if (
-    (n.includes('traction') || n.includes('pull-up') || n.includes('chin')) &&
-    n.includes('lest')
+    (n.includes('traction') || n.includes('pull-up') || n.includes('pull up') || n.includes('chin')) &&
+    (n.includes('lest') || n.includes('charg'))
   )
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 
-  // Autres exercices (isolation, câbles, etc.) — pas d'estimation 1RM
+  // Tirage vertical / horizontal bilatéral — formule valide
+  if (
+    (n.includes('tirage') || n.includes('rowing') || n.includes('row')) &&
+    !n.includes('unilatéral') && !n.includes('unilateral')
+  )
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Isolation, câbles, machines monoarticulaires → pas d'estimation
   return null
 }
 
@@ -254,10 +285,9 @@ export default function ProgressionClient() {
 
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState(null)
-  // Données brutes
-  const [exercicesData, setExercicesData] = useState({}) // { nomEx: { config, points: [{date, rm, poids}], sets: [...] } }
-  // Exercice sélectionné
+  const [exercicesData, setExercicesData] = useState({})
   const [selected, setSelected]     = useState(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   // ── Chargement des données ────────────────────────────────────────────────
 
@@ -553,38 +583,16 @@ export default function ProgressionClient() {
         <p style={S.headerSub}>Évolution de tes performances</p>
       </div>
 
-      {/* ── Chips groupées par groupe musculaire ──────────────────────────── */}
-      <div style={S.chipsWrapper}>
-        {(() => {
-          const LABELS = {
-            jambes:    'Jambes',
-            dos:       'Dos',
-            pectoraux: 'Pectoraux',
-            epaules:   'Épaules',
-            bras:      'Bras',
-            autres:    'Autres',
-          }
-          let lastGroupe = null
-          return exNames.map(nom => {
-            const groupe = getGroupeMusculaire(nom)
-            const showLabel = groupe !== lastGroupe
-            lastGroupe = groupe
-            return (
-              <div key={nom} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                {showLabel && (
-                  <span style={S.groupLabel}>{LABELS[groupe]}</span>
-                )}
-                <button
-                  onClick={() => setSelected(nom)}
-                  style={{ ...S.chip, ...(selected === nom ? S.chipActive : S.chipInactive) }}
-                >
-                  {nom}
-                </button>
-              </div>
-            )
-          })
-        })()}
-      </div>
+      {/* ── Sélecteur d'exercice ───────────────────────────────────────────── */}
+      <ExercicePicker
+        exNames={exNames}
+        exercicesData={exercicesData}
+        selected={selected}
+        open={pickerOpen}
+        onOpen={() => setPickerOpen(true)}
+        onClose={() => setPickerOpen(false)}
+        onSelect={nom => { setSelected(nom); setPickerOpen(false) }}
+      />
 
       {/* ── Métriques ──────────────────────────────────────────────────────── */}
       {metrics && (
@@ -729,6 +737,147 @@ export default function ProgressionClient() {
       <div style={{ height: 100 }} />
       <ClientBottomNav />
     </div>
+  )
+}
+
+// ─── Composant ExercicePicker ────────────────────────────────────────────────
+
+const GROUPE_LABELS = {
+  jambes:    'Jambes',
+  dos:       'Dos',
+  pectoraux: 'Pectoraux',
+  epaules:   'Épaules',
+  bras:      'Bras',
+  autres:    'Autres',
+}
+
+function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClose, onSelect }) {
+  const groupe = selected ? getGroupeMusculaire(selected) : null
+  const groupeLabel = groupe ? GROUPE_LABELS[groupe] : null
+  const hasFormula = selected && exercicesData[selected]?.config
+
+  // Regrouper les exercices
+  const groups = {}
+  exNames.forEach(nom => {
+    const g = getGroupeMusculaire(nom)
+    if (!groups[g]) groups[g] = []
+    groups[g].push(nom)
+  })
+
+  return (
+    <>
+      {/* Bouton déclencheur */}
+      <button onClick={onOpen} style={{
+        margin: '10px 16px 4px',
+        width: 'calc(100% - 32px)',
+        background: 'white',
+        border: '1.5px solid #e5e7eb',
+        borderRadius: 14,
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        cursor: 'pointer',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          {groupeLabel && (
+            <span style={{
+              fontSize: '0.62rem', fontWeight: 800, color: 'var(--chip-text)',
+              background: 'var(--chip-bg)', borderRadius: 6,
+              padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}>{groupeLabel}</span>
+          )}
+          <span style={{
+            fontSize: '0.88rem', fontWeight: 700, color: '#1a1a1a',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {selected || 'Choisir un exercice'}
+          </span>
+          {hasFormula && (
+            <span style={{
+              fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af',
+              flexShrink: 0,
+            }}>1RM</span>
+          )}
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {/* Bottom sheet */}
+      {open && createPortal(
+        <>
+          <div onClick={onClose} style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.35)',
+          }} />
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
+            background: 'white',
+            borderRadius: '20px 20px 0 0',
+            maxHeight: '72vh',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          }}>
+            {/* Handle + titre */}
+            <div style={{ padding: '12px 20px 8px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 10px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>
+                  Choisir un exercice
+                </span>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.1rem', cursor: 'pointer', padding: 4 }}>✕</button>
+              </div>
+            </div>
+
+            {/* Liste groupée scrollable */}
+            <div style={{ overflowY: 'auto', padding: '8px 0 32px', WebkitOverflowScrolling: 'touch' }}>
+              {GROUPE_ORDER.filter(g => groups[g]?.length).map(g => (
+                <div key={g}>
+                  {/* Label groupe */}
+                  <div style={{
+                    padding: '10px 20px 4px',
+                    fontSize: '0.65rem', fontWeight: 800,
+                    color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em',
+                  }}>
+                    {GROUPE_LABELS[g]}
+                  </div>
+                  {/* Exercices du groupe */}
+                  {groups[g].map(nom => {
+                    const isSelected = nom === selected
+                    const hasF = exercicesData[nom]?.config
+                    return (
+                      <button key={nom} onClick={() => onSelect(nom)} style={{
+                        width: '100%', display: 'flex', alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '11px 20px',
+                        background: isSelected ? 'rgba(228,248,22,0.1)' : 'none',
+                        border: 'none', cursor: 'pointer', textAlign: 'left',
+                        borderLeft: isSelected ? '3px solid var(--accent-stripe)' : '3px solid transparent',
+                      }}>
+                        <span style={{
+                          fontSize: '0.875rem', fontWeight: isSelected ? 700 : 500,
+                          color: isSelected ? '#1a1a1a' : '#374151',
+                        }}>{nom}</span>
+                        {hasF
+                          ? <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--accent-fg)', background: '#f0fdf4', borderRadius: 5, padding: '1px 6px' }}>1RM</span>
+                          : <span style={{ fontSize: '0.62rem', color: '#d1d5db' }}>poids</span>
+                        }
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   )
 }
 
