@@ -200,7 +200,7 @@ export default function ProfilClient() {
           display: 'flex', flexDirection: 'column',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}>
-          {/* Barre haute */}
+          {/* Top bar */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '16px 20px',
@@ -209,30 +209,31 @@ export default function ProfilClient() {
           }}>
             <button
               onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined) }}
-              style={{ color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
             >
               Annuler
             </button>
-            <span style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>Recadrer la photo</span>
+            <span style={{ color: 'white', fontWeight: 700, fontSize: '0.92rem' }}>Photo de profil</span>
             <button
               onClick={handleCropConfirm}
               disabled={!completedCrop || cropping}
               style={{
-                background: completedCrop && !cropping ? '#e4f816' : 'rgba(255,255,255,0.2)',
-                color: '#111', border: 'none', borderRadius: 10,
-                padding: '8px 16px', fontWeight: 800, fontSize: '0.88rem',
+                background: completedCrop && !cropping ? '#e4f816' : 'rgba(255,255,255,0.15)',
+                color: completedCrop && !cropping ? '#000' : 'rgba(255,255,255,0.4)',
+                border: 'none', borderRadius: 99,
+                padding: '8px 20px', fontWeight: 800, fontSize: '0.85rem',
                 cursor: completedCrop && !cropping ? 'pointer' : 'default',
-                transition: 'background 0.2s',
+                transition: 'all 0.2s',
               }}
             >
-              {cropping ? '…' : 'Confirmer'}
+              {cropping ? '…' : 'Valider'}
             </button>
           </div>
 
           {/* Zone de recadrage */}
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', padding: '0 0 8px',
+            overflow: 'hidden',
           }}>
             <ReactCrop
               crop={crop}
@@ -240,27 +241,28 @@ export default function ProfilClient() {
               onComplete={(c) => setCompletedCrop(c)}
               aspect={1}
               circularCrop
-              style={{ maxHeight: '68vh', maxWidth: '100%' }}
+              style={{ maxHeight: '65vh', maxWidth: '100%' }}
             >
               <img
                 ref={imgRef}
                 src={cropSrc}
                 alt="Recadrage"
                 onLoad={onImageLoad}
-                style={{ maxHeight: '68vh', maxWidth: '100%', display: 'block' }}
+                style={{ maxHeight: '65vh', maxWidth: '100%', display: 'block' }}
               />
             </ReactCrop>
           </div>
 
-          {/* Hint */}
-          <p style={{
-            color: 'rgba(255,255,255,0.35)', textAlign: 'center',
-            fontSize: '0.72rem', padding: '8px 20px',
-            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-            flexShrink: 0, margin: 0,
+          {/* Bas : hint */}
+          <div style={{
+            padding: '16px 24px',
+            paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
+            flexShrink: 0, textAlign: 'center',
           }}>
-            Glisse pour repositionner · Pincer pour zoomer
-          </p>
+            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', margin: '0 0 16px', lineHeight: 1.5 }}>
+              Glisse pour repositionner · Pince pour zoomer
+            </p>
+          </div>
         </div>
       )}
 
