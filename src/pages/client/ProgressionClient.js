@@ -108,6 +108,82 @@ function applyRpeCorrection(rm, rpe) {
   return Math.round(rm * corr * 2) / 2
 }
 
+// ─── Groupe musculaire (pour le tri des chips) ────────────────────────────────
+
+const GROUPE_ORDER = ['jambes', 'dos', 'pectoraux', 'epaules', 'bras', 'autres']
+
+function getGroupeMusculaire(nom) {
+  const n = (nom || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // enlève les accents pour les comparaisons
+
+  // Jambes / Postérieur de cuisse / Fessiers
+  if (
+    n.includes('squat') || n.includes('leg press') || n.includes('presse') ||
+    n.includes('leg curl') || n.includes('leg extension') || n.includes('fente') ||
+    n.includes('hip thrust') || n.includes('pont fessier') || n.includes('hip extension') ||
+    n.includes('souleve') || n.includes('deadlift') || n.includes('sdt') ||
+    n.includes('roumain') || n.includes('sumo') || n.includes('jefferson') ||
+    n.includes('rdl') || n.includes('good morning') || n.includes('mollet') ||
+    n.includes('calf') || n.includes('ischio')
+  ) return 'jambes'
+
+  // Dos
+  if (
+    n.includes('traction') || n.includes('pull-up') || n.includes('pull up') ||
+    n.includes('chin') || n.includes('tirage') || n.includes('rowing') ||
+    n.includes('row') || n.includes('back extension') || n.includes('hyperextension') ||
+    n.includes('grande dorsale') || n.includes('lat ') || n.includes('lats') ||
+    n.includes('low row') || n.includes('seated row')
+  ) return 'dos'
+
+  // Pectoraux
+  if (
+    n.includes('bench') || n.includes('couche') || n.includes('developpe') ||
+    n.includes('pec') || n.includes('dips') || n.includes('ecarte') ||
+    n.includes('fly') || n.includes('chest') || n.includes('incline') ||
+    n.includes('decline')
+  ) return 'pectoraux'
+
+  // Épaules
+  if (
+    n.includes('militaire') || n.includes('overhead') || n.includes('ohp') ||
+    n.includes('push press') || n.includes('push jerk') || n.includes('elevation') ||
+    n.includes('lateral') || n.includes('epaule') || n.includes('shoulder') ||
+    n.includes('upright') || n.includes('oiseau') || n.includes('face pull') ||
+    n.includes('arriere') || n.includes('rear delt')
+  ) return 'epaules'
+
+  // Bras
+  if (
+    n.includes('curl') || n.includes('tricep') || n.includes('bicep') ||
+    n.includes('extension bras') || n.includes('marteau') || n.includes('preacher') ||
+    n.includes('dip') || n.includes('skull') || n.includes('barre front') ||
+    n.includes('kickback') || n.includes('close grip')
+  ) return 'bras'
+
+  return 'autres'
+}
+
+/** Tri principal des exercices :
+ *  1. Groupe musculaire (Jambes → Dos → Pectoraux → Épaules → Bras → Autres)
+ *  2. Dans chaque groupe : polyarticulaires avec formule 1RM en premier
+ *  3. Alphabétique à égalité */
+function sortExercices(exNames, exercicesData) {
+  return [...exNames].sort((a, b) => {
+    const ga = GROUPE_ORDER.indexOf(getGroupeMusculaire(a))
+    const gb = GROUPE_ORDER.indexOf(getGroupeMusculaire(b))
+    if (ga !== gb) return ga - gb
+
+    // Dans le même groupe : polyarticulaire (formule 1RM) en premier
+    const fa = exercicesData[a]?.config ? 0 : 1
+    const fb = exercicesData[b]?.config ? 0 : 1
+    if (fa !== fb) return fa - fb
+
+    // Alphabétique
+    return a.localeCompare(b, 'fr')
+  })
+}
+
 // ─── Formatage dates ──────────────────────────────────────────────────────────
 
 function formatDateShort(dateStr) {
@@ -432,7 +508,7 @@ export default function ProgressionClient() {
     </div>
   )
 
-  const exNames = Object.keys(exercicesData)
+  const exNames = sortExercices(Object.keys(exercicesData), exercicesData)
 
   if (!exNames.length) return (
     <div style={{ ...S.page, ...fadeStyle }}>
@@ -477,20 +553,37 @@ export default function ProgressionClient() {
         <p style={S.headerSub}>Évolution de tes performances</p>
       </div>
 
-      {/* ── Chips de sélection d'exercice ──────────────────────────────────── */}
+      {/* ── Chips groupées par groupe musculaire ──────────────────────────── */}
       <div style={S.chipsWrapper}>
-        {exNames.map(nom => (
-          <button
-            key={nom}
-            onClick={() => setSelected(nom)}
-            style={{
-              ...S.chip,
-              ...(selected === nom ? S.chipActive : S.chipInactive),
-            }}
-          >
-            {nom}
-          </button>
-        ))}
+        {(() => {
+          const LABELS = {
+            jambes:    'Jambes',
+            dos:       'Dos',
+            pectoraux: 'Pectoraux',
+            epaules:   'Épaules',
+            bras:      'Bras',
+            autres:    'Autres',
+          }
+          let lastGroupe = null
+          return exNames.map(nom => {
+            const groupe = getGroupeMusculaire(nom)
+            const showLabel = groupe !== lastGroupe
+            lastGroupe = groupe
+            return (
+              <div key={nom} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                {showLabel && (
+                  <span style={S.groupLabel}>{LABELS[groupe]}</span>
+                )}
+                <button
+                  onClick={() => setSelected(nom)}
+                  style={{ ...S.chip, ...(selected === nom ? S.chipActive : S.chipInactive) }}
+                >
+                  {nom}
+                </button>
+              </div>
+            )
+          })
+        })()}
       </div>
 
       {/* ── Métriques ──────────────────────────────────────────────────────── */}
@@ -685,11 +778,21 @@ const S = {
   // Chips
   chipsWrapper: {
     display: 'flex',
-    gap: 8,
+    gap: 6,
     padding: '14px 16px',
     overflowX: 'auto',
     scrollbarWidth: 'none',
     WebkitOverflowScrolling: 'touch',
+    alignItems: 'center',
+  },
+  groupLabel: {
+    fontSize: '0.62rem',
+    fontWeight: 800,
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    whiteSpace: 'nowrap',
+    paddingLeft: 4,
   },
   chip: {
     flexShrink: 0,
