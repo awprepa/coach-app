@@ -246,6 +246,30 @@ export default function AccueilClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Temps réel — prochain événement + semaine en cours se mettent à jour instantanément
+  // quand le coach ou le client ajoute / modifie / supprime depuis n'importe où
+  useEffect(() => {
+    if (!client?.id) return
+    const today = new Date().toISOString().slice(0, 10)
+    const { start, end } = getWeekBounds()
+    const channel = supabase
+      .channel(`accueil-events-${client.id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'evenements',
+        filter: `client_id=eq.${client.id}`,
+      }, () => {
+        // On re-fetch les deux listes à chaque changement
+        supabase.from('evenements').select('*').eq('client_id', client.id)
+          .gte('date', today).order('date', { ascending: true }).limit(1)
+          .then(({ data }) => setProchaineSeance(data?.[0] || null))
+        supabase.from('evenements').select('*').eq('client_id', client.id)
+          .gte('date', start).lte('date', end).order('date', { ascending: true })
+          .then(({ data }) => setWeekEvents(data || []))
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [client?.id])
+
   async function fetchClientData() {
     try {
       const { data } = await supabase.auth.getSession()

@@ -245,15 +245,17 @@ export default function ProgressionClient() {
         // 5. Serie_tracking : toutes les séries avec poids ET reps renseignés
         // On n'utilise ni is_done ni valide car ces colonnes peuvent être null ou false
         // sur les anciennes séances. On se base uniquement sur la présence des données.
+        // Note : poids est une colonne TEXT — on ne filtre pas avec .gt() car PostgreSQL
+        // tenterait de caster en numeric et planterait sur "102,5" (virgule fr).
+        // Le filtrage numérique se fait en JS après parsing.
         const { data: series, error: seriesError } = await supabase
           .from('serie_tracking')
           .select('exercice_id, semaine, serie, poids, reps_reelles, valide, is_done')
           .in('exercice_id', exIds)
           .not('poids', 'is', null)
           .not('reps_reelles', 'is', null)
-          .gt('poids', 0)
 
-        console.log('[Progression] exercices:', exercices?.length, '| exIds:', exIds?.length, '| series brutes:', series?.length, seriesError)
+        if (seriesError) console.error('[Progression] series error:', seriesError)
 
         // 6. Charges / RPE par exercice et semaine
         const { data: charges } = await supabase
@@ -277,10 +279,11 @@ export default function ProgressionClient() {
           const ex = exMap[s.exercice_id]
           if (!ex) return
 
-          // Convertir et valider poids + reps (reps_reelles peut être stocké en string)
-          const poids = parseFloat(s.poids)
+          // Convertir et valider poids + reps
+          // poids est TEXT et peut contenir une virgule fr (ex: "102,5") → remplacer par "."
+          const poids = parseFloat(String(s.poids).replace(',', '.'))
           const reps  = parseInt(s.reps_reelles)
-          if (!poids || !reps || poids <= 0 || reps <= 0 || reps > 20) return
+          if (isNaN(poids) || isNaN(reps) || poids <= 0 || reps <= 0 || reps > 20) return
           // Remplacer s.poids et s.reps_reelles par les valeurs numériques propres
           s = { ...s, poids, reps_reelles: reps }
 

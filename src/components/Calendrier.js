@@ -206,6 +206,30 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchEvenements() }, [clientId])
 
+  // Temps réel — mise à jour instantanée quand le coach ou le client
+  // ajoute / modifie / supprime un événement depuis n'importe quel device
+  useEffect(() => {
+    if (!clientId) return
+    const channel = supabase
+      .channel(`calendrier-${clientId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'evenements',
+        filter: `client_id=eq.${clientId}`,
+      }, payload => {
+        if (payload.eventType === 'INSERT') {
+          setEvenements(prev =>
+            prev.find(e => e.id === payload.new.id) ? prev : [...prev, payload.new]
+          )
+        } else if (payload.eventType === 'DELETE') {
+          setEvenements(prev => prev.filter(e => e.id !== payload.old.id))
+        } else if (payload.eventType === 'UPDATE') {
+          setEvenements(prev => prev.map(e => e.id === payload.new.id ? payload.new : e))
+        }
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [clientId])
+
   async function fetchEvenements() {
     const { data } = await supabase.from('evenements').select('*').eq('client_id', clientId).order('date', { ascending: true })
     setEvenements(data || [])
