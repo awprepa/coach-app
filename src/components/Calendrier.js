@@ -416,9 +416,6 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                       <div style={{ minWidth: 0 }}>
                         <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>{ev.titre}</span>
                         <span style={{ fontSize: '0.7rem', opacity: 0.65, marginLeft: '0.4rem' }}>{EVENT_TYPES.find(t => t.value === ev.type)?.label}</span>
-                        {ev.source === 'client' && (
-                          <span style={{ fontSize: '0.62rem', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 4, padding: '1px 5px', marginLeft: '0.4rem', fontWeight: '700', verticalAlign: 'middle' }}>👤 client</span>
-                        )}
                       </div>
                       <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
                         {ev.type === 'seance' && ev.seance_id && onViewSeance && (
