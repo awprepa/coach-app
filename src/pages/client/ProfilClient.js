@@ -330,7 +330,7 @@ export default function ProfilClient() {
                 fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
                 lineHeight: 1,
               }}>
-                {s === 'homme' ? '♂ Homme' : '♀ Femme'}
+                {s === 'homme' ? '♂︎ Homme' : '♀︎ Femme'}
               </button>
             ))}
           </div>
