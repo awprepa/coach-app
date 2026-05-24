@@ -231,11 +231,12 @@ export default function ProgressionClient() {
         // Map seance_id → programme_id
         const seanceProg = Object.fromEntries(seances.map(s => [s.id, s.programme_id]))
 
-        // 4. Exercices avec catégorie biblio
-        const { data: exercices } = await supabase
+        // 4. Exercices
+        const { data: exercices, error: exercicesError } = await supabase
           .from('exercices')
-          .select('id, nom, seance_id, bibliotheque_exercices(categorie, muscles_primaires)')
+          .select('id, nom, seance_id')
           .in('seance_id', seanceIds)
+        if (exercicesError) console.error('[Progression] exercices error:', exercicesError)
         if (!exercices?.length) { setLoading(false); return }
 
         const exIds = exercices.map(e => e.id)

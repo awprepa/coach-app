@@ -64,12 +64,13 @@ export default function ProgrammeClient() {
     })
     setSeancesRenseignees(renseignees)
 
-    // Séances libres ajoutées par le client
+    // Séances libres ajoutées par le client (source='client_ponctuelle' uniquement,
+    // pour ne pas afficher les simples événements calendrier)
     const { data: libres } = await supabase
       .from('evenements')
       .select('*')
       .eq('client_id', prog.client_id)
-      .eq('source', 'client')
+      .eq('source', 'client_ponctuelle')
       .order('date', { ascending: false })
       .limit(30)
     setSeancesLibres(libres || [])
@@ -86,7 +87,7 @@ export default function ProgrammeClient() {
       type: 'seance',
       titre: formTitre.trim(),
       description: formNotes.trim() || null,
-      source: 'client',
+      source: 'client_ponctuelle',
     }]).select().single()
     if (!error && data) {
       setSeancesLibres(prev => [data, ...prev])

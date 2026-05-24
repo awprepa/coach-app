@@ -27,18 +27,15 @@ function IconProgramme({ active }) {
 
 function IconNutrition({ active }) {
   const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
-  const fill = active ? 'var(--accent-stripe)' : 'none'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {/* Fourchette à 3 dents */}
-      <path d="M6 2v6" />
-      <path d="M9 2v6" />
-      <path d="M12 2v6" />
-      <path d="M9 8v14" />
-      <path d="M6 2v6a3 3 0 0 0 6 0V2" fill={fill} />
-      {/* Cuillère */}
-      <path d="M17 22v-7" />
-      <ellipse cx="17" cy="6" rx="3" ry="5" fill={fill} />
+      {/* Bol */}
+      <path d="M4 11h16" />
+      <path d="M5 11c0 5 2 8 7 8s7-3 7-8" />
+      {/* Vapeur */}
+      <path d="M9 7 Q10 5 9 3" />
+      <path d="M12 7 Q13 5 12 3" />
+      <path d="M15 7 Q16 5 15 3" />
     </svg>
   )
 }
