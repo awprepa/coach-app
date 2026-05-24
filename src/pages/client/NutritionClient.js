@@ -403,7 +403,7 @@ export default function NutritionClient() {
             <div style={{ marginBottom: 14 }}>
               <div style={{ height: 6, background: 'rgba(255,255,255,0.18)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
                 <div style={{
-                  height: '100%', borderRadius: 999, background: 'var(--chip-bg)',
+                  height: '100%', borderRadius: 999, background: '#e4f816',
                   width: `${Math.min(totals.kcal / (goals.kcal_target || 1) * 100, 100)}%`,
                   transition: 'width 0.5s ease',
                 }} />

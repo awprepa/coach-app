@@ -152,7 +152,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset }) {
         marginTop: '0.75rem', background: '#1a1a1a', borderRadius: 12,
         padding: '0.65rem 0.9rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
       }}>
-        <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--accent-fg)', flexShrink: 0 }}>
+        <span style={{ fontSize: '1rem', fontWeight: 900, color: '#e4f816', flexShrink: 0 }}>
           {Math.round(totalKcal)} kcal
         </span>
         <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
