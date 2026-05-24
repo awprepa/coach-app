@@ -217,6 +217,7 @@ export default function AccueilClient() {
   const fadeStyle = usePageFade()
   const { permission, subscribed, requestAndSubscribe } = usePush()
   const [client, setClient]               = useState(null)
+  const [avatarUrl, setAvatarUrl]         = useState(null)
   const [programmes, setProgrammes]       = useState([])
   const [seances, setSeances]             = useState([])
   const [prochaineSeance, setProchaineSeance] = useState(null)
@@ -268,6 +269,7 @@ export default function AccueilClient() {
 
       if (!clientData) return
       setClient(clientData)
+      if (clientData.avatar_url) setAvatarUrl(clientData.avatar_url)
       setUserId(user.id)
 
       // Vérifier acceptation du contrat
@@ -403,10 +405,14 @@ export default function AccueilClient() {
               }}>{unread > 9 ? '9+' : unread}</span>
             )}
           </button>
-          <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>{initiales}</div>
+          <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : initiales}
+          </div>
         </div>
       </div>
-      {showProfileMenu && <ClientProfileMenu client={client} onClose={() => setShowProfileMenu(false)} />}
+      {showProfileMenu && <ClientProfileMenu client={client} avatarUrl={avatarUrl} onClose={() => setShowProfileMenu(false)} />}
 
       <div style={styles.content}>
         <div style={{ marginBottom: '1.75rem' }}>
@@ -521,7 +527,7 @@ export default function AccueilClient() {
               programmeDebut={programmes[0]?.date_debut || client.date_debut}
               programmeSemaines={programmes[0]?.semaines || 8}
               seances={seances}
-              onViewSeance={id => navigate(`/client/seance/${id}`)}
+              onViewSeance={(id, semaine) => navigate(`/client/seance/${id}${semaine ? `?semaine=${semaine}` : ''}`)}
             />
           </div>
         </div>

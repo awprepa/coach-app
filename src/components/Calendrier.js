@@ -399,7 +399,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                       <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
                         {ev.type === 'seance' && ev.seance_id && onViewSeance && (
                           <button
-                            onClick={() => onViewSeance(ev.seance_id)}
+                            onClick={() => onViewSeance(ev.seance_id, getCycleWeek(selectedDay, programmeDebut, programmeSemaines))}
                             style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', color: ts.text, whiteSpace: 'nowrap' }}
                           >
                             Voir →

@@ -7,7 +7,7 @@ const OFFRES = {
   coaching:            'Coaching',
 }
 
-export default function ClientProfileMenu({ client, onClose }) {
+export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
   const navigate = useNavigate()
 
   async function handleLogout() {
@@ -22,13 +22,11 @@ export default function ClientProfileMenu({ client, onClose }) {
 
   return (
     <>
-      {/* Backdrop */}
       <div onClick={onClose} style={{
         position: 'fixed', inset: 0, zIndex: 150,
         background: 'rgba(0,0,0,0.25)',
       }} />
 
-      {/* Menu */}
       <div style={{
         position: 'fixed', top: 60, right: 14, zIndex: 160,
         width: 250, background: 'white', borderRadius: 18,
@@ -37,15 +35,23 @@ export default function ClientProfileMenu({ client, onClose }) {
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}>
 
-        {/* Profil header */}
+        {/* Header */}
         <div style={{ padding: '1.1rem 1.1rem 0.85rem', borderBottom: '1px solid #f3f4f6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: '50%',
-              background: '#333333', color: 'var(--accent)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: '800', fontSize: '0.95rem', flexShrink: 0,
-            }}>{initiales}</div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" style={{
+                width: 42, height: 42, borderRadius: '50%',
+                objectFit: 'cover', flexShrink: 0,
+                border: '2px solid var(--accent-stripe)',
+              }} />
+            ) : (
+              <div style={{
+                width: 42, height: 42, borderRadius: '50%',
+                background: '#333333', color: 'var(--accent)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: '800', fontSize: '0.95rem', flexShrink: 0,
+              }}>{initiales}</div>
+            )}
             <div>
               <p style={{ margin: 0, fontWeight: '800', fontSize: '0.9rem', color: '#1a1a1a' }}>
                 {client?.prenom} {client?.nom}
@@ -66,30 +72,14 @@ export default function ClientProfileMenu({ client, onClose }) {
 
         {/* Items */}
         <div style={{ padding: '0.4rem 0' }}>
-          <MenuItem
-            icon={<IconWellness />}
-            label="Mon wellness"
-            onClick={() => go('/client/wellness')}
-          />
-          <MenuItem
-            icon={<IconTests />}
-            label="Mes tests"
-            onClick={() => go('/client/tests')}
-          />
-          <MenuItem
-            icon={<IconSciences />}
-            label="Base scientifique"
-            onClick={() => go('/client/sciences')}
-          />
+          <MenuItem icon={<IconProfil />} label="Mon profil" onClick={() => go('/client/profil')} />
+          <MenuItem icon={<IconWellness />} label="Mon wellness" onClick={() => go('/client/wellness')} />
+          <MenuItem icon={<IconTests />} label="Mes tests" onClick={() => go('/client/tests')} />
+          <MenuItem icon={<IconSciences />} label="Base scientifique" onClick={() => go('/client/sciences')} />
         </div>
 
         <div style={{ borderTop: '1px solid #f3f4f6', padding: '0.4rem 0' }}>
-          <MenuItem
-            icon={<IconLogout />}
-            label="Se déconnecter"
-            onClick={handleLogout}
-            danger
-          />
+          <MenuItem icon={<IconLogout />} label="Se déconnecter" onClick={handleLogout} danger />
         </div>
       </div>
     </>
@@ -114,6 +104,14 @@ function MenuItem({ icon, label, onClick, danger }) {
   )
 }
 
+function IconProfil() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  )
+}
 function IconWellness() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -121,7 +119,6 @@ function IconWellness() {
     </svg>
   )
 }
-
 function IconTests() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -129,7 +126,6 @@ function IconTests() {
     </svg>
   )
 }
-
 function IconSciences() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -138,7 +134,6 @@ function IconSciences() {
     </svg>
   )
 }
-
 function IconLogout() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

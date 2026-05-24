@@ -1,6 +1,6 @@
 import AppLogo from '../../components/AppLogo'
 import { useEffect, useState, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { useTimer } from '../../context/TimerContext'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell as RechartsCell, LineChart, Line, Legend } from 'recharts'
@@ -46,6 +46,7 @@ const COL_LABEL = 56
 export default function SeanceClient() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [seance, setSeance] = useState(null)
   const [exercices, setExercices] = useState([])
   const [charges, setCharges] = useState({})
@@ -181,7 +182,10 @@ export default function SeanceClient() {
     const total = data.programmes.semaines
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.created_at
-    const semAct = dateDebut ? getSemaineActuelle(dateDebut, total) : 1
+    const paramSemaine = parseInt(searchParams.get('semaine'))
+    const semAct = (paramSemaine >= 1 && paramSemaine <= total)
+      ? paramSemaine
+      : (dateDebut ? getSemaineActuelle(dateDebut, total) : 1)
     if (dateDebut) setSemaineActuelle(semAct)
 
     const exData   = await fetchExercices(data.programmes.semaines, dateDebut, semAct)
