@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockups — Scanner & Recadrage</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  body { background: #0f0f0f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: white; padding: 24px 16px; }
+  h1 { font-size: 1rem; color: #9ca3af; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+  .section { margin-bottom: 48px; }
+  .label { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; font-weight: 700; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  /* Phone frame */
+  .phone { width: 320px; background: #111; border-radius: 36px; border: 2px solid #222; overflow: hidden; flex-shrink: 0; }
+  .phone-inner { padding: 0; }
+  .tag { display: inline-block; background: #e4f816; color: #000; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  .tag.b { background: #374151; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  SECTION 1 : SCANNER CODE-BARRES                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h1>Scanner code-barres · Nutrition</h1>
+  <div class="row">
+
+    <!-- DESIGN A : Fullscreen immersif -->
+    <div>
+      <div class="label">Design A — Fullscreen immersif</div>
+      <div class="phone">
+        <div style="position:relative; height:580px; background:#000; overflow:hidden;">
+
+          <!-- Vidéo simulée -->
+          <div style="position:absolute;inset:0;background:linear-gradient(160deg,#1a2a1a 0%,#0d1a0d 50%,#1a1a2a 100%);opacity:.9;"></div>
+          <!-- Grain texture -->
+          <div style="position:absolute;inset:0;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%224%22 height=%224%22><rect width=%224%22 height=%224%22 fill=%22%23000%22 opacity=%22.3%22/><circle cx=%222%22 cy=%222%22 r=%221%22 fill=%22%23fff%22 opacity=%22.03%22/></svg>');"></div>
+
+          <!-- Header -->
+          <div style="position:absolute;top:0;left:0;right:0;padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;z-index:10;">
+            <button style="background:rgba(255,255,255,.12);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1rem;cursor:pointer;backdrop-filter:blur(8px);">✕</button>
+            <span style="font-weight:800;font-size:.9rem;color:white;letter-spacing:.02em;">Scanner un produit</span>
+            <button style="background:rgba(255,255,255,.12);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1rem;cursor:pointer;backdrop-filter:blur(8px);">⚡</button>
+          </div>
+
+          <!-- Masque sombre haut -->
+          <div style="position:absolute;top:0;left:0;right:0;height:160px;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);z-index:2;"></div>
+
+          <!-- Zone de scan centrale -->
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;">
+            <div style="position:relative;width:240px;height:100px;">
+              <!-- Coins lumineux -->
+              <div style="position:absolute;top:0;left:0;width:28px;height:28px;border-top:3px solid #e4f816;border-left:3px solid #e4f816;border-radius:4px 0 0 0;box-shadow:0 0 12px #e4f81666;"></div>
+              <div style="position:absolute;top:0;right:0;width:28px;height:28px;border-top:3px solid #e4f816;border-right:3px solid #e4f816;border-radius:0 4px 0 0;box-shadow:0 0 12px #e4f81666;"></div>
+              <div style="position:absolute;bottom:0;left:0;width:28px;height:28px;border-bottom:3px solid #e4f816;border-left:3px solid #e4f816;border-radius:0 0 0 4px;box-shadow:0 0 12px #e4f81666;"></div>
+              <div style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-bottom:3px solid #e4f816;border-right:3px solid #e4f816;border-radius:0 0 4px 0;box-shadow:0 0 12px #e4f81666;"></div>
+              <!-- Ligne de scan animée -->
+              <div style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(to right,transparent,#e4f816,transparent);top:48px;box-shadow:0 0 8px #e4f816;animation:scan 2s ease-in-out infinite;"></div>
+            </div>
+          </div>
+
+          <!-- Masque sombre bas -->
+          <div style="position:absolute;bottom:0;left:0;right:0;height:200px;background:linear-gradient(to top,rgba(0,0,0,.85),transparent);z-index:2;"></div>
+
+          <!-- Bottom panel -->
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:24px 24px 32px;z-index:10;text-align:center;">
+            <p style="font-size:.78rem;color:rgba(255,255,255,.55);margin-bottom:20px;line-height:1.4;">Pointe vers le code-barres<br>sur l'emballage</p>
+            <button style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:11px 28px;border-radius:99px;font-size:.82rem;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);">✏︎ Saisie manuelle</button>
+          </div>
+        </div>
+      </div>
+      <span class="tag" style="margin-top:10px;display:inline-block;">Recommandé</span>
+    </div>
+
+    <!-- DESIGN B : Card moderne avec UI riche -->
+    <div>
+      <div class="label">Design B — Card avec actions</div>
+      <div class="phone">
+        <div style="background:#111;min-height:580px;">
+
+          <!-- Header page -->
+          <div style="padding:20px 20px 0;display:flex;align-items:center;gap:12px;">
+            <button style="background:#1e1e1e;border:none;color:#9ca3af;width:34px;height:34px;border-radius:10px;font-size:.85rem;cursor:pointer;">←</button>
+            <span style="font-weight:800;font-size:1rem;color:white;">Ajouter un aliment</span>
+          </div>
+
+          <!-- Tabs mode -->
+          <div style="display:flex;gap:6px;padding:16px 16px 0;overflow-x:auto;">
+            <button style="background:#e4f816;color:#000;border:none;padding:7px 14px;border-radius:99px;font-size:.75rem;font-weight:800;white-space:nowrap;cursor:pointer;">▦ Code-barres</button>
+            <button style="background:#1e1e1e;color:#6b7280;border:none;padding:7px 14px;border-radius:99px;font-size:.75rem;font-weight:700;white-space:nowrap;cursor:pointer;">✏︎ Manuel</button>
+            <button style="background:#1e1e1e;color:#6b7280;border:none;padding:7px 14px;border-radius:99px;font-size:.75rem;font-weight:700;white-space:nowrap;cursor:pointer;">📷 Photo IA</button>
+            <button style="background:#1e1e1e;color:#6b7280;border:none;padding:7px 14px;border-radius:99px;font-size:.75rem;font-weight:700;white-space:nowrap;cursor:pointer;">🎤 Vocal</button>
+          </div>
+
+          <!-- Scanner card -->
+          <div style="margin:14px;background:#1a1a1a;border-radius:20px;overflow:hidden;border:1px solid #2a2a2a;">
+            <!-- Caméra simulée -->
+            <div style="position:relative;height:200px;background:linear-gradient(135deg,#0d180d,#0d0d18);overflow:hidden;">
+              <!-- Zone scan -->
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                <div style="width:200px;height:80px;position:relative;">
+                  <div style="position:absolute;top:0;left:0;width:20px;height:20px;border-top:2.5px solid #e4f816;border-left:2.5px solid #e4f816;border-radius:3px 0 0 0;"></div>
+                  <div style="position:absolute;top:0;right:0;width:20px;height:20px;border-top:2.5px solid #e4f816;border-right:2.5px solid #e4f816;border-radius:0 3px 0 0;"></div>
+                  <div style="position:absolute;bottom:0;left:0;width:20px;height:20px;border-bottom:2.5px solid #e4f816;border-left:2.5px solid #e4f816;border-radius:0 0 0 3px;"></div>
+                  <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:2.5px solid #e4f816;border-right:2.5px solid #e4f816;border-radius:0 0 3px 0;"></div>
+                  <div style="position:absolute;left:4px;right:4px;top:38px;height:2px;background:linear-gradient(to right,transparent,#e4f816,transparent);box-shadow:0 0 6px #e4f816;"></div>
+                </div>
+              </div>
+              <!-- Flash button -->
+              <button style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);border:none;color:white;width:32px;height:32px;border-radius:50%;font-size:.85rem;cursor:pointer;">⚡</button>
+              <!-- Badge live -->
+              <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);backdrop-filter:blur(8px);color:rgba(255,255,255,.7);font-size:.65rem;font-weight:700;padding:4px 12px;border-radius:99px;white-space:nowrap;letter-spacing:.03em;">● EN DIRECT</div>
+            </div>
+            <!-- Info sous la caméra -->
+            <div style="padding:16px 18px;">
+              <p style="font-size:.8rem;color:#6b7280;margin-bottom:14px;text-align:center;">Place le code-barres dans le cadre jaune</p>
+              <button style="width:100%;background:#252525;border:1px solid #333;color:#9ca3af;padding:11px;border-radius:12px;font-size:.82rem;font-weight:700;cursor:pointer;">✏︎ Saisir le code manuellement</button>
+            </div>
+          </div>
+
+          <!-- Favoris rapides -->
+          <div style="padding:0 14px 14px;">
+            <p style="font-size:.68rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">⭐ Récents</p>
+            <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;">
+              <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:10px 12px;min-width:100px;flex-shrink:0;">
+                <p style="font-size:.7rem;font-weight:700;color:white;margin-bottom:2px;">Yaourt</p>
+                <p style="font-size:.65rem;color:#6b7280;">150 kcal</p>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:10px 12px;min-width:100px;flex-shrink:0;">
+                <p style="font-size:.7rem;font-weight:700;color:white;margin-bottom:2px;">Flocons avoine</p>
+                <p style="font-size:.65rem;color:#6b7280;">350 kcal</p>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:10px 12px;min-width:100px;flex-shrink:0;">
+                <p style="font-size:.7rem;font-weight:700;color:white;margin-bottom:2px;">Œuf entier</p>
+                <p style="font-size:.65rem;color:#6b7280;">78 kcal</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <span class="tag b" style="margin-top:10px;display:inline-block;">Option B</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  SECTION 2 : RECADRAGE PHOTO DE PROFIL                    -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h1>Recadrage photo de profil</h1>
+  <div class="row">
+
+    <!-- DESIGN A : Minimal élégant -->
+    <div>
+      <div class="label">Design A — Minimal / iOS style</div>
+      <div class="phone">
+        <div style="position:relative;height:620px;background:#000;display:flex;flex-direction:column;">
+
+          <!-- Top bar -->
+          <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <button style="background:none;border:none;color:rgba(255,255,255,.6);font-size:.88rem;font-weight:600;cursor:pointer;padding:0;">Annuler</button>
+            <span style="color:white;font-weight:700;font-size:.92rem;">Photo de profil</span>
+            <button style="background:#e4f816;border:none;color:#000;font-size:.82rem;font-weight:800;padding:8px 18px;border-radius:99px;cursor:pointer;">Valider</button>
+          </div>
+
+          <!-- Image + crop circle -->
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+            <!-- Image simulée -->
+            <div style="width:280px;height:340px;background:linear-gradient(135deg,#2a3a2a 0%,#1a2a3a 50%,#3a2a1a 100%);position:relative;border-radius:4px;">
+              <!-- Zone assombrie hors cercle -->
+              <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);border-radius:4px;"></div>
+              <!-- Cercle de crop -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:210px;height:210px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 9999px rgba(0,0,0,.55);overflow:hidden;">
+                <div style="width:100%;height:100%;background:linear-gradient(135deg,#2a3a2a 0%,#1a2a3a 50%,#3a2a1a 100%);"></div>
+              </div>
+              <!-- Petites poignées de redimensionnement -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:210px;height:210px;">
+                <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:32px;height:5px;background:white;border-radius:99px;opacity:.9;"></div>
+                <div style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:32px;height:5px;background:white;border-radius:99px;opacity:.9;"></div>
+                <div style="position:absolute;left:-4px;top:50%;transform:translateY(-50%);width:5px;height:32px;background:white;border-radius:99px;opacity:.9;"></div>
+                <div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:5px;height:32px;background:white;border-radius:99px;opacity:.9;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hint + actions bas -->
+          <div style="padding:16px 24px 32px;flex-shrink:0;text-align:center;">
+            <p style="color:rgba(255,255,255,.35);font-size:.7rem;margin-bottom:16px;">Glisse pour déplacer · Pince pour zoomer</p>
+            <!-- Slider zoom -->
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:.75rem;color:rgba(255,255,255,.4);">⊖</span>
+              <div style="flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:99px;position:relative;">
+                <div style="position:absolute;left:0;top:0;width:38%;height:100%;background:#e4f816;border-radius:99px;"></div>
+                <div style="position:absolute;left:38%;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4);"></div>
+              </div>
+              <span style="font-size:.75rem;color:rgba(255,255,255,.4);">⊕</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <span class="tag" style="margin-top:10px;display:inline-block;">Recommandé</span>
+    </div>
+
+    <!-- DESIGN B : Stylé avec preview -->
+    <div>
+      <div class="label">Design B — Avec aperçu & outils</div>
+      <div class="phone">
+        <div style="position:relative;height:620px;background:#0a0a0a;display:flex;flex-direction:column;">
+
+          <!-- Top bar dark -->
+          <div style="padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid #1a1a1a;padding-bottom:14px;">
+            <button style="background:#1a1a1a;border:none;color:#9ca3af;padding:8px 14px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;">✕ Annuler</button>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <!-- Mini preview -->
+              <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2a3a2a,#1a2a3a);border:2px solid #e4f816;overflow:hidden;"></div>
+              <span style="color:white;font-weight:700;font-size:.88rem;">Recadrer</span>
+            </div>
+            <button style="background:#e4f816;border:none;color:#000;padding:8px 16px;border-radius:10px;font-size:.82rem;font-weight:800;cursor:pointer;">OK ✓</button>
+          </div>
+
+          <!-- Zone image principale -->
+          <div style="flex:1;background:#050505;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+            <div style="width:260px;height:280px;background:linear-gradient(135deg,#2a3a2a 0%,#1a2a3a 50%,#3a2a1a 100%);position:relative;border-radius:4px;">
+              <div style="position:absolute;inset:0;background:rgba(0,0,0,.5);border-radius:4px;"></div>
+              <!-- Cercle crop avec effet glow -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:195px;height:195px;border-radius:50%;border:2.5px solid #e4f816;box-shadow:0 0 0 9999px rgba(0,0,0,.52),0 0 20px rgba(228,248,22,.3);overflow:hidden;">
+                <div style="width:100%;height:100%;background:linear-gradient(135deg,#2a3a2a 0%,#1a2a3a 50%,#3a2a1a 100%);"></div>
+              </div>
+              <!-- Grille tiers (règle des tiers) -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:195px;height:195px;border-radius:50%;overflow:hidden;pointer-events:none;">
+                <div style="position:absolute;top:33.3%;left:0;right:0;height:1px;background:rgba(255,255,255,.15);"></div>
+                <div style="position:absolute;top:66.6%;left:0;right:0;height:1px;background:rgba(255,255,255,.15);"></div>
+                <div style="position:absolute;left:33.3%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.15);"></div>
+                <div style="position:absolute;left:66.6%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.15);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barre d'outils -->
+          <div style="padding:14px 20px;flex-shrink:0;background:#0f0f0f;border-top:1px solid #1a1a1a;">
+            <!-- Slider zoom -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <span style="font-size:.65rem;color:#6b7280;font-weight:700;width:20px;text-align:center;">1×</span>
+              <div style="flex:1;height:4px;background:#1e1e1e;border-radius:99px;position:relative;">
+                <div style="position:absolute;left:0;top:0;width:25%;height:100%;background:#e4f816;border-radius:99px;"></div>
+                <div style="position:absolute;left:25%;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.6);"></div>
+              </div>
+              <span style="font-size:.65rem;color:#6b7280;font-weight:700;width:20px;text-align:center;">5×</span>
+            </div>
+            <!-- Actions -->
+            <div style="display:flex;gap:8px;">
+              <button style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:#9ca3af;padding:11px;border-radius:12px;font-size:.75rem;font-weight:700;cursor:pointer;">↺ Tourner</button>
+              <button style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:#9ca3af;padding:11px;border-radius:12px;font-size:.75rem;font-weight:700;cursor:pointer;">⟺ Miroir</button>
+              <button style="flex:2;background:#e4f816;border:none;color:#000;padding:11px;border-radius:12px;font-size:.82rem;font-weight:800;cursor:pointer;">Valider la photo</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <span class="tag b" style="margin-top:10px;display:inline-block;">Option B</span>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes scan {
+  0%   { top: 8px; opacity: 1; }
+  50%  { top: calc(100% - 10px); opacity: .6; }
+  100% { top: 8px; opacity: 1; }
+}
+</style>
+
+</body>
+</html>

@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWprepa — Mockup features</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #efefef; }
+
+  /* ── Navigation entre les deux mockups ── */
+  .tabs { display: flex; background: #1f2937; position: sticky; top: 0; z-index: 99; }
+  .tab  { flex: 1; padding: 14px; text-align: center; color: #9ca3af; font-weight: 700;
+          font-size: 0.85rem; cursor: pointer; border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab.active { color: #e4f816; border-bottom-color: #e4f816; }
+
+  /* ── Conteneurs des deux écrans ── */
+  .screen { display: none; max-width: 420px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* ────────────────────────────────────────────────────
+     FEATURE 1 — Graphes de progression
+  ──────────────────────────────────────────────────── */
+
+  /* Header app */
+  .app-header {
+    background: linear-gradient(135deg, #333333 0%, #1f2937 100%);
+    padding: 52px 20px 20px;
+    border-left: 4px solid #e4f816;
+  }
+  .app-header h1 { color: #e4f816; font-size: 1.15rem; font-weight: 900; margin-bottom: 2px; }
+  .app-header p  { color: rgba(255,255,255,0.6); font-size: 0.78rem; }
+
+  /* Sélecteur exercice */
+  .selector-wrap { background: white; padding: 14px 16px; display: flex; gap: 8px; overflow-x: auto;
+                   border-bottom: 1px solid #f0f0f0; scrollbar-width: none; }
+  .selector-wrap::-webkit-scrollbar { display: none; }
+  .chip { padding: 6px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+          white-space: nowrap; cursor: pointer; border: 1.5px solid #e5e7eb; background: white; color: #6b7280; }
+  .chip.active { background: #333333; color: #e4f816; border-color: #333333; }
+
+  /* Sélecteur période */
+  .period-row { display: flex; gap: 6px; padding: 12px 16px 0; }
+  .period-btn { flex: 1; padding: 6px 0; border: 1.5px solid #e5e7eb; border-radius: 8px;
+                background: white; font-size: 0.72rem; font-weight: 700; color: #6b7280; cursor: pointer; text-align: center; }
+  .period-btn.active { background: #333; color: #e4f816; border-color: #333; }
+
+  /* Carte stat résumé */
+  .stats-row { display: flex; gap: 8px; padding: 12px 16px; }
+  .stat-card  { flex: 1; background: white; border-radius: 12px; padding: 12px;
+                box-shadow: 0 1px 3px rgba(0,0,0,.06); text-align: center; }
+  .stat-card .val { font-size: 1.3rem; font-weight: 900; color: #1a1a1a; }
+  .stat-card .lbl { font-size: 0.65rem; font-weight: 700; color: #9ca3af; text-transform: uppercase;
+                    letter-spacing: .06em; margin-top: 2px; }
+  .stat-card .delta { font-size: 0.7rem; font-weight: 800; margin-top: 4px; }
+  .delta.up   { color: #16a34a; }
+  .delta.down { color: #ef4444; }
+
+  /* Zone graphe */
+  .chart-wrap { margin: 0 16px 12px; background: white; border-radius: 16px;
+                padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .chart-title { font-size: 0.72rem; font-weight: 800; color: #9ca3af; text-transform: uppercase;
+                 letter-spacing: .08em; margin-bottom: 12px; }
+  svg.chart { width: 100%; overflow: visible; }
+
+  /* Historique séances */
+  .section-title-row { padding: 8px 16px 6px; display: flex; align-items: center; gap: 8px; }
+  .section-label { font-size: 0.72rem; font-weight: 800; color: #6b7280; text-transform: uppercase;
+                   letter-spacing: .08em; border-left: 3px solid #e4f816; padding-left: 8px; }
+  .seance-row { margin: 0 16px 8px; background: white; border-radius: 12px; padding: 12px 14px;
+                display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .seance-date-box { width: 38px; height: 38px; border-radius: 8px; background: #333; color: #e4f816;
+                     display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+  .seance-date-box .day  { font-size: 0.52rem; font-weight: 800; text-transform: uppercase; line-height: 1; }
+  .seance-date-box .num  { font-size: 0.95rem; font-weight: 900; line-height: 1; }
+  .seance-info { flex: 1; }
+  .seance-info .name { font-size: 0.85rem; font-weight: 800; color: #1a1a1a; }
+  .seance-info .sets { font-size: 0.72rem; color: #9ca3af; margin-top: 2px; }
+  .seance-badge { background: #f3f4f6; border-radius: 8px; padding: 6px 10px; text-align: right; }
+  .seance-badge .weight { font-size: 1rem; font-weight: 900; color: #1a1a1a; }
+  .seance-badge .unit   { font-size: 0.62rem; color: #9ca3af; font-weight: 600; }
+
+  /* bottom nav placeholder */
+  .bottom-nav { height: 72px; }
+
+  /* ────────────────────────────────────────────────────
+     FEATURE 4 — Rapport PDF
+  ──────────────────────────────────────────────────── */
+
+  .pdf-page {
+    background: white;
+    margin: 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.12);
+  }
+
+  /* En-tête du rapport */
+  .pdf-header {
+    background: linear-gradient(135deg, #333333 0%, #1f2937 100%);
+    padding: 28px 24px 22px;
+    border-left: 5px solid #e4f816;
+  }
+  .pdf-header .club { font-size: 0.7rem; color: rgba(255,255,255,.55); font-weight: 700;
+                      text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+  .pdf-header h2    { color: white; font-size: 1.25rem; font-weight: 900; margin-bottom: 2px; }
+  .pdf-header .period { color: #e4f816; font-size: 0.82rem; font-weight: 700; }
+
+  /* Infos client */
+  .client-row { display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+                border-bottom: 1px solid #f3f4f6; }
+  .client-avatar { width: 42px; height: 42px; border-radius: 50%; background: #e4f816;
+                   color: #111; display: flex; align-items: center; justify-content: center;
+                   font-weight: 900; font-size: 0.9rem; flex-shrink: 0; }
+  .client-info .name  { font-weight: 800; font-size: 0.95rem; color: #1a1a1a; }
+  .client-info .offre { font-size: 0.72rem; color: #6b7280; font-weight: 600; }
+
+  /* Section du rapport */
+  .pdf-section { padding: 16px 20px; border-bottom: 1px solid #f3f4f6; }
+  .pdf-section:last-child { border-bottom: none; }
+  .pdf-section-title {
+    font-size: 0.65rem; font-weight: 800; color: #9ca3af; text-transform: uppercase;
+    letter-spacing: .1em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .pdf-section-title::after { content: ''; flex: 1; height: 1px; background: #f3f4f6; }
+
+  /* Grille de stats PDF */
+  .pdf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pdf-stat { background: #f9fafb; border-radius: 10px; padding: 10px 12px; }
+  .pdf-stat .v  { font-size: 1.5rem; font-weight: 900; color: #1a1a1a; line-height: 1; }
+  .pdf-stat .l  { font-size: 0.65rem; color: #9ca3af; font-weight: 600; margin-top: 3px; }
+  .pdf-stat.accent { background: #333333; }
+  .pdf-stat.accent .v { color: #e4f816; }
+  .pdf-stat.accent .l { color: rgba(228,248,22,.6); }
+
+  /* Barre de progression PDF */
+  .pdf-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .pdf-bar-label { font-size: 0.75rem; font-weight: 700; color: #374151; width: 80px; flex-shrink: 0; }
+  .pdf-bar-track { flex: 1; height: 7px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+  .pdf-bar-fill  { height: 100%; background: #333; border-radius: 999px; }
+  .pdf-bar-fill.yellow { background: #e4f816; }
+  .pdf-bar-val   { font-size: 0.72rem; font-weight: 800; color: #1a1a1a; width: 36px; text-align: right; }
+
+  /* Tableau exercices */
+  .pdf-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+  .pdf-table th { font-size: 0.62rem; font-weight: 800; color: #9ca3af; text-transform: uppercase;
+                  letter-spacing: .06em; padding: 4px 6px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+  .pdf-table td { padding: 7px 6px; border-bottom: 1px solid #f9fafb; color: #374151; font-weight: 600; }
+  .pdf-table tr:last-child td { border-bottom: none; }
+  .pdf-table .prog { color: #16a34a; font-weight: 800; }
+  .pdf-table .prog.down { color: #ef4444; }
+
+  /* Commentaire coach */
+  .coach-comment { background: #fffef0; border-left: 3px solid #e4f816; border-radius: 0 10px 10px 0;
+                   padding: 10px 12px; font-size: 0.78rem; color: #374151; line-height: 1.5; }
+  .coach-comment .coach-label { font-size: 0.65rem; font-weight: 800; color: #727a0b;
+                                 text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+
+  /* Footer PDF */
+  .pdf-footer { background: #f9fafb; padding: 12px 20px; display: flex; align-items: center;
+                justify-content: space-between; }
+  .pdf-footer .logo { font-weight: 900; font-size: 0.88rem; color: #333; }
+  .pdf-footer .logo span { color: #e4f816; }
+  .pdf-footer .page { font-size: 0.65rem; color: #9ca3af; font-weight: 600; }
+
+  /* Bouton générer */
+  .generate-btn-wrap { padding: 16px; }
+  .generate-btn { width: 100%; padding: 14px; background: #333; color: #e4f816; font-weight: 800;
+                  font-size: 0.9rem; border: none; border-radius: 12px; cursor: pointer;
+                  display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .generate-btn span { font-size: 1.1rem; }
+</style>
+</head>
+<body>
+
+<!-- Navigation entre les deux mockups -->
+<div class="tabs">
+  <div class="tab active" onclick="show('graph')">📈 Graphes progression</div>
+  <div class="tab"        onclick="show('pdf')">📄 Rapport PDF</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     FEATURE 1 — Graphes de progression
+══════════════════════════════════════════ -->
+<div class="screen active" id="screen-graph">
+
+  <!-- Header -->
+  <div class="app-header">
+    <h1>Progression</h1>
+    <p>Évolution de tes performances</p>
+  </div>
+
+  <!-- Sélecteur exercice -->
+  <div class="selector-wrap">
+    <div class="chip active">Squat</div>
+    <div class="chip">Développé couché</div>
+    <div class="chip">Soulevé de terre</div>
+    <div class="chip">Sprint 30m</div>
+    <div class="chip">Tractions</div>
+  </div>
+
+  <!-- Période -->
+  <div class="period-row">
+    <button class="period-btn">1M</button>
+    <button class="period-btn active">3M</button>
+    <button class="period-btn">6M</button>
+    <button class="period-btn">1A</button>
+  </div>
+
+  <!-- Stats résumé -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="val">112 kg</div>
+      <div class="lbl">1RM estimé</div>
+      <div class="delta up">↑ +7 kg</div>
+    </div>
+    <div class="stat-card">
+      <div class="val">95 kg</div>
+      <div class="lbl">Dernier poids</div>
+      <div class="delta up">↑ +5 kg</div>
+    </div>
+    <div class="stat-card">
+      <div class="val">14</div>
+      <div class="lbl">Séances</div>
+      <div class="delta up">↑ +3</div>
+    </div>
+  </div>
+
+  <!-- Graphe 1RM estimé -->
+  <div class="chart-wrap">
+    <div class="chart-title">1RM estimé (kg)</div>
+    <svg class="chart" viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg">
+      <!-- Grille horizontale -->
+      <line x1="0" y1="110" x2="340" y2="110" stroke="#f3f4f6" stroke-width="1"/>
+      <line x1="0" y1="80"  x2="340" y2="80"  stroke="#f3f4f6" stroke-width="1"/>
+      <line x1="0" y1="50"  x2="340" y2="50"  stroke="#f3f4f6" stroke-width="1"/>
+      <line x1="0" y1="20"  x2="340" y2="20"  stroke="#f3f4f6" stroke-width="1"/>
+
+      <!-- Labels Y -->
+      <text x="0" y="114" font-size="9" fill="#d1d5db">90</text>
+      <text x="0" y="84"  font-size="9" fill="#d1d5db">100</text>
+      <text x="0" y="54"  font-size="9" fill="#d1d5db">110</text>
+      <text x="0" y="24"  font-size="9" fill="#d1d5db">120</text>
+
+      <!-- Aire sous la courbe -->
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#e4f816" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#e4f816" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon
+        points="28,100 68,95 108,88 148,90 188,80 228,72 268,62 308,48 308,110 28,110"
+        fill="url(#chartGrad)"/>
+
+      <!-- Courbe -->
+      <polyline
+        points="28,100 68,95 108,88 148,90 188,80 228,72 268,62 308,48"
+        fill="none" stroke="#e4f816" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+
+      <!-- Points -->
+      <circle cx="28"  cy="100" r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <circle cx="68"  cy="95"  r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <circle cx="108" cy="88"  r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <circle cx="148" cy="90"  r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <circle cx="188" cy="80"  r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <circle cx="228" cy="72"  r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <circle cx="268" cy="62"  r="3.5" fill="#333" stroke="#e4f816" stroke-width="2"/>
+      <!-- Dernier point mis en avant -->
+      <circle cx="308" cy="48"  r="6"   fill="#e4f816" stroke="#333" stroke-width="2.5"/>
+
+      <!-- Labels X -->
+      <text x="22"  y="126" font-size="8.5" fill="#9ca3af" text-anchor="middle">2 fév</text>
+      <text x="108" y="126" font-size="8.5" fill="#9ca3af" text-anchor="middle">1 mar</text>
+      <text x="188" y="126" font-size="8.5" fill="#9ca3af" text-anchor="middle">1 avr</text>
+      <text x="308" y="126" font-size="8.5" fill="#9ca3af" text-anchor="middle">23 mai</text>
+    </svg>
+  </div>
+
+  <!-- Graphe volume (barres) -->
+  <div class="chart-wrap">
+    <div class="chart-title">Volume par séance (kg × reps)</div>
+    <svg class="chart" viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="90" x2="340" y2="90" stroke="#f3f4f6" stroke-width="1"/>
+      <!-- Barres -->
+      <rect x="20"  y="60" width="22" height="30" rx="4" fill="#e5e7eb"/>
+      <rect x="60"  y="50" width="22" height="40" rx="4" fill="#e5e7eb"/>
+      <rect x="100" y="45" width="22" height="45" rx="4" fill="#e5e7eb"/>
+      <rect x="140" y="55" width="22" height="35" rx="4" fill="#e5e7eb"/>
+      <rect x="180" y="40" width="22" height="50" rx="4" fill="#e5e7eb"/>
+      <rect x="220" y="35" width="22" height="55" rx="4" fill="#333"/>
+      <rect x="260" y="30" width="22" height="60" rx="4" fill="#333"/>
+      <rect x="300" y="20" width="22" height="70" rx="4" fill="#333"/>
+      <!-- Labels X -->
+      <text x="31"  y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S1</text>
+      <text x="71"  y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S2</text>
+      <text x="111" y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S3</text>
+      <text x="151" y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S4</text>
+      <text x="191" y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S5</text>
+      <text x="231" y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S6</text>
+      <text x="271" y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S7</text>
+      <text x="311" y="104" font-size="8" fill="#9ca3af" text-anchor="middle">S8</text>
+    </svg>
+  </div>
+
+  <!-- Historique séances -->
+  <div class="section-title-row">
+    <span class="section-label">Dernières séances</span>
+  </div>
+
+  <div class="seance-row">
+    <div class="seance-date-box"><span class="day">VEN</span><span class="num">23</span></div>
+    <div class="seance-info">
+      <div class="name">Force max — Squat</div>
+      <div class="sets">5×3 @ 95 kg · RPE 8</div>
+    </div>
+    <div class="seance-badge">
+      <div class="weight">95 kg</div>
+      <div class="unit">1RM est. 112</div>
+    </div>
+  </div>
+
+  <div class="seance-row">
+    <div class="seance-date-box"><span class="day">MAR</span><span class="num">20</span></div>
+    <div class="seance-info">
+      <div class="name">Hypertrophie — Squat</div>
+      <div class="sets">4×8 @ 80 kg · RPE 7</div>
+    </div>
+    <div class="seance-badge">
+      <div class="weight">80 kg</div>
+      <div class="unit">1RM est. 105</div>
+    </div>
+  </div>
+
+  <div class="seance-row" style="opacity:.6">
+    <div class="seance-date-box"><span class="day">VEN</span><span class="num">16</span></div>
+    <div class="seance-info">
+      <div class="name">Force — Squat</div>
+      <div class="sets">5×5 @ 87.5 kg · RPE 9</div>
+    </div>
+    <div class="seance-badge">
+      <div class="weight">87.5 kg</div>
+      <div class="unit">1RM est. 108</div>
+    </div>
+  </div>
+
+  <div class="bottom-nav"></div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     FEATURE 4 — Rapport PDF
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-pdf">
+
+  <!-- Bouton générer -->
+  <div class="generate-btn-wrap">
+    <button class="generate-btn">
+      <span>📄</span> Générer le rapport — Mai 2026
+    </button>
+  </div>
+
+  <!-- Aperçu du PDF -->
+  <div class="pdf-page">
+
+    <!-- En-tête -->
+    <div class="pdf-header">
+      <div class="club">AWprepa · Suivi mensuel</div>
+      <h2>Rapport de performance</h2>
+      <div class="period">Mai 2026</div>
+    </div>
+
+    <!-- Client -->
+    <div class="client-row">
+      <div class="client-avatar">TM</div>
+      <div class="client-info">
+        <div class="name">Thomas Martin</div>
+        <div class="offre">Préparation physique · Depuis jan. 2026</div>
+      </div>
+    </div>
+
+    <!-- Section 1 — Séances -->
+    <div class="pdf-section">
+      <div class="pdf-section-title">🏋️ Entraînement</div>
+      <div class="pdf-stats">
+        <div class="pdf-stat accent">
+          <div class="v">12/14</div>
+          <div class="l">Séances réalisées</div>
+        </div>
+        <div class="pdf-stat">
+          <div class="v">86%</div>
+          <div class="l">Taux de compliance</div>
+        </div>
+        <div class="pdf-stat">
+          <div class="v">7.2</div>
+          <div class="l">RPE moyen</div>
+        </div>
+        <div class="pdf-stat">
+          <div class="v">63 min</div>
+          <div class="l">Durée moyenne</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2 — Progression exercices -->
+    <div class="pdf-section">
+      <div class="pdf-section-title">📈 Progression clé</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Exercice</th>
+            <th>Début</th>
+            <th>Fin</th>
+            <th>Évolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Squat</td>
+            <td>95 kg</td>
+            <td>105 kg</td>
+            <td class="prog">↑ +10 kg</td>
+          </tr>
+          <tr>
+            <td>Dév. couché</td>
+            <td>80 kg</td>
+            <td>85 kg</td>
+            <td class="prog">↑ +5 kg</td>
+          </tr>
+          <tr>
+            <td>Sprint 30m</td>
+            <td>4.32 s</td>
+            <td>4.18 s</td>
+            <td class="prog">↑ −0.14 s</td>
+          </tr>
+          <tr>
+            <td>Tractions</td>
+            <td>8 reps</td>
+            <td>11 reps</td>
+            <td class="prog">↑ +3 reps</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 3 — Nutrition -->
+    <div class="pdf-section">
+      <div class="pdf-section-title">🥗 Nutrition</div>
+      <div style="margin-bottom:10px">
+        <div class="pdf-bar-row">
+          <span class="pdf-bar-label">Kcal moy.</span>
+          <div class="pdf-bar-track"><div class="pdf-bar-fill yellow" style="width:82%"></div></div>
+          <span class="pdf-bar-val">2 460</span>
+        </div>
+        <div class="pdf-bar-row">
+          <span class="pdf-bar-label">Protéines</span>
+          <div class="pdf-bar-track"><div class="pdf-bar-fill" style="width:74%"></div></div>
+          <span class="pdf-bar-val">148 g</span>
+        </div>
+        <div class="pdf-bar-row">
+          <span class="pdf-bar-label">Hydratation</span>
+          <div class="pdf-bar-track"><div class="pdf-bar-fill" style="width:68%"></div></div>
+          <span class="pdf-bar-val">1.7 L</span>
+        </div>
+      </div>
+      <div style="font-size:.72rem;color:#9ca3af">Jours loggés : <strong style="color:#1a1a1a">19/31</strong></div>
+    </div>
+
+    <!-- Section 4 — Wellness -->
+    <div class="pdf-section">
+      <div class="pdf-section-title">💤 Récupération & Wellness</div>
+      <div class="pdf-stats">
+        <div class="pdf-stat">
+          <div class="v">7.1</div>
+          <div class="l">Énergie moy. /10</div>
+        </div>
+        <div class="pdf-stat">
+          <div class="v">6.8</div>
+          <div class="l">Sommeil moy. /10</div>
+        </div>
+        <div class="pdf-stat">
+          <div class="v">78.4 kg</div>
+          <div class="l">Poids moyen</div>
+        </div>
+        <div class="pdf-stat">
+          <div class="v">−0.6 kg</div>
+          <div class="l">Évolution poids</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commentaire coach -->
+    <div class="pdf-section">
+      <div class="pdf-section-title">✍️ Commentaire du coach</div>
+      <div class="coach-comment">
+        <div class="coach-label">Arthur Wehrey · AWprepa</div>
+        Excellent mois de mai, Thomas. La progression au squat est remarquable (+10 kg en 1RM estimé). L'objectif pour juin est de maintenir cette dynamique tout en améliorant la régularité du suivi nutritionnel. Reste attentif à l'hydratation les jours d'entraînement.
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="pdf-footer">
+      <div class="logo">AW<span>prepa</span></div>
+      <div class="page">Rapport généré le 23/05/2026</div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav"></div>
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+    document.getElementById('screen-' + id).classList.add('active')
+    event.target.classList.add('active')
+  }
+</script>
+</body>
+</html>

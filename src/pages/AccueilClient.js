@@ -71,15 +71,15 @@ function InstallGuide({ onDone }) {
           <div style={I.steps}>
             <div style={I.step}>
               <span style={I.num}>1</span>
-              <span style={I.text}>Appuie sur le bouton <strong>Partager</strong> en bas de Safari <span style={{ fontSize: '1.1rem' }}>⬆</span></span>
+              <span style={I.text}>En bas de Safari, appuie sur le bouton <strong>Partager</strong> <span style={{ fontSize: '1.1rem' }}>⬆</span> (le carré avec une flèche)</span>
             </div>
             <div style={I.step}>
               <span style={I.num}>2</span>
-              <span style={I.text}>Fais défiler et sélectionne <strong>"Sur l'écran d'accueil"</strong></span>
+              <span style={I.text}>Fais défiler la liste et appuie sur <strong>"Sur l'écran d'accueil"</strong></span>
             </div>
             <div style={I.step}>
               <span style={I.num}>3</span>
-              <span style={I.text}>Appuie sur <strong>Ajouter</strong> en haut à droite</span>
+              <span style={I.text}>Appuie sur <strong>Ajouter</strong> en haut à droite — c'est installé !</span>
             </div>
           </div>
         )}
@@ -88,11 +88,11 @@ function InstallGuide({ onDone }) {
           <div style={I.steps}>
             <div style={I.step}>
               <span style={I.num}>1</span>
-              <span style={I.text}>Appuie sur le menu <strong>⋮</strong> en haut à droite de Chrome</span>
+              <span style={I.text}>Appuie sur les <strong>3 petits points ⋮</strong> en haut à droite de Chrome</span>
             </div>
             <div style={I.step}>
               <span style={I.num}>2</span>
-              <span style={I.text}>Sélectionne <strong>"Ajouter à l'écran d'accueil"</strong></span>
+              <span style={I.text}>Appuie sur <strong>Partager</strong>, puis <strong>"Ajouter à l'écran d'accueil"</strong></span>
             </div>
             <div style={I.step}>
               <span style={I.num}>3</span>
@@ -260,7 +260,7 @@ export default function AccueilClient() {
       }, () => {
         // On re-fetch les deux listes à chaque changement
         supabase.from('evenements').select('*').eq('client_id', client.id)
-          .gte('date', today).order('date', { ascending: true }).limit(1)
+          .gte('date', today).or('terminee.is.null,terminee.eq.false').order('date', { ascending: true }).limit(1)
           .then(({ data }) => setProchaineSeance(data?.[0] || null))
         supabase.from('evenements').select('*').eq('client_id', client.id)
           .gte('date', start).lte('date', end).order('date', { ascending: true })
@@ -322,7 +322,7 @@ export default function AccueilClient() {
 
       const { data: evs } = await supabase
         .from('evenements').select('*').eq('client_id', clientData.id)
-        .gte('date', today).order('date', { ascending: true }).limit(1)
+        .gte('date', today).or('terminee.is.null,terminee.eq.false').order('date', { ascending: true }).limit(1)
       setProchaineSeance(evs?.[0] || null)
 
       const { start, end } = getWeekBounds()

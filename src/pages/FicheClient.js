@@ -5,6 +5,7 @@ import Calendrier from '../components/Calendrier'
 import ChatBox from '../components/ChatBox'
 import { sendPushOnly } from '../notifs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { CGV_CONTENU } from './CGV'
 
 
 const OFFRES = {
@@ -71,7 +72,9 @@ export default function FicheClient() {
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [wellness, setWellness] = useState([])
   const [showAllWellness, setShowAllWellness] = useState(false)
-  const [activeTab, setActiveTab] = useState('profil') // 'profil' | 'progression' | 'messages'
+  const [activeTab, setActiveTab] = useState('profil') // 'profil' | 'progression' | 'messages' | 'nutrition' | 'contrat'
+  const [contratData, setContratData] = useState(null)
+  const [contratLoading, setContratLoading] = useState(false)
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
   const [coachId, setCoachId] = useState(null)
@@ -389,11 +392,17 @@ export default function FicheClient() {
           { k: 'progression', l: '📈 Progression' },
           { k: 'messages', l: '💬 Messages' },
           { k: 'nutrition', l: '🥗 Nutrition' },
+          { k: 'contrat', l: '📄 Contrat' },
         ].map(t => (
           <button key={t.k} onClick={() => {
             setActiveTab(t.k)
             if (t.k === 'progression' && progression.length === 0) fetchProgression()
             if (t.k === 'nutrition') fetchNutrition()
+            if (t.k === 'contrat' && !contratData && !contratLoading) {
+              setContratLoading(true)
+              supabase.from('acceptations_contrat').select('*').eq('client_id', id).maybeSingle()
+                .then(({ data }) => { setContratData(data || null); setContratLoading(false) })
+            }
           }} style={{
             flex: 1, padding: '0.45rem 0.5rem', border: 'none', borderRadius: 9, fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer',
             background: activeTab === t.k ? 'white' : 'transparent',
@@ -949,6 +958,47 @@ export default function FicheClient() {
             </div>
           ) : (
             <div style={styles.emptyCard}>Le client n'a pas encore renseigné son profil nutritionnel.</div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Onglet Contrat ─────────────────────────────────────── */}
+      {activeTab === 'contrat' && (
+        <div style={{ marginTop: '1rem' }}>
+          {contratLoading && <div style={styles.emptyCard}>Chargement…</div>}
+          {!contratLoading && !contratData && (
+            <div style={styles.emptyCard}>
+              ⚠️ Ce client n'a pas encore signé le contrat.
+            </div>
+          )}
+          {!contratLoading && contratData && (
+            <>
+              {/* Bandeau signature */}
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 12, padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>✅</span>
+                <div>
+                  <p style={{ fontWeight: 700, color: '#166534', margin: 0, fontSize: '0.9rem' }}>Contrat signé électroniquement</p>
+                  <p style={{ color: '#16a34a', fontSize: '0.78rem', margin: '2px 0 0' }}>
+                    {contratData.created_at
+                      ? `Le ${new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+                      : 'Date inconnue'}
+                    {contratData.formule ? ` · ${contratData.formule}` : ''}
+                    {` · v${contratData.version_contrat || '1.0'}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Texte CGV */}
+              <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 1rem' }}>Conditions générales acceptées</p>
+                {CGV_CONTENU.map((section, i) => (
+                  <div key={i} style={{ marginBottom: '1.1rem' }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#333', margin: '0 0 0.3rem' }}>{section.titre}</p>
+                    <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{section.texte}</p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
