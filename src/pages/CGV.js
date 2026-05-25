@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 
+export const CURRENT_CGV_VERSION = '1.1'
+
 export const CGV_CONTENU = [
   {
     titre: 'Préambule',

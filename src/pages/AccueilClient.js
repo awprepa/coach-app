@@ -14,6 +14,7 @@ import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
 import ModaleContrat from '../components/ModaleContrat'
+import { CURRENT_CGV_VERSION } from './CGV'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -296,11 +297,12 @@ export default function AccueilClient() {
       if (clientData.avatar_url) setAvatarUrl(clientData.avatar_url)
       setUserId(user.id)
 
-      // Vérifier acceptation du contrat
+      // Vérifier acceptation du contrat (version actuelle obligatoire)
       const { data: contrat } = await supabase
         .from('acceptations_contrat')
         .select('id')
         .eq('client_id', clientData.id)
+        .eq('version_contrat', CURRENT_CGV_VERSION)
         .limit(1)
         .maybeSingle()
       setContratAccepte(!!contrat)

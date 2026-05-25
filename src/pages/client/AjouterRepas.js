@@ -1015,6 +1015,7 @@ export default function AjouterRepas() {
                 background: 'rgba(255,255,255,0.14)', border: 'none', color: 'white',
                 width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
               }}>✕</button>
               <span style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>Scanner un produit</span>
               <button onClick={toggleFlash} style={{
@@ -1022,12 +1023,13 @@ export default function AjouterRepas() {
                 color: flashOn ? '#000' : 'white',
                 width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
               }}>⚡</button>
             </div>
 
             {/* Coins de scan */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div style={{ position: 'relative', width: '78%', height: '22%' }}>
+              <div style={{ position: 'relative', width: '78%', height: 90 }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
                 <div style={{ position: 'absolute', top: 0, left: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '5px 0 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
                 <div style={{ position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 5px 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />

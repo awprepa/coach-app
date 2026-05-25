@@ -2,7 +2,7 @@ import AppLogo from './AppLogo'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { CGV_CONTENU } from '../pages/CGV'
+import { CGV_CONTENU, CURRENT_CGV_VERSION } from '../pages/CGV'
 
 const OFFRE_LABELS = {
   preparation_physique: 'Préparation physique',
@@ -27,7 +27,7 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
     const { error: err } = await supabase.from('acceptations_contrat').upsert({
       client_id:       clientId,
       user_id:         userId,
-      version_contrat: '1.0',
+      version_contrat: CURRENT_CGV_VERSION,
       formule:         offre || null,
     }, { onConflict: 'client_id,version_contrat', ignoreDuplicates: true })
     if (err) {

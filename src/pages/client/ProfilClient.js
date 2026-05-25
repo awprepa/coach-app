@@ -1,7 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
-import 'react-image-crop/dist/ReactCrop.css'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -28,11 +26,208 @@ const ACTIVITES = [
   { value: 'intensif',    label: 'Intensément actif (×1,9)' },
 ]
 
+// ── Crop modal 100 % custom (sans react-image-crop) ──────────────────────────
+// Correspond exactement au Design A du mockup :
+//   • Image déplaçable par drag/touch
+//   • Cercle fixe au centre avec overlay sombre
+//   • Poignées bar blanches N/S/E/W
+//   • Slider de zoom
+function CustomCropModal({ src, onConfirm, onCancel, saving }) {
+  const CIRCLE_R = 140                // rayon du cercle en px
+  const [zoom,       setZoom]       = useState(1)
+  const [offset,     setOffset]     = useState({ x: 0, y: 0 })
+  const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 })
+  const [baseScale,  setBaseScale]  = useState(1)
+  const imgRef   = useRef()
+  const dragRef  = useRef({ active: false, lastX: 0, lastY: 0 })
+  const areaRef  = useRef()
+
+  // Quand l'image est chargée : on calcule baseScale pour couvrir le cercle
+  function onImgLoad(e) {
+    const nw = e.target.naturalWidth
+    const nh = e.target.naturalHeight
+    setImgNatural({ w: nw, h: nh })
+    // L'image doit couvrir le diamètre du cercle sur son plus petit côté
+    setBaseScale((CIRCLE_R * 2) / Math.min(nw, nh))
+  }
+
+  // Clamp l'offset pour ne pas sortir le cercle de l'image
+  function clamp(x, y, z) {
+    const scale = baseScale * z
+    const hw = (imgNatural.w * scale) / 2
+    const hh = (imgNatural.h * scale) / 2
+    const mx = Math.max(0, hw - CIRCLE_R)
+    const my = Math.max(0, hh - CIRCLE_R)
+    return { x: Math.max(-mx, Math.min(mx, x)), y: Math.max(-my, Math.min(my, y)) }
+  }
+
+  // Gestion touch (mobile)
+  function onTouchStart(e) {
+    if (e.touches.length === 1) {
+      dragRef.current = { active: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY }
+    }
+  }
+  function onTouchMove(e) {
+    if (!dragRef.current.active || e.touches.length !== 1) return
+    const dx = e.touches[0].clientX - dragRef.current.lastX
+    const dy = e.touches[0].clientY - dragRef.current.lastY
+    dragRef.current.lastX = e.touches[0].clientX
+    dragRef.current.lastY = e.touches[0].clientY
+    setOffset(prev => clamp(prev.x + dx, prev.y + dy, zoom))
+  }
+  function onTouchEnd() { dragRef.current.active = false }
+
+  // Gestion souris (desktop)
+  function onMouseDown(e) { dragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY } }
+  function onMouseMove(e) {
+    if (!dragRef.current.active) return
+    const dx = e.clientX - dragRef.current.lastX
+    const dy = e.clientY - dragRef.current.lastY
+    dragRef.current.lastX = e.clientX
+    dragRef.current.lastY = e.clientY
+    setOffset(prev => clamp(prev.x + dx, prev.y + dy, zoom))
+  }
+  function onMouseUp() { dragRef.current.active = false }
+
+  // Zoom slider
+  function onZoomChange(newZ) {
+    setZoom(newZ)
+    setOffset(prev => clamp(prev.x, prev.y, newZ))
+  }
+
+  // Bloque le scroll de page lors du drag tactile
+  useEffect(() => {
+    const el = areaRef.current
+    if (!el) return
+    const prevent = (e) => { if (dragRef.current.active) e.preventDefault() }
+    el.addEventListener('touchmove', prevent, { passive: false })
+    return () => el.removeEventListener('touchmove', prevent)
+  }, [])
+
+  // Extraction canvas → blob JPEG
+  async function handleConfirm() {
+    if (!imgNatural.w || !imgRef.current) return
+    const displayScale = baseScale * zoom
+    const displayW     = imgNatural.w * displayScale
+    const displayH     = imgNatural.h * displayScale
+    // Position du coin haut-gauche du cercle, relative au coin haut-gauche de l'image (en px écran)
+    const dx = -CIRCLE_R - offset.x + displayW / 2
+    const dy = -CIRCLE_R - offset.y + displayH / 2
+    // Conversion en pixels naturels de l'image
+    const srcX    = dx / displayScale
+    const srcY    = dy / displayScale
+    const srcSize = (CIRCLE_R * 2) / displayScale
+
+    const OUT = 400
+    const canvas = document.createElement('canvas')
+    canvas.width  = OUT
+    canvas.height = OUT
+    const ctx = canvas.getContext('2d')
+    // Clip circulaire
+    ctx.beginPath()
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(imgRef.current, srcX, srcY, srcSize, srcSize, 0, 0, OUT, OUT)
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92))
+    onConfirm(blob)
+  }
+
+  const displayScale = baseScale * zoom
+  const imgW = imgNatural.w > 0 ? imgNatural.w * displayScale : undefined
+  const imgH = imgNatural.h > 0 ? imgNatural.h * displayScale : undefined
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 300, background: '#000',
+      display: 'flex', flexDirection: 'column',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      userSelect: 'none', WebkitUserSelect: 'none',
+    }}>
+      {/* Barre haute */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 20px', paddingTop: 'max(16px, env(safe-area-inset-top))', flexShrink: 0,
+      }}>
+        <button onClick={onCancel} style={{
+          background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)',
+          fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0,
+        }}>Annuler</button>
+        <span style={{ color: 'white', fontWeight: 700, fontSize: '0.92rem' }}>Photo de profil</span>
+        <button onClick={handleConfirm} disabled={saving || !imgNatural.w} style={{
+          background: !saving && imgNatural.w ? '#e4f816' : 'rgba(255,255,255,0.15)',
+          color:      !saving && imgNatural.w ? '#000'    : 'rgba(255,255,255,0.4)',
+          border: 'none', borderRadius: 99, padding: '8px 20px',
+          fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s',
+        }}>{saving ? '…' : 'Valider'}</button>
+      </div>
+
+      {/* Zone de recadrage */}
+      <div ref={areaRef} style={{ flex: 1, position: 'relative', overflow: 'hidden', cursor: 'grab' }}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown}   onMouseMove={onMouseMove}  onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+
+        {/* Image déplaçable */}
+        <img ref={imgRef} src={src} alt="Recadrage" onLoad={onImgLoad} draggable={false}
+          style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: imgW, height: imgH,
+            transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+            transformOrigin: 'center', display: 'block',
+            pointerEvents: 'none', userSelect: 'none', WebkitUserSelect: 'none',
+          }} />
+
+        {/* Overlay sombre + cercle + poignées */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{ position: 'relative', width: CIRCLE_R * 2, height: CIRCLE_R * 2 }}>
+            {/* Bordure du cercle + ombre qui assombrit l'extérieur */}
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              border: '2px solid rgba(255,255,255,0.88)',
+              boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
+            }} />
+            {/* Poignée N */}
+            <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', width: 32, height: 5, background: 'white', borderRadius: 99, opacity: 0.9 }} />
+            {/* Poignée S */}
+            <div style={{ position: 'absolute', bottom: -3, left: '50%', transform: 'translateX(-50%)', width: 32, height: 5, background: 'white', borderRadius: 99, opacity: 0.9 }} />
+            {/* Poignée O */}
+            <div style={{ position: 'absolute', left: -3, top: '50%', transform: 'translateY(-50%)', width: 5, height: 32, background: 'white', borderRadius: 99, opacity: 0.9 }} />
+            {/* Poignée E */}
+            <div style={{ position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)', width: 5, height: 32, background: 'white', borderRadius: 99, opacity: 0.9 }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Bas : hint + slider zoom */}
+      <div style={{ padding: '16px 24px', paddingBottom: 'max(28px, env(safe-area-inset-bottom))', flexShrink: 0 }}>
+        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.7rem', margin: '0 0 14px', textAlign: 'center', lineHeight: 1.5 }}>
+          Glisse pour repositionner · Curseur pour zoomer
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>⊖</span>
+          <div style={{ flex: 1, position: 'relative', height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 99, background: '#e4f816', width: `${((zoom - 1) / 2) * 100}%` }} />
+            <input type="range" min="1" max="3" step="0.05" value={zoom}
+              onChange={e => onZoomChange(parseFloat(e.target.value))}
+              style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer', margin: 0, height: '100%' }} />
+            <div style={{
+              position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+              left: `calc(${((zoom - 1) / 2) * 100}% - 9px)`,
+              width: 18, height: 18, borderRadius: '50%', background: 'white',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.5)', pointerEvents: 'none',
+            }} />
+          </div>
+          <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>⊕</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Page ProfilClient ─────────────────────────────────────────────────────────
 export default function ProfilClient() {
   const navigate  = useNavigate()
   const fadeStyle = usePageFade()
   const fileRef   = useRef()
-  const imgRef    = useRef()
 
   const [client,       setClient]       = useState(null)
   const [loading,      setLoading]      = useState(true)
@@ -42,11 +237,8 @@ export default function ProfilClient() {
   const [savedMsg,     setSavedMsg]     = useState(false)
 
   // Recadrage photo
-  const [cropSrc,       setCropSrc]       = useState(null)
-  const [crop,          setCrop]          = useState()
-  const [completedCrop, setCompletedCrop] = useState(null)
-  const [cropping,      setCropping]      = useState(false)
-  const [cropZoom,      setCropZoom]      = useState(1)
+  const [cropSrc,  setCropSrc]  = useState(null)
+  const [cropping, setCropping] = useState(false)
 
   // Champs nutrition
   const [sexe,     setSexe]     = useState('')
@@ -73,7 +265,6 @@ export default function ProfilClient() {
       setClient(c)
       if (c.avatar_url) setAvatarUrl(c.avatar_url)
 
-      // Profil nutritionnel
       const { data: nutri } = await supabase.from('nutrition_profile').select('*').eq('client_id', c.id).maybeSingle()
       if (nutri) {
         setSexe(nutri.sexe || '')
@@ -88,55 +279,21 @@ export default function ProfilClient() {
     load()
   }, [navigate])
 
-  // Ouvre le recadreur (ne uploade pas encore)
+  // Ouvre le recadreur
   function handlePhotoChange(e) {
     const file = e.target.files?.[0]
     if (!file || !client) return
-    e.target.value = ''  // reset pour pouvoir resélectionner le même fichier
+    e.target.value = ''
     const reader = new FileReader()
     reader.addEventListener('load', () => setCropSrc(reader.result?.toString() || ''))
     reader.readAsDataURL(file)
   }
 
-  // Initialise le crop centré au chargement de l'image
-  function onImageLoad(e) {
-    const { naturalWidth: width, naturalHeight: height } = e.currentTarget
-    const c = centerCrop(
-      makeAspectCrop({ unit: '%', width: 85 }, 1, width, height),
-      width, height
-    )
-    setCrop(c)
-  }
-
-  // Extrait le carré recadré via canvas → Blob JPEG
-  function getCroppedBlob() {
-    const image = imgRef.current
-    if (!image || !completedCrop) return Promise.resolve(null)
-    const canvas = document.createElement('canvas')
-    const SIZE = 400
-    canvas.width = SIZE
-    canvas.height = SIZE
-    const ctx = canvas.getContext('2d')
-    const scaleX = image.naturalWidth / image.width
-    const scaleY = image.naturalHeight / image.height
-    ctx.drawImage(
-      image,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0, 0, SIZE, SIZE
-    )
-    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92))
-  }
-
-  // Confirmer le recadrage → upload
-  async function handleCropConfirm() {
-    if (!completedCrop || !client) return
+  // Reçoit le blob depuis CustomCropModal → upload
+  async function handleCropConfirm(blob) {
+    if (!blob || !client) return
     setCropping(true)
     try {
-      const blob = await getCroppedBlob()
-      if (!blob) return
       const path = `${client.id}/avatar.jpg`
       const { error: upErr } = await supabase.storage
         .from('profile-photos').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
@@ -146,10 +303,8 @@ export default function ProfilClient() {
       await supabase.from('clients').update({ avatar_url: url }).eq('id', client.id)
       setAvatarUrl(url)
       setCropSrc(null)
-      setCompletedCrop(null)
-      setCrop(undefined)
     } catch (err) {
-      console.error('Upload avatar recadré:', err)
+      console.error('Upload avatar:', err)
     } finally {
       setCropping(false)
     }
@@ -193,80 +348,6 @@ export default function ProfilClient() {
   return (
     <>
     <div style={{ ...S.page, ...fadeStyle }}>
-
-      {/* modal recadrage rendu hors du div transformé (voir en bas du return) */}
-      {false && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 300,
-          background: '#000',
-          display: 'flex', flexDirection: 'column',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        }}>
-          {/* Top bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '16px 20px',
-            paddingTop: 'max(16px, env(safe-area-inset-top))',
-            flexShrink: 0,
-          }}>
-            <button
-              onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined) }}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-            >
-              Annuler
-            </button>
-            <span style={{ color: 'white', fontWeight: 700, fontSize: '0.92rem' }}>Photo de profil</span>
-            <button
-              onClick={handleCropConfirm}
-              disabled={!completedCrop || cropping}
-              style={{
-                background: completedCrop && !cropping ? '#e4f816' : 'rgba(255,255,255,0.15)',
-                color: completedCrop && !cropping ? '#000' : 'rgba(255,255,255,0.4)',
-                border: 'none', borderRadius: 99,
-                padding: '8px 20px', fontWeight: 800, fontSize: '0.85rem',
-                cursor: completedCrop && !cropping ? 'pointer' : 'default',
-                transition: 'all 0.2s',
-              }}
-            >
-              {cropping ? '…' : 'Valider'}
-            </button>
-          </div>
-
-          {/* Zone de recadrage */}
-          <div style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
-          }}>
-            <ReactCrop
-              crop={crop}
-              onChange={(_, pct) => setCrop(pct)}
-              onComplete={(c) => setCompletedCrop(c)}
-              aspect={1}
-              circularCrop
-              style={{ maxHeight: '65vh', maxWidth: '100%' }}
-            >
-              <img
-                ref={imgRef}
-                src={cropSrc}
-                alt="Recadrage"
-                onLoad={onImageLoad}
-                style={{ maxHeight: '65vh', maxWidth: '100%', display: 'block' }}
-              />
-            </ReactCrop>
-          </div>
-
-          {/* Bas : hint */}
-          <div style={{
-            padding: '16px 24px',
-            paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
-            flexShrink: 0, textAlign: 'center',
-          }}>
-            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Glisse pour repositionner · Pince pour zoomer
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div style={S.header}>
@@ -389,103 +470,14 @@ export default function ProfilClient() {
       <ClientBottomNav />
     </div>
 
-    {/* ── Modal recadrage — hors du div avec transform pour que position:fixed marche ── */}
+    {/* Modal recadrage — hors du div avec transform (position:fixed fonctionne) */}
     {cropSrc && (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 300,
-        background: '#000', display: 'flex', flexDirection: 'column',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}>
-        {/* CSS overrides react-image-crop → Design A */}
-        <style>{`
-          .awp-crop .ReactCrop__crop-selection {
-            border: 2px solid rgba(255,255,255,0.88) !important;
-            box-shadow: 0 0 0 9999px rgba(0,0,0,0.56) !important;
-          }
-          .awp-crop .ReactCrop__drag-handle {
-            background: transparent !important;
-            border: none !important;
-            width: 44px !important;
-            height: 44px !important;
-          }
-          .awp-crop .ReactCrop__drag-handle::after {
-            background: white !important;
-            border-radius: 99px !important;
-            opacity: 0.88 !important;
-          }
-          .awp-crop .ReactCrop__drag-handle.ord-n::after,
-          .awp-crop .ReactCrop__drag-handle.ord-s::after {
-            width: 32px !important;
-            height: 5px !important;
-            top: 50% !important; left: 50% !important;
-            transform: translate(-50%,-50%) !important;
-          }
-          .awp-crop .ReactCrop__drag-handle.ord-e::after,
-          .awp-crop .ReactCrop__drag-handle.ord-w::after {
-            width: 5px !important;
-            height: 32px !important;
-            top: 50% !important; left: 50% !important;
-            transform: translate(-50%,-50%) !important;
-          }
-          .awp-crop .ReactCrop__drag-handle.ord-nw::after,
-          .awp-crop .ReactCrop__drag-handle.ord-ne::after,
-          .awp-crop .ReactCrop__drag-handle.ord-sw::after,
-          .awp-crop .ReactCrop__drag-handle.ord-se::after {
-            display: none !important;
-          }
-          .awp-crop .ReactCrop { background: transparent !important; }
-        `}</style>
-
-        {/* Top bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px', paddingTop: 'max(16px, env(safe-area-inset-top))', flexShrink: 0,
-        }}>
-          <button onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined); setCropZoom(1) }}
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-            Annuler
-          </button>
-          <span style={{ color: 'white', fontWeight: 700, fontSize: '0.92rem' }}>Photo de profil</span>
-          <button onClick={handleCropConfirm} disabled={!completedCrop || cropping} style={{
-            background: completedCrop && !cropping ? '#e4f816' : 'rgba(255,255,255,0.15)',
-            color: completedCrop && !cropping ? '#000' : 'rgba(255,255,255,0.4)',
-            border: 'none', borderRadius: 99, padding: '8px 20px',
-            fontWeight: 800, fontSize: '0.85rem',
-            cursor: completedCrop && !cropping ? 'pointer' : 'default', transition: 'all 0.2s',
-          }}>
-            {cropping ? '…' : 'Valider'}
-          </button>
-        </div>
-
-        {/* Zone de recadrage */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <ReactCrop className="awp-crop" crop={crop} onChange={(_, pct) => setCrop(pct)}
-            onComplete={(c) => setCompletedCrop(c)} aspect={1} circularCrop
-            style={{ maxHeight: '62vh', maxWidth: '100%' }}>
-            <img ref={imgRef} src={cropSrc} alt="Recadrage" onLoad={onImageLoad}
-              style={{ maxHeight: '62vh', maxWidth: '100%', display: 'block', transform: `scale(${cropZoom})`, transformOrigin: 'center center', transition: 'transform 0.1s' }} />
-          </ReactCrop>
-        </div>
-
-        {/* Bas : hint + slider zoom */}
-        <div style={{ padding: '16px 24px', paddingBottom: 'max(28px, env(safe-area-inset-bottom))', flexShrink: 0 }}>
-          <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.7rem', margin: '0 0 14px', textAlign: 'center', lineHeight: 1.5 }}>
-            Glisse pour repositionner · Pince pour zoomer
-          </p>
-          {/* Slider zoom */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1, userSelect: 'none' }}>⊖</span>
-            <div style={{ flex: 1, position: 'relative', height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)' }}>
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 99, background: '#e4f816', width: `${((cropZoom - 1) / 2) * 100}%` }} />
-              <input type="range" min="1" max="3" step="0.05" value={cropZoom}
-                onChange={e => setCropZoom(parseFloat(e.target.value))}
-                style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer', margin: 0, height: '100%' }} />
-              <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: `calc(${((cropZoom - 1) / 2) * 100}% - 9px)`, width: 18, height: 18, borderRadius: '50%', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', pointerEvents: 'none' }} />
-            </div>
-            <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1, userSelect: 'none' }}>⊕</span>
-          </div>
-        </div>
-      </div>
+      <CustomCropModal
+        src={cropSrc}
+        onConfirm={handleCropConfirm}
+        onCancel={() => setCropSrc(null)}
+        saving={cropping}
+      />
     )}
     </>
   )
