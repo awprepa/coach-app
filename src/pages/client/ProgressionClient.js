@@ -360,10 +360,11 @@ export default function ProgressionClient() {
         // Le filtrage numérique se fait en JS après parsing.
         const { data: series, error: seriesError } = await supabase
           .from('serie_tracking')
-          .select('exercice_id, semaine, serie, poids, reps_reelles, valide, is_done')
+          .select('exercice_id, semaine, serie, poids, reps_reelles, valide, is_done, created_at')
           .in('exercice_id', exIds)
           .not('poids', 'is', null)
           .not('reps_reelles', 'is', null)
+          .lt('serie', 1000)  // exclure les séries d'échauffement (serie >= 1000)
 
         if (seriesError) console.error('[Progression] series error:', seriesError)
 
@@ -397,14 +398,23 @@ export default function ProgressionClient() {
           // Remplacer s.poids et s.reps_reelles par les valeurs numériques propres
           s = { ...s, poids, reps_reelles: reps }
 
-          // Calcul de la date réelle de la semaine
-          const progId = seanceProg[ex.seance_id]
-          const prog = progMap[progId]
-          if (!prog) return
-          const dateDebut = prog.date_debut || prog.created_at
-          const weekDate = new Date(dateDebut + 'T00:00:00')
-          weekDate.setDate(weekDate.getDate() + (s.semaine - 1) * 7)
-          const dateStr = weekDate.toISOString().split('T')[0]
+          // Date réelle de la séance : on utilise created_at (date exacte où la série a été saisie).
+          // Si created_at est absent, on calcule depuis date_debut + semaine (fallback).
+          let dateStr
+          if (s.created_at) {
+            // Convertir le timestamp UTC en date locale (ex: "2025-05-15T20:30:00+00:00" → "2025-05-15" en UTC+2)
+            const d = new Date(s.created_at)
+            dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+          } else {
+            const progId = seanceProg[ex.seance_id]
+            const prog = progMap[progId]
+            if (!prog || !s.semaine || s.semaine <= 0) return
+            const dateDebutStr = prog.date_debut ? prog.date_debut : (prog.created_at || '').slice(0, 10)
+            if (!dateDebutStr) return
+            const [yy, mm, dd] = dateDebutStr.split('-').map(Number)
+            const weekDate = new Date(Date.UTC(yy, mm - 1, dd + (s.semaine - 1) * 7, 12))
+            dateStr = weekDate.toISOString().split('T')[0]
+          }
 
           const nom = ex.nom || 'Exercice'
           if (!byName[nom]) {
@@ -434,13 +444,15 @@ export default function ProgressionClient() {
             poids: betterPds ? s.poids : (prev?.poids || 0),
           }
 
-          // Conserver le set brut pour la liste "Dernières séances"
-          byName[nom].rawSets.push({
-            date: dateStr,
-            poids: s.poids,
-            reps: s.reps_reelles,
-            rm,
-          })
+          // Conserver uniquement le set avec le poids max par date pour "Dernières séances"
+          const prevRaw = byName[nom].rawSets.find(r => r.date === dateStr)
+          if (!prevRaw) {
+            byName[nom].rawSets.push({ date: dateStr, poids: s.poids, reps: s.reps_reelles, rm })
+          } else if (s.poids > prevRaw.poids) {
+            prevRaw.poids = s.poids
+            prevRaw.reps  = s.reps_reelles
+            prevRaw.rm    = rm
+          }
         })
 
         // Construire la structure finale : seulement exercices avec ≥ 2 points de données

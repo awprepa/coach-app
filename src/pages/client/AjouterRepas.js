@@ -1019,13 +1019,13 @@ export default function AjouterRepas() {
             {/* ── Design A : 4 blocs opaques + rectangle blanc ── */}
 
             {/* Blocs opaques : haut / bas / gauche / droite */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 'calc(50% - 52px)', background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 'calc(50% - 52px)', background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: 'calc(50% - 52px)', left: 0, width: 'calc(50% - 120px)', height: 104, background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: 'calc(50% - 52px)', right: 0, width: 'calc(50% - 120px)', height: 104, background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 'calc(50% - 60px)', background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 'calc(50% - 60px)', background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 'calc(50% - 60px)', left: 0, width: 'calc(50% - 140px)', height: 120, background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 'calc(50% - 60px)', right: 0, width: 'calc(50% - 140px)', height: 120, background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
 
             {/* Rectangle de scan avec bordure blanche fine */}
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 104, zIndex: 4, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 280, height: 120, zIndex: 4, pointerEvents: 'none' }}>
               <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: 6 }} />
             </div>
 

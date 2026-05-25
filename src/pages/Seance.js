@@ -772,13 +772,13 @@ export default function Seance() {
                       {colSemaines.map(s => (
                         <>
                           <td key={`${s}-kg`} style={styles.tdCenter}>
-                            <input type="text"
+                            <input type="text" inputMode="decimal"
                               defaultValue={charges[ex.id]?.[s]?.charge || ''}
                               onBlur={e => updateCharge(ex.id, s, 'charge', e.target.value)}
                               style={styles.chargeInput} placeholder="—" />
                           </td>
                           <td key={`${s}-rpe`} style={styles.tdCenter}>
-                            <input type="number" min="1" max="10" step="0.5"
+                            <input type="number" inputMode="decimal" min="1" max="10" step="0.5"
                               defaultValue={charges[ex.id]?.[s]?.rpe_reel || ''}
                               onBlur={e => updateCharge(ex.id, s, 'rpe_reel', e.target.value)}
                               style={{ ...styles.chargeInput, color: '#16a34a' }} placeholder="—" />

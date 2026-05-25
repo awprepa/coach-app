@@ -248,60 +248,51 @@ export default function ScannerArticle() {
                 playsInline
                 muted
               />
-              {/* Viseur */}
+              {/* Viseur Design A — 4 blocs opaques + rectangle blanc */}
+              {/* Bloc haut */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 'calc(42% - 70px)', background: 'rgba(0,0,0,0.82)', pointerEvents: 'none' }} />
+              {/* Bloc bas */}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 'calc(58% - 70px)', background: 'rgba(0,0,0,0.82)', pointerEvents: 'none' }} />
+              {/* Bloc gauche */}
+              <div style={{ position: 'absolute', top: 'calc(42% - 70px)', left: 0, width: 'calc(50% - 155px)', height: 140, background: 'rgba(0,0,0,0.82)', pointerEvents: 'none' }} />
+              {/* Bloc droite */}
+              <div style={{ position: 'absolute', top: 'calc(42% - 70px)', right: 0, width: 'calc(50% - 155px)', height: 140, background: 'rgba(0,0,0,0.82)', pointerEvents: 'none' }} />
+              {/* Rectangle de scan */}
               <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', top: '42%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 310, height: 140,
+                border: '1.5px solid rgba(255,255,255,0.7)',
+                borderRadius: 6,
                 pointerEvents: 'none',
               }}>
-                {/* Fond sombre autour du viseur */}
+                {/* Ligne de scan animée */}
                 <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'rgba(0,0,0,0.45)',
-                  maskImage: 'radial-gradient(ellipse 260px 180px at 50% 46%, transparent 99%, black 100%)',
-                  WebkitMaskImage: 'radial-gradient(ellipse 260px 180px at 50% 46%, transparent 99%, black 100%)',
+                  position: 'absolute', left: 0, right: 0,
+                  height: 2,
+                  background: 'linear-gradient(90deg, transparent 0%, #e4f816 20%, #e4f816 80%, transparent 100%)',
+                  boxShadow: '0 0 8px rgba(228,248,22,0.6)',
+                  animation: 'scanLine 2.2s ease-in-out infinite',
+                  borderRadius: 1,
                 }} />
-                {/* Cadre de visée */}
-                <div style={{
-                  width: 260, height: 180,
-                  border: '2.5px solid var(--accent)',
-                  borderRadius: 18,
-                  boxShadow: '0 0 0 4px rgba(228,248,22,0.15)',
-                  position: 'relative',
-                }}>
-                  {/* Coins accentués */}
-                  {[
-                    { top: -2, left: -2, borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '10px 0 0 0' },
-                    { top: -2, right: -2, borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 10px 0 0' },
-                    { bottom: -2, left: -2, borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)', borderRadius: '0 0 0 10px' },
-                    { bottom: -2, right: -2, borderBottom: '3px solid var(--accent)', borderRight: '3px solid var(--accent)', borderRadius: '0 0 10px 0' },
-                  ].map((st, i) => (
-                    <div key={i} style={{ position: 'absolute', width: 24, height: 24, ...st }} />
-                  ))}
-                  {/* Ligne de scan animée */}
-                  <div style={{
-                    position: 'absolute', left: 0, right: 0,
-                    height: 2, background: 'var(--accent)',
-                    opacity: 0.75,
-                    animation: 'scanLine 2s ease-in-out infinite',
-                    top: '50%',
-                  }} />
-                </div>
-                <p style={{
-                  color: 'white', fontSize: '0.82rem', fontWeight: 600,
-                  marginTop: 20, textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                  background: 'rgba(0,0,0,0.4)', padding: '6px 16px',
-                  borderRadius: 999,
-                }}>
+              </div>
+              {/* Texte indicateur */}
+              <div style={{
+                position: 'absolute', top: 'calc(42% + 80px)', left: 0, right: 0,
+                textAlign: 'center', pointerEvents: 'none',
+              }}>
+                <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
                   Place le code-barres dans le cadre
                 </p>
               </div>
               <style>{`
                 @keyframes scanLine {
-                  0%   { top: 10%; }
-                  50%  { top: 85%; }
-                  100% { top: 10%; }
+                  0%   { top: 8px; opacity: 1; }
+                  45%  { top: calc(100% - 10px); opacity: 1; }
+                  50%  { opacity: 0; }
+                  51%  { top: 8px; opacity: 0; }
+                  55%  { opacity: 1; }
+                  100% { top: 8px; opacity: 1; }
                 }
               `}</style>
             </>

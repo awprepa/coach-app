@@ -23,18 +23,17 @@ function isCycleTermine(prog) {
   return fin < new Date()
 }
 
+function dateToISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
 function getWeekBounds() {
   const today = new Date()
   const day = today.getDay()
   const monday = new Date(today)
   monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1))
-  monday.setHours(0, 0, 0, 0)
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
-  return {
-    start: monday.toISOString().slice(0, 10),
-    end: sunday.toISOString().slice(0, 10),
-  }
+  return { start: dateToISO(monday), end: dateToISO(sunday) }
 }
 
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']

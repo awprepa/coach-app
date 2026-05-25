@@ -6,6 +6,7 @@ import ChatBox from '../components/ChatBox'
 import { sendPushOnly } from '../notifs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { CGV_CONTENU } from './CGV'
+import { ChargePanel } from './ChargeEntrainement'
 
 
 const OFFRES = {
@@ -72,7 +73,7 @@ export default function FicheClient() {
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [wellness, setWellness] = useState([])
   const [showAllWellness, setShowAllWellness] = useState(false)
-  const [activeTab, setActiveTab] = useState('profil') // 'profil' | 'progression' | 'messages' | 'nutrition' | 'contrat'
+  const [activeTab, setActiveTab] = useState('profil') // 'profil' | 'progression' | 'messages' | 'nutrition' | 'contrat' | 'charge'
   const [contratData, setContratData] = useState(null)
   const [contratLoading, setContratLoading] = useState(false)
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
@@ -393,6 +394,7 @@ export default function FicheClient() {
           { k: 'messages', l: '💬 Messages' },
           { k: 'nutrition', l: '🥗 Nutrition' },
           { k: 'contrat', l: '📄 Contrat' },
+          { k: 'charge', l: '📊 Charge' },
         ].map(t => (
           <button key={t.k} onClick={() => {
             setActiveTab(t.k)
@@ -400,7 +402,8 @@ export default function FicheClient() {
             if (t.k === 'nutrition') fetchNutrition()
             if (t.k === 'contrat' && !contratData && !contratLoading) {
               setContratLoading(true)
-              supabase.from('acceptations_contrat').select('*').eq('client_id', id).maybeSingle()
+              supabase.from('acceptations_contrat').select('*').eq('client_id', id)
+                .order('created_at', { ascending: false }).limit(1).maybeSingle()
                 .then(({ data }) => { setContratData(data || null); setContratLoading(false) })
             }
           }} style={{
@@ -1001,6 +1004,11 @@ export default function FicheClient() {
             </>
           )}
         </div>
+      )}
+
+      {/* Contenu onglet Charge */}
+      {activeTab === 'charge' && client && (
+        <ChargePanel clientId={id} clientPrenom={client.prenom} clientNom={client.nom} />
       )}
 
     </div>
