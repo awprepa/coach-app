@@ -200,22 +200,38 @@ export default function AjouterRepas() {
   // ── Scan code-barres ─────────────────────────────────────────────────────
   const videoRef        = useRef(null)
   const scanControlsRef = useRef(null)
+  const audioCtxRef     = useRef(null)   // AudioContext persistant (iOS exige init sur geste user)
   const [cameraError,    setCameraError]    = useState(false)
   const [loadingBarcode, setLoadingBarcode] = useState(false)
   const [scanDone,       setScanDone]       = useState(false)
   const [flashOn, setFlashOn] = useState(false)
 
+  // Crée / débloque l'AudioContext dès l'entrée en mode scan (= geste utilisateur)
+  useEffect(() => {
+    if (mode !== 'scan') return
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      }
+      audioCtxRef.current.resume().catch(() => {})
+    } catch(e) {}
+  }, [mode])
+
   function playBeep() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(1900, ctx.currentTime)
-      gain.gain.setValueAtTime(0.45, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.11)
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.11)
+      const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)()
+      const play = () => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(1900, ctx.currentTime)
+        gain.gain.setValueAtTime(0.45, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.11)
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.11)
+      }
+      if (ctx.state === 'suspended') ctx.resume().then(play)
+      else play()
     } catch(e) {}
   }
 
