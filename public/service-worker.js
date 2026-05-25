@@ -1,4 +1,4 @@
-// ── AWprepa Service Worker v7 ─────────────────────────────────────────────────
+// ── AWprepa Service Worker v8 ─────────────────────────────────────────────────
 // Stratégies :
 //   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
 //   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
@@ -7,9 +7,9 @@
 // IMPORTANT : stale-while-revalidate supprimé pour Supabase — il causait l'affichage
 // de données obsolètes (wellness "non rempli", charges perdues) au retour dans l'app.
 
-const CACHE_SHELL   = 'aw-shell-v7'
-const CACHE_API     = 'aw-api-v7'
-const CACHE_PAGES   = 'aw-pages-v7'
+const CACHE_SHELL   = 'aw-shell-v8'
+const CACHE_API     = 'aw-api-v8'
+const CACHE_PAGES   = 'aw-pages-v8'
 
 // ── Install : précache le shell de l'app ─────────────────────────────────────
 self.addEventListener('install', event => {
