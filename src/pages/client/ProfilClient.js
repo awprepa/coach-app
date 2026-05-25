@@ -143,21 +143,24 @@ function CustomCropModal({ src, onConfirm, onCancel, saving }) {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       userSelect: 'none', WebkitUserSelect: 'none',
     }}>
-      {/* Barre haute */}
+      {/* Barre haute — titre centré absolument pour ne pas être décalé par les boutons */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 20px', paddingTop: 'max(16px, env(safe-area-inset-top))', flexShrink: 0,
       }}>
         <button onClick={onCancel} style={{
           background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)',
-          fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0,
+          fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0, zIndex: 1,
         }}>Annuler</button>
-        <span style={{ color: 'white', fontWeight: 700, fontSize: '0.92rem' }}>Photo de profil</span>
+        <span style={{
+          position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+          color: 'white', fontWeight: 700, fontSize: '0.92rem', whiteSpace: 'nowrap',
+        }}>Photo de profil</span>
         <button onClick={handleConfirm} disabled={saving || !imgNatural.w} style={{
           background: !saving && imgNatural.w ? '#e4f816' : 'rgba(255,255,255,0.15)',
           color:      !saving && imgNatural.w ? '#000'    : 'rgba(255,255,255,0.4)',
           border: 'none', borderRadius: 99, padding: '8px 20px',
-          fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s',
+          fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s', zIndex: 1,
         }}>{saving ? '…' : 'Valider'}</button>
       </div>
 
@@ -185,6 +188,13 @@ function CustomCropModal({ src, onConfirm, onCancel, saving }) {
               border: '2px solid rgba(255,255,255,0.88)',
               boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
             }} />
+            {/* Grille tiers 3×3 (clippée au cercle) */}
+            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden', pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: '33.33%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.22)' }} />
+              <div style={{ position: 'absolute', top: '66.66%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.22)' }} />
+              <div style={{ position: 'absolute', left: '33.33%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.22)' }} />
+              <div style={{ position: 'absolute', left: '66.66%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.22)' }} />
+            </div>
             {/* Poignée N */}
             <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', width: 32, height: 5, background: 'white', borderRadius: 99, opacity: 0.9 }} />
             {/* Poignée S */}
