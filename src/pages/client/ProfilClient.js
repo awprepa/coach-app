@@ -46,6 +46,7 @@ export default function ProfilClient() {
   const [crop,          setCrop]          = useState()
   const [completedCrop, setCompletedCrop] = useState(null)
   const [cropping,      setCropping]      = useState(false)
+  const [cropZoom,      setCropZoom]      = useState(1)
 
   // Champs nutrition
   const [sexe,     setSexe]     = useState('')
@@ -395,12 +396,52 @@ export default function ProfilClient() {
         background: '#000', display: 'flex', flexDirection: 'column',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}>
+        {/* CSS overrides react-image-crop → Design A */}
+        <style>{`
+          .awp-crop .ReactCrop__crop-selection {
+            border: 2px solid rgba(255,255,255,0.88) !important;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.56) !important;
+          }
+          .awp-crop .ReactCrop__drag-handle {
+            background: transparent !important;
+            border: none !important;
+            width: 44px !important;
+            height: 44px !important;
+          }
+          .awp-crop .ReactCrop__drag-handle::after {
+            background: white !important;
+            border-radius: 99px !important;
+            opacity: 0.88 !important;
+          }
+          .awp-crop .ReactCrop__drag-handle.ord-n::after,
+          .awp-crop .ReactCrop__drag-handle.ord-s::after {
+            width: 32px !important;
+            height: 5px !important;
+            top: 50% !important; left: 50% !important;
+            transform: translate(-50%,-50%) !important;
+          }
+          .awp-crop .ReactCrop__drag-handle.ord-e::after,
+          .awp-crop .ReactCrop__drag-handle.ord-w::after {
+            width: 5px !important;
+            height: 32px !important;
+            top: 50% !important; left: 50% !important;
+            transform: translate(-50%,-50%) !important;
+          }
+          .awp-crop .ReactCrop__drag-handle.ord-nw::after,
+          .awp-crop .ReactCrop__drag-handle.ord-ne::after,
+          .awp-crop .ReactCrop__drag-handle.ord-sw::after,
+          .awp-crop .ReactCrop__drag-handle.ord-se::after {
+            display: none !important;
+          }
+          .awp-crop .ReactCrop { background: transparent !important; }
+        `}</style>
+
         {/* Top bar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px', paddingTop: 'max(16px, env(safe-area-inset-top))', flexShrink: 0,
         }}>
-          <button onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined) }}
+          <button onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined); setCropZoom(1) }}
             style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
             Annuler
           </button>
@@ -418,18 +459,31 @@ export default function ProfilClient() {
 
         {/* Zone de recadrage */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <ReactCrop crop={crop} onChange={(_, pct) => setCrop(pct)} onComplete={(c) => setCompletedCrop(c)}
-            aspect={1} circularCrop style={{ maxHeight: '65vh', maxWidth: '100%' }}>
+          <ReactCrop className="awp-crop" crop={crop} onChange={(_, pct) => setCrop(pct)}
+            onComplete={(c) => setCompletedCrop(c)} aspect={1} circularCrop
+            style={{ maxHeight: '62vh', maxWidth: '100%' }}>
             <img ref={imgRef} src={cropSrc} alt="Recadrage" onLoad={onImageLoad}
-              style={{ maxHeight: '65vh', maxWidth: '100%', display: 'block' }} />
+              style={{ maxHeight: '62vh', maxWidth: '100%', display: 'block', transform: `scale(${cropZoom})`, transformOrigin: 'center center', transition: 'transform 0.1s' }} />
           </ReactCrop>
         </div>
 
-        {/* Bas */}
-        <div style={{ padding: '16px 24px', paddingBottom: 'max(24px, env(safe-area-inset-bottom))', flexShrink: 0, textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', margin: 0, lineHeight: 1.5 }}>
+        {/* Bas : hint + slider zoom */}
+        <div style={{ padding: '16px 24px', paddingBottom: 'max(28px, env(safe-area-inset-bottom))', flexShrink: 0 }}>
+          <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.7rem', margin: '0 0 14px', textAlign: 'center', lineHeight: 1.5 }}>
             Glisse pour repositionner · Pince pour zoomer
           </p>
+          {/* Slider zoom */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1, userSelect: 'none' }}>⊖</span>
+            <div style={{ flex: 1, position: 'relative', height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)' }}>
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 99, background: '#e4f816', width: `${((cropZoom - 1) / 2) * 100}%` }} />
+              <input type="range" min="1" max="3" step="0.05" value={cropZoom}
+                onChange={e => setCropZoom(parseFloat(e.target.value))}
+                style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer', margin: 0, height: '100%' }} />
+              <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: `calc(${((cropZoom - 1) / 2) * 100}% - 9px)`, width: 18, height: 18, borderRadius: '50%', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', pointerEvents: 'none' }} />
+            </div>
+            <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1, userSelect: 'none' }}>⊕</span>
+          </div>
         </div>
       </div>
     )}
