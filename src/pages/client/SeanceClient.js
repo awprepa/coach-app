@@ -478,6 +478,45 @@ export default function SeanceClient() {
       valide: repsOk,
       is_done: true,
     }, { onConflict: 'exercice_id,semaine,serie' })
+
+    // ── Auto-fill : écrire le max validé dans la table `charges` ──
+    const currentPoids = parseFloat(serie.poids)
+    if (currentPoids > 0) {
+      // Calcul du max parmi toutes les séries is_done de cet exo cette semaine
+      const allSeries = newT[exId] || []
+      const maxPoids = Math.max(
+        ...allSeries
+          .filter(s => s.is_done && parseFloat(s.poids) > 0)
+          .map(s => parseFloat(s.poids)),
+        0
+      )
+      const existingCharge = charges[exId]?.[semaineActuelle]
+      const currentChargeVal = parseFloat(existingCharge?.charge) || 0
+      if (maxPoids > 0 && maxPoids >= currentChargeVal) {
+        const maxStr = String(maxPoids)
+        // Mise à jour optimiste de l'UI
+        setCharges(prev => ({
+          ...prev,
+          [exId]: { ...prev[exId], [semaineActuelle]: { ...(existingCharge || {}), charge: maxStr } },
+        }))
+        // Sauvegarde Supabase
+        if (existingCharge?.id) {
+          await supabase.from('charges').update({ charge: maxStr }).eq('id', existingCharge.id)
+        } else {
+          const { data: newCharge } = await supabase
+            .from('charges')
+            .insert([{ exercice_id: exId, semaine: semaineActuelle, charge: maxStr }])
+            .select().single()
+          if (newCharge) {
+            setCharges(prev => ({
+              ...prev,
+              [exId]: { ...prev[exId], [semaineActuelle]: { id: newCharge.id, charge: maxStr, rpe_reel: null } },
+            }))
+          }
+        }
+      }
+    }
+
     if (!groupLetter || !groupItems) return
     const allDone = groupItems.every(ex => {
       const t = newT[ex.id] || []
@@ -826,13 +865,13 @@ export default function SeanceClient() {
                   {warmups.map((ws, wi) => (
                     <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: '1.5px solid #e5e7eb' }}>
                       <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', width: 22, textAlign: 'center', flexShrink: 0 }}>É{wi + 1}</span>
-                      <input type="text" value={ws.poids}
+                      <input type="text" inputMode="decimal" value={ws.poids}
                         onChange={e => updateWarmupField(ex.id, wi, 'poids', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         placeholder="kg"
                         style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
                       <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>kg</span>
-                      <input type="number" value={ws.reps_reelles}
+                      <input type="number" inputMode="numeric" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         placeholder={tempsMode ? 'sec' : 'reps'}
@@ -853,14 +892,14 @@ export default function SeanceClient() {
               return (
               <div key={si} style={{ ...S.serieRow, ...(serie.is_done ? (serie.valide ? S.serieRowDone : S.serieRowWarn) : {}) }}>
                 <span style={S.serieNum}>{si + 1}</span>
-                <input type="text" value={serie.poids}
+                <input type="text" inputMode="decimal" value={serie.poids}
                   onChange={e => updateTrackingField(ex.id, si, 'poids', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
                   placeholder="kg"
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 52, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>kg</span>
-                <input type="number" value={serie.reps_reelles}
+                <input type="number" inputMode="numeric" value={serie.reps_reelles}
                   onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
                   placeholder={tempsMode ? (ex.repetitions?.replace('"', '') || 'sec') : (ex.repetitions || 'reps')}
@@ -957,8 +996,12 @@ export default function SeanceClient() {
             <div style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
               <div style={labelStyle}>kg</div>
               {cols.map(s => (
-                <input key={`charge-${ex.id}-${s}`} type="text"
-                  defaultValue={charges[ex.id]?.[s]?.charge || ''}
+                <input key={`charge-${ex.id}-${s}`} type="text" inputMode="decimal"
+                  value={charges[ex.id]?.[s]?.charge || ''}
+                  onChange={e => setCharges(prev => ({
+                    ...prev,
+                    [ex.id]: { ...prev[ex.id], [s]: { ...(prev[ex.id]?.[s] || {}), charge: e.target.value } },
+                  }))}
                   onBlur={e => updateCharge(ex.id, s, 'charge', e.target.value)}
                   style={inputStyle(s === semaineActuelle)} placeholder="—" />
               ))}
@@ -966,7 +1009,7 @@ export default function SeanceClient() {
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <div style={labelStyle}>RPE</div>
               {cols.map(s => (
-                <input key={`rpe-${ex.id}-${s}`} type="number" min="1" max="10" step="0.5"
+                <input key={`rpe-${ex.id}-${s}`} type="number" inputMode="decimal" min="1" max="10" step="0.5"
                   defaultValue={charges[ex.id]?.[s]?.rpe_reel || ''}
                   onBlur={e => updateCharge(ex.id, s, 'rpe_reel', e.target.value)}
                   style={inputStyle(s === semaineActuelle)} placeholder="—" />
@@ -1343,7 +1386,7 @@ export default function SeanceClient() {
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                     <div style={labelStyle}>Réel</div>
                     {cols.map(s => (
-                      <input key={`rpe-seance-${s}`} type="number" min="1" max="10" step="0.5"
+                      <input key={`rpe-seance-${s}`} type="number" inputMode="decimal" min="1" max="10" step="0.5"
                         defaultValue={rpeSeances[s]?.rpe_reel || ''}
                         onBlur={e => updateRpeReel(s, e.target.value)}
                         style={inputStyle(s === semaineActuelle)} placeholder="—" />
