@@ -1000,53 +1000,54 @@ export default function AjouterRepas() {
 
         {!cameraError ? (
           <>
-            {/* Masques sombres haut et bas */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '22%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.72), transparent)', zIndex: 2, pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '32%', background: 'linear-gradient(to top, rgba(0,0,0,0.82), transparent)', zIndex: 2, pointerEvents: 'none' }} />
+            {/* ── Design A : 4 blocs opaques + rectangle blanc ── */}
+
+            {/* Blocs opaques : haut / bas / gauche / droite */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 'calc(50% - 52px)', background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 'calc(50% - 52px)', background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 'calc(50% - 52px)', left: 0, width: 'calc(50% - 120px)', height: 104, background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 'calc(50% - 52px)', right: 0, width: 'calc(50% - 120px)', height: 104, background: 'rgba(0,0,0,0.82)', zIndex: 3, pointerEvents: 'none' }} />
+
+            {/* Rectangle de scan avec bordure blanche fine */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 104, zIndex: 4, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: 6 }} />
+            </div>
 
             {/* Header */}
             <div style={{
-              position: 'relative', zIndex: 10,
+              position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '20px 20px 0',
               paddingTop: 'max(20px, env(safe-area-inset-top))',
             }}>
               <button onClick={() => setMode('manuel')} style={{
-                background: 'rgba(255,255,255,0.14)', border: 'none', color: 'white',
-                width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
+                background: 'rgba(255,255,255,0.12)', border: 'none', color: 'white',
+                width: 38, height: 38, borderRadius: '50%', fontSize: '1rem',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
               }}>✕</button>
-              <span style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>Scanner un produit</span>
+              <span style={{ color: 'white', fontWeight: 800, fontSize: '0.9rem' }}>Scanner un produit</span>
               <button onClick={toggleFlash} style={{
-                background: flashOn ? '#e4f816' : 'rgba(255,255,255,0.14)', border: 'none',
+                background: flashOn ? '#e4f816' : 'rgba(255,255,255,0.12)', border: 'none',
                 color: flashOn ? '#000' : 'white',
-                width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
+                width: 38, height: 38, borderRadius: '50%', fontSize: '1rem',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
               }}>⚡</button>
             </div>
 
-            {/* Coins de scan */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div style={{ position: 'relative', width: '78%', height: 90 }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
-                <div style={{ position: 'absolute', top: 0, left: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '5px 0 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                <div style={{ position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 5px 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, width: 28, height: 28, borderBottom: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '0 0 0 5px', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                <div style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderBottom: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 0 5px 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-              </div>
+            {/* Texte sous la zone */}
+            <div style={{ position: 'absolute', top: 'calc(50% + 62px)', left: 0, right: 0, zIndex: 10, textAlign: 'center', pointerEvents: 'none' }}>
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem' }}>Place le code-barres dans le cadre</p>
             </div>
 
             {/* Panel bas */}
-            <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', padding: '0 24px', paddingBottom: 'max(32px, calc(24px + env(safe-area-inset-bottom)))', textAlign: 'center' }}>
-              <p style={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.8rem', marginBottom: 20, lineHeight: 1.5 }}>
-                Pointe vers le code-barres<br />sur l'emballage
-              </p>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, padding: '0 24px', paddingBottom: 'max(32px, calc(24px + env(safe-area-inset-bottom)))', textAlign: 'center' }}>
               <button onClick={() => setMode('manuel')} style={{
-                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.16)',
-                color: 'rgba(255,255,255,0.85)', padding: '12px 32px',
+                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.8)', padding: '12px 32px',
                 borderRadius: 99, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
               }}>✏︎ Saisie manuelle</button>
             </div>
           </>
