@@ -158,6 +158,31 @@ export default function SeanceClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Marquer l'événement comme terminé quand toute la séance est finie
+  // (doit être AVANT les early returns pour respecter les règles des hooks)
+  useEffect(() => {
+    if (exercices.length === 0) return
+    const groups = []
+    exercices.forEach(ex => {
+      const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
+      const last = groups[groups.length - 1]
+      if (last && last.letter === letter && letter) last.items.push(ex)
+      else groups.push({ letter, items: [ex] })
+    })
+    const totalBlocs = groups.length
+    const doneBlocs = groups.filter(g => g.letter && (blocsTermines.has(g.letter) || blocsSkippes.has(g.letter))).length
+    if (totalBlocs === 0 || doneBlocs < totalBlocs) return
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    const ydate = yesterday.toISOString().slice(0, 10)
+    supabase.from('evenements').select('id')
+      .eq('seance_id', id).gte('date', ydate)
+      .order('date', { ascending: true }).limit(1).maybeSingle()
+      .then(({ data: ev }) => {
+        if (ev?.id) supabase.from('evenements').update({ terminee: true }).eq('id', ev.id).then(() => {})
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocsTermines, blocsSkippes, exercices])
+
   async function fetchSeance() {
     // Si hors ligne → charger depuis IndexedDB
     if (!navigator.onLine) {
@@ -617,20 +642,6 @@ export default function SeanceClient() {
 
   const totalBlocs = groups.length
   const doneBlocs = groups.filter(g => g.letter && (blocsTermines.has(g.letter) || blocsSkippes.has(g.letter))).length
-
-  // Marquer l'événement comme terminé quand toute la séance est finie
-  useEffect(() => {
-    if (totalBlocs === 0 || doneBlocs < totalBlocs) return
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
-    const ydate = yesterday.toISOString().slice(0, 10)
-    supabase.from('evenements').select('id')
-      .eq('seance_id', id).gte('date', ydate)
-      .order('date', { ascending: true }).limit(1).maybeSingle()
-      .then(({ data: ev }) => {
-        if (ev?.id) supabase.from('evenements').update({ terminee: true }).eq('id', ev.id).then(() => {})
-      })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doneBlocs, totalBlocs])
 
   // Résumé d'un bloc terminé (ex: "4×6 · 80 kg")
   function blocSummary(groupItems) {
