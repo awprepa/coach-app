@@ -618,6 +618,7 @@ export default function AjouterRepas() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
+    <>
     <div style={{ ...S.page, ...fadeStyle }}>
       {/* Header */}
       <div style={S.header}>
@@ -674,105 +675,6 @@ export default function AjouterRepas() {
             </button>
           ))}
         </div>
-
-        {/* ══ MODE SCAN — FULLSCREEN OVERLAY ════════════════════════ */}
-        {mode === 'scan' && !food && !loadingBarcode && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            background: '#000',
-            display: 'flex', flexDirection: 'column',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          }}>
-            {/* Vidéo plein écran */}
-            <video ref={videoRef} style={{
-              position: 'absolute', inset: 0,
-              width: '100%', height: '100%',
-              objectFit: 'cover', display: 'block',
-            }} />
-
-            {!cameraError ? (
-              <>
-                {/* Masques sombres haut et bas */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '22%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.72), transparent)', zIndex: 2, pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '32%', background: 'linear-gradient(to top, rgba(0,0,0,0.82), transparent)', zIndex: 2, pointerEvents: 'none' }} />
-
-                {/* Header */}
-                <div style={{
-                  position: 'relative', zIndex: 10,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '20px 20px 0',
-                  paddingTop: 'max(20px, env(safe-area-inset-top))',
-                }}>
-                  <button onClick={() => setMode('manuel')} style={{
-                    background: 'rgba(255,255,255,0.14)', border: 'none', color: 'white',
-                    width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
-                    cursor: 'pointer', backdropFilter: 'blur(8px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>✕</button>
-                  <span style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                    Scanner un produit
-                  </span>
-                  <button onClick={toggleFlash} style={{
-                    background: flashOn ? '#e4f816' : 'rgba(255,255,255,0.14)',
-                    border: 'none',
-                    color: flashOn ? '#000' : 'white',
-                    width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
-                    cursor: 'pointer', backdropFilter: 'blur(8px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>⚡</button>
-                </div>
-
-                {/* Coins de scan (sans bande animée) */}
-                <div style={{
-                  position: 'absolute', inset: 0, zIndex: 5,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}>
-                  <div style={{ position: 'relative', width: '78%', height: '22%' }}>
-                    {/* Masque sombre latéral (box-shadow inset) */}
-                    <div style={{ position: 'absolute', inset: -9999, boxShadow: 'inset 0 0 0 9999px rgba(0,0,0,0.45)', pointerEvents: 'none' }} />
-                    {/* Coins jaunes */}
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '5px 0 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                    <div style={{ position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 5px 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: 28, height: 28, borderBottom: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '0 0 0 5px', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderBottom: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 0 5px 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
-                  </div>
-                </div>
-
-                {/* Panel bas */}
-                <div style={{
-                  position: 'relative', zIndex: 10, marginTop: 'auto',
-                  padding: '0 24px 32px',
-                  paddingBottom: 'max(32px, calc(24px + env(safe-area-inset-bottom)))',
-                  textAlign: 'center',
-                }}>
-                  <p style={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.8rem', marginBottom: 20, lineHeight: 1.5 }}>
-                    Pointe vers le code-barres<br />sur l'emballage
-                  </p>
-                  <button onClick={() => setMode('manuel')} style={{
-                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.16)',
-                    color: 'rgba(255,255,255,0.85)', padding: '12px 32px',
-                    borderRadius: 99, fontSize: '0.85rem', fontWeight: 700,
-                    cursor: 'pointer', backdropFilter: 'blur(8px)',
-                  }}>
-                    ✏︎ Saisie manuelle
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* Erreur caméra */
-              <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
-                <p style={{ fontSize: '3rem', margin: '0 0 0.5rem' }}>📷</p>
-                <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.4rem' }}>Caméra inaccessible</p>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', marginBottom: '1.5rem' }}>Vérifie les permissions caméra dans les réglages</p>
-                <button onClick={() => setMode('manuel')} style={{
-                  background: '#e4f816', border: 'none', color: '#000',
-                  padding: '12px 28px', borderRadius: 99, fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
-                }}>Saisie manuelle</button>
-              </div>
-            )}
-          </div>
-        )}
 
         {mode === 'scan' && (loadingBarcode || food) && (
           <div style={S.card}>
@@ -1082,6 +984,83 @@ export default function AjouterRepas() {
         </div>
       )}
     </div>
+
+    {/* ══ SCAN FULLSCREEN — hors du div avec transform (sinon position:fixed cassé) ══ */}
+    {mode === 'scan' && !food && !loadingBarcode && (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200,
+        background: '#000', display: 'flex', flexDirection: 'column',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      }}>
+        {/* Vidéo plein écran */}
+        <video ref={videoRef} style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+        }} />
+
+        {!cameraError ? (
+          <>
+            {/* Masques sombres haut et bas */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '22%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.72), transparent)', zIndex: 2, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '32%', background: 'linear-gradient(to top, rgba(0,0,0,0.82), transparent)', zIndex: 2, pointerEvents: 'none' }} />
+
+            {/* Header */}
+            <div style={{
+              position: 'relative', zIndex: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '20px 20px 0',
+              paddingTop: 'max(20px, env(safe-area-inset-top))',
+            }}>
+              <button onClick={() => setMode('manuel')} style={{
+                background: 'rgba(255,255,255,0.14)', border: 'none', color: 'white',
+                width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>✕</button>
+              <span style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>Scanner un produit</span>
+              <button onClick={toggleFlash} style={{
+                background: flashOn ? '#e4f816' : 'rgba(255,255,255,0.14)', border: 'none',
+                color: flashOn ? '#000' : 'white',
+                width: 40, height: 40, borderRadius: '50%', fontSize: '1.1rem',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>⚡</button>
+            </div>
+
+            {/* Coins de scan */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ position: 'relative', width: '78%', height: '22%' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '5px 0 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
+                <div style={{ position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderTop: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 5px 0 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: 28, height: 28, borderBottom: '3px solid #e4f816', borderLeft: '3px solid #e4f816', borderRadius: '0 0 0 5px', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderBottom: '3px solid #e4f816', borderRight: '3px solid #e4f816', borderRadius: '0 0 5px 0', boxShadow: '0 0 10px rgba(228,248,22,0.5)' }} />
+              </div>
+            </div>
+
+            {/* Panel bas */}
+            <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', padding: '0 24px', paddingBottom: 'max(32px, calc(24px + env(safe-area-inset-bottom)))', textAlign: 'center' }}>
+              <p style={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.8rem', marginBottom: 20, lineHeight: 1.5 }}>
+                Pointe vers le code-barres<br />sur l'emballage
+              </p>
+              <button onClick={() => setMode('manuel')} style={{
+                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.16)',
+                color: 'rgba(255,255,255,0.85)', padding: '12px 32px',
+                borderRadius: 99, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+              }}>✏︎ Saisie manuelle</button>
+            </div>
+          </>
+        ) : (
+          <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
+            <p style={{ fontSize: '3rem', margin: '0 0 0.5rem' }}>📷</p>
+            <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.4rem' }}>Caméra inaccessible</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', marginBottom: '1.5rem' }}>Vérifie les permissions dans les réglages</p>
+            <button onClick={() => setMode('manuel')} style={{ background: '#e4f816', border: 'none', color: '#000', padding: '12px 28px', borderRadius: 99, fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>
+              Saisie manuelle
+            </button>
+          </div>
+        )}
+      </div>
+    )}
+    </>
   )
 }
 

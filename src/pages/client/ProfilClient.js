@@ -190,10 +190,11 @@ export default function ProfilClient() {
   const initiales = `${client?.prenom?.[0] || ''}${client?.nom?.[0] || ''}`.toUpperCase()
 
   return (
+    <>
     <div style={{ ...S.page, ...fadeStyle }}>
 
-      {/* ── Modal de recadrage ─────────────────────────────────────────────── */}
-      {cropSrc && (
+      {/* modal recadrage rendu hors du div transformé (voir en bas du return) */}
+      {false && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 300,
           background: '#000',
@@ -386,6 +387,53 @@ export default function ProfilClient() {
       <div style={{ height: 100 }} />
       <ClientBottomNav />
     </div>
+
+    {/* ── Modal recadrage — hors du div avec transform pour que position:fixed marche ── */}
+    {cropSrc && (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 300,
+        background: '#000', display: 'flex', flexDirection: 'column',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      }}>
+        {/* Top bar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', paddingTop: 'max(16px, env(safe-area-inset-top))', flexShrink: 0,
+        }}>
+          <button onClick={() => { setCropSrc(null); setCompletedCrop(null); setCrop(undefined) }}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+            Annuler
+          </button>
+          <span style={{ color: 'white', fontWeight: 700, fontSize: '0.92rem' }}>Photo de profil</span>
+          <button onClick={handleCropConfirm} disabled={!completedCrop || cropping} style={{
+            background: completedCrop && !cropping ? '#e4f816' : 'rgba(255,255,255,0.15)',
+            color: completedCrop && !cropping ? '#000' : 'rgba(255,255,255,0.4)',
+            border: 'none', borderRadius: 99, padding: '8px 20px',
+            fontWeight: 800, fontSize: '0.85rem',
+            cursor: completedCrop && !cropping ? 'pointer' : 'default', transition: 'all 0.2s',
+          }}>
+            {cropping ? '…' : 'Valider'}
+          </button>
+        </div>
+
+        {/* Zone de recadrage */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <ReactCrop crop={crop} onChange={(_, pct) => setCrop(pct)} onComplete={(c) => setCompletedCrop(c)}
+            aspect={1} circularCrop style={{ maxHeight: '65vh', maxWidth: '100%' }}>
+            <img ref={imgRef} src={cropSrc} alt="Recadrage" onLoad={onImageLoad}
+              style={{ maxHeight: '65vh', maxWidth: '100%', display: 'block' }} />
+          </ReactCrop>
+        </div>
+
+        {/* Bas */}
+        <div style={{ padding: '16px 24px', paddingBottom: 'max(24px, env(safe-area-inset-bottom))', flexShrink: 0, textAlign: 'center' }}>
+          <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', margin: 0, lineHeight: 1.5 }}>
+            Glisse pour repositionner · Pince pour zoomer
+          </p>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
