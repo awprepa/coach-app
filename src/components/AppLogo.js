@@ -9,7 +9,7 @@ import { useClientTheme } from '../context/ClientThemeContext'
  *   style   — styles supplémentaires sur le conteneur texte
  *   imgStyle — styles supplémentaires sur l'image
  */
-export default function AppLogo({ size = 72, style = {}, imgStyle = {} }) {
+export default function AppLogo({ size = 52, style = {}, imgStyle = {} }) {
   const { logoUrl, clubName } = useClientTheme()
 
   if (logoUrl) {
