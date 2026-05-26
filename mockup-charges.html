@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charges — Vue coach</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: #f0f0f5;
+  color: #111;
+  min-height: 100vh;
+  padding: 28px 28px 48px;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+.header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+.header .sub { font-size: 13px; color: #999; margin-top: 3px; }
+.week-badge {
+  background: #111;
+  color: #e4f816;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+/* ── KPIs ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.kpi {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e8e8f0;
+}
+.kpi-val {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: #111;
+}
+.kpi-val sup { font-size: 12px; font-weight: 500; color: #aaa; letter-spacing: 0; }
+.kpi-lbl { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.7px; margin-top: 5px; }
+.kpi-delta { font-size: 11px; font-weight: 700; margin-top: 3px; }
+.green { color: #16a34a; }
+.orange { color: #ea580c; }
+.gray { color: #aaa; }
+
+/* ── FILTRE ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: #aaa;
+}
+.filters { display: flex; gap: 6px; }
+.filter-pill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid #e0e0e8;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+.filter-pill.active { background: #111; color: #fff; border-color: #111; }
+
+/* ── TABLE ── */
+.table-wrap {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e8e8f0;
+  overflow: hidden;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* En-têtes */
+thead tr {
+  background: #fafafa;
+  border-bottom: 2px solid #f0f0f5;
+}
+thead th {
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #bbb;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  text-align: center;
+  white-space: nowrap;
+}
+thead th.left { text-align: left; }
+thead th.week { min-width: 68px; }
+
+/* Séparateur groupes musculaires */
+.group-sep td {
+  padding: 6px 16px 4px;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: #fafafa;
+  border-top: 2px solid #f0f0f5;
+  border-bottom: 1px solid #f0f0f5;
+}
+
+/* Lignes exercices */
+tbody tr.exo-row { border-bottom: 1px solid #f5f5fa; transition: background 0.1s; }
+tbody tr.exo-row:hover { background: #fafbff; }
+
+/* Colonne exercice */
+td.exo-cell {
+  padding: 11px 16px;
+  white-space: nowrap;
+}
+.exo-name { font-size: 13px; font-weight: 600; color: #111; }
+.muscle-tag {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 7px;
+  vertical-align: middle;
+}
+
+/* Cellules semaine */
+td.week-cell { padding: 8px 6px; text-align: center; vertical-align: middle; }
+.wpill {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  position: relative;
+  gap: 0;
+}
+.wpill .w-kg { line-height: 1; }
+.wpill .w-unit { font-size: 8px; font-weight: 600; opacity: 0.7; line-height: 1; margin-top: 1px; }
+.wpill.empty { background: transparent; color: #ddd; font-size: 11px; }
+.pr-dot {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: #fff;
+  color: #15803d;
+  font-size: 7px;
+  font-weight: 900;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Échelle unique — rouge → orange → jaune → vert clair → vert foncé */
+.j1, .d1, .p1, .e1 { background: #ef4444; color: #fff; }
+.j2, .d2, .p2, .e2 { background: #f97316; color: #fff; }
+.j3, .d3, .p3, .e3 { background: #eab308; color: #fff; }
+.j4, .d4, .p4, .e4 { background: #84cc16; color: #fff; }
+.j5, .d5, .p5, .e5 { background: #16a34a; color: #fff; }
+.jpr, .dpr, .ppr, .epr { background: #15803d; color: #fff; }
+
+/* Colonne charge max */
+td.maxw-cell { padding: 8px 12px; text-align: right; white-space: nowrap; }
+.maxw-val { font-size: 18px; font-weight: 800; color: #111; letter-spacing: -0.5px; line-height: 1; }
+.maxw-val sup { font-size: 10px; color: #bbb; font-weight: 500; }
+.maxw-prog {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Colonne reps + RPE */
+td.detail-cell { padding: 8px 12px; text-align: center; }
+.detail-line { font-size: 12px; color: #555; font-weight: 500; white-space: nowrap; }
+.rpe-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 3px;
+}
+.rpe-low  { background: #dcfce7; color: #14532d; }
+.rpe-mid  { background: #fef9c3; color: #854d0e; }
+.rpe-high { background: #fee2e2; color: #991b1b; }
+
+/* Colonne trend S4→S5 */
+td.trend-cell { padding: 8px 10px; text-align: center; }
+.trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.trend.up   { background: #dcfce7; color: #15803d; }
+.trend.flat { background: #f5f5f5; color: #aaa; }
+.trend.down { background: #fee2e2; color: #991b1b; }
+
+/* Colonne progression totale S1→S5 */
+td.prog-cell { padding: 8px 12px; text-align: center; }
+.prog-pct {
+  font-size: 14px;
+  font-weight: 800;
+  color: #111;
+}
+.prog-sub { font-size: 10px; color: #aaa; margin-top: 1px; }
+
+/* Colonne PR */
+td.pr-cell { padding: 8px 10px; text-align: center; }
+.pr-badge { background: #15803d; color: #fff; font-size: 9px; font-weight: 900; padding: 3px 7px; border-radius: 5px; letter-spacing: 0.3px; }
+
+/* ── LIGNE TOTAUX ── */
+.totals-row td {
+  padding: 10px 12px;
+  background: #fafafa;
+  border-top: 2px solid #f0f0f5;
+  font-size: 11px;
+  color: #888;
+  font-weight: 600;
+  text-align: center;
+}
+.totals-row td.left { text-align: left; font-weight: 800; color: #555; font-size: 12px; }
+
+/* ── NOTE / LÉGENDE ── */
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  border-top: 1px solid #f0f0f5;
+  background: #fafafa;
+  flex-wrap: wrap;
+}
+.legend-group { display: flex; align-items: center; gap: 6px; }
+.legend-label { font-size: 10px; font-weight: 700; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; }
+.legend-swatches { display: flex; gap: 3px; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>Lucas Moreau</h1>
+    <div class="sub">Prépa physique · 14 exercices programmés</div>
+  </div>
+  <div class="week-badge">Semaine 5 / 8</div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="kpi-val">12 <sup>/ 14</sup></div>
+    <div class="kpi-lbl">Exercices trackés</div>
+    <div class="kpi-delta gray">2 non renseignés</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val" style="color:#ea580c">3</div>
+    <div class="kpi-lbl">PRs cette semaine</div>
+    <div class="kpi-delta orange">Squat · SDT · Bench</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val">142 <sup>kg</sup></div>
+    <div class="kpi-lbl">Charge max moy.</div>
+    <div class="kpi-delta green">↑ +8% vs S4</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val">18.4 <sup>t</sup></div>
+    <div class="kpi-lbl">Tonnage total S5</div>
+    <div class="kpi-delta green">↑ +5% vs S4</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val">8.1</div>
+    <div class="kpi-lbl">RPE moyen séance</div>
+    <div class="kpi-delta orange">↑ Charge élevée</div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="section-title">Détail par exercice — S1 à S5</div>
+  <div class="filters">
+    <div class="filter-pill active">Tous</div>
+    <div class="filter-pill">Jambes</div>
+    <div class="filter-pill">Dos</div>
+    <div class="filter-pill">Poitrine</div>
+    <div class="filter-pill">Épaules</div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th class="left" style="min-width:160px">Exercice</th>
+      <th class="week">S1</th>
+      <th class="week">S2</th>
+      <th class="week">S3</th>
+      <th class="week">S4</th>
+      <th class="week">S5</th>
+      <th style="min-width:80px">Max S5</th>
+      <th style="min-width:90px">Séries / Reps</th>
+      <th style="min-width:90px">S4 → S5</th>
+      <th style="min-width:70px">Prog. totale</th>
+      <th style="min-width:40px">PR</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- ── JAMBES ── -->
+    <tr class="group-sep">
+      <td colspan="11" style="color:#888">
+        🦵 &nbsp;JAMBES
+      </td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Squat</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Jambes</span>
+      </td>
+      <td class="week-cell"><div class="wpill j1"><span class="w-kg">100</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j2"><span class="w-kg">105</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j3"><span class="w-kg">110</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j4"><span class="w-kg">115</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill jpr"><span class="w-kg">122</span><span class="w-unit">kg</span><div class="pr-dot">★</div></div></td>
+      <td class="maxw-cell"><div class="maxw-val">122 <sup>kg</sup></div><div class="maxw-prog green">↑ +7 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">5 × 3 reps</div><div class="rpe-badge rpe-high">RPE 8.5</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +7 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+22%</div><div class="prog-sub">100 → 122 kg</div></td>
+      <td class="pr-cell"><span class="pr-badge">★ PR</span></td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Leg press</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Jambes</span>
+      </td>
+      <td class="week-cell"><div class="wpill j3"><span class="w-kg">180</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j4"><span class="w-kg">190</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j4"><span class="w-kg">195</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j5"><span class="w-kg">200</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j5"><span class="w-kg">200</span><span class="w-unit">kg</span></div></td>
+      <td class="maxw-cell"><div class="maxw-val">200 <sup>kg</sup></div><div class="maxw-prog gray">→ stable</div></td>
+      <td class="detail-cell"><div class="detail-line">4 × 8 reps</div><div class="rpe-badge rpe-low">RPE 7</div></td>
+      <td class="trend-cell"><div class="trend flat">→ 0 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+11%</div><div class="prog-sub">180 → 200 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Hip thrust</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Jambes</span>
+      </td>
+      <td class="week-cell"><div class="wpill j3"><span class="w-kg">100</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j4"><span class="w-kg">105</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j5"><span class="w-kg">110</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j4"><span class="w-kg">105</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill j5"><span class="w-kg">112</span><span class="w-unit">kg</span></div></td>
+      <td class="maxw-cell"><div class="maxw-val">112 <sup>kg</sup></div><div class="maxw-prog green">↑ +7 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">4 × 8 reps</div><div class="rpe-badge rpe-mid">RPE 7.5</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +7 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+12%</div><div class="prog-sub">100 → 112 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <!-- ── DOS ── -->
+    <tr class="group-sep">
+      <td colspan="11" style="color:#888">
+        🔵 &nbsp;DOS
+      </td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Soulevé de terre</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Dos</span>
+      </td>
+      <td class="week-cell"><div class="wpill d2"><span class="w-kg">120</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d3"><span class="w-kg">125</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d3"><span class="w-kg">130</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d4"><span class="w-kg">135</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill dpr"><span class="w-kg">142</span><span class="w-unit">kg</span><div class="pr-dot">★</div></div></td>
+      <td class="maxw-cell"><div class="maxw-val">142 <sup>kg</sup></div><div class="maxw-prog green">↑ +7 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">4 × 4 reps</div><div class="rpe-badge rpe-high">RPE 9</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +7 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+18%</div><div class="prog-sub">120 → 142 kg</div></td>
+      <td class="pr-cell"><span class="pr-badge">★ PR</span></td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Rowing barre</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Dos</span>
+      </td>
+      <td class="week-cell"><div class="wpill d2"><span class="w-kg">70</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d3"><span class="w-kg">75</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d5"><span class="w-kg">80</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d5"><span class="w-kg">80</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d5"><span class="w-kg">82</span><span class="w-unit">kg</span></div></td>
+      <td class="maxw-cell"><div class="maxw-val">82 <sup>kg</sup></div><div class="maxw-prog green">↑ +2 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">4 × 6 reps</div><div class="rpe-badge rpe-high">RPE 8</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +2 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+17%</div><div class="prog-sub">70 → 82 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Tirage poulie haute</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Dos</span>
+      </td>
+      <td class="week-cell"><div class="wpill d1"><span class="w-kg">60</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d3"><span class="w-kg">65</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d3"><span class="w-kg">65</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d4"><span class="w-kg">70</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill d5"><span class="w-kg">72</span><span class="w-unit">kg</span></div></td>
+      <td class="maxw-cell"><div class="maxw-val">72 <sup>kg</sup></div><div class="maxw-prog green">↑ +2 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">4 × 8 reps</div><div class="rpe-badge rpe-mid">RPE 7.5</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +2 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+20%</div><div class="prog-sub">60 → 72 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <!-- ── POITRINE ── -->
+    <tr class="group-sep">
+      <td colspan="11" style="color:#888">
+        💜 &nbsp;POITRINE
+      </td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Développé couché</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Poitrine</span>
+      </td>
+      <td class="week-cell"><div class="wpill p1"><span class="w-kg">75</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill p3"><span class="w-kg">80</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill p3"><span class="w-kg">82</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill p4"><span class="w-kg">85</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill ppr"><span class="w-kg">90</span><span class="w-unit">kg</span><div class="pr-dot">★</div></div></td>
+      <td class="maxw-cell"><div class="maxw-val">90 <sup>kg</sup></div><div class="maxw-prog green">↑ +5 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">5 × 3 reps</div><div class="rpe-badge rpe-high">RPE 8</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +5 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+20%</div><div class="prog-sub">75 → 90 kg</div></td>
+      <td class="pr-cell"><span class="pr-badge">★ PR</span></td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Écarté haltères</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Poitrine</span>
+      </td>
+      <td class="week-cell"><div class="wpill p3"><span class="w-kg">18</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill p3"><span class="w-kg">18</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill p5"><span class="w-kg">20</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill p5"><span class="w-kg">20</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill empty">—</div></td>
+      <td class="maxw-cell"><div class="maxw-val" style="color:#bbb">—</div><div class="maxw-prog gray">Non renseigné</div></td>
+      <td class="detail-cell"><div class="detail-line" style="color:#ccc">—</div><div class="rpe-badge" style="background:#f5f5f5;color:#bbb">—</div></td>
+      <td class="trend-cell"><div class="trend flat">— ND</div></td>
+      <td class="prog-cell"><div class="prog-pct">+11%</div><div class="prog-sub">18 → 20 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <!-- ── ÉPAULES ── -->
+    <tr class="group-sep">
+      <td colspan="11" style="color:#888">
+        🟢 &nbsp;ÉPAULES
+      </td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Dév. militaire</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Épaules</span>
+      </td>
+      <td class="week-cell"><div class="wpill e1"><span class="w-kg">50</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e3"><span class="w-kg">55</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e4"><span class="w-kg">57</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e4"><span class="w-kg">57</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e5"><span class="w-kg">60</span><span class="w-unit">kg</span></div></td>
+      <td class="maxw-cell"><div class="maxw-val">60 <sup>kg</sup></div><div class="maxw-prog green">↑ +3 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">4 × 6 reps</div><div class="rpe-badge rpe-mid">RPE 7.5</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +3 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+20%</div><div class="prog-sub">50 → 60 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <tr class="exo-row">
+      <td class="exo-cell">
+        <span class="exo-name">Élévations latérales</span>
+        <span class="muscle-tag" style="background:#f0f0f5;color:#777">Épaules</span>
+      </td>
+      <td class="week-cell"><div class="wpill e1"><span class="w-kg">10</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e1"><span class="w-kg">10</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e2"><span class="w-kg">12</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e2"><span class="w-kg">12</span><span class="w-unit">kg</span></div></td>
+      <td class="week-cell"><div class="wpill e3"><span class="w-kg">14</span><span class="w-unit">kg</span></div></td>
+      <td class="maxw-cell"><div class="maxw-val">14 <sup>kg</sup></div><div class="maxw-prog green">↑ +2 kg vs S4</div></td>
+      <td class="detail-cell"><div class="detail-line">3 × 15 reps</div><div class="rpe-badge rpe-mid">RPE 7</div></td>
+      <td class="trend-cell"><div class="trend up">↑ +2 kg</div></td>
+      <td class="prog-cell"><div class="prog-pct green">+40%</div><div class="prog-sub">10 → 14 kg</div></td>
+      <td class="pr-cell">—</td>
+    </tr>
+
+    <!-- LIGNE TOTAUX -->
+    <tr class="totals-row">
+      <td class="left">Résumé S5 — 12 exercices</td>
+      <td colspan="5"></td>
+      <td>Moy. 102 kg</td>
+      <td>8 séances</td>
+      <td style="color:#15803d;font-weight:700">↑ +4.8 kg moy.</td>
+      <td style="color:#15803d;font-weight:700">+18% moy.</td>
+      <td>3 PRs</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<!-- LÉGENDE COULEURS -->
+<div class="legend-row">
+  <div class="legend-group">
+    <div class="legend-swatch j1" style="width:14px;height:14px;border-radius:3px"></div>
+    <div class="legend-swatch j2" style="width:14px;height:14px;border-radius:3px"></div>
+    <div class="legend-swatch j3" style="width:14px;height:14px;border-radius:3px"></div>
+    <div class="legend-swatch j4" style="width:14px;height:14px;border-radius:3px"></div>
+    <div class="legend-swatch j5" style="width:14px;height:14px;border-radius:3px"></div>
+    <span class="legend-label" style="margin-left:4px">Léger → Très lourd</span>
+  </div>
+  <div class="legend-group">
+    <div class="legend-swatch jpr" style="width:14px;height:14px;border-radius:3px"></div>
+    <span class="legend-label">★ PR absolu</span>
+  </div>
+  <div style="margin-left:auto;font-size:10px;color:#bbb;font-weight:600">
+    Couleur = % du max de l'exercice · Noir/jaune = PR absolu
+  </div>
+</div>
+
+</div><!-- /table-wrap -->
+
+</body>
+</html>

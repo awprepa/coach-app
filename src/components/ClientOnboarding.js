@@ -140,7 +140,7 @@ function IlluWelcome() {
     <div style={{ width: '100%', borderRadius: 14, background: '#1a1a1a', padding: '28px 16px', marginBottom: 18, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontSize: '2.2rem', marginBottom: 14 }}>👋</div>
       <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', marginBottom: 4 }}>
-        <AppLogo size={120} />
+        <AppLogo size={180} />
       </div>
       <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>Ta plateforme de coaching sportif</div>
     </div>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner v2 — Nouveaux designs</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  body { background: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: white; padding: 20px 16px 40px; }
+  h1 { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 24px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; align-items: flex-start; }
+  .label { font-size: 0.65rem; color: #4b5563; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; font-weight: 700; }
+  .phone { width: 300px; background: #000; border-radius: 40px; border: 2px solid #1a1a1a; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
+  .tag { display: inline-block; font-size: 0.6rem; font-weight: 800; padding: 3px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: .05em; margin-top: 10px; }
+  .tag-a { background: #e4f816; color: #000; }
+  .tag-b { background: #1e1e1e; color: #6b7280; }
+
+  @keyframes scanline {
+    0%   { top: 8px; opacity: 1; }
+    45%  { top: calc(100% - 10px); opacity: 1; }
+    50%  { opacity: 0; }
+    51%  { top: 8px; opacity: 0; }
+    55%  { opacity: 1; }
+    100% { top: 8px; opacity: 1; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Scanner code-barres — Nouveaux designs</h1>
+<div class="row">
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- DESIGN A : Découpe nette — overlay opaque percé -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="label">Design A — Découpe opaque</div>
+    <div class="phone">
+      <div style="position:relative; height:580px; background:#000; overflow:hidden;">
+
+        <!-- Caméra simulée -->
+        <div style="position:absolute;inset:0;background:linear-gradient(160deg,#1a2a1a 0%,#0d1a0d 40%,#0a0a1a 100%);"></div>
+        <!-- Lumière ambiante simulée -->
+        <div style="position:absolute;top:30%;left:20%;width:60%;height:40%;background:radial-gradient(ellipse,rgba(255,255,240,0.08),transparent);border-radius:50%;"></div>
+
+        <!-- Overlay 4 blocs opaques autour de la zone de scan -->
+        <!-- Haut -->
+        <div style="position:absolute;top:0;left:0;right:0;height:calc(50% - 52px);background:rgba(0,0,0,0.82);"></div>
+        <!-- Bas -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:calc(50% - 52px);background:rgba(0,0,0,0.82);"></div>
+        <!-- Gauche -->
+        <div style="position:absolute;top:calc(50% - 52px);left:0;width:calc(50% - 120px);height:104px;background:rgba(0,0,0,0.82);"></div>
+        <!-- Droite -->
+        <div style="position:absolute;top:calc(50% - 52px);right:0;width:calc(50% - 120px);height:104px;background:rgba(0,0,0,0.82);"></div>
+
+        <!-- Zone de scan : rectangle transparent avec bordure blanche -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:240px;height:104px;">
+          <!-- Bordure blanche fine -->
+          <div style="position:absolute;inset:0;border:1.5px solid rgba(255,255,255,0.7);border-radius:6px;"></div>
+          <!-- Ligne de scan animée -->
+          <div style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 0%,#e4f816 20%,#e4f816 80%,transparent 100%);box-shadow:0 0 8px #e4f81699;animation:scanline 2.2s ease-in-out infinite;border-radius:1px;"></div>
+        </div>
+
+        <!-- Header -->
+        <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:max(20px,env(safe-area-inset-top)) 20px 0;z-index:10;">
+          <button style="background:rgba(255,255,255,0.1);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:0.95rem;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;">✕</button>
+          <span style="font-weight:800;font-size:0.85rem;color:white;letter-spacing:.02em;">Scanner un produit</span>
+          <button style="background:rgba(255,255,255,0.1);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:0.95rem;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;">⚡</button>
+        </div>
+
+        <!-- Texte indicateur sous la zone -->
+        <div style="position:absolute;top:calc(50% + 70px);left:0;right:0;text-align:center;z-index:10;">
+          <p style="font-size:0.72rem;color:rgba(255,255,255,0.45);letter-spacing:.02em;">Place le code-barres dans le cadre</p>
+        </div>
+
+        <!-- Bas -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:0 24px max(28px,env(safe-area-inset-bottom));z-index:10;text-align:center;">
+          <button style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.75);padding:12px 32px;border-radius:99px;font-size:0.82rem;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);">✏︎ Saisie manuelle</button>
+        </div>
+
+      </div>
+    </div>
+    <span class="tag tag-a" style="margin-top:10px;">Option A</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- DESIGN B : Vignette douce — dégradé radial     -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="label">Design B — Vignette douce</div>
+    <div class="phone">
+      <div style="position:relative; height:580px; background:#000; overflow:hidden;">
+
+        <!-- Caméra simulée -->
+        <div style="position:absolute;inset:0;background:linear-gradient(160deg,#1a2a1a 0%,#0d1a0d 40%,#0a0a1a 100%);"></div>
+        <div style="position:absolute;top:30%;left:20%;width:60%;height:40%;background:radial-gradient(ellipse,rgba(255,255,240,0.08),transparent);border-radius:50%;"></div>
+
+        <!-- Vignette sombre radiale concentrique (dégradé) -->
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse 75% 38% at 50% 48%, transparent 0%, transparent 42%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.88) 100%);"></div>
+
+        <!-- Cadre simple autour de la zone (pas de coins) -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:240px;height:104px;border:1.5px solid rgba(255,255,255,0.55);border-radius:4px;animation:pulse 2.5s ease-in-out infinite;">
+          <!-- Ligne de scan -->
+          <div style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e4f816,transparent);box-shadow:0 0 10px #e4f816;animation:scanline 2s ease-in-out infinite;"></div>
+        </div>
+
+        <!-- Header -->
+        <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:max(20px,env(safe-area-inset-top)) 20px 0;z-index:10;">
+          <button style="background:rgba(0,0,0,0.4);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:0.95rem;cursor:pointer;backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;">✕</button>
+          <span style="font-weight:800;font-size:0.85rem;color:white;text-shadow:0 1px 6px rgba(0,0,0,0.8);">Scanner un produit</span>
+          <button style="background:rgba(0,0,0,0.4);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:0.95rem;cursor:pointer;backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;">⚡</button>
+        </div>
+
+        <!-- Texte indicateur -->
+        <div style="position:absolute;top:calc(50% + 70px);left:0;right:0;text-align:center;z-index:10;">
+          <p style="font-size:0.72rem;color:rgba(255,255,255,0.5);letter-spacing:.02em;">Pointe vers le code-barres</p>
+        </div>
+
+        <!-- Bas -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:0 24px max(28px,env(safe-area-inset-bottom));z-index:10;text-align:center;">
+          <button style="background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:12px 32px;border-radius:99px;font-size:0.82rem;font-weight:700;cursor:pointer;backdrop-filter:blur(12px);">✏︎ Saisie manuelle</button>
+        </div>
+
+      </div>
+    </div>
+    <span class="tag tag-b" style="margin-top:10px;">Option B</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- DESIGN C : Ultra-minimaliste — juste une ligne -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="label">Design C — Ultra minimal</div>
+    <div class="phone">
+      <div style="position:relative; height:580px; background:#000; overflow:hidden;">
+
+        <!-- Caméra simulée -->
+        <div style="position:absolute;inset:0;background:linear-gradient(160deg,#1a2a1a 0%,#0d1a0d 40%,#0a0a1a 100%);"></div>
+        <div style="position:absolute;top:30%;left:20%;width:60%;height:40%;background:radial-gradient(ellipse,rgba(255,255,240,0.08),transparent);border-radius:50%;"></div>
+
+        <!-- Léger fondu haut et bas uniquement -->
+        <div style="position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(to bottom,rgba(0,0,0,0.6),transparent);"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to top,rgba(0,0,0,0.75),transparent);"></div>
+
+        <!-- Zone centrale : 4 coins jaunes uniquement, rien d'autre -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:250px;height:108px;">
+          <!-- Coin TL -->
+          <div style="position:absolute;top:0;left:0;width:22px;height:22px;border-top:3px solid #e4f816;border-left:3px solid #e4f816;border-radius:2px 0 0 0;"></div>
+          <!-- Coin TR -->
+          <div style="position:absolute;top:0;right:0;width:22px;height:22px;border-top:3px solid #e4f816;border-right:3px solid #e4f816;border-radius:0 2px 0 0;"></div>
+          <!-- Coin BL -->
+          <div style="position:absolute;bottom:0;left:0;width:22px;height:22px;border-bottom:3px solid #e4f816;border-left:3px solid #e4f816;border-radius:0 0 0 2px;"></div>
+          <!-- Coin BR -->
+          <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;border-bottom:3px solid #e4f816;border-right:3px solid #e4f816;border-radius:0 0 2px 0;"></div>
+          <!-- Ligne de scan jaune -->
+          <div style="position:absolute;left:4px;right:4px;height:2px;background:#e4f816;box-shadow:0 0 12px #e4f816,0 0 24px #e4f81644;animation:scanline 2s ease-in-out infinite;"></div>
+        </div>
+
+        <!-- Header minimaliste -->
+        <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:max(20px,env(safe-area-inset-top)) 20px 0;z-index:10;">
+          <button style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:1.4rem;cursor:pointer;line-height:1;padding:4px;">✕</button>
+          <span style="font-weight:700;font-size:0.85rem;color:rgba(255,255,255,0.85);">Scanner un produit</span>
+          <button style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:1rem;cursor:pointer;padding:4px;">⚡</button>
+        </div>
+
+        <!-- Texte indicateur -->
+        <div style="position:absolute;top:calc(50% + 72px);left:0;right:0;text-align:center;z-index:10;">
+          <p style="font-size:0.7rem;color:rgba(255,255,255,0.4);">Alignez le code-barres dans le cadre</p>
+        </div>
+
+        <!-- Bas -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:0 24px max(28px,env(safe-area-inset-bottom));z-index:10;text-align:center;">
+          <button style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);padding:11px 28px;border-radius:99px;font-size:0.8rem;font-weight:700;cursor:pointer;">✏︎ Saisie manuelle</button>
+        </div>
+
+      </div>
+    </div>
+    <span class="tag tag-b" style="margin-top:10px;">Option C</span>
+  </div>
+
+</div>
+</body>
+</html>
