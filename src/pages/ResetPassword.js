@@ -57,7 +57,7 @@ export default function ResetPassword() {
   return (
     <div style={S.page}>
       <div style={S.brand}>
-        <img src="/logo-noir.png" alt="AWprepa" style={{ height: 180, width: 'auto', display: 'block', margin: '0 auto' }} />
+        <img src="/logo-noir.png" alt="AWprepa" style={{ height: 80, width: 'auto', display: 'block', margin: '0 auto' }} />
         <p style={S.tagline}>Plateforme de coaching sportif</p>
       </div>
 
