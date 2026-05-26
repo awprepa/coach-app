@@ -1207,7 +1207,8 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         // KPIs
         const exosCetteSemaine = exercises.filter(e => e.weeks[lastWeek]).length
         const prCount = exercises.filter(e => {
-          const myLast = allWeeks.filter(w => e.weeks[w]).pop()
+          const keys = Object.keys(e.weeks).map(Number).sort((a, b) => a - b)
+          const myLast = keys[keys.length - 1]
           const w = myLast !== undefined ? e.weeks[myLast] : null
           return w && parseFloat(w.poids) >= e.allTimeMax
         }).length
@@ -1223,8 +1224,8 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
         // Helper : rendu d'une ligne exercice
         const renderExoRow = (exo) => {
-          // Dernière semaine où CET exercice a été fait (pas la dernière semaine globale)
-          const exoWeeks = allWeeks.filter(w => exo.weeks[w])
+          // Dernière semaine où CET exercice a été fait (directement depuis ses propres clés)
+          const exoWeeks = Object.keys(exo.weeks).map(Number).sort((a, b) => a - b)
           const myLastWeek = exoWeeks[exoWeeks.length - 1]
           const myFirstWeek = exoWeeks[0]
           const currentW = myLastWeek !== undefined ? exo.weeks[myLastWeek] : null
