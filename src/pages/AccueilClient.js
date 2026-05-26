@@ -204,7 +204,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
 
 const W = {
   overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
-  card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380 },
+  card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380, maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box' },
   subtitle:  { fontSize: '0.68rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
   title:     { fontSize: '1.4rem', fontWeight: '800', color: '#333333', margin: 0 },
   qLabel:    { fontSize: '0.85rem', fontWeight: '700', color: '#374151', margin: '0 0 0.45rem' },
@@ -405,7 +405,7 @@ export default function AccueilClient() {
       )}
 
       <div style={styles.header}>
-        <AppLogo size={28} />
+        <AppLogo size={38} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button
             onClick={() => navigate('/client/notifications')}
