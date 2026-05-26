@@ -406,7 +406,7 @@ export default function AccueilClient() {
       )}
 
       <div style={styles.header}>
-        <AppLogo size={52} />
+        <AppLogo size={62} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button
             onClick={() => navigate('/client/notifications')}
@@ -604,7 +604,7 @@ export default function AccueilClient() {
 const styles = {
   page:        { minHeight: '100vh', background: 'var(--accent-muted)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
   centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:      { background: 'var(--header-bg)', height: 60, padding: '0 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  header:      { background: 'var(--header-bg)', height: 70, padding: '0 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.25rem', letterSpacing: '-0.5px' },
   avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'var(--header-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
   content:     { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
