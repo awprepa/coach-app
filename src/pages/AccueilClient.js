@@ -392,8 +392,9 @@ export default function AccueilClient() {
         />
       )}
 
-      {showInstall && (
-        <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />
+      {showInstall && createPortal(
+        <InstallGuide onDone={() => { localStorage.setItem('awprepa_install_seen', '1'); setShowInstall(false) }} />,
+        document.body
       )}
       {!showInstall && showWellness && createPortal(
         <WellnessOverlay
