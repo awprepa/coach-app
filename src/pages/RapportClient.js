@@ -419,9 +419,7 @@ export default function RapportClient() {
         {/* En-tête */}
         <div style={S.rapportHeader}>
           <div style={S.rapportHeaderLeft}>
-            <div style={S.logo}>
-              AW<span style={{ color: '#e4f816' }}>prepa</span>
-            </div>
+            <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 36, width: 'auto', display: 'block' }} />
             <div>
               <p style={S.rapportSubtitle}>Rapport mensuel</p>
               <h1 style={S.rapportNomClient}>

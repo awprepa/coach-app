@@ -34,14 +34,9 @@
       }
 
       .splash-logo {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 2.4rem;
-        font-weight: 900;
-        color: #ffffff;
-        letter-spacing: -0.04em;
         animation: splashIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
-      .splash-logo span { color: #e4f816; }
+      .splash-logo img { width: 160px; height: auto; display: block; }
 
       .splash-sub {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -62,7 +57,7 @@
   <body>
     <!-- Splash — retiré par React dès que l'auth est vérifiée -->
     <div id="splash">
-      <div class="splash-logo">AW<span>prepa</span></div>
+      <div class="splash-logo"><img src="/logo-blanc.png" alt="AWprepa" /></div>
       <div class="splash-sub">Coaching sportif</div>
     </div>
 

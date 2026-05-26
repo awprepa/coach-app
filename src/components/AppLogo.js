@@ -29,10 +29,8 @@ export default function AppLogo({ size = 36, style = {}, imgStyle = {} }) {
     )
   }
 
-  // Fallback texte AWprepa
+  // Fallback logo AWprepa
   return (
-    <span style={{ color: 'white', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.5px', ...style }}>
-      AW<span style={{ color: 'var(--accent)' }}>prepa</span>
-    </span>
+    <img src="/logo-blanc.png" alt="AWprepa" style={{ height: size, width: 'auto', display: 'block', objectFit: 'contain', ...imgStyle }} />
   )
 }

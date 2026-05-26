@@ -112,8 +112,8 @@ function BanniereNavigateur() {
       {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo192.png" alt="AWPrepa"
-            style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
+          <img src="/logo-blanc.png" alt="AWprepa"
+            style={{ height: 28, width: 'auto', flexShrink: 0 }} />
           <div>
             <p style={{ margin: 0, fontWeight: 800, fontSize: '14px', color: '#e4f816' }}>AWprepa</p>
             <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af' }}>Installer l'application</p>
