@@ -1208,6 +1208,14 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   return (
     <div style={{ padding: '0.5rem 0' }}>
 
+      {/* ── DEBUG TEMPORAIRE ── */}
+      <div style={{ background: '#1e1e1e', color: '#0f0', fontFamily: 'monospace', fontSize: '0.65rem', padding: '0.5rem', borderRadius: 8, marginBottom: '0.5rem', wordBreak: 'break-all' }}>
+        <div>⚙️ DEBUG exWeightLoading={String(exWeightLoading)} exWeightData={exWeightData ? 'OK' : 'null'}</div>
+        {exWeightData && <div>exercises={exWeightData.exercises?.length} allWeeks={JSON.stringify(exWeightData.allWeeks)}</div>}
+        {exWeightData?.exercises?.[0] && <div>ex0={exWeightData.exercises[0].nom} weeks={JSON.stringify(Object.keys(exWeightData.exercises[0].weeks))}</div>}
+        {exWeightData?.seancesWithExos && <div>séances={exWeightData.seancesWithExos.map(s=>s.nom+':'+s.exercises.length).join(' | ')}</div>}
+      </div>
+
       {/* ── Suivi des charges par exercice ── */}
       {exWeightLoading && (
         <div style={{ ...S.indicateursSection, color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>
