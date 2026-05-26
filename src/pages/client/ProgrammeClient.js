@@ -301,7 +301,7 @@ const styles = {
   },
   header: {
     background: 'var(--header-bg)',
-    padding: '1.25rem 1.5rem',
+    padding: '0.6rem 1.5rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',

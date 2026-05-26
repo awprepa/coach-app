@@ -272,7 +272,7 @@ export default function GPSClient() {
 
 const S = {
   page:        { minHeight: '100vh', background: '#f0f0f0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
-  header:      { background: 'var(--header-bg)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  header:      { background: 'var(--header-bg)', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.5px' },
   headerTitle: { color: 'white', fontWeight: '700', fontSize: '0.95rem' },
   content:     { padding: '1rem' },
