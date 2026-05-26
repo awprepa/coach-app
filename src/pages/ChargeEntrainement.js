@@ -868,20 +868,12 @@ async function loadExerciseWeights(cid) {
   // ── Fusion : charges en priorité, serie_tracking en fallback ──
   const byId = {}
 
-  console.log('[loadExWeights] cid=', cid)
-  console.log('[loadExWeights] prog=', prog.nom, prog.id)
-  console.log('[loadExWeights] chargesRows count=', chargesRows?.length, 'chargesMap keys=', Object.keys(chargesMap))
-  console.log('[loadExWeights] series count=', series?.length, 'trackingMax keys=', Object.keys(trackingMax))
-  console.log('[loadExWeights] exIds=', exIds.slice(0, 3), '...')
-
   // Parcourir tous les exercices ayant au moins une donnée
   // Les clés sont des UUIDs (strings) — surtout pas .map(Number) !
   const allExIds = new Set([
     ...Object.keys(chargesMap),
     ...Object.keys(trackingMax),
   ])
-
-  console.log('[loadExWeights] allExIds size=', allExIds.size)
 
   allExIds.forEach(exId => {
     const exo = exoMap[exId]
@@ -943,13 +935,6 @@ async function loadExerciseWeights(cid) {
   const seancesWithExos = seances
     .filter(s => result.some(e => e.seance_id === s.id))
     .map(s => ({ ...s, exercises: result.filter(e => e.seance_id === s.id) }))
-
-  console.log('[loadExWeights] result count=', result.length, 'allWeeks=', allWeeks)
-  if (result.length > 0) {
-    const ex0 = result[0]
-    console.log('[loadExWeights] first exo:', ex0.nom, 'weeks keys=', Object.keys(ex0.weeks), 'allTimeMax=', ex0.allTimeMax)
-  }
-  console.log('[loadExWeights] seancesWithExos=', seancesWithExos.map(s => s.nom + ':' + s.exercises.length + 'exos'))
 
   return { exercises: result, seancesWithExos, allWeeks, lastWeek, totalSemaines, rpeMoyen, progNom: prog.nom }
 }
@@ -1207,14 +1192,6 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
   return (
     <div style={{ padding: '0.5rem 0' }}>
-
-      {/* ── DEBUG TEMPORAIRE ── */}
-      <div style={{ background: '#1e1e1e', color: '#0f0', fontFamily: 'monospace', fontSize: '0.65rem', padding: '0.5rem', borderRadius: 8, marginBottom: '0.5rem', wordBreak: 'break-all' }}>
-        <div>⚙️ DEBUG exWeightLoading={String(exWeightLoading)} exWeightData={exWeightData ? 'OK' : 'null'}</div>
-        {exWeightData && <div>exercises={exWeightData.exercises?.length} allWeeks={JSON.stringify(exWeightData.allWeeks)}</div>}
-        {exWeightData?.exercises?.[0] && <div>ex0={exWeightData.exercises[0].nom} weeks={JSON.stringify(Object.keys(exWeightData.exercises[0].weeks))}</div>}
-        {exWeightData?.seancesWithExos && <div>séances={exWeightData.seancesWithExos.map(s=>s.nom+':'+s.exercises.length).join(' | ')}</div>}
-      </div>
 
       {/* ── Suivi des charges par exercice ── */}
       {exWeightLoading && (

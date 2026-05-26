@@ -12,6 +12,7 @@ export default function Seance() {
   const [seance, setSeance] = useState(null)
   const [exercices, setExercices] = useState([])
   const [charges, setCharges] = useState({})
+  const [trackingMap, setTrackingMap] = useState({})
   const [rpeSeances, setRpeSeances] = useState({})
   const [semaines, setSemaines] = useState(4)
   const [loading, setLoading] = useState(true)
@@ -64,6 +65,26 @@ export default function Seance() {
         ex.charges.forEach(c => { chargesMap[ex.id][c.semaine] = { id: c.id, charge: c.charge, rpe_reel: c.rpe_reel } })
       })
       setCharges(chargesMap)
+
+      // Fallback : séries réellement effectuées (serie_tracking) quand le petit tableau est vide
+      const exIds = data.map(ex => ex.id)
+      if (exIds.length > 0) {
+        const { data: series } = await supabase
+          .from('serie_tracking')
+          .select('exercice_id, semaine, poids')
+          .in('exercice_id', exIds)
+          .not('poids', 'is', null)
+        const tMap = {}
+        ;(series || []).forEach(s => {
+          const poids = parseFloat(s.poids)
+          if (!poids || !s.semaine) return
+          if (!tMap[s.exercice_id]) tMap[s.exercice_id] = {}
+          if (!tMap[s.exercice_id][s.semaine] || poids > tMap[s.exercice_id][s.semaine]) {
+            tMap[s.exercice_id][s.semaine] = poids
+          }
+        })
+        setTrackingMap(tMap)
+      }
     }
   }
 
@@ -773,9 +794,10 @@ export default function Seance() {
                         <>
                           <td key={`${s}-kg`} style={styles.tdCenter}>
                             <input type="text" inputMode="decimal"
-                              defaultValue={charges[ex.id]?.[s]?.charge || ''}
+                              defaultValue={charges[ex.id]?.[s]?.charge || trackingMap[ex.id]?.[s] || ''}
                               onBlur={e => updateCharge(ex.id, s, 'charge', e.target.value)}
-                              style={styles.chargeInput} placeholder="—" />
+                              style={{ ...styles.chargeInput, ...((!charges[ex.id]?.[s]?.charge && trackingMap[ex.id]?.[s]) ? { color: '#6b7280', fontStyle: 'italic' } : {}) }}
+                              placeholder="—" />
                           </td>
                           <td key={`${s}-rpe`} style={styles.tdCenter}>
                             <input type="number" inputMode="decimal" min="1" max="10" step="0.5"
