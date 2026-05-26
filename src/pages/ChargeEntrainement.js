@@ -1207,8 +1207,9 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         // KPIs
         const exosCetteSemaine = exercises.filter(e => e.weeks[lastWeek]).length
         const prCount = exercises.filter(e => {
-          const w = e.weeks[lastWeek]
-          return w && w.poids >= e.allTimeMax
+          const myLast = allWeeks.filter(w => e.weeks[w]).pop()
+          const w = myLast !== undefined ? e.weeks[myLast] : null
+          return w && parseFloat(w.poids) >= e.allTimeMax
         }).length
         const chargesLastWeek = exercises.filter(e => e.weeks[lastWeek]).map(e => e.weeks[lastWeek].poids)
         const chargeMaxMoy = chargesLastWeek.length
@@ -1222,13 +1223,15 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
         // Helper : rendu d'une ligne exercice
         const renderExoRow = (exo) => {
-          const currentW = exo.weeks[lastWeek]
-          const prevWeekNum = allWeeks.length >= 2 ? allWeeks[allWeeks.length - 2] : null
-          const prevW = prevWeekNum ? exo.weeks[prevWeekNum] : null
-          const firstW = exo.weeks[allWeeks[0]]
-          const isPR = currentW && currentW.poids >= exo.allTimeMax
+          // Dernière semaine où CET exercice a été fait (pas la dernière semaine globale)
+          const exoWeeks = allWeeks.filter(w => exo.weeks[w])
+          const myLastWeek = exoWeeks[exoWeeks.length - 1]
+          const myFirstWeek = exoWeeks[0]
+          const currentW = myLastWeek !== undefined ? exo.weeks[myLastWeek] : null
+          const firstW = myFirstWeek !== undefined ? exo.weeks[myFirstWeek] : null
+          const isPR = currentW && parseFloat(currentW.poids) >= exo.allTimeMax
           let evo = null
-          if (currentW && firstW && currentW !== firstW) evo = parseFloat(currentW.poids) - parseFloat(firstW.poids)
+          if (currentW && firstW && myLastWeek !== myFirstWeek) evo = parseFloat(currentW.poids) - parseFloat(firstW.poids)
           let progPct = null
           if (currentW && firstW && parseFloat(firstW.poids) > 0) {
             progPct = (((parseFloat(currentW.poids) - parseFloat(firstW.poids)) / parseFloat(firstW.poids)) * 100).toFixed(1)
