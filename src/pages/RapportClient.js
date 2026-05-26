@@ -419,7 +419,7 @@ export default function RapportClient() {
         {/* En-tête */}
         <div style={S.rapportHeader}>
           <div style={S.rapportHeaderLeft}>
-            <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 36, width: 'auto', display: 'block' }} />
+            <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 72, width: 'auto', display: 'block' }} />
             <div>
               <p style={S.rapportSubtitle}>Rapport mensuel</p>
               <h1 style={S.rapportNomClient}>
