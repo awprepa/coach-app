@@ -869,14 +869,16 @@ async function loadExerciseWeights(cid) {
   const byId = {}
 
   // Parcourir tous les exercices ayant au moins une donnée
+  // Les clés sont des UUIDs (strings) — surtout pas .map(Number) !
   const allExIds = new Set([
-    ...Object.keys(chargesMap).map(Number),
-    ...Object.keys(trackingMax).map(Number),
+    ...Object.keys(chargesMap),
+    ...Object.keys(trackingMax),
   ])
 
   allExIds.forEach(exId => {
     const exo = exoMap[exId]
     if (!exo) return
+    // Les semaines sont des entiers — .map(Number) est correct ici
     const allSems = new Set([
       ...Object.keys(chargesMap[exId] || {}).map(Number),
       ...Object.keys(trackingMax[exId] || {}).map(Number),
