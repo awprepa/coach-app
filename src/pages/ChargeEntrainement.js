@@ -1228,7 +1228,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
           const firstW = exo.weeks[allWeeks[0]]
           const isPR = currentW && currentW.poids >= exo.allTimeMax
           let evo = null
-          if (currentW && prevW) evo = parseFloat(currentW.poids) - parseFloat(prevW.poids)
+          if (currentW && firstW && currentW !== firstW) evo = parseFloat(currentW.poids) - parseFloat(firstW.poids)
           let progPct = null
           if (currentW && firstW && parseFloat(firstW.poids) > 0) {
             progPct = (((parseFloat(currentW.poids) - parseFloat(firstW.poids)) / parseFloat(firstW.poids)) * 100).toFixed(1)
@@ -1316,7 +1316,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     ))}
                     <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', borderBottom: '1px solid #e8e8f0', whiteSpace: 'nowrap', background: '#fafafa' }}>Max</th>
                     <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', borderBottom: '1px solid #e8e8f0', whiteSpace: 'nowrap', background: '#fafafa' }}>Reps</th>
-                    <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', borderBottom: '1px solid #e8e8f0', whiteSpace: 'nowrap', background: '#fafafa' }}>Évolution</th>
+                    <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', borderBottom: '1px solid #e8e8f0', whiteSpace: 'nowrap', background: '#fafafa' }}>Évolution S1</th>
                     <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', borderBottom: '1px solid #e8e8f0', whiteSpace: 'nowrap', background: '#fafafa' }}>Prog. %</th>
                     <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', borderBottom: '1px solid #e8e8f0', whiteSpace: 'nowrap', background: '#fafafa' }}>PR</th>
                   </tr>
