@@ -112,7 +112,11 @@ function ChatInner({ clientId, coachId }) {
         ) : messages.map(m => {
           const isMe = m.from_id === clientId
           return (
-            <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+            <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.45rem' }}>
+              {/* Avatar coach à gauche des messages du coach */}
+              {!isMe && (
+                <img src="/coach-avatar.png" alt="Coach" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #e5e7eb' }} />
+              )}
               <div style={{
                 maxWidth: '78%',
                 background: isMe ? '#333333' : 'white',
@@ -294,9 +298,7 @@ export default function MessagesClient() {
           </svg>
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: 'var(--accent-text)' }}>
-            A
-          </div>
+          <img src="/coach-avatar.png" alt="Coach" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
           <span style={{ color: 'white', fontWeight: '700', fontSize: '0.95rem' }}>Arthur</span>
         </div>
         <div style={{ width: 32 }} />
