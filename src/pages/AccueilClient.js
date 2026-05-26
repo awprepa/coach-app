@@ -406,7 +406,7 @@ export default function AccueilClient() {
       )}
 
       <div style={styles.header}>
-        <AppLogo size={44} />
+        <AppLogo size={54} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button
             onClick={() => navigate('/client/notifications')}
