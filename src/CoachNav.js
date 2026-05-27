@@ -27,7 +27,7 @@ export default function CoachNav() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     }}>
       <Link to="/" style={{ textDecoration: 'none', marginRight: '2.5rem', flexShrink: 0 }}>
-        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 24, width: 'auto', display: 'block' }} />
+        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 72, width: 'auto', display: 'block' }} />
       </Link>
       <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
         <Link to="/" style={navLink}>
