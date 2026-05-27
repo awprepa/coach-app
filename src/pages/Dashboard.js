@@ -270,9 +270,10 @@ export default function Dashboard() {
     return { ...c, daysLeft: Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24)) }
   })
 
-  // Programmes se terminant dans les 7 prochains jours
+  // Programmes se terminant dans les 7 prochains jours (client doit exister)
   const progFinBientot = programmes.filter(p => {
     if (!p.date_debut) return false
+    if (!clients.find(c => c.id === p.client_id)) return false  // client supprimé → on ignore
     const fin = new Date(p.date_debut + 'T00:00:00')
     fin.setDate(fin.getDate() + p.semaines * 7)
     const days = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
@@ -282,7 +283,7 @@ export default function Dashboard() {
     fin.setDate(fin.getDate() + p.semaines * 7)
     const daysLeft = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
     const client = clients.find(c => c.id === p.client_id)
-    return { ...p, daysLeft, clientNom: client ? `${client.prenom} ${client.nom}` : '—', clientId: p.client_id }
+    return { ...p, daysLeft, clientNom: `${client.prenom} ${client.nom}`, clientId: p.client_id }
   })
 
   // Clients sans wellness depuis 3+ jours
@@ -363,8 +364,8 @@ export default function Dashboard() {
               <div style={{ padding: '1.25rem', color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification</div>
             )}
             {notifs.slice(0, 30).map(n => (
-              <div key={n.id} onClick={() => markRead(n.id)}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem 1.1rem', borderBottom: '1px solid #f3f4f6', background: n.lu ? 'white' : '#fafff0', cursor: 'default' }}>
+              <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/') && !n.lien.startsWith('/client/')) navigate(n.lien) }}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem 1.1rem', borderBottom: '1px solid #f3f4f6', background: n.lu ? 'white' : '#fafff0', cursor: n.lien && !n.lien.startsWith('/client/') ? 'pointer' : 'default' }}>
                 <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.titre}</p>
