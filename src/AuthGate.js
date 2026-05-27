@@ -33,9 +33,11 @@ export default function AuthGate({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Si on est sur /reset-password → ne rien faire, laisser la page gérer
+    // Si on est sur /reset-password → laisser la page gérer, mais retirer le splash
     if (window.location.pathname === '/reset-password') {
       setLoading(false)
+      const splash = document.getElementById('splash')
+      if (splash) { splash.classList.add('hide'); setTimeout(() => splash.remove(), 500) }
       return
     }
 
