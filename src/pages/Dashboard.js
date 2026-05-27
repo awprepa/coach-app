@@ -392,12 +392,17 @@ export default function Dashboard() {
               <div style={{ ...S.alertAvatar, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
               <div style={{ flex: 1 }}>
                 <p style={S.alertName}>{c.prenom} {c.nom}</p>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.15rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
                   {['sommeil','fatigue','douleurs','stress'].map(k => (
                     <span key={k} style={{ fontSize: '0.65rem', color: '#6b7280' }}>
                       {k.slice(0,3)} <strong style={{ color: c.wellness_today[k] <= 2 ? '#dc2626' : '#333' }}>{c.wellness_today[k]}</strong>
                     </span>
                   ))}
+                  {c.wellness_today?.created_at && (
+                    <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
+                      · {new Date(c.wellness_today.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </div>
               </div>
               <span style={{ background: '#fef2f2', color: '#dc2626', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800' }}>⚠ {c.avg.toFixed(1)}/4</span>
@@ -424,7 +429,14 @@ export default function Dashboard() {
               <div style={{ ...S.alertAvatar, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
               <div style={{ flex: 1 }}>
                 <p style={S.alertName}>{c.prenom} {c.nom}</p>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>{c.email}</p>
+                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>
+                  {c.email}
+                  {c.created_at && (
+                    <span style={{ marginLeft: 8, color: '#a78bfa', fontWeight: 600 }}>
+                      · {new Date(c.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — {new Date(c.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </p>
               </div>
               <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800' }}>🆕 Nouveau</span>
               <button onClick={() => navigate(`/client/${c.id}`)} style={S.btnSmall}>Voir</button>
