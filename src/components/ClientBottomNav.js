@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { haptics } from '../utils/haptics'
 
 function IconHome({ active }) {
   const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
@@ -142,7 +141,7 @@ export default function ClientBottomNav() {
       {/* Zone boutons */}
       <div style={{ display: 'flex' }}>
         {tabs.map(({ label, Icon, active, to, badge }) => (
-          <button key={label} onClick={() => { haptics.tap(); navigate(to) }}
+          <button key={label} onClick={() => navigate(to)}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',

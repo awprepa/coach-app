@@ -8,7 +8,6 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQueue'
 import { saveSeanceLocally, loadSeanceLocally, formatSavedAt } from '../../utils/localDB'
-import { haptics } from '../../utils/haptics'
 import { createPortal } from 'react-dom'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
@@ -471,9 +470,6 @@ export default function SeanceClient() {
     newT[exId] = [...(tracking[exId] || [])]
     newT[exId][serieIdx] = { ...serie, is_done: true, valide: repsOk }
     setTracking(newT)
-    // Vibration : succès si toutes les séries de l'exo sont terminées, sinon légère
-    const allSeriesDone = newT[exId].length > 0 && newT[exId].every(s => s.is_done)
-    allSeriesDone ? haptics.success() : haptics.light()
     flashSaved()
     await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
