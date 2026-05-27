@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
+import { useNotifications } from '../hooks/useNotifications'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -48,8 +49,22 @@ function getWeekBounds() {
   return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) }
 }
 
+function formatNotifTime(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  const today = new Date()
+  const isToday = d.toDateString() === today.toDateString()
+  const hhmm = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  if (isToday) return hhmm
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' · ' + hhmm
+}
+
+const NOTIF_ICONS = { wellness: '🧘', message: '💬', seance: '📅', info: '🔔', default: '🔔' }
+
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { notifs, unread, markRead, markAllRead } = useNotifications()
+  const [showNotifs, setShowNotifs]   = useState(false)
   const [loading, setLoading]         = useState(true)
   const [clients, setClients]         = useState([])
   const [categories, setCategories]   = useState([])
@@ -330,6 +345,37 @@ export default function Dashboard() {
           )}
           <button onClick={() => navigate('/nouveau-client')} style={S.btnPrimary}>+ Nouveau client</button>
         </div>
+      </div>
+
+      {/* ── Notifications reçues ────────────────────────────────── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <button onClick={() => { setShowNotifs(v => !v); if (!showNotifs) markAllRead() }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0, marginBottom: showNotifs ? '0.75rem' : 0 }}>
+          <p style={S.sectionTitle}>Notifications</p>
+          {unread > 0 && !showNotifs && (
+            <span style={{ background: '#e4f816', color: '#333', borderRadius: 999, fontSize: '0.65rem', fontWeight: '800', padding: '1px 7px' }}>{unread}</span>
+          )}
+          <span style={{ color: '#d1d5db', fontSize: '1rem', transform: showNotifs ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+        </button>
+        {showNotifs && (
+          <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            {notifs.length === 0 && (
+              <div style={{ padding: '1.25rem', color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification</div>
+            )}
+            {notifs.slice(0, 30).map(n => (
+              <div key={n.id} onClick={() => markRead(n.id)}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem 1.1rem', borderBottom: '1px solid #f3f4f6', background: n.lu ? 'white' : '#fafff0', cursor: 'default' }}>
+                <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.titre}</p>
+                  {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
+                </div>
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
+                {!n.lu && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Alertes ─────────────────────────────────────────────── */}
