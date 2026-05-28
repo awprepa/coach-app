@@ -195,26 +195,27 @@ function IOSInstallWall() {
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>
         <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-          2 étapes pour installer
+          3 étapes pour installer
         </p>
         {/* Étape 1 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={SW.num}><span>1</span></div>
           <div>
-            <p style={SW.stepTitle}>
-              Appuie sur{' '}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }}>
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
-              {' '}<strong style={{ color: '#e4f816' }}>Partager</strong>
-            </p>
-            <p style={SW.stepSub}>Le bouton en bas de Safari (barre de navigation)</p>
+            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>•••</strong> en bas de Safari</p>
+            <p style={SW.stepSub}>Le bouton avec trois points dans la barre de navigation</p>
           </div>
         </div>
         {/* Étape 2 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={SW.num}><span>2</span></div>
+          <div>
+            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Partager"</strong></p>
+            <p style={SW.stepSub}>Dans le menu qui s'affiche</p>
+          </div>
+        </div>
+        {/* Étape 3 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={SW.num}><span>3</span></div>
           <div>
             <p style={SW.stepTitle}>Choisis <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
             <p style={SW.stepSub}>Puis appuie sur "Ajouter" en haut à droite</p>
@@ -225,7 +226,7 @@ function IOSInstallWall() {
       {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
         <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-          Le bouton Partager est ici ↓
+          Le bouton ••• est ici ↓
         </p>
         <div style={{ animation: 'bounceDown 1.2s ease-in-out infinite' }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
