@@ -99,7 +99,7 @@ function InAppBrowserSheet({ onDismiss }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 16,
         }}>
-          <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block' }} />
+          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
         </div>
 
         <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 6, textAlign: 'center' }}>

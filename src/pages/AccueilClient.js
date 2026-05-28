@@ -319,7 +319,7 @@ export default function AccueilClient() {
         <InstallGuide
           deferredPrompt={deferredInstallPrompt}
           onDone={() => { markInstalled(); setShowInstall(false) }}
-          onLater={() => setShowInstall(false)}
+          onLater={() => { markInstalled(); setShowInstall(false) }}
         />
       )}
       {!showInstall && showWellness && createPortal(

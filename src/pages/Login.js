@@ -116,11 +116,11 @@ export default function Login() {
         <InstallGuide
           deferredPrompt={deferredPrompt}
           onDone={() => { markInstalled(); setShowInstall(false) }}
-          onLater={() => setShowInstall(false)}
+          onLater={() => { markInstalled(); setShowInstall(false) }}
         />
       )}
       <div style={styles.brand}>
-        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 80, width: 'auto', display: 'block', margin: '0 auto' }} />
+        <img src="/logo-noir.png" alt="AWprepa" style={{ height: 80, width: 'auto', display: 'block', margin: '0 auto', filter: 'brightness(0) invert(1)' }} />
         <p style={styles.tagline}>Plateforme de coaching sportif</p>
       </div>
 
