@@ -124,7 +124,7 @@ export default function ProgrammeClient() {
         <button onClick={() => navigate('/client/accueil')} style={styles.backBtn}>
           ‹
         </button>
-        <AppLogo />
+        <AppLogo size={36} />
         <div style={{ width: 32 }} />
       </div>
 
