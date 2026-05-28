@@ -1,4 +1,5 @@
 import { lazy, Suspense, Component, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
@@ -51,121 +52,110 @@ const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const Paiements            = lazy(() => import('./pages/Paiements'))
 const FicheGroupe          = lazy(() => import('./pages/FicheGroupe'))
-// ── Bannière navigateur intégré (Instagram / TikTok) ─────────────────────────
-function BanniereNavigateur() {
-  const location       = useLocation()
-  const ua             = navigator.userAgent
-  const isInAppBrowser = /Instagram|FBAN|FBAV|TikTok/i.test(ua)
-  const isIOS          = /iPhone|iPad|iPod/i.test(ua)
-  const isAndroid      = /Android/i.test(ua)
-  const isStandalone   = window.navigator.standalone === true ||
-                         window.matchMedia('(display-mode: standalone)').matches
-  const isLoginPage    = location.pathname === '/login'
+// ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
+function InAppBrowserSheet({ onDismiss }) {
+  const ua         = navigator.userAgent
+  const isIOS      = /iPhone|iPad|iPod/i.test(ua)
+  const isInstagram = /Instagram/i.test(ua)
+  const isTikTok    = /TikTok|BytedanceWebview|musical_ly/i.test(ua)
 
-  // ── Cas 1 : navigateur intégré Instagram / TikTok ────────────────────────
-  const [inAppFerme, setInAppFerme] = useState(false)
+  const appName = isInstagram ? 'Instagram' : isTikTok ? 'TikTok' : 'cette app'
+  const browserName = isIOS ? 'Safari' : 'Chrome'
 
-  // ── Cas 2 : Safari iOS / Chrome Android (pas encore installé comme PWA) ──
-  const lsKey = 'awprepa_safari_banner_dismissed'
-  function lsGet(k)    { try { return localStorage.getItem(k) }    catch (_e) { return null } }
-  function lsSet(k, v) { try { localStorage.setItem(k, v) }        catch (_e) {} }
+  // Étapes selon plateforme
+  const steps = isIOS ? [
+    { icon: '···', text: <span>Appuie sur <strong style={{ color: '#fff' }}>···</strong> {isInstagram ? 'en bas à droite' : 'en haut à droite'}</span> },
+    { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans Safari"</strong></span> },
+  ] : [
+    { icon: '···', text: <span>Appuie sur <strong style={{ color: '#fff' }}>⋮</strong> en haut à droite</span> },
+    { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans Chrome"</strong></span> },
+  ]
 
-  const [safariFerme, setSafariFerme] = useState(() => lsGet(lsKey) === '1')
-
-  function dismissSafari() { lsSet(lsKey, '1'); setSafariFerme(true) }
-
-  // In-app browser → bannière haute jaune
-  if (isInAppBrowser && !inAppFerme) {
-    const message = isIOS
-      ? "Navigateur Instagram/TikTok détecté. Appuyez sur ··· puis « Ouvrir dans Safari » pour accéder à AWPrepa correctement."
-      : "Navigateur Instagram/TikTok détecté. Appuyez sur ··· puis « Ouvrir dans Chrome » pour accéder à AWPrepa correctement."
-    return (
+  return createPortal(
+    <>
+      {/* Overlay */}
       <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999,
-        background: '#FEF9C3', padding: '12px 16px',
-        display: 'flex', alignItems: 'flex-start', gap: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+        position: 'fixed', inset: 0, zIndex: 9998,
+        background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+      }} />
+
+      {/* Bottom sheet */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+        background: '#1e1e1e',
+        borderRadius: '24px 24px 0 0',
+        padding: '12px 24px calc(env(safe-area-inset-bottom) + 32px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}>
-        <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>⚠️</span>
-        <p style={{ margin: 0, flex: 1, fontSize: '13px', color: '#1a1a1a', lineHeight: '1.5' }}>
-          {message}
+        {/* Poignée */}
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)', marginBottom: 24 }} />
+
+        {/* Icône app */}
+        <div style={{
+          width: 72, height: 72, borderRadius: 18, background: '#111',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', overflow: 'hidden', marginBottom: 16,
+        }}>
+          <img src="/logo-blanc.png" alt="AWprepa" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+        </div>
+
+        <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 6, textAlign: 'center' }}>
+          Ouvre dans {browserName}
         </p>
-        <button onClick={() => setInAppFerme(true)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#555', flexShrink: 0, padding: '0 0 0 6px', lineHeight: 1 }}
-          aria-label="Fermer">✕</button>
+        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.5, marginBottom: 22, maxWidth: 270 }}>
+          Le navigateur d'{appName} ne supporte pas toutes les fonctionnalités de l'app.
+        </p>
+
+        {/* Étapes */}
+        <div style={{
+          width: '100%', background: 'rgba(255,255,255,0.06)',
+          borderRadius: 12, padding: '12px 14px', marginBottom: 20,
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <p style={{ fontSize: '0.68rem', fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 2 }}>
+            Comment faire
+          </p>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: 8,
+                background: 'rgba(255,255,255,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, fontSize: '0.85rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)',
+              }}>{s.icon}</div>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.35, margin: 0 }}>{s.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onDismiss} style={{
+          background: 'none', border: 'none',
+          color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem',
+          fontWeight: 500, cursor: 'pointer', padding: '8px',
+        }}>
+          Continuer quand même
+        </button>
       </div>
-    )
-  }
-
-  // Safari iOS (ou Android Chrome), pas en standalone, pas sur /login, bannière non fermée
-  const showInstallBanner = !isInAppBrowser && !isStandalone && !safariFerme && !isLoginPage && (isIOS || isAndroid)
-  if (!showInstallBanner) return null
-
-  return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 999,
-      background: '#1a1a1a', color: 'white',
-      padding: '14px 16px 20px',
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.25)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    }}>
-      {/* En-tête */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo-blanc.png" alt="AWprepa"
-            style={{ height: 28, width: 'auto', flexShrink: 0 }} />
-          <div>
-            <p style={{ margin: 0, fontWeight: 800, fontSize: '14px', color: '#e4f816' }}>AWprepa</p>
-            <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af' }}>Installer l'application</p>
-          </div>
-        </div>
-        <button onClick={dismissSafari}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#6b7280', padding: '0 4px', lineHeight: 1 }}
-          aria-label="Fermer">✕</button>
-      </div>
-
-      {/* Étapes */}
-      {isIOS ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={stepStyle}>
-            <span style={numStyle}>1</span>
-            <span style={txtStyle}>Appuyez sur le bouton <strong style={{ color: '#e4f816' }}>Partager ⬆</strong> en bas de Safari</span>
-          </div>
-          <div style={stepStyle}>
-            <span style={numStyle}>2</span>
-            <span style={txtStyle}>Faites défiler et choisissez <strong style={{ color: '#e4f816' }}>« Sur l'écran d'accueil »</strong></span>
-          </div>
-          <div style={stepStyle}>
-            <span style={numStyle}>3</span>
-            <span style={txtStyle}>Appuyez sur <strong style={{ color: '#e4f816' }}>Ajouter</strong> en haut à droite</span>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={stepStyle}>
-            <span style={numStyle}>1</span>
-            <span style={txtStyle}>Appuyez sur le menu <strong style={{ color: '#e4f816' }}>⋮</strong> en haut à droite de Chrome</span>
-          </div>
-          <div style={stepStyle}>
-            <span style={numStyle}>2</span>
-            <span style={txtStyle}>Choisissez <strong style={{ color: '#e4f816' }}>« Ajouter à l'écran d'accueil »</strong></span>
-          </div>
-        </div>
-      )}
-    </div>
+    </>,
+    document.body
   )
 }
 
-const stepStyle = {
-  display: 'flex', alignItems: 'flex-start', gap: '10px',
-  background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 10px',
+// ── BanniereNavigateur — rendu conditionnel selon contexte ────────────────────
+function BanniereNavigateur() {
+  const ua             = navigator.userAgent
+  const isInAppBrowser = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i.test(ua)
+  const [inAppFerme, setInAppFerme] = useState(false)
+
+  if (isInAppBrowser && !inAppFerme) {
+    return <InAppBrowserSheet onDismiss={() => setInAppFerme(true)} />
+  }
+
+  return null
 }
-const numStyle = {
-  width: 20, height: 20, borderRadius: '50%', background: '#e4f816',
-  color: '#1a1a1a', fontWeight: 900, fontSize: '11px',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
-}
-const txtStyle = { fontSize: '13px', color: '#e5e7eb', lineHeight: 1.45 }
 
 // ── Scroll en haut à chaque changement de route ───────────────────────────────
 // Désactive le scroll restoration natif du navigateur (qui mémorise la position
