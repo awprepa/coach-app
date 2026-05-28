@@ -7,6 +7,7 @@ import { NotifProvider } from './context/NotifContext'
 import { TimerProvider } from './context/TimerContext'
 import { ClientThemeProvider } from './context/ClientThemeContext'
 import GlobalTimerBubble from './components/GlobalTimerBubble'
+import InstallGuide, { shouldShowInstall, markInstalled } from './components/InstallGuide'
 
 // ── Pages chargées immédiatement (Auth critique) ──────────────────────────────
 import Login from './pages/Login'
@@ -99,7 +100,7 @@ function InAppBrowserSheet({ onDismiss }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 16,
         }}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
+          <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block' }} />
         </div>
 
         <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 6, textAlign: 'center' }}>
@@ -155,6 +156,37 @@ function BanniereNavigateur() {
   }
 
   return null
+}
+
+// ── Guide installation PWA — affiché pour tout le monde (coach + client) ──────
+function GlobalInstallGuide() {
+  const [show, setShow]               = useState(false)
+  const [deferredPrompt, setDeferred] = useState(null)
+
+  useEffect(() => {
+    // Capturer l'événement Android (doit être fait le plus tôt possible)
+    const handler = (e) => { e.preventDefault(); setDeferred(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+
+    // Attendre 2 s que l'app soit chargée avant d'afficher
+    const timer = setTimeout(() => {
+      if (shouldShowInstall()) setShow(true)
+    }, 2000)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      clearTimeout(timer)
+    }
+  }, [])
+
+  if (!show) return null
+  return (
+    <InstallGuide
+      deferredPrompt={deferredPrompt}
+      onDone={() => { markInstalled(); setShow(false) }}
+      onLater={() => { markInstalled(); setShow(false) }}
+    />
+  )
 }
 
 // ── Scroll en haut à chaque changement de route ───────────────────────────────
@@ -230,6 +262,7 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <BanniereNavigateur />
+      <GlobalInstallGuide />
       <ChunkErrorBoundary>
       <ClientThemeProvider>
       <AuthGate>

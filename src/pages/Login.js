@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import InstallGuide, { shouldShowInstall, markInstalled } from '../components/InstallGuide'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -16,16 +15,6 @@ export default function Login() {
   const [success, setSuccess]   = useState('')
   const [loading, setLoading]   = useState(false)
   const [showPwd, setShowPwd]   = useState(false)
-  const [showInstall, setShowInstall] = useState(false)
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
-
-  // Guide installation PWA — dès la page login, avant même la connexion
-  useEffect(() => {
-    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e) }
-    window.addEventListener('beforeinstallprompt', handler)
-    if (shouldShowInstall()) setShowInstall(true)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
 
   function switchMode(m) { setMode(m); setError(''); setSuccess('') }
 
@@ -112,15 +101,8 @@ export default function Login() {
 
   return (
     <div style={styles.page}>
-      {showInstall && (
-        <InstallGuide
-          deferredPrompt={deferredPrompt}
-          onDone={() => { markInstalled(); setShowInstall(false) }}
-          onLater={() => { markInstalled(); setShowInstall(false) }}
-        />
-      )}
       <div style={styles.brand}>
-        <img src="/logo-noir.png" alt="AWprepa" style={{ height: 80, width: 'auto', display: 'block', margin: '0 auto', filter: 'brightness(0) invert(1)' }} />
+        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 80, width: 'auto', display: 'block', margin: '0 auto' }} />
         <p style={styles.tagline}>Plateforme de coaching sportif</p>
       </div>
 

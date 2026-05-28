@@ -4,7 +4,10 @@ import { supabase } from '../supabase'
 const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY
 
 export function usePush() {
-  const [permission, setPermission] = useState(Notification.permission)
+  // Notification n'est pas défini sur iOS Safari < 16.4 → guard obligatoire
+  const [permission, setPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  )
   const [subscribed, setSubscribed] = useState(false)
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export function usePush() {
 
   async function requestAndSubscribe() {
     // Si déjà accordé, subscribe directement sans re-demander
+    if (typeof Notification === 'undefined') return false
     if (Notification.permission === 'granted') return subscribe()
     const perm = await Notification.requestPermission()
     setPermission(perm)

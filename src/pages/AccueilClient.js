@@ -14,7 +14,6 @@ import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
 import ModaleContrat from '../components/ModaleContrat'
-import InstallGuide, { shouldShowInstall, markInstalled } from '../components/InstallGuide'
 import { CURRENT_CGV_VERSION } from './CGV'
 
 function isCycleTermine(prog) {
@@ -142,8 +141,6 @@ export default function AccueilClient() {
   const [weekEvents, setWeekEvents]       = useState([])
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [showWellness, setShowWellness]   = useState(false)
-  const [showInstall, setShowInstall]         = useState(false)
-  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
@@ -155,12 +152,6 @@ export default function AccueilClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClientData() }, [])
 
-  // Capture le prompt d'installation Android (beforeinstallprompt)
-  useEffect(() => {
-    const handler = (e) => { e.preventDefault(); setDeferredInstallPrompt(e) }
-    window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
 
   // Re-fetch quand l'app revient au premier plan (PWA backgroundée puis rouverte)
   useEffect(() => {
@@ -258,9 +249,6 @@ export default function AccueilClient() {
         .gte('date', start).lte('date', end).order('date', { ascending: true })
       setWeekEvents(wevs || [])
 
-      // Guide installation
-      if (shouldShowInstall()) setShowInstall(true)
-
       // Wellness : afficher si ≥ 7h et pas encore soumis aujourd'hui
       if (new Date().getHours() >= 7) {
         const { data: w } = await supabase
@@ -315,14 +303,7 @@ export default function AccueilClient() {
         />
       )}
 
-      {showInstall && (
-        <InstallGuide
-          deferredPrompt={deferredInstallPrompt}
-          onDone={() => { markInstalled(); setShowInstall(false) }}
-          onLater={() => { markInstalled(); setShowInstall(false) }}
-        />
-      )}
-      {!showInstall && showWellness && createPortal(
+      {showWellness && createPortal(
         <WellnessOverlay
           clientId={client.id}
           clientName={`${client.prenom} ${client.nom}`}

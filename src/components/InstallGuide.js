@@ -1,20 +1,26 @@
 import { createPortal } from 'react-dom'
 
 const IN_APP_RE = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i
+// Snooze 3 jours (ms)
+const SNOOZE_MS  = 3 * 24 * 60 * 60 * 1000
+const SNOOZE_KEY = 'aw_install_v2'
 
 export function shouldShowInstall() {
   if (IN_APP_RE.test(navigator.userAgent)) return false
   const isStandalone = window.navigator.standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
   if (isStandalone) return false
-  // Snooze par session (se réinitialise à chaque nouvelle ouverture du navigateur)
-  try { if (sessionStorage.getItem('aw_install_snooze')) return false } catch (_) {}
+  // Snooze avec expiration (localStorage persiste entre sessions)
+  try {
+    const ts = localStorage.getItem(SNOOZE_KEY)
+    if (ts && Date.now() < parseInt(ts, 10)) return false
+  } catch (_) {}
   return true
 }
 
 export function markInstalled() {
-  // Snooze cette session (iOS : on ne peut pas détecter l'install côté JS)
-  try { sessionStorage.setItem('aw_install_snooze', '1') } catch (_) {}
+  // Snooze 3 jours (iOS : on ne peut pas détecter l'install côté JS)
+  try { localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS)) } catch (_) {}
 }
 
 export default function InstallGuide({ onDone, onLater, deferredPrompt }) {
@@ -64,7 +70,7 @@ export default function InstallGuide({ onDone, onLater, deferredPrompt }) {
           boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1)',
           overflow: 'hidden',
         }}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
+          <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block' }} />
         </div>
 
         <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 6, textAlign: 'center' }}>
