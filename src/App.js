@@ -158,26 +158,118 @@ function BanniereNavigateur() {
   return null
 }
 
-// ── Guide installation PWA — affiché pour tout le monde (coach + client) ──────
+// ── Mur d'installation iOS Safari — bloque totalement l'app si non installée ──
+function IOSInstallWall() {
+  const ua         = navigator.userAgent || ''
+  const isIOS      = /iPhone|iPad|iPod/i.test(ua)
+  const isInApp    = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i.test(ua)
+  const isStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+
+  // Afficher seulement sur iOS Safari, non installé, hors in-app browser
+  if (!isIOS || isStandalone || isInApp) return null
+
+  async function handleShare() {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'AWprepa', url: window.location.href }) } catch (_) {}
+    }
+  }
+
+  return createPortal(
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99990,
+      background: '#1a1a1a',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '32px 28px calc(env(safe-area-inset-bottom) + 32px)',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}>
+      {/* Logo */}
+      <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 64, width: 'auto', marginBottom: 32 }} />
+
+      <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: 10, lineHeight: 1.25 }}>
+        Installe l'app pour<br />accéder à ton coaching
+      </p>
+      <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.5, marginBottom: 36, maxWidth: 280 }}>
+        AWprepa fonctionne uniquement en tant qu'application installée.
+      </p>
+
+      {/* Étapes */}
+      <div style={{
+        width: '100%', maxWidth: 340,
+        background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+        padding: '16px 18px', marginBottom: 28,
+        display: 'flex', flexDirection: 'column', gap: 14,
+      }}>
+        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+          2 étapes pour installer
+        </p>
+        {/* Étape 1 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={SW.num}><span>1</span></div>
+          <div>
+            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>Partager</strong></p>
+            <p style={SW.stepSub}>L'icône carrée avec une flèche, en bas de Safari</p>
+          </div>
+        </div>
+        {/* Étape 2 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={SW.num}><span>2</span></div>
+          <div>
+            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
+            <p style={SW.stepSub}>Puis confirme en haut à droite</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bouton */}
+      <button onClick={handleShare} style={{
+        width: '100%', maxWidth: 340, height: 54,
+        background: '#e4f816', color: '#1a1a1a',
+        border: 'none', borderRadius: 14,
+        fontSize: '1rem', fontWeight: 800, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        Ouvrir le menu Partager
+      </button>
+    </div>,
+    document.body
+  )
+}
+
+const SW = {
+  num: {
+    width: 32, height: 32, borderRadius: '50%',
+    background: 'rgba(228,248,22,0.12)', border: '1.5px solid rgba(228,248,22,0.3)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    fontSize: '0.85rem', fontWeight: 800, color: '#e4f816',
+  },
+  stepTitle: { fontSize: '0.85rem', fontWeight: 600, color: '#fff', margin: '0 0 2px' },
+  stepSub:   { fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', margin: 0, lineHeight: 1.35 },
+}
+
+// ── Guide installation PWA — Android uniquement (iOS est géré par IOSInstallWall) ─
 function GlobalInstallGuide() {
+  const ua         = navigator.userAgent || ''
+  const isIOS      = /iPhone|iPad|iPod/i.test(ua)
   const [show, setShow]               = useState(false)
   const [deferredPrompt, setDeferred] = useState(null)
 
   useEffect(() => {
-    // Capturer l'événement Android (doit être fait le plus tôt possible)
+    if (isIOS) return  // iOS → géré par IOSInstallWall
     const handler = (e) => { e.preventDefault(); setDeferred(e) }
     window.addEventListener('beforeinstallprompt', handler)
-
-    // Attendre 2 s que l'app soit chargée avant d'afficher
     const timer = setTimeout(() => {
       if (shouldShowInstall()) setShow(true)
     }, 2000)
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)
       clearTimeout(timer)
     }
-  }, [])
+  }, [isIOS])
 
   if (!show) return null
   return (
@@ -262,6 +354,7 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <BanniereNavigateur />
+      <IOSInstallWall />
       <GlobalInstallGuide />
       <ChunkErrorBoundary>
       <ClientThemeProvider>
