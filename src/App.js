@@ -65,7 +65,7 @@ function InAppBrowserSheet({ onDismiss }) {
   // Étapes selon plateforme
   const steps = isIOS ? [
     { icon: '···', text: <span>Appuie sur <strong style={{ color: '#fff' }}>···</strong> en haut à droite</span> },
-    { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans Safari"</strong></span> },
+    { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans un navigateur externe"</strong></span> },
   ] : [
     { icon: '···', text: <span>Appuie sur <strong style={{ color: '#fff' }}>⋮</strong> en haut à droite</span> },
     { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans Chrome"</strong></span> },
@@ -93,13 +93,13 @@ function InAppBrowserSheet({ onDismiss }) {
         {/* Poignée */}
         <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)', marginBottom: 24 }} />
 
-        {/* Icône app — fond jaune + logo noir, visible dans tous les navigateurs */}
+        {/* Icône app — logo blanc sur fond noir */}
         <div style={{
-          width: 72, height: 72, borderRadius: 18, background: '#e4f816',
+          width: 72, height: 72, borderRadius: 18, background: '#1a1a1a',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)', overflow: 'hidden', marginBottom: 16,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 16,
         }}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
+          <img src="/logo-blanc.png" alt="AWprepa" style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
         </div>
 
         <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 6, textAlign: 'center' }}>
