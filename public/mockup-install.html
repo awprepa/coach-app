@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Install Prompt</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      min-height: 100vh;
+      flex-wrap: wrap;
+    }
+
+    .label {
+      color: rgba(255,255,255,0.4);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* ── Téléphone ── */
+    .phone {
+      width: 375px;
+      height: 812px;
+      background: #1a1a1a;
+      border-radius: 44px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    /* ── Fond de page (simulé) ── */
+    .page-bg {
+      position: absolute;
+      inset: 0;
+      background: #f5f5f0;
+      display: flex;
+      flex-direction: column;
+    }
+    .fake-header {
+      height: 60px;
+      background: linear-gradient(135deg, #333333 0%, #1f2937 100%);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .fake-header-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.25); }
+    .fake-header-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.15); }
+    .fake-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .fake-card {
+      height: 80px;
+      border-radius: 12px;
+      background: #e8e8e3;
+    }
+    .fake-card.tall { height: 120px; }
+    .fake-card.short { height: 50px; }
+
+    /* ── Overlay sombre ── */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(3px);
+    }
+
+    /* ── Bottom sheet ── */
+    .sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      background: #1e1e1e;
+      border-radius: 24px 24px 0 0;
+      padding: 12px 24px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.18);
+      margin-bottom: 24px;
+    }
+
+    .app-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .app-icon-fallback {
+      font-size: 2rem;
+    }
+
+    .sheet-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .sheet-sub {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 28px;
+      max-width: 260px;
+    }
+
+    /* ── Bouton principal ── */
+    .btn-install {
+      width: 100%;
+      height: 52px;
+      background: #e4f816;
+      color: #1a1a1a;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn-later {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.35);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    /* ── Hint iOS spécifique ── */
+    .ios-hint {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ios-hint-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .ios-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ios-step-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .ios-step-text {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.35;
+    }
+    .ios-step-text strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* ── Variante Android : pas de hint, juste le bouton ── */
+    .android-only { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ════ VARIANTE iOS ════ -->
+  <div>
+    <p class="label">iOS Safari</p>
+    <div class="phone">
+      <!-- Fond de page -->
+      <div class="page-bg">
+        <div class="fake-header">
+          <div class="fake-header-dot"></div>
+          <div class="fake-header-bar" style="width:60px"></div>
+          <div class="fake-header-bar" style="width:40px;margin-left:8px"></div>
+          <div class="fake-header-bar" style="width:50px;margin-left:8px"></div>
+        </div>
+        <div class="fake-content">
+          <div class="fake-card tall"></div>
+          <div class="fake-card"></div>
+          <div class="fake-card short"></div>
+          <div class="fake-card"></div>
+        </div>
+      </div>
+
+      <!-- Overlay -->
+      <div class="overlay"></div>
+
+      <!-- Sheet iOS -->
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+
+        <div class="app-icon">
+          <!-- Remplace par <img src="/logo-blanc.png" /> en vrai -->
+          <span class="app-icon-fallback">🏋️</span>
+        </div>
+
+        <p class="sheet-title">Installer AWprepa</p>
+        <p class="sheet-sub">Accède à ton coaching directement depuis ton écran d'accueil, sans passer par Safari.</p>
+
+        <!-- Étapes iOS -->
+        <div class="ios-hint">
+          <p class="ios-hint-title">Comment faire</p>
+          <div class="ios-step">
+            <div class="ios-step-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <p class="ios-step-text">Appuie sur <strong>Partager</strong> en bas de Safari</p>
+          </div>
+          <div class="ios-step">
+            <div class="ios-step-icon">➕</div>
+            <p class="ios-step-text">Puis <strong>"Sur l'écran d'accueil"</strong></p>
+          </div>
+        </div>
+
+        <button class="btn-install">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+            <polyline points="16 6 12 2 8 6"/>
+            <line x1="12" y1="2" x2="12" y2="15"/>
+          </svg>
+          Ouvrir le menu Partager
+        </button>
+        <button class="btn-later">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ VARIANTE Android ════ -->
+  <div>
+    <p class="label">Android Chrome</p>
+    <div class="phone">
+      <div class="page-bg">
+        <div class="fake-header">
+          <div class="fake-header-dot"></div>
+          <div class="fake-header-bar" style="width:60px"></div>
+          <div class="fake-header-bar" style="width:40px;margin-left:8px"></div>
+          <div class="fake-header-bar" style="width:50px;margin-left:8px"></div>
+        </div>
+        <div class="fake-content">
+          <div class="fake-card tall"></div>
+          <div class="fake-card"></div>
+          <div class="fake-card short"></div>
+          <div class="fake-card"></div>
+        </div>
+      </div>
+      <div class="overlay"></div>
+
+      <!-- Sheet Android (plus simple, pas besoin d'instructions) -->
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+
+        <div class="app-icon">
+          <span class="app-icon-fallback">🏋️</span>
+        </div>
+
+        <p class="sheet-title">Installer AWprepa</p>
+        <p class="sheet-sub">Accède à ton coaching directement depuis ton écran d'accueil, sans passer par ton navigateur.</p>
+
+        <button class="btn-install" style="margin-top: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Installer l'application
+        </button>
+        <button class="btn-later">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
