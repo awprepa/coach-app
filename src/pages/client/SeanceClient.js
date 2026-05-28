@@ -9,6 +9,7 @@ import { PageLoading } from '../../components/Skeleton'
 import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQueue'
 import { saveSeanceLocally, loadSeanceLocally, formatSavedAt } from '../../utils/localDB'
 import { createPortal } from 'react-dom'
+import { sendNotif, getCoachId } from '../../notifs'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -78,6 +79,7 @@ export default function SeanceClient() {
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
   const [localSavedAt, setLocalSavedAt] = useState(null)
   const blocRefs = useRef({})
+  const prNotifiedRef = useRef({}) // { [exId]: maxPoidsNotifié } — évite les doublons dans la même séance
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -178,7 +180,29 @@ export default function SeanceClient() {
       .eq('seance_id', id).gte('date', ydate)
       .order('date', { ascending: true }).limit(1).maybeSingle()
       .then(({ data: ev }) => {
-        if (ev?.id) supabase.from('evenements').update({ terminee: true }).eq('id', ev.id).then(() => {})
+        if (!ev?.id) return
+        supabase.from('evenements').update({ terminee: true }).eq('id', ev.id)
+        // Notifier le coach que la séance est terminée
+        ;(async () => {
+          try {
+            const clientId = seance?.programmes?.client_id
+            const [coachId, clientRes] = await Promise.all([
+              getCoachId(),
+              clientId
+                ? supabase.from('clients').select('prenom').eq('id', clientId).maybeSingle()
+                : Promise.resolve({ data: null }),
+            ])
+            const prenom = clientRes?.data?.prenom || 'Un client'
+            if (coachId) {
+              sendNotif(coachId, {
+                titre: '✅ Séance terminée',
+                corps: `${prenom} a terminé "${seance?.nom || 'sa séance'}"`,
+                type: 'seance',
+                lien: clientId ? `/clients/${clientId}` : '/clients',
+              })
+            }
+          } catch (e) { console.warn('[notif-seance] échec:', e) }
+        })()
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocsTermines, blocsSkippes, exercices])
@@ -194,7 +218,7 @@ export default function SeanceClient() {
 
     const { data, error } = await supabase
       .from('seances')
-      .select('*, programmes(id, nom, semaines, date_debut, created_at)')
+      .select('*, programmes(id, nom, semaines, date_debut, created_at, client_id)')
       .eq('id', id).single()
     if (error) {
       const local = await loadSeanceLocally(id)
@@ -478,6 +502,66 @@ export default function SeanceClient() {
       valide: repsOk,
       is_done: true,
     }, { onConflict: 'exercice_id,semaine,serie' })
+
+    // ── Détection 1RM PR ─────────────────────────────────────────────────
+    const repsR = parseInt(serie.reps_reelles)
+    const poids1RM = parseFloat(serie.poids)
+    if (repsR === 1 && poids1RM > 0 && poids1RM > (prNotifiedRef.current[exId] || 0)) {
+      ;(async () => {
+        try {
+          // Max historique des semaines précédentes (exclut la semaine en cours)
+          const { data: prevRows } = await supabase
+            .from('serie_tracking').select('poids')
+            .eq('exercice_id', exId).eq('reps_reelles', 1).eq('is_done', true)
+            .lt('semaine', semaineActuelle)
+          const prevMax = prevRows?.length
+            ? Math.max(...prevRows.map(r => parseFloat(r.poids) || 0))
+            : 0
+          // Aussi comparer au max déjà notifié cette séance (même semaine)
+          const sessionMax = prNotifiedRef.current[exId] || 0
+          if (poids1RM > Math.max(prevMax, sessionMax)) {
+            prNotifiedRef.current[exId] = poids1RM
+            const exo = exercices.find(e => e.id === exId)
+            const exoNom = exo?.nom || 'Exercice'
+            const clientId = seance?.programmes?.client_id
+            const coachId = await getCoachId()
+            // Notif coach
+            if (coachId && clientId) {
+              const { data: clientData } = await supabase
+                .from('clients').select('prenom').eq('id', clientId).maybeSingle()
+              const prenom = clientData?.prenom || 'Un client'
+              sendNotif(coachId, {
+                titre: '🏆 Nouveau 1RM !',
+                corps: `${prenom} — ${exoNom} : ${poids1RM} kg`,
+                type: 'pr',
+                lien: `/clients/${clientId}`,
+              })
+            }
+            // Insérer dans tests_resultats
+            if (clientId) {
+              // Trouver ou créer le test_type correspondant à l'exercice
+              let { data: testType } = await supabase
+                .from('tests_types').select('id').ilike('nom', exoNom).maybeSingle()
+              if (!testType) {
+                const { data: newType } = await supabase
+                  .from('tests_types').insert({ nom: exoNom, unite: 'kg' }).select().single()
+                testType = newType
+              }
+              if (testType?.id) {
+                const today = new Date().toISOString().slice(0, 10)
+                await supabase.from('tests_resultats').insert({
+                  test_type_id: testType.id,
+                  client_id: clientId,
+                  valeur: poids1RM,
+                  date: today,
+                  notes: `1RM automatique — ${seance?.nom || ''} S${semaineActuelle}`,
+                })
+              }
+            }
+          }
+        } catch (e) { console.warn('[1rm-pr] échec:', e) }
+      })()
+    }
 
     // ── Auto-fill : écrire le max validé dans la table `charges` ──
     const currentPoids = parseFloat(serie.poids)

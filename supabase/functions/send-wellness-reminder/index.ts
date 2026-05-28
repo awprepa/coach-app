@@ -114,6 +114,62 @@ Deno.serve(async (_req) => {
       }
     }
 
+    // ── 3. Rappel événements du jour (séances, matchs, etc.) ────────────────
+    if (clientIds.length) {
+      // Récupérer tous les événements non terminés d'aujourd'hui pour chaque client
+      const { data: eventsData } = await supabase
+        .from("evenements")
+        .select("client_id, titre, type, seance_id, seances(nom)")
+        .in("client_id", clientIds)
+        .eq("date", today)
+        .or("terminee.is.null,terminee.eq.false");
+
+      // Grouper par client
+      const eventsByClient: Record<string, any[]> = {};
+      (eventsData || []).forEach((ev: any) => {
+        if (!eventsByClient[ev.client_id]) eventsByClient[ev.client_id] = [];
+        eventsByClient[ev.client_id].push(ev);
+      });
+
+      const clientToUser: Record<string, string> = {};
+      (clients || []).forEach((c: any) => { clientToUser[c.id] = c.user_id; });
+
+      const eventTargets = subs.filter((s: any) => {
+        const cid = clientMap[s.user_id];
+        return cid && eventsByClient[cid]?.length > 0;
+      });
+
+      if (eventTargets.length) {
+        const eventResults = await Promise.allSettled(
+          eventTargets.map((s: any) => {
+            const cid = clientMap[s.user_id];
+            const evs = eventsByClient[cid] || [];
+            const count = evs.length;
+            // Construire un message résumant les événements
+            const labels = evs.map((ev: any) => {
+              if (ev.seances?.nom) return ev.seances.nom;
+              if (ev.titre) return ev.titre;
+              return ev.type === "match" ? "Match" : "Séance";
+            });
+            const corps = count === 1
+              ? `Tu as "${labels[0]}" aujourd'hui. C'est le moment de te préparer !`
+              : `Tu as ${count} événements aujourd'hui : ${labels.slice(0, 2).join(", ")}${count > 2 ? "…" : ""}.`;
+            const payload = JSON.stringify({
+              titre: "📅 Programme du jour",
+              corps,
+              lien: "/client/mon-programme",
+            });
+            return webpush.sendNotification(s.subscription, payload);
+          })
+        );
+        eventResults.forEach((r, i) => {
+          if (r.status === "rejected") console.error(`[wellness-reminder] event push #${i} échoué:`, r.reason);
+          else console.error(`[wellness-reminder] event push #${i} envoyé ✓`);
+        });
+        console.error(`[wellness-reminder] rappel événements envoyé à ${eventTargets.length} client(s)`);
+      }
+    }
+
     return new Response(`envoyé à ${subs.length} client(s)`, { status: 200 });
   } catch (e) {
     console.error("[wellness-reminder] exception:", String(e));
