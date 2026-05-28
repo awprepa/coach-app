@@ -430,6 +430,7 @@ export default function SeanceClient() {
   }
 
   async function devaliderSerie(exId, serieIdx, groupLetter) {
+    if (!exId) return
     const newT = { ...tracking }
     newT[exId] = [...(tracking[exId] || [])]
     newT[exId][serieIdx] = { ...newT[exId][serieIdx], valide: false, is_done: false }
@@ -472,6 +473,7 @@ export default function SeanceClient() {
   }
 
   async function saveSerieField(exId, serieIdx) {
+    if (!exId) return
     const serie = tracking[exId]?.[serieIdx] || {}
     // Sauvegarder dès la saisie, même avant validation — évite la perte si on quitte l'app
     if (!serie.poids && !serie.reps_reelles) return // rien à sauvegarder
@@ -486,6 +488,7 @@ export default function SeanceClient() {
   }
 
   async function validerSerie(exId, serieIdx, groupLetter, groupItems, targetReps) {
+    if (!exId) return
     const serie = tracking[exId]?.[serieIdx] || {}
     // Vérifie si les reps ont été atteintes
     const repsOk = !targetReps || !serie.reps_reelles ||
@@ -687,6 +690,7 @@ export default function SeanceClient() {
   }
 
   async function updateCharge(exId, semaine, field, valeur) {
+    if (!exId) return
     // Normaliser : "-", "--", "—", "" → traiter comme vide (ne pas sauvegarder)
     const cleanVal = (valeur || '').trim().replace(/^[-—]+$/, '')
     const existing = charges[exId]?.[semaine]
@@ -720,15 +724,13 @@ export default function SeanceClient() {
     // En ligne → sauvegarde directe
     if (existing) {
       const { error } = await supabase.from('charges').update({ [field]: cleanVal || null }).eq('id', existing.id)
-      if (error) alert(error.message)
-      else flashSaved()
+      if (error) { console.error('updateCharge update:', error.message); return }
+      flashSaved()
     } else {
       const { data, error } = await supabase.from('charges').insert([{ exercice_id: exId, semaine, [field]: cleanVal || null }]).select().single()
-      if (error) alert(error.message)
-      else {
-        setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: cleanVal } } }))
-        flashSaved()
-      }
+      if (error) { console.error('updateCharge insert:', error.message); return }
+      setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: cleanVal } } }))
+      flashSaved()
     }
   }
 
@@ -739,12 +741,14 @@ export default function SeanceClient() {
     if (!cleanVal && !existing) return
     if (existing) {
       const { error } = await supabase.from('rpe_seances').update({ rpe_reel: cleanVal || null }).eq('id', existing.id)
-      if (error) alert(error.message)
-      else { setRpeSeances(prev => ({ ...prev, [semaine]: { ...existing, rpe_reel: cleanVal } })); flashSaved() }
+      if (error) { console.error('updateRpeReel update:', error.message); return }
+      setRpeSeances(prev => ({ ...prev, [semaine]: { ...existing, rpe_reel: cleanVal } }))
+      flashSaved()
     } else {
       const { data, error } = await supabase.from('rpe_seances').insert([{ seance_id: id, semaine, rpe_reel: cleanVal || null }]).select().single()
-      if (error) alert(error.message)
-      else { setRpeSeances(prev => ({ ...prev, [semaine]: { id: data.id, rpe_cible: null, rpe_reel: cleanVal } })); flashSaved() }
+      if (error) { console.error('updateRpeReel insert:', error.message); return }
+      setRpeSeances(prev => ({ ...prev, [semaine]: { id: data.id, rpe_cible: null, rpe_reel: cleanVal } }))
+      flashSaved()
     }
   }
 

@@ -10,24 +10,30 @@ export function TimerProvider({ children }) {
   const [seanceId, setSeanceId]       = useState(null)
   const [clientIdRef] = useState({ current: null })    // ref mutable pour sendPush
 
-  const intervalRef = useRef(null)
-  const notifRef    = useRef(null)
+  const intervalRef   = useRef(null)
+  const notifRef      = useRef(null)
+  const seanceIdRef   = useRef(null)   // ref pour accès dans visibilitychange
+  const notifSentRef  = useRef(false)  // évite le double envoi push
 
   function startTimer(secs, cId, sId) {
     clearInterval(intervalRef.current)
     clearTimeout(notifRef.current)
+    notifSentRef.current = false
 
     const endsAt = Date.now() + secs * 1000
     clientIdRef.current = cId
+    seanceIdRef.current = sId
     setTimerEndsAt(endsAt)
     setTimerTotal(secs)
     setTimerSecs(secs)
     setSeanceId(sId)
 
     // Push notif à la fin (si l'app est en arrière-plan)
+    // iOS throttle les setTimeout en background → fallback dans visibilitychange
     if (cId) {
       notifRef.current = setTimeout(() => {
-        if (document.visibilityState === 'hidden') {
+        if (document.visibilityState === 'hidden' && !notifSentRef.current) {
+          notifSentRef.current = true
           sendPushOnly(cId, {
             titre: '🔔 Récupération terminée',
             corps: "C'est reparti !",
@@ -57,14 +63,25 @@ export function TimerProvider({ children }) {
     setTimerSecs(0)
   }
 
-  // Quand l'app revient au premier plan, recalcule immédiatement le temps restant
+  // Quand l'app revient au premier plan, recalcule le temps restant
+  // et envoie la push si le timer s'est terminé en background (iOS throttle setTimeout)
   useEffect(() => {
     function onVisible() {
+      if (document.visibilityState !== 'visible') return
       if (!timerEndsAt) return
       const remaining = Math.max(0, Math.round((timerEndsAt - Date.now()) / 1000))
       setTimerSecs(remaining)
       if (remaining === 0) {
         clearInterval(intervalRef.current)
+        // iOS a probablement tué le setTimeout → envoyer la push maintenant
+        if (!notifSentRef.current && clientIdRef.current) {
+          notifSentRef.current = true
+          sendPushOnly(clientIdRef.current, {
+            titre: '🔔 Récupération terminée',
+            corps: "C'est reparti !",
+            lien: `/client/seance/${seanceIdRef.current}`,
+          })
+        }
         stopTimer()
       }
     }
