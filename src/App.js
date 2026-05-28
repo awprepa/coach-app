@@ -169,12 +169,6 @@ function IOSInstallWall() {
   // Afficher seulement sur iOS Safari, non installé, hors in-app browser
   if (!isIOS || isStandalone || isInApp) return null
 
-  async function handleShare() {
-    if (navigator.share) {
-      try { await navigator.share({ title: 'AWprepa', url: window.location.href }) } catch (_) {}
-    }
-  }
-
   return createPortal(
     <div style={{
       position: 'fixed', inset: 0, zIndex: 99990,
@@ -197,7 +191,7 @@ function IOSInstallWall() {
       <div style={{
         width: '100%', maxWidth: 340,
         background: 'rgba(255,255,255,0.06)', borderRadius: 16,
-        padding: '16px 18px', marginBottom: 28,
+        padding: '16px 18px', marginBottom: 32,
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>
         <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
@@ -207,34 +201,39 @@ function IOSInstallWall() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={SW.num}><span>1</span></div>
           <div>
-            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>Partager</strong></p>
-            <p style={SW.stepSub}>L'icône carrée avec une flèche, en bas de Safari</p>
+            <p style={SW.stepTitle}>
+              Appuie sur{' '}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }}>
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+              {' '}<strong style={{ color: '#e4f816' }}>Partager</strong>
+            </p>
+            <p style={SW.stepSub}>Le bouton en bas de Safari (barre de navigation)</p>
           </div>
         </div>
         {/* Étape 2 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={SW.num}><span>2</span></div>
           <div>
-            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
-            <p style={SW.stepSub}>Puis confirme en haut à droite</p>
+            <p style={SW.stepTitle}>Choisis <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
+            <p style={SW.stepSub}>Puis appuie sur "Ajouter" en haut à droite</p>
           </div>
         </div>
       </div>
 
-      {/* Bouton */}
-      <button onClick={handleShare} style={{
-        width: '100%', maxWidth: 340, height: 54,
-        background: '#e4f816', color: '#1a1a1a',
-        border: 'none', borderRadius: 14,
-        fontSize: '1rem', fontWeight: 800, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-          <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-        </svg>
-        Ouvrir le menu Partager
-      </button>
+      {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+          Le bouton Partager est ici ↓
+        </p>
+        <div style={{ animation: 'bounceDown 1.2s ease-in-out infinite' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+          </svg>
+        </div>
+      </div>
+      <style>{`@keyframes bounceDown { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }`}</style>
     </div>,
     document.body
   )
