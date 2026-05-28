@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect } from 'react'
-import { sendPushOnly } from '../notifs'
+import { supabase } from '../supabase'
 
 const TimerCtx = createContext(null)
 
@@ -8,17 +8,19 @@ export function TimerProvider({ children }) {
   const [timerTotal, setTimerTotal]   = useState(0)    // durée initiale (s)
   const [timerSecs, setTimerSecs]     = useState(0)    // restant (s)
   const [seanceId, setSeanceId]       = useState(null)
-  const [clientIdRef] = useState({ current: null })    // ref mutable pour sendPush
+  const [clientIdRef] = useState({ current: null })    // ref mutable pour annulation
 
-  const intervalRef   = useRef(null)
-  const notifRef      = useRef(null)
-  const seanceIdRef   = useRef(null)   // ref pour accès dans visibilitychange
-  const notifSentRef  = useRef(false)  // évite le double envoi push
+  const intervalRef    = useRef(null)
+  const seanceIdRef    = useRef(null)
+  const timerPushIdRef = useRef(null)  // id de la ligne timer_pushes en cours
 
-  function startTimer(secs, cId, sId) {
+  async function startTimer(secs, cId, sId) {
     clearInterval(intervalRef.current)
-    clearTimeout(notifRef.current)
-    notifSentRef.current = false
+    // Annuler toute push serveur précédente pour ce client/séance
+    if (timerPushIdRef.current) {
+      supabase.from('timer_pushes').delete().eq('id', timerPushIdRef.current).then(() => {})
+      timerPushIdRef.current = null
+    }
 
     const endsAt = Date.now() + secs * 1000
     clientIdRef.current = cId
@@ -28,23 +30,23 @@ export function TimerProvider({ children }) {
     setTimerSecs(secs)
     setSeanceId(sId)
 
-    // Push notif à la fin (si l'app est en arrière-plan)
-    // iOS throttle les setTimeout en background → fallback dans visibilitychange
+    // ── Push serveur (fiable même si iOS tue l'app) ───────────────────────
+    // Une Edge Function cron lit cette table toutes les minutes et envoie la push
     if (cId) {
-      notifRef.current = setTimeout(() => {
-        if (document.visibilityState === 'hidden' && !notifSentRef.current) {
-          notifSentRef.current = true
-          sendPushOnly(cId, {
-            titre: '🔔 Récupération terminée',
-            corps: "C'est reparti !",
-            lien: `/client/seance/${sId}`,
-          })
-        }
-      }, secs * 1000)
+      const sendAt = new Date(endsAt).toISOString()
+      supabase.from('timer_pushes').insert({
+        user_id:   cId,
+        seance_id: sId || null,
+        send_at:   sendAt,
+        titre:     '🔔 Récupération terminée',
+        corps:     "C'est reparti !",
+        lien:      `/client/seance/${sId}`,
+      }).select('id').single().then(({ data }) => {
+        if (data?.id) timerPushIdRef.current = data.id
+      })
     }
 
-    // Tick toutes les 500ms — on recalcule depuis endsAt pour rester précis
-    // même si iOS throttle les intervals en background
+    // Tick toutes les 500ms — recalcule depuis endsAt pour rester précis
     intervalRef.current = setInterval(() => {
       const remaining = Math.max(0, Math.round((endsAt - Date.now()) / 1000))
       setTimerSecs(remaining)
@@ -57,14 +59,17 @@ export function TimerProvider({ children }) {
 
   function stopTimer() {
     clearInterval(intervalRef.current)
-    clearTimeout(notifRef.current)
+    // Annuler la push serveur si le chrono est arrêté manuellement
+    if (timerPushIdRef.current) {
+      supabase.from('timer_pushes').delete().eq('id', timerPushIdRef.current).then(() => {})
+      timerPushIdRef.current = null
+    }
     setTimerEndsAt(null)
     setTimerTotal(0)
     setTimerSecs(0)
   }
 
   // Quand l'app revient au premier plan, recalcule le temps restant
-  // et envoie la push si le timer s'est terminé en background (iOS throttle setTimeout)
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState !== 'visible') return
@@ -73,15 +78,6 @@ export function TimerProvider({ children }) {
       setTimerSecs(remaining)
       if (remaining === 0) {
         clearInterval(intervalRef.current)
-        // iOS a probablement tué le setTimeout → envoyer la push maintenant
-        if (!notifSentRef.current && clientIdRef.current) {
-          notifSentRef.current = true
-          sendPushOnly(clientIdRef.current, {
-            titre: '🔔 Récupération terminée',
-            corps: "C'est reparti !",
-            lien: `/client/seance/${seanceIdRef.current}`,
-          })
-        }
         stopTimer()
       }
     }
@@ -92,7 +88,6 @@ export function TimerProvider({ children }) {
 
   useEffect(() => () => {
     clearInterval(intervalRef.current)
-    clearTimeout(notifRef.current)
   }, [])
 
   const isRunning = timerEndsAt !== null && timerSecs > 0
