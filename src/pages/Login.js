@@ -120,7 +120,7 @@ export default function Login() {
         />
       )}
       <div style={styles.brand}>
-        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 90, width: 'auto', display: 'block', margin: '0 auto', marginBottom: -6 }} />
+        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 80, width: 'auto', display: 'block', margin: '0 auto' }} />
         <p style={styles.tagline}>Plateforme de coaching sportif</p>
       </div>
 

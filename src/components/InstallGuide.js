@@ -1,11 +1,14 @@
 import { createPortal } from 'react-dom'
 
-const LS_KEY = 'awprepa_install_seen_v3'
+const LS_KEY = 'awprepa_install_seen_v4'
+const IN_APP_RE = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i
 
 export function shouldShowInstall() {
-  const isInApp = window.navigator.standalone === true ||
+  // Pas dans un navigateur intégré (Instagram/TikTok ont leur propre sheet)
+  if (IN_APP_RE.test(navigator.userAgent)) return false
+  const isStandalone = window.navigator.standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
-  return !isInApp && !localStorage.getItem(LS_KEY)
+  return !isStandalone && !localStorage.getItem(LS_KEY)
 }
 
 export function markInstalled() {
@@ -59,7 +62,7 @@ export default function InstallGuide({ onDone, onLater, deferredPrompt }) {
           boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1)',
           overflow: 'hidden',
         }}>
-          <img src="/logo-blanc.png" alt="AWprepa" style={{ width: '85%', objectFit: 'contain' }} />
+          <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 52, width: 'auto', display: 'block' }} />
         </div>
 
         <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 6, textAlign: 'center' }}>
