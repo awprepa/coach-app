@@ -47,9 +47,6 @@ const QUESTIONS = [
 const COLORS = ['#ef4444', '#f97316', '#84cc16', '#22c55e']
 
 function InstallGuide({ onDone, onLater, deferredPrompt }) {
-  const isInApp = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches
-  if (isInApp) { onDone(); return null }
-
   const ua = navigator.userAgent || ''
   const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream
   const canDirectInstall = !!deferredPrompt
@@ -397,7 +394,7 @@ export default function AccueilClient() {
 
       // Guide installation : afficher une seule fois
       const isInApp = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches
-      if (!isInApp && !localStorage.getItem('awprepa_install_seen_v2')) {
+      if (!isInApp && !localStorage.getItem('awprepa_install_seen_v3')) {
         setShowInstall(true)
       }
 
@@ -458,7 +455,7 @@ export default function AccueilClient() {
       {showInstall && createPortal(
         <InstallGuide
           deferredPrompt={deferredInstallPrompt}
-          onDone={() => { localStorage.setItem('awprepa_install_seen_v2', '1'); setShowInstall(false) }}
+          onDone={() => { localStorage.setItem('awprepa_install_seen_v3', '1'); setShowInstall(false) }}
           onLater={() => setShowInstall(false)}
         />,
         document.body
