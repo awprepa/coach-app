@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import InstallGuide, { shouldShowInstall, markInstalled } from '../components/InstallGuide'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -15,6 +16,16 @@ export default function Login() {
   const [success, setSuccess]   = useState('')
   const [loading, setLoading]   = useState(false)
   const [showPwd, setShowPwd]   = useState(false)
+  const [showInstall, setShowInstall] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+
+  // Guide installation PWA — dès la page login, avant même la connexion
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    if (shouldShowInstall()) setShowInstall(true)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   function switchMode(m) { setMode(m); setError(''); setSuccess('') }
 
@@ -101,6 +112,13 @@ export default function Login() {
 
   return (
     <div style={styles.page}>
+      {showInstall && (
+        <InstallGuide
+          deferredPrompt={deferredPrompt}
+          onDone={() => { markInstalled(); setShowInstall(false) }}
+          onLater={() => setShowInstall(false)}
+        />
+      )}
       <div style={styles.brand}>
         <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 90, width: 'auto', display: 'block', margin: '0 auto', marginBottom: -6 }} />
         <p style={styles.tagline}>Plateforme de coaching sportif</p>
@@ -270,10 +288,10 @@ function EyeOff() {
 }
 
 const styles = {
-  page:        { minHeight: '100vh', background: '#efefef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:        { minHeight: '100vh', background: '#1a1a1a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   brand:       { textAlign: 'center', marginBottom: '2rem' },
   logo:        { fontSize: '2.25rem', fontWeight: '900', color: '#333333', letterSpacing: '-1px' },
-  tagline:     { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.4rem' },
+  tagline:     { color: 'rgba(255,255,255,0.35)', fontSize: '0.875rem', marginTop: '0.4rem' },
   card:        { background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '420px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' },
   toggle:      { display: 'flex', background: '#f3f4f6', borderRadius: '12px', padding: '4px', marginBottom: '1.75rem' },
   toggleBtn:   { flex: 1, background: 'transparent', border: 'none', borderRadius: '9px', padding: '0.55rem', fontSize: '0.875rem', fontWeight: '600', color: '#6b7280', cursor: 'pointer' },
