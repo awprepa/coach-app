@@ -102,7 +102,7 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.brand}>
-        <img src="/logo-noir.png" alt="AWprepa" style={{ height: 135, width: 'auto', display: 'block', margin: '0 auto', marginBottom: -8 }} />
+        <img src="/logo-noir.png" alt="AWprepa" style={{ height: 90, width: 'auto', display: 'block', margin: '0 auto', marginBottom: -6 }} />
         <p style={styles.tagline}>Plateforme de coaching sportif</p>
       </div>
 

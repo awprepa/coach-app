@@ -46,7 +46,7 @@ const QUESTIONS = [
 ]
 const COLORS = ['#ef4444', '#f97316', '#84cc16', '#22c55e']
 
-function InstallGuide({ onDone, deferredPrompt }) {
+function InstallGuide({ onDone, onLater, deferredPrompt }) {
   const isInApp = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches
   if (isInApp) { onDone(); return null }
 
@@ -68,7 +68,7 @@ function InstallGuide({ onDone, deferredPrompt }) {
   return (
     <>
       {/* Overlay flouté */}
-      <div onClick={onDone} style={{
+      <div onClick={onLater} style={{
         position: 'fixed', inset: 0, zIndex: 9998,
         background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(3px)',
@@ -161,7 +161,7 @@ function InstallGuide({ onDone, deferredPrompt }) {
           )}
         </button>
 
-        <button onClick={onDone} style={{
+        <button onClick={onLater} style={{
           background: 'none', border: 'none',
           color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem',
           fontWeight: 500, cursor: 'pointer', padding: '8px',
@@ -459,6 +459,7 @@ export default function AccueilClient() {
         <InstallGuide
           deferredPrompt={deferredInstallPrompt}
           onDone={() => { localStorage.setItem('awprepa_install_seen_v2', '1'); setShowInstall(false) }}
+          onLater={() => setShowInstall(false)}
         />,
         document.body
       )}
