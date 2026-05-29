@@ -12,25 +12,24 @@ const INPUT_H  = 62
 /**
  * useInputBottom — colle la barre au clavier iOS.
  *
- * Sur iOS PWA, quand le clavier s'ouvre, window.innerHeight DIMINUE
- * exactement de la hauteur du clavier. On capture la hauteur naturelle
- * au montage, puis on calcule kbH = naturalH - window.innerHeight.
- * Pas de visualViewport.offsetTop qui cause le gap visible sur screenshot.
+ * window.resize ne se déclenche PAS sur iOS PWA quand le clavier s'ouvre.
+ * On utilise visualViewport.resize qui lui est fiable.
+ * kbH = window.innerHeight - visualViewport.height (sans offsetTop pour éviter le gap).
  */
 function useInputBottom() {
   const [bottom, setBottom] = useState(NAV_H)
 
   useEffect(() => {
-    // Hauteur de la fenêtre sans clavier
-    const naturalH = window.innerHeight
+    const vv = window.visualViewport
+    if (!vv) return // fallback : anciens navigateurs, pas de clavier détecté
 
     function update() {
-      const kbH = naturalH - window.innerHeight
+      const kbH = window.innerHeight - vv.height
       setBottom(kbH > 80 ? kbH : NAV_H)
     }
 
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
+    vv.addEventListener('resize', update)
+    return () => vv.removeEventListener('resize', update)
   }, [])
 
   return bottom
