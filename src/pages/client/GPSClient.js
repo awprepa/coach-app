@@ -132,7 +132,7 @@ export default function GPSClient() {
     <div style={S.page}>
       {/* Header */}
       <div style={S.header}>
-        <AppLogo />
+        <AppLogo size={28} />
         <span style={S.headerTitle}>GPS</span>
         <div style={{ width: 60 }} />
       </div>
