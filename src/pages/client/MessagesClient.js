@@ -21,10 +21,15 @@ function useInputBottom() {
 
   useEffect(() => {
     const vv = window.visualViewport
-    if (!vv) return // fallback : anciens navigateurs, pas de clavier détecté
+    if (!vv) return
+
+    // Sur iOS PWA, window.innerHeight rétrécit EN MÊME TEMPS que vv.height
+    // → leur différence vaut toujours 0. On capture la hauteur initiale de vv
+    // avant l'ouverture du clavier pour avoir une référence stable.
+    const naturalH = vv.height
 
     function update() {
-      const kbH = window.innerHeight - vv.height
+      const kbH = naturalH - vv.height
       setBottom(kbH > 80 ? kbH : NAV_H)
     }
 
