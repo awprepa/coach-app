@@ -81,11 +81,13 @@ function compressImage(file, maxSide = 1024) {
 }
 
 // ── Composant résultats IA (photo + vocal) ───────────────────────────────────
-function AIResults({ analysis, items, onUpdateQty, onReset }) {
+function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
   const totalKcal  = items.reduce((s, i) => s + (i.kcal   || 0), 0)
   const totalProt  = items.reduce((s, i) => s + (i.prot_g  || 0), 0)
   const totalCarbs = items.reduce((s, i) => s + (i.carbs_g || 0), 0)
   const totalFat   = items.reduce((s, i) => s + (i.fat_g   || 0), 0)
+  const [showNote, setShowNote] = useState(false)
+  const [note,     setNote]     = useState('')
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
@@ -161,6 +163,70 @@ function AIResults({ analysis, items, onUpdateQty, onReset }) {
           L {Math.round(totalFat * 10) / 10}g
         </span>
       </div>
+
+      {/* Raffiner avec l'IA */}
+      {onRefine && (
+        <div style={{ marginTop: '0.65rem' }}>
+          {!showNote ? (
+            <button
+              onClick={() => setShowNote(true)}
+              style={{
+                width: '100%', background: 'none',
+                border: '1.5px dashed #d1d5db', borderRadius: 12,
+                padding: '0.55rem', fontSize: '0.8rem',
+                color: '#6b7280', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+              }}
+            >
+              ✏️ Ajouter ou modifier des éléments
+            </button>
+          ) : (
+            <div style={{ background: '#f9fafb', borderRadius: 12, padding: '0.75rem', border: '1px solid #e5e7eb' }}>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.45rem', fontWeight: 600 }}>
+                Précise à l'IA ce qu'il faut ajuster
+              </p>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Ex : ajoute une vinaigrette, c'était une grande portion, j'ai aussi mangé du pain…"
+                rows={3}
+                style={{
+                  width: '100%', resize: 'none', borderRadius: 8,
+                  border: '1.5px solid #e5e7eb', padding: '0.5rem 0.75rem',
+                  fontSize: '0.82rem', outline: 'none', background: 'white',
+                  boxSizing: 'border-box', lineHeight: 1.5, color: '#1a1a1a',
+                  fontFamily: 'inherit',
+                }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  onClick={() => { setShowNote(false); setNote('') }}
+                  style={{
+                    flex: 1, background: 'none', border: '1px solid #e5e7eb',
+                    borderRadius: 10, padding: '0.5rem', fontSize: '0.78rem',
+                    color: '#9ca3af', cursor: 'pointer',
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => { if (note.trim()) { onRefine(note.trim()); setShowNote(false); setNote('') } }}
+                  disabled={!note.trim()}
+                  style={{
+                    flex: 2, background: note.trim() ? '#1a1a1a' : '#e5e7eb',
+                    border: 'none', borderRadius: 10, padding: '0.5rem',
+                    fontSize: '0.82rem', fontWeight: 700,
+                    color: note.trim() ? '#e4f816' : '#9ca3af',
+                    cursor: note.trim() ? 'pointer' : 'default',
+                  }}
+                >
+                  🤖 Relancer l'analyse
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -271,6 +337,8 @@ export default function AjouterRepas() {
   // ── Photo ─────────────────────────────────────────────────────────────────
   const photoInputRef   = useRef(null)
   const galleryInputRef = useRef(null)
+  const photoBase64Ref  = useRef(null)   // stocke la dernière photo pour le raffinement
+  const photoMimeRef    = useRef('image/jpeg')
 
   // ── Vocal ─────────────────────────────────────────────────────────────────
   const mediaRecorderRef = useRef(null)
@@ -412,13 +480,42 @@ export default function AjouterRepas() {
     setAnalyzingAI(true); setAiError(null)
     try {
       const base64 = await compressImage(file)
+      photoBase64Ref.current = base64
+      photoMimeRef.current   = file.type || 'image/jpeg'
       const { data, error } = await supabase.functions.invoke('nutrition-analyze-photo', {
-        body: { photo_base64: base64, mime_type: file.type || 'image/jpeg' },
+        body: { photo_base64: base64, mime_type: photoMimeRef.current },
       })
       if (error || !data?.ok) throw new Error(data?.error || 'Analyse échouée')
       handleAIResult(data)
     } catch (err) {
       setAiError(err.message || 'Analyse impossible')
+    }
+    setAnalyzingAI(false)
+  }
+
+  // ── Raffiner l'analyse IA avec une note utilisateur ───────────────────────
+  async function refineWithNote(note) {
+    setAnalyzingAI(true); setAiError(null)
+    try {
+      if (mode === 'photo' && photoBase64Ref.current) {
+        const { data, error } = await supabase.functions.invoke('nutrition-analyze-photo', {
+          body: {
+            photo_base64:    photoBase64Ref.current,
+            mime_type:       photoMimeRef.current,
+            note_utilisateur: note,
+          },
+        })
+        if (error || !data?.ok) throw new Error(data?.error || 'Analyse échouée')
+        handleAIResult(data)
+      } else if (mode === 'vocal') {
+        // Pour le vocal, on ajoute la note au transcript et on re-parse
+        const enrichedText = transcript
+          ? `${transcript}. Précision : ${note}`
+          : note
+        await callParseVoice(enrichedText)
+      }
+    } catch (err) {
+      setAiError(err.message || 'Raffinage impossible')
     }
     setAnalyzingAI(false)
   }
@@ -855,7 +952,7 @@ export default function AjouterRepas() {
             {analyzingAI && <AILoading label="Analyse de la photo…" />}
             {aiError && !analyzingAI && <AIError error={aiError} onRetry={() => { setAiError(null); setAiAnalysis(null) }} />}
             {aiAnalysis && !analyzingAI && (
-              <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} />
+              <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} onRefine={refineWithNote} />
             )}
           </div>
         )}
@@ -950,7 +1047,7 @@ export default function AjouterRepas() {
 
             {analyzingAI && <AILoading label="Analyse en cours…" />}
             {aiAnalysis && !analyzingAI && (
-              <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} />
+              <AIResults analysis={aiAnalysis} items={editableItems} onUpdateQty={updateItemQuantity} onReset={resetAI} onRefine={refineWithNote} />
             )}
           </div>
         )}

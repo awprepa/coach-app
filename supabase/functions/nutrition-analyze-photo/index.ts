@@ -91,7 +91,10 @@ Les valeurs "unit" acceptées : "g", "ml", "pièce".
 Si un aliment n'est pas identifiable, note "Aliment non identifié" et estime à 100 kcal par défaut.`;
 
 // ── Groq Vision ───────────────────────────────────────────────────────────────
-async function callGroqVision(key: string, base64: string, mimeType: string): Promise<Record<string, unknown>> {
+async function callGroqVision(key: string, base64: string, mimeType: string, note?: string): Promise<Record<string, unknown>> {
+  const prompt = note
+    ? `${VISION_PROMPT}\n\n⚠️ PRÉCISION UTILISATEUR : "${note}"\nTiens compte de cette information pour ajuster ou compléter ton analyse (ajoute des éléments manquants, modifie les quantités, corrige les aliments, etc.).`
+    : VISION_PROMPT
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
@@ -105,7 +108,7 @@ async function callGroqVision(key: string, base64: string, mimeType: string): Pr
               type: "image_url",
               image_url: { url: `data:${mimeType};base64,${base64}` },
             },
-            { type: "text", text: VISION_PROMPT },
+            { type: "text", text: prompt },
           ],
         },
       ],
@@ -124,36 +127,24 @@ async function callGroqVision(key: string, base64: string, mimeType: string): Pr
 }
 
 // ── Gemini Vision (fallback) ──────────────────────────────────────────────────
-async function callGeminiVision(key: string, base64: string, mimeType: string): Promise<Record<string, unknown>> {
+async function callGeminiVision(key: string, base64: string, mimeType: string, note?: string): Promise<Record<string, unknown>> {
+  const prompt = note
+    ? `${VISION_PROMPT}\n\n⚠️ PRÉCISION UTILISATEUR : "${note}"\nTiens compte de cette information pour ajuster ou compléter ton analyse.`
+    : VISION_PROMPT
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  let res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { inlineData: { mimeType, data: base64 } },
-          { text: VISION_PROMPT },
-        ],
-      }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-    }),
-  });
+  const body = JSON.stringify({
+    contents: [{
+      parts: [
+        { inlineData: { mimeType, data: base64 } },
+        { text: prompt },
+      ],
+    }],
+    generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+  })
+  let res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
   if (res.status === 429) {
     await new Promise(r => setTimeout(r, 2000));
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inlineData: { mimeType, data: base64 } },
-            { text: VISION_PROMPT },
-          ],
-        }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-      }),
-    });
+    res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
   }
   if (!res.ok) {
     if (res.status === 429) throw new Error("Quota Gemini dépassé — configure GROQ_API_KEY dans les secrets Supabase");
@@ -194,14 +185,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { photo_base64, mime_type = "image/jpeg" } = await req.json();
+    const { photo_base64, mime_type = "image/jpeg", note_utilisateur } = await req.json();
     if (!photo_base64 || photo_base64.length > 2_000_000) {
       return new Response(JSON.stringify({ ok: false, error: !photo_base64 ? "photo_base64 manquant" : "Image trop volumineuse (max ~1.5 Mo)" }), { status: 400, headers: JSON_CT })
     }
 
     const result = GROQ_KEY
-      ? await callGroqVision(GROQ_KEY, photo_base64, mime_type)
-      : await callGeminiVision(GEMINI_KEY!, photo_base64, mime_type);
+      ? await callGroqVision(GROQ_KEY, photo_base64, mime_type, note_utilisateur)
+      : await callGeminiVision(GEMINI_KEY!, photo_base64, mime_type, note_utilisateur);
 
     // Recalcul des totaux côté serveur depuis les items (ne pas faire confiance au modèle)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

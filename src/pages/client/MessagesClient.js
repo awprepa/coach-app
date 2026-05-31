@@ -9,36 +9,6 @@ const HEADER_H = 58
 const NAV_H    = 88
 const INPUT_H  = 62
 
-/**
- * useInputBottom — colle la barre au clavier iOS.
- *
- * window.resize ne se déclenche PAS sur iOS PWA quand le clavier s'ouvre.
- * On utilise visualViewport.resize qui lui est fiable.
- * kbH = window.innerHeight - visualViewport.height (sans offsetTop pour éviter le gap).
- */
-function useInputBottom() {
-  const [bottom, setBottom] = useState(NAV_H)
-
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-
-    // Sur iOS PWA, window.innerHeight rétrécit EN MÊME TEMPS que vv.height
-    // → leur différence vaut toujours 0. On capture la hauteur initiale de vv
-    // avant l'ouverture du clavier pour avoir une référence stable.
-    const naturalH = vv.height
-
-    function update() {
-      const kbH = naturalH - vv.height
-      setBottom(kbH > 80 ? kbH : NAV_H)
-    }
-
-    vv.addEventListener('resize', update)
-    return () => vv.removeEventListener('resize', update)
-  }, [])
-
-  return bottom
-}
 
 function ChatInner({ clientId, coachId }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
@@ -47,8 +17,6 @@ function ChatInner({ clientId, coachId }) {
   const [sendError, setSendError] = useState(false)
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
-  const inputBottom = useInputBottom()
-  const msgsBottom  = INPUT_H + inputBottom
 
   // Scroll vers le bas à chaque nouveau message
   useEffect(() => {
@@ -94,10 +62,9 @@ function ChatInner({ clientId, coachId }) {
     <>
       {/* ── Zone des messages ──────────────────────────────────────── */}
       <div style={{
-        position: 'fixed',
-        top: HEADER_H, left: 0, right: 0,
-        bottom: msgsBottom,
+        flex: 1,
         overflowY: 'auto',
+        minHeight: 0,
         background: '#f5f5f5',
         padding: '0.75rem 0.75rem 0.5rem',
         display: 'flex',
@@ -156,7 +123,7 @@ function ChatInner({ clientId, coachId }) {
       {sendError && (
         <div style={{
           position: 'fixed',
-          bottom: inputBottom + INPUT_H + 8,
+          bottom: NAV_H + INPUT_H + 8,
           left: '50%', transform: 'translateX(-50%)',
           background: '#dc2626', color: 'white',
           padding: '0.4rem 0.9rem', borderRadius: 20,
@@ -170,10 +137,7 @@ function ChatInner({ clientId, coachId }) {
 
       {/* ── Barre de saisie ────────────────────────────────────────── */}
       <div style={{
-        position: 'fixed',
-        left: 0, right: 0,
-        bottom: inputBottom,
-        zIndex: 100,          // au-dessus de la bottom nav (zIndex 90) → pas d'ombre par-dessus
+        flexShrink: 0,
         background: 'white',
         borderTop: '1px solid #efefef',
         boxShadow: 'none',    // pas d'ombre — la bottom nav en a déjà une vers le haut
@@ -282,11 +246,17 @@ export default function MessagesClient() {
   }, [])
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+    <div style={{
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      height: '100dvh',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0,
+        flexShrink: 0,
         height: HEADER_H,
         background: 'var(--header-bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -309,29 +279,34 @@ export default function MessagesClient() {
       </div>
 
       {/* ── Contenu ────────────────────────────────────────────────── */}
-      {loadError ? (
-        <div style={{
-          position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: NAV_H,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: '#f5f5f5', gap: '0.5rem',
-        }}>
-          <p style={{ fontSize: '2rem', margin: 0 }}>💬</p>
-          <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0, textAlign: 'center', padding: '0 2rem' }}>
-            Contacte ton coach pour activer la messagerie.
-          </p>
-        </div>
-      ) : !clientId || !coachId ? (
-        <div style={{
-          position: 'fixed', top: HEADER_H, left: 0, right: 0, bottom: NAV_H,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: '#f5f5f5',
-        }}>
-          <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
-        </div>
-      ) : (
-        <ChatInner clientId={clientId} coachId={coachId} />
-      )}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {loadError ? (
+          <div style={{
+            flex: 1,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: '#f5f5f5', gap: '0.5rem',
+          }}>
+            <p style={{ fontSize: '2rem', margin: 0 }}>💬</p>
+            <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0, textAlign: 'center', padding: '0 2rem' }}>
+              Contacte ton coach pour activer la messagerie.
+            </p>
+          </div>
+        ) : !clientId || !coachId ? (
+          <div style={{
+            flex: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#f5f5f5',
+          }}>
+            <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
+          </div>
+        ) : (
+          <ChatInner clientId={clientId} coachId={coachId} />
+        )}
+      </div>
+
+      {/* ── Spacer pour la ClientBottomNav fixe ────────────────────── */}
+      <div style={{ height: NAV_H, flexShrink: 0 }} />
 
       <ClientBottomNav />
     </div>
