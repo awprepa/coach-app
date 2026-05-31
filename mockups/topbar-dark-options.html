@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWprepa — Barre du haut · variantes sombres</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--accent:#e4f816;--ink:#15181d;--ink2:#5b626c;--line:#e6e8ec;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#c9ccd3;padding:30px 22px;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  .opt{margin-bottom:32px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 18px 45px rgba(0,0,0,0.22);}
+  .lbl{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);}
+  .lbl .num{width:24px;height:24px;border-radius:7px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:800;flex-shrink:0;}
+  .lbl .t{font-size:0.92rem;font-weight:800;}
+  .lbl .d{font-size:0.74rem;color:var(--ink2);}
+  .stage{padding:22px;background:#eef0f3;}
+  .demo-body{height:90px;background:#f5f6f8;border:1px dashed #cfd4da;border-top:none;border-radius:0 0 10px 10px;display:flex;align-items:center;justify-content:center;color:#aab1bb;font-size:0.8rem;}
+  svg{width:16px;height:16px;flex-shrink:0;}
+  .logo-mark{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.82rem;flex-shrink:0;}
+  .logo-txt{font-weight:800;letter-spacing:-0.02em;}
+  .nav-base{height:62px;display:flex;align-items:center;padding:0 22px;gap:22px;}
+  .brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+  .items{display:flex;gap:2px;flex:1;flex-wrap:wrap;}
+  .items a{display:flex;align-items:center;gap:6px;text-decoration:none;font-size:0.85rem;font-weight:600;padding:8px 13px;border-radius:8px;transition:.15s;white-space:nowrap;}
+  .badge{border-radius:999px;font-size:0.62rem;font-weight:800;padding:1px 6px;margin-left:2px;}
+  .logout{flex-shrink:0;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;}
+
+  /* A — Gris anthracite (sombre doux) */
+  .a{background:#1f2937;}
+  .a .logo-mark{background:var(--accent);color:#15181d;}
+  .a .logo-txt{color:#fff;}
+  .a .items a{color:rgba(255,255,255,0.66);}
+  .a .items a svg{opacity:.85;}
+  .a .items a:hover{color:#fff;background:rgba(255,255,255,0.07);}
+  .a .items a.on{background:var(--accent);color:#15181d;}
+  .a .items a.on svg{stroke:#15181d;opacity:1;}
+  .a .badge{background:#15181d;color:var(--accent);} .a a.on .badge{background:#15181d;color:var(--accent);}
+  .a .logout{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.14);}
+
+  /* B — Noir profond */
+  .b{background:#16181d;}
+  .b .logo-mark{background:var(--accent);color:#15181d;}
+  .b .logo-txt{color:#fff;}
+  .b .items a{color:#9aa3af;}
+  .b .items a svg{opacity:.8;}
+  .b .items a:hover{color:#fff;background:rgba(255,255,255,0.05);}
+  .b .items a.on{background:var(--accent);color:#16181d;}
+  .b .items a.on svg{stroke:#16181d;opacity:1;}
+  .b .badge{background:#16181d;color:var(--accent);} .b a.on .badge{background:#16181d;color:var(--accent);}
+  .b .logout{background:rgba(255,255,255,0.06);color:#aab1bb;border:1px solid rgba(255,255,255,0.1);}
+
+  /* C — Dégradé (gradient maison) + soulignement accent */
+  .c{background:linear-gradient(135deg,#333333 0%,#1f2937 100%);}
+  .c .logo-mark{background:var(--accent);color:#15181d;box-shadow:0 2px 8px rgba(228,248,22,0.3);}
+  .c .logo-txt{color:#fff;}
+  .c .items a{color:rgba(255,255,255,0.7);position:relative;}
+  .c .items a:hover{color:#fff;background:rgba(255,255,255,0.07);}
+  .c .items a.on{color:#fff;}
+  .c .items a.on::after{content:'';position:absolute;left:13px;right:13px;bottom:-1px;height:3px;border-radius:3px;background:var(--accent);}
+  .c .badge{background:var(--accent);color:#15181d;}
+  .c .logout{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.14);}
+
+  /* D — Blanc + bloc logo sombre (hybride) */
+  .d{background:#fff;border-bottom:1px solid var(--line);padding-left:0;}
+  .d .brand{background:#16181d;align-self:stretch;display:flex;align-items:center;padding:0 22px;gap:9px;margin-right:8px;}
+  .d .logo-mark{background:var(--accent);color:#16181d;}
+  .d .logo-txt{color:#fff;}
+  .d .items a{color:var(--ink2);}
+  .d .items a:hover{color:var(--ink);background:#f3f4f6;}
+  .d .items a.on{background:#16181d;color:#fff;}
+  .d .items a.on svg{stroke:var(--accent);}
+  .d .badge{background:#16181d;color:var(--accent);} .d a.on .badge{background:var(--accent);color:#16181d;}
+  .d .logout{background:#fff;color:var(--ink2);border:1px solid var(--line);margin-right:22px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<script>
+  const ITEMS = [
+    {k:'dashboard', l:'Tableau de bord', badge:3, on:true},
+    {k:'clients',   l:'Clients'},
+    {k:'book',      l:'Bibliothèque'},
+    {k:'gps',       l:'GPS'},
+    {k:'tests',     l:'Tests'},
+    {k:'messages',  l:'Messagerie'},
+    {k:'paiements', l:'Paiements'},
+  ];
+  const IC = {
+    dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    clients:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+    book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    gps:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    tests:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>',
+    messages:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    paiements:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  };
+  function nav(cls){
+    const links = ITEMS.map(it=>`<a class="${it.on?'on':''}" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${IC[it.k]}</svg>${it.l}${it.badge?`<span class="badge">${it.badge}</span>`:''}</a>`).join('');
+    return `<div class="nav-base ${cls}"><div class="brand"><div class="logo-mark">AW</div><span class="logo-txt">AWprepa</span></div><div class="items">${links}</div><button class="logout">Déconnexion</button></div>`;
+  }
+  const OPTS=[
+    ['A','Gris anthracite (sombre doux)','fond #1f2937, texte clair, onglet actif en pastille jaune. Reprend l’épure de l’option 2 en sombre.','a'],
+    ['B','Noir profond','barre quasi noire #16181d, très contrastée, onglet actif jaune plein.','b'],
+    ['C','Dégradé maison + soulignement','ton dégradé actuel (#333→#1f2937), onglet actif marqué par un trait accent sous l’onglet.','c'],
+    ['D','Blanc + bloc logo sombre','reste clair mais ancre un bloc logo foncé à gauche + onglet actif en pastille sombre (hybride).','d'],
+  ];
+  document.getElementById('root').innerHTML = OPTS.map(([n,t,d,cls])=>`
+    <div class="opt">
+      <div class="lbl"><span class="num">${n}</span><span class="t">${t}</span><span class="d">— ${d}</span></div>
+      <div class="stage">${nav(cls)}<div class="demo-body">Contenu de la page</div></div>
+    </div>`).join('');
+</script>
+</body>
+</html>

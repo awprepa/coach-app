@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWprepa — Ajout d'évènement · options</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--accent:#e4f816;--ink:#15181d;--ink2:#5b626c;--ink3:#9aa1ac;--line:#e6e8ec;--line2:#eef0f3;
+        --group:#2f6f76;--muscu:#b08769;--vitesse:#6b94a3;--prevention:#8c7ea6;--collectif:#98a2ad;--test:#454c57;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#c9ccd3;padding:30px 22px;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  .cap{font-size:0.8rem;color:#3b4250;margin-bottom:18px;}
+  .cap b{color:#15181d;}
+  .opt{margin-bottom:34px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 18px 45px rgba(0,0,0,0.22);}
+  .lbl{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);}
+  .lbl .num{width:24px;height:24px;border-radius:7px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:800;flex-shrink:0;}
+  .lbl .t{font-size:0.95rem;font-weight:800;} .lbl .d{font-size:0.74rem;color:var(--ink2);}
+  .stage{padding:0;background:#f5f6f8;position:relative;min-height:340px;overflow:hidden;}
+
+  /* En-tête de groupe + onglets */
+  .ghead{background:#fff;border-bottom:1px solid var(--line);padding:13px 20px 0;}
+  .ghead .g1{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+  .ghead .gdot{width:14px;height:14px;border-radius:4px;background:var(--group);}
+  .ghead .gname{font-size:1.05rem;font-weight:800;}
+  .ghead .gsub{font-size:0.7rem;color:var(--ink3);font-weight:600;}
+  .ghead .tabs{display:flex;gap:3px;}
+  .ghead .tabs a{font-size:0.8rem;font-weight:600;color:var(--ink2);text-decoration:none;padding:9px 13px;border-bottom:2px solid transparent;}
+  .ghead .tabs a.on{color:var(--ink);border-bottom-color:var(--group);font-weight:700;}
+
+  /* mini grille calendrier */
+  .mini-grid{display:flex;padding:16px 20px;gap:0;overflow-x:auto;}
+  .mcol{min-width:104px;flex:1;border-right:1px solid var(--line2);}
+  .mcol:last-child{border-right:none;}
+  .mch{text-align:center;font-size:0.72rem;font-weight:800;padding:5px 0;border-top:3px solid var(--ph,#e6e8ec);border-bottom:1px solid var(--line);}
+  .mch span{display:block;font-size:0.5rem;color:var(--ink3);font-weight:700;}
+  .drow{display:grid;grid-template-columns:16px 12px 1fr;align-items:center;border-bottom:1px solid var(--line2);min-height:19px;font-size:0.56rem;}
+  .drow .dn{color:var(--ink2);text-align:center;font-weight:700;line-height:19px;border-right:1px solid var(--line2);}
+  .drow .dw{color:var(--ink3);text-align:center;line-height:19px;}
+  .cell{font-size:0.57rem;font-weight:700;padding:0 5px;line-height:19px;overflow:hidden;white-space:nowrap;}
+  .cell.ev{border-left:3px solid color-mix(in srgb,var(--c) 70%,#fff);background:color-mix(in srgb,var(--c) 9%,#fff);color:#3a4049;}
+  .cell.mt{background:var(--group);color:#fff;font-weight:800;display:flex;justify-content:space-between;}
+  .cell.mt small{font-size:0.48rem;opacity:.9;}
+  .drow.sel{box-shadow:inset 0 0 0 2px var(--group);}
+  .drow.dash{cursor:pointer;}
+  .plus{color:var(--group);font-weight:800;}
+
+  /* type chips réutilisables */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;background:#fff;}
+  .chip .dot{width:9px;height:9px;border-radius:2px;}
+  .chip:hover{border-color:var(--ink2);}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .inp{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:0.78rem;width:100%;}
+  .fld{font-size:0.6rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;display:block;}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 13px;font-size:0.77rem;font-weight:600;color:var(--ink2);cursor:pointer;}
+  .btnD{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:0.77rem;font-weight:700;cursor:pointer;}
+  .btnD span{color:var(--accent);}
+
+  /* A — popover au clic sur un jour */
+  .popover{position:absolute;top:150px;left:260px;width:280px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 45px rgba(0,0,0,0.25);padding:14px;z-index:5;}
+  .popover .ar{position:absolute;left:-7px;top:24px;width:13px;height:13px;background:#fff;border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg);}
+  .popover h4{font-size:0.82rem;font-weight:800;margin-bottom:2px;} .popover .sub{font-size:0.66rem;color:var(--ink3);margin-bottom:10px;}
+
+  /* B — panneau latéral */
+  .scrim{position:absolute;inset:0;background:rgba(15,18,23,0.28);z-index:4;}
+  .side{position:absolute;top:0;right:0;bottom:0;width:330px;background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(0,0,0,0.18);z-index:5;display:flex;flex-direction:column;}
+  .side .sh{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+  .side .sh b{font-size:0.95rem;font-weight:800;} .side .sh .x{color:var(--ink3);font-size:1.2rem;cursor:pointer;}
+  .side .sb{padding:14px 18px;flex:1;overflow:auto;} .side .sa{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;}
+
+  /* C — modale centrale */
+  .modal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:440px;max-width:90%;background:#fff;border-radius:14px;box-shadow:0 25px 60px rgba(0,0,0,0.3);z-index:5;overflow:hidden;}
+  .modal .mh{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+  .modal .mh b{font-size:0.98rem;font-weight:800;} .modal .mh .x{color:var(--ink3);font-size:1.2rem;cursor:pointer;}
+  .modal .mb{padding:16px 18px;} .modal .ma{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;}
+  .typegrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+  .tcard{border:1px solid var(--line);border-radius:10px;padding:11px;cursor:pointer;text-align:center;}
+  .tcard:hover{border-color:var(--ink2);} .tcard.on{border-color:var(--ink);background:#f7f8fa;}
+  .tcard .dot{width:11px;height:11px;border-radius:3px;margin:0 auto 6px;}
+  .tcard .cn{font-size:0.74rem;font-weight:700;}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cap"><b>3 façons d'ajouter un évènement</b> — le calendrier vit dans la page du groupe (onglet « Calendrier »). Choisis l'interaction qui te parle. (Rendu indicatif, non cliquable.)</div>
+
+  <!-- ───────── OPTION A : POPOVER ───────── -->
+  <div class="opt">
+    <div class="lbl"><span class="num">A</span><span class="t">Popover au clic sur un jour</span><span class="d">— léger et rapide : tu cliques une case, une petite bulle s'ouvre sur place pour choisir le type + l'essentiel.</span></div>
+    <div class="stage" id="stA"></div>
+  </div>
+
+  <!-- ───────── OPTION B : PANNEAU ───────── -->
+  <div class="opt">
+    <div class="lbl"><span class="num">B</span><span class="t">Panneau latéral</span><span class="d">— glisse depuis la droite : tout le formulaire + (pour une séance) le déroulé en blocs/exercices. Le plus complet.</span></div>
+    <div class="stage" id="stB"></div>
+  </div>
+
+  <!-- ───────── OPTION C : MODALE ───────── -->
+  <div class="opt">
+    <div class="lbl"><span class="num">C</span><span class="t">Modale centrale en 2 temps</span><span class="d">— une fenêtre centrée : d'abord une grille de types (gros boutons), puis le formulaire. Très clair et guidé.</span></div>
+    <div class="stage" id="stC"></div>
+  </div>
+</div>
+
+<script>
+  const IC_DOT = {match:'var(--group)',muscu:'var(--muscu)',vitesse:'var(--vitesse)',prevention:'var(--prevention)',collectif:'var(--collectif)',test:'var(--test)'};
+  // mini calendrier de contexte (3 mois)
+  const COLS=[
+    {m:'Sept',y:2026,ph:'#86ad8e',rows:[[5,'V'],[6,'S','mt','Montauban','ext'],[7,'D'],[8,'L'],[9,'M','ev','vitesse','Vitesse'],[10,'M','ev','muscu','Muscu'],[11,'J','ev','collectif','Coll.'],[12,'V'],[13,'S','mt','Béziers','dom']]},
+    {m:'Oct',y:2026,ph:'#86ad8e',rows:[[1,'J','ev','collectif','Coll.'],[2,'V','ev','prevention','Activ.'],[3,'S','mt','Agen','ext'],[4,'D'],[5,'L'],[6,'M','ev','muscu','Muscu'],[7,'M','ev','vitesse','Vitesse'],[8,'J'],[9,'V']]},
+    {m:'Nov',y:2026,ph:'#86ad8e',rows:[[2,'L'],[3,'M','ev','collectif','Coll.'],[4,'M','ev','muscu','Muscu'],[5,'J'],[6,'V','ev','prevention','Activ.'],[7,'S','mt','Dax','dom'],[8,'D'],[9,'L'],[10,'M']]},
+  ];
+  function grid(selDay){
+    return `<div class="mini-grid">`+COLS.map(c=>{
+      const rows=c.rows.map(r=>{
+        const [d,w,kind,a,b]=r;
+        let cell='<div></div>';
+        if(kind==='mt') cell=`<div class="cell mt">${a}<small>${b}</small></div>`;
+        else if(kind==='ev') cell=`<div class="cell ev" style="--c:${IC_DOT[a]}">${b}</div>`;
+        else if(d===selDay&&c.m==='Sept') cell=`<div class="cell"><span class="plus">+ ajouter</span></div>`;
+        const sel=(d===selDay&&c.m==='Sept')?'sel':'';
+        return `<div class="drow ${kind?'':'dash'} ${sel}"><div class="dn">${d}</div><div class="dw">${w}</div>${cell}</div>`;
+      }).join('');
+      return `<div class="mcol"><div class="mch" style="--ph:${c.ph}">${c.m}<span>${c.y}</span></div>${rows}</div>`;
+    }).join('')+`</div>`;
+  }
+  const TYPES=[['match','Match'],['collectif','Collectif'],['muscu','Muscu'],['vitesse','Vitesse'],['prevention','Prévention'],['test','Tests']];
+  function chips(onKey){return `<div class="chips">`+TYPES.map(([k,l])=>`<div class="chip ${k===onKey?'on':''}"><span class="dot" style="background:${IC_DOT[k]}"></span>${l}</div>`).join('')+`</div>`;}
+  function typegrid(onKey){return `<div class="typegrid">`+TYPES.map(([k,l])=>`<div class="tcard ${k===onKey?'on':''}"><div class="dot" style="background:${IC_DOT[k]}"></div><div class="cn">${l}</div></div>`).join('')+`</div>`;}
+  function ghead(){return `<div class="ghead"><div class="g1"><span class="gdot"></span><span class="gname">Seniors A</span><span class="gsub">· 23 joueurs · Phase aller</span></div><div class="tabs"><a href="#">Effectif</a><a href="#">Programmes</a><a class="on" href="#">Calendrier</a><a href="#">Charge</a><a href="#">Tests</a></div></div>`;}
+
+  // A
+  document.getElementById('stA').innerHTML = ghead()+grid(9)+`
+    <div class="popover"><div class="ar"></div>
+      <h4>Mardi 9 sept.</h4><div class="sub">Ajouter un évènement</div>
+      ${chips('muscu')}
+      <div style="margin-top:11px"><span class="fld">Titre</span><input class="inp" value="Force max bas du corps"></div>
+      <div class="row2" style="margin-top:9px"><div><span class="fld">Heure</span><input class="inp" value="17:00"></div><div><span class="fld">Durée</span><input class="inp" value="60 min"></div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn">Annuler</button><button class="btnD"><span>+</span> Ajouter</button></div>
+    </div>`;
+
+  // B
+  document.getElementById('stB').innerHTML = ghead()+grid(null)+`
+    <div class="scrim"></div>
+    <div class="side">
+      <div class="sh"><b>Nouvel évènement</b><span class="x">×</span></div>
+      <div class="sb">
+        <span class="fld">Type</span>${chips('vitesse')}
+        <div class="row2" style="margin-top:12px"><div><span class="fld">Date</span><input class="inp" value="09/09/2026"></div><div><span class="fld">Heure</span><input class="inp" value="18:00"></div></div>
+        <div style="margin-bottom:10px"><span class="fld">Titre</span><input class="inp" value="Vitesse & accélérations"></div>
+        <div class="row2"><div><span class="fld">Lieu</span><input class="inp" value="Terrain"></div><div><span class="fld">Charge</span><input class="inp" value="Modérée"></div></div>
+        <div style="margin-top:6px;border-top:1px solid var(--line2);padding-top:10px"><span class="fld">Déroulé en blocs</span>
+          <div style="border:1px solid var(--line);border-radius:9px;padding:9px;margin-top:5px"><b style="font-size:.78rem">Échauffement · 12 min</b><div style="font-size:.72rem;color:var(--ink2);margin-top:4px">Course + gammes · 8 min</div></div>
+          <div style="border:1px dashed var(--line);border-radius:8px;text-align:center;font-size:.74rem;color:var(--ink2);padding:7px;margin-top:6px">+ Ajouter un bloc</div>
+        </div>
+      </div>
+      <div class="sa"><button class="btn">Fermer</button><button class="btnD"><span>Créer</span></button></div>
+    </div>`;
+
+  // C
+  document.getElementById('stC').innerHTML = ghead()+grid(null)+`
+    <div class="scrim"></div>
+    <div class="modal">
+      <div class="mh"><b>Nouvel évènement</b><span class="x">×</span></div>
+      <div class="mb">
+        <span class="fld">1 · Type</span>${typegrid('match')}
+        <span class="fld">2 · Détails</span>
+        <div class="row2" style="margin-top:6px"><div><span class="fld">Date</span><input class="inp" value="13/09/2026"></div><div><span class="fld">Heure</span><input class="inp" value="15:00"></div></div>
+        <div class="row2"><div><span class="fld">Adversaire</span><input class="inp" value="Béziers"></div><div><span class="fld">Lieu</span><input class="inp" value="Domicile"></div></div>
+      </div>
+      <div class="ma"><button class="btn">Annuler</button><button class="btnD"><span>+</span> Créer</button></div>
+    </div>`;
+</script>
+</body>
+</html>

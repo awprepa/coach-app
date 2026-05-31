@@ -154,11 +154,6 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  async function marquerVu(clientId) {
-    await supabase.from('clients').update({ coach_notifie: true }).eq('id', clientId)
-    setClients(prev => prev.map(c => c.id === clientId ? { ...c, coach_notifie: true } : c))
-  }
-
   async function ajouterCategorie() {
     if (!newCatNom.trim()) return
     const { data, error } = await supabase
@@ -331,20 +326,125 @@ export default function Dashboard() {
   const nbPrepa = clientsIndividuels.filter(c => c.offre === 'preparation_physique').length
   const nbCoach = clientsIndividuels.filter(c => c.offre === 'coaching').length
 
+  function scrollToId(anchor) {
+    const el = document.getElementById(anchor)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <div style={S.page}>
 
-      {/* ── En-tête ─────────────────────────────────────────────── */}
-      <div style={S.pageHeader}>
-        <div>
-          <p style={S.dateLabel}>{dateLabel}</p>
-          <h1 style={S.title}>Tableau de bord</h1>
+      {/* ── Héros : sidebar résumé + bento ───────────────────────── */}
+      <div style={S.hero}>
+
+        {/* Colonne gauche — résumé + mini-nav */}
+        <div style={S.side}>
+          <div style={S.sumCard}>
+            <p style={S.sumDate}>{dateLabel}</p>
+            <h1 style={S.sumTitle}>Tableau de bord</h1>
+            <div style={S.sumStat}><span style={S.sumStatL}>Clients</span><span style={S.sumStatV}>{clients.length}</span></div>
+            <div style={S.sumStat}><span style={S.sumStatL}>Séances du jour</span><span style={S.sumStatV}>{seancesAujourdhui.length}</span></div>
+            <div style={S.sumStat}><span style={S.sumStatL}>Alertes</span><span style={{ ...S.sumStatV, color: totalAlertes > 0 ? '#fca5a5' : '#e4f816' }}>{totalAlertes}</span></div>
+            <div style={S.sumStat}><span style={S.sumStatL}>Groupes</span><span style={S.sumStatV}>{groupes.length}</span></div>
+          </div>
+
+          <div style={S.navCard}>
+            <button style={{ ...S.navItem, ...S.navItemOn }} onClick={() => scrollToId('top')}>📊 Vue d'ensemble</button>
+            <button style={S.navItem} onClick={() => scrollToId('sec-clients')}>👥 Clients individuels</button>
+            <button style={S.navItem} onClick={() => scrollToId('sec-groupes')}>🏆 Groupes</button>
+            <button style={S.navItem} onClick={() => scrollToId('sec-groupes')}>📅 Calendrier</button>
+          </div>
+
+          <button onClick={() => navigate('/nouveau-client')} style={{ ...S.btnPrimary, width: '100%' }}>+ Nouveau client</button>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {totalAlertes > 0 && (
-            <span style={S.alertBadge}>{totalAlertes} alerte{totalAlertes > 1 ? 's' : ''}</span>
-          )}
-          <button onClick={() => navigate('/nouveau-client')} style={S.btnPrimary}>+ Nouveau client</button>
+
+        {/* Colonne droite — bento */}
+        <div style={S.bento}>
+          {/* 2 KPI */}
+          <div style={S.kpis}>
+            <div style={S.kpiDark}>
+              <div style={S.kpiVal}>{seancesAujourdhui.length}</div>
+              <div style={S.kpiLbl}>séance{seancesAujourdhui.length > 1 ? 's' : ''} aujourd'hui</div>
+            </div>
+            <div style={S.kpiAccent}>
+              <div style={{ ...S.kpiVal, color: '#333333' }}>{totalAlertes}</div>
+              <div style={{ ...S.kpiLbl, color: '#333333', opacity: 0.8 }}>alerte{totalAlertes > 1 ? 's' : ''} à traiter</div>
+            </div>
+          </div>
+
+          {/* grande carte séances + colonne alertes */}
+          <div style={S.bentoGrid}>
+            {/* Séances du jour */}
+            <div style={S.card}>
+              <div style={S.cardHead}><span style={S.sectionTitle}>Séances du jour</span></div>
+              {seancesAujourdhui.length === 0 ? (
+                <p style={S.empty}>Aucune séance planifiée aujourd'hui.</p>
+              ) : (
+                seancesAujourdhui.map(ev => (
+                  <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)} style={S.miniRow}>
+                    <div style={S.miniIco}>📅</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={S.miniName}>{ev.titre}</p>
+                      <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
+                    </div>
+                    <span style={S.chevron}>›</span>
+                  </div>
+                ))
+              )}
+              {sansWellness.length > 0 && (
+                <div style={{ ...S.miniRow, cursor: 'default' }}>
+                  <div style={S.miniIco}>🔕</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={S.miniName}>{sansWellness.length} sans wellness 3j+</p>
+                    <p style={S.miniSub}>{sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Alertes */}
+            <div style={S.card}>
+              <div style={S.cardHead}>
+                <span style={S.sectionTitle}>Alertes</span>
+                {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>{totalAlertes}</span>}
+              </div>
+              {totalAlertes === 0 ? (
+                <p style={{ ...S.empty, color: '#16a34a' }}>✓ Tout va bien aujourd'hui.</p>
+              ) : (
+                <>
+                  {wellnessAlertes.map(c => (
+                    <div key={'w' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #ef4444' }}>
+                      <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas</p></div>
+                      <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ {c.avg.toFixed(1)}</span>
+                    </div>
+                  ))}
+                  {expirations.map(c => (
+                    <div key={'e' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #f59e0b' }}>
+                      <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire</p></div>
+                      <span style={{ ...S.pill, background: '#fffbeb', color: '#d97706' }}>⏳ {c.daysLeft === 0 ? "Auj." : `${c.daysLeft}j`}</span>
+                    </div>
+                  ))}
+                  {nouveaux.map(c => (
+                    <div key={'n' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #6366f1' }}>
+                      <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
+                      <span style={{ ...S.pill, background: '#ede9fe', color: '#6d28d9' }}>🆕</span>
+                    </div>
+                  ))}
+                  {progFinBientot.map(p => (
+                    <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, borderLeft: '3px solid #0ea5e9' }}>
+                      <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
+                      <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -378,118 +478,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      {/* ── Alertes ─────────────────────────────────────────────── */}
-      {totalAlertes === 0 ? (
-        <div style={{ ...S.alertCard, cursor: 'default', gap: '0.6rem', marginBottom: '1.5rem' }}>
-          <span style={{ fontSize: '1rem' }}>✓</span>
-          <p style={{ margin: 0, fontSize: '0.88rem', color: '#16a34a', fontWeight: '600' }}>Tout va bien, aucune alerte aujourd'hui.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-          {wellnessAlertes.map(c => (
-            <div key={c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.alertCard, borderLeft: '4px solid #ef4444' }}>
-              <div style={{ ...S.alertAvatar, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-              <div style={{ flex: 1 }}>
-                <p style={S.alertName}>{c.prenom} {c.nom}</p>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
-                  {['sommeil','fatigue','douleurs','stress'].map(k => (
-                    <span key={k} style={{ fontSize: '0.65rem', color: '#6b7280' }}>
-                      {k.slice(0,3)} <strong style={{ color: c.wellness_today[k] <= 2 ? '#dc2626' : '#333' }}>{c.wellness_today[k]}</strong>
-                    </span>
-                  ))}
-                  {c.wellness_today?.created_at && (
-                    <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
-                      · {new Date(c.wellness_today.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <span style={{ background: '#fef2f2', color: '#dc2626', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800' }}>⚠ {c.avg.toFixed(1)}/4</span>
-              <span style={S.chevron}>›</span>
-            </div>
-          ))}
-          {expirations.map(c => (
-            <div key={c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.alertCard, borderLeft: '4px solid #f59e0b' }}>
-              <div style={{ ...S.alertAvatar, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-              <div style={{ flex: 1 }}>
-                <p style={S.alertName}>{c.prenom} {c.nom}</p>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>
-                  {new Date(c.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                </p>
-              </div>
-              <span style={{ background: c.daysLeft === 0 ? '#fef2f2' : '#fffbeb', color: c.daysLeft === 0 ? '#dc2626' : '#d97706', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800' }}>
-                ⏳ {c.daysLeft === 0 ? "Aujourd'hui" : `${c.daysLeft}j`}
-              </span>
-              <span style={S.chevron}>›</span>
-            </div>
-          ))}
-          {nouveaux.map(c => (
-            <div key={c.id} style={{ ...S.alertCard, borderLeft: '4px solid #6366f1', cursor: 'default' }}>
-              <div style={{ ...S.alertAvatar, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-              <div style={{ flex: 1 }}>
-                <p style={S.alertName}>{c.prenom} {c.nom}</p>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>
-                  {c.email}
-                  {c.created_at && (
-                    <span style={{ marginLeft: 8, color: '#a78bfa', fontWeight: 600 }}>
-                      · {new Date(c.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — {new Date(c.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800' }}>🆕 Nouveau</span>
-              <button onClick={() => navigate(`/client/${c.id}`)} style={S.btnSmall}>Voir</button>
-              <button onClick={() => marquerVu(c.id)} style={{ ...S.btnSmall, background: '#f3f4f6', color: '#6b7280' }}>✓ Vu</button>
-            </div>
-          ))}
-          {progFinBientot.map(p => (
-            <div key={p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.alertCard, borderLeft: '4px solid #0ea5e9' }}>
-              <div style={{ ...S.alertAvatar, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
-              <div style={{ flex: 1 }}>
-                <p style={S.alertName}>{p.clientNom}</p>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Cycle : {p.nom}</p>
-              </div>
-              <span style={{ background: '#e0f2fe', color: '#0284c7', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                ⏳ Fin dans {p.daysLeft}j
-              </span>
-              <span style={S.chevron}>›</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Aujourd'hui ─────────────────────────────────────────── */}
-      {(seancesAujourdhui.length > 0 || sansWellness.length > 0) && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <p style={{ ...S.sectionTitle, marginBottom: '0.75rem' }}>Aujourd'hui</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            {seancesAujourdhui.length > 0 && (
-              <div style={{ background: '#333333', borderRadius: 12, padding: '0.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.1rem' }}>📅</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: 'white' }}>{seancesAujourdhui.length} séance{seancesAujourdhui.length > 1 ? 's' : ''} planifiée{seancesAujourdhui.length > 1 ? 's' : ''}</p>
-                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
-                    {seancesAujourdhui.map(e => e.clients?.prenom).join(', ')}
-                  </p>
-                </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#e4f816', background: 'rgba(228,248,22,0.15)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>
-              </div>
-            )}
-            {sansWellness.length > 0 && (
-              <div style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <span style={{ fontSize: '1.1rem' }}>🔕</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#374151' }}>{sansWellness.length} client{sansWellness.length > 1 ? 's' : ''} sans wellness depuis 3j+</p>
-                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>
-                    {sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ── Bilan de la semaine ─────────────────────────────────── */}
       <div style={{ marginBottom: '1.5rem' }}>
@@ -605,7 +593,7 @@ export default function Dashboard() {
 
       {/* ── Groupes ─────────────────────────────────────────────── */}
       {groupes.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div id="sec-groupes" style={{ marginBottom: '1.25rem', scrollMarginTop: '80px' }}>
           <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
             {groupes.map(g => (
@@ -620,7 +608,11 @@ export default function Dashboard() {
                   <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#1a1a1a' }}>{g.nom}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ background: g.couleur + '18', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.7rem', fontWeight: '700' }}>Groupe</span>
+                  <button onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
+                    title="Ouvrir le calendrier du groupe"
+                    style={{ background: g.couleur + '14', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 8, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' }}>
+                    📅 Calendrier
+                  </button>
                   <span style={S.chevron}>›</span>
                 </div>
               </div>
@@ -744,7 +736,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Clients ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+      <div id="sec-clients" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', scrollMarginTop: '80px' }}>
         <p style={S.sectionTitle}>Clients individuels</p>
         <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsIndividuels.length} client{clientsIndividuels.length !== 1 ? 's' : ''}</span>
       </div>
@@ -869,8 +861,37 @@ export default function Dashboard() {
 }
 
 const S = {
-  page:        { padding: '2rem', maxWidth: '900px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:        { padding: '2rem', maxWidth: '1120px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   centered:    { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+
+  // ── Héros (sidebar + bento) ──
+  hero:        { display: 'grid', gridTemplateColumns: '240px 1fr', gap: '1rem', marginBottom: '1.75rem', alignItems: 'start' },
+  side:        { display: 'flex', flexDirection: 'column', gap: '0.85rem', position: 'sticky', top: '76px' },
+  sumCard:     { background: 'linear-gradient(160deg, #333333 0%, #1f2937 100%)', borderRadius: 16, padding: '1.1rem', color: '#fff' },
+  sumDate:     { fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', textTransform: 'capitalize', margin: 0 },
+  sumTitle:    { fontSize: '1.15rem', fontWeight: '900', margin: '0.2rem 0 0.9rem' },
+  sumStat:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderTop: '1px solid rgba(255,255,255,0.1)' },
+  sumStatL:    { fontSize: '0.78rem', color: 'rgba(255,255,255,0.65)' },
+  sumStatV:    { fontSize: '1.1rem', fontWeight: '900', color: '#e4f816' },
+  navCard:     { background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.1rem' },
+  navItem:     { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.84rem', fontWeight: '600', color: '#5b626c', cursor: 'pointer' },
+  navItemOn:   { background: '#333333', color: '#fff' },
+  bento:       { display: 'flex', flexDirection: 'column', gap: '0.85rem', minWidth: 0 },
+  kpis:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' },
+  kpiDark:     { background: 'linear-gradient(135deg, #333333, #1f2937)', borderRadius: 16, padding: '1rem 1.15rem', color: '#fff' },
+  kpiAccent:   { background: '#e4f816', borderRadius: 16, padding: '1rem 1.15rem' },
+  kpiVal:      { fontSize: '1.7rem', fontWeight: '900', lineHeight: 1, color: '#e4f816' },
+  kpiLbl:      { fontSize: '0.7rem', fontWeight: '700', opacity: 0.8, marginTop: '0.4rem' },
+  bentoGrid:   { display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: '0.85rem', alignItems: 'start' },
+  card:        { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', paddingBottom: '0.35rem' },
+  cardHead:    { padding: '0.8rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  empty:       { color: '#9ca3af', fontSize: '0.82rem', padding: '0.5rem 1rem 0.9rem', margin: 0 },
+  miniRow:     { display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1rem', cursor: 'pointer', borderTop: '1px solid #f6f7f8' },
+  miniIco:     { width: 28, height: 28, borderRadius: 7, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 },
+  miniAva:     { width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.66rem', fontWeight: '800', flexShrink: 0 },
+  miniName:    { margin: 0, fontSize: '0.82rem', fontWeight: '700', color: '#333333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  miniSub:     { margin: 0, fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  pill:        { borderRadius: 999, fontSize: '0.68rem', fontWeight: '800', padding: '0.15rem 0.5rem', whiteSpace: 'nowrap', flexShrink: 0 },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
   dateLabel:   { fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.2rem', textTransform: 'capitalize' },
   title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },

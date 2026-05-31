@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>render bento</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--ink:#333333;--ink2:#5b626c;--accent:#e4f816;--line:#e6e8ec;--bg:#f4f5f7;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  #stage{padding:30px;width:1040px;}
+  svg{flex-shrink:0;}
+  .card{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;}
+  .sect-t{font-size:0.68rem;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:0.08em;}
+  .btn-primary{background:var(--ink);color:var(--accent);border:none;border-radius:10px;padding:9px 15px;font-size:0.82rem;font-weight:800;cursor:pointer;}
+  .pill{border-radius:999px;font-size:0.7rem;font-weight:800;padding:3px 9px;}
+  .ava{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0;}
+  .chev{color:#d1d5db;font-size:1.15rem;}
+
+  /* sidebar commune */
+  .wrap{display:grid;grid-template-columns:240px 1fr;gap:16px;}
+  .side{display:flex;flex-direction:column;gap:14px;}
+  .sumcard{background:linear-gradient(160deg,#333 0%,#1f2937 100%);border-radius:16px;padding:18px;color:#fff;}
+  .sumcard .s-date{font-size:0.72rem;color:rgba(255,255,255,0.5);text-transform:capitalize;}
+  .sumcard .s-title{font-size:1.15rem;font-weight:900;margin:3px 0 14px;}
+  .stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,0.1);}
+  .stat .v{font-size:1.1rem;font-weight:900;color:var(--accent);}
+  .stat .l{font-size:0.74rem;color:rgba(255,255,255,0.65);}
+  .nav{padding:6px;}
+  .navitem{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:0.83rem;font-weight:600;color:var(--ink2);}
+  .navitem.on{background:var(--ink);color:#fff;}
+  .navitem.on svg{stroke:var(--accent);}
+
+  .ch{padding:13px 16px 0;display:flex;justify-content:space-between;align-items:center;}
+  .rowi{display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid #f3f4f6;}
+  .rowi:last-child{border-bottom:none;}
+
+  /* ---- variante A : bento mosaïque ---- */
+  .bentoA{display:grid;grid-template-columns:1fr 1fr 1fr;grid-auto-rows:118px;gap:14px;}
+  .tile{border-radius:16px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  .tile .t-lbl{font-size:0.7rem;font-weight:700;opacity:0.75;}
+  .tile .t-val{font-size:2.1rem;font-weight:900;line-height:1;}
+  .tile .t-sub{font-size:0.66rem;opacity:0.7;}
+  .tile.dark{background:linear-gradient(135deg,#333,#1f2937);color:#fff;}
+  .tile.dark .t-val{color:var(--accent);}
+  .tile.white{background:#fff;}
+  .tile.red{background:#fff;border-left:4px solid #ef4444;}
+  .tile.red .t-val{color:#dc2626;}
+  .tspan2c{grid-column:span 2;}
+  .tspan2r{grid-row:span 2;}
+  .listtile{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;display:flex;flex-direction:column;}
+
+  /* ---- variante B : grande carte agenda + petites cartes ---- */
+  .bentoB{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;}
+  .kpis2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .mini{border-radius:16px;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  .mini .m-val{font-size:1.7rem;font-weight:900;line-height:1;}
+  .mini .m-lbl{font-size:0.68rem;font-weight:700;opacity:0.75;margin-top:6px;}
+  .mini.dark{background:linear-gradient(135deg,#333,#1f2937);color:#fff;}
+  .mini.dark .m-val{color:var(--accent);}
+  .mini.accent{background:var(--accent);color:var(--ink);}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+  function av(i,b,t){return `<div class="ava" style="background:${b};color:${t}">${i}</div>`}
+  const chev='<span class="chev">›</span>';
+  const ic={
+    home:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+    cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    cup:'<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  };
+  function svg(p){return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${p}</svg>`}
+  function sidebar(){return `
+    <div class="side">
+      <div class="sumcard"><div class="s-date">lundi 1 juin</div><div class="s-title">Tableau de bord</div>
+        <div class="stat"><span class="l">Clients actifs</span><span class="v">24</span></div>
+        <div class="stat"><span class="l">Séances du jour</span><span class="v">5</span></div>
+        <div class="stat"><span class="l">Alertes</span><span class="v" style="color:#fca5a5">3</span></div>
+        <div class="stat"><span class="l">Groupes</span><span class="v">3</span></div>
+      </div>
+      <div class="card nav">
+        <div class="navitem on">${svg(ic.home)} Vue d'ensemble</div>
+        <div class="navitem">${svg(ic.users)} Clients individuels</div>
+        <div class="navitem">${svg(ic.cup)} Groupes</div>
+        <div class="navitem">${svg(ic.cal)} Calendrier</div>
+      </div>
+      <button class="btn-primary" style="width:100%">+ Nouveau client</button>
+    </div>`}
+
+  // VARIANTE A : mosaïque de tuiles
+  function variantA(){return `<div class="wrap">${sidebar()}
+    <div class="bentoA">
+      <div class="tile dark"><div class="t-lbl">Clients actifs</div><div><div class="t-val">24</div><div class="t-sub">+2 ce mois</div></div></div>
+      <div class="tile red"><div class="t-lbl">Alertes</div><div><div class="t-val">3</div><div class="t-sub">à traiter</div></div></div>
+      <div class="listtile tspan2r">
+        <div class="ch"><span class="sect-t">Alertes</span><span class="pill" style="background:#fef2f2;color:#dc2626">3</span></div>
+        <div style="height:8px"></div>
+        <div class="rowi" style="border-left:3px solid #ef4444">${av('ML','#fef2f2','#dc2626')}<div style="flex:1"><div style="font-weight:700;font-size:0.83rem">Marc Lopez</div><div style="font-size:0.7rem;color:#9ca3af">Wellness bas</div></div><span class="pill" style="background:#fef2f2;color:#dc2626">⚠1.8</span></div>
+        <div class="rowi" style="border-left:3px solid #f59e0b">${av('JD','#fffbeb','#d97706')}<div style="flex:1"><div style="font-weight:700;font-size:0.83rem">Julie Durand</div><div style="font-size:0.7rem;color:#9ca3af">Expire 3j</div></div></div>
+        <div class="rowi" style="border-left:3px solid #6366f1">${av('TB','#ede9fe','#6d28d9')}<div style="flex:1"><div style="font-weight:700;font-size:0.83rem">Tom Bernard</div><div style="font-size:0.7rem;color:#9ca3af">Nouveau</div></div></div>
+      </div>
+      <div class="listtile tspan2c tspan2r">
+        <div class="ch"><span class="sect-t">Séances du jour</span><span class="pill" style="background:rgba(228,248,22,0.3);color:#7a8400">5</span></div>
+        <div style="height:8px"></div>
+        <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.83rem">Muscu — Seniors A</div><div style="font-size:0.7rem;color:#9ca3af">10:00 · 12 joueurs</div></div>${chev}</div>
+        <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.83rem">Vitesse — U18</div><div style="font-size:0.7rem;color:#9ca3af">14:00</div></div>${chev}</div>
+        <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.83rem">Indiv. — Marc Lopez</div><div style="font-size:0.7rem;color:#9ca3af">17:30</div></div>${chev}</div>
+      </div>
+    </div></div>`}
+
+  // VARIANTE B : 2 mini KPI + grande carte agenda + carte groupes
+  function variantB(){return `<div class="wrap">${sidebar()}
+    <div>
+      <div class="kpis2">
+        <div class="mini dark"><div class="m-val">5</div><div class="m-lbl">séances aujourd'hui</div></div>
+        <div class="mini accent"><div class="m-val">3</div><div class="m-lbl">alertes à traiter</div></div>
+      </div>
+      <div class="bentoB">
+        <div class="card">
+          <div class="ch"><span class="sect-t">Séances du jour</span></div><div style="height:8px"></div>
+          <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.84rem">Muscu — Seniors A</div><div style="font-size:0.7rem;color:#9ca3af">10:00 · 12 joueurs</div></div>${chev}</div>
+          <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.84rem">Vitesse — U18</div><div style="font-size:0.7rem;color:#9ca3af">14:00</div></div>${chev}</div>
+          <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.84rem">Indiv. — Marc Lopez</div><div style="font-size:0.7rem;color:#9ca3af">17:30</div></div>${chev}</div>
+          <div class="rowi">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.84rem">Prévention — U16</div><div style="font-size:0.7rem;color:#9ca3af">18:30</div></div>${chev}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="card">
+            <div class="ch"><span class="sect-t">Alertes</span><span class="pill" style="background:#fef2f2;color:#dc2626">3</span></div><div style="height:8px"></div>
+            <div class="rowi">${av('ML','#fef2f2','#dc2626')}<div style="flex:1"><div style="font-weight:700;font-size:0.82rem">Marc Lopez</div><div style="font-size:0.68rem;color:#9ca3af">Wellness bas</div></div><span class="pill" style="background:#fef2f2;color:#dc2626">⚠1.8</span></div>
+            <div class="rowi">${av('JD','#fffbeb','#d97706')}<div style="flex:1"><div style="font-weight:700;font-size:0.82rem">Julie Durand</div><div style="font-size:0.68rem;color:#9ca3af">Expire</div></div><span class="pill" style="background:#fffbeb;color:#d97706">3j</span></div>
+          </div>
+          <div class="card">
+            <div class="ch"><span class="sect-t">Groupes</span></div><div style="height:8px"></div>
+            <div class="rowi" style="border-left:3px solid #2f6f76">🏆<div style="flex:1;margin-left:4px;font-weight:700;font-size:0.82rem">Seniors A</div>${chev}</div>
+            <div class="rowi" style="border-left:3px solid #b45309">🏆<div style="flex:1;margin-left:4px;font-weight:700;font-size:0.82rem">U18</div>${chev}</div>
+          </div>
+        </div>
+      </div>
+    </div></div>`}
+
+  const fns={'A':variantA,'B':variantB};
+  const which=(location.hash||'#A').slice(1);
+  document.getElementById('stage').innerHTML=(fns[which]||variantA)();
+</script>
+</body>
+</html>

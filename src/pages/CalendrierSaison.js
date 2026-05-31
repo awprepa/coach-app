@@ -2,29 +2,41 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Calendrier saison (préparateur physique) — vue mois × jours par groupe.
-   Les matchs ressortent en pavés couleur-du-groupe (repères de la saison).
-   Clic sur une séance → panneau détail (édition + déroulé en blocs/exercices).
+   Calendrier saison (préparateur physique) — vue mois × jours d'un groupe.
+   - Matchs en pavés couleur-du-groupe (repères de la saison)
+   - Types de création : Entraînement (+ style libre) · Match (+ catégorie) · Muscu
+   - Clic sur une séance → panneau détail (édition + déroulé blocs/exercices)
+   - Double-clic sur un jour → création
+   - Clic droit sur un jour ou une séance → menu (ajouter / copier / coller / suppr.)
+   Utilisable :
+     • en page autonome (route)            → <CalendrierSaison />
+     • intégré dans une fiche groupe        → <CalendrierSaison groupeId={id} embedded />
    ───────────────────────────────────────────────────────────────────────────── */
 
 const DOW = ['D', 'L', 'M', 'M', 'J', 'V', 'S']            // index getDay()
 const MOIS_LABEL = ['Janv', 'Févr', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc']
 
-// Types d'évènement : teintes douces désaturées (cohérent maquette validée)
+// Types d'évènement.
+//  - les 3 premiers sont proposés à la création (CREATE_TYPES)
+//  - les suivants restent gérés pour l'affichage des données existantes (legacy)
 const TYPES = {
-  match:      { label: 'Match',      color: null,       solid: 'group' }, // couleur du groupe
-  collectif:  { label: 'Collectif',  color: '#98a2ad',  neutral: true },
-  muscu:      { label: 'Muscu',      color: '#b08769' },
-  vitesse:    { label: 'Vitesse',    color: '#6b94a3' },
-  prevention: { label: 'Prévention', color: '#8c7ea6', short: 'Activ.' },
-  recup:      { label: 'Récup',      color: null,       blank: true },
-  test:       { label: 'Tests',      color: '#454c57',  dark: true },
-  autre:      { label: 'Autre',      color: '#9aa1ac' },
+  match:        { label: 'Match',        color: null,      solid: 'group' }, // couleur du groupe
+  entrainement: { label: 'Entraînement', color: '#6b94a3' },
+  muscu:        { label: 'Musculation',  color: '#b08769' },
+  // legacy (affichage seulement) :
+  collectif:    { label: 'Collectif',    color: '#98a2ad', neutral: true },
+  vitesse:      { label: 'Vitesse',      color: '#6b94a3' },
+  prevention:   { label: 'Prévention',   color: '#8c7ea6', short: 'Activ.' },
+  recup:        { label: 'Récup',        color: null,      blank: true },
+  test:         { label: 'Tests',        color: '#454c57', dark: true },
+  autre:        { label: 'Autre',        color: '#9aa1ac' },
 }
+const CREATE_TYPES = ['entrainement', 'match', 'muscu']
+const MATCH_CATEGORIES = ['Amical', 'Championnat', 'Coupe', 'Phases finales']
 // types qui ont un déroulé en blocs/exercices
-const HAS_BLOCS = ['muscu', 'vitesse', 'prevention', 'recup', 'autre']
+const HAS_BLOCS = ['entrainement', 'muscu', 'vitesse', 'prevention', 'recup', 'autre']
 
-const ymd = (y, m, d) => `${y}-${m}-${d}`                  // clé carte (m 0-based)
+const ymd = (y, m, d) => `${y}-${m}-${d}`                  // clé interne (m 0-based)
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 
 // 11 mois Août(start) → Juin(start+1)
@@ -41,7 +53,7 @@ function seasonStartYear(date = new Date()) {
   return date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1
 }
 
-export default function CalendrierSaison() {
+export default function CalendrierSaison({ groupeId = null, embedded = false }) {
   const [groupes, setGroupes]   = useState([])
   const [groupe, setGroupe]     = useState(null)
   const [startYear, setStartYear] = useState(seasonStartYear())
@@ -53,6 +65,11 @@ export default function CalendrierSaison() {
   const [panel, setPanel] = useState(null)
   const [saving, setSaving] = useState(false)
 
+  // Menu contextuel (clic droit) : { x, y, dateISO, evt }
+  const [ctx, setCtx] = useState(null)
+  // Presse-papier : { source, blocs }  (source = évènement copié)
+  const [clip, setClip] = useState(null)
+
   const groupColor = groupe?.couleur || '#2f6f76'
   const months = buildMonths(startYear)
   const seasonStart = iso(startYear, 7, 1)
@@ -60,12 +77,20 @@ export default function CalendrierSaison() {
 
   // ── Chargement des groupes ──────────────────────────────────────────────────
   useEffect(() => {
-    supabase.from('groupes').select('*').order('nom').then(({ data }) => {
-      setGroupes(data || [])
-      if (data?.length) setGroupe(data[0])
-      else setLoading(false)
-    })
-  }, [])
+    if (groupeId) {
+      // mode intégré : un seul groupe
+      supabase.from('groupes').select('*').eq('id', groupeId).single().then(({ data }) => {
+        if (data) { setGroupes([data]); setGroupe(data) }
+        else setLoading(false)
+      })
+    } else {
+      supabase.from('groupes').select('*').order('nom').then(({ data }) => {
+        setGroupes(data || [])
+        if (data?.length) setGroupe(data[0])
+        else setLoading(false)
+      })
+    }
+  }, [groupeId])
 
   // ── Chargement saison (évènements + phases) ─────────────────────────────────
   const loadSeason = useCallback(async () => {
@@ -83,6 +108,21 @@ export default function CalendrierSaison() {
   }, [groupe, seasonStart, seasonEnd])
 
   useEffect(() => { loadSeason() }, [loadSeason])
+
+  // fermer le menu contextuel sur clic ailleurs / touche échap
+  useEffect(() => {
+    if (!ctx) return
+    const close = () => setCtx(null)
+    const onKey = e => { if (e.key === 'Escape') setCtx(null) }
+    window.addEventListener('click', close)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [ctx])
 
   // ── Index par jour ──────────────────────────────────────────────────────────
   const evByDay = {}
@@ -119,25 +159,30 @@ export default function CalendrierSaison() {
   })
 
   // ── Actions panneau ───────────────────────────────────────────────────────────
+  function emptyForm(dateISO) {
+    return {
+      type: 'entrainement', date: dateISO || seasonStart, heure: '', titre: '',
+      style: '', adversaire: '', categorie: 'Championnat', domicile: true, journee: '',
+      lieu: '', duree_min: '', charge: '', note: '',
+    }
+  }
   function openCreate(dateISO) {
-    setPanel({
-      mode: 'create', evt: null,
-      form: { type: 'muscu', date: dateISO || seasonStart, heure: '', titre: '', adversaire: '', domicile: true, journee: '', lieu: '', duree_min: '', charge: '', note: '' },
-      blocs: [],
-    })
+    setPanel({ mode: 'create', evt: null, form: emptyForm(dateISO), blocs: [] })
+  }
+  async function loadBlocs(evtId) {
+    const { data } = await supabase.from('groupe_seance_blocs')
+      .select('*, groupe_seance_exercices(*)').eq('evenement_id', evtId).order('ordre')
+    return (data || []).map(b => ({ ...b, exos: (b.groupe_seance_exercices || []).sort((a, z) => a.ordre - z.ordre) }))
   }
   async function openEdit(e) {
     let blocs = []
-    if (HAS_BLOCS.includes(e.type) || e.type === 'collectif') {
-      const { data } = await supabase.from('groupe_seance_blocs')
-        .select('*, groupe_seance_exercices(*)').eq('evenement_id', e.id).order('ordre')
-      blocs = (data || []).map(b => ({ ...b, exos: (b.groupe_seance_exercices || []).sort((a, z) => a.ordre - z.ordre) }))
-    }
+    if (HAS_BLOCS.includes(e.type) || e.type === 'collectif') blocs = await loadBlocs(e.id)
     setPanel({
       mode: 'edit', evt: e,
       form: {
         type: e.type, date: e.date, heure: e.heure || '', titre: e.titre || '',
-        adversaire: e.adversaire || '', domicile: e.domicile ?? true, journee: e.journee || '',
+        style: e.style || '', adversaire: e.adversaire || '', categorie: e.categorie || 'Championnat',
+        domicile: e.domicile ?? true, journee: e.journee || '',
         lieu: e.lieu || '', duree_min: e.duree_min || '', charge: e.charge || '', note: e.note || '',
       },
       blocs,
@@ -146,18 +191,24 @@ export default function CalendrierSaison() {
   function closePanel() { setPanel(null) }
   const setForm = patch => setPanel(p => ({ ...p, form: { ...p.form, ...patch } }))
 
-  async function saveEvent() {
-    if (!panel || !groupe) return
-    setSaving(true)
-    const f = panel.form
-    const payload = {
+  function buildPayload(f) {
+    const isMatch = f.type === 'match'
+    return {
       groupe_id: groupe.id, date: f.date, heure: f.heure || null, type: f.type,
       titre: f.titre || null, lieu: f.lieu || null,
       duree_min: f.duree_min ? Number(f.duree_min) : null, charge: f.charge || null, note: f.note || null,
-      adversaire: f.type === 'match' ? (f.adversaire || null) : null,
-      domicile:   f.type === 'match' ? !!f.domicile : null,
-      journee:    f.type === 'match' ? (f.journee || null) : null,
+      style:      f.type === 'entrainement' ? (f.style || null) : null,
+      adversaire: isMatch ? (f.adversaire || null) : null,
+      categorie:  isMatch ? (f.categorie || null) : null,
+      domicile:   isMatch ? !!f.domicile : null,
+      journee:    isMatch ? (f.journee || null) : null,
     }
+  }
+
+  async function saveEvent() {
+    if (!panel || !groupe) return
+    setSaving(true)
+    const payload = buildPayload(panel.form)
     let evtId = panel.evt?.id
     if (panel.mode === 'create') {
       const { data, error } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
@@ -179,6 +230,44 @@ export default function CalendrierSaison() {
     setSaving(false)
     await loadSeason()
     closePanel()
+  }
+  async function deleteEventDirect(e) {
+    if (!window.confirm('Supprimer cet évènement ?')) return
+    await supabase.from('groupe_evenements').delete().eq('id', e.id)
+    await loadSeason()
+  }
+
+  // ── Copier / coller ─────────────────────────────────────────────────────────
+  async function copyEvent(e) {
+    let blocs = []
+    if (HAS_BLOCS.includes(e.type) || e.type === 'collectif') blocs = await loadBlocs(e.id)
+    setClip({ source: e, blocs })
+    setCtx(null)
+  }
+  async function pasteEvent(dateISO) {
+    if (!clip || !groupe) return
+    const s = clip.source
+    const payload = {
+      groupe_id: groupe.id, date: dateISO, heure: s.heure || null, type: s.type,
+      titre: s.titre || null, lieu: s.lieu || null, duree_min: s.duree_min || null,
+      charge: s.charge || null, note: s.note || null, style: s.style || null,
+      adversaire: s.adversaire || null, categorie: s.categorie || null,
+      domicile: s.domicile, journee: s.journee || null,
+    }
+    const { data, error } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
+    if (error) { alert('Erreur : ' + error.message); return }
+    // dupliquer blocs + exercices
+    for (const b of clip.blocs) {
+      const { data: nb } = await supabase.from('groupe_seance_blocs')
+        .insert([{ evenement_id: data.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre }]).select('id').single()
+      if (nb && b.exos?.length) {
+        await supabase.from('groupe_seance_exercices').insert(
+          b.exos.map(x => ({ bloc_id: nb.id, nom: x.nom, prescription: x.prescription || '', detail: x.detail || '', ordre: x.ordre }))
+        )
+      }
+    }
+    setCtx(null)
+    await loadSeason()
   }
 
   // ── Blocs / exercices (édition d'une séance existante) ──────────────────────
@@ -213,6 +302,13 @@ export default function CalendrierSaison() {
     await supabase.from('groupe_seance_exercices').delete().eq('id', id)
   }
 
+  // ── Menu contextuel (clic droit) ────────────────────────────────────────────
+  function openCtx(e, dateISO, evt) {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtx({ x: e.clientX, y: e.clientY, dateISO, evt: evt || null })
+  }
+
   // ── Rendu cellule jour ────────────────────────────────────────────────────────
   function renderCell(y, m, d) {
     const evs = evByDay[ymd(y, m, d)] || []
@@ -221,9 +317,10 @@ export default function CalendrierSaison() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {evs.map(e => {
           const T = TYPES[e.type] || TYPES.autre
+          const onCtx = ev => openCtx(ev, e.date, e)
           if (e.type === 'match') {
             return (
-              <div key={e.id} onClick={() => openEdit(e)} title="Match"
+              <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
                 style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
                 {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
@@ -231,14 +328,15 @@ export default function CalendrierSaison() {
             )
           }
           if (e.type === 'recup') {
-            return <div key={e.id} onClick={() => openEdit(e)} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'pointer' }} />
+            return <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'pointer' }} />
           }
           if (e.type === 'test') {
-            return <div key={e.id} onClick={() => openEdit(e)} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap' }}>{e.titre || T.label}</div>
+            return <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap' }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
+          const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
           return (
-            <div key={e.id} onClick={() => openEdit(e)} title={T.label}
+            <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title={T.label}
               style={{
                 fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'pointer',
                 overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
@@ -246,7 +344,7 @@ export default function CalendrierSaison() {
                 background: neutral ? '#f0f2f5' : `color-mix(in srgb, ${T.color} 9%, #fff)`,
                 borderLeft: `3px solid ${neutral ? '#c4ccd4' : `color-mix(in srgb, ${T.color} 70%, #fff)`}`,
               }}>
-              {e.titre || T.short || T.label}
+              {txt}
             </div>
           )
         })}
@@ -255,20 +353,23 @@ export default function CalendrierSaison() {
   }
 
   const seasonOpts = [seasonStartYear() - 1, seasonStartYear(), seasonStartYear() + 1]
+  const pageStyle = embedded ? S.pageEmbed : S.page
 
   return (
-    <div style={S.page}>
+    <div style={pageStyle}>
       {/* ── Barre d'actions ── */}
       <div style={S.toolbar}>
-        <h1 style={S.h1}>Calendrier saison</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={S.groupSel}>
-            <span style={{ width: 11, height: 11, borderRadius: 3, background: groupColor, flexShrink: 0 }} />
-            <select value={groupe?.id || ''} onChange={e => setGroupe(groupes.find(g => g.id === e.target.value))} style={S.select}>
-              {groupes.length === 0 && <option>Aucun groupe</option>}
-              {groupes.map(g => <option key={g.id} value={g.id}>{g.nom}</option>)}
-            </select>
-          </div>
+        {!embedded && <h1 style={S.h1}>Calendrier saison</h1>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginLeft: embedded ? 0 : 'auto' }}>
+          {!groupeId && (
+            <div style={S.groupSel}>
+              <span style={{ width: 11, height: 11, borderRadius: 3, background: groupColor, flexShrink: 0 }} />
+              <select value={groupe?.id || ''} onChange={e => setGroupe(groupes.find(g => g.id === e.target.value))} style={S.select}>
+                {groupes.length === 0 && <option>Aucun groupe</option>}
+                {groupes.map(g => <option key={g.id} value={g.id}>{g.nom}</option>)}
+              </select>
+            </div>
+          )}
           <select value={startYear} onChange={e => setStartYear(Number(e.target.value))} style={S.select}>
             {seasonOpts.map(y => <option key={y} value={y}>Saison {y} / {y + 1}</option>)}
           </select>
@@ -280,16 +381,13 @@ export default function CalendrierSaison() {
       <div style={S.summary}>
         <Stat v={matchsList.length} l="Matchs" />
         <span style={S.sep} />
-        <Stat v={matchsList.filter(m => m.terminee).length} l="Joués" />
+        <Stat v={evenements.filter(e => e.type === 'entrainement').length} l="Entraînements" />
         <span style={S.sep} />
         <Stat v={evenements.length} l="Évènements" />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 13, flexWrap: 'wrap' }}>
           <Leg c={groupColor} t="Match" />
-          <Leg c={TYPES.muscu.color} t="Muscu" />
-          <Leg c={TYPES.vitesse.color} t="Vitesse" />
-          <Leg c={TYPES.prevention.color} t="Prévention" />
-          <Leg c={TYPES.collectif.color} t="Collectif" />
-          <Leg c={TYPES.test.color} t="Tests" />
+          <Leg c={TYPES.entrainement.color} t="Entraînement" />
+          <Leg c={TYPES.muscu.color} t="Musculation" />
         </div>
       </div>
 
@@ -321,10 +419,11 @@ export default function CalendrierSaison() {
                       const dow = new Date(M.y, M.m, d).getDay()
                       const vac = vacInfo(M.y, M.m, d)
                       const isToday = ymd(M.y, M.m, d) === todayKey
+                      const dISO = iso(M.y, M.m, d)
                       return (
                         <div key={d}>
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
-                          <div onDoubleClick={() => openCreate(iso(M.y, M.m, d))}
+                          <div onDoubleClick={() => openCreate(dISO)} onContextMenu={e => openCtx(e, dISO, null)}
                             style={{ ...S.drow, ...(vac.in ? S.drowVac : null), ...(isToday ? S.drowToday : null) }}>
                             <div style={S.dnum}>{d}</div>
                             <div style={S.ddow}>{DOW[dow]}</div>
@@ -338,8 +437,31 @@ export default function CalendrierSaison() {
               })}
             </div>
           </div>
-          <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 10 }}>Double-clic sur un jour pour ajouter un évènement · clic sur une séance pour l'éditer.</p>
+          <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 10 }}>
+            Double-clic sur un jour pour ajouter · clic sur une séance pour l'éditer · clic droit pour le menu (copier / coller).
+            {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · 📋 « {clipLabel(clip.source)} » dans le presse-papier</span>}
+          </p>
         </>
+      )}
+
+      {/* ── Menu contextuel ── */}
+      {ctx && (
+        <div style={{ ...S.ctxMenu, left: ctx.x, top: ctx.y }} onClick={e => e.stopPropagation()}>
+          {ctx.evt ? (
+            <>
+              <button style={S.ctxItem} onClick={() => { openEdit(ctx.evt); setCtx(null) }}>✏️ Modifier</button>
+              <button style={S.ctxItem} onClick={() => copyEvent(ctx.evt)}>📋 Copier</button>
+              {clip && <button style={S.ctxItem} onClick={() => pasteEvent(ctx.dateISO)}>📌 Coller ici</button>}
+              <div style={S.ctxSep} />
+              <button style={{ ...S.ctxItem, color: '#e11d48' }} onClick={() => { deleteEventDirect(ctx.evt); setCtx(null) }}>🗑 Supprimer</button>
+            </>
+          ) : (
+            <>
+              <button style={S.ctxItem} onClick={() => { openCreate(ctx.dateISO); setCtx(null) }}>➕ Ajouter un évènement</button>
+              {clip && <button style={S.ctxItem} onClick={() => pasteEvent(ctx.dateISO)}>📌 Coller « {clipLabel(clip.source)} »</button>}
+            </>
+          )}
+        </div>
       )}
 
       {/* ── Panneau ── */}
@@ -367,6 +489,13 @@ export default function CalendrierSaison() {
   )
 }
 
+function clipLabel(e) {
+  if (!e) return ''
+  if (e.type === 'match') return e.adversaire || 'Match'
+  if (e.type === 'entrainement') return e.style || e.titre || 'Entraînement'
+  return e.titre || (TYPES[e.type]?.label) || 'Évènement'
+}
+
 /* ── Sous-composants ── */
 function Stat({ v, l }) {
   return <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -382,6 +511,9 @@ function Leg({ c, t }) {
 function PanelHead({ panel, groupColor, onClose }) {
   const T = TYPES[panel.form.type] || TYPES.autre
   const col = panel.form.type === 'match' ? groupColor : (T.color || '#5b626c')
+  const titre = panel.form.type === 'entrainement'
+    ? (panel.form.style || panel.form.titre || T.label)
+    : (panel.form.titre || panel.form.adversaire || T.label)
   return (
     <div style={S.phead}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -389,7 +521,7 @@ function PanelHead({ panel, groupColor, onClose }) {
         <span style={{ color: '#9aa1ac', fontSize: '1.3rem', cursor: 'pointer', lineHeight: 1 }} onClick={onClose}>×</span>
       </div>
       <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '11px 0 2px' }}>
-        {panel.mode === 'create' ? 'Nouvel évènement' : (panel.form.titre || panel.form.adversaire || T.label)}
+        {panel.mode === 'create' ? 'Nouvel évènement' : titre}
       </h2>
     </div>
   )
@@ -404,25 +536,39 @@ function EventForm({ form, setForm, groupColor }) {
   return (
     <div>
       <Field label="Type">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-          {Object.entries(TYPES).map(([k, t]) => (
-            <button key={k} onClick={() => setForm({ type: k })}
-              style={{ ...S.typeCard, ...(form.type === k ? { borderColor: '#15181d', background: '#f7f8fa' } : null) }}>
-              <span style={{ width: 9, height: 9, borderRadius: 2, background: k === 'match' ? groupColor : (t.color || '#cbd1d9') }} />
-              {t.label}
-            </button>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>
+          {CREATE_TYPES.map(k => {
+            const t = TYPES[k]
+            return (
+              <button key={k} onClick={() => setForm({ type: k })}
+                style={{ ...S.typeCard, ...(form.type === k ? { borderColor: '#15181d', background: '#f7f8fa' } : null) }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: k === 'match' ? groupColor : (t.color || '#cbd1d9') }} />
+                {t.label}
+              </button>
+            )
+          })}
         </div>
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <Field label="Date"><input type="date" value={form.date} onChange={e => setForm({ date: e.target.value })} style={S.input} /></Field>
         <Field label="Heure"><input type="time" value={form.heure} onChange={e => setForm({ heure: e.target.value })} style={S.input} /></Field>
       </div>
-      {form.type === 'match' ? (
+
+      {form.type === 'match' && (
         <>
           <Field label="Adversaire"><input value={form.adversaire} onChange={e => setForm({ adversaire: e.target.value })} placeholder="ex. Montauban" style={S.input} /></Field>
+          <Field label="Catégorie">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+              {MATCH_CATEGORIES.map(c => (
+                <button key={c} onClick={() => setForm({ categorie: c })}
+                  style={{ ...S.chip, ...(form.categorie === c ? { borderColor: '#15181d', background: '#15181d', color: '#fff' } : null) }}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Lieu">
+            <Field label="Lieu du match">
               <select value={form.domicile ? '1' : '0'} onChange={e => setForm({ domicile: e.target.value === '1' })} style={S.input}>
                 <option value="1">Domicile</option><option value="0">Extérieur</option>
               </select>
@@ -430,9 +576,19 @@ function EventForm({ form, setForm, groupColor }) {
             <Field label="Journée"><input value={form.journee} onChange={e => setForm({ journee: e.target.value })} placeholder="ex. J12" style={S.input} /></Field>
           </div>
         </>
-      ) : (
+      )}
+
+      {form.type === 'entrainement' && (
+        <>
+          <Field label="Style d'entraînement"><input value={form.style} onChange={e => setForm({ style: e.target.value })} placeholder="ex. Vitesse, Collectif, Prévention…" style={S.input} /></Field>
+          <Field label="Titre (optionnel)"><input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Travail d'appuis" style={S.input} /></Field>
+        </>
+      )}
+
+      {form.type === 'muscu' && (
         <Field label="Titre"><input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Force max bas du corps" style={S.input} /></Field>
       )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
         <Field label="Lieu"><input value={form.lieu} onChange={e => setForm({ lieu: e.target.value })} placeholder="Salle…" style={S.input} /></Field>
         <Field label="Durée (min)"><input type="number" value={form.duree_min} onChange={e => setForm({ duree_min: e.target.value })} style={S.input} /></Field>
@@ -474,12 +630,13 @@ function BlocsEditor({ panel, addBloc, updateBloc, deleteBloc, addExo, updateExo
 /* ── Styles ── */
 const S = {
   page: { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', padding: '20px 24px 40px', background: '#f5f6f8', minHeight: 'calc(100vh - 60px)', color: '#15181d' },
+  pageEmbed: { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#15181d' },
   toolbar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' },
   h1: { fontSize: '1.3rem', fontWeight: 800, margin: 0 },
   groupSel: { display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e6e8ec', borderRadius: 8, padding: '4px 10px' },
   select: { border: '1px solid #e6e8ec', background: '#fff', borderRadius: 8, padding: '7px 10px', fontSize: '0.8rem', fontWeight: 600, color: '#15181d', cursor: 'pointer' },
   btn: { border: '1px solid #e6e8ec', background: '#fff', borderRadius: 8, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 600, color: '#5b626c', cursor: 'pointer' },
-  btnDark: { background: '#15181d', color: '#fff', border: '1px solid #15181d', borderRadius: 8, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' },
+  btnDark: { background: '#333333', color: '#fff', border: '1px solid #333333', borderRadius: 8, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' },
   btnGhostDanger: { border: '1px solid #f3c2c8', background: '#fff', color: '#e11d48', borderRadius: 8, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', marginRight: 'auto' },
   btnSmall: { border: '1px solid #e6e8ec', background: '#fff', borderRadius: 7, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 600, color: '#5b626c', cursor: 'pointer' },
   summary: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 14, flexWrap: 'wrap' },
@@ -494,7 +651,7 @@ const S = {
   my: { fontSize: '0.5rem', fontWeight: 700, color: '#9aa1ac', letterSpacing: '0.04em' },
   drow: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20 },
   drowVac: { background: '#fdf8ea' },
-  drowToday: { boxShadow: 'inset 0 0 0 2px #15181d', position: 'relative', zIndex: 2 },
+  drowToday: { boxShadow: 'inset 0 0 0 2px #333333', position: 'relative', zIndex: 2 },
   blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
   dnum: { width: 17, fontSize: '0.56rem', color: '#5b626c', textAlign: 'center', fontWeight: 700, lineHeight: '20px', borderRight: '1px solid #eef0f3', flexShrink: 0 },
   ddow: { width: 13, fontSize: '0.52rem', color: '#9aa1ac', textAlign: 'center', lineHeight: '20px', textTransform: 'uppercase', flexShrink: 0 },
@@ -505,9 +662,13 @@ const S = {
   tag: { fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', padding: '3px 9px', borderRadius: 5, color: '#fff' },
   pbody: { flex: 1, overflowY: 'auto', padding: '16px 20px' },
   pactions: { display: 'flex', gap: 9, padding: '13px 20px', background: '#fff', borderTop: '1px solid #e6e8ec' },
-  typeCard: { display: 'flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid #e6e8ec', borderRadius: 8, padding: '9px 11px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', color: '#15181d' },
+  typeCard: { display: 'flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid #e6e8ec', borderRadius: 8, padding: '9px 9px', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer', color: '#15181d', justifyContent: 'center' },
+  chip: { background: '#fff', border: '1px solid #e6e8ec', borderRadius: 8, padding: '8px 10px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', color: '#15181d' },
   input: { width: '100%', border: '1px solid #e6e8ec', borderRadius: 8, padding: '8px 10px', fontSize: '0.82rem', color: '#15181d', boxSizing: 'border-box', background: '#fff' },
   inputSm: { border: '1px solid #e6e8ec', borderRadius: 7, padding: '6px 8px', fontSize: '0.76rem', color: '#15181d', boxSizing: 'border-box', background: '#fff', width: '100%' },
   bloc: { background: '#fff', border: '1px solid #e6e8ec', borderRadius: 9, padding: 11, marginBottom: 8 },
   xBtn: { border: 'none', background: 'none', color: '#c2c8d0', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
+  ctxMenu: { position: 'fixed', zIndex: 70, background: '#fff', borderRadius: 10, border: '1px solid #e6e8ec', boxShadow: '0 12px 34px rgba(0,0,0,0.18)', padding: 5, minWidth: 190, display: 'flex', flexDirection: 'column' },
+  ctxItem: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 7, padding: '8px 11px', fontSize: '0.8rem', fontWeight: 600, color: '#15181d', cursor: 'pointer' },
+  ctxSep: { height: 1, background: '#eef0f3', margin: '4px 0' },
 }

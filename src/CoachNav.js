@@ -7,7 +7,7 @@ const ICONS = {
   clients:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>,
   calendar:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
   book:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
-  gps:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+  gps:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   tests:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>,
   messages:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
   paiements: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>,
@@ -16,7 +16,6 @@ const ICONS = {
 const NAV = [
   { to: '/',            icon: 'dashboard', label: 'Tableau de bord', end: true },
   { to: '/clients',     icon: 'clients',   label: 'Clients' },
-  { to: '/calendrier',  icon: 'calendar',  label: 'Calendrier' },
   { to: '/bibliotheque',icon: 'book',      label: 'Bibliothèque' },
   { to: '/gps',         icon: 'gps',       label: 'GPS' },
   { to: '/tests',       icon: 'tests',     label: 'Tests' },
@@ -76,14 +75,14 @@ const CSS = `
   white-space:nowrap;
 }
 .coachnav-ico svg{width:16px;height:16px;display:block;}
-.coachnav-link:hover{background:#f3f4f6;color:#15181d;}
-.coachnav-link.active{background:#15181d;color:#fff;}
+.coachnav-link:hover{background:#f3f4f6;color:#333333;}
+.coachnav-link.active{background:#333333;color:#fff;}
 .coachnav-link.active .coachnav-ico svg{stroke:#e4f816;}
 .coachnav-badge{
-  background:#15181d;color:#e4f816;border-radius:999px;
+  background:#333333;color:#e4f816;border-radius:999px;
   font-size:0.62rem;font-weight:800;padding:1px 6px;margin-left:2px;
 }
-.coachnav-link.active .coachnav-badge{background:#e4f816;color:#15181d;}
+.coachnav-link.active .coachnav-badge{background:#e4f816;color:#333333;}
 .coachnav-logout{
   flex-shrink:0;background:#fff;color:#5b626c;
   border:1px solid #e6e8ec;border-radius:8px;

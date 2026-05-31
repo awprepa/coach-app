@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWprepa — Tableau de bord · nouveaux designs</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--ink:#333333;--ink2:#5b626c;--accent:#e4f816;--line:#e6e8ec;--bg:#f4f5f7;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#c9ccd3;padding:28px 20px;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  .intro{background:#fff;border-radius:14px;padding:18px 22px;margin-bottom:26px;box-shadow:0 10px 30px rgba(0,0,0,0.12);}
+  .intro h1{font-size:1.1rem;margin-bottom:6px;}
+  .intro p{font-size:0.85rem;color:var(--ink2);line-height:1.5;}
+  .opt{margin-bottom:30px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 18px 45px rgba(0,0,0,0.20);}
+  .lbl{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line);background:#fafbfc;}
+  .lbl .num{width:26px;height:26px;border-radius:8px;background:var(--ink);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:900;flex-shrink:0;}
+  .lbl .t{font-size:0.98rem;font-weight:800;}
+  .lbl .d{font-size:0.76rem;color:var(--ink2);}
+  .stage{padding:24px;background:var(--bg);}
+  svg{flex-shrink:0;}
+
+  /* ---- éléments génériques ---- */
+  .card{background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  .sect-t{font-size:0.7rem;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:0.08em;}
+  .btn-primary{background:var(--ink);color:var(--accent);border:none;border-radius:10px;padding:9px 15px;font-size:0.82rem;font-weight:800;cursor:pointer;}
+  .pill{border-radius:999px;font-size:0.7rem;font-weight:800;padding:3px 9px;}
+  .ava{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.74rem;font-weight:800;flex-shrink:0;}
+
+  /* ============ OPTION 1 : Bento / cartes stats en haut ============ */
+  .o1-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
+  .o1-date{font-size:0.76rem;color:var(--ink2);text-transform:capitalize;margin-bottom:3px;}
+  .o1-title{font-size:1.6rem;font-weight:900;}
+  .o1-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+  .o1-kpi{border-radius:16px;padding:16px 18px;color:#fff;position:relative;overflow:hidden;}
+  .o1-kpi .k-lbl{font-size:0.72rem;opacity:0.8;font-weight:600;margin-bottom:8px;}
+  .o1-kpi .k-val{font-size:2rem;font-weight:900;line-height:1;}
+  .o1-kpi .k-sub{font-size:0.68rem;opacity:0.75;margin-top:6px;}
+  .o1-kpi.dark{background:linear-gradient(135deg,#333 0%,#1f2937 100%);}
+  .o1-kpi.dark .k-val{color:var(--accent);}
+  .o1-kpi.red{background:linear-gradient(135deg,#ef4444,#dc2626);}
+  .o1-kpi.green{background:linear-gradient(135deg,#10b981,#059669);}
+  .o1-kpi.blue{background:linear-gradient(135deg,#6366f1,#4f46e5);}
+  .o1-cols{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;}
+  .o1-row{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid #f3f4f6;}
+  .o1-row:last-child{border-bottom:none;}
+  .o1-cardhead{padding:13px 16px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;}
+
+  /* ============ OPTION 2 : Focus "Aujourd'hui" pleine largeur ============ */
+  .o2-hero{background:linear-gradient(135deg,#333 0%,#1f2937 100%);border-radius:18px;padding:22px 24px;color:#fff;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+  .o2-hero .h-date{font-size:0.78rem;color:rgba(255,255,255,0.55);text-transform:capitalize;}
+  .o2-hero .h-title{font-size:1.5rem;font-weight:900;margin:2px 0 14px;}
+  .o2-chips{display:flex;gap:10px;flex-wrap:wrap;}
+  .o2-chip{background:rgba(255,255,255,0.1);border-radius:11px;padding:9px 14px;display:flex;align-items:center;gap:9px;}
+  .o2-chip .c-val{font-size:1.3rem;font-weight:900;color:var(--accent);line-height:1;}
+  .o2-chip .c-lbl{font-size:0.68rem;color:rgba(255,255,255,0.7);line-height:1.2;}
+  .o2-quick{display:flex;flex-direction:column;gap:8px;}
+  .o2-qbtn{background:var(--accent);color:var(--ink);border:none;border-radius:11px;padding:11px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;white-space:nowrap;}
+  .o2-qbtn.ghost{background:rgba(255,255,255,0.1);color:#fff;}
+  .o2-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .o2-alert{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid #f3f4f6;}
+  .o2-alert:last-child{border-bottom:none;}
+
+  /* ============ OPTION 3 : Sidebar résumé + flux principal ============ */
+  .o3-wrap{display:grid;grid-template-columns:260px 1fr;gap:16px;}
+  .o3-side{display:flex;flex-direction:column;gap:14px;}
+  .o3-sumcard{background:linear-gradient(160deg,#333 0%,#1f2937 100%);border-radius:16px;padding:18px;color:#fff;}
+  .o3-sumcard .s-date{font-size:0.72rem;color:rgba(255,255,255,0.5);text-transform:capitalize;}
+  .o3-sumcard .s-title{font-size:1.2rem;font-weight:900;margin:3px 0 14px;}
+  .o3-stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,0.1);}
+  .o3-stat .v{font-size:1.1rem;font-weight:900;color:var(--accent);}
+  .o3-stat .l{font-size:0.74rem;color:rgba(255,255,255,0.65);}
+  .o3-nav{padding:6px;}
+  .o3-navitem{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:0.84rem;font-weight:600;color:var(--ink2);cursor:pointer;}
+  .o3-navitem.on{background:var(--ink);color:#fff;}
+  .o3-navitem.on svg{stroke:var(--accent);}
+  .o3-main{display:flex;flex-direction:column;gap:14px;}
+  .o3-row{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid #f3f4f6;}
+  .o3-row:last-child{border-bottom:none;}
+  .o3-cardhead{padding:13px 16px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+<script>
+  // petit util avatar
+  function av(ini,bg,tx){return `<div class="ava" style="background:${bg};color:${tx}">${ini}</div>`}
+  const chev = '<span style="color:#d1d5db;font-size:1.2rem">›</span>';
+
+  // ---------- OPTION 1 : Bento KPI ----------
+  function opt1(){return `
+  <div class="o1-head">
+    <div><div class="o1-date">lundi 1 juin</div><div class="o1-title">Tableau de bord</div></div>
+    <button class="btn-primary">+ Nouveau client</button>
+  </div>
+  <div class="o1-grid">
+    <div class="o1-kpi dark"><div class="k-lbl">Clients actifs</div><div class="k-val">24</div><div class="k-sub">+2 ce mois</div></div>
+    <div class="o1-kpi red"><div class="k-lbl">Alertes</div><div class="k-val">3</div><div class="k-sub">wellness bas · expirations</div></div>
+    <div class="o1-kpi green"><div class="k-lbl">Séances aujourd'hui</div><div class="k-val">5</div><div class="k-sub">Marc, Léa, Tom…</div></div>
+    <div class="o1-kpi blue"><div class="k-lbl">Groupes</div><div class="k-val">3</div><div class="k-sub">Seniors A, U18, U16</div></div>
+  </div>
+  <div class="o1-cols">
+    <div class="card">
+      <div class="o1-cardhead"><span class="sect-t">Alertes à traiter</span><span class="pill" style="background:#fef2f2;color:#dc2626">3</span></div>
+      <div class="o1-row" style="border-left:3px solid #ef4444">${av('ML','#fef2f2','#dc2626')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Marc Lopez</div><div style="font-size:0.72rem;color:#9ca3af">Wellness bas ce matin</div></div><span class="pill" style="background:#fef2f2;color:#dc2626">⚠ 1.8/4</span>${chev}</div>
+      <div class="o1-row" style="border-left:3px solid #f59e0b">${av('JD','#fffbeb','#d97706')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Julie Durand</div><div style="font-size:0.72rem;color:#9ca3af">Abonnement</div></div><span class="pill" style="background:#fffbeb;color:#d97706">⏳ 3j</span>${chev}</div>
+      <div class="o1-row" style="border-left:3px solid #6366f1">${av('TB','#ede9fe','#6d28d9')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Tom Bernard</div><div style="font-size:0.72rem;color:#9ca3af">Nouveau client</div></div><span class="pill" style="background:#ede9fe;color:#6d28d9">🆕</span>${chev}</div>
+    </div>
+    <div class="card">
+      <div class="o1-cardhead"><span class="sect-t">Groupes</span></div>
+      <div class="o1-row" style="border-left:3px solid #2f6f76">🏆<div style="flex:1;margin-left:4px"><div style="font-weight:700;font-size:0.86rem">Seniors A</div></div>${chev}</div>
+      <div class="o1-row" style="border-left:3px solid #b45309">🏆<div style="flex:1;margin-left:4px"><div style="font-weight:700;font-size:0.86rem">U18</div></div>${chev}</div>
+      <div class="o1-row" style="border-left:3px solid #1d4ed8">🏆<div style="flex:1;margin-left:4px"><div style="font-weight:700;font-size:0.86rem">U16</div></div>${chev}</div>
+    </div>
+  </div>`}
+
+  // ---------- OPTION 2 : Focus aujourd'hui ----------
+  function opt2(){return `
+  <div class="o2-hero">
+    <div>
+      <div class="h-date">lundi 1 juin</div>
+      <div class="h-title">Bonjour Arthur 👋</div>
+      <div class="o2-chips">
+        <div class="o2-chip"><span class="c-val">5</span><span class="c-lbl">séances<br>aujourd'hui</span></div>
+        <div class="o2-chip"><span class="c-val">3</span><span class="c-lbl">alertes<br>à traiter</span></div>
+        <div class="o2-chip"><span class="c-val">24</span><span class="c-lbl">clients<br>actifs</span></div>
+      </div>
+    </div>
+    <div class="o2-quick">
+      <button class="o2-qbtn">+ Nouveau client</button>
+      <button class="o2-qbtn ghost">📅 Calendrier</button>
+    </div>
+  </div>
+  <div class="o2-grid">
+    <div class="card">
+      <div class="o1-cardhead"><span class="sect-t">Alertes</span><span class="pill" style="background:#fef2f2;color:#dc2626">3</span></div>
+      <div class="o2-alert">${av('ML','#fef2f2','#dc2626')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Marc Lopez</div><div style="font-size:0.72rem;color:#9ca3af">Wellness bas</div></div><span class="pill" style="background:#fef2f2;color:#dc2626">⚠ 1.8</span></div>
+      <div class="o2-alert">${av('JD','#fffbeb','#d97706')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Julie Durand</div><div style="font-size:0.72rem;color:#9ca3af">Expire bientôt</div></div><span class="pill" style="background:#fffbeb;color:#d97706">⏳ 3j</span></div>
+      <div class="o2-alert">${av('TB','#ede9fe','#6d28d9')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Tom Bernard</div><div style="font-size:0.72rem;color:#9ca3af">Nouveau</div></div><span class="pill" style="background:#ede9fe;color:#6d28d9">🆕</span></div>
+    </div>
+    <div class="card">
+      <div class="o1-cardhead"><span class="sect-t">Séances du jour</span><span class="pill" style="background:rgba(228,248,22,0.25);color:#7a8400">5</span></div>
+      <div class="o2-alert">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Muscu — Seniors A</div><div style="font-size:0.72rem;color:#9ca3af">10:00 · 12 joueurs</div></div></div>
+      <div class="o2-alert">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Vitesse — U18</div><div style="font-size:0.72rem;color:#9ca3af">14:00</div></div></div>
+      <div class="o2-alert">${av('📅','#f3f4f6','#374151')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Indiv. — Marc Lopez</div><div style="font-size:0.72rem;color:#9ca3af">17:30</div></div></div>
+    </div>
+  </div>`}
+
+  // ---------- OPTION 3 : Sidebar résumé ----------
+  const ic = {
+    home:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+    cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    cup:'<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  };
+  function svg(p){return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${p}</svg>`}
+  function opt3(){return `
+  <div class="o3-wrap">
+    <div class="o3-side">
+      <div class="o3-sumcard">
+        <div class="s-date">lundi 1 juin</div>
+        <div class="s-title">Tableau de bord</div>
+        <div class="o3-stat"><span class="l">Clients actifs</span><span class="v">24</span></div>
+        <div class="o3-stat"><span class="l">Séances du jour</span><span class="v">5</span></div>
+        <div class="o3-stat"><span class="l">Alertes</span><span class="v" style="color:#fca5a5">3</span></div>
+        <div class="o3-stat"><span class="l">Groupes</span><span class="v">3</span></div>
+      </div>
+      <div class="card o3-nav">
+        <div class="o3-navitem on">${svg(ic.home)} Vue d'ensemble</div>
+        <div class="o3-navitem">${svg(ic.users)} Clients individuels</div>
+        <div class="o3-navitem">${svg(ic.cup)} Groupes</div>
+        <div class="o3-navitem">${svg(ic.cal)} Calendrier</div>
+      </div>
+      <button class="btn-primary" style="width:100%">+ Nouveau client</button>
+    </div>
+    <div class="o3-main">
+      <div class="card">
+        <div class="o3-cardhead"><span class="sect-t">Alertes à traiter</span><span class="pill" style="background:#fef2f2;color:#dc2626">3</span></div>
+        <div class="o3-row" style="border-left:3px solid #ef4444">${av('ML','#fef2f2','#dc2626')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Marc Lopez</div><div style="font-size:0.72rem;color:#9ca3af">Wellness bas ce matin</div></div><span class="pill" style="background:#fef2f2;color:#dc2626">⚠ 1.8/4</span>${chev}</div>
+        <div class="o3-row" style="border-left:3px solid #f59e0b">${av('JD','#fffbeb','#d97706')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Julie Durand</div><div style="font-size:0.72rem;color:#9ca3af">Abonnement expire</div></div><span class="pill" style="background:#fffbeb;color:#d97706">⏳ 3j</span>${chev}</div>
+      </div>
+      <div class="card">
+        <div class="o3-cardhead"><span class="sect-t">Bilan de la semaine</span><span style="font-size:0.74rem;color:#9ca3af">26 mai – 1 juin</span></div>
+        <div class="o3-row">${av('LM','#dcfce7','#15803d')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Léa Martin</div></div><span style="font-size:0.8rem;font-weight:800;color:#16a34a">3.4</span><span class="pill" style="background:#f0fdf4;color:#16a34a">✓ OK</span></div>
+        <div class="o3-row">${av('PB','#fef9c3','#a16207')}<div style="flex:1"><div style="font-weight:700;font-size:0.86rem">Paul Blanc</div></div><span style="font-size:0.8rem;font-weight:800;color:#dc2626">1.9</span><span class="pill" style="background:#fef2f2;color:#dc2626">⚠ Bas</span></div>
+      </div>
+    </div>
+  </div>`}
+
+  const OPTS=[
+    ['1','Bento — KPI en cartes colorées','4 grandes cartes chiffres en haut (clients, alertes, séances, groupes) puis 2 colonnes. Vue synthétique et visuelle.',opt1],
+    ['2','Focus du jour — bandeau héros','Grand bandeau sombre « Bonjour Arthur » avec les chiffres clés + raccourcis, puis alertes et séances du jour côte à côte.',opt2],
+    ['3','Sidebar résumé + flux','Colonne de gauche fixe (résumé chiffré + mini-nav) et flux principal à droite. Style « app de gestion ».',opt3],
+  ];
+  document.getElementById('root').innerHTML = `
+    <div class="intro"><h1>Tableau de bord — 3 nouveaux designs</h1>
+    <p>Données d'exemple. Le gris du logo (<b>#333333</b>) sert d'accent partout. Dis-moi quel numéro te parle (ou un mix), je l'implémente ensuite sur tes vraies données.</p></div>
+  ` + OPTS.map(([n,t,d,fn])=>`
+    <div class="opt">
+      <div class="lbl"><span class="num">${n}</span><span class="t">${t}</span><span class="d">— ${d}</span></div>
+      <div class="stage">${fn()}</div>
+    </div>`).join('');
+</script>
+</body>
+</html>

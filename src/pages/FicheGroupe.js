@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
+import CalendrierSaison from './CalendrierSaison'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -15,6 +16,9 @@ const OFFRES = {
 export default function FicheGroupe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = searchParams.get('tab') === 'calendrier' ? 'calendrier' : 'groupe'
+  const setTab = t => setSearchParams(t === 'calendrier' ? { tab: 'calendrier' } : {})
 
   const [groupe, setGroupe]               = useState(null)
   const [parent, setParent]               = useState(null)
@@ -317,7 +321,7 @@ export default function FicheGroupe() {
   const accent = groupe.couleur || '#6366f1'
 
   return (
-    <div style={S.page}>
+    <div style={tab === 'calendrier' ? S.pageWide : S.page}>
       {/* ── Retour ── */}
       <button onClick={() => parent ? navigate(`/groupe/${parent.id}`) : navigate('/clients')} style={S.back}>
         ← {parent ? parent.nom : 'Clients'}
@@ -350,8 +354,24 @@ export default function FicheGroupe() {
       </div>
 
       {/* ── Barre accent ── */}
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}44)`, borderRadius: 999, marginBottom: '2rem' }} />
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}44)`, borderRadius: 999, marginBottom: '1.25rem' }} />
 
+      {/* ── Onglets ── */}
+      <div style={S.tabs}>
+        <button onClick={() => setTab('groupe')}
+          style={{ ...S.tab, ...(tab === 'groupe' ? { background: '#333333', color: '#fff' } : null) }}>
+          Groupe
+        </button>
+        <button onClick={() => setTab('calendrier')}
+          style={{ ...S.tab, ...(tab === 'calendrier' ? { background: '#333333', color: '#fff' } : null) }}>
+          📅 Calendrier
+        </button>
+      </div>
+
+      {tab === 'calendrier' ? (
+        <CalendrierSaison groupeId={id} embedded />
+      ) : (
+      <>
       {/* ── Sous-groupes ── */}
       <Section title="Sous-groupes" accent={accent}>
         {sousGroupes.length > 0 && (
@@ -469,6 +489,8 @@ export default function FicheGroupe() {
           + Nouveau programme de groupe
         </button>
       </Section>
+      </>
+      )}
 
       {/* ── Modal édition groupe ── */}
       {editOpen && (
@@ -660,6 +682,9 @@ function isLightColor(hex) {
 
 const S = {
   page: { padding: '2rem', maxWidth: '860px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  pageWide: { padding: '2rem', maxWidth: '1400px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  tabs: { display: 'flex', gap: '0.4rem', marginBottom: '1.75rem' },
+  tab: { background: '#fff', color: '#5b626c', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' },
   back: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600', padding: '0 0 1.5rem', display: 'block' },
   btnPrimary: { background: '#333', color: '#e4f816', border: 'none', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },

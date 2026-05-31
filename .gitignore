@@ -24,3 +24,4 @@ yarn-debug.log*
 yarn-error.log*
 .mcp.json
 .vercel
+mockups/tdb-png/
