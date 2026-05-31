@@ -178,7 +178,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
               }}
             >
-              ✏️ Ajouter ou modifier des éléments
+              Ajouter ou modifier des éléments
             </button>
           ) : (
             <div style={{ background: '#f9fafb', borderRadius: 12, padding: '0.75rem', border: '1px solid #e5e7eb' }}>
@@ -220,7 +220,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
                     cursor: note.trim() ? 'pointer' : 'default',
                   }}
                 >
-                  🤖 Relancer l'analyse
+                  Relancer l'analyse
                 </button>
               </div>
             </div>
