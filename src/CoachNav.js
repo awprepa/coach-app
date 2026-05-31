@@ -1,6 +1,28 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from './supabase'
+
+const ICONS = {
+  dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
+  clients:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>,
+  calendar:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
+  book:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+  gps:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+  tests:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>,
+  messages:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  paiements: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>,
+}
+
+const NAV = [
+  { to: '/',            icon: 'dashboard', label: 'Tableau de bord', end: true },
+  { to: '/clients',     icon: 'clients',   label: 'Clients' },
+  { to: '/calendrier',  icon: 'calendar',  label: 'Calendrier' },
+  { to: '/bibliotheque',icon: 'book',      label: 'Bibliothèque' },
+  { to: '/gps',         icon: 'gps',       label: 'GPS' },
+  { to: '/tests',       icon: 'tests',     label: 'Tests' },
+  { to: '/messages',    icon: 'messages',  label: 'Messagerie' },
+  { to: '/paiements',   icon: 'paiements', label: 'Paiements' },
+]
 
 export default function CoachNav() {
   const navigate = useNavigate()
@@ -18,43 +40,55 @@ export default function CoachNav() {
   }
 
   return (
-    <nav style={{
-      background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)',
-      padding: '0 2rem',
-      display: 'flex',
-      alignItems: 'center',
-      height: '60px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    }}>
-      <Link to="/" style={{ textDecoration: 'none', marginRight: '2.5rem', flexShrink: 0 }}>
-        <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 72, width: 'auto', display: 'block' }} />
-      </Link>
-      <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
-        <Link to="/" style={navLink}>
-          Tableau de bord {newClients > 0 && <span style={{ background: '#e4f816', color: '#333333', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', marginLeft: '4px' }}>{newClients}</span>}
-        </Link>
-        <Link to="/clients" style={navLink}>Clients</Link>
-        <Link to="/bibliotheque" style={navLink}>Bibliothèque</Link>
-        <Link to="/gps" style={navLink}>GPS</Link>
-        <Link to="/tests" style={navLink}>Tests</Link>
-        <Link to="/messages" style={navLink}>Messagerie</Link>
-<Link to="/paiements" style={navLink}>Paiements</Link>
+    <nav className="coachnav">
+      <style>{CSS}</style>
+      <NavLink to="/" end className="coachnav-brand">
+        <img src="/logo-noir.png" alt="AWprepa" className="coachnav-logo" />
+      </NavLink>
+      <div className="coachnav-items">
+        {NAV.map(item => (
+          <NavLink key={item.to} to={item.to} end={item.end} className="coachnav-link">
+            <span className="coachnav-ico">{ICONS[item.icon]}</span>
+            {item.label}
+            {item.to === '/' && newClients > 0 && <span className="coachnav-badge">{newClients}</span>}
+          </NavLink>
+        ))}
       </div>
-      <button onClick={handleLogout} style={logoutBtn}>Déconnexion</button>
+      <button onClick={handleLogout} className="coachnav-logout">Déconnexion</button>
     </nav>
   )
 }
 
-const navLink = {
-  color: 'rgba(255,255,255,0.7)', textDecoration: 'none',
-  fontSize: '0.875rem', fontWeight: '500',
-  padding: '0.4rem 0.875rem', borderRadius: '8px',
-  transition: 'all 0.15s',
+const CSS = `
+.coachnav{
+  background:#fff;height:62px;display:flex;align-items:center;
+  padding:0 22px;gap:22px;border-bottom:1px solid #e6e8ec;
+  box-shadow:0 1px 0 rgba(0,0,0,0.02);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
-
-const logoutBtn = {
-  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)',
-  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-  padding: '0.4rem 0.875rem', fontSize: '0.875rem',
-  cursor: 'pointer', fontWeight: '500',
+.coachnav-brand{flex-shrink:0;display:flex;align-items:center;text-decoration:none;}
+.coachnav-logo{height:38px;width:auto;display:block;}
+.coachnav-items{display:flex;gap:2px;flex:1;flex-wrap:wrap;}
+.coachnav-link{
+  display:flex;align-items:center;gap:6px;
+  color:#5b626c;text-decoration:none;font-size:0.85rem;font-weight:600;
+  padding:8px 13px;border-radius:8px;transition:background .15s,color .15s;
+  white-space:nowrap;
 }
+.coachnav-ico svg{width:16px;height:16px;display:block;}
+.coachnav-link:hover{background:#f3f4f6;color:#15181d;}
+.coachnav-link.active{background:#15181d;color:#fff;}
+.coachnav-link.active .coachnav-ico svg{stroke:#e4f816;}
+.coachnav-badge{
+  background:#15181d;color:#e4f816;border-radius:999px;
+  font-size:0.62rem;font-weight:800;padding:1px 6px;margin-left:2px;
+}
+.coachnav-link.active .coachnav-badge{background:#e4f816;color:#15181d;}
+.coachnav-logout{
+  flex-shrink:0;background:#fff;color:#5b626c;
+  border:1px solid #e6e8ec;border-radius:8px;
+  padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;
+  transition:background .15s;
+}
+.coachnav-logout:hover{background:#f3f4f6;}
+`

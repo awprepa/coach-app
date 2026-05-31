@@ -53,6 +53,7 @@ const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const Paiements            = lazy(() => import('./pages/Paiements'))
 const FicheGroupe          = lazy(() => import('./pages/FicheGroupe'))
+const CalendrierSaison     = lazy(() => import('./pages/CalendrierSaison'))
 // ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
 function InAppBrowserSheet({ onDismiss }) {
   const ua         = navigator.userAgent
@@ -409,6 +410,7 @@ function App() {
               <Route path="/messages"                    element={<WithNav><CoachMessages /></WithNav>} />
               <Route path="/charge"                      element={<WithNav><ChargeEntrainement /></WithNav>} />
               <Route path="/paiements"                   element={<WithNav><Paiements /></WithNav>} />
+              <Route path="/calendrier"                  element={<WithNav><CalendrierSaison /></WithNav>} />
               <Route path="/groupe/:id"                  element={<WithNav><FicheGroupe /></WithNav>} />
               <Route path="/groupe/:groupeId/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
             </Routes>

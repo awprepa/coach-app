@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWprepa Club — Calendrier saison</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f6f8; --panel:#fff; --ink:#15181d; --ink2:#5b626c; --ink3:#9aa1ac;
+    --line:#e6e8ec; --line2:#eef0f3; --sidebar:#181b20; --accent:#e4f816;
+    /* ── Couleur du groupe (change selon le groupe sélectionné) ── */
+    --group:#2f6f76;            /* Seniors A — teinte de référence */
+    --match:var(--group);       /* le match prend la couleur du groupe */
+    /* ── Types de séance : teintes douces et désaturées ── */
+    --muscu:#b08769; --vitesse:#6b94a3; --prevention:#8c7ea6; --recup:#7488a8;
+    --collectif:#98a2ad; --test:#454c57;
+    /* ── Phases : versions atténuées ── */
+    --prep:#c7a978; --aller:#86ad8e; --retour:#84a6bf; --finales:#bb8a93; --vac:#f4e8c4;
+  }
+  html{font-size:14px;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#c9ccd3;color:var(--ink);padding:22px;-webkit-font-smoothing:antialiased;}
+  .cap{max-width:1340px;margin:0 auto 14px;font-size:0.78rem;color:#4b5563;}
+  .cap b{color:#1f2937;}
+
+  .browser{max-width:1340px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,0.3);}
+  .chrome{background:#eceef1;height:34px;display:flex;align-items:center;gap:8px;padding:0 13px;border-bottom:1px solid #dcdee2;}
+  .chrome i{width:10px;height:10px;border-radius:50%;display:block;}
+  .chrome .url{flex:1;background:#fff;border-radius:6px;height:21px;display:flex;align-items:center;padding:0 11px;font-size:0.7rem;color:#6b7280;margin-left:8px;}
+
+  .app{display:flex;height:820px;background:var(--bg);}
+  /* Sidebar */
+  .side{width:206px;flex-shrink:0;background:var(--sidebar);color:#cfd3da;display:flex;flex-direction:column;}
+  .side .brand{display:flex;align-items:center;gap:9px;padding:16px 16px 14px;}
+  .side .brand .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);color:#15181d;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem;}
+  .side .brand .bt{font-size:0.86rem;font-weight:700;color:#fff;}
+  .side .brand .bs{font-size:0.56rem;color:#7c8794;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+  .side .grp{margin:0 12px 8px;padding:9px 11px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+  .side .grp .gl{font-size:0.54rem;color:#7c8794;text-transform:uppercase;letter-spacing:0.05em;}
+  .side .grp .gv{font-size:0.82rem;font-weight:700;color:#fff;margin-top:1px;}
+  .side .grp .gc{color:#7c8794;}
+  .side .ni{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:0.82rem;font-weight:500;color:#aab1bb;cursor:pointer;border-left:2px solid transparent;}
+  .side .ni svg{width:17px;height:17px;flex-shrink:0;opacity:0.85;}
+  .side .ni:hover{color:#fff;background:rgba(255,255,255,0.04);}
+  .side .ni.on{color:#fff;background:rgba(228,248,22,0.10);border-left-color:var(--accent);font-weight:600;}
+  .side .foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:9px;}
+  .side .foot .av{width:28px;height:28px;border-radius:50%;background:#2c3138;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.66rem;font-weight:700;}
+  .side .foot .fn{font-size:0.74rem;font-weight:600;color:#fff;} .side .foot .fr{font-size:0.58rem;color:#7c8794;}
+
+  /* Main */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:56px;flex-shrink:0;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+  .topbar h2{font-size:1.1rem;font-weight:800;}
+  .topbar .tr{display:flex;align-items:center;gap:9px;}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-size:0.78rem;font-weight:600;color:var(--ink2);cursor:pointer;}
+  .btn.dark{background:var(--ink);color:#fff;border-color:var(--ink);} .btn.dark span{color:var(--accent);}
+  .scroll{flex:1;overflow:auto;padding:18px 24px 30px;}
+
+  /* ── Bandeau résumé compact ── */
+  .summary{display:flex;align-items:center;gap:18px;margin-bottom:14px;flex-wrap:wrap;}
+  .summary .blkc{display:flex;align-items:baseline;gap:6px;}
+  .summary .blkc .v{font-size:1.1rem;font-weight:800;} .summary .blkc .l{font-size:0.64rem;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;}
+  .summary .sep{width:1px;height:26px;background:var(--line);}
+  .summary .leg{margin-left:auto;display:flex;gap:13px;flex-wrap:wrap;}
+  .summary .leg .l{font-size:0.64rem;color:var(--ink2);font-weight:600;display:flex;align-items:center;gap:5px;}
+  .summary .leg .l .sw{width:10px;height:10px;border-radius:3px;}
+
+  /* ── Ruban des phases ── */
+  .phrow{display:flex;min-width:max-content;border:1px solid var(--line);border-bottom:none;border-radius:11px 11px 0 0;overflow:hidden;background:#fafbfc;}
+  .phseg{display:flex;align-items:center;justify-content:center;height:24px;font-size:0.58rem;font-weight:800;color:#fff;letter-spacing:0.04em;text-transform:uppercase;border-right:1px solid rgba(255,255,255,0.25);}
+  .phseg:last-child{border-right:none;}
+
+  /* ── Grille saison (mois en colonnes, jours en lignes) ── */
+  .gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:0 0 11px 11px;background:#fff;}
+  .season-grid{display:flex;min-width:max-content;}
+  .mcol{flex:1;min-width:108px;border-right:1px solid var(--line);}
+  .mcol:last-child{border-right:none;}
+  .mch{position:sticky;top:0;z-index:5;text-align:center;padding:7px 4px 6px;background:#fbfcfd;border-bottom:1px solid var(--line);border-top:3px solid var(--ph,var(--line));}
+  .mch .mm{font-size:0.74rem;font-weight:800;}
+  .mch .my{font-size:0.5rem;font-weight:700;color:var(--ink3);letter-spacing:0.04em;}
+  .drow{display:grid;grid-template-columns:17px 13px 1fr;align-items:stretch;border-bottom:1px solid var(--line2);min-height:20px;}
+  .drow.vac{background:#fdf8ea;}
+  .drow.today{box-shadow:inset 0 0 0 2px var(--ink);position:relative;z-index:2;}
+  .drow.blank{background:repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px);min-height:20px;}
+  .dnum{font-size:0.56rem;color:var(--ink2);text-align:center;font-weight:700;line-height:20px;border-right:1px solid var(--line2);}
+  .ddow{font-size:0.52rem;color:var(--ink3);text-align:center;line-height:20px;text-transform:uppercase;}
+  /* cellule contenu */
+  .cell{font-size:0.6rem;font-weight:700;padding:0 5px;display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;line-height:20px;}
+  .cell.ev{border-left:3px solid color-mix(in srgb, var(--c) 70%, #fff);color:#3a4049;background:color-mix(in srgb, var(--c) 9%, #fff);cursor:pointer;}
+  .cell.ev:hover{background:color-mix(in srgb, var(--c) 16%, #fff);}
+  .cell.coll{color:#5b626c;background:#f0f2f5;border-left-color:#c4ccd4;} /* staff rugby — discret */
+  .cell.rec{background:#fff;border-left:none;color:var(--ink3);font-weight:600;cursor:pointer;} /* récup — blanc */
+  .cell.rec:hover{background:#f7f8fa;}
+  .cell.mt{background:var(--match);color:#fff;font-weight:800;cursor:pointer;justify-content:space-between;}
+  .cell.mt small{font-size:0.5rem;font-weight:700;opacity:0.9;}
+  .cell.mt:hover{filter:brightness(1.07);}
+  .cell.tst{background:var(--test);color:#fff;font-weight:800;cursor:pointer;}
+  .vacband{grid-column:1/-1;font-size:0.5rem;font-weight:800;color:#a16207;text-transform:uppercase;letter-spacing:0.05em;padding:1px 5px;background:var(--vac);line-height:1.6;}
+
+  /* ── Right panel (détail séance) ── */
+  .scrim{position:fixed;inset:0;background:rgba(15,18,23,0.4);opacity:0;pointer-events:none;transition:0.2s;z-index:50;}
+  .scrim.on{opacity:1;pointer-events:auto;}
+  .panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:92vw;background:var(--bg);z-index:60;transform:translateX(102%);transition:0.3s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column;box-shadow:-16px 0 50px rgba(0,0,0,0.22);}
+  .panel.on{transform:translateX(0);}
+  .ph2{background:#fff;padding:16px 20px 14px;border-bottom:1px solid var(--line);}
+  .ph2 .r1{display:flex;justify-content:space-between;align-items:center;}
+  .ph2 .tag{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:3px 9px;border-radius:5px;color:#fff;}
+  .ph2 .x{color:var(--ink3);font-size:1.3rem;cursor:pointer;line-height:1;}
+  .ph2 h2{font-size:1.15rem;font-weight:800;margin:11px 0 5px;}
+  .ph2 .meta{font-size:0.74rem;color:var(--ink2);display:flex;gap:14px;flex-wrap:wrap;}
+  .pb{flex:1;overflow-y:auto;padding:16px 20px;}
+  .pa{display:flex;gap:9px;padding:13px 20px;background:#fff;border-top:1px solid var(--line);}
+  .pa .btn{flex:1;text-align:center;}
+  .mini{display:flex;gap:8px;margin-bottom:16px;}
+  .mini .m{flex:1;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 6px;text-align:center;}
+  .mini .m .v{font-size:0.95rem;font-weight:800;} .mini .m .l{font-size:0.54rem;color:var(--ink3);font-weight:600;text-transform:uppercase;margin-top:2px;}
+  .blk{background:#fff;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;overflow:hidden;}
+  .blk .bt{display:flex;align-items:center;gap:9px;padding:11px 13px;cursor:pointer;border-left:3px solid var(--c);}
+  .blk .bt .bd{font-size:0.58rem;font-weight:700;color:var(--ink2);background:#f1f3f5;border-radius:5px;padding:3px 7px;}
+  .blk .bt .bn{font-size:0.84rem;font-weight:700;flex:1;} .blk .bt .ca{color:#c2c8d0;transition:0.2s;}
+  .blk.open .ca{transform:rotate(90deg);}
+  .blk .bo{max-height:0;overflow:hidden;transition:max-height 0.3s;} .blk.open .bo{max-height:600px;}
+  .blk .bi{padding:0 13px 12px;}
+  .exo{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:8px 0;border-bottom:1px solid var(--line2);}
+  .exo:last-child{border-bottom:none;}
+  .exo .en{font-size:0.78rem;font-weight:600;} .exo .ep{font-size:0.7rem;color:var(--ink2);font-variant-numeric:tabular-nums;font-weight:600;text-align:right;}
+  .exo .ed{grid-column:1/-1;font-size:0.66rem;color:var(--ink3);}
+  .addx{font-size:0.7rem;font-weight:600;color:var(--ink2);text-align:center;border:1px dashed var(--line);border-radius:7px;padding:8px;margin-top:6px;cursor:pointer;}
+  .ctype{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .ctype .ci{background:#fff;border:1px solid var(--line);border-radius:9px;padding:12px 13px;cursor:pointer;}
+  .ctype .ci:hover{border-color:var(--ink2);}
+  .ctype .ci .cn{font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:7px;}
+  .ctype .ci .cn .dot{width:8px;height:8px;border-radius:2px;}
+  .ctype .ci .cd{font-size:0.64rem;color:var(--ink3);margin-top:4px;}
+  .hint{font-size:0.72rem;color:var(--ink3);margin-top:14px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="cap"><b>Maquette — Calendrier saison (préparateur physique), format ordinateur.</b> Toute la saison d'un seul bloc : les mois en colonnes, les jours en lignes. Les matchs ressortent en pavés rouges (les repères de la saison). Clique une séance pour voir son contenu. (Rendu indicatif.)</div>
+
+<div class="browser">
+  <div class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">awprepa.app/club/calendrier</div></div>
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="logo">AW</div><div><div class="bt">AWprepa Club</div><div class="bs">Préparation physique</div></div></div>
+      <div class="grp"><div style="display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:3px;background:var(--group);flex-shrink:0"></span><div><div class="gl">Groupe</div><div class="gv">Seniors A</div></div></div><div class="gc">▾</div></div>
+      <div class="ni on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Calendrier</div>
+      <div class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Séances types</div>
+      <div class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Effectif &amp; charge</div>
+      <div class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>Tests physiques</div>
+      <div class="foot"><div class="av">AW</div><div><div class="fn">Arthur W.</div><div class="fr">Préparateur physique</div></div></div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <h2>Calendrier — Saison 2026 / 2027</h2>
+        <div class="tr"><button class="btn">Exporter</button><button class="btn dark" onclick="openCreate()"><span>+</span> Ajouter</button></div>
+      </div>
+
+      <div class="scroll">
+
+        <div class="summary">
+          <div class="blkc"><span class="v">26</span><span class="l">Matchs</span></div>
+          <div class="sep"></div>
+          <div class="blkc"><span class="v">12</span><span class="l">Joués</span></div>
+          <div class="sep"></div>
+          <div class="blkc"><span class="v">Phase aller</span><span class="l">En cours</span></div>
+          <div class="sep"></div>
+          <div class="blkc"><span class="v">Sam. 14 nov.</span><span class="l">Prochain match</span></div>
+          <div class="leg">
+            <div class="l"><span class="sw" style="background:var(--match)"></span>Match</div>
+            <div class="l"><span class="sw" style="background:var(--muscu)"></span>Muscu</div>
+            <div class="l"><span class="sw" style="background:var(--vitesse)"></span>Vitesse/athlé</div>
+            <div class="l"><span class="sw" style="background:var(--prevention)"></span>Prévention</div>
+            <div class="l"><span class="sw" style="background:var(--recup)"></span>Récup</div>
+            <div class="l"><span class="sw" style="background:var(--collectif)"></span>Collectif (staff)</div>
+            <div class="l"><span class="sw" style="background:var(--test)"></span>Tests</div>
+          </div>
+        </div>
+
+        <!-- Ruban des phases + grille générés en JS -->
+        <div id="phrow" class="phrow"></div>
+        <div class="gridwrap"><div id="grid" class="season-grid"></div></div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL DÉTAIL -->
+<div class="scrim" id="scrim" onclick="closePanel()"></div>
+<div class="panel" id="panel-session">
+  <div class="ph2"><div class="r1"><span class="tag" id="ss-tag"></span><span class="x" onclick="closePanel()">×</span></div><h2 id="ss-title"></h2><div class="meta" id="ss-meta"></div></div>
+  <div class="pb"><div class="mini" id="ss-mini"></div><div id="ss-blocks"></div></div>
+  <div class="pa"><div class="btn" onclick="closePanel()">Fermer</div><div class="btn dark" style="text-align:center"><span style="color:var(--accent)">Modifier</span></div></div>
+</div>
+<div class="panel" id="panel-create">
+  <div class="ph2"><div class="r1"><span style="font-size:.58rem;font-weight:700;color:var(--ink3);text-transform:uppercase">Création</span><span class="x" onclick="closePanel()">×</span></div><h2>Nouvel événement</h2><div class="meta">Choisis un type à placer dans le calendrier</div></div>
+  <div class="pb">
+    <div class="ctype">
+      <div class="ci"><div class="cn"><span class="dot" style="background:var(--match)"></span>Match</div><div class="cd">Date, adversaire, lieu</div></div>
+      <div class="ci"><div class="cn"><span class="dot" style="background:var(--collectif)"></span>Collectif</div><div class="cd">Créneau staff rugby</div></div>
+      <div class="ci"><div class="cn"><span class="dot" style="background:var(--muscu)"></span>Muscu / renfo</div><div class="cd">Séance en blocs</div></div>
+      <div class="ci"><div class="cn"><span class="dot" style="background:var(--vitesse)"></span>Vitesse / athlé</div><div class="cd">Séance en blocs</div></div>
+      <div class="ci"><div class="cn"><span class="dot" style="background:var(--prevention)"></span>Prévention</div><div class="cd">Activation, réathlé</div></div>
+      <div class="ci"><div class="cn"><span class="dot" style="background:var(--recup)"></span>Récupération</div><div class="cd">Footing, soins</div></div>
+    </div>
+    <p class="hint">Après le choix → date, heure, durée, lieu. Pour une séance physique, tu construis le déroulé en blocs avec les exercices (séries × reps × charge).</p>
+  </div>
+</div>
+
+<script>
+  const C={muscu:'var(--muscu)',vitesse:'var(--vitesse)',activation:'var(--prevention)',recup:'var(--recup)',collectif:'var(--collectif)',match:'var(--match)',test:'var(--test)'};
+
+  /* ── Données séances pour le panneau de détail ── */
+  const sessions={
+    muscu:{tag:'Muscu',title:'Force max — bas du corps',meta:['17h00','Salle','1h00'],mini:[['1h00','Durée'],['4','Blocs'],['Haute','Charge'],['~520','UA']],blocks:[
+      {d:'10 min',n:'Échauffement',c:C.muscu,exos:[{n:'Mobilité hanches/chevilles',p:'5 min'},{n:'Activation fessiers',p:'2 × 12'}]},
+      {d:'30 min',n:'Force principale',c:C.muscu,exos:[{n:'Squat barre',p:'5 × 4 @ 85 %',d:'Récup 3 min'},{n:'Soulevé de terre roumain',p:'4 × 6 @ 75 %',d:'Récup 2 min'}]},
+      {d:'15 min',n:'Pliométrie',c:C.muscu,exos:[{n:'Box jumps',p:'4 × 5'},{n:'Sauts horizontaux',p:'4 × 4'}]},
+      {d:'5 min',n:'Retour au calme',c:C.muscu,exos:[{n:'Étirements',p:'5 min'}]}]},
+    vitesse:{tag:'Vitesse',title:'Vitesse & accélérations',meta:['18h00','Terrain','45 min'],mini:[['45 min','Durée'],['3','Blocs'],['Modérée','Charge'],['~360','UA']],blocks:[
+      {d:'12 min',n:'Échauffement',c:C.vitesse,exos:[{n:'Course + gammes',p:'8 min'},{n:'Accélérations',p:'4 × 20 m'}]},
+      {d:'25 min',n:'Sprints',c:C.vitesse,exos:[{n:'Sprints linéaires',p:'6 × 30 m',d:'Récup 2 min'},{n:'Changements de direction',p:'4 × 20 m'}]},
+      {d:'8 min',n:'Retour au calme',c:C.vitesse,exos:[{n:'Footing + étirements',p:'8 min'}]}]},
+    activation:{tag:'Prévention',title:'Activation avant-match',meta:['18h30','Terrain','45 min'],mini:[['45 min','Durée'],['3','Blocs'],['Faible','Charge'],['~150','UA']],blocks:[
+      {d:'15 min',n:'Réveil musculaire',c:C.muscu,exos:[{n:'Mobilité globale',p:'7 min'},{n:'Chaîne postérieure',p:'2 × 10'}]},
+      {d:'20 min',n:'Mise en action',c:C.muscu,exos:[{n:'Courses progressives',p:'5 × 30 m'},{n:'Appuis',p:'3 ateliers'}]},
+      {d:'10 min',n:'Déblocage',c:C.muscu,exos:[{n:'Étirements + soins',p:'10 min'}]}]},
+    recup:{tag:'Récup',title:'Récupération active',meta:['10h00','Piscine','1h00'],mini:[['1h00','Durée'],['3','Blocs'],['Faible','Charge'],['~90','UA']],blocks:[
+      {d:'20 min',n:'Footing souple',c:C.recup,exos:[{n:'Course continue faible',p:'20 min'}]},
+      {d:'25 min',n:'Mobilité & soins',c:C.recup,exos:[{n:'Foam roller + étirements',p:'25 min'}]},
+      {d:'15 min',n:'Froid',c:C.recup,exos:[{n:'Immersion (option)',p:'15 min'}]}]},
+    collectif:{tag:'Collectif',title:'Entraînement collectif',meta:['18h30','Terrain','Staff rugby'],mini:[['1h45','Durée'],['—','Blocs'],['Haute','Charge'],['~480','UA']],blocks:[
+      {d:'',n:'Géré par le staff rugby',c:C.collectif,exos:[{n:'Contenu technique/tactique',p:'staff'},{n:'Toi : charge + GPS suivis',p:'suivi'}]}]},
+    test:{tag:'Tests',title:'Tests physiques — batterie',meta:['Journée','Terrain + salle'],mini:[['Effectif','Cible'],['5','Tests'],['—','Charge'],['Suivi','But']],blocks:[
+      {d:'',n:'Batterie de tests',c:C.test,exos:[{n:'Sprint 10/30 m',p:'2 essais'},{n:'CMJ (détente)',p:'3 essais'},{n:'Yo-Yo IR1',p:'1 passage'},{n:'Profil force-vitesse',p:'option'}]}]},
+    match:{tag:'Match',title:'Match — J12',meta:['15h00','RDV 13h15'],mini:[['13:15','RDV'],['15:00','CE'],['23','Convoqués'],['Compét.','Charge']],blocks:[
+      {d:'',n:'Avant-match (ta partie)',c:C.match,exos:[{n:'Échauffement athlétique',p:'-45 min'},{n:'Déblocage individuel',p:'sur demande'}]},
+      {d:'',n:'Après-match',c:C.match,exos:[{n:'Retour au calme + recharge',p:'+15 min'},{n:'Recueil RPE',p:'soir'}]}]},
+  };
+
+  /* ── Construction de la saison ── */
+  const DOW=['D','L','M','M','J','V','S'];                 // index getDay()
+  const LABEL={muscu:'Muscu',vitesse:'Vitesse',athle:'Athlé',recup:'Récup',activation:'Activ.',collectif:'Coll.',test:'Tests'};
+  // mois affichés : Août 2026 → Juin 2027
+  const MONTHS=[
+    {mm:'Août',y:2026,m:7,ph:'prep'},
+    {mm:'Sept',y:2026,m:8,ph:'aller'},
+    {mm:'Oct', y:2026,m:9,ph:'aller'},
+    {mm:'Nov', y:2026,m:10,ph:'aller'},
+    {mm:'Déc', y:2026,m:11,ph:'aller'},
+    {mm:'Janv',y:2027,m:0,ph:'retour'},
+    {mm:'Févr',y:2027,m:1,ph:'retour'},
+    {mm:'Mars',y:2027,m:2,ph:'retour'},
+    {mm:'Avr', y:2027,m:3,ph:'retour'},
+    {mm:'Mai', y:2027,m:4,ph:'finales'},
+    {mm:'Juin',y:2027,m:5,ph:'finales'},
+  ];
+  const PHASES=[
+    {key:'prep',  label:'Préparation', col:'var(--prep)',   span:1},
+    {key:'aller', label:'Phase aller', col:'var(--aller)',  span:4},
+    {key:'retour',label:'Phase retour',col:'var(--retour)', span:4},
+    {key:'finales',label:'Phases finales',col:'var(--finales)',span:2},
+  ];
+  const PHCOL={prep:'var(--prep)',aller:'var(--aller)',retour:'var(--retour)',finales:'var(--finales)'};
+
+  // matchs : "y-m-d" -> {opp, home, jour}
+  const OPP=['Montauban','Aurillac','Béziers','Colomiers','Oyonnax','Nevers','Agen','Brive','Dax','Vannes','Biarritz','Rouen','Provence','Soyaux','Carcassonne','Bourg'];
+  const matches={};
+  (function(){
+    // un match (presque) chaque samedi de sept à mi-avril, hors trêve
+    let ji=1, oi=0, home=true;
+    const start=new Date(2026,8,5), end=new Date(2027,3,18);
+    const skip=[ '2026-11-20','2026-11-27' ]; // exemples de week-ends sans match
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+7)){
+      const key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const iso=d.toISOString().slice(0,10);
+      // trêve de Noël ~ 19 déc → 4 janv
+      const treve=(d.getMonth()===11&&d.getDate()>=19)||(d.getMonth()===0&&d.getDate()<=4);
+      if(treve||skip.includes(iso)) continue;
+      matches[key]={opp:OPP[oi%OPP.length], home, jour:'J'+ji};
+      ji++; oi++; home=!home;
+    }
+    // matchs amicaux de préparation en août
+    matches['2026-7-22']={opp:'Amical Albi',home:false,jour:'Amical'};
+    matches['2026-7-29']={opp:'Amical Mazamet',home:true,jour:'Amical'};
+    // phases finales mai/juin
+    matches['2027-4-23']={opp:'Barrage',home:true,jour:'Barrage'};
+    matches['2027-5-6'] ={opp:'1/4 finale',home:false,jour:'1/4'};
+    matches['2027-5-13']={opp:'1/2 finale',home:false,jour:'1/2'};
+    matches['2027-5-20']={opp:'FINALE',home:false,jour:'Finale'};
+  })();
+
+  // tests physiques (journées repères)
+  const tests={'2026-7-10':1,'2026-7-17':1,'2026-10-12':1,'2027-0-12':1,'2027-2-9':1};
+
+  // vacances / trêve (tinte + libellé en tête de plage)
+  const vacRanges=[
+    {y:2026,m:9,from:24,to:31,label:'Toussaint'},
+    {y:2026,m:11,from:19,to:31,label:'Trêve / Noël'},
+    {y:2027,m:0,from:1,to:4,label:'Trêve'},
+    {y:2027,m:1,from:13,to:28,label:'Vacances hiver'},
+    {y:2027,m:3,from:10,to:25,label:'Vacances printemps'},
+  ];
+  function vacInfo(y,m,d){
+    for(const r of vacRanges){ if(r.y===y&&r.m===m&&d>=r.from&&d<=r.to) return {in:true,start:d===r.from,label:r.label}; }
+    return {in:false};
+  }
+
+  // micro-cycle hebdo de prépa physique selon le jour de la semaine
+  function dayEvent(y,m,d,monthPh){
+    const key=`${y}-${m}-${d}`;
+    if(matches[key]) return {type:'match'};
+    if(tests[key])   return {type:'test'};
+    const dow=new Date(y,m,d).getDay();           // 0=Dim..6=Sam
+    const vac=vacInfo(y,m,d);
+    if(vac.in){
+      // période allégée : juste 1-2 séances d'entretien en semaine
+      if(dow===2||dow===4) return {type:'muscu'};
+      return null;
+    }
+    const week=Math.floor((new Date(y,m,d)-new Date(y,m,1))/(7*864e5)); // parité de semaine
+    if(monthPh==='prep'){
+      // août : grosse charge athlétique, pas de match en semaine
+      if(dow===1) return {type:'muscu'};
+      if(dow===2) return {type:'vitesse'};
+      if(dow===3) return {type:'collectif'};
+      if(dow===4) return {type:'muscu'};
+      if(dow===5) return {type:'vitesse'};
+      if(dow===6) return {type:'athle'};
+      return null;
+    }
+    // semaine type autour d'un match le samedi
+    if(dow===1) return null;                       // lundi récup = jour blanc
+    if(dow===2) return {type:'collectif'};
+    if(dow===3) return {type: week%2?'vitesse':'muscu'};
+    if(dow===4) return {type:'collectif'};
+    if(dow===5) return {type:'activation'};
+    return null;                                   // dim + sam sans match = repos
+  }
+
+  /* ── Rendu ── */
+  const TODAY={y:2026,m:10,d:12};                  // "aujourd'hui" simulé : jeu 12 nov.
+  function renderPhrow(){
+    const total=MONTHS.length;
+    document.getElementById('phrow').innerHTML=PHASES.map(p=>
+      `<div class="phseg" style="background:${p.col};flex:${p.span};min-width:${p.span*108}px">${p.label}</div>`).join('');
+  }
+  function renderGrid(){
+    const grid=document.getElementById('grid');
+    grid.innerHTML=MONTHS.map(M=>{
+      const ndays=new Date(M.y,M.m+1,0).getDate();
+      let rows='';
+      for(let d=1;d<=31;d++){
+        if(d>ndays){ rows+=`<div class="drow blank"><div class="dnum"></div><div class="ddow"></div><div></div></div>`; continue; }
+        const dow=new Date(M.y,M.m,d).getDay();
+        const we=(dow===0||dow===6);
+        const vac=vacInfo(M.y,M.m,d);
+        const isToday=(M.y===TODAY.y&&M.m===TODAY.m&&d===TODAY.d);
+        const ev=dayEvent(M.y,M.m,d,M.ph);
+        let cell='<div></div>';
+        if(ev){
+          if(ev.type==='match'){
+            const mt=matches[`${M.y}-${M.m}-${d}`];
+            cell=`<div class="cell mt" onclick="openSession('match')">${mt.opp}<small>${mt.home?'dom':'ext'}</small></div>`;
+          } else if(ev.type==='test'){
+            cell=`<div class="cell tst" onclick="openSession('test')">${LABEL.test}</div>`;
+          } else if(ev.type==='recup'){
+            cell=`<div class="cell rec" onclick="openSession('recup')">${LABEL.recup}</div>`;
+          } else {
+            const sk = ev.type==='athle'?'vitesse':ev.type;       // clé panneau
+            const cls = ev.type==='collectif'?'cell ev coll':'cell ev';
+            const col = C[ev.type==='athle'?'vitesse':ev.type];
+            cell=`<div class="${cls}" style="--c:${col}" onclick="openSession('${sk}')">${LABEL[ev.type]}</div>`;
+          }
+        }
+        const cls=['drow', we?'we':'', vac.in?'vac':'', isToday?'today':''].filter(Boolean).join(' ');
+        if(vac.in&&vac.start){
+          rows+=`<div class="drow vac"><div class="vacband">${vac.label}</div></div>`;
+        }
+        rows+=`<div class="${cls}"><div class="dnum">${d}</div><div class="ddow">${DOW[dow]}</div>${cell}</div>`;
+      }
+      return `<div class="mcol"><div class="mch" style="--ph:${PHCOL[M.ph]}"><div class="mm">${M.mm}</div><div class="my">${M.y}</div></div>${rows}</div>`;
+    }).join('');
+  }
+
+  function openSession(k){
+    const s=sessions[k];
+    document.getElementById('ss-tag').textContent=s.tag;
+    document.getElementById('ss-tag').style.background=C[k]||'var(--ink2)';
+    document.getElementById('ss-title').textContent=s.title;
+    document.getElementById('ss-meta').innerHTML=s.meta.map(m=>`<span>${m}</span>`).join('');
+    document.getElementById('ss-mini').innerHTML=s.mini.map(([v,l])=>`<div class="m"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+    document.getElementById('ss-blocks').innerHTML=s.blocks.map((b,i)=>`
+      <div class="blk${i===1||s.blocks.length<3?' open':''}" style="--c:${b.c}">
+        <div class="bt" onclick="this.parentElement.classList.toggle('open')">${b.d?`<span class="bd">${b.d}</span>`:''}<span class="bn">${b.n}</span><span class="ca">▸</span></div>
+        <div class="bo"><div class="bi">${b.exos.map(e=>`<div class="exo"><div class="en">${e.n}</div><div class="ep">${e.p}</div>${e.d?`<div class="ed">${e.d}</div>`:''}</div>`).join('')}<div class="addx">+ Ajouter un exercice</div></div></div>
+      </div>`).join('');
+    showPanel('panel-session');
+  }
+  function openCreate(){ showPanel('panel-create'); }
+  function showPanel(id){ document.getElementById('scrim').classList.add('on'); document.getElementById(id).classList.add('on'); }
+  function closePanel(){ document.getElementById('scrim').classList.remove('on'); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on')); }
+
+  renderPhrow(); renderGrid();
+</script>
+</body>
+</html>
