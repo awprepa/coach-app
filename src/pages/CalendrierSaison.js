@@ -65,8 +65,10 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [panel, setPanel] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Menu contextuel (clic droit) : { x, y, dateISO, evt }
+  // Menu contextuel sur une séance (clic droit) : { x, y, dateISO, evt }
   const [ctx, setCtx] = useState(null)
+  // Bulle de création sur un jour : { x, y, form }
+  const [pop, setPop] = useState(null)
   // Presse-papier : { source, blocs }  (source = évènement copié)
   const [clip, setClip] = useState(null)
 
@@ -123,6 +125,14 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       window.removeEventListener('keydown', onKey)
     }
   }, [ctx])
+
+  // fermer la bulle de création sur touche échap
+  useEffect(() => {
+    if (!pop) return
+    const onKey = e => { if (e.key === 'Escape') setPop(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pop])
 
   // ── Index par jour ──────────────────────────────────────────────────────────
   const evByDay = {}
@@ -302,11 +312,35 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     await supabase.from('groupe_seance_exercices').delete().eq('id', id)
   }
 
-  // ── Menu contextuel (clic droit) ────────────────────────────────────────────
+  // ── Menu contextuel sur une séance (clic droit) ─────────────────────────────
   function openCtx(e, dateISO, evt) {
     e.preventDefault()
     e.stopPropagation()
+    setPop(null)
     setCtx({ x: e.clientX, y: e.clientY, dateISO, evt: evt || null })
+  }
+
+  // ── Bulle de création sur un jour (double-clic ou clic droit) ────────────────
+  function openPop(e, dateISO) {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtx(null)
+    const PW = 272, PH = 330
+    const x = Math.max(8, Math.min(e.clientX, window.innerWidth - PW - 12))
+    const y = Math.max(8, Math.min(e.clientY, window.innerHeight - PH - 12))
+    setPop({ x, y, form: emptyForm(dateISO) })
+  }
+  const setPopForm = patch => setPop(p => ({ ...p, form: { ...p.form, ...patch } }))
+
+  async function quickSave(openDetails) {
+    if (!pop || !groupe) return
+    setSaving(true)
+    const { data, error } = await supabase.from('groupe_evenements').insert([buildPayload(pop.form)]).select('*').single()
+    setSaving(false)
+    if (error) { alert('Erreur : ' + error.message); return }
+    setPop(null)
+    await loadSeason()
+    if (openDetails && data) openEdit(data)
   }
 
   // ── Rendu cellule jour ────────────────────────────────────────────────────────
@@ -423,7 +457,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                       return (
                         <div key={d}>
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
-                          <div onDoubleClick={() => openCreate(dISO)} onContextMenu={e => openCtx(e, dISO, null)}
+                          <div onDoubleClick={e => openPop(e, dISO)} onContextMenu={e => openPop(e, dISO)}
                             style={{ ...S.drow, ...(vac.in ? S.drowVac : null), ...(isToday ? S.drowToday : null) }}>
                             <div style={S.dnum}>{d}</div>
                             <div style={S.ddow}>{DOW[dow]}</div>
@@ -438,7 +472,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             </div>
           </div>
           <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 10 }}>
-            Double-clic sur un jour pour ajouter · clic sur une séance pour l'éditer · clic droit pour le menu (copier / coller).
+            Double-clic ou clic droit sur un jour pour ajouter · clic sur une séance pour l'éditer · clic droit sur une séance pour copier / coller.
             {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · 📋 « {clipLabel(clip.source)} » dans le presse-papier</span>}
           </p>
         </>
@@ -462,6 +496,71 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             </>
           )}
         </div>
+      )}
+
+      {/* ── Bulle de création sur un jour ── */}
+      {pop && (
+        <>
+          <div style={S.popScrim} onClick={() => setPop(null)} onContextMenu={e => { e.preventDefault(); setPop(null) }} />
+          <div style={{ ...S.popover, left: pop.x, top: pop.y }} onClick={e => e.stopPropagation()}>
+            <div style={S.popHead}>
+              <span style={S.popDate}>{formatPopDate(pop.form.date)}</span>
+              <span style={{ color: '#9aa1ac', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }} onClick={() => setPop(null)}>×</span>
+            </div>
+
+            {/* choix du type */}
+            <div style={S.popTypes}>
+              {CREATE_TYPES.map(k => {
+                const t = TYPES[k]
+                const on = pop.form.type === k
+                return (
+                  <button key={k} onClick={() => setPopForm({ type: k })}
+                    style={{ ...S.popType, ...(on ? { borderColor: '#333333', background: '#333333', color: '#fff' } : null) }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: k === 'match' ? groupColor : (t.color || '#cbd1d9') }} />
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* champs compacts selon le type */}
+            {pop.form.type === 'match' && (
+              <>
+                <input value={pop.form.adversaire} onChange={e => setPopForm({ adversaire: e.target.value })} placeholder="Adversaire" style={S.popInput} />
+                <div style={S.popCats}>
+                  {MATCH_CATEGORIES.map(c => (
+                    <button key={c} onClick={() => setPopForm({ categorie: c })}
+                      style={{ ...S.popCat, ...(pop.form.categorie === c ? { borderColor: '#333333', background: '#f2f3f5', fontWeight: 700 } : null) }}>{c}</button>
+                  ))}
+                </div>
+              </>
+            )}
+            {pop.form.type === 'entrainement' && (
+              <input value={pop.form.style} onChange={e => setPopForm({ style: e.target.value })} placeholder="Style (ex. Vitesse, Collectif…)" style={S.popInput} />
+            )}
+            {pop.form.type === 'muscu' && (
+              <input value={pop.form.titre} onChange={e => setPopForm({ titre: e.target.value })} placeholder="Titre (ex. Force max)" style={S.popInput} />
+            )}
+
+            <div style={{ display: 'flex', gap: 7 }}>
+              <input type="time" value={pop.form.heure} onChange={e => setPopForm({ heure: e.target.value })} style={{ ...S.popInput, flex: 1, marginBottom: 0 }} />
+              <input type="number" value={pop.form.duree_min} onChange={e => setPopForm({ duree_min: e.target.value })} placeholder="min" style={{ ...S.popInput, width: 64, marginBottom: 0 }} />
+            </div>
+
+            {clip && (
+              <button style={S.popPaste} onClick={() => { pasteEvent(pop.form.date); setPop(null) }}>
+                📌 Coller « {clipLabel(clip.source)} »
+              </button>
+            )}
+
+            <div style={S.popActions}>
+              <button style={S.popGhost} onClick={() => quickSave(true)} disabled={saving}>Détails…</button>
+              <button style={S.popCreate} onClick={() => quickSave(false)} disabled={saving}>
+                <span style={{ color: '#e4f816' }}>{saving ? '…' : 'Créer'}</span>
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── Panneau ── */}
@@ -494,6 +593,11 @@ function clipLabel(e) {
   if (e.type === 'match') return e.adversaire || 'Match'
   if (e.type === 'entrainement') return e.style || e.titre || 'Entraînement'
   return e.titre || (TYPES[e.type]?.label) || 'Évènement'
+}
+function formatPopDate(dateISO) {
+  if (!dateISO) return ''
+  const [y, m, d] = dateISO.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 /* ── Sous-composants ── */
@@ -671,4 +775,18 @@ const S = {
   ctxMenu: { position: 'fixed', zIndex: 70, background: '#fff', borderRadius: 10, border: '1px solid #e6e8ec', boxShadow: '0 12px 34px rgba(0,0,0,0.18)', padding: 5, minWidth: 190, display: 'flex', flexDirection: 'column' },
   ctxItem: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 7, padding: '8px 11px', fontSize: '0.8rem', fontWeight: 600, color: '#15181d', cursor: 'pointer' },
   ctxSep: { height: 1, background: '#eef0f3', margin: '4px 0' },
+  // bulle de création
+  popScrim: { position: 'fixed', inset: 0, zIndex: 68, background: 'transparent' },
+  popover: { position: 'fixed', zIndex: 69, width: 272, background: '#fff', borderRadius: 12, border: '1px solid #e6e8ec', boxShadow: '0 16px 44px rgba(0,0,0,0.22)', padding: 12 },
+  popHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 },
+  popDate: { fontSize: '0.72rem', fontWeight: 800, color: '#15181d', textTransform: 'capitalize' },
+  popTypes: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5, marginBottom: 9 },
+  popType: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#fff', border: '1px solid #e6e8ec', borderRadius: 7, padding: '7px 4px', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', color: '#15181d' },
+  popInput: { width: '100%', border: '1px solid #e6e8ec', borderRadius: 8, padding: '7px 9px', fontSize: '0.8rem', color: '#15181d', boxSizing: 'border-box', background: '#fff', marginBottom: 8 },
+  popCats: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 8 },
+  popCat: { background: '#fff', border: '1px solid #e6e8ec', borderRadius: 7, padding: '6px 6px', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', color: '#15181d' },
+  popPaste: { width: '100%', background: '#f5f6f8', border: '1px solid #e6e8ec', borderRadius: 8, padding: '7px', fontSize: '0.74rem', fontWeight: 700, color: '#5b626c', cursor: 'pointer', marginBottom: 8 },
+  popActions: { display: 'flex', gap: 7 },
+  popGhost: { flex: 1, background: '#fff', border: '1px solid #e6e8ec', borderRadius: 8, padding: '8px', fontSize: '0.76rem', fontWeight: 600, color: '#5b626c', cursor: 'pointer' },
+  popCreate: { flex: 1, background: '#333333', border: '1px solid #333333', borderRadius: 8, padding: '8px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' },
 }

@@ -882,7 +882,7 @@ const S = {
   kpiAccent:   { background: '#e4f816', borderRadius: 16, padding: '1rem 1.15rem' },
   kpiVal:      { fontSize: '1.7rem', fontWeight: '900', lineHeight: 1, color: '#e4f816' },
   kpiLbl:      { fontSize: '0.7rem', fontWeight: '700', opacity: 0.8, marginTop: '0.4rem' },
-  bentoGrid:   { display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: '0.85rem', alignItems: 'start' },
+  bentoGrid:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', alignItems: 'start' },
   card:        { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', paddingBottom: '0.35rem' },
   cardHead:    { padding: '0.8rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   empty:       { color: '#9ca3af', fontSize: '0.82rem', padding: '0.5rem 1rem 0.9rem', margin: 0 },
