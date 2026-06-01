@@ -39,6 +39,17 @@ const HAS_BLOCS = ['entrainement', 'muscu', 'vitesse', 'prevention', 'recup', 'a
 const ymd = (y, m, d) => `${y}-${m}-${d}`                  // clé interne (m 0-based)
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 
+// Numéro de semaine ISO 8601 (semaine commençant le lundi, S1 = semaine du 1er jeudi de l'année)
+function isoWeek(y, m, d) {
+  const date = new Date(Date.UTC(y, m, d))
+  const day = (date.getUTCDay() + 6) % 7        // 0 = lundi … 6 = dimanche
+  date.setUTCDate(date.getUTCDate() - day + 3)  // jeudi de la semaine
+  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4))
+  const fday = (firstThursday.getUTCDay() + 6) % 7
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - fday + 3)
+  return 1 + Math.round((date - firstThursday) / (7 * 86400000))
+}
+
 // 12 mois Juillet(start) → Juin(start+1)
 function buildMonths(startYear) {
   const out = []
@@ -470,8 +481,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                       const vac = vacInfo(M.y, M.m, d)
                       const isToday = ymd(M.y, M.m, d) === todayKey
                       const dISO = iso(M.y, M.m, d)
+                      const weekStart = dow === 1 || d === 1   // lundi, ou 1er jour visible du mois
+                      const wkNum = weekStart ? isoWeek(M.y, M.m, d) : null
                       return (
-                        <div key={d}>
+                        <div key={d} style={weekStart && d !== 1 ? S.weekSep : null}>
+                          {weekStart && <div style={S.weekTag}>S{wkNum}</div>}
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
                           <div onDoubleClick={e => openPop(e, dISO)} onContextMenu={e => openPop(e, dISO)}
                             onDragOver={dragEvt ? (e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== dISO) setDragOver(dISO) }) : undefined}
@@ -779,6 +793,8 @@ const S = {
   dnum: { width: 17, fontSize: '0.56rem', color: '#5b626c', textAlign: 'center', fontWeight: 700, lineHeight: '20px', borderRight: '1px solid #eef0f3', flexShrink: 0 },
   ddow: { width: 13, fontSize: '0.52rem', color: '#9aa1ac', textAlign: 'center', lineHeight: '20px', textTransform: 'uppercase', flexShrink: 0 },
   vacband: { fontSize: '0.5rem', fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '1px 5px', background: '#f4e8c4', lineHeight: 1.6 },
+  weekSep: { borderTop: '2px solid #c4ccd4' },
+  weekTag: { fontSize: '0.5rem', fontWeight: 800, color: '#8a93a0', letterSpacing: '0.04em', padding: '1px 5px', background: '#f0f2f5', lineHeight: 1.5 },
   scrim: { position: 'fixed', inset: 0, background: 'rgba(15,18,23,0.4)', zIndex: 50 },
   panel: { position: 'fixed', top: 0, right: 0, bottom: 0, width: 460, maxWidth: '94vw', background: '#f5f6f8', zIndex: 60, display: 'flex', flexDirection: 'column', boxShadow: '-16px 0 50px rgba(0,0,0,0.22)' },
   phead: { background: '#fff', padding: '16px 20px 14px', borderBottom: '1px solid #e6e8ec' },
