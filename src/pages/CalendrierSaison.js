@@ -1026,13 +1026,14 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {(() => {
               const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
-              const MAX_H = 420 // hauteur max totale des phases pour tenir dans l'écran
+              // 4px par minute, capé pour tenir dans l'écran
+              const PX_PER_MIN = 4
+              const rawH = totalMins * PX_PER_MIN
+              const scale = rawH > 380 ? 380 / rawH : 1
               return blocs.map((bloc, idx) => {
               const bc = blocColor(idx)
               const mins = parseDurMin(bloc.duree)
-              const minH = totalMins > 0 && mins
-                ? Math.max(36, Math.round((mins / totalMins) * MAX_H))
-                : 50
+              const minH = mins ? Math.max(36, Math.round(mins * PX_PER_MIN * scale)) : 44
 
               const byGroup = {}
               for (const exo of (bloc.exos || [])) {
@@ -1130,7 +1131,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         </div>
 
         {/* Séances */}
-        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', maxHeight: 'calc(100vh - 230px)' }}>
           {day.events.map(evt => (
             <div key={evt.id}>
               {evt.heure && (
