@@ -64,7 +64,6 @@ const NOTIF_ICONS = { wellness: '🧘', message: '💬', seance: '📅', info: '
 export default function Dashboard() {
   const navigate = useNavigate()
   const { notifs, unread, markRead, markAllRead } = useNotifications()
-  const [showNotifs, setShowNotifs]   = useState(false)
   const [loading, setLoading]         = useState(true)
   const [clients, setClients]         = useState([])
   const [categories, setCategories]   = useState([])
@@ -75,8 +74,7 @@ export default function Dashboard() {
   const [showCatForm, setShowCatForm] = useState(false)
   const [newCatNom, setNewCatNom]     = useState('')
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
-  const [showWeek, setShowWeek]       = useState(false)
-  const [showBilan, setShowBilan]     = useState(true)
+  const [tab, setTab]                 = useState('overview') // overview | clients | notifs | groupes | calendrier
   // Groupes
   const [groupes, setGroupes]               = useState([])
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
@@ -326,19 +324,24 @@ export default function Dashboard() {
   const nbPrepa = clientsIndividuels.filter(c => c.offre === 'preparation_physique').length
   const nbCoach = clientsIndividuels.filter(c => c.offre === 'coaching').length
 
-  function scrollToId(anchor) {
-    const el = document.getElementById(anchor)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  const TABS = [
+    { k: 'overview',   label: "Vue d'ensemble", icon: '📊' },
+    { k: 'clients',    label: 'Clients',        icon: '👥' },
+    { k: 'notifs',     label: 'Notifications',  icon: '🔔', badge: unread },
+    { k: 'groupes',    label: 'Groupes',        icon: '🏆' },
+    { k: 'calendrier', label: 'Calendrier',     icon: '📅' },
+  ]
+  function selectTab(k) {
+    setTab(k)
+    if (k === 'notifs' && unread > 0) markAllRead()
+    window.scrollTo({ top: 0 })
   }
 
   return (
     <div style={S.page}>
-
-      {/* ── Héros : sidebar résumé + bento ───────────────────────── */}
       <div style={S.hero}>
 
-        {/* Colonne gauche — résumé + mini-nav */}
+        {/* ── Colonne gauche — résumé + menu d'onglets ── */}
         <div style={S.side}>
           <div style={S.sumCard}>
             <p style={S.sumDate}>{dateLabel}</p>
@@ -350,276 +353,383 @@ export default function Dashboard() {
           </div>
 
           <div style={S.navCard}>
-            <button style={{ ...S.navItem, ...S.navItemOn }} onClick={() => scrollToId('top')}>📊 Vue d'ensemble</button>
-            <button style={S.navItem} onClick={() => scrollToId('sec-clients')}>👥 Clients individuels</button>
-            <button style={S.navItem} onClick={() => scrollToId('sec-groupes')}>🏆 Groupes</button>
-            <button style={S.navItem} onClick={() => scrollToId('sec-groupes')}>📅 Calendrier</button>
+            {TABS.map(t => (
+              <button key={t.k} onClick={() => selectTab(t.k)}
+                style={{ ...S.navItem, ...(tab === t.k ? S.navItemOn : null) }}>
+                <span>{t.icon} {t.label}</span>
+                {t.badge > 0 && <span style={{ ...S.navBadge, ...(tab === t.k ? { background: '#e4f816', color: '#333333' } : null) }}>{t.badge}</span>}
+              </button>
+            ))}
           </div>
 
           <button onClick={() => navigate('/nouveau-client')} style={{ ...S.btnPrimary, width: '100%' }}>+ Nouveau client</button>
         </div>
 
-        {/* Colonne droite — bento */}
-        <div style={S.bento}>
-          {/* 2 KPI */}
-          <div style={S.kpis}>
-            <div style={S.kpiDark}>
-              <div style={S.kpiVal}>{seancesAujourdhui.length}</div>
-              <div style={S.kpiLbl}>séance{seancesAujourdhui.length > 1 ? 's' : ''} aujourd'hui</div>
-            </div>
-            <div style={S.kpiAccent}>
-              <div style={{ ...S.kpiVal, color: '#333333' }}>{totalAlertes}</div>
-              <div style={{ ...S.kpiLbl, color: '#333333', opacity: 0.8 }}>alerte{totalAlertes > 1 ? 's' : ''} à traiter</div>
-            </div>
-          </div>
+        {/* ── Colonne droite — un seul grand bloc, change selon l'onglet ── */}
+        <div style={S.panel}>
 
-          {/* grande carte séances + colonne alertes */}
-          <div style={S.bentoGrid}>
-            {/* Séances du jour */}
-            <div style={S.card}>
-              <div style={S.cardHead}><span style={S.sectionTitle}>Séances du jour</span></div>
-              {seancesAujourdhui.length === 0 ? (
-                <p style={S.empty}>Aucune séance planifiée aujourd'hui.</p>
-              ) : (
-                seancesAujourdhui.map(ev => (
-                  <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)} style={S.miniRow}>
-                    <div style={S.miniIco}>📅</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={S.miniName}>{ev.titre}</p>
-                      <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
+          {/* ═══ VUE D'ENSEMBLE ═══ */}
+          {tab === 'overview' && (
+            <div style={S.bento}>
+              <div style={S.kpis}>
+                <div style={S.kpiDark}>
+                  <div style={S.kpiVal}>{seancesAujourdhui.length}</div>
+                  <div style={S.kpiLbl}>séance{seancesAujourdhui.length > 1 ? 's' : ''} aujourd'hui</div>
+                </div>
+                <div style={S.kpiAccent}>
+                  <div style={{ ...S.kpiVal, color: '#333333' }}>{totalAlertes}</div>
+                  <div style={{ ...S.kpiLbl, color: '#333333', opacity: 0.8 }}>alerte{totalAlertes > 1 ? 's' : ''} à traiter</div>
+                </div>
+              </div>
+
+              <div style={S.bentoGrid}>
+                {/* Séances du jour */}
+                <div style={S.card}>
+                  <div style={S.cardHead}><span style={S.sectionTitle}>Séances du jour</span></div>
+                  {seancesAujourdhui.length === 0 ? (
+                    <p style={S.empty}>Aucune séance planifiée aujourd'hui.</p>
+                  ) : (
+                    seancesAujourdhui.map(ev => (
+                      <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)} style={S.miniRow}>
+                        <div style={S.miniIco}>📅</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={S.miniName}>{ev.titre}</p>
+                          <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
+                        </div>
+                        <span style={S.chevron}>›</span>
+                      </div>
+                    ))
+                  )}
+                  {sansWellness.length > 0 && (
+                    <div style={{ ...S.miniRow, cursor: 'default' }}>
+                      <div style={S.miniIco}>🔕</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={S.miniName}>{sansWellness.length} sans wellness 3j+</p>
+                        <p style={S.miniSub}>{sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}</p>
+                      </div>
                     </div>
-                    <span style={S.chevron}>›</span>
+                  )}
+                </div>
+
+                {/* Alertes */}
+                <div style={S.card}>
+                  <div style={S.cardHead}>
+                    <span style={S.sectionTitle}>Alertes</span>
+                    {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>{totalAlertes}</span>}
+                  </div>
+                  {totalAlertes === 0 ? (
+                    <p style={{ ...S.empty, color: '#16a34a' }}>✓ Tout va bien aujourd'hui.</p>
+                  ) : (
+                    <>
+                      {wellnessAlertes.map(c => (
+                        <div key={'w' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #ef4444' }}>
+                          <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas</p></div>
+                          <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ {c.avg.toFixed(1)}</span>
+                        </div>
+                      ))}
+                      {expirations.map(c => (
+                        <div key={'e' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #f59e0b' }}>
+                          <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire</p></div>
+                          <span style={{ ...S.pill, background: '#fffbeb', color: '#d97706' }}>⏳ {c.daysLeft === 0 ? "Auj." : `${c.daysLeft}j`}</span>
+                        </div>
+                      ))}
+                      {nouveaux.map(c => (
+                        <div key={'n' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #6366f1' }}>
+                          <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
+                          <span style={{ ...S.pill, background: '#ede9fe', color: '#6d28d9' }}>🆕</span>
+                        </div>
+                      ))}
+                      {progFinBientot.map(p => (
+                        <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, borderLeft: '3px solid #0ea5e9' }}>
+                          <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
+                          <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Bilan de la semaine */}
+              <div style={S.card}>
+                <div style={S.cardHead}>
+                  <span style={S.sectionTitle}>Bilan de la semaine</span>
+                  <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>
+                    {new Date(wStart + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {new Date(wEnd + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+                  {['Client', 'Wellness moy.', 'Séances', 'Statut'].map(h => (
+                    <span key={h} style={{ fontSize: '0.6rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                  ))}
+                </div>
+                {bilanRows.map((c) => {
+                  const avg = c.wellness_week_avg
+                  const entriesCount = c.wellness_week?.length || 0
+                  const inactif = entriesCount === 0 && c.eventsCount === 0
+                  const wColor = avg === null ? '#9ca3af' : avg <= 2 ? '#dc2626' : avg <= 3 ? '#d97706' : '#16a34a'
+                  const av = getAvatar(c.prenom, c.nom)
+                  return (
+                    <div key={c.id} onClick={() => navigate(`/client/${c.id}`)}
+                      style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 1rem', borderTop: '1px solid #f6f7f8', cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                        {c.avatar_url
+                          ? <img src={c.avatar_url} alt={c.prenom} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                          : <div style={{ width: 28, height: 28, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
+                        }
+                        <span style={{ ...S.miniName }}>{c.prenom} {c.nom}</span>
+                      </div>
+                      <div>
+                        {avg !== null ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <div style={{ flex: 1, height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
+                              <div style={{ width: `${(avg / 4) * 100}%`, height: '100%', background: wColor, borderRadius: 99 }} />
+                            </div>
+                            <span style={{ fontSize: '0.78rem', fontWeight: '700', color: wColor, minWidth: 26 }}>{avg.toFixed(1)}</span>
+                          </div>
+                        ) : <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>}
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '700', color: c.eventsCount > 0 ? '#333333' : '#d1d5db' }}>
+                        {c.eventsCount > 0 ? c.eventsCount : '—'}
+                      </span>
+                      {inactif ? (
+                        <span style={{ ...S.pill, background: '#f3f4f6', color: '#9ca3af' }}>Inactif</span>
+                      ) : avg !== null && avg <= 2 ? (
+                        <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ Bas</span>
+                      ) : (
+                        <span style={{ ...S.pill, background: '#f0fdf4', color: '#16a34a' }}>✓ OK</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Cette semaine */}
+              <div style={S.card}>
+                <div style={S.cardHead}>
+                  <span style={S.sectionTitle}>Cette semaine</span>
+                  <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>{weekEvents.length} évènement{weekEvents.length !== 1 ? 's' : ''}</span>
+                </div>
+                {weekEvents.length === 0 ? (
+                  <p style={S.empty}>Aucun évènement cette semaine.</p>
+                ) : (
+                  weekEvents.map(ev => {
+                    const d = new Date(ev.date + 'T00:00:00')
+                    const isToday = ev.date === today
+                    const isPast  = ev.date < today
+                    return (
+                      <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)}
+                        style={{ ...S.miniRow, opacity: isPast && !isToday ? 0.55 : 1 }}>
+                        <div style={{ ...S.dayBadge, background: isToday ? '#333333' : '#f3f4f6', color: isToday ? '#e4f816' : '#6b7280' }}>
+                          <span style={{ fontSize: '0.5rem', fontWeight: '800', textTransform: 'uppercase', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={S.miniName}>{ev.titre}</p>
+                          <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
+                        </div>
+                        {isToday && <span style={{ ...S.pill, background: 'rgba(228,248,22,0.25)', color: '#7a8400' }}>Auj.</span>}
+                        <span style={S.chevron}>›</span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═══ NOTIFICATIONS ═══ */}
+          {tab === 'notifs' && (
+            <div style={S.card}>
+              <div style={S.cardHead}><span style={S.sectionTitle}>Notifications</span></div>
+              {notifs.length === 0 && <p style={S.empty}>Aucune notification</p>}
+              {notifs.slice(0, 50).map(n => (
+                <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/') && !n.lien.startsWith('/client/')) navigate(n.lien) }}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: n.lu ? 'white' : '#fafff0', cursor: n.lien && !n.lien.startsWith('/client/') ? 'pointer' : 'default' }}>
+                  <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a' }}>{n.titre}</p>
+                    {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
+                  {!n.lu && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ CLIENTS ═══ */}
+          {tab === 'clients' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <p style={S.sectionTitle}>Clients individuels</p>
+                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsIndividuels.length} client{clientsIndividuels.length !== 1 ? 's' : ''}</span>
+              </div>
+
+              <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>🔍</span>
+                <input type="text" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem 0.875rem 0.65rem 2.4rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', background: 'white' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                <button onClick={() => setActiveCat(null)}
+                  style={{ ...S.catTab, background: activeCat === null ? '#333333' : 'white', color: activeCat === null ? '#e4f816' : '#6b7280', border: activeCat === null ? 'none' : '1.5px solid #e5e7eb' }}>
+                  Tous
+                </button>
+                {categories.map(cat => (
+                  <button key={cat.id} onClick={() => setActiveCat(activeCat === cat.id ? null : cat.id)}
+                    style={{ ...S.catTab, background: activeCat === cat.id ? cat.couleur : 'white', color: activeCat === cat.id ? 'white' : '#374151', border: activeCat === cat.id ? 'none' : `1.5px solid ${cat.couleur}`, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: activeCat === cat.id ? 'rgba(255,255,255,0.7)' : cat.couleur, flexShrink: 0 }} />
+                    {cat.nom}
+                    <span onClick={e => { e.stopPropagation(); supprimerCategorie(cat.id) }} style={{ opacity: 0.5, fontSize: '0.7rem', cursor: 'pointer', marginLeft: '0.1rem' }}>✕</span>
+                  </button>
+                ))}
+                {showCatForm ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <input autoFocus value={newCatNom} onChange={e => setNewCatNom(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && ajouterCategorie()}
+                      placeholder="Nom..." style={{ padding: '0.35rem 0.65rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', width: 110 }} />
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      {PALETTE_CATS.map(c => (
+                        <button key={c} onClick={() => setNewCatColor(c)}
+                          style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newCatColor === c ? '2.5px solid #333' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+                      ))}
+                    </div>
+                    <button onClick={ajouterCategorie} style={{ ...S.btnPrimary, padding: '0.3rem 0.65rem', fontSize: '0.78rem', borderRadius: '8px' }}>OK</button>
+                    <button onClick={() => setShowCatForm(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowCatForm(true)} style={{ ...S.catTab, background: 'white', color: '#9ca3af', border: '1.5px dashed #d1d5db' }}>+ Catégorie</button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                {[
+                  { label: 'Individuels', value: clientsIndividuels.length },
+                  { label: 'Essai', value: nbEssai },
+                  { label: 'Prépa physique', value: nbPrepa },
+                  { label: 'Coaching', value: nbCoach },
+                ].map(stat => (
+                  <div key={stat.label} style={S.statCard}>
+                    <p style={S.statLabel}>{stat.label}</p>
+                    <p style={S.statValue}>{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={S.listCard}>
+                {filtered.length === 0 ? (
+                  <p style={{ color: '#9ca3af', padding: '2rem', textAlign: 'center', fontSize: '0.875rem' }}>
+                    {search || activeCat ? 'Aucun client trouvé.' : 'Aucun client pour l\'instant.'}
+                  </p>
+                ) : (
+                  filtered.map((client, i) => {
+                    const av  = getAvatar(client.prenom, client.nom)
+                    const sub = getSubInfo(client.date_fin)
+                    const cat = client.categories
+                    const w   = client.wellness_today
+                    const wAvg = w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
+                    return (
+                      <div key={client.id} onClick={() => navigate(`/client/${client.id}`)}
+                        style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{ position: 'relative' }}>
+                            {client.avatar_url
+                              ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
+                              : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+                            }
+                            {cat && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 11, height: 11, borderRadius: '50%', background: cat.couleur, border: '2px solid white' }} />}
+                          </div>
+                          <div>
+                            <p style={S.clientName}>{client.prenom} {client.nom}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
+                              {cat && <span style={{ fontSize: '0.7rem', color: cat.couleur, fontWeight: '700' }}>· {cat.nom}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {wAvg !== null && (
+                            <span title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}
+                              style={{ background: wAvg <= 2 ? '#fef2f2' : '#f0fdf4', color: wAvg <= 2 ? '#dc2626' : '#16a34a', padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: '700' }}>
+                              {wAvg <= 2 ? '⚠ ' : '✓ '}{wAvg.toFixed(1)}
+                            </span>
+                          )}
+                          {sub && (
+                            <span style={{ background: sub.bg, color: sub.color, padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: '700' }}>{sub.label}</span>
+                          )}
+                          <span style={{ ...S.badge, ...offreBadge(client.offre) }}>{offreLabel(client.offre)}</span>
+                          <span style={S.chevron}>›</span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═══ CALENDRIER ═══ */}
+          {tab === 'calendrier' && (
+            <div style={S.card}>
+              <div style={S.cardHead}><span style={S.sectionTitle}>Calendrier des groupes</span></div>
+              {groupes.length === 0 ? (
+                <p style={S.empty}>Crée un groupe pour accéder à son calendrier de saison.</p>
+              ) : (
+                groupes.map(g => (
+                  <div key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
+                    style={{ ...S.miniRow, borderLeft: `3px solid ${g.couleur}` }}>
+                    {g.logo_url
+                      ? <img src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                      : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🏆</div>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={S.miniName}>{g.nom}</p>
+                      <p style={S.miniSub}>Ouvrir le calendrier de saison</p>
+                    </div>
+                    <span style={{ ...S.pill, background: g.couleur + '18', color: g.couleur }}>📅</span>
                   </div>
                 ))
               )}
-              {sansWellness.length > 0 && (
-                <div style={{ ...S.miniRow, cursor: 'default' }}>
-                  <div style={S.miniIco}>🔕</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={S.miniName}>{sansWellness.length} sans wellness 3j+</p>
-                    <p style={S.miniSub}>{sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}</p>
-                  </div>
-                </div>
-              )}
             </div>
-
-            {/* Alertes */}
-            <div style={S.card}>
-              <div style={S.cardHead}>
-                <span style={S.sectionTitle}>Alertes</span>
-                {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>{totalAlertes}</span>}
-              </div>
-              {totalAlertes === 0 ? (
-                <p style={{ ...S.empty, color: '#16a34a' }}>✓ Tout va bien aujourd'hui.</p>
-              ) : (
-                <>
-                  {wellnessAlertes.map(c => (
-                    <div key={'w' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #ef4444' }}>
-                      <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas</p></div>
-                      <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ {c.avg.toFixed(1)}</span>
-                    </div>
-                  ))}
-                  {expirations.map(c => (
-                    <div key={'e' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #f59e0b' }}>
-                      <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire</p></div>
-                      <span style={{ ...S.pill, background: '#fffbeb', color: '#d97706' }}>⏳ {c.daysLeft === 0 ? "Auj." : `${c.daysLeft}j`}</span>
-                    </div>
-                  ))}
-                  {nouveaux.map(c => (
-                    <div key={'n' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #6366f1' }}>
-                      <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
-                      <span style={{ ...S.pill, background: '#ede9fe', color: '#6d28d9' }}>🆕</span>
-                    </div>
-                  ))}
-                  {progFinBientot.map(p => (
-                    <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, borderLeft: '3px solid #0ea5e9' }}>
-                      <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
-                      <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
-                      <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Notifications reçues ────────────────────────────────── */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <button onClick={() => { setShowNotifs(v => !v); if (!showNotifs) markAllRead() }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0, marginBottom: showNotifs ? '0.75rem' : 0 }}>
-          <p style={S.sectionTitle}>Notifications</p>
-          {unread > 0 && !showNotifs && (
-            <span style={{ background: '#e4f816', color: '#333', borderRadius: 999, fontSize: '0.65rem', fontWeight: '800', padding: '1px 7px' }}>{unread}</span>
           )}
-          <span style={{ color: '#d1d5db', fontSize: '1rem', transform: showNotifs ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-        </button>
-        {showNotifs && (
-          <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            {notifs.length === 0 && (
-              <div style={{ padding: '1.25rem', color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification</div>
-            )}
-            {notifs.slice(0, 30).map(n => (
-              <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/') && !n.lien.startsWith('/client/')) navigate(n.lien) }}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem 1.1rem', borderBottom: '1px solid #f3f4f6', background: n.lu ? 'white' : '#fafff0', cursor: n.lien && !n.lien.startsWith('/client/') ? 'pointer' : 'default' }}>
-                <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.titre}</p>
-                  {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
-                </div>
-                <span style={{ fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
-                {!n.lu && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* ── Bilan de la semaine ─────────────────────────────────── */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <button onClick={() => setShowBilan(v => !v)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0, marginBottom: showBilan ? '0.75rem' : 0 }}>
-          <p style={S.sectionTitle}>Bilan de la semaine</p>
-          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
-            {new Date(wStart + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {new Date(wEnd + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-          </span>
-          <span style={{ color: '#d1d5db', fontSize: '1rem', transform: showBilan ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-        </button>
-        {showBilan && (
-          <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            {/* En-tête colonnes */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px', gap: '0.5rem', padding: '0.5rem 1.1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-              {['Client', 'Wellness moy.', 'Séances', 'Statut'].map(h => (
-                <span key={h} style={{ fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</span>
-              ))}
-            </div>
-            {bilanRows.map((c, i) => {
-              const avg = c.wellness_week_avg
-              const entriesCount = c.wellness_week?.length || 0
-              const inactif = entriesCount === 0 && c.eventsCount === 0
-              const wColor = avg === null ? '#9ca3af' : avg <= 2 ? '#dc2626' : avg <= 3 ? '#d97706' : '#16a34a'
-              const av = getAvatar(c.prenom, c.nom)
-              return (
-                <div key={c.id} onClick={() => navigate(`/client/${c.id}`)}
-                  style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px', gap: '0.5rem', alignItems: 'center', padding: '0.65rem 1.1rem', borderTop: i > 0 ? '1px solid #f9fafb' : 'none', cursor: 'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  {/* Nom */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    {c.avatar_url
-                      ? <img src={c.avatar_url} alt={c.prenom} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
-                    }
-                    <span style={{ fontWeight: '600', fontSize: '0.88rem', color: '#333333' }}>{c.prenom} {c.nom}</span>
-                  </div>
-                  {/* Wellness moy */}
-                  <div>
-                    {avg !== null ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <div style={{ flex: 1, height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
-                          <div style={{ width: `${(avg / 4) * 100}%`, height: '100%', background: wColor, borderRadius: 99 }} />
+          {/* ═══ GROUPES ═══ */}
+          {tab === 'groupes' && (
+            <div>
+              {groupes.length > 0 && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {groupes.map(g => (
+                      <div key={g.id}
+                        onClick={() => navigate(`/groupe/${g.id}`)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          {g.logo_url
+                            ? <img src={g.logo_url} alt={g.nom} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                            : <div style={{ width: 32, height: 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
+                          }
+                          <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#1a1a1a' }}>{g.nom}</span>
                         </div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: wColor, minWidth: 28 }}>{avg.toFixed(1)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
+                            title="Ouvrir le calendrier du groupe"
+                            style={{ background: g.couleur + '14', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 8, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' }}>
+                            📅 Calendrier
+                          </button>
+                          <span style={S.chevron}>›</span>
+                        </div>
                       </div>
-                    ) : (
-                      <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>
-                    )}
-                    {entriesCount > 0 && (
-                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>{entriesCount} bilan{entriesCount > 1 ? 's' : ''}</span>
-                    )}
+                    ))}
                   </div>
-                  {/* Séances */}
-                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: c.eventsCount > 0 ? '#333333' : '#d1d5db' }}>
-                    {c.eventsCount > 0 ? c.eventsCount : '—'}
-                  </span>
-                  {/* Statut */}
-                  {inactif ? (
-                    <span style={{ background: '#f3f4f6', color: '#9ca3af', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', whiteSpace: 'nowrap' }}>Inactif</span>
-                  ) : avg !== null && avg <= 2 ? (
-                    <span style={{ background: '#fef2f2', color: '#dc2626', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', whiteSpace: 'nowrap' }}>⚠ Bas</span>
-                  ) : (
-                    <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '0.2rem 0.55rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ OK</span>
-                  )}
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ── Planning de la semaine (collapsible) ────────────────── */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <button onClick={() => setShowWeek(v => !v)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0, marginBottom: showWeek ? '0.75rem' : 0 }}>
-          <p style={S.sectionTitle}>Cette semaine</p>
-          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>{weekEvents.length} événement{weekEvents.length !== 1 ? 's' : ''}</span>
-          <span style={{ color: '#d1d5db', fontSize: '1rem', transform: showWeek ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-        </button>
-        {showWeek && (
-          weekEvents.length === 0 ? (
-            <div style={{ background: 'white', borderRadius: 12, padding: '1rem 1.25rem', color: '#9ca3af', fontSize: '0.875rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-              Aucun événement cette semaine.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {weekEvents.map(ev => {
-                const d = new Date(ev.date + 'T00:00:00')
-                const isToday = ev.date === today
-                const isPast  = ev.date < today
-                return (
-                  <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)}
-                    style={{ ...S.eventRow, background: isToday ? '#333333' : 'white', opacity: isPast && !isToday ? 0.55 : 1 }}>
-                    <div style={{ ...S.dayBadge, background: isToday ? 'rgba(228,248,22,0.15)' : '#f3f4f6', color: isToday ? '#e4f816' : '#6b7280' }}>
-                      <span style={{ fontSize: '0.55rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
-                      <span style={{ fontSize: '0.95rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: '700', fontSize: '0.88rem', color: isToday ? 'white' : '#333333', margin: '0 0 0.1rem' }}>{ev.titre}</p>
-                      <p style={{ fontSize: '0.72rem', color: isToday ? 'rgba(255,255,255,0.55)' : '#9ca3af', margin: 0 }}>{ev.clients?.prenom} {ev.clients?.nom}</p>
-                    </div>
-                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#e4f816', background: 'rgba(228,248,22,0.15)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
-                    <span style={{ color: isToday ? 'rgba(255,255,255,0.3)' : '#d1d5db', fontSize: '1.25rem' }}>›</span>
-                  </div>
-                )
-              })}
-            </div>
-          )
-        )}
-      </div>
-
-      {/* ── Groupes ─────────────────────────────────────────────── */}
-      {groupes.length > 0 && (
-        <div id="sec-groupes" style={{ marginBottom: '1.25rem', scrollMarginTop: '80px' }}>
-          <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-            {groupes.map(g => (
-              <div key={g.id}
-                onClick={() => navigate(`/groupe/${g.id}`)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  {g.logo_url
-                    ? <img src={g.logo_url} alt={g.nom} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-                    : <div style={{ width: 32, height: 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
-                  }
-                  <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#1a1a1a' }}>{g.nom}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <button onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
-                    title="Ouvrir le calendrier du groupe"
-                    style={{ background: g.couleur + '14', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 8, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' }}>
-                    📅 Calendrier
-                  </button>
-                  <span style={S.chevron}>›</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
 
       {/* Bouton nouveau groupe */}
       <div style={{ marginBottom: '1.25rem' }}>
@@ -734,118 +844,10 @@ export default function Dashboard() {
           </button>
         )}
       </div>
-
-      {/* ── Clients ─────────────────────────────────────────────── */}
-      <div id="sec-clients" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', scrollMarginTop: '80px' }}>
-        <p style={S.sectionTitle}>Clients individuels</p>
-        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsIndividuels.length} client{clientsIndividuels.length !== 1 ? 's' : ''}</span>
-      </div>
-
-      {/* Recherche */}
-      <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
-        <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>🔍</span>
-        <input type="text" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '0.65rem 0.875rem 0.65rem 2.4rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', background: 'white' }}
-        />
-      </div>
-
-      {/* Filtres catégories */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        <button onClick={() => setActiveCat(null)}
-          style={{ ...S.catTab, background: activeCat === null ? '#333333' : 'white', color: activeCat === null ? '#e4f816' : '#6b7280', border: activeCat === null ? 'none' : '1.5px solid #e5e7eb' }}>
-          Tous
-        </button>
-        {categories.map(cat => (
-          <button key={cat.id} onClick={() => setActiveCat(activeCat === cat.id ? null : cat.id)}
-            style={{ ...S.catTab, background: activeCat === cat.id ? cat.couleur : 'white', color: activeCat === cat.id ? 'white' : '#374151', border: activeCat === cat.id ? 'none' : `1.5px solid ${cat.couleur}`, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: activeCat === cat.id ? 'rgba(255,255,255,0.7)' : cat.couleur, flexShrink: 0 }} />
-            {cat.nom}
-            <span onClick={e => { e.stopPropagation(); supprimerCategorie(cat.id) }} style={{ opacity: 0.5, fontSize: '0.7rem', cursor: 'pointer', marginLeft: '0.1rem' }}>✕</span>
-          </button>
-        ))}
-        {showCatForm ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <input autoFocus value={newCatNom} onChange={e => setNewCatNom(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && ajouterCategorie()}
-              placeholder="Nom..." style={{ padding: '0.35rem 0.65rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', width: 110 }} />
-            <div style={{ display: 'flex', gap: '0.25rem' }}>
-              {PALETTE_CATS.map(c => (
-                <button key={c} onClick={() => setNewCatColor(c)}
-                  style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newCatColor === c ? '2.5px solid #333' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
-              ))}
             </div>
-            <button onClick={ajouterCategorie} style={{ ...S.btnPrimary, padding: '0.3rem 0.65rem', fontSize: '0.78rem', borderRadius: '8px' }}>OK</button>
-            <button onClick={() => setShowCatForm(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
-          </div>
-        ) : (
-          <button onClick={() => setShowCatForm(true)} style={{ ...S.catTab, background: 'white', color: '#9ca3af', border: '1.5px dashed #d1d5db' }}>+ Catégorie</button>
-        )}
-      </div>
+          )}
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        {[
-          { label: 'Individuels', value: clientsIndividuels.length },
-          { label: 'Essai', value: nbEssai },
-          { label: 'Prépa physique', value: nbPrepa },
-          { label: 'Coaching', value: nbCoach },
-        ].map(stat => (
-          <div key={stat.label} style={S.statCard}>
-            <p style={S.statLabel}>{stat.label}</p>
-            <p style={S.statValue}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Liste */}
-      <div style={S.listCard}>
-        {filtered.length === 0 ? (
-          <p style={{ color: '#9ca3af', padding: '2rem', textAlign: 'center', fontSize: '0.875rem' }}>
-            {search || activeCat ? 'Aucun client trouvé.' : 'Aucun client pour l\'instant.'}
-          </p>
-        ) : (
-          filtered.map((client, i) => {
-            const av  = getAvatar(client.prenom, client.nom)
-            const sub = getSubInfo(client.date_fin)
-            const cat = client.categories
-            const w   = client.wellness_today
-            const wAvg = w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
-            return (
-              <div key={client.id} onClick={() => navigate(`/client/${client.id}`)}
-                style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ position: 'relative' }}>
-                    {client.avatar_url
-                      ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
-                      : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
-                    }
-                    {cat && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 11, height: 11, borderRadius: '50%', background: cat.couleur, border: '2px solid white' }} />}
-                  </div>
-                  <div>
-                    <p style={S.clientName}>{client.prenom} {client.nom}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
-                      {cat && <span style={{ fontSize: '0.7rem', color: cat.couleur, fontWeight: '700' }}>· {cat.nom}</span>}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {wAvg !== null && (
-                    <span title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}
-                      style={{ background: wAvg <= 2 ? '#fef2f2' : '#f0fdf4', color: wAvg <= 2 ? '#dc2626' : '#16a34a', padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: '700' }}>
-                      {wAvg <= 2 ? '⚠ ' : '✓ '}{wAvg.toFixed(1)}
-                    </span>
-                  )}
-                  {sub && (
-                    <span style={{ background: sub.bg, color: sub.color, padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: '700' }}>{sub.label}</span>
-                  )}
-                  <span style={{ ...S.badge, ...offreBadge(client.offre) }}>{offreLabel(client.offre)}</span>
-                  <span style={S.chevron}>›</span>
-                </div>
-              </div>
-            )
-          })
-        )}
+        </div>
       </div>
 
       {/* Modal de recadrage logo groupe */}
@@ -874,8 +876,10 @@ const S = {
   sumStatL:    { fontSize: '0.78rem', color: 'rgba(255,255,255,0.65)' },
   sumStatV:    { fontSize: '1.1rem', fontWeight: '900', color: '#e4f816' },
   navCard:     { background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.1rem' },
-  navItem:     { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.84rem', fontWeight: '600', color: '#5b626c', cursor: 'pointer' },
+  navItem:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.84rem', fontWeight: '600', color: '#5b626c', cursor: 'pointer' },
   navItemOn:   { background: '#333333', color: '#fff' },
+  navBadge:    { background: '#e4f816', color: '#333333', borderRadius: 999, fontSize: '0.62rem', fontWeight: '800', padding: '1px 7px' },
+  panel:       { minWidth: 0 },
   bento:       { display: 'flex', flexDirection: 'column', gap: '0.85rem', minWidth: 0 },
   kpis:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' },
   kpiDark:     { background: 'linear-gradient(135deg, #333333, #1f2937)', borderRadius: 16, padding: '1rem 1.15rem', color: '#fff' },

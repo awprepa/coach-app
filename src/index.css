@@ -18,6 +18,13 @@
   --header-text:    #ffffff;   /* texte sur le dégradé du header */
 }
 
+/* Réserve en permanence la gouttière de scrollbar pour éviter que la page
+   (et la barre du haut) « saute » quand le contenu devient scrollable ou non. */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

@@ -71,6 +71,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [pop, setPop] = useState(null)
   // Presse-papier : { source, blocs }  (source = évènement copié)
   const [clip, setClip] = useState(null)
+  // Glisser-déposer : évènement en cours de déplacement + jour survolé
+  const [dragEvt, setDragEvt] = useState(null)
+  const [dragOver, setDragOver] = useState(null) // dateISO survolé
 
   const groupColor = groupe?.couleur || '#2f6f76'
   const months = buildMonths(startYear)
@@ -312,6 +315,15 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     await supabase.from('groupe_seance_exercices').delete().eq('id', id)
   }
 
+  // ── Glisser-déposer : déplacer un évènement vers un autre jour ───────────────
+  async function moveEvent(evt, newDateISO) {
+    if (!evt || evt.date === newDateISO) return
+    // maj optimiste
+    setEvenements(prev => prev.map(e => e.id === evt.id ? { ...e, date: newDateISO } : e))
+    const { error } = await supabase.from('groupe_evenements').update({ date: newDateISO }).eq('id', evt.id)
+    if (error) { alert('Erreur : ' + error.message); loadSeason() }
+  }
+
   // ── Menu contextuel sur une séance (clic droit) ─────────────────────────────
   function openCtx(e, dateISO, evt) {
     e.preventDefault()
@@ -352,28 +364,34 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         {evs.map(e => {
           const T = TYPES[e.type] || TYPES.autre
           const onCtx = ev => openCtx(ev, e.date, e)
+          const dragProps = {
+            draggable: true,
+            onDragStart: ev => { ev.stopPropagation(); setDragEvt(e); ev.dataTransfer.effectAllowed = 'move' },
+            onDragEnd: () => { setDragEvt(null); setDragOver(null) },
+          }
+          const dragOpacity = dragEvt?.id === e.id ? 0.4 : 1
           if (e.type === 'match') {
             return (
-              <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
-                style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+              <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
+                style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
                 {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
               </div>
             )
           }
           if (e.type === 'recup') {
-            return <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'pointer' }} />
+            return <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'grab', opacity: dragOpacity }} />
           }
           if (e.type === 'test') {
-            return <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap' }}>{e.titre || T.label}</div>
+            return <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
           const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
           return (
-            <div key={e.id} onClick={() => openEdit(e)} onContextMenu={onCtx} title={T.label}
+            <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title={T.label}
               style={{
-                fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'pointer',
-                overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'grab',
+                overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
                 color: neutral ? '#5b626c' : '#3a4049',
                 background: neutral ? '#f0f2f5' : `color-mix(in srgb, ${T.color} 9%, #fff)`,
                 borderLeft: `3px solid ${neutral ? '#c4ccd4' : `color-mix(in srgb, ${T.color} 70%, #fff)`}`,
@@ -458,7 +476,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                         <div key={d}>
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
                           <div onDoubleClick={e => openPop(e, dISO)} onContextMenu={e => openPop(e, dISO)}
-                            style={{ ...S.drow, ...(vac.in ? S.drowVac : null), ...(isToday ? S.drowToday : null) }}>
+                            onDragOver={dragEvt ? (e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== dISO) setDragOver(dISO) }) : undefined}
+                            onDrop={dragEvt ? (e => { e.preventDefault(); moveEvent(dragEvt, dISO); setDragEvt(null); setDragOver(null) }) : undefined}
+                            style={{ ...S.drow, ...(vac.in ? S.drowVac : null), ...(isToday ? S.drowToday : null), ...(dragOver === dISO ? S.drowDrop : null) }}>
                             <div style={S.dnum}>{d}</div>
                             <div style={S.ddow}>{DOW[dow]}</div>
                             {renderCell(M.y, M.m, d)}
@@ -472,7 +492,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             </div>
           </div>
           <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 10 }}>
-            Double-clic ou clic droit sur un jour pour ajouter · clic sur une séance pour l'éditer · clic droit sur une séance pour copier / coller.
+            Double-clic ou clic droit sur un jour pour ajouter · glisser-déposer une séance pour la changer de jour · clic droit sur une séance pour copier / coller.
             {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · 📋 « {clipLabel(clip.source)} » dans le presse-papier</span>}
           </p>
         </>
@@ -756,6 +776,7 @@ const S = {
   drow: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20 },
   drowVac: { background: '#fdf8ea' },
   drowToday: { boxShadow: 'inset 0 0 0 2px #333333', position: 'relative', zIndex: 2 },
+  drowDrop: { background: '#eaf7ec', boxShadow: 'inset 0 0 0 2px #34c759', position: 'relative', zIndex: 3 },
   blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
   dnum: { width: 17, fontSize: '0.56rem', color: '#5b626c', textAlign: 'center', fontWeight: 700, lineHeight: '20px', borderRight: '1px solid #eef0f3', flexShrink: 0 },
   ddow: { width: 13, fontSize: '0.52rem', color: '#9aa1ac', textAlign: 'center', lineHeight: '20px', textTransform: 'uppercase', flexShrink: 0 },
