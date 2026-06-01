@@ -1055,7 +1055,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
                   {/* Exercices */}
                   {bloc.exos?.length > 0 && (
-                    <div style={{ height: h, overflowY: 'auto', padding: '6px 10px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <div style={{ minHeight: h, padding: '5px 8px 6px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {hasGroups ? (
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'start' }}>
                           {groupKeys.map(g => (
@@ -1063,9 +1063,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                               {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: bc + 'bb', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
                               <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: bc + '08' }}>
                                 {byGroup[g].map(exo => (
-                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${bc}30` }}>
-                                    <div style={{ fontSize: '.73rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.3 }}>{exo.nom}</div>
-                                    {exo.prescription && <div style={{ fontSize: '.67rem', color: bc, fontWeight: 800, marginTop: 3 }}>{exo.prescription}</div>}
+                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 5, padding: '3px 7px', border: `1px solid ${bc}25` }}>
+                                    <div style={{ fontSize: '.67rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.25 }}>{exo.nom}</div>
+                                    {exo.prescription && <div style={{ fontSize: '.62rem', color: bc, fontWeight: 800, marginTop: 1 }}>{exo.prescription}</div>}
                                   </div>
                                 ))}
                               </div>
@@ -1075,9 +1075,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {bloc.exos.map(exo => (
-                            <div key={exo.id} style={{ background: '#fff', borderRadius: 8, padding: '8px 11px', border: `1px solid ${bc}30`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#1a1a1a', flex: 1, lineHeight: 1.35 }}>{exo.nom}</span>
-                              {exo.prescription && <span style={{ fontSize: '.68rem', color: '#fff', fontWeight: 900, flexShrink: 0, background: bc, borderRadius: 5, padding: '2px 7px' }}>{exo.prescription}</span>}
+                            <div key={exo.id} style={{ background: '#fff', borderRadius: 6, padding: '4px 8px', border: `1px solid ${bc}25`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', flex: 1, lineHeight: 1.25 }}>{exo.nom}</span>
+                              {exo.prescription && <span style={{ fontSize: '.62rem', color: '#fff', fontWeight: 800, flexShrink: 0, background: bc, borderRadius: 4, padding: '1px 5px' }}>{exo.prescription}</span>}
                             </div>
                           ))}
                         </div>
@@ -1086,7 +1086,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                   )}
                   {!bloc.exos?.length && (
                     <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '.75rem', fontWeight: 800, color: bc, opacity: 0.55 }}>{bloc.nom}</span>
+                      <span style={{ fontSize: '.72rem', fontWeight: 700, color: bc, opacity: 0.5, fontStyle: 'italic' }}>{bloc.nom}</span>
                     </div>
                   )}
                 </div>
