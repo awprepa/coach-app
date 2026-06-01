@@ -8,6 +8,18 @@ import { useNotifications } from '../hooks/useNotifications'
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
+// Icônes SVG du menu (line-icons faits maison, héritent de currentColor)
+const svgIco = paths => (
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>
+)
+const NAV_ICONS = {
+  overview:   svgIco(<><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></>),
+  clients:    svgIco(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></>),
+  notifs:     svgIco(<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></>),
+  groupes:    svgIco(<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>),
+  calendrier: svgIco(<><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></>),
+}
+
 const OFFRES = {
   essai:               { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
   preparation_physique:{ label: 'Prépa physique', bg: '#eff6ff', color: '#1d4ed8' },
@@ -346,11 +358,11 @@ export default function Dashboard() {
   const nbCoach = clientsIndividuels.filter(c => c.offre === 'coaching').length
 
   const TABS = [
-    { k: 'overview',   label: "Vue d'ensemble", icon: '📊' },
-    { k: 'clients',    label: 'Clients',        icon: '👥' },
-    { k: 'notifs',     label: 'Notifications',  icon: '🔔', badge: unread },
-    { k: 'groupes',    label: 'Groupes',        icon: '🏆' },
-    { k: 'calendrier', label: 'Calendrier',     icon: '📅' },
+    { k: 'overview',   label: "Vue d'ensemble", icon: NAV_ICONS.overview },
+    { k: 'clients',    label: 'Clients',        icon: NAV_ICONS.clients },
+    { k: 'notifs',     label: 'Notifications',  icon: NAV_ICONS.notifs, badge: unread },
+    { k: 'groupes',    label: 'Groupes',        icon: NAV_ICONS.groupes },
+    { k: 'calendrier', label: 'Calendrier',     icon: NAV_ICONS.calendrier },
   ]
   function selectTab(k) {
     setTab(k)
@@ -377,7 +389,10 @@ export default function Dashboard() {
             {TABS.map(t => (
               <button key={t.k} onClick={() => selectTab(t.k)}
                 style={{ ...S.navItem, ...(tab === t.k ? S.navItemOn : null) }}>
-                <span>{t.icon} {t.label}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                  <span style={{ ...S.navIco, color: tab === t.k ? '#e4f816' : '#9aa1ac' }}>{t.icon}</span>
+                  {t.label}
+                </span>
                 {t.badge > 0 && <span style={{ ...S.navBadge, ...(tab === t.k ? { background: '#e4f816', color: '#333333' } : null) }}>{t.badge}</span>}
               </button>
             ))}
@@ -963,6 +978,7 @@ const S = {
   navItem:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.84rem', fontWeight: '600', color: '#5b626c', cursor: 'pointer' },
   navItemOn:   { background: '#333333', color: '#fff' },
   navBadge:    { background: '#e4f816', color: '#333333', borderRadius: 999, fontSize: '0.62rem', fontWeight: '800', padding: '1px 7px' },
+  navIco:      { display: 'flex', alignItems: 'center', flexShrink: 0 },
   panel:       { minWidth: 0 },
   bento:       { display: 'flex', flexDirection: 'column', gap: '0.85rem', minWidth: 0 },
   kpis:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' },

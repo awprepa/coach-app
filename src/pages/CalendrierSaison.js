@@ -237,7 +237,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   }
   async function deleteEvent() {
     if (!panel?.evt) return
-    if (!window.confirm('Supprimer cet évènement ?')) return
     setSaving(true)
     await supabase.from('groupe_evenements').delete().eq('id', panel.evt.id)
     setSaving(false)
@@ -245,7 +244,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     closePanel()
   }
   async function deleteEventDirect(e) {
-    if (!window.confirm('Supprimer cet évènement ?')) return
     await supabase.from('groupe_evenements').delete().eq('id', e.id)
     await loadSeason()
   }
