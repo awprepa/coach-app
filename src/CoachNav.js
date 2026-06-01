@@ -60,6 +60,7 @@ export default function CoachNav() {
 
 const CSS = `
 .coachnav{
+  position:sticky;top:0;z-index:100;
   background:#fff;height:62px;display:flex;align-items:center;
   padding:0 22px;gap:22px;border-bottom:1px solid #e6e8ec;
   box-shadow:0 1px 0 rgba(0,0,0,0.02);
