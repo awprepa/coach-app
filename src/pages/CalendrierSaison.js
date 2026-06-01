@@ -727,57 +727,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         </>
       )}
 
-      {/* ── Barre d'action de sélection (remplace le menu flottant) ── */}
-      {sel && !selDrag && (
-        <div style={S.selBar}>
-          <span style={S.selBarLabel}>
-            {formatPopDate([sel.start, sel.end].sort()[0])}
-            {sel.start !== sel.end && <> → {formatPopDate([sel.start, sel.end].sort()[1])}</>}
-          </span>
-
-          {selMode === 'main' && (
-            <>
-              <button style={S.selBarBtn} onClick={() => setSelMode('period')}>Ajouter une période</button>
-              <button style={S.selBarBtn} onClick={copyPeriod}>
-                Copier ({evenements.filter(e => { const [s,en]=[sel.start,sel.end].sort(); return e.date>=s&&e.date<=en }).length} évèn.)
-              </button>
-              {periodClip && (
-                <button style={{ ...S.selBarBtn, background: '#059669', color: '#fff', border: 'none' }}
-                  onClick={() => { pastePeriod([sel.start, sel.end].sort()[0]); setSel(null) }}>
-                  Coller ({periodClip.events.length} évèn.)
-                </button>
-              )}
-              <button style={S.selBarClose} onClick={() => setSel(null)}>×</button>
-            </>
-          )}
-
-          {selMode === 'period' && (
-            <>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {[{ v: 'vacances', l: 'Vacances' }, { v: 'phase', l: 'Phase' }].map(({ v, l }) => (
-                  <button key={v} onClick={() => setSelForm(f => ({ ...f, type: v, couleur: v === 'vacances' ? '#f4e8c4' : '#c7d2fe' }))}
-                    style={{ ...S.selBarBtn, ...(selForm.type === v ? { background: '#333', color: '#fff', border: '1px solid #333' } : null) }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-              <input
-                autoFocus value={selForm.label}
-                onChange={e => setSelForm(f => ({ ...f, label: e.target.value }))}
-                placeholder={selForm.type === 'vacances' ? 'ex. Vacances Noël' : 'ex. Phase de reprise'}
-                style={S.selBarInput}
-                onKeyDown={e => { if (e.key === 'Enter') addPeriodFromSel() }}
-              />
-              <input type="color" value={selForm.couleur} onChange={e => setSelForm(f => ({ ...f, couleur: e.target.value }))}
-                style={{ width: 26, height: 26, border: '1px solid #e6e8ec', borderRadius: 5, cursor: 'pointer', padding: 1, flexShrink: 0 }} />
-              <button style={{ ...S.selBarBtn, background: '#333', color: '#e4f816', border: 'none' }} onClick={addPeriodFromSel}>Créer</button>
-              <button style={S.selBarBtn} onClick={() => setSelMode('main')}>Retour</button>
-              <button style={S.selBarClose} onClick={() => setSel(null)}>×</button>
-            </>
-          )}
-        </div>
-      )}
-
       {/* ── Menu contextuel (clic droit sur séance) ── */}
       {ctx && ctx.evt && (
         <div style={{ ...S.ctxMenu, left: ctx.x, top: ctx.y }} onClick={e => e.stopPropagation()}>
