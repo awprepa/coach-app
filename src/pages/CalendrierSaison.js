@@ -920,10 +920,14 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   function evtColor(type) {
     if (type === 'match') return groupColor
-    if (type === 'entrainement') return '#2563eb'
-    if (type === 'muscu') return '#7c3aed'
-    return '#64748b'
+    if (type === 'entrainement') return '#6b94a3'
+    if (type === 'muscu') return '#b08769'
+    return '#9aa1ac'
   }
+
+  // Palette de couleurs pour les blocs à l'intérieur d'une séance
+  const BLOC_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16']
+  function blocColor(idx) { return BLOC_COLORS[idx % BLOC_COLORS.length] }
 
   function chargeLevel(charge) {
     if (!charge) return null
@@ -1018,6 +1022,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         {blocs.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {blocs.map((bloc, idx) => {
+              const bc = blocColor(idx)
               const mins = parseDurMin(bloc.duree)
               const minH = mins ? Math.max(44, Math.min(500, Math.round(mins * 5))) : 50
 
@@ -1030,27 +1035,27 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
 
               return (
-                <div key={bloc.id} style={{ borderTop: idx > 0 ? `1px solid ${color}20` : 'none' }}>
+                <div key={bloc.id} style={{ borderTop: idx > 0 ? `1px solid #e6e8ec` : 'none' }}>
                   {/* En-tête phase */}
-                  <div style={{ padding: '7px 12px', background: color + '20', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 22, height: 22, borderRadius: '50%', background: color, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${color}55` }}>{idx + 1}</span>
+                  <div style={{ padding: '7px 12px', background: bc + '18', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 22, height: 22, borderRadius: '50%', background: bc, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${bc}55` }}>{idx + 1}</span>
                     <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
-                    {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: color, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
+                    {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
 
                   {/* Exercices */}
                   {bloc.exos?.length > 0 && (
-                    <div style={{ minHeight: minH, padding: '8px 10px 10px', background: color + '08', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
+                    <div style={{ minHeight: minH, padding: '8px 10px 10px', background: bc + '08', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                       {hasGroups ? (
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'start' }}>
                           {groupKeys.map(g => (
-                            <div key={g} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${color}30` }}>
-                              {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: color + 'bb', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
-                              <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: color + '08' }}>
+                            <div key={g} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${bc}30` }}>
+                              {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: bc + 'bb', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
+                              <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: bc + '08' }}>
                                 {byGroup[g].map(exo => (
-                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${color}30` }}>
+                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${bc}30` }}>
                                     <div style={{ fontSize: '.73rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.3 }}>{exo.nom}</div>
-                                    {exo.prescription && <div style={{ fontSize: '.67rem', color: color, fontWeight: 800, marginTop: 3 }}>{exo.prescription}</div>}
+                                    {exo.prescription && <div style={{ fontSize: '.67rem', color: bc, fontWeight: 800, marginTop: 3 }}>{exo.prescription}</div>}
                                   </div>
                                 ))}
                               </div>
@@ -1060,16 +1065,16 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {bloc.exos.map(exo => (
-                            <div key={exo.id} style={{ background: '#fff', borderRadius: 8, padding: '8px 11px', border: `1px solid ${color}30`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <div key={exo.id} style={{ background: '#fff', borderRadius: 8, padding: '8px 11px', border: `1px solid ${bc}30`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                               <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#1a1a1a', flex: 1, lineHeight: 1.35 }}>{exo.nom}</span>
-                              {exo.prescription && <span style={{ fontSize: '.68rem', color: '#fff', fontWeight: 900, flexShrink: 0, background: color, borderRadius: 5, padding: '2px 7px' }}>{exo.prescription}</span>}
+                              {exo.prescription && <span style={{ fontSize: '.68rem', color: '#fff', fontWeight: 900, flexShrink: 0, background: bc, borderRadius: 5, padding: '2px 7px' }}>{exo.prescription}</span>}
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
                   )}
-                  {!bloc.exos?.length && mins && <div style={{ minHeight: minH, background: color + '08' }} />}
+                  {!bloc.exos?.length && mins && <div style={{ minHeight: minH, background: bc + '08' }} />}
                 </div>
               )
             })}
