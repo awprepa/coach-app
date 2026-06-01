@@ -1026,15 +1026,14 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(() => {
               const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
-              const PX_PER_MIN = 2
-              const MAX_TOTAL = 160
+              const PX_PER_MIN = 2.5
+              const MAX_TOTAL = 220
               const rawH = totalMins * PX_PER_MIN
               const scale = rawH > MAX_TOTAL ? MAX_TOTAL / rawH : 1
               return blocs.map((bloc, idx) => {
               const bc = blocColor(idx)
               const mins = parseDurMin(bloc.duree)
-              // height fixe (pas minHeight) pour que la proportion soit toujours visible
-              const h = mins ? Math.max(22, Math.round(mins * PX_PER_MIN * scale)) : 36
+              const h = mins ? Math.max(20, Math.round(mins * PX_PER_MIN * scale)) : 40
 
               const byGroup = {}
               for (const exo of (bloc.exos || [])) {
@@ -1055,7 +1054,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
                   {/* Exercices */}
                   {bloc.exos?.length > 0 && (
-                    <div style={{ minHeight: h, padding: '5px 8px 6px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    h < 40
+                    /* Bloc trop court → juste le nom centré, pas d'exercices */
+                    ? <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '.68rem', fontWeight: 700, color: bc, opacity: 0.5, fontStyle: 'italic' }}>{bloc.nom}</span>
+                      </div>
+                    : <div style={{ height: h, overflow: 'hidden', padding: '5px 8px 6px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {hasGroups ? (
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'stretch' }}>
                           {groupKeys.map(g => (
