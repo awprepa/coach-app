@@ -1023,7 +1023,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
         {/* Phases (blocs) */}
         {blocs.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(() => {
               const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
               const PX_PER_MIN = 2
@@ -1045,7 +1045,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
 
               return (
-                <div key={bloc.id} style={{ borderTop: idx > 0 ? `1px solid #e6e8ec` : 'none' }}>
+                <div key={bloc.id} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid #e6e8ec' }}>
                   {/* En-tête phase */}
                   <div style={{ padding: '7px 12px', background: bc + '18', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 22, height: 22, borderRadius: '50%', background: bc, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${bc}55` }}>{idx + 1}</span>
@@ -1189,7 +1189,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         {activeDays.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa1ac', fontSize: '.9rem', fontStyle: 'italic' }}>Aucune séance cette semaine</div>
         ) : (
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4', alignItems: 'start' }}>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4', alignItems: 'stretch' }}>
             {activeDays.map(day => <DayColumn key={day.date} day={day} />)}
           </div>
         )}
