@@ -87,6 +87,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [panel, setPanel] = useState(null)
   const [saving, setSaving] = useState(false)
 
+  // Zoom semaine : { startISO, wkNum, days, blocsMap }
+  const [weekZoom, setWeekZoom] = useState(null)
+
   // Menu contextuel sur une séance (clic droit) : { x, y, dateISO, evt }
   const [ctx, setCtx] = useState(null)
   // Bulle de création sur un jour : { x, y, form }
@@ -263,6 +266,44 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     const { data } = await supabase.from('groupe_seance_blocs')
       .select('*, groupe_seance_exercices(*)').eq('evenement_id', evtId).order('ordre')
     return (data || []).map(b => ({ ...b, exos: (b.groupe_seance_exercices || []).sort((a, z) => a.ordre - z.ordre) }))
+  }
+
+  // ── Zoom semaine ─────────────────────────────────────────────────────────────
+  async function openWeekZoom(dateISO) {
+    const [y, m, d] = dateISO.split('-').map(Number)
+    const date = new Date(Date.UTC(y, m - 1, d))
+    const dow = (date.getUTCDay() + 6) % 7          // 0 = lundi
+    const monday = new Date(date)
+    monday.setUTCDate(date.getUTCDate() - dow)
+
+    const days = []
+    for (let i = 0; i < 7; i++) {
+      const cur = new Date(monday)
+      cur.setUTCDate(monday.getUTCDate() + i)
+      const dISO = cur.toISOString().slice(0, 10)
+      const evs = evenements.filter(e => e.date === dISO)
+      days.push({ date: dISO, dow: i, events: evs })
+    }
+
+    // Charger les blocs de toutes les séances de la semaine
+    const blocsMap = {}
+    for (const day of days) {
+      for (const ev of day.events) {
+        if (HAS_BLOCS.includes(ev.type)) blocsMap[ev.id] = await loadBlocs(ev.id)
+      }
+    }
+
+    const startISO = monday.toISOString().slice(0, 10)
+    const [sy, sm, sd] = startISO.split('-').map(Number)
+    const wkNum = isoWeek(sy, sm - 1, sd)
+    setWeekZoom({ startISO, wkNum, days, blocsMap })
+  }
+
+  async function navigateWeekZoom(delta) {
+    if (!weekZoom) return
+    const cur = new Date(weekZoom.startISO + 'T00:00:00')
+    cur.setDate(cur.getDate() + delta * 7)
+    await openWeekZoom(cur.toISOString().slice(0, 10))
   }
   async function openEdit(e) {
     let blocs = []
@@ -683,7 +724,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                       const isPastDay = dISO < todayISO
                       return (
                         <div key={d} style={weekStart && d !== 1 ? S.weekSep : null}>
-                          {weekStart && <div style={{ ...S.weekTag, ...(isPastDay ? S.weekTagPast : null) }}>S{wkNum}</div>}
+                          {weekStart && (
+                        <div
+                          style={{ ...S.weekTag, ...(isPastDay ? S.weekTagPast : null), cursor: 'pointer' }}
+                          onClick={e => { e.stopPropagation(); openWeekZoom(dISO) }}
+                          title="Voir le détail de cette semaine"
+                        >S{wkNum}</div>
+                      )}
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
                           <div
                             onMouseDown={e => onDayMouseDown(e, dISO)}
@@ -809,6 +856,16 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       )}
 
       {/* ── Panneau ── */}
+      {/* ── Zoom semaine ── */}
+      {weekZoom && (
+        <WeekZoomModal
+          weekZoom={weekZoom}
+          groupe={groupe}
+          onClose={() => setWeekZoom(null)}
+          onNavigate={navigateWeekZoom}
+        />
+      )}
+
       {panel && <div style={S.scrim} onClick={closePanel} />}
       {panel && (
         <div style={S.panel}>
@@ -830,6 +887,223 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         </div>
       )}
     </div>
+  )
+}
+
+/* ── Zoom semaine (modal plein écran) ── */
+function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
+  const groupColor = groupe?.couleur || '#2f6f76'
+  const { wkNum, startISO, days, blocsMap } = weekZoom
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const DOW_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+  // Date range affichage
+  const endDate = new Date(startISO + 'T00:00:00'); endDate.setDate(endDate.getDate() + 6)
+  const [sy, sm, sd] = startISO.split('-').map(Number)
+  const [ey, em, ed] = endDate.toISOString().slice(0, 10).split('-').map(Number)
+  const fmtStart = new Date(sy, sm-1, sd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  const fmtEnd   = new Date(ey, em-1, ed).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  // Seulement les jours avec séances
+  const activeDays = days.filter(d => d.events.length > 0)
+  const allEvts = days.flatMap(d => d.events)
+  const nbMatch = allEvts.filter(e => e.type === 'match').length
+  const nbTrain = allEvts.filter(e => e.type === 'entrainement').length
+  const nbMuscu = allEvts.filter(e => e.type === 'muscu').length
+
+  // Fermer sur Échap
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+
+  function evtColor(type) {
+    if (type === 'match') return groupColor
+    if (type === 'entrainement') return '#6b94a3'
+    if (type === 'muscu') return '#b08769'
+    return '#9aa1ac'
+  }
+
+  function chargeLevel(charge) {
+    if (!charge) return null
+    const c = charge.toLowerCase()
+    if (c.includes('lég') || c.includes('faib') || c.includes('bass') || c.includes('repos')) return 'low'
+    if (c.includes('mod') || c.includes('moyen')) return 'medium'
+    if (c.includes('haut') || c.includes('fort') || c.includes('élev') || c.includes('elev')) return 'high'
+    return null
+  }
+  const INT_COLOR = { low: '#16a34a', medium: '#d97706', high: '#dc2626' }
+  const INT_LABEL = { low: 'Légère', medium: 'Modérée', high: 'Haute' }
+
+  function IntensityBar({ charge }) {
+    const lvl = chargeLevel(charge)
+    if (!lvl) return null
+    const c = INT_COLOR[lvl]
+    const filled = lvl === 'low' ? 1 : lvl === 'medium' ? 2 : 3
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px 5px' }}>
+        <span style={{ fontSize: '.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: c }}>{INT_LABEL[lvl]}</span>
+        <div style={{ display: 'flex', gap: 3 }}>
+          {[1,2,3].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: 2, background: i <= filled ? c : '#e5e7eb' }} />)}
+        </div>
+      </div>
+    )
+  }
+
+  function EventContent({ evt }) {
+    const color = evtColor(evt.type)
+    const blocs = blocsMap[evt.id] || []
+
+    if (evt.type === 'match') {
+      const mc = matchCatColor(evt.categorie, groupColor)
+      return (
+        <div style={{ background: `linear-gradient(135deg, ${mc}, ${mc}cc)`, borderRadius: 11, padding: '12px 13px', color: '#fff', textAlign: 'center', marginBottom: 2 }}>
+          {evt.categorie && <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .65, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Match · {evt.categorie}{evt.journee ? ` · ${evt.journee}` : ''}</div>}
+          <div style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1.15, marginBottom: 8 }}>{evt.adversaire ? `vs ${evt.adversaire}` : evt.titre || 'Match'}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
+            {evt.heure && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.heure}</span>}
+            {evt.domicile != null && <span style={{ background: '#e4f816', color: '#333', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.domicile ? 'Domicile' : 'Extérieur'}</span>}
+            {evt.lieu && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.lieu}</span>}
+          </div>
+        </div>
+      )
+    }
+
+    // Avec blocs
+    if (blocs.length > 0) {
+      return (
+        <>
+          {blocs.map(bloc => (
+            <div key={bloc.id} style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 5 }}>
+              <div style={{ padding: '6px 10px', background: color + '28', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <span style={{ fontSize: '.72rem', fontWeight: 800, color: color + 'ee', flex: 1 }}>{bloc.nom}</span>
+                {bloc.duree && <span style={{ fontSize: '.6rem', fontWeight: 700, background: color + '18', color: color, borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>{bloc.duree}</span>}
+              </div>
+              {bloc.exos?.length > 0 && (
+                <div style={{ padding: '5px 10px 7px', background: color + '0d', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {bloc.exos.map(exo => (
+                    <div key={exo.id} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 5 }} />
+                      <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#3a4049', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
+                      {exo.prescription && <span style={{ fontSize: '.6rem', color: '#7a8290', flexShrink: 0 }}>{exo.prescription}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )
+    }
+
+    // Sans blocs : info de base
+    const label = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+      : evt.type === 'muscu' ? (evt.titre || 'Musculation')
+      : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+    return (
+      <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 2 }}>
+        <div style={{ padding: '8px 10px', background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '.78rem', fontWeight: 800, color: color + 'ee' }}>{label}</span>
+          {evt.duree_min && <span style={{ fontSize: '.62rem', color: color, background: color + '15', borderRadius: 4, padding: '1px 6px' }}>{evt.duree_min} min</span>}
+        </div>
+        {(evt.heure || evt.lieu || evt.note) && (
+          <div style={{ padding: '5px 10px 7px', background: color + '0d', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {evt.heure && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>🕐 {evt.heure}</span>}
+            {evt.lieu  && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>📍 {evt.lieu}</span>}
+            {evt.note  && <span style={{ fontSize: '.65rem', color: '#7a8290', fontStyle: 'italic' }}>{evt.note}</span>}
+          </div>
+        )}
+        <div style={{ padding: '3px 10px 5px', color: '#c4ccd4', fontSize: '.65rem', fontStyle: 'italic' }}>Aucun déroulé renseigné</div>
+      </div>
+    )
+  }
+
+  function DayColumn({ day }) {
+    const isToday = day.date === todayISO
+    const matchEvt = day.events.find(e => e.type === 'match')
+    const isMuscu  = !matchEvt && day.events.every(e => e.type === 'muscu')
+    const [, , dd] = day.date.split('-').map(Number)
+    const borderColor = matchEvt ? matchCatColor(matchEvt.categorie, groupColor)
+      : isMuscu ? '#b08769'
+      : isToday ? '#e4f816'
+      : '#6b94a3'
+    const typeLabel = matchEvt ? 'Match' : isMuscu ? 'Musculation' : 'Entraînement'
+
+    return (
+      <div style={{ background: matchEvt ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column' }}>
+        {/* En-tête colonne */}
+        <div style={{ padding: '10px 12px 8px', borderBottom: `3px solid ${borderColor}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: '#9aa1ac' }}>{DOW_FR[day.dow]}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: isToday ? borderColor : '#15181d', lineHeight: 1.1 }}>{dd}</div>
+          <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: borderColor, marginTop: 2 }}>{typeLabel}</div>
+          {isToday && <div style={{ display: 'inline-block', fontSize: '.52rem', fontWeight: 800, background: '#e4f816', color: '#333', borderRadius: 4, padding: '1px 5px', marginTop: 2 }}>Aujourd'hui</div>}
+        </div>
+
+        {/* Séances */}
+        <div style={{ flex: 1, padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
+          {day.events.map(evt => (
+            <div key={evt.id}>
+              {evt.heure && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                  <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
+                  <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#9aa1ac' }}>{evt.heure}</span>
+                  <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
+                </div>
+              )}
+              <EventContent evt={evt} />
+              {evt.charge && <IntensityBar charge={evt.charge} />}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const cols = activeDays.length || 1
+  const Pill = ({ color, label }) => (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,.1)', borderRadius: 7, padding: '3px 9px', fontSize: '.67rem', fontWeight: 700, color: 'rgba(255,255,255,.75)' }}>
+      <span style={{ width: 6, height: 6, borderRadius: 2, background: color, flexShrink: 0 }} />{label}
+    </span>
+  )
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 80 }} onClick={onClose} />
+      <div style={{ position: 'fixed', inset: '2.5vh 2.5vw', zIndex: 81, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <span style={{ background: '#e4f816', color: '#333', fontSize: '.68rem', fontWeight: 900, padding: '4px 10px', borderRadius: 7, letterSpacing: '.05em', flexShrink: 0 }}>S{wkNum}</span>
+            <div>
+              <div style={{ color: '#fff', fontSize: '.98rem', fontWeight: 800 }}>Semaine {wkNum}</div>
+              <div style={{ color: 'rgba(255,255,255,.45)', fontSize: '.7rem' }}>{fmtStart} → {fmtEnd}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+            {nbMatch > 0 && <Pill color={groupColor} label={`${nbMatch} Match${nbMatch > 1 ? 's' : ''}`} />}
+            {nbTrain > 0 && <Pill color="#6b94a3" label={`${nbTrain} Entraîn.`} />}
+            {nbMuscu > 0 && <Pill color="#b08769" label={`${nbMuscu} Muscu`} />}
+            {allEvts.length === 0 && <span style={{ fontSize: '.7rem', color: 'rgba(255,255,255,.4)', fontStyle: 'italic' }}>Semaine libre</span>}
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button onClick={() => onNavigate(-1)} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>← S{wkNum - 1}</button>
+            <button onClick={() => onNavigate(1)}  style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>S{wkNum + 1} →</button>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          </div>
+        </div>
+
+        {/* Grille */}
+        {activeDays.length === 0 ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa1ac', fontSize: '.9rem', fontStyle: 'italic' }}>Aucune séance cette semaine</div>
+        ) : (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4' }}>
+            {activeDays.map(day => <DayColumn key={day.date} day={day} />)}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
