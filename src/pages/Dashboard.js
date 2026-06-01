@@ -87,6 +87,7 @@ export default function Dashboard() {
   const [newCatNom, setNewCatNom]     = useState('')
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
   const [tab, setTab]                 = useState('overview') // overview | clients | notifs | groupes | calendrier
+  const [showSecondaire, setShowSecondaire] = useState(false) // bilan + planning repliés par défaut
   // Groupes
   const [groupes, setGroupes]               = useState([])
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
@@ -256,6 +257,11 @@ export default function Dashboard() {
     setUploadingLogo(false)
   }
 
+  async function marquerVu(clientId) {
+    await supabase.from('clients').update({ coach_notifie: true }).eq('id', clientId)
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, coach_notifie: true } : c))
+  }
+
   if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
 
   const today = new Date().toISOString().slice(0, 10)
@@ -379,10 +385,18 @@ export default function Dashboard() {
           <div style={S.sumCard}>
             <p style={S.sumDate}>{dateLabel}</p>
             <h1 style={S.sumTitle}>Tableau de bord</h1>
-            <div style={S.sumStat}><span style={S.sumStatL}>Clients</span><span style={S.sumStatV}>{clients.length}</span></div>
-            <div style={S.sumStat}><span style={S.sumStatL}>Séances du jour</span><span style={S.sumStatV}>{seancesAujourdhui.length}</span></div>
-            <div style={S.sumStat}><span style={S.sumStatL}>Alertes</span><span style={{ ...S.sumStatV, color: totalAlertes > 0 ? '#fca5a5' : '#e4f816' }}>{totalAlertes}</span></div>
-            <div style={S.sumStat}><span style={S.sumStatL}>Groupes</span><span style={S.sumStatV}>{groupes.length}</span></div>
+            <button style={S.sumStatBtn} onClick={() => selectTab('clients')}>
+              <span style={S.sumStatL}>Clients</span><span style={S.sumStatV}>{clients.length}</span>
+            </button>
+            <button style={S.sumStatBtn} onClick={() => selectTab('overview')}>
+              <span style={S.sumStatL}>Séances du jour</span><span style={S.sumStatV}>{seancesAujourdhui.length}</span>
+            </button>
+            <button style={S.sumStatBtn} onClick={() => selectTab('overview')}>
+              <span style={S.sumStatL}>Alertes</span><span style={{ ...S.sumStatV, color: totalAlertes > 0 ? '#fca5a5' : '#e4f816' }}>{totalAlertes}</span>
+            </button>
+            <button style={S.sumStatBtn} onClick={() => selectTab('groupes')}>
+              <span style={S.sumStatL}>Groupes</span><span style={S.sumStatV}>{groupes.length}</span>
+            </button>
           </div>
 
           <div style={S.navCard}>
@@ -398,7 +412,27 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <button onClick={() => navigate('/nouveau-client')} style={{ ...S.btnPrimary, width: '100%' }}>+ Nouveau client</button>
+          {/* Actions rapides — adaptées à l'onglet */}
+          <div style={S.navCard}>
+            <p style={{ ...S.sectionTitle, padding: '0.35rem 0.6rem 0.15rem' }}>Actions rapides</p>
+            {tab === 'groupes' ? (
+              <>
+                <button style={S.btnPrimary} onClick={() => setShowGroupeForm(true)}>+ Nouveau groupe</button>
+                <button style={S.quickAction} onClick={() => selectTab('clients')}>{NAV_ICONS.clients} Voir les clients</button>
+              </>
+            ) : tab === 'calendrier' ? (
+              <>
+                <button style={S.quickAction} onClick={() => selectTab('groupes')}>{NAV_ICONS.groupes} Gérer les groupes</button>
+                <button style={S.btnPrimary} onClick={() => navigate('/nouveau-client')}>+ Nouveau client</button>
+              </>
+            ) : (
+              <>
+                <button style={S.btnPrimary} onClick={() => navigate('/nouveau-client')}>+ Nouveau client</button>
+                <button style={S.quickAction} onClick={() => navigate('/messages')}>{NAV_ICONS.notifs} Messagerie</button>
+                <button style={S.quickAction} onClick={() => selectTab('calendrier')}>{NAV_ICONS.calendrier} Calendriers</button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Colonne droite — un seul grand bloc, change selon l'onglet ── */}
@@ -419,6 +453,50 @@ export default function Dashboard() {
               </div>
 
               <div style={S.bentoGrid}>
+                {/* Alertes — à traiter en priorité */}
+                <div style={S.card}>
+                  <div style={S.cardHead}>
+                    <span style={S.sectionTitle}>À traiter</span>
+                    {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>{totalAlertes}</span>}
+                  </div>
+                  {totalAlertes === 0 ? (
+                    <p style={{ ...S.empty, color: '#16a34a' }}>✓ Tout va bien aujourd'hui.</p>
+                  ) : (
+                    <>
+                      {wellnessAlertes.map(c => (
+                        <div key={'w' + c.id} style={{ ...S.miniRow, borderLeft: '3px solid #ef4444', cursor: 'default' }}>
+                          <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas · {c.avg.toFixed(1)}/4</p></div>
+                          <button style={S.miniBtnDark} onClick={() => navigate('/messages')}>Message</button>
+                          <button style={S.miniBtn} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
+                        </div>
+                      ))}
+                      {expirations.map(c => (
+                        <div key={'e' + c.id} style={{ ...S.miniRow, borderLeft: '3px solid #f59e0b', cursor: 'default' }}>
+                          <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire {c.daysLeft === 0 ? "auj." : `dans ${c.daysLeft}j`}</p></div>
+                          <button style={S.miniBtn} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
+                        </div>
+                      ))}
+                      {nouveaux.map(c => (
+                        <div key={'n' + c.id} style={{ ...S.miniRow, borderLeft: '3px solid #6366f1', cursor: 'default' }}>
+                          <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
+                          <button style={S.miniBtnDark} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
+                          <button style={S.miniBtn} onClick={() => marquerVu(c.id)}>Vu</button>
+                        </div>
+                      ))}
+                      {progFinBientot.map(p => (
+                        <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, borderLeft: '3px solid #0ea5e9' }}>
+                          <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
+                          <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+
                 {/* Séances du jour */}
                 <div style={S.card}>
                   <div style={S.cardHead}><span style={S.sectionTitle}>Séances du jour</span></div>
@@ -446,50 +524,15 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-
-                {/* Alertes */}
-                <div style={S.card}>
-                  <div style={S.cardHead}>
-                    <span style={S.sectionTitle}>Alertes</span>
-                    {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>{totalAlertes}</span>}
-                  </div>
-                  {totalAlertes === 0 ? (
-                    <p style={{ ...S.empty, color: '#16a34a' }}>✓ Tout va bien aujourd'hui.</p>
-                  ) : (
-                    <>
-                      {wellnessAlertes.map(c => (
-                        <div key={'w' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #ef4444' }}>
-                          <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas</p></div>
-                          <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ {c.avg.toFixed(1)}</span>
-                        </div>
-                      ))}
-                      {expirations.map(c => (
-                        <div key={'e' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #f59e0b' }}>
-                          <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire</p></div>
-                          <span style={{ ...S.pill, background: '#fffbeb', color: '#d97706' }}>⏳ {c.daysLeft === 0 ? "Auj." : `${c.daysLeft}j`}</span>
-                        </div>
-                      ))}
-                      {nouveaux.map(c => (
-                        <div key={'n' + c.id} onClick={() => navigate(`/client/${c.id}`)} style={{ ...S.miniRow, borderLeft: '3px solid #6366f1' }}>
-                          <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
-                          <span style={{ ...S.pill, background: '#ede9fe', color: '#6d28d9' }}>🆕</span>
-                        </div>
-                      ))}
-                      {progFinBientot.map(p => (
-                        <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, borderLeft: '3px solid #0ea5e9' }}>
-                          <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
-                          <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
               </div>
 
+              {/* Détails (bilan + planning) — repliable */}
+              <button onClick={() => setShowSecondaire(v => !v)} style={S.collapseBtn}>
+                <span style={S.sectionTitle}>Bilan & planning de la semaine</span>
+                <span style={{ color: '#9aa1ac', fontSize: '1rem', transform: showSecondaire ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+              </button>
+
+              {showSecondaire && (<>
               {/* Bilan de la semaine */}
               <div style={S.card}>
                 <div style={S.cardHead}>
@@ -575,6 +618,7 @@ export default function Dashboard() {
                   })
                 )}
               </div>
+              </>)}
             </div>
           )}
 
@@ -972,6 +1016,11 @@ const S = {
   sumDate:     { fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', textTransform: 'capitalize', margin: 0 },
   sumTitle:    { fontSize: '1.15rem', fontWeight: '900', margin: '0.2rem 0 0.9rem' },
   sumStat:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderTop: '1px solid rgba(255,255,255,0.1)' },
+  sumStatBtn:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.5rem 0', borderTop: '1px solid rgba(255,255,255,0.1)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', background: 'none', cursor: 'pointer' },
+  quickAction: { display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', textAlign: 'left', background: '#f3f4f6', border: 'none', borderRadius: 10, padding: '0.55rem 0.7rem', fontSize: '0.82rem', fontWeight: '700', color: '#374151', cursor: 'pointer', marginTop: '0.3rem' },
+  miniBtn:     { background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 7, padding: '0.3rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  miniBtnDark: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 7, padding: '0.3rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  collapseBtn: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem 0.1rem' },
   sumStatL:    { fontSize: '0.78rem', color: 'rgba(255,255,255,0.65)' },
   sumStatV:    { fontSize: '1.1rem', fontWeight: '900', color: '#e4f816' },
   navCard:     { background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.1rem' },
