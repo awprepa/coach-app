@@ -1024,10 +1024,15 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         {/* Phases (blocs) */}
         {blocs.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {blocs.map((bloc, idx) => {
+            {(() => {
+              const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
+              const MAX_H = 420 // hauteur max totale des phases pour tenir dans l'écran
+              return blocs.map((bloc, idx) => {
               const bc = blocColor(idx)
               const mins = parseDurMin(bloc.duree)
-              const minH = mins ? Math.max(44, Math.min(500, Math.round(mins * 5))) : 50
+              const minH = totalMins > 0 && mins
+                ? Math.max(36, Math.round((mins / totalMins) * MAX_H))
+                : 50
 
               const byGroup = {}
               for (const exo of (bloc.exos || [])) {
@@ -1077,10 +1082,15 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       )}
                     </div>
                   )}
-                  {!bloc.exos?.length && mins && <div style={{ minHeight: minH, background: bc + '08' }} />}
+                  {!bloc.exos?.length && (
+                    <div style={{ minHeight: minH, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '.78rem', fontWeight: 800, color: bc, opacity: 0.55 }}>{bloc.nom}</span>
+                    </div>
+                  )}
                 </div>
               )
-            })}
+            })
+            })()}
           </div>
         ) : (
           /* Pas de blocs */
