@@ -39,18 +39,18 @@ const HAS_BLOCS = ['entrainement', 'muscu', 'vitesse', 'prevention', 'recup', 'a
 const ymd = (y, m, d) => `${y}-${m}-${d}`                  // clé interne (m 0-based)
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 
-// 11 mois Août(start) → Juin(start+1)
+// 12 mois Juillet(start) → Juin(start+1)
 function buildMonths(startYear) {
   const out = []
-  for (let i = 0; i < 11; i++) {
-    const m = (7 + i) % 12
-    const y = startYear + (7 + i >= 12 ? 1 : 0)
+  for (let i = 0; i < 12; i++) {
+    const m = (6 + i) % 12
+    const y = startYear + (6 + i >= 12 ? 1 : 0)
     out.push({ y, m, label: MOIS_LABEL[m], days: new Date(y, m + 1, 0).getDate() })
   }
   return out
 }
 function seasonStartYear(date = new Date()) {
-  return date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1
+  return date.getMonth() >= 6 ? date.getFullYear() : date.getFullYear() - 1
 }
 
 export default function CalendrierSaison({ groupeId = null, embedded = false }) {
@@ -77,7 +77,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
 
   const groupColor = groupe?.couleur || '#2f6f76'
   const months = buildMonths(startYear)
-  const seasonStart = iso(startYear, 7, 1)
+  const seasonStart = iso(startYear, 6, 1)
   const seasonEnd   = iso(startYear + 1, 5, 30)
 
   // ── Chargement des groupes ──────────────────────────────────────────────────

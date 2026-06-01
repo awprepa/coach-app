@@ -78,6 +78,7 @@ export default function Dashboard() {
   // Groupes
   const [groupes, setGroupes]               = useState([])
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
+  const [memberGroupMap, setMemberGroupMap] = useState({}) // client_id → { id, nom, couleur, logo_url }
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
   const [newGroupeCouleur, setNewGroupeCouleur]   = useState('#6366f1')
@@ -132,7 +133,7 @@ export default function Dashboard() {
       supabase.from('categories').select('*').order('created_at'),
       supabase.from('programmes').select('id, client_id, nom, semaines, date_debut'),
       supabase.from('groupes').select('*').is('parent_id', null).order('created_at'),
-      supabase.from('groupe_membres').select('client_id'),
+      supabase.from('groupe_membres').select('client_id, groupe_id, groupes(id, nom, couleur, logo_url)'),
     ])
 
     const withWellness = (clientsData || []).map(c => {
@@ -149,6 +150,12 @@ export default function Dashboard() {
     setProgrammes(progsData || [])
     setGroupes(groupesData || [])
     setGroupMemberIds(new Set((membresData || []).map(m => m.client_id)))
+    // map client_id → infos groupe (pour afficher les membres regroupés)
+    const map = {}
+    for (const m of (membresData || [])) {
+      if (m.client_id && m.groupes) map[m.client_id] = m.groupes
+    }
+    setMemberGroupMap(map)
     setLoading(false)
   }
 
@@ -312,13 +319,27 @@ export default function Dashboard() {
 
   // Clients individuels (pas membres d'un groupe)
   const clientsIndividuels = clients.filter(c => !groupMemberIds.has(c.id))
+  // Membres de groupes
+  const clientsMembres = clients.filter(c => groupMemberIds.has(c.id))
 
-  // Filtrage clients
-  const filtered = clientsIndividuels.filter(c => {
-    const matchSearch = `${c.prenom} ${c.nom}`.toLowerCase().includes(search.toLowerCase())
-    const matchCat = activeCat === null ? true : c.categorie_id === activeCat
-    return matchSearch && matchCat
-  })
+  const matchFiltre = c =>
+    `${c.prenom} ${c.nom}`.toLowerCase().includes(search.toLowerCase()) &&
+    (activeCat === null ? true : c.categorie_id === activeCat)
+
+  // Filtrage clients individuels
+  const filtered = clientsIndividuels.filter(matchFiltre)
+
+  // Membres filtrés, regroupés par groupe
+  const membresFiltres = clientsMembres.filter(matchFiltre)
+  const membresParGroupe = {}
+  for (const m of membresFiltres) {
+    const g = memberGroupMap[m.id]
+    const key = g?.id || 'autres'
+    if (!membresParGroupe[key]) membresParGroupe[key] = { groupe: g, membres: [] }
+    membresParGroupe[key].membres.push(m)
+  }
+  const groupesAvecMembres = Object.values(membresParGroupe)
+    .sort((a, b) => (a.groupe?.nom || 'zzz').localeCompare(b.groupe?.nom || 'zzz'))
 
   const nbEssai = clientsIndividuels.filter(c => c.offre === 'essai').length
   const nbPrepa = clientsIndividuels.filter(c => c.offre === 'preparation_physique').length
@@ -672,6 +693,69 @@ export default function Dashboard() {
                   })
                 )}
               </div>
+
+              {/* ── Membres de groupes ── */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.75rem 0 0.75rem' }}>
+                <p style={S.sectionTitle}>Membres de groupes</p>
+                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsMembres.length} membre{clientsMembres.length !== 1 ? 's' : ''}</span>
+              </div>
+
+              {clientsMembres.length === 0 ? (
+                <p style={{ ...S.empty, padding: '0.5rem 0' }}>Aucun membre de groupe.</p>
+              ) : groupesAvecMembres.length === 0 ? (
+                <p style={{ ...S.empty, padding: '0.5rem 0' }}>Aucun membre trouvé pour cette recherche.</p>
+              ) : (
+                groupesAvecMembres.map(({ groupe: g, membres }) => (
+                  <div key={g?.id || 'autres'} style={{ marginBottom: '1rem' }}>
+                    {/* En-tête groupe */}
+                    <div onClick={() => g && navigate(`/groupe/${g.id}`)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.25rem', cursor: g ? 'pointer' : 'default' }}>
+                      {g?.logo_url
+                        ? <img src={g.logo_url} alt={g.nom} style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
+                        : <span style={{ width: 12, height: 12, borderRadius: 4, background: g?.couleur || '#9ca3af', flexShrink: 0 }} />}
+                      <span style={{ fontWeight: '800', fontSize: '0.82rem', color: '#333333' }}>{g?.nom || 'Sans groupe'}</span>
+                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>· {membres.length}</span>
+                      <div style={{ flex: 1, height: 1, background: (g?.couleur || '#e5e7eb') + '33' }} />
+                    </div>
+
+                    <div style={{ ...S.listCard, borderLeft: `3px solid ${g?.couleur || '#e5e7eb'}` }}>
+                      {membres.map((client, i) => {
+                        const av  = getAvatar(client.prenom, client.nom)
+                        const sub = getSubInfo(client.date_fin)
+                        const w   = client.wellness_today
+                        const wAvg = w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
+                        return (
+                          <div key={client.id} onClick={() => navigate(`/client/${client.id}`)}
+                            style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              {client.avatar_url
+                                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
+                                : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>}
+                              <div>
+                                <p style={S.clientName}>{client.prenom} {client.nom}</p>
+                                {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {wAvg !== null && (
+                                <span title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}
+                                  style={{ background: wAvg <= 2 ? '#fef2f2' : '#f0fdf4', color: wAvg <= 2 ? '#dc2626' : '#16a34a', padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: '700' }}>
+                                  {wAvg <= 2 ? '⚠ ' : '✓ '}{wAvg.toFixed(1)}
+                                </span>
+                              )}
+                              {sub && (
+                                <span style={{ background: sub.bg, color: sub.color, padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: '700' }}>{sub.label}</span>
+                              )}
+                              <span style={{ ...S.badge, ...offreBadge(client.offre) }}>{offreLabel(client.offre)}</span>
+                              <span style={S.chevron}>›</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
