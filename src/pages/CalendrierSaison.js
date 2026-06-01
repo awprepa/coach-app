@@ -989,8 +989,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         <>
           {blocs.map(bloc => {
             const mins = parseDurMin(bloc.duree)
-            // Hauteur min proportionnelle : 1 min ≈ 2.2 px, plancher 56px, plafond 320px
-            const minH = mins ? Math.max(56, Math.min(320, Math.round(mins * 2.2))) : 56
+            // Hauteur min proportionnelle : 1 min ≈ 4 px, plancher 28px, plafond 400px
+            const minH = mins ? Math.max(28, Math.min(400, Math.round(mins * 4))) : 40
 
             // Grouper les exercices par groupe_label
             const byGroup = {}
