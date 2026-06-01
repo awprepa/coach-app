@@ -979,7 +979,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           {evt.categorie && <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .65, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Match · {evt.categorie}{evt.journee ? ` · ${evt.journee}` : ''}</div>}
           <div style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1.15, marginBottom: 8 }}>{evt.adversaire ? `vs ${evt.adversaire}` : evt.titre || 'Match'}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
-            {evt.heure && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.heure}</span>}
+            {evt.heure && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{String(evt.heure).slice(0, 5)}</span>}
             {evt.domicile != null && <span style={{ background: '#e4f816', color: '#333', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.domicile ? 'Domicile' : 'Extérieur'}</span>}
             {evt.lieu && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.lieu}</span>}
           </div>
@@ -1007,7 +1007,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             {evt.heure && (
               <span style={{ fontSize: '.8rem', fontWeight: 900, color: '#fff', background: 'rgba(0,0,0,.22)', borderRadius: 6, padding: '3px 8px', letterSpacing: '.01em' }}>
-                🕐 {evt.heure}
+                🕐 {String(evt.heure).slice(0, 5)}
               </span>
             )}
             {evt.duree_min && (
@@ -1123,7 +1123,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               {evt.heure && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                   <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
-                  <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#9aa1ac' }}>{evt.heure}</span>
+                  <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#9aa1ac' }}>{String(evt.heure).slice(0, 5)}</span>
                   <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
                 </div>
               )}
