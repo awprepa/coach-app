@@ -963,6 +963,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2] || 0)
     const m = str.match(/(\d+)\s*m/)
     if (m) return parseInt(m[1])
+    // format "5'" ou "55'" (apostrophe ou prime)
+    const apos = str.match(/^(\d+)\s*['′']/)
+    if (apos) return parseInt(apos[1])
     const n = str.match(/^(\d+)$/)
     if (n) return parseInt(n[1])
     return null
