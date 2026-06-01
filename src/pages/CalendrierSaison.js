@@ -1026,14 +1026,15 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {(() => {
               const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
-              // 4px par minute, capé pour tenir dans l'écran
-              const PX_PER_MIN = 4
+              const PX_PER_MIN = 2
+              const MAX_TOTAL = 160
               const rawH = totalMins * PX_PER_MIN
-              const scale = rawH > 380 ? 380 / rawH : 1
+              const scale = rawH > MAX_TOTAL ? MAX_TOTAL / rawH : 1
               return blocs.map((bloc, idx) => {
               const bc = blocColor(idx)
               const mins = parseDurMin(bloc.duree)
-              const minH = mins ? Math.max(36, Math.round(mins * PX_PER_MIN * scale)) : 44
+              // height fixe (pas minHeight) pour que la proportion soit toujours visible
+              const h = mins ? Math.max(22, Math.round(mins * PX_PER_MIN * scale)) : 36
 
               const byGroup = {}
               for (const exo of (bloc.exos || [])) {
@@ -1054,7 +1055,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
                   {/* Exercices */}
                   {bloc.exos?.length > 0 && (
-                    <div style={{ minHeight: minH, padding: '8px 10px 10px', background: bc + '08', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
+                    <div style={{ height: h, overflowY: 'auto', padding: '6px 10px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 3 }}>
                       {hasGroups ? (
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'start' }}>
                           {groupKeys.map(g => (
@@ -1084,8 +1085,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     </div>
                   )}
                   {!bloc.exos?.length && (
-                    <div style={{ minHeight: minH, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '.78rem', fontWeight: 800, color: bc, opacity: 0.55 }}>{bloc.nom}</span>
+                    <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '.75rem', fontWeight: 800, color: bc, opacity: 0.55 }}>{bloc.nom}</span>
                     </div>
                   )}
                 </div>
