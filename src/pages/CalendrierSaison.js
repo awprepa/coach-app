@@ -33,6 +33,17 @@ const TYPES = {
 }
 const CREATE_TYPES = ['entrainement', 'match', 'muscu']
 const MATCH_CATEGORIES = ['Amical', 'Championnat', 'Coupe', 'Phases finales']
+// Couleur de fond par catégorie de match (null = couleur du groupe)
+const MATCH_CAT_COLORS = {
+  Amical:           '#64748b',  // gris ardoise — match amical, faible enjeu
+  Championnat:      null,        // couleur du groupe
+  Coupe:            '#d97706',  // ambre — coupe
+  'Phases finales': '#dc2626',  // rouge — playoffs / finale
+}
+function matchCatColor(categorie, groupColor) {
+  const c = MATCH_CAT_COLORS[categorie]
+  return (c === undefined || c === null) ? groupColor : c
+}
 // types qui ont un déroulé en blocs/exercices
 const HAS_BLOCS = ['entrainement', 'muscu', 'vitesse', 'prevention', 'recup', 'autre']
 
@@ -531,9 +542,10 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           }
           const dragOpacity = dragEvt?.id === e.id ? 0.4 : 1
           if (e.type === 'match') {
+            const mc = matchCatColor(e.categorie, groupColor)
             return (
               <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
-                style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
+                style={{ background: mc, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
                 {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
               </div>
@@ -627,7 +639,10 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         <span style={S.sep} />
         <Stat v={evenements.length} l="Évènements" />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 13, flexWrap: 'wrap' }}>
-          <Leg c={groupColor} t="Match" />
+          {MATCH_CATEGORIES.map(cat => (
+            <Leg key={cat} c={matchCatColor(cat, groupColor)} t={cat} />
+          ))}
+          <span style={S.sep} />
           <Leg c={TYPES.entrainement.color} t="Entraînement" />
           <Leg c={TYPES.muscu.color} t="Musculation" />
         </div>
