@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
+import APP_VERSION from './version'
 import { NotifProvider } from './context/NotifContext'
 import { TimerProvider } from './context/TimerContext'
 import { ClientThemeProvider } from './context/ClientThemeContext'
@@ -301,7 +302,15 @@ function ScrollToTop() {
 
 // ── Wrappers ──────────────────────────────────────────────────────────────────
 function WithNav({ children }) {
-  return <><CoachNav />{children}</>
+  return (
+    <>
+      <CoachNav />
+      {children}
+      <div style={{ textAlign: 'center', padding: '18px 0 10px', color: '#c0c4cc', fontSize: '0.68rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', letterSpacing: '.03em' }}>
+        AWprepa v{APP_VERSION}
+      </div>
+    </>
+  )
 }
 
 function WithNotifs({ children }) {
