@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -86,6 +86,16 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [dragEvt, setDragEvt] = useState(null)
   const [dragOver, setDragOver] = useState(null) // dateISO survolé
 
+  // Sélection multi-jours (glisser)
+  const [sel, setSel]           = useState(null)   // { start: ISO, end: ISO }
+  const [selDrag, setSelDrag]   = useState(false)
+  const [selMenu, setSelMenu]   = useState(null)   // { x, y }
+  const [selMode, setSelMode]   = useState('main') // 'main' | 'period'
+  const [selForm, setSelForm]   = useState({ type: 'vacances', label: '', couleur: '#f4e8c4' })
+  const [periodClip, setPeriodClip] = useState(null) // { start, end, events, blocsMap }
+  const selRef = useRef(null)
+  selRef.current = sel
+
   const groupColor = groupe?.couleur || '#2f6f76'
   const months = buildMonths(startYear)
   const seasonStart = iso(startYear, 6, 1)
@@ -147,6 +157,32 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [pop])
+
+  // finaliser la sélection multi-jours au mouseup
+  useEffect(() => {
+    if (!selDrag) return
+    const onUp = e => {
+      setSelDrag(false)
+      const s = selRef.current
+      if (!s) return
+      const [start, end] = [s.start, s.end].sort()
+      if (start === end) { setSel(null); return }
+      const x = Math.min(e.clientX, window.innerWidth - 250)
+      const y = Math.min(e.clientY + 10, window.innerHeight - 310)
+      setSelMenu({ x, y }); setSelMode('main')
+      setSelForm({ type: 'vacances', label: '', couleur: '#f4e8c4' })
+    }
+    window.addEventListener('mouseup', onUp)
+    return () => window.removeEventListener('mouseup', onUp)
+  }, [selDrag])
+
+  // fermer le menu de sélection sur Echap
+  useEffect(() => {
+    if (!selMenu) return
+    const onKey = e => { if (e.key === 'Escape') { setSelMenu(null); setSel(null) } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selMenu])
 
   // ── Index par jour ──────────────────────────────────────────────────────────
   const evByDay = {}
@@ -324,6 +360,81 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     await supabase.from('groupe_seance_exercices').delete().eq('id', id)
   }
 
+  // ── Sélection multi-jours ────────────────────────────────────────────────────
+  const selMin = sel ? [sel.start, sel.end].sort()[0] : null
+  const selMax = sel ? [sel.start, sel.end].sort()[1] : null
+  function inSel(dISO) { return !!selMin && dISO >= selMin && dISO <= selMax }
+
+  function onDayMouseDown(e, dISO) {
+    if (e.button !== 0 || dragEvt) return
+    e.preventDefault()
+    setSel({ start: dISO, end: dISO })
+    setSelDrag(true)
+    setSelMenu(null); setPop(null); setCtx(null)
+  }
+  function onDayMouseEnter(dISO) {
+    if (!selDrag) return
+    setSel(prev => prev ? { ...prev, end: dISO } : null)
+  }
+
+  async function copyPeriod() {
+    if (!sel || !groupe) return
+    const [s, e] = [sel.start, sel.end].sort()
+    const rangeEvts = evenements.filter(ev => ev.date >= s && ev.date <= e)
+    const blocsMap = {}
+    for (const ev of rangeEvts) {
+      if (HAS_BLOCS.includes(ev.type)) blocsMap[ev.id] = await loadBlocs(ev.id)
+    }
+    setPeriodClip({ start: s, end: e, events: rangeEvts, blocsMap })
+    setSelMenu(null); setSel(null)
+  }
+
+  async function pastePeriod(newStartISO) {
+    if (!periodClip || !groupe) return
+    const origStart = new Date(periodClip.start + 'T00:00:00')
+    const newStart  = new Date(newStartISO + 'T00:00:00')
+    const offsetDays = Math.round((newStart - origStart) / 86400000)
+    for (const ev of periodClip.events) {
+      const nd = new Date(ev.date + 'T00:00:00')
+      nd.setDate(nd.getDate() + offsetDays)
+      const newDate = nd.toISOString().slice(0, 10)
+      const payload = {
+        groupe_id: groupe.id, date: newDate, heure: ev.heure || null, type: ev.type,
+        titre: ev.titre || null, lieu: ev.lieu || null, duree_min: ev.duree_min || null,
+        charge: ev.charge || null, note: ev.note || null, style: ev.style || null,
+        adversaire: ev.adversaire || null, categorie: ev.categorie || null,
+        domicile: ev.domicile, journee: ev.journee || null,
+      }
+      const { data: nev } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
+      if (nev && periodClip.blocsMap[ev.id]) {
+        for (const b of periodClip.blocsMap[ev.id]) {
+          const { data: nb } = await supabase.from('groupe_seance_blocs')
+            .insert([{ evenement_id: nev.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre }]).select('id').single()
+          if (nb && b.exos?.length) {
+            await supabase.from('groupe_seance_exercices').insert(
+              b.exos.map(x => ({ bloc_id: nb.id, nom: x.nom, prescription: x.prescription || '', detail: x.detail || '', ordre: x.ordre }))
+            )
+          }
+        }
+      }
+    }
+    await loadSeason()
+    setPop(null); setCtx(null)
+  }
+
+  async function addPeriodFromSel() {
+    if (!sel || !groupe) return
+    const [s, e] = [sel.start, sel.end].sort()
+    const label = selForm.label.trim() || (selForm.type === 'vacances' ? 'Vacances' : 'Phase')
+    await supabase.from('groupe_phases').insert([{
+      groupe_id: groupe.id, type: selForm.type, label,
+      couleur: selForm.couleur, date_debut: s, date_fin: e,
+      ordre: phases.length + 1,
+    }])
+    await loadSeason()
+    setSelMenu(null); setSel(null)
+  }
+
   // ── Glisser-déposer : déplacer un évènement vers un autre jour ───────────────
   async function moveEvent(evt, newDateISO) {
     if (!evt || evt.date === newDateISO) return
@@ -375,6 +486,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           const onCtx = ev => openCtx(ev, e.date, e)
           const dragProps = {
             draggable: true,
+            onMouseDown: ev => ev.stopPropagation(), // ne pas déclencher la sélection multi-jours
             onDragStart: ev => { ev.stopPropagation(); setDragEvt(e); ev.dataTransfer.effectAllowed = 'move' },
             onDragEnd: () => { setDragEvt(null); setDragOver(null) },
           }
@@ -483,14 +595,26 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                       const dISO = iso(M.y, M.m, d)
                       const weekStart = dow === 1 || d === 1   // lundi, ou 1er jour visible du mois
                       const wkNum = weekStart ? isoWeek(M.y, M.m, d) : null
+                      const selected = inSel(dISO)
                       return (
                         <div key={d} style={weekStart && d !== 1 ? S.weekSep : null}>
                           {weekStart && <div style={S.weekTag}>S{wkNum}</div>}
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
-                          <div onDoubleClick={e => openPop(e, dISO)} onContextMenu={e => openPop(e, dISO)}
+                          <div
+                            onMouseDown={e => onDayMouseDown(e, dISO)}
+                            onMouseEnter={() => onDayMouseEnter(dISO)}
+                            onDoubleClick={e => { if (!selMenu) openPop(e, dISO) }}
+                            onContextMenu={e => { if (!selDrag && !sel) openPop(e, dISO) }}
                             onDragOver={dragEvt ? (e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== dISO) setDragOver(dISO) }) : undefined}
                             onDrop={dragEvt ? (e => { e.preventDefault(); moveEvent(dragEvt, dISO); setDragEvt(null); setDragOver(null) }) : undefined}
-                            style={{ ...S.drow, ...(vac.in ? S.drowVac : null), ...(isToday ? S.drowToday : null), ...(dragOver === dISO ? S.drowDrop : null) }}>
+                            style={{
+                              ...S.drow,
+                              ...(vac.in ? S.drowVac : null),
+                              ...(isToday ? S.drowToday : null),
+                              ...(dragOver === dISO ? S.drowDrop : null),
+                              ...(selected ? S.drowSel : null),
+                              userSelect: 'none',
+                            }}>
                             <div style={S.dnum}>{d}</div>
                             <div style={S.ddow}>{DOW[dow]}</div>
                             {renderCell(M.y, M.m, d)}
@@ -504,8 +628,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             </div>
           </div>
           <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 10 }}>
-            Double-clic ou clic droit sur un jour pour ajouter · glisser-déposer une séance pour la changer de jour · clic droit sur une séance pour copier / coller.
-            {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · 📋 « {clipLabel(clip.source)} » dans le presse-papier</span>}
+            Glisser sur plusieurs jours pour les sélectionner · double-clic sur un jour pour ajouter · glisser une séance pour la déplacer.
+            {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · 📋 « {clipLabel(clip.source)} » copié</span>}
+            {periodClip && <span style={{ color: '#059669', fontWeight: 700 }}> · 📆 Période copiée ({periodClip.events.length} évèn.) — clic droit sur un jour pour coller</span>}
           </p>
         </>
       )}
@@ -525,9 +650,71 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             <>
               <button style={S.ctxItem} onClick={() => { openCreate(ctx.dateISO); setCtx(null) }}>➕ Ajouter un évènement</button>
               {clip && <button style={S.ctxItem} onClick={() => pasteEvent(ctx.dateISO)}>📌 Coller « {clipLabel(clip.source)} »</button>}
+              {periodClip && <button style={S.ctxItem} onClick={() => { pastePeriod(ctx.dateISO); setCtx(null) }}>📆 Coller la période ({periodClip.events.length} évèn.)</button>}
             </>
           )}
         </div>
+      )}
+
+      {/* ── Menu de sélection multi-jours ── */}
+      {selMenu && sel && (
+        <>
+          <div style={S.popScrim} onClick={() => { setSelMenu(null); setSel(null) }} onContextMenu={e => { e.preventDefault(); setSelMenu(null); setSel(null) }} />
+          <div style={{ ...S.ctxMenu, left: selMenu.x, top: selMenu.y, minWidth: 230, padding: 10 }} onClick={e => e.stopPropagation()}>
+            {/* En-tête : période sélectionnée */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#15181d' }}>
+                {formatPopDate([sel.start, sel.end].sort()[0])}
+                {sel.start !== sel.end && <> → {formatPopDate([sel.start, sel.end].sort()[1])}</>}
+              </span>
+              <span style={{ cursor: 'pointer', color: '#9aa1ac', fontSize: '1rem', lineHeight: 1 }} onClick={() => { setSelMenu(null); setSel(null) }}>×</span>
+            </div>
+
+            {selMode === 'main' && (
+              <>
+                <button style={{ ...S.ctxItem, fontWeight: 700 }} onClick={() => setSelMode('period')}>🗓 Ajouter une période</button>
+                <button style={S.ctxItem} onClick={copyPeriod}>
+                  📋 Copier les évènements ({evenements.filter(e => { const [s,en]=[sel.start,sel.end].sort(); return e.date>=s&&e.date<=en }).length})
+                </button>
+                {periodClip && (
+                  <button style={S.ctxItem} onClick={() => { pastePeriod([sel.start, sel.end].sort()[0]); setSelMenu(null); setSel(null) }}>
+                    📆 Coller ici ({periodClip.events.length} évèn.)
+                  </button>
+                )}
+              </>
+            )}
+
+            {selMode === 'period' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Type */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                  {[{ v: 'vacances', l: 'Vacances' }, { v: 'phase', l: 'Phase' }].map(({ v, l }) => (
+                    <button key={v} onClick={() => setSelForm(f => ({ ...f, type: v, couleur: v === 'vacances' ? '#f4e8c4' : '#c7d2fe' }))}
+                      style={{ ...S.chip, ...(selForm.type === v ? { borderColor: '#333', background: '#333', color: '#fff' } : null) }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  autoFocus value={selForm.label}
+                  onChange={e => setSelForm(f => ({ ...f, label: e.target.value }))}
+                  placeholder={selForm.type === 'vacances' ? 'ex. Vacances Noël' : 'ex. Phase de reprise'}
+                  style={S.popInput}
+                  onKeyDown={e => { if (e.key === 'Enter') addPeriodFromSel() }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="color" value={selForm.couleur} onChange={e => setSelForm(f => ({ ...f, couleur: e.target.value }))}
+                    style={{ width: 30, height: 26, border: '1px solid #e6e8ec', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
+                  <span style={{ fontSize: '0.7rem', color: '#9aa1ac' }}>Couleur</span>
+                </div>
+                <div style={{ display: 'flex', gap: 7 }}>
+                  <button style={{ ...S.popGhost, flex: 1 }} onClick={() => setSelMode('main')}>← Retour</button>
+                  <button style={{ ...S.popCreate, flex: 1 }} onClick={addPeriodFromSel}><span style={{ color: '#e4f816' }}>Créer</span></button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── Bulle de création sur un jour ── */}
@@ -789,6 +976,7 @@ const S = {
   drowVac: { background: '#fdf8ea' },
   drowToday: { boxShadow: 'inset 0 0 0 2px #333333', position: 'relative', zIndex: 2 },
   drowDrop: { background: '#eaf7ec', boxShadow: 'inset 0 0 0 2px #34c759', position: 'relative', zIndex: 3 },
+  drowSel:  { background: '#e0e7ff', boxShadow: 'inset 0 0 0 1px #818cf8' },
   blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
   dnum: { width: 17, fontSize: '0.56rem', color: '#5b626c', textAlign: 'center', fontWeight: 700, lineHeight: '20px', borderRight: '1px solid #eef0f3', flexShrink: 0 },
   ddow: { width: 13, fontSize: '0.52rem', color: '#9aa1ac', textAlign: 'center', lineHeight: '20px', textTransform: 'uppercase', flexShrink: 0 },
