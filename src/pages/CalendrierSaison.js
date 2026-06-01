@@ -1097,7 +1097,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         </div>
 
         {/* Séances */}
-        <div style={{ flex: 1, padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
+        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {day.events.map(evt => (
             <div key={evt.id}>
               {evt.heure && (
@@ -1154,7 +1154,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         {activeDays.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa1ac', fontSize: '.9rem', fontStyle: 'italic' }}>Aucune séance cette semaine</div>
         ) : (
-          <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4' }}>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4', alignItems: 'start' }}>
             {activeDays.map(day => <DayColumn key={day.date} day={day} />)}
           </div>
         )}
