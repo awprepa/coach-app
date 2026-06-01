@@ -1122,7 +1122,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     const typeLabel = matchEvt ? 'Match' : isMuscu ? 'Musculation' : 'Entraînement'
 
     return (
-      <div style={{ background: matchEvt ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ background: matchEvt ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         {/* En-tête colonne */}
         <div style={{ padding: '10px 12px 8px', borderBottom: `3px solid ${borderColor}`, textAlign: 'center', flexShrink: 0 }}>
           <div style={{ fontSize: '.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: '#9aa1ac' }}>{DOW_FR[day.dow]}</div>
@@ -1189,8 +1189,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         {activeDays.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa1ac', fontSize: '.9rem', fontStyle: 'italic' }}>Aucune séance cette semaine</div>
         ) : (
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4', alignItems: 'stretch' }}>
-            {activeDays.map(day => <DayColumn key={day.date} day={day} />)}
+          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1, background: '#d8dce4', alignItems: 'stretch' }}>
+              {activeDays.map(day => <DayColumn key={day.date} day={day} />)}
+            </div>
           </div>
         )}
       </div>
