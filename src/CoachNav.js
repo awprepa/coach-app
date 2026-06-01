@@ -49,7 +49,7 @@ export default function CoachNav() {
           <NavLink key={item.to} to={item.to} end={item.end} className="coachnav-link">
             <span className="coachnav-ico">{ICONS[item.icon]}</span>
             {item.label}
-            {item.to === '/' && newClients > 0 && <span className="coachnav-badge">{newClients}</span>}
+            {item.to === '/' && <span className="coachnav-badge" style={{visibility: newClients > 0 ? 'visible' : 'hidden'}}>{newClients}</span>}
           </NavLink>
         ))}
       </div>
