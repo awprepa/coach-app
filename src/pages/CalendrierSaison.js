@@ -920,9 +920,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   function evtColor(type) {
     if (type === 'match') return groupColor
-    if (type === 'entrainement') return '#6b94a3'
-    if (type === 'muscu') return '#b08769'
-    return '#9aa1ac'
+    if (type === 'entrainement') return '#2563eb'
+    if (type === 'muscu') return '#7c3aed'
+    return '#64748b'
   }
 
   function chargeLevel(charge) {
@@ -993,16 +993,24 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       <div style={{ border: `2px solid ${color}35`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
 
         {/* En-tête séance (bandeau coloré) */}
-        <div style={{ background: color, padding: '9px 13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div>
-            <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+        <div style={{ background: color, padding: '11px 14px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.62rem', fontWeight: 800, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 3 }}>
               {TYPES[evt.type]?.label || evt.type}
             </div>
-            <div style={{ fontSize: '.88rem', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginTop: 1 }}>{evtLabel}</div>
+            <div style={{ fontSize: '.95rem', fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{evtLabel}</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-            {evt.heure && <span style={{ fontSize: '.62rem', color: 'rgba(255,255,255,.75)', fontWeight: 700 }}>{evt.heure}</span>}
-            {evt.duree_min && <span style={{ fontSize: '.6rem', background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>{evt.duree_min} min</span>}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+            {evt.heure && (
+              <span style={{ fontSize: '.8rem', fontWeight: 900, color: '#fff', background: 'rgba(0,0,0,.22)', borderRadius: 6, padding: '3px 8px', letterSpacing: '.01em' }}>
+                🕐 {evt.heure}
+              </span>
+            )}
+            {evt.duree_min && (
+              <span style={{ fontSize: '.68rem', background: 'rgba(255,255,255,.25)', color: '#fff', borderRadius: 5, padding: '2px 7px', fontWeight: 800 }}>
+                ⏱ {evt.duree_min} min
+              </span>
+            )}
           </div>
         </div>
 
@@ -1011,7 +1019,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {blocs.map((bloc, idx) => {
               const mins = parseDurMin(bloc.duree)
-              const minH = mins ? Math.max(28, Math.min(400, Math.round(mins * 4))) : 40
+              const minH = mins ? Math.max(44, Math.min(500, Math.round(mins * 5))) : 50
 
               const byGroup = {}
               for (const exo of (bloc.exos || [])) {
@@ -1024,15 +1032,15 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               return (
                 <div key={bloc.id} style={{ borderTop: idx > 0 ? `1px solid ${color}20` : 'none' }}>
                   {/* En-tête phase */}
-                  <div style={{ padding: '5px 12px', background: color + '14', display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: color, color: '#fff', fontSize: '.55rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                    <span style={{ fontSize: '.72rem', fontWeight: 800, color: color, flex: 1 }}>{bloc.nom}</span>
-                    {bloc.duree && <span style={{ fontSize: '.6rem', fontWeight: 800, color: color + 'aa', background: color + '18', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>{bloc.duree}</span>}
+                  <div style={{ padding: '7px 12px', background: color + '20', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 22, height: 22, borderRadius: '50%', background: color, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${color}55` }}>{idx + 1}</span>
+                    <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
+                    {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: color, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
 
                   {/* Exercices */}
                   {bloc.exos?.length > 0 && (
-                    <div style={{ minHeight: minH, padding: '6px 10px 8px', background: color + '05', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
+                    <div style={{ minHeight: minH, padding: '8px 10px 10px', background: color + '08', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                       {hasGroups ? (
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'start' }}>
                           {groupKeys.map(g => (
@@ -1040,9 +1048,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                               {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: color + 'bb', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
                               <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: color + '08' }}>
                                 {byGroup[g].map(exo => (
-                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 6, padding: '5px 8px', border: `1px solid ${color}20` }}>
-                                    <div style={{ fontSize: '.67rem', fontWeight: 800, color: '#2a3040', lineHeight: 1.25 }}>{exo.nom}</div>
-                                    {exo.prescription && <div style={{ fontSize: '.6rem', color: color, fontWeight: 700, marginTop: 2 }}>{exo.prescription}</div>}
+                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${color}30` }}>
+                                    <div style={{ fontSize: '.73rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.3 }}>{exo.nom}</div>
+                                    {exo.prescription && <div style={{ fontSize: '.67rem', color: color, fontWeight: 800, marginTop: 3 }}>{exo.prescription}</div>}
                                   </div>
                                 ))}
                               </div>
@@ -1052,16 +1060,16 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {bloc.exos.map(exo => (
-                            <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#2a3040', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
-                              {exo.prescription && <span style={{ fontSize: '.62rem', color: color, fontWeight: 800, flexShrink: 0, background: color + '14', borderRadius: 4, padding: '1px 5px' }}>{exo.prescription}</span>}
+                            <div key={exo.id} style={{ background: '#fff', borderRadius: 8, padding: '8px 11px', border: `1px solid ${color}30`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#1a1a1a', flex: 1, lineHeight: 1.35 }}>{exo.nom}</span>
+                              {exo.prescription && <span style={{ fontSize: '.68rem', color: '#fff', fontWeight: 900, flexShrink: 0, background: color, borderRadius: 5, padding: '2px 7px' }}>{exo.prescription}</span>}
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
                   )}
-                  {!bloc.exos?.length && mins && <div style={{ minHeight: minH, background: color + '05' }} />}
+                  {!bloc.exos?.length && mins && <div style={{ minHeight: minH, background: color + '08' }} />}
                 </div>
               )
             })}
