@@ -173,7 +173,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       const s = selRef.current
       if (!s) return
       const [start, end] = [s.start, s.end].sort()
-      if (start === end) { setSel(null); return }
+      // si 1 seul jour : on garde sel actif (case bleue) mais pas de selMenu flottant
+      if (start === end) return
       const x = Math.min(e.clientX, window.innerWidth - 250)
       const y = Math.min(e.clientY + 10, window.innerHeight - 310)
       setSelMenu({ x, y }); setSelMode('main')
@@ -387,6 +388,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     if (e.button !== 0 || dragEvt) return
     e.preventDefault()
     lastDateRef.current = dISO
+    lastEvtRef.current = null   // on clique sur la grille → on désélectionne tout évènement ciblé
     setSel({ start: dISO, end: dISO })
     setSelDrag(true)
     setSelMenu(null); setPop(null); setCtx(null)
@@ -395,6 +397,20 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     lastDateRef.current = dISO
     if (!selDrag) return
     setSel(prev => prev ? { ...prev, end: dISO } : null)
+  }
+
+  // Supprime tous les évènements compris dans la sélection en cours
+  async function deleteEventsInSel() {
+    const s = selRef.current
+    if (!s || !groupe) return
+    const [start, end] = [s.start, s.end].sort()
+    const toDelete = evenements.filter(ev => ev.date >= start && ev.date <= end)
+    if (!toDelete.length) return
+    for (const ev of toDelete) {
+      await supabase.from('groupe_evenements').delete().eq('id', ev.id)
+    }
+    setSel(null)
+    await loadSeason(true)
   }
 
   async function copyPeriod() {
@@ -559,10 +575,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     const tag = (e.target?.tagName || '').toLowerCase()
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return
 
-    // Delete / Backspace → supprimer l'évènement actif
+    // Delete / Backspace → supprimer l'évènement ciblé OU les évènements de la sélection
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const evt = lastEvtRef.current
       if (evt) { deleteEventDirect(evt); lastEvtRef.current = null }
+      else if (selRef.current) { deleteEventsInSel() }
       return
     }
     // Cmd+C → copier
@@ -656,14 +673,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                           <div
                             onMouseDown={e => onDayMouseDown(e, dISO)}
                             onMouseEnter={() => onDayMouseEnter(dISO)}
-                            onDoubleClick={e => { if (!selMenu) openPop(e, dISO) }}
+                            onDoubleClick={e => { setSel(null); if (!selMenu) openPop(e, dISO) }}
                             onContextMenu={e => {
                               e.preventDefault(); e.stopPropagation()
-                              if (selDrag || sel) return
+                              if (selDrag) return
+                              setSel(null)  // efface la sélection avant d'ouvrir la bulle
                               lastDateRef.current = dISO
-                              // Si une période est copiée → colle directement, sinon ouvre la bulle
-                              if (periodClip) { pastePeriod(dISO) }
-                              else openPop(e, dISO)
+                              openPop(e, dISO)
                             }}
                             onDragOver={dragEvt ? (e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== dISO) setDragOver(dISO) }) : undefined}
                             onDrop={dragEvt ? (e => { e.preventDefault(); moveEvent(dragEvt, dISO); setDragEvt(null); setDragOver(null) }) : undefined}
@@ -809,7 +825,12 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
 
             {clip && (
               <button style={S.popPaste} onClick={() => { pasteEvent(pop.form.date); setPop(null) }}>
-                📌 Coller « {clipLabel(clip.source)} »
+                Coller « {clipLabel(clip.source)} »
+              </button>
+            )}
+            {periodClip && (
+              <button style={{ ...S.popPaste, color: '#059669', borderColor: '#a7f3d0' }} onClick={() => { pastePeriod(pop.form.date); setPop(null) }}>
+                Coller la période ({periodClip.events.length} évèn.)
               </button>
             )}
 
