@@ -1274,7 +1274,7 @@ function SeanceModal({
       const d = dragRef.current
       if (!d) return
       const deltaMin = Math.round((e.clientY - d.startY) / pxMinRef.current)
-      const newDur = Math.max(5, Math.min(d.maxEnd - d.startMin, d.startDur + deltaMin))
+      const newDur = Math.max(5, Math.min(d.maxDur, d.startDur + deltaMin))
       d.currentDur = newDur
       setLocalDurs(prev => ({ ...prev, [d.id]: newDur }))
     }
@@ -1310,10 +1310,9 @@ function SeanceModal({
 
   function startDrag(e, bloc) {
     e.preventDefault()
-    const idx = blocsWithPos.findIndex(b => b.id === bloc.id)
-    const next = blocsWithPos[idx + 1]
-    const maxEnd = next ? next.startMin : totalMin
-    dragRef.current = { id: bloc.id, startY: e.clientY, startDur: bloc.durationMin, startMin: bloc.startMin, maxEnd, currentDur: bloc.durationMin }
+    const sumOthers = blocsWithPos.filter(b => b.id !== bloc.id).reduce((s, b) => s + b.durationMin, 0)
+    const maxDur = Math.max(5, totalMin - sumOthers)
+    dragRef.current = { id: bloc.id, startY: e.clientY, startDur: bloc.durationMin, startMin: bloc.startMin, maxDur, currentDur: bloc.durationMin }
     document.body.style.cursor = 'ns-resize'
     document.body.style.userSelect = 'none'
   }
@@ -1501,8 +1500,9 @@ function SeanceModal({
                   {blocsWithPos.map((bloc, idx) => {
                     const color = BLOC_COLORS[idx % BLOC_COLORS.length]
                     const top = bloc.startMin * pxMin
-                    const height = Math.max(33, bloc.durationMin * pxMin)
-                    const bodyH = height - 33
+                    const height = bloc.durationMin * pxMin
+                    const compact = height < 28  // trop petit pour afficher la tête complète
+                    const bodyH = height - 30
 
                     const groups = {}
                     for (const exo of (bloc.exos || [])) {
@@ -1513,17 +1513,24 @@ function SeanceModal({
                     const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
 
                     return (
-                      <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height, borderRadius: 10, overflow: 'visible' }}>
-                        <div style={{ height: '100%', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
-                          {/* Tête du bloc */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px 5px', borderBottom: '1px solid rgba(255,255,255,.18)', flexShrink: 0 }}>
-                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                            <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.74rem', fontWeight: 800, minWidth: 0, fontFamily: 'inherit' }} />
-                            <span style={{ fontSize: '.62rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '2px 7px', borderRadius: 5, flexShrink: 0 }}>{bloc.durationMin} min</span>
-                            <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'rgba(255,255,255,.7)', borderRadius: 5, width: 18, height: 18, fontSize: '.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                      <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height: Math.max(height, 6), borderRadius: 6, overflow: 'visible' }}>
+                        <div style={{ height: '100%', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
+                          {/* Tête du bloc — compacte si très petit */}
+                          {compact ? (
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6, overflow: 'hidden' }}>
+                              <span style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{bloc.nom}</span>
+                              <span style={{ fontSize: '.55rem', fontWeight: 900, color: 'rgba(255,255,255,.75)', flexShrink: 0 }}>{bloc.durationMin}\'</span>
+                            </div>
+                          ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 8px 4px', borderBottom: bodyH >= 24 ? '1px solid rgba(255,255,255,.18)' : 'none', flexShrink: 0 }}>
+                            <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.55rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                            <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.72rem', fontWeight: 800, minWidth: 0, fontFamily: 'inherit' }} />
+                            <span style={{ fontSize: '.6rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>{bloc.durationMin} min</span>
+                            <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'rgba(255,255,255,.7)', borderRadius: 4, width: 16, height: 16, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                           </div>
-                          {/* Exercices */}
-                          {bodyH >= 24 && (bloc.exos || []).length > 0 && (
+                          )}
+                          {/* Exercices — flex:1 sur chaque ligne → proportionnel à la hauteur du bloc */}
+                          {!compact && bodyH >= 24 && (bloc.exos || []).length > 0 && (
                             <div style={{ flex: 1, overflow: 'hidden', padding: '4px 8px 5px', background: 'rgba(255,255,255,.1)', minHeight: 0 }}>
                               {hasGroups ? (
                                 <div style={{ display: 'flex', gap: 5, height: '100%' }}>
