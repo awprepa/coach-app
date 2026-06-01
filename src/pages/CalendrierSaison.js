@@ -983,94 +983,101 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       )
     }
 
-    // Avec blocs — proportionnels + groupes côte à côte
-    if (blocs.length > 0) {
-      return (
-        <>
-          {blocs.map(bloc => {
-            const mins = parseDurMin(bloc.duree)
-            // Hauteur min proportionnelle : 1 min ≈ 4 px, plancher 28px, plafond 400px
-            const minH = mins ? Math.max(28, Math.min(400, Math.round(mins * 4))) : 40
-
-            // Grouper les exercices par groupe_label
-            const byGroup = {}
-            for (const exo of (bloc.exos || [])) {
-              const g = exo.groupe_label?.trim() || ''
-              ;(byGroup[g] ||= []).push(exo)
-            }
-            const groupKeys = Object.keys(byGroup)
-            const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
-
-            return (
-              <div key={bloc.id} style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 5 }}>
-                {/* En-tête bloc */}
-                <div style={{ padding: '6px 10px', background: color + '28', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                  <span style={{ fontSize: '.72rem', fontWeight: 800, color: color + 'ee', flex: 1 }}>{bloc.nom}</span>
-                  {bloc.duree && <span style={{ fontSize: '.6rem', fontWeight: 700, background: color + '18', color: color, borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>{bloc.duree}</span>}
-                </div>
-
-                {/* Corps — hauteur proportionnelle */}
-                {bloc.exos?.length > 0 && (
-                  <div style={{ minHeight: minH, background: color + '0d', padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                    {hasGroups ? (
-                      /* Groupes côte à côte — chaque exercice = sous-bloc */
-                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 6, alignItems: 'start' }}>
-                        {groupKeys.map(g => (
-                          <div key={g} style={{ background: color + '10', borderRadius: 8, overflow: 'hidden', border: `1px solid ${color}25` }}>
-                            {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.06em', color: '#fff', background: color + 'cc', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
-                            <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                              {byGroup[g].map(exo => (
-                                <div key={exo.id} style={{ background: '#fff', borderRadius: 6, padding: '5px 8px', border: `1px solid ${color}18` }}>
-                                  <div style={{ fontSize: '.68rem', fontWeight: 800, color: '#2a3040', lineHeight: 1.25 }}>{exo.nom}</div>
-                                  {exo.prescription && <div style={{ fontSize: '.6rem', color: color, fontWeight: 700, marginTop: 2 }}>{exo.prescription}</div>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      /* Pas de groupe — chaque exercice = sous-bloc */
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {bloc.exos.map(exo => (
-                          <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                            <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#2a3040', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
-                            {exo.prescription && <span style={{ fontSize: '.62rem', color: color, fontWeight: 800, flexShrink: 0, background: color + '14', borderRadius: 4, padding: '1px 5px' }}>{exo.prescription}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Bloc sans exos : juste la hauteur proportionnelle */}
-                {!bloc.exos?.length && mins && (
-                  <div style={{ minHeight: minH, background: color + '08' }} />
-                )}
-              </div>
-            )
-          })}
-        </>
-      )
-    }
-
-    // Sans blocs : info de base
-    const label = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+    // Libellé principal de la séance
+    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+
+    // ── Carte unique englobant toute la séance ──────────────────────────────
     return (
-      <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 2 }}>
-        <div style={{ padding: '8px 10px', background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '.78rem', fontWeight: 800, color: color + 'ee' }}>{label}</span>
-          {evt.duree_min && <span style={{ fontSize: '.62rem', color: color, background: color + '15', borderRadius: 4, padding: '1px 6px' }}>{evt.duree_min} min</span>}
+      <div style={{ border: `2px solid ${color}35`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+
+        {/* En-tête séance (bandeau coloré) */}
+        <div style={{ background: color, padding: '9px 13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {TYPES[evt.type]?.label || evt.type}
+            </div>
+            <div style={{ fontSize: '.88rem', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginTop: 1 }}>{evtLabel}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+            {evt.heure && <span style={{ fontSize: '.62rem', color: 'rgba(255,255,255,.75)', fontWeight: 700 }}>{evt.heure}</span>}
+            {evt.duree_min && <span style={{ fontSize: '.6rem', background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>{evt.duree_min} min</span>}
+          </div>
         </div>
-        {(evt.heure || evt.lieu || evt.note) && (
-          <div style={{ padding: '5px 10px 7px', background: color + '0d', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {evt.heure && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>🕐 {evt.heure}</span>}
-            {evt.lieu  && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>📍 {evt.lieu}</span>}
-            {evt.note  && <span style={{ fontSize: '.65rem', color: '#7a8290', fontStyle: 'italic' }}>{evt.note}</span>}
+
+        {/* Phases (blocs) */}
+        {blocs.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {blocs.map((bloc, idx) => {
+              const mins = parseDurMin(bloc.duree)
+              const minH = mins ? Math.max(28, Math.min(400, Math.round(mins * 4))) : 40
+
+              const byGroup = {}
+              for (const exo of (bloc.exos || [])) {
+                const g = exo.groupe_label?.trim() || ''
+                ;(byGroup[g] ||= []).push(exo)
+              }
+              const groupKeys = Object.keys(byGroup)
+              const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
+
+              return (
+                <div key={bloc.id} style={{ borderTop: idx > 0 ? `1px solid ${color}20` : 'none' }}>
+                  {/* En-tête phase */}
+                  <div style={{ padding: '5px 12px', background: color + '14', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: color, color: '#fff', fontSize: '.55rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                    <span style={{ fontSize: '.72rem', fontWeight: 800, color: color, flex: 1 }}>{bloc.nom}</span>
+                    {bloc.duree && <span style={{ fontSize: '.6rem', fontWeight: 800, color: color + 'aa', background: color + '18', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>{bloc.duree}</span>}
+                  </div>
+
+                  {/* Exercices */}
+                  {bloc.exos?.length > 0 && (
+                    <div style={{ minHeight: minH, padding: '6px 10px 8px', background: color + '05', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
+                      {hasGroups ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'start' }}>
+                          {groupKeys.map(g => (
+                            <div key={g} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${color}30` }}>
+                              {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: color + 'bb', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
+                              <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: color + '08' }}>
+                                {byGroup[g].map(exo => (
+                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 6, padding: '5px 8px', border: `1px solid ${color}20` }}>
+                                    <div style={{ fontSize: '.67rem', fontWeight: 800, color: '#2a3040', lineHeight: 1.25 }}>{exo.nom}</div>
+                                    {exo.prescription && <div style={{ fontSize: '.6rem', color: color, fontWeight: 700, marginTop: 2 }}>{exo.prescription}</div>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {bloc.exos.map(exo => (
+                            <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#2a3040', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
+                              {exo.prescription && <span style={{ fontSize: '.62rem', color: color, fontWeight: 800, flexShrink: 0, background: color + '14', borderRadius: 4, padding: '1px 5px' }}>{exo.prescription}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!bloc.exos?.length && mins && <div style={{ minHeight: minH, background: color + '05' }} />}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Pas de blocs */
+          <div style={{ padding: '10px 13px' }}>
+            {(evt.lieu || evt.note) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
+                {evt.lieu && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>📍 {evt.lieu}</span>}
+                {evt.note && <span style={{ fontSize: '.65rem', color: '#7a8290', fontStyle: 'italic' }}>{evt.note}</span>}
+              </div>
+            )}
+            <div style={{ color: '#c4ccd4', fontSize: '.65rem', fontStyle: 'italic' }}>Aucun déroulé renseigné</div>
           </div>
         )}
-        <div style={{ padding: '3px 10px 5px', color: '#c4ccd4', fontSize: '.65rem', fontStyle: 'italic' }}>Aucun déroulé renseigné</div>
       </div>
     )
   }
