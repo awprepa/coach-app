@@ -866,25 +866,22 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         />
       )}
 
-      {panel && <div style={S.scrim} onClick={closePanel} />}
       {panel && (
-        <div style={S.panel}>
-          <PanelHead panel={panel} groupColor={groupColor} onClose={closePanel} />
-          <div style={S.pbody}>
-            <EventForm form={panel.form} setForm={setForm} groupColor={groupColor} />
-            {(HAS_BLOCS.includes(panel.form.type) || panel.form.type === 'collectif') && (
-              <BlocsEditor panel={panel} addBloc={addBloc} updateBloc={updateBloc} deleteBloc={deleteBloc}
-                addExo={addExo} updateExo={updateExo} deleteExo={deleteExo} />
-            )}
-          </div>
-          <div style={S.pactions}>
-            {panel.mode === 'edit' && <button style={S.btnGhostDanger} onClick={deleteEvent} disabled={saving}>Supprimer</button>}
-            <button style={S.btn} onClick={closePanel}>Fermer</button>
-            <button style={S.btnDark} onClick={saveEvent} disabled={saving}>
-              <span style={{ color: '#e4f816' }}>{saving ? '…' : panel.mode === 'create' ? 'Créer' : 'Enregistrer'}</span>
-            </button>
-          </div>
-        </div>
+        <SeanceModal
+          panel={panel}
+          groupColor={groupColor}
+          closePanel={closePanel}
+          setForm={setForm}
+          addBloc={addBloc}
+          updateBloc={updateBloc}
+          deleteBloc={deleteBloc}
+          addExo={addExo}
+          updateExo={updateExo}
+          deleteExo={deleteExo}
+          saveEvent={saveEvent}
+          deleteEvent={deleteEvent}
+          saving={saving}
+        />
       )}
     </div>
   )
@@ -1216,6 +1213,389 @@ function formatPopDate(dateISO) {
   return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
+// Parse durée libre → minutes (ex: "30 min", "1h30", "45", "5'")
+function parseDurMin(s) {
+  if (!s) return null
+  const str = String(s).toLowerCase().trim()
+  const hm = str.match(/(\d+)\s*h\s*(\d*)/)
+  if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2] || 0)
+  const m = str.match(/(\d+)\s*m/)
+  if (m) return parseInt(m[1])
+  const apos = str.match(/^(\d+)\s*['′']/)
+  if (apos) return parseInt(apos[1])
+  const n = str.match(/^(\d+)$/)
+  if (n) return parseInt(n[1])
+  return null
+}
+
+const BLOC_COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16']
+
+/* ── SeanceModal — plein écran, remplace l'ancien panneau latéral ── */
+function SeanceModal({
+  panel, groupColor, closePanel, setForm,
+  addBloc, updateBloc, deleteBloc,
+  addExo, updateExo, deleteExo,
+  saveEvent, deleteEvent, saving,
+}) {
+  const { form } = panel
+  const hasBlocs = HAS_BLOCS.includes(form.type) || form.type === 'collectif'
+  const totalMin = Number(form.duree_min) || 0
+
+  // ── Timeline ──
+  const blocksAreaRef = useRef(null)
+  const [pxMin, setPxMin] = useState(3)
+  const pxMinRef = useRef(3)
+  const dragRef = useRef(null)
+  const updateBlocRef = useRef(updateBloc)
+  updateBlocRef.current = updateBloc
+  const [localDurs, setLocalDurs] = useState({})
+
+  // PX_MIN dynamique basé sur la hauteur de la zone
+  useEffect(() => {
+    const area = blocksAreaRef.current
+    if (!area) return
+    const compute = () => {
+      const h = area.getBoundingClientRect().height
+      if (h > 0 && totalMin > 0) {
+        const v = Math.max(1.5, (h - 16) / totalMin)
+        pxMinRef.current = v
+        setPxMin(v)
+      }
+    }
+    compute()
+    const ro = new ResizeObserver(compute)
+    ro.observe(area)
+    return () => ro.disconnect()
+  }, [totalMin])
+
+  // Drag (listeners sur document, une seule fois)
+  useEffect(() => {
+    const onMove = (e) => {
+      const d = dragRef.current
+      if (!d) return
+      const deltaMin = Math.round((e.clientY - d.startY) / pxMinRef.current)
+      const newDur = Math.max(5, Math.min(d.maxEnd - d.startMin, d.startDur + deltaMin))
+      d.currentDur = newDur
+      setLocalDurs(prev => ({ ...prev, [d.id]: newDur }))
+    }
+    const onUp = () => {
+      const d = dragRef.current
+      if (!d) return
+      if (d.currentDur != null && d.currentDur !== d.startDur) {
+        updateBlocRef.current(d.id, { duree: String(d.currentDur) })
+      }
+      dragRef.current = null
+      setLocalDurs({})
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+  }, [])
+
+  // Blocs triés + startMin cumulatif
+  const sortedBlocs = [...panel.blocs].sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+  let cursor = 0
+  const blocsWithPos = sortedBlocs.map(b => {
+    const dur = localDurs[b.id] ?? parseDurMin(b.duree) ?? 0
+    const start = cursor
+    cursor += dur
+    return { ...b, startMin: start, durationMin: dur }
+  })
+  const usedMin = blocsWithPos.reduce((s, b) => s + b.durationMin, 0)
+
+  function startDrag(e, bloc) {
+    e.preventDefault()
+    const idx = blocsWithPos.findIndex(b => b.id === bloc.id)
+    const next = blocsWithPos[idx + 1]
+    const maxEnd = next ? next.startMin : totalMin
+    dragRef.current = { id: bloc.id, startY: e.clientY, startDur: bloc.durationMin, startMin: bloc.startMin, maxEnd, currentDur: bloc.durationMin }
+    document.body.style.cursor = 'ns-resize'
+    document.body.style.userSelect = 'none'
+  }
+
+  // Libellé de la date
+  const dateLabel = form.date ? (() => {
+    const [y, m, d] = form.date.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  })() : 'Nouvel événement'
+
+  const step = totalMin <= 60 ? 10 : totalMin <= 120 ? 15 : totalMin <= 180 ? 20 : 30
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 110 }} onClick={closePanel} />
+
+      {/* Modal */}
+      <div style={{ position: 'fixed', top: 70, bottom: '2vh', left: '50%', transform: 'translateX(-50%)', width: 'min(96vw, 1000px)', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '13px 20px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+          <div>
+            <div style={{ color: '#fff', fontSize: '.95rem', fontWeight: 800, textTransform: 'capitalize' }}>{dateLabel}</div>
+            <div style={{ color: 'rgba(255,255,255,.4)', fontSize: '.68rem', marginTop: 1 }}>
+              {panel.mode === 'create' ? 'Nouvel événement' : 'Modifier l\'événement'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            {CREATE_TYPES.map(k => (
+              <button key={k} onClick={() => setForm({ type: k })} style={{ background: form.type === k ? '#e4f816' : 'rgba(255,255,255,.1)', border: 'none', color: form.type === k ? '#333' : 'rgba(255,255,255,.55)', borderRadius: 8, padding: '5px 13px', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                {TYPES[k].label}
+              </button>
+            ))}
+          </div>
+          <button onClick={closePanel} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+        </div>
+
+        {/* Body 2 colonnes */}
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: hasBlocs ? '400px 1fr' : '1fr', overflow: 'hidden', minHeight: 0 }}>
+
+          {/* ── Colonne formulaire ── */}
+          <div style={{ background: '#fff', borderRight: hasBlocs ? '1px solid #e0e3e8' : 'none', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+
+            <div style={Sm.section}>
+              <div style={Sm.sTitle}>Horaire</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={Sm.fLabel}>Heure</div>
+                  <input type="time" value={form.heure} onChange={e => setForm({ heure: e.target.value })} style={Sm.input} />
+                </div>
+                {form.type !== 'match' && (
+                  <div style={{ flex: 1 }}>
+                    <div style={Sm.fLabel}>Durée totale (min)</div>
+                    <input type="number" value={form.duree_min} onChange={e => setForm({ duree_min: e.target.value })} style={{ ...Sm.input, borderColor: '#7c3aed', background: '#f5f3ff', color: '#5b21b6', fontWeight: 900, textAlign: 'center', fontSize: '.9rem' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={Sm.section}>
+              <div style={Sm.sTitle}>{TYPES[form.type]?.label || 'Détails'}</div>
+
+              {form.type === 'match' && (
+                <>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={Sm.fLabel}>Adversaire</div>
+                    <input value={form.adversaire} onChange={e => setForm({ adversaire: e.target.value })} placeholder="ex. Montauban" style={Sm.input} />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={Sm.fLabel}>Catégorie</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {MATCH_CATEGORIES.map(c => (
+                        <button key={c} onClick={() => setForm({ categorie: c })} style={{ ...Sm.chip, ...(form.categorie === c ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={Sm.fLabel}>Lieu</div>
+                      <select value={form.domicile ? '1' : '0'} onChange={e => setForm({ domicile: e.target.value === '1' })} style={Sm.input}>
+                        <option value="1">Domicile</option><option value="0">Extérieur</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={Sm.fLabel}>Journée</div>
+                      <input value={form.journee} onChange={e => setForm({ journee: e.target.value })} placeholder="ex. J12" style={Sm.input} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {form.type === 'entrainement' && (
+                <>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={Sm.fLabel}>Style</div>
+                    <input value={form.style} onChange={e => setForm({ style: e.target.value })} placeholder="ex. Vitesse, Collectif, Prévention…" style={Sm.input} />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={Sm.fLabel}>Titre (optionnel)</div>
+                    <input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Travail d'appuis" style={Sm.input} />
+                  </div>
+                </>
+              )}
+
+              {form.type === 'muscu' && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={Sm.fLabel}>Titre</div>
+                  <input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Force max bas du corps" style={Sm.input} />
+                </div>
+              )}
+            </div>
+
+            {form.type !== 'match' && (
+              <div style={Sm.section}>
+                <div style={Sm.sTitle}>Charge</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['Légère', 'Modérée', 'Haute'].map(c => (
+                    <button key={c} onClick={() => setForm({ charge: c })} style={{ ...Sm.chip, flex: 1, ...(form.charge === c ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>{c}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={Sm.section}>
+              <div style={Sm.sTitle}>Lieu</div>
+              <input value={form.lieu} onChange={e => setForm({ lieu: e.target.value })} placeholder="Terrain, salle…" style={Sm.input} />
+            </div>
+
+            <div style={Sm.section}>
+              <div style={Sm.sTitle}>Note</div>
+              <textarea value={form.note} onChange={e => setForm({ note: e.target.value })} rows={3} style={{ ...Sm.input, resize: 'none', height: 72 }} />
+            </div>
+          </div>
+
+          {/* ── Colonne timeline ── */}
+          {hasBlocs && (
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f5f6f8', minHeight: 0 }}>
+
+              {/* Stats + bouton */}
+              <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #e0e3e8', background: '#fff', flexShrink: 0 }}>
+                <span style={{ fontSize: '.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.07em', color: '#6b7280' }}>Séquence</span>
+                <span style={{ fontSize: '.98rem', fontWeight: 900, color: '#1a1a1a' }}>{usedMin}</span>
+                <span style={{ color: '#d1d5db' }}>/</span>
+                <span style={{ fontSize: '.98rem', fontWeight: 900, color: '#7c3aed' }}>{totalMin || '—'}</span>
+                <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#9aa1ac' }}>min</span>
+                {totalMin > 0 && (
+                  <div style={{ width: 90, height: 5, background: '#e5e7eb', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 99, width: Math.min(100, usedMin / totalMin * 100) + '%', background: usedMin > totalMin ? 'linear-gradient(90deg,#ef4444,#dc2626)' : 'linear-gradient(90deg,#10b981,#06b6d4)', transition: 'width .3s' }} />
+                  </div>
+                )}
+                <span style={{ fontSize: '.62rem', fontWeight: 700, color: usedMin > totalMin ? '#ef4444' : '#9aa1ac' }}>
+                  {totalMin > 0 ? (usedMin > totalMin ? `⚠️ +${usedMin - totalMin} min` : `· ${totalMin - usedMin} min libres`) : ''}
+                </span>
+                <button onClick={addBloc} style={{ marginLeft: 'auto', background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: '.72rem', fontWeight: 800, cursor: 'pointer' }}>+ Bloc</button>
+              </div>
+
+              {/* Zone timeline sans scroll */}
+              <div style={{ flex: 1, display: 'flex', gap: 10, padding: '12px 14px', minHeight: 0, overflow: 'hidden' }}>
+
+                {/* Ruler */}
+                <div style={{ width: 30, flexShrink: 0, position: 'relative', pointerEvents: 'none' }}>
+                  {totalMin > 0 && Array.from({ length: Math.floor(totalMin / step) + 1 }, (_, i) => i * step).map(m => (
+                    <div key={m} style={{ position: 'absolute', top: m * pxMin - 7, right: 0, left: 0, textAlign: 'right', paddingRight: 4, fontSize: '.55rem', fontWeight: 700, color: '#c4c8d0' }}>
+                      {m === 0 ? '0' : m + '\''}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Blocs area */}
+                <div ref={blocksAreaRef} style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+
+                  {/* Grid lines */}
+                  {totalMin > 0 && Array.from({ length: Math.floor(totalMin / step) + 1 }, (_, i) => i * step).map(m => (
+                    <div key={m} style={{ position: 'absolute', top: m * pxMin, left: 0, right: 0, height: 1, background: m % (step * 2) === 0 ? '#d5d8df' : '#eaecf0', pointerEvents: 'none' }} />
+                  ))}
+
+                  {/* Blocs */}
+                  {panel.mode === 'create' && panel.blocs.length === 0 && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                      <span style={{ fontSize: '.8rem', color: '#9aa1ac', fontStyle: 'italic' }}>Enregistre la séance pour ajouter des blocs.</span>
+                    </div>
+                  )}
+
+                  {blocsWithPos.map((bloc, idx) => {
+                    const color = BLOC_COLORS[idx % BLOC_COLORS.length]
+                    const top = bloc.startMin * pxMin
+                    const height = Math.max(33, bloc.durationMin * pxMin)
+                    const bodyH = height - 33
+
+                    const groups = {}
+                    for (const exo of (bloc.exos || [])) {
+                      const g = exo.groupe_label?.trim() || ''
+                      ;(groups[g] ||= []).push(exo)
+                    }
+                    const gKeys = Object.keys(groups)
+                    const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
+
+                    return (
+                      <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height, borderRadius: 10, overflow: 'visible' }}>
+                        <div style={{ height: '100%', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
+                          {/* Tête du bloc */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px 5px', borderBottom: '1px solid rgba(255,255,255,.18)', flexShrink: 0 }}>
+                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                            <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.74rem', fontWeight: 800, minWidth: 0, fontFamily: 'inherit' }} />
+                            <span style={{ fontSize: '.62rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '2px 7px', borderRadius: 5, flexShrink: 0 }}>{bloc.durationMin} min</span>
+                            <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'rgba(255,255,255,.7)', borderRadius: 5, width: 18, height: 18, fontSize: '.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                          </div>
+                          {/* Exercices */}
+                          {bodyH >= 24 && (bloc.exos || []).length > 0 && (
+                            <div style={{ flex: 1, overflow: 'hidden', padding: '4px 8px 5px', background: 'rgba(255,255,255,.1)', minHeight: 0 }}>
+                              {hasGroups ? (
+                                <div style={{ display: 'flex', gap: 5, height: '100%' }}>
+                                  {gKeys.map(gk => (
+                                    <div key={gk} style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(255,255,255,.2)' }}>
+                                      {gk && <div style={{ fontSize: '.54rem', fontWeight: 900, textTransform: 'uppercase', color: 'rgba(255,255,255,.9)', background: 'rgba(0,0,0,.25)', padding: '2px 7px', textAlign: 'center', flexShrink: 0 }}>{gk}</div>}
+                                      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '3px 4px', gap: 3, background: 'rgba(255,255,255,.08)', minHeight: 0 }}>
+                                        {groups[gk].map(exo => (
+                                          <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.88)', borderRadius: 5, padding: '0 7px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, minHeight: 0, overflow: 'hidden' }}>
+                                            <span style={{ fontSize: '.63rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
+                                            {exo.prescription && <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: color, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>{exo.prescription}</span>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
+                                  {(bloc.exos || []).map(exo => (
+                                    <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.88)', borderRadius: 5, padding: '0 7px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, overflow: 'hidden' }}>
+                                      <span style={{ fontSize: '.63rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
+                                      {exo.prescription && <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: color, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>{exo.prescription}</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {/* Handle drag */}
+                        <div onMouseDown={e => startDrag(e, bloc)} style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 36, height: 9, background: 'rgba(255,255,255,.45)', border: '1.5px solid rgba(255,255,255,.75)', borderRadius: 5, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, userSelect: 'none' }}>
+                          <div style={{ width: 16, height: 2, background: 'rgba(80,80,80,.45)', borderRadius: 2 }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Zone non planifiée */}
+                  {totalMin > 0 && usedMin < totalMin && (totalMin - usedMin) * pxMin >= 10 && (
+                    <div style={{ position: 'absolute', left: 0, right: 0, top: usedMin * pxMin, height: (totalMin - usedMin) * pxMin, pointerEvents: 'none' }}>
+                      <div style={{ position: 'absolute', inset: 0, borderRadius: 6, background: 'repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(100,80,200,.04) 5px, rgba(100,80,200,.04) 10px)', border: '1.5px dashed #c4b5fd' }} />
+                      {(totalMin - usedMin) * pxMin >= 20 && <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center', fontSize: '.62rem', fontWeight: 700, color: '#7c3aed' }}>{totalMin - usedMin} min non planifiées</div>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ background: '#fff', borderTop: '1px solid #e0e3e8', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {panel.mode === 'edit' && <button onClick={deleteEvent} disabled={saving} style={{ background: 'none', border: '1.5px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '7px 16px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>Supprimer</button>}
+          <button onClick={closePanel} style={{ marginLeft: 'auto', background: '#f3f4f6', border: 'none', color: '#6b7280', borderRadius: 8, padding: '7px 18px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>Fermer</button>
+          <button onClick={saveEvent} disabled={saving} style={{ background: '#1a1a1a', border: 'none', color: '#e4f816', borderRadius: 8, padding: '8px 26px', fontSize: '.78rem', fontWeight: 800, cursor: 'pointer' }}>
+            {saving ? '…' : panel.mode === 'create' ? 'Créer' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+const Sm = {
+  section: { padding: '14px 16px', borderBottom: '1px solid #f0f2f5' },
+  sTitle: { fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: '#9aa1ac', marginBottom: 10 },
+  fLabel: { fontSize: '.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: '#b0b7c0', marginBottom: 4 },
+  input: { width: '100%', border: '1.5px solid #e4e7ec', borderRadius: 8, padding: '7px 10px', fontSize: '.8rem', fontWeight: 600, color: '#1a1a1a', background: '#f8f9fb', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' },
+  chip: { border: '1.5px solid #e0e3e8', background: '#f8f9fb', color: '#6b7280', borderRadius: 7, padding: '5px 10px', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer' },
+}
+
 /* ── Sous-composants ── */
 function Stat({ v, l }) {
   return <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -1227,125 +1607,6 @@ function Leg({ c, t }) {
   return <div style={{ fontSize: '0.64rem', color: '#5b626c', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
     <span style={{ width: 10, height: 10, borderRadius: 3, background: c }} />{t}
   </div>
-}
-function PanelHead({ panel, groupColor, onClose }) {
-  const T = TYPES[panel.form.type] || TYPES.autre
-  const col = panel.form.type === 'match' ? groupColor : (T.color || '#5b626c')
-  const titre = panel.form.type === 'entrainement'
-    ? (panel.form.style || panel.form.titre || T.label)
-    : (panel.form.titre || panel.form.adversaire || T.label)
-  return (
-    <div style={S.phead}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ ...S.tag, background: col }}>{T.label}</span>
-        <span style={{ color: '#9aa1ac', fontSize: '1.3rem', cursor: 'pointer', lineHeight: 1 }} onClick={onClose}>×</span>
-      </div>
-      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '11px 0 2px' }}>
-        {panel.mode === 'create' ? 'Nouvel évènement' : titre}
-      </h2>
-    </div>
-  )
-}
-function Field({ label, children }) {
-  return <label style={{ display: 'block', marginBottom: 11 }}>
-    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: 4 }}>{label}</span>
-    {children}
-  </label>
-}
-function EventForm({ form, setForm, groupColor }) {
-  return (
-    <div>
-      <Field label="Type">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>
-          {CREATE_TYPES.map(k => {
-            const t = TYPES[k]
-            return (
-              <button key={k} onClick={() => setForm({ type: k })}
-                style={{ ...S.typeCard, ...(form.type === k ? { borderColor: '#15181d', background: '#f7f8fa' } : null) }}>
-                <span style={{ width: 9, height: 9, borderRadius: 2, background: k === 'match' ? groupColor : (t.color || '#cbd1d9') }} />
-                {t.label}
-              </button>
-            )
-          })}
-        </div>
-      </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <Field label="Date"><input type="date" value={form.date} onChange={e => setForm({ date: e.target.value })} style={S.input} /></Field>
-        <Field label="Heure"><input type="time" value={form.heure} onChange={e => setForm({ heure: e.target.value })} style={S.input} /></Field>
-      </div>
-
-      {form.type === 'match' && (
-        <>
-          <Field label="Adversaire"><input value={form.adversaire} onChange={e => setForm({ adversaire: e.target.value })} placeholder="ex. Montauban" style={S.input} /></Field>
-          <Field label="Catégorie">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-              {MATCH_CATEGORIES.map(c => (
-                <button key={c} onClick={() => setForm({ categorie: c })}
-                  style={{ ...S.chip, ...(form.categorie === c ? { borderColor: '#15181d', background: '#15181d', color: '#fff' } : null) }}>
-                  {c}
-                </button>
-              ))}
-            </div>
-          </Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Lieu du match">
-              <select value={form.domicile ? '1' : '0'} onChange={e => setForm({ domicile: e.target.value === '1' })} style={S.input}>
-                <option value="1">Domicile</option><option value="0">Extérieur</option>
-              </select>
-            </Field>
-            <Field label="Journée"><input value={form.journee} onChange={e => setForm({ journee: e.target.value })} placeholder="ex. J12" style={S.input} /></Field>
-          </div>
-        </>
-      )}
-
-      {form.type === 'entrainement' && (
-        <>
-          <Field label="Style d'entraînement"><input value={form.style} onChange={e => setForm({ style: e.target.value })} placeholder="ex. Vitesse, Collectif, Prévention…" style={S.input} /></Field>
-          <Field label="Titre (optionnel)"><input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Travail d'appuis" style={S.input} /></Field>
-        </>
-      )}
-
-      {form.type === 'muscu' && (
-        <Field label="Titre"><input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Force max bas du corps" style={S.input} /></Field>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-        <Field label="Lieu"><input value={form.lieu} onChange={e => setForm({ lieu: e.target.value })} placeholder="Salle…" style={S.input} /></Field>
-        <Field label="Durée (min)"><input type="number" value={form.duree_min} onChange={e => setForm({ duree_min: e.target.value })} style={S.input} /></Field>
-        <Field label="Charge"><input value={form.charge} onChange={e => setForm({ charge: e.target.value })} placeholder="Haute…" style={S.input} /></Field>
-      </div>
-      <Field label="Note"><textarea value={form.note} onChange={e => setForm({ note: e.target.value })} rows={2} style={{ ...S.input, resize: 'vertical' }} /></Field>
-    </div>
-  )
-}
-function BlocsEditor({ panel, addBloc, updateBloc, deleteBloc, addExo, updateExo, deleteExo }) {
-  return (
-    <div style={{ marginTop: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Déroulé en blocs</span>
-        <button style={S.btnSmall} onClick={addBloc}>+ Bloc</button>
-      </div>
-      {panel.mode === 'create' && <p style={{ fontSize: '0.72rem', color: '#9aa1ac' }}>Enregistre la séance pour construire son déroulé.</p>}
-      {panel.blocs.map(b => (
-        <div key={b.id} style={S.bloc}>
-          <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginBottom: 6 }}>
-            <input value={b.nom} onChange={e => updateBloc(b.id, { nom: e.target.value })} placeholder="Nom du bloc" style={{ ...S.input, flex: 1, fontWeight: 700 }} />
-            <input value={b.duree || ''} onChange={e => updateBloc(b.id, { duree: e.target.value })} placeholder="durée" style={{ ...S.input, width: 70 }} />
-            <button style={S.xBtn} onClick={() => deleteBloc(b.id)}>×</button>
-          </div>
-          {b.exos.map(x => (
-            <div key={x.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 90px auto', gap: 6, marginBottom: 5 }}>
-              <input value={x.nom} onChange={e => updateExo(b.id, x.id, { nom: e.target.value })} placeholder="Exercice" style={S.inputSm} />
-              <input value={x.prescription || ''} onChange={e => updateExo(b.id, x.id, { prescription: e.target.value })} placeholder="5 × 4 @ 85 %" style={S.inputSm} />
-              <input value={x.groupe_label || ''} onChange={e => updateExo(b.id, x.id, { groupe_label: e.target.value })} placeholder="Groupe…" style={{ ...S.inputSm, fontSize: '0.68rem', color: '#7a8290' }} title="Groupe d'activité (ex : Avants, Arrières, Groupe A…)" />
-              <button style={S.xBtn} onClick={() => deleteExo(b.id, x.id)}>×</button>
-            </div>
-          ))}
-          <button style={{ ...S.btnSmall, width: '100%', marginTop: 4 }} onClick={() => addExo(b.id)}>+ Exercice</button>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 /* ── Styles ── */
