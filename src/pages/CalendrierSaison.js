@@ -951,6 +951,19 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     )
   }
 
+  // Parse la durée d'un bloc en minutes (ex: "30 min", "1h30", "45")
+  function parseDurMin(s) {
+    if (!s) return null
+    const str = String(s).toLowerCase().trim()
+    const hm = str.match(/(\d+)\s*h\s*(\d*)/)
+    if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2] || 0)
+    const m = str.match(/(\d+)\s*m/)
+    if (m) return parseInt(m[1])
+    const n = str.match(/^(\d+)$/)
+    if (n) return parseInt(n[1])
+    return null
+  }
+
   function EventContent({ evt }) {
     const color = evtColor(evt.type)
     const blocs = blocsMap[evt.id] || []
@@ -970,29 +983,72 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       )
     }
 
-    // Avec blocs
+    // Avec blocs — proportionnels + groupes côte à côte
     if (blocs.length > 0) {
       return (
         <>
-          {blocs.map(bloc => (
-            <div key={bloc.id} style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 5 }}>
-              <div style={{ padding: '6px 10px', background: color + '28', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                <span style={{ fontSize: '.72rem', fontWeight: 800, color: color + 'ee', flex: 1 }}>{bloc.nom}</span>
-                {bloc.duree && <span style={{ fontSize: '.6rem', fontWeight: 700, background: color + '18', color: color, borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>{bloc.duree}</span>}
-              </div>
-              {bloc.exos?.length > 0 && (
-                <div style={{ padding: '5px 10px 7px', background: color + '0d', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {bloc.exos.map(exo => (
-                    <div key={exo.id} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 5 }} />
-                      <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#3a4049', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
-                      {exo.prescription && <span style={{ fontSize: '.6rem', color: '#7a8290', flexShrink: 0 }}>{exo.prescription}</span>}
-                    </div>
-                  ))}
+          {blocs.map(bloc => {
+            const mins = parseDurMin(bloc.duree)
+            // Hauteur min proportionnelle : 1 min ≈ 2.2 px, plancher 56px, plafond 320px
+            const minH = mins ? Math.max(56, Math.min(320, Math.round(mins * 2.2))) : 56
+
+            // Grouper les exercices par groupe_label
+            const byGroup = {}
+            for (const exo of (bloc.exos || [])) {
+              const g = exo.groupe_label?.trim() || ''
+              ;(byGroup[g] ||= []).push(exo)
+            }
+            const groupKeys = Object.keys(byGroup)
+            const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
+
+            return (
+              <div key={bloc.id} style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 5 }}>
+                {/* En-tête bloc */}
+                <div style={{ padding: '6px 10px', background: color + '28', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <span style={{ fontSize: '.72rem', fontWeight: 800, color: color + 'ee', flex: 1 }}>{bloc.nom}</span>
+                  {bloc.duree && <span style={{ fontSize: '.6rem', fontWeight: 700, background: color + '18', color: color, borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>{bloc.duree}</span>}
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Corps — hauteur proportionnelle */}
+                {bloc.exos?.length > 0 && (
+                  <div style={{ minHeight: minH, background: color + '0d', padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
+                    {hasGroups ? (
+                      /* Groupes côte à côte */
+                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 6, height: '100%' }}>
+                        {groupKeys.map(g => (
+                          <div key={g} style={{ background: color + '12', borderRadius: 7, padding: '5px 8px', borderTop: `2px solid ${color}55` }}>
+                            {g && <div style={{ fontSize: '.56rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: color, marginBottom: 4, textAlign: 'center' }}>{g}</div>}
+                            {byGroup[g].map(exo => (
+                              <div key={exo.id} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 3 }}>
+                                <span style={{ width: 4, height: 4, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 5 }} />
+                                <span style={{ fontSize: '.67rem', fontWeight: 700, color: '#3a4049', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
+                                {exo.prescription && <span style={{ fontSize: '.58rem', color: '#7a8290', flexShrink: 0 }}>{exo.prescription}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Liste simple */
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {bloc.exos.map(exo => (
+                          <div key={exo.id} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 5 }} />
+                            <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#3a4049', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
+                            {exo.prescription && <span style={{ fontSize: '.6rem', color: '#7a8290', flexShrink: 0 }}>{exo.prescription}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Bloc sans exos : juste la hauteur proportionnelle */}
+                {!bloc.exos?.length && mins && (
+                  <div style={{ minHeight: minH, background: color + '08' }} />
+                )}
+              </div>
+            )
+          })}
         </>
       )
     }
@@ -1237,9 +1293,10 @@ function BlocsEditor({ panel, addBloc, updateBloc, deleteBloc, addExo, updateExo
             <button style={S.xBtn} onClick={() => deleteBloc(b.id)}>×</button>
           </div>
           {b.exos.map(x => (
-            <div key={x.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6, marginBottom: 5 }}>
+            <div key={x.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 90px auto', gap: 6, marginBottom: 5 }}>
               <input value={x.nom} onChange={e => updateExo(b.id, x.id, { nom: e.target.value })} placeholder="Exercice" style={S.inputSm} />
               <input value={x.prescription || ''} onChange={e => updateExo(b.id, x.id, { prescription: e.target.value })} placeholder="5 × 4 @ 85 %" style={S.inputSm} />
+              <input value={x.groupe_label || ''} onChange={e => updateExo(b.id, x.id, { groupe_label: e.target.value })} placeholder="Groupe…" style={{ ...S.inputSm, fontSize: '0.68rem', color: '#7a8290' }} title="Groupe d'activité (ex : Avants, Arrières, Groupe A…)" />
               <button style={S.xBtn} onClick={() => deleteExo(b.id, x.id)}>×</button>
             </div>
           ))}
