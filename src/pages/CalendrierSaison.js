@@ -93,8 +93,12 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [selMode, setSelMode]   = useState('main') // 'main' | 'period'
   const [selForm, setSelForm]   = useState({ type: 'vacances', label: '', couleur: '#f4e8c4' })
   const [periodClip, setPeriodClip] = useState(null) // { start, end, events, blocsMap }
-  const selRef = useRef(null)
-  selRef.current = sel
+  const selRef     = useRef(null)
+  selRef.current   = sel
+  const lastDateRef = useRef(null) // dernier jour survolé/cliqué (pour coller via clavier)
+  const lastEvtRef  = useRef(null) // dernier évènement focusé (pour delete/copier via clavier)
+  // ref stable pour le handler clavier (évite re-register à chaque render)
+  const kbRef = useRef(null)
 
   const groupColor = groupe?.couleur || '#2f6f76'
   const months = buildMonths(startYear)
@@ -119,9 +123,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   }, [groupeId])
 
   // ── Chargement saison (évènements + phases) ─────────────────────────────────
-  const loadSeason = useCallback(async () => {
+  // silent=true : pas de spinner, préserve la position de scroll (utilisé après create/edit/delete)
+  const loadSeason = useCallback(async (silent = false) => {
     if (!groupe) return
-    setLoading(true)
+    const scrollY = window.scrollY
+    if (!silent) setLoading(true)
     const [{ data: evs }, { data: phs }] = await Promise.all([
       supabase.from('groupe_evenements').select('*')
         .eq('groupe_id', groupe.id).gte('date', seasonStart).lte('date', seasonEnd).order('date'),
@@ -130,7 +136,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     ])
     setEvenements(evs || [])
     setPhases(phs || [])
-    setLoading(false)
+    if (!silent) setLoading(false)
+    else requestAnimationFrame(() => window.scrollTo(0, scrollY))
   }, [groupe, seasonStart, seasonEnd])
 
   useEffect(() => { loadSeason() }, [loadSeason])
@@ -183,6 +190,17 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selMenu])
+
+  // ── Raccourcis clavier globaux ───────────────────────────────────────────────
+  // Le handler est dans kbRef pour toujours lire les valeurs à jour sans re-register
+  // Delete/Backspace : supprimer l'évènement actif
+  // Cmd/Ctrl+C       : copier l'évènement actif OU la période sélectionnée
+  // Cmd/Ctrl+V       : coller au dernier jour survolé
+  useEffect(() => {
+    const onKey = e => kbRef.current?.(e)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])                // inscrit une seule fois, kbRef.current est toujours à jour
 
   // ── Index par jour ──────────────────────────────────────────────────────────
   const evByDay = {}
@@ -279,7 +297,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       if (error) { alert('Erreur : ' + error.message); setSaving(false); return }
     }
     setSaving(false)
-    await loadSeason()
+    await loadSeason(true)
     closePanel()
   }
   async function deleteEvent() {
@@ -287,12 +305,12 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     setSaving(true)
     await supabase.from('groupe_evenements').delete().eq('id', panel.evt.id)
     setSaving(false)
-    await loadSeason()
+    await loadSeason(true)
     closePanel()
   }
   async function deleteEventDirect(e) {
     await supabase.from('groupe_evenements').delete().eq('id', e.id)
-    await loadSeason()
+    await loadSeason(true)
   }
 
   // ── Copier / coller ─────────────────────────────────────────────────────────
@@ -325,7 +343,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       }
     }
     setCtx(null)
-    await loadSeason()
+    await loadSeason(true)
   }
 
   // ── Blocs / exercices (édition d'une séance existante) ──────────────────────
@@ -368,11 +386,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   function onDayMouseDown(e, dISO) {
     if (e.button !== 0 || dragEvt) return
     e.preventDefault()
+    lastDateRef.current = dISO
     setSel({ start: dISO, end: dISO })
     setSelDrag(true)
     setSelMenu(null); setPop(null); setCtx(null)
   }
   function onDayMouseEnter(dISO) {
+    lastDateRef.current = dISO
     if (!selDrag) return
     setSel(prev => prev ? { ...prev, end: dISO } : null)
   }
@@ -418,7 +438,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         }
       }
     }
-    await loadSeason()
+    await loadSeason(true)
     setPop(null); setCtx(null)
   }
 
@@ -431,7 +451,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       couleur: selForm.couleur, date_debut: s, date_fin: e,
       ordre: phases.length + 1,
     }])
-    await loadSeason()
+    await loadSeason(true)
     setSelMenu(null); setSel(null)
   }
 
@@ -441,13 +461,15 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     // maj optimiste
     setEvenements(prev => prev.map(e => e.id === evt.id ? { ...e, date: newDateISO } : e))
     const { error } = await supabase.from('groupe_evenements').update({ date: newDateISO }).eq('id', evt.id)
-    if (error) { alert('Erreur : ' + error.message); loadSeason() }
+    if (error) { alert('Erreur : ' + error.message); loadSeason(true) }
   }
 
   // ── Menu contextuel sur une séance (clic droit) ─────────────────────────────
   function openCtx(e, dateISO, evt) {
     e.preventDefault()
     e.stopPropagation()
+    lastDateRef.current = dateISO
+    if (evt) lastEvtRef.current = evt
     setPop(null)
     setCtx({ x: e.clientX, y: e.clientY, dateISO, evt: evt || null })
   }
@@ -471,7 +493,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     setSaving(false)
     if (error) { alert('Erreur : ' + error.message); return }
     setPop(null)
-    await loadSeason()
+    await loadSeason(true)
     if (openDetails && data) openEdit(data)
   }
 
@@ -484,16 +506,17 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         {evs.map(e => {
           const T = TYPES[e.type] || TYPES.autre
           const onCtx = ev => openCtx(ev, e.date, e)
+          const onEvtClick = () => { lastEvtRef.current = e; openEdit(e) }
           const dragProps = {
             draggable: true,
-            onMouseDown: ev => ev.stopPropagation(), // ne pas déclencher la sélection multi-jours
+            onMouseDown: ev => { ev.stopPropagation(); lastEvtRef.current = e; lastDateRef.current = e.date },
             onDragStart: ev => { ev.stopPropagation(); setDragEvt(e); ev.dataTransfer.effectAllowed = 'move' },
             onDragEnd: () => { setDragEvt(null); setDragOver(null) },
           }
           const dragOpacity = dragEvt?.id === e.id ? 0.4 : 1
           if (e.type === 'match') {
             return (
-              <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
+              <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
                 style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
                 {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
@@ -501,15 +524,15 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             )
           }
           if (e.type === 'recup') {
-            return <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'grab', opacity: dragOpacity }} />
+            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'grab', opacity: dragOpacity }} />
           }
           if (e.type === 'test') {
-            return <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
+            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
           const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
           return (
-            <div key={e.id} {...dragProps} onClick={() => openEdit(e)} onContextMenu={onCtx} title={T.label}
+            <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={T.label}
               style={{
                 fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'grab',
                 overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
@@ -527,6 +550,35 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
 
   const seasonOpts = [seasonStartYear() - 1, seasonStartYear(), seasonStartYear() + 1]
   const pageStyle = embedded ? S.pageEmbed : S.page
+  const todayISO = iso(today.getFullYear(), today.getMonth(), today.getDate())
+
+  // Handler clavier mis à jour à chaque render (lu via kbRef)
+  kbRef.current = (e) => {
+    const isMac = /Mac|iPhone|iPod|iPad/.test(navigator.platform)
+    const isCmd = isMac ? e.metaKey : e.ctrlKey
+    const tag = (e.target?.tagName || '').toLowerCase()
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+
+    // Delete / Backspace → supprimer l'évènement actif
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const evt = lastEvtRef.current
+      if (evt) { deleteEventDirect(evt); lastEvtRef.current = null }
+      return
+    }
+    // Cmd+C → copier
+    if (isCmd && e.key === 'c') {
+      const evt = lastEvtRef.current
+      if (evt) { copyEvent(evt); e.preventDefault() }
+      else if (selRef.current) { copyPeriod(); e.preventDefault() }
+    }
+    // Cmd+V → coller
+    if (isCmd && e.key === 'v') {
+      const date = lastDateRef.current
+      if (!date) return
+      if (clip) { pasteEvent(date); e.preventDefault() }
+      else if (periodClip) { pastePeriod(date); e.preventDefault() }
+    }
+  }
 
   return (
     <div style={pageStyle}>
@@ -595,27 +647,36 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                       const dISO = iso(M.y, M.m, d)
                       const weekStart = dow === 1 || d === 1   // lundi, ou 1er jour visible du mois
                       const wkNum = weekStart ? isoWeek(M.y, M.m, d) : null
-                      const selected = inSel(dISO)
+                      const selected  = inSel(dISO)
+                      const isPastDay = dISO < todayISO
                       return (
                         <div key={d} style={weekStart && d !== 1 ? S.weekSep : null}>
-                          {weekStart && <div style={S.weekTag}>S{wkNum}</div>}
+                          {weekStart && <div style={{ ...S.weekTag, ...(isPastDay ? S.weekTagPast : null) }}>S{wkNum}</div>}
                           {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
                           <div
                             onMouseDown={e => onDayMouseDown(e, dISO)}
                             onMouseEnter={() => onDayMouseEnter(dISO)}
                             onDoubleClick={e => { if (!selMenu) openPop(e, dISO) }}
-                            onContextMenu={e => { if (!selDrag && !sel) openPop(e, dISO) }}
+                            onContextMenu={e => {
+                              e.preventDefault(); e.stopPropagation()
+                              if (selDrag || sel) return
+                              lastDateRef.current = dISO
+                              // Si une période est copiée → colle directement, sinon ouvre la bulle
+                              if (periodClip) { pastePeriod(dISO) }
+                              else openPop(e, dISO)
+                            }}
                             onDragOver={dragEvt ? (e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== dISO) setDragOver(dISO) }) : undefined}
                             onDrop={dragEvt ? (e => { e.preventDefault(); moveEvent(dragEvt, dISO); setDragEvt(null); setDragOver(null) }) : undefined}
                             style={{
                               ...S.drow,
+                              ...(isPastDay ? S.drowPast : null),
                               ...(vac.in ? S.drowVac : null),
                               ...(isToday ? S.drowToday : null),
                               ...(dragOver === dISO ? S.drowDrop : null),
                               ...(selected ? S.drowSel : null),
                               userSelect: 'none',
                             }}>
-                            <div style={S.dnum}>{d}</div>
+                            <div style={{ ...S.dnum, ...(isPastDay ? S.dnumPast : null) }}>{d}</div>
                             <div style={S.ddow}>{DOW[dow]}</div>
                             {renderCell(M.y, M.m, d)}
                           </div>
@@ -627,94 +688,74 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
               })}
             </div>
           </div>
-          <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 10 }}>
-            Glisser sur plusieurs jours pour les sélectionner · double-clic sur un jour pour ajouter · glisser une séance pour la déplacer.
-            {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · 📋 « {clipLabel(clip.source)} » copié</span>}
-            {periodClip && <span style={{ color: '#059669', fontWeight: 700 }}> · 📆 Période copiée ({periodClip.events.length} évèn.) — clic droit sur un jour pour coller</span>}
+          <p style={{ fontSize: '0.72rem', color: '#9aa1ac', marginTop: 8 }}>
+            Glisser sur plusieurs jours pour les sélectionner · double-clic pour ajouter · glisser une séance pour la déplacer · Suppr = effacer · ⌘C/⌘V = copier/coller
+            {clip && <span style={{ color: groupColor, fontWeight: 700 }}> · « {clipLabel(clip.source)} » copié</span>}
+            {periodClip && <span style={{ color: '#059669', fontWeight: 700 }}> · Période copiée ({periodClip.events.length} évèn.) — clic droit sur un jour pour coller</span>}
           </p>
         </>
       )}
 
-      {/* ── Menu contextuel ── */}
-      {ctx && (
-        <div style={{ ...S.ctxMenu, left: ctx.x, top: ctx.y }} onClick={e => e.stopPropagation()}>
-          {ctx.evt ? (
+      {/* ── Barre d'action de sélection (remplace le menu flottant) ── */}
+      {sel && !selDrag && (
+        <div style={S.selBar}>
+          <span style={S.selBarLabel}>
+            {formatPopDate([sel.start, sel.end].sort()[0])}
+            {sel.start !== sel.end && <> → {formatPopDate([sel.start, sel.end].sort()[1])}</>}
+          </span>
+
+          {selMode === 'main' && (
             <>
-              <button style={S.ctxItem} onClick={() => { openEdit(ctx.evt); setCtx(null) }}>✏️ Modifier</button>
-              <button style={S.ctxItem} onClick={() => copyEvent(ctx.evt)}>📋 Copier</button>
-              {clip && <button style={S.ctxItem} onClick={() => pasteEvent(ctx.dateISO)}>📌 Coller ici</button>}
-              <div style={S.ctxSep} />
-              <button style={{ ...S.ctxItem, color: '#e11d48' }} onClick={() => { deleteEventDirect(ctx.evt); setCtx(null) }}>🗑 Supprimer</button>
+              <button style={S.selBarBtn} onClick={() => setSelMode('period')}>Ajouter une période</button>
+              <button style={S.selBarBtn} onClick={copyPeriod}>
+                Copier ({evenements.filter(e => { const [s,en]=[sel.start,sel.end].sort(); return e.date>=s&&e.date<=en }).length} évèn.)
+              </button>
+              {periodClip && (
+                <button style={{ ...S.selBarBtn, background: '#059669', color: '#fff', border: 'none' }}
+                  onClick={() => { pastePeriod([sel.start, sel.end].sort()[0]); setSel(null) }}>
+                  Coller ({periodClip.events.length} évèn.)
+                </button>
+              )}
+              <button style={S.selBarClose} onClick={() => setSel(null)}>×</button>
             </>
-          ) : (
+          )}
+
+          {selMode === 'period' && (
             <>
-              <button style={S.ctxItem} onClick={() => { openCreate(ctx.dateISO); setCtx(null) }}>➕ Ajouter un évènement</button>
-              {clip && <button style={S.ctxItem} onClick={() => pasteEvent(ctx.dateISO)}>📌 Coller « {clipLabel(clip.source)} »</button>}
-              {periodClip && <button style={S.ctxItem} onClick={() => { pastePeriod(ctx.dateISO); setCtx(null) }}>📆 Coller la période ({periodClip.events.length} évèn.)</button>}
+              <div style={{ display: 'flex', gap: 5 }}>
+                {[{ v: 'vacances', l: 'Vacances' }, { v: 'phase', l: 'Phase' }].map(({ v, l }) => (
+                  <button key={v} onClick={() => setSelForm(f => ({ ...f, type: v, couleur: v === 'vacances' ? '#f4e8c4' : '#c7d2fe' }))}
+                    style={{ ...S.selBarBtn, ...(selForm.type === v ? { background: '#333', color: '#fff', border: '1px solid #333' } : null) }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <input
+                autoFocus value={selForm.label}
+                onChange={e => setSelForm(f => ({ ...f, label: e.target.value }))}
+                placeholder={selForm.type === 'vacances' ? 'ex. Vacances Noël' : 'ex. Phase de reprise'}
+                style={S.selBarInput}
+                onKeyDown={e => { if (e.key === 'Enter') addPeriodFromSel() }}
+              />
+              <input type="color" value={selForm.couleur} onChange={e => setSelForm(f => ({ ...f, couleur: e.target.value }))}
+                style={{ width: 26, height: 26, border: '1px solid #e6e8ec', borderRadius: 5, cursor: 'pointer', padding: 1, flexShrink: 0 }} />
+              <button style={{ ...S.selBarBtn, background: '#333', color: '#e4f816', border: 'none' }} onClick={addPeriodFromSel}>Créer</button>
+              <button style={S.selBarBtn} onClick={() => setSelMode('main')}>Retour</button>
+              <button style={S.selBarClose} onClick={() => setSel(null)}>×</button>
             </>
           )}
         </div>
       )}
 
-      {/* ── Menu de sélection multi-jours ── */}
-      {selMenu && sel && (
-        <>
-          <div style={S.popScrim} onClick={() => { setSelMenu(null); setSel(null) }} onContextMenu={e => { e.preventDefault(); setSelMenu(null); setSel(null) }} />
-          <div style={{ ...S.ctxMenu, left: selMenu.x, top: selMenu.y, minWidth: 230, padding: 10 }} onClick={e => e.stopPropagation()}>
-            {/* En-tête : période sélectionnée */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#15181d' }}>
-                {formatPopDate([sel.start, sel.end].sort()[0])}
-                {sel.start !== sel.end && <> → {formatPopDate([sel.start, sel.end].sort()[1])}</>}
-              </span>
-              <span style={{ cursor: 'pointer', color: '#9aa1ac', fontSize: '1rem', lineHeight: 1 }} onClick={() => { setSelMenu(null); setSel(null) }}>×</span>
-            </div>
-
-            {selMode === 'main' && (
-              <>
-                <button style={{ ...S.ctxItem, fontWeight: 700 }} onClick={() => setSelMode('period')}>🗓 Ajouter une période</button>
-                <button style={S.ctxItem} onClick={copyPeriod}>
-                  📋 Copier les évènements ({evenements.filter(e => { const [s,en]=[sel.start,sel.end].sort(); return e.date>=s&&e.date<=en }).length})
-                </button>
-                {periodClip && (
-                  <button style={S.ctxItem} onClick={() => { pastePeriod([sel.start, sel.end].sort()[0]); setSelMenu(null); setSel(null) }}>
-                    📆 Coller ici ({periodClip.events.length} évèn.)
-                  </button>
-                )}
-              </>
-            )}
-
-            {selMode === 'period' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/* Type */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                  {[{ v: 'vacances', l: 'Vacances' }, { v: 'phase', l: 'Phase' }].map(({ v, l }) => (
-                    <button key={v} onClick={() => setSelForm(f => ({ ...f, type: v, couleur: v === 'vacances' ? '#f4e8c4' : '#c7d2fe' }))}
-                      style={{ ...S.chip, ...(selForm.type === v ? { borderColor: '#333', background: '#333', color: '#fff' } : null) }}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  autoFocus value={selForm.label}
-                  onChange={e => setSelForm(f => ({ ...f, label: e.target.value }))}
-                  placeholder={selForm.type === 'vacances' ? 'ex. Vacances Noël' : 'ex. Phase de reprise'}
-                  style={S.popInput}
-                  onKeyDown={e => { if (e.key === 'Enter') addPeriodFromSel() }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="color" value={selForm.couleur} onChange={e => setSelForm(f => ({ ...f, couleur: e.target.value }))}
-                    style={{ width: 30, height: 26, border: '1px solid #e6e8ec', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
-                  <span style={{ fontSize: '0.7rem', color: '#9aa1ac' }}>Couleur</span>
-                </div>
-                <div style={{ display: 'flex', gap: 7 }}>
-                  <button style={{ ...S.popGhost, flex: 1 }} onClick={() => setSelMode('main')}>← Retour</button>
-                  <button style={{ ...S.popCreate, flex: 1 }} onClick={addPeriodFromSel}><span style={{ color: '#e4f816' }}>Créer</span></button>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
+      {/* ── Menu contextuel (clic droit sur séance) ── */}
+      {ctx && ctx.evt && (
+        <div style={{ ...S.ctxMenu, left: ctx.x, top: ctx.y }} onClick={e => e.stopPropagation()}>
+          <button style={S.ctxItem} onClick={() => { openEdit(ctx.evt); setCtx(null) }}>Modifier</button>
+          <button style={S.ctxItem} onClick={() => copyEvent(ctx.evt)}>Copier</button>
+          {clip && <button style={S.ctxItem} onClick={() => pasteEvent(ctx.dateISO)}>Coller ici</button>}
+          <div style={S.ctxSep} />
+          <button style={{ ...S.ctxItem, color: '#e11d48' }} onClick={() => { deleteEventDirect(ctx.evt); setCtx(null) }}>Supprimer</button>
+        </div>
       )}
 
       {/* ── Bulle de création sur un jour ── */}
@@ -995,9 +1036,19 @@ const S = {
   inputSm: { border: '1px solid #e6e8ec', borderRadius: 7, padding: '6px 8px', fontSize: '0.76rem', color: '#15181d', boxSizing: 'border-box', background: '#fff', width: '100%' },
   bloc: { background: '#fff', border: '1px solid #e6e8ec', borderRadius: 9, padding: 11, marginBottom: 8 },
   xBtn: { border: 'none', background: 'none', color: '#c2c8d0', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
-  ctxMenu: { position: 'fixed', zIndex: 70, background: '#fff', borderRadius: 10, border: '1px solid #e6e8ec', boxShadow: '0 12px 34px rgba(0,0,0,0.18)', padding: 5, minWidth: 190, display: 'flex', flexDirection: 'column' },
+  ctxMenu: { position: 'fixed', zIndex: 70, background: '#fff', borderRadius: 10, border: '1px solid #e6e8ec', boxShadow: '0 12px 34px rgba(0,0,0,0.18)', padding: 5, minWidth: 170, display: 'flex', flexDirection: 'column' },
   ctxItem: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 7, padding: '8px 11px', fontSize: '0.8rem', fontWeight: 600, color: '#15181d', cursor: 'pointer' },
   ctxSep: { height: 1, background: '#eef0f3', margin: '4px 0' },
+  // barre d'action de sélection
+  selBar:      { display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', background: '#fff', border: '1px solid #e6e8ec', borderRadius: 12, padding: '8px 12px', marginTop: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.07)' },
+  selBarLabel: { fontSize: '0.74rem', fontWeight: 800, color: '#333333', textTransform: 'capitalize', marginRight: 4 },
+  selBarBtn:   { background: '#f3f4f6', border: '1px solid #e6e8ec', borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, color: '#333333', cursor: 'pointer', whiteSpace: 'nowrap' },
+  selBarClose: { background: 'none', border: 'none', color: '#9aa1ac', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px', marginLeft: 'auto' },
+  selBarInput: { border: '1px solid #e6e8ec', borderRadius: 8, padding: '6px 9px', fontSize: '0.78rem', color: '#15181d', outline: 'none', minWidth: 180 },
+  // jours passés
+  drowPast:    { background: '#fafafa' },
+  dnumPast:    { color: '#c4ccd4' },
+  weekTagPast: { background: '#f3f4f6', color: '#c4ccd4' },
   // bulle de création
   popScrim: { position: 'fixed', inset: 0, zIndex: 68, background: 'transparent' },
   popover: { position: 'fixed', zIndex: 69, width: 272, background: '#fff', borderRadius: 12, border: '1px solid #e6e8ec', boxShadow: '0 16px 44px rgba(0,0,0,0.22)', padding: 12 },
