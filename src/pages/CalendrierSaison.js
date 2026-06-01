@@ -1057,11 +1057,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                   {bloc.exos?.length > 0 && (
                     <div style={{ minHeight: h, padding: '5px 8px 6px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {hasGroups ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'start' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'stretch' }}>
                           {groupKeys.map(g => (
-                            <div key={g} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${bc}30` }}>
-                              {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: bc + 'bb', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
-                              <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: bc + '08' }}>
+                            <div key={g} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${bc}30`, display: 'flex', flexDirection: 'column' }}>
+                              {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: bc + 'bb', padding: '3px 8px', textAlign: 'center', flexShrink: 0 }}>{g}</div>}
+                              <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: bc + '08', flex: 1 }}>
                                 {byGroup[g].map(exo => (
                                   <div key={exo.id} style={{ background: '#fff', borderRadius: 5, padding: '3px 7px', border: `1px solid ${bc}25` }}>
                                     <div style={{ fontSize: '.67rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.25 }}>{exo.nom}</div>
@@ -1122,9 +1122,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     const typeLabel = matchEvt ? 'Match' : isMuscu ? 'Musculation' : 'Entraînement'
 
     return (
-      <div style={{ background: matchEvt ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: matchEvt ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* En-tête colonne */}
-        <div style={{ padding: '10px 12px 8px', borderBottom: `3px solid ${borderColor}`, textAlign: 'center' }}>
+        <div style={{ padding: '10px 12px 8px', borderBottom: `3px solid ${borderColor}`, textAlign: 'center', flexShrink: 0 }}>
           <div style={{ fontSize: '.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: '#9aa1ac' }}>{DOW_FR[day.dow]}</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 900, color: isToday ? borderColor : '#15181d', lineHeight: 1.1 }}>{dd}</div>
           <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: borderColor, marginTop: 2 }}>{typeLabel}</div>
@@ -1132,7 +1132,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         </div>
 
         {/* Séances */}
-        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', maxHeight: 'calc(100vh - 230px)' }}>
+        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
           {day.events.map(evt => (
             <div key={evt.id}>
               {evt.heure && (
