@@ -1013,29 +1013,29 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 {bloc.exos?.length > 0 && (
                   <div style={{ minHeight: minH, background: color + '0d', padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                     {hasGroups ? (
-                      /* Groupes côte à côte */
-                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 6, height: '100%' }}>
+                      /* Groupes côte à côte — chaque exercice = sous-bloc */
+                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 6, alignItems: 'start' }}>
                         {groupKeys.map(g => (
-                          <div key={g} style={{ background: color + '12', borderRadius: 7, padding: '5px 8px', borderTop: `2px solid ${color}55` }}>
-                            {g && <div style={{ fontSize: '.56rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: color, marginBottom: 4, textAlign: 'center' }}>{g}</div>}
-                            {byGroup[g].map(exo => (
-                              <div key={exo.id} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 3 }}>
-                                <span style={{ width: 4, height: 4, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 5 }} />
-                                <span style={{ fontSize: '.67rem', fontWeight: 700, color: '#3a4049', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
-                                {exo.prescription && <span style={{ fontSize: '.58rem', color: '#7a8290', flexShrink: 0 }}>{exo.prescription}</span>}
-                              </div>
-                            ))}
+                          <div key={g} style={{ background: color + '10', borderRadius: 8, overflow: 'hidden', border: `1px solid ${color}25` }}>
+                            {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.06em', color: '#fff', background: color + 'cc', padding: '3px 8px', textAlign: 'center' }}>{g}</div>}
+                            <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              {byGroup[g].map(exo => (
+                                <div key={exo.id} style={{ background: '#fff', borderRadius: 6, padding: '5px 8px', border: `1px solid ${color}18` }}>
+                                  <div style={{ fontSize: '.68rem', fontWeight: 800, color: '#2a3040', lineHeight: 1.25 }}>{exo.nom}</div>
+                                  {exo.prescription && <div style={{ fontSize: '.6rem', color: color, fontWeight: 700, marginTop: 2 }}>{exo.prescription}</div>}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      /* Liste simple */
+                      /* Pas de groupe — chaque exercice = sous-bloc */
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {bloc.exos.map(exo => (
-                          <div key={exo.id} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 5 }} />
-                            <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#3a4049', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
-                            {exo.prescription && <span style={{ fontSize: '.6rem', color: '#7a8290', flexShrink: 0 }}>{exo.prescription}</span>}
+                          <div key={exo.id} style={{ background: '#fff', borderRadius: 7, padding: '6px 9px', border: `1px solid ${color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                            <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#2a3040', flex: 1, lineHeight: 1.3 }}>{exo.nom}</span>
+                            {exo.prescription && <span style={{ fontSize: '.62rem', color: color, fontWeight: 800, flexShrink: 0, background: color + '14', borderRadius: 4, padding: '1px 5px' }}>{exo.prescription}</span>}
                           </div>
                         ))}
                       </div>
@@ -1125,8 +1125,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 80 }} onClick={onClose} />
-      <div style={{ position: 'fixed', inset: '2.5vh 2.5vw', zIndex: 81, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 110 }} onClick={onClose} />
+      <div style={{ position: 'fixed', top: '70px', left: '2vw', right: '2vw', bottom: '2vh', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', flexShrink: 0 }}>
