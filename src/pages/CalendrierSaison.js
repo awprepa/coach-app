@@ -1504,14 +1504,6 @@ function SeanceModal({
                     const compact = height < 28  // trop petit pour afficher la tête complète
                     const bodyH = height - 30
 
-                    const groups = {}
-                    for (const exo of (bloc.exos || [])) {
-                      const g = exo.groupe_label?.trim() || ''
-                      ;(groups[g] ||= []).push(exo)
-                    }
-                    const gKeys = Object.keys(groups)
-                    const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
-
                     return (
                       <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height: Math.max(height, 6), borderRadius: 6, overflow: 'visible' }}>
                         <div style={{ height: '100%', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
@@ -1529,35 +1521,38 @@ function SeanceModal({
                             <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'rgba(255,255,255,.7)', borderRadius: 4, width: 16, height: 16, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                           </div>
                           )}
-                          {/* Exercices — flex:1 sur chaque ligne → proportionnel à la hauteur du bloc */}
-                          {!compact && bodyH >= 24 && (bloc.exos || []).length > 0 && (
-                            <div style={{ flex: 1, overflow: 'hidden', padding: '4px 8px 5px', background: 'rgba(255,255,255,.1)', minHeight: 0 }}>
-                              {hasGroups ? (
-                                <div style={{ display: 'flex', gap: 5, height: '100%' }}>
-                                  {gKeys.map(gk => (
-                                    <div key={gk} style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(255,255,255,.2)' }}>
-                                      {gk && <div style={{ fontSize: '.54rem', fontWeight: 900, textTransform: 'uppercase', color: 'rgba(255,255,255,.9)', background: 'rgba(0,0,0,.25)', padding: '2px 7px', textAlign: 'center', flexShrink: 0 }}>{gk}</div>}
-                                      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '3px 4px', gap: 3, background: 'rgba(255,255,255,.08)', minHeight: 0 }}>
-                                        {groups[gk].map(exo => (
-                                          <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.88)', borderRadius: 5, padding: '0 7px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, minHeight: 0, overflow: 'hidden' }}>
-                                            <span style={{ fontSize: '.63rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
-                                            {exo.prescription && <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: color, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>{exo.prescription}</span>}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))}
+                          {/* Zone exercices — toujours présente si pas compact, flex:1 pour suivre la hauteur du bloc */}
+                          {!compact && (
+                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '3px 6px 4px', gap: 2, background: 'rgba(255,255,255,.1)', minHeight: 0 }}>
+                              {(bloc.exos || []).map(exo => (
+                                <div key={exo.id} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,.88)', borderRadius: 5, padding: '0 4px 0 6px', minHeight: 0, overflow: 'hidden' }}>
+                                  <input
+                                    value={exo.nom}
+                                    onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })}
+                                    placeholder="Exercice…"
+                                    style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.62rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', minWidth: 0, fontFamily: 'inherit' }}
+                                  />
+                                  <input
+                                    value={exo.prescription || ''}
+                                    onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })}
+                                    placeholder="Charge…"
+                                    style={{ width: 62, border: 'none', background: color + '33', borderRadius: 3, fontSize: '.58rem', fontWeight: 700, color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
+                                  />
+                                  <input
+                                    value={exo.groupe_label || ''}
+                                    onChange={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })}
+                                    placeholder="Grp…"
+                                    title="Groupe (ex: Avants, Arrières…)"
+                                    style={{ width: 44, border: 'none', background: 'rgba(0,0,0,.08)', borderRadius: 3, fontSize: '.55rem', fontWeight: 600, color: '#555', padding: '1px 4px', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
+                                  />
+                                  <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: 'rgba(0,0,0,.25)', fontSize: '.75rem', cursor: 'pointer', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}>×</button>
                                 </div>
-                              ) : (
-                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
-                                  {(bloc.exos || []).map(exo => (
-                                    <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.88)', borderRadius: 5, padding: '0 7px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, overflow: 'hidden' }}>
-                                      <span style={{ fontSize: '.63rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
-                                      {exo.prescription && <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: color, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>{exo.prescription}</span>}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                              ))}
+                              {/* Bouton + Exercice */}
+                              <button
+                                onClick={() => addExo(bloc.id)}
+                                style={{ flexShrink: 0, background: 'rgba(255,255,255,.35)', border: '1px dashed rgba(255,255,255,.6)', borderRadius: 4, color: 'rgba(255,255,255,.9)', fontSize: '.58rem', fontWeight: 800, cursor: 'pointer', padding: '2px 0', width: '100%', textAlign: 'center' }}
+                              >+ Exercice</button>
                             </div>
                           )}
                         </div>
