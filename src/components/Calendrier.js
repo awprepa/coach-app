@@ -269,10 +269,15 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     // 2. Récupérer les événements de ces groupes (type + titre uniquement)
     const { data: gevts } = await supabase
       .from('groupe_evenements')
-      .select('id, date, type, titre, heure')
+      .select('id, date, type, titre, style, heure')
       .in('groupe_id', groupIds)
       .order('date', { ascending: true })
-    setGroupEvts((gevts || []).map(e => ({ ...e, _isGroupe: true })))
+    setGroupEvts((gevts || []).map(e => ({
+      ...e,
+      _isGroupe: true,
+      // Titre affiché : titre libre > "Type Style" > "Type"
+      titre: e.titre || (e.style ? `${getTypeLabel(e.type)} ${e.style}` : getTypeLabel(e.type)),
+    })))
   }
 
   async function ajouterEvenement() {
@@ -455,9 +460,8 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                     <div key={`g-${ev.id}`} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                         <div style={{ minWidth: 0 }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>👥 {ev.titre || getTypeLabel(ev.type)}</span>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.65, marginLeft: '0.4rem' }}>{getTypeLabel(ev.type)}</span>
-                          {ev.heure && <span style={{ fontSize: '0.7rem', opacity: 0.5, marginLeft: '0.4rem' }}>· {ev.heure.slice(0,5)}</span>}
+                          <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>👥 {ev.titre}</span>
+                          {ev.heure && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>· {ev.heure.slice(0,5)}</span>}
                         </div>
                       </div>
                     </div>
