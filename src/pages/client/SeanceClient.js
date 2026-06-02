@@ -604,23 +604,16 @@ export default function SeanceClient() {
       }
     }
 
-    if (!groupLetter || !groupItems) return
-    const allDone = groupItems.every(ex => {
-      const t = newT[ex.id] || []
-      return t.length > 0 && t.every(s => s.is_done)
-    })
-    if (allDone) {
-      setBlocsTermines(prev => new Set([...prev, groupLetter]))
-      const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
-      const idx = letters.indexOf(groupLetter)
-      // Passer au bloc suivant non terminé
-      const nextLetter = letters.slice(idx + 1).find(l => !blocsTermines.has(l) && l !== groupLetter)
-      if (nextLetter) {
-        setActiveBloc(nextLetter)
-        setTimeout(() => blocRefs.current[nextLetter]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
-      } else if (idx < letters.length - 1) {
-        setTimeout(() => blocRefs.current[letters[idx + 1]]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
-      }
+  }
+
+  function terminerBloc(groupLetter) {
+    setBlocsTermines(prev => new Set([...prev, groupLetter]))
+    const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
+    const idx = letters.indexOf(groupLetter)
+    const nextLetter = letters.slice(idx + 1).find(l => !blocsTermines.has(l) && !blocsSkippes.has(l))
+    if (nextLetter) {
+      setActiveBloc(nextLetter)
+      setTimeout(() => blocRefs.current[nextLetter]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
     }
   }
 
@@ -756,7 +749,11 @@ export default function SeanceClient() {
   if (!seance) return <div style={S.centered}><p style={{ color: '#888' }}>Séance introuvable.</p></div>
 
   const cols = Array.from({ length: semaines }, (_, i) => i + 1)
-  const graphData = cols.map(s => ({ name: `S${s}`, 'RPE cible': rpeSeances[s]?.rpe_cible || null, 'RPE réel': rpeSeances[s]?.rpe_reel || null }))
+  const graphData = cols.map(s => ({
+    name: `S${s}`,
+    'RPE cible': rpeSeances[s]?.rpe_cible != null ? parseFloat(rpeSeances[s].rpe_cible) : null,
+    'RPE réel':  rpeSeances[s]?.rpe_reel  != null ? parseFloat(rpeSeances[s].rpe_reel)  : null,
+  }))
 
   // Grouper les exercices par lettre
   const groups = []
@@ -983,6 +980,7 @@ export default function SeanceClient() {
                 <input type="text" inputMode="decimal" value={serie.poids}
                   onChange={e => updateTrackingField(ex.id, si, 'poids', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
+                  onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len) }}
                   placeholder="kg"
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 52, ...(serie.is_done ? S.serieInputDone : {}) }} />
@@ -1091,6 +1089,7 @@ export default function SeanceClient() {
                     [ex.id]: { ...prev[ex.id], [s]: { ...(prev[ex.id]?.[s] || {}), charge: e.target.value } },
                   }))}
                   onBlur={e => updateCharge(ex.id, s, 'charge', e.target.value)}
+                  onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len) }}
                   style={inputStyle(s === semaineActuelle)} placeholder="—" />
               ))}
             </div>
@@ -1338,6 +1337,15 @@ export default function SeanceClient() {
                       </div>
                     )}
                     {renderExContent(group.items[0], true, true, group.letter, group.items)}
+                    {!isDone && !isSkipped && group.letter && (() => {
+                      const allSeriesDone = group.items.every(ex => {
+                        const t = tracking[ex.id] || []
+                        return t.length > 0 && t.every(s => s.is_done)
+                      })
+                      return allSeriesDone
+                        ? <button onClick={() => terminerBloc(group.letter)} style={S.terminerBlocBtn}>✓ Terminer le bloc</button>
+                        : null
+                    })()}
                   </div>
                 )
               }
@@ -1386,6 +1394,15 @@ export default function SeanceClient() {
                       </div>
                     )
                   })}
+                  {!isDone && !isSkipped && (() => {
+                    const allSeriesDone = group.items.every(ex => {
+                      const t = tracking[ex.id] || []
+                      return t.length > 0 && t.every(s => s.is_done)
+                    })
+                    return allSeriesDone
+                      ? <button onClick={() => terminerBloc(group.letter)} style={{ ...S.terminerBlocBtn, borderRadius: '0 0 12px 12px', marginTop: 0 }}>✓ Terminer le bloc</button>
+                      : null
+                  })()}
                 </div>
               )
             })}
@@ -1451,8 +1468,10 @@ export default function SeanceClient() {
                   <YAxis domain={[0, 10]} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.8rem' }} />
                   <Legend wrapperStyle={{ fontSize: '0.72rem' }} />
-                  <Line type="monotone" dataKey="RPE cible" stroke="#333333" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                  <Line type="monotone" dataKey="RPE réel" stroke="var(--accent)" strokeWidth={2} dot={{ r: 2 }} strokeDasharray="5 5" connectNulls />
+                  <Line type="monotone" dataKey="RPE cible" stroke="#333333" strokeWidth={2} connectNulls
+                    dot={(props) => props.value != null ? <circle key={props.index} cx={props.cx} cy={props.cy} r={3} fill="#333333" /> : <g key={props.index}/>} />
+                  <Line type="monotone" dataKey="RPE réel" stroke="var(--accent)" strokeWidth={2} strokeDasharray="5 5" connectNulls
+                    dot={(props) => props.value != null ? <circle key={props.index} cx={props.cx} cy={props.cy} r={3} fill="var(--accent)" /> : <g key={props.index}/>} />
                 </LineChart>
               </ResponsiveContainer>
               {/* Table RPE séance */}
@@ -1573,6 +1592,7 @@ const S = {
   // Boutons "Passer ce bloc"
   skipBlocBtn:      { background: 'none', border: '1px solid #d1d5db', color: '#9ca3af', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
   skipBlocBtnInline:{ background: 'none', border: '1px solid #d1d5db', color: '#9ca3af', borderRadius: 6, padding: '0.2rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' },
+  terminerBlocBtn:  { width: '100%', marginTop: '0.75rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: '800', cursor: 'pointer', letterSpacing: '0.02em' },
   // Paramètres
   paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
   paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
