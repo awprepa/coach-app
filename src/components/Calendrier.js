@@ -12,13 +12,30 @@ const EVENT_TYPES = [
   { value: 'autre',        label: 'Autre',         bg: '#f0fdfa', text: '#0f766e' },
 ]
 
+// Types supplémentaires utilisés dans les groupes (groupe_evenements)
+const GROUP_EXTRA_TYPES = {
+  collectif:   { label: 'Collectif',    bg: '#f97316', text: 'white'   },
+  muscu:       { label: 'Muscu',        bg: '#6366f1', text: 'white'   },
+  vacances:    { label: 'Vacances',     bg: '#e5e7eb', text: '#6b7280' },
+  competition: { label: 'Compétition',  bg: '#7c3aed', text: 'white'   },
+}
+
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MOIS  = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
-function getTypeStyle(type) { return EVENT_TYPES.find(t => t.value === type) || EVENT_TYPES[0] }
+function getTypeStyle(type) {
+  return EVENT_TYPES.find(t => t.value === type)
+    || (GROUP_EXTRA_TYPES[type] ? { value: type, ...GROUP_EXTRA_TYPES[type] } : null)
+    || EVENT_TYPES[0]
+}
+function getTypeLabel(type) {
+  return EVENT_TYPES.find(t => t.value === type)?.label
+    || GROUP_EXTRA_TYPES[type]?.label
+    || type
+}
 
 function getMonthDays(year, month) {
   const first = new Date(year, month, 1)
@@ -62,6 +79,17 @@ function generateICS(events) {
 
 function EventChip({ ev, tiny = false }) {
   const ts = getTypeStyle(ev.type)
+  if (ev._isGroupe) {
+    return (
+      <span style={{
+        background: 'transparent', color: ts.text === 'white' ? ts.bg : ts.text,
+        border: `1.5px solid ${ts.bg === 'var(--chip-bg)' ? '#d1d5db' : ts.bg}`,
+        fontSize: tiny ? '0.6rem' : '0.7rem', fontWeight: '700',
+        padding: tiny ? '1px 4px' : '2px 6px', borderRadius: '4px',
+        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block',
+      }}>👥 {ev.titre}</span>
+    )
+  }
   return (
     <span style={{
       background: ts.bg, color: ts.text,
@@ -198,6 +226,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   const [vue, setVue]                 = useState('mois')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [evenements, setEvenements]   = useState([])
+  const [groupEvts, setGroupEvts]     = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
   const [form, setForm]               = useState({ type: 'seance', titre: '', seanceId: '', description: '' })
   const [saving, setSaving]           = useState(false)
@@ -205,6 +234,10 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchEvenements() }, [clientId])
+
+  // Récupère les événements des groupes auxquels appartient ce client
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchGroupEvenements() }, [clientId])
 
   // Temps réel — mise à jour instantanée quand le coach ou le client
   // ajoute / modifie / supprime un événement depuis n'importe quel device
@@ -233,6 +266,24 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   async function fetchEvenements() {
     const { data } = await supabase.from('evenements').select('*').eq('client_id', clientId).order('date', { ascending: true })
     setEvenements(data || [])
+  }
+
+  async function fetchGroupEvenements() {
+    if (!clientId) { setGroupEvts([]); return }
+    // 1. Trouver les groupes du client
+    const { data: memberships } = await supabase
+      .from('groupe_membres')
+      .select('groupe_id')
+      .eq('client_id', clientId)
+    if (!memberships || memberships.length === 0) { setGroupEvts([]); return }
+    const groupIds = memberships.map(m => m.groupe_id)
+    // 2. Récupérer les événements de ces groupes (type + titre uniquement)
+    const { data: gevts } = await supabase
+      .from('groupe_evenements')
+      .select('id, date, type, titre, heure')
+      .in('groupe_id', groupIds)
+      .order('date', { ascending: true })
+    setGroupEvts((gevts || []).map(e => ({ ...e, _isGroupe: true })))
   }
 
   async function ajouterEvenement() {
@@ -271,7 +322,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   }
 
   const eventsMap = {}
-  evenements.forEach(ev => { if (!eventsMap[ev.date]) eventsMap[ev.date] = []; eventsMap[ev.date].push(ev) })
+  ;[...evenements, ...groupEvts].forEach(ev => { if (!eventsMap[ev.date]) eventsMap[ev.date] = []; eventsMap[ev.date].push(ev) })
 
   const todayStr    = formatDate(new Date())
   const selectedStr = selectedDay ? formatDate(selectedDay) : null
@@ -410,6 +461,24 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.875rem' }}>
               {selectedEvs.map(ev => {
                 const ts = getTypeStyle(ev.type)
+                if (ev._isGroupe) {
+                  // Événement groupe — lecture seule, type + titre uniquement
+                  const borderColor = ts.bg === 'var(--chip-bg)' ? '#d1d5db' : ts.bg
+                  const textColor   = ts.text === 'white' ? ts.bg : ts.text
+                  return (
+                    <div key={`g-${ev.id}`} style={{ background: '#fafafa', color: textColor, padding: '0.55rem 0.75rem', borderRadius: 8, border: `2px solid ${borderColor}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.85rem' }}>👥</span>
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>{ev.titre || getTypeLabel(ev.type)}</span>
+                          <span style={{ fontSize: '0.68rem', opacity: 0.6, marginLeft: '0.4rem', fontWeight: 600 }}>{getTypeLabel(ev.type)}</span>
+                          {ev.heure && <span style={{ fontSize: '0.68rem', opacity: 0.5, marginLeft: '0.4rem' }}>· {ev.heure.slice(0,5)}</span>}
+                        </div>
+                        <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', background: '#f3f4f6', borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>Équipe</span>
+                      </div>
+                    </div>
+                  )
+                }
                 return (
                   <div key={ev.id} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8, border: ev.type === 'autre' ? '1px solid #99f6e4' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
