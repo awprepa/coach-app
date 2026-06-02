@@ -596,7 +596,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'grab', opacity: dragOpacity }} />
           }
           if (e.type === 'test') {
-            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Tests" style={{ background: T.color, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
+            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Tests" style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
           const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
@@ -606,8 +606,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                 fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'grab',
                 overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
                 color: neutral ? '#5b626c' : '#3a4049',
-                background: neutral ? '#f0f2f5' : `color-mix(in srgb, ${T.color} 9%, #fff)`,
-                borderLeft: `3px solid ${neutral ? '#c4ccd4' : `color-mix(in srgb, ${T.color} 70%, #fff)`}`,
+                background: neutral ? '#f0f2f5' : `color-mix(in srgb, ${groupColor} 12%, #fff)`,
+                borderLeft: `3px solid ${neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`}`,
               }}>
               {txt}
             </div>
@@ -684,8 +684,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             <Leg key={cat} c={matchCatColor(cat, groupColor)} t={cat} />
           ))}
           <span style={S.sep} />
-          <Leg c={TYPES.entrainement.color} t="Entraînement" />
-          <Leg c={TYPES.muscu.color} t="Musculation" />
+          <Leg c={groupColor} t="Entraînement" />
+          <Leg c={groupColor} t="Musculation" />
         </div>
       </div>
 
