@@ -8,6 +8,7 @@ import { useClientTheme } from '../context/ClientThemeContext'
 import ClientBottomNav from '../components/ClientBottomNav'
 import ClientProfileMenu from '../components/ClientProfileMenu'
 import ClientOnboarding from '../components/ClientOnboarding'
+import APP_VERSION from '../version'
 import usePageFade from '../hooks/usePageFade'
 import { AccueilSkeleton } from '../components/Skeleton'
 import { sendNotif, getCoachId } from '../notifs'
@@ -466,6 +467,7 @@ export default function AccueilClient() {
         </div>
 
         <button onClick={handleLogout} style={styles.logoutBtn}>Se déconnecter</button>
+        <p style={{ textAlign: 'center', fontSize: '0.68rem', color: '#d1d5db', marginTop: '0.75rem', marginBottom: 0 }}>v{APP_VERSION}</p>
 
         {/* ── Confidentialité & compte ───────────────────────── */}
         <div style={styles.legalRow}>
