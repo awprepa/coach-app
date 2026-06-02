@@ -650,14 +650,37 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     }
   }
 
+  const btnColor = isLight(groupColor) ? '#1a1a1a' : '#ffffff'
+
   return (
     <div style={pageStyle}>
+      {/* ── Bande identité club ── */}
+      {groupe && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: groupColor,
+          borderRadius: 10,
+          padding: '8px 14px',
+          marginBottom: 12,
+        }}>
+          {groupe.couleur_secondaire && (
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: groupe.couleur_secondaire, flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.3)' }} />
+          )}
+          <span style={{ fontWeight: 900, fontSize: '0.85rem', color: btnColor, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            {groupe.nom}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: btnColor, opacity: 0.6, marginLeft: 2 }}>
+            · Saison {startYear} / {startYear + 1}
+          </span>
+        </div>
+      )}
+
       {/* ── Barre d'actions ── */}
       <div style={S.toolbar}>
-        {!embedded && <h1 style={S.h1}>Calendrier saison</h1>}
+        {!embedded && <h1 style={{ ...S.h1, borderLeft: `3px solid ${groupColor}`, paddingLeft: 10 }}>Calendrier saison</h1>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginLeft: embedded ? 0 : 'auto' }}>
           {!groupeId && (
-            <div style={S.groupSel}>
+            <div style={{ ...S.groupSel, borderColor: `color-mix(in srgb, ${groupColor} 40%, #e6e8ec)` }}>
               <span style={{ width: 11, height: 11, borderRadius: 3, background: groupColor, flexShrink: 0 }} />
               <select value={groupe?.id || ''} onChange={e => setGroupe(groupes.find(g => g.id === e.target.value))} style={S.select}>
                 {groupes.length === 0 && <option>Aucun groupe</option>}
@@ -668,17 +691,20 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           <select value={startYear} onChange={e => setStartYear(Number(e.target.value))} style={S.select}>
             {seasonOpts.map(y => <option key={y} value={y}>Saison {y} / {y + 1}</option>)}
           </select>
-          <button style={S.btnDark} onClick={() => openCreate()}><span style={{ color: '#e4f816' }}>+</span> Ajouter</button>
+          <button style={{ ...S.btnDark, background: groupColor, borderColor: groupColor, color: btnColor }}
+            onClick={() => openCreate()}>
+            <span style={{ fontWeight: 900 }}>+</span> Ajouter
+          </button>
         </div>
       </div>
 
       {/* ── Résumé + légende ── */}
-      <div style={S.summary}>
-        <Stat v={matchsList.length} l="Matchs" />
+      <div style={{ ...S.summary, borderBottom: `2px solid color-mix(in srgb, ${groupColor} 30%, #e6e8ec)`, paddingBottom: 12 }}>
+        <Stat v={matchsList.length} l="Matchs" color={groupColor} />
         <span style={S.sep} />
-        <Stat v={evenements.filter(e => e.type === 'entrainement').length} l="Entraînements" />
+        <Stat v={evenements.filter(e => e.type === 'entrainement').length} l="Entraînements" color={groupColor} />
         <span style={S.sep} />
-        <Stat v={evenements.length} l="Évènements" />
+        <Stat v={evenements.length} l="Évènements" color={groupColor} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 13, flexWrap: 'wrap' }}>
           {MATCH_CATEGORIES.map(cat => (
             <Leg key={cat} c={matchCatColor(cat, groupColor)} t={cat} />
@@ -709,8 +735,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                 const ph = phaseOfMonth(M.y, M.m)
                 return (
                   <div key={`${M.y}-${M.m}`} style={S.mcol}>
-                    <div style={{ ...S.mch, borderTop: `3px solid ${ph?.couleur || '#e6e8ec'}` }}>
-                      <div style={S.mm}>{M.label}</div><div style={S.my}>{M.y}</div>
+                    <div style={{ ...S.mch, borderTop: `3px solid ${ph?.couleur || groupColor}`, background: `color-mix(in srgb, ${groupColor} 4%, #fbfcfd)` }}>
+                      <div style={{ ...S.mm, color: `color-mix(in srgb, ${groupColor} 60%, #15181d)` }}>{M.label}</div>
+                      <div style={S.my}>{M.y}</div>
                     </div>
                     {Array.from({ length: 31 }, (_, i) => i + 1).map(d => {
                       if (d > M.days) return <div key={d} style={S.blank}><div style={S.dnum} /><div style={S.ddow} /><div style={{ flex: 1 }} /></div>
@@ -914,6 +941,7 @@ function hslToHex(h, s, l) {
   }
   return '#' + [r,g,b].map(x => Math.round(x*255).toString(16).padStart(2,'0')).join('')
 }
+function isLight(hex) { const [,, l] = hexToHsl(hex || '#2f6f76'); return l > 55 }
 function generateBlocPalette(primary, secondary) {
   const p = primary || '#2f6f76'
   const [ph, ps, pl] = hexToHsl(p)
@@ -1722,9 +1750,9 @@ const Sm = {
 }
 
 /* ── Sous-composants ── */
-function Stat({ v, l }) {
+function Stat({ v, l, color }) {
   return <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-    <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{v}</span>
+    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: color || '#15181d' }}>{v}</span>
     <span style={{ fontSize: '0.64rem', color: '#9aa1ac', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{l}</span>
   </div>
 }
