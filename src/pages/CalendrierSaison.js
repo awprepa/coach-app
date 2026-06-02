@@ -1446,15 +1446,91 @@ function SeanceModal({
               <div style={Sm.sTitle}>Note</div>
               <textarea value={form.note} onChange={e => setForm({ note: e.target.value })} rows={3} style={{ ...Sm.input, resize: 'none', height: 72 }} />
             </div>
+
+            {/* ── Section blocs (gauche) ── */}
+            {hasBlocs && (
+              <div style={{ padding: '14px 16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={Sm.sTitle}>Blocs</div>
+                  <button onClick={addBloc} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>+ Bloc</button>
+                </div>
+
+                {panel.mode === 'create' && panel.blocs.length === 0 && (
+                  <p style={{ fontSize: '.72rem', color: '#9aa1ac', fontStyle: 'italic' }}>Enregistre la séance d'abord.</p>
+                )}
+
+                {blocsWithPos.map((bloc, idx) => {
+                  const color = BLOC_COLORS[idx % BLOC_COLORS.length]
+                  const groups = {}
+                  for (const exo of (bloc.exos || [])) {
+                    const g = exo.groupe_label?.trim() || ''
+                    ;(groups[g] ||= []).push(exo)
+                  }
+                  const gKeys = Object.keys(groups)
+                  const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
+                  return (
+                    <div key={bloc.id} style={{ marginBottom: 8, border: `1.5px solid ${color}35`, borderRadius: 10, overflow: 'hidden' }}>
+                      {/* Tête colorée */}
+                      <div style={{ background: color, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                        <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.78rem', fontWeight: 800, fontFamily: 'inherit', minWidth: 0 }} placeholder="Nom du bloc…" />
+                        <input
+                          type="number" min={5}
+                          value={bloc.durationMin || ''}
+                          onChange={e => { const v = parseInt(e.target.value); if (v >= 1) updateBloc(bloc.id, { duree: String(v) }) }}
+                          style={{ width: 44, border: 'none', background: 'rgba(0,0,0,.2)', color: '#fff', borderRadius: 5, padding: '2px 5px', fontSize: '.75rem', fontWeight: 900, textAlign: 'center', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
+                        />
+                        <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
+                        <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                      </div>
+
+                      {/* Exercices */}
+                      <div style={{ background: color + '0a', padding: '6px 8px 7px' }}>
+                        {hasGroups ? (
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
+                            {gKeys.map(gk => (
+                              <div key={gk} style={{ flex: 1, borderRadius: 7, overflow: 'hidden', border: `1px solid ${color}25` }}>
+                                {gk && <div style={{ fontSize: '.55rem', fontWeight: 900, textTransform: 'uppercase', color: '#fff', background: color + 'cc', padding: '2px 7px', textAlign: 'center' }}>{gk}</div>}
+                                <div style={{ padding: '3px 5px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                  {groups[gk].map(exo => (
+                                    <div key={exo.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', borderRadius: 5, padding: '3px 6px', border: `1px solid ${color}18` }}>
+                                      <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
+                                      <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 60, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.63rem', color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit' }} />
+                                      <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 5 }}>
+                            {(bloc.exos || []).map(exo => (
+                              <div key={exo.id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', borderRadius: 6, padding: '4px 8px', border: `1px solid ${color}20` }}>
+                                <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.7rem', fontWeight: 600, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
+                                <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 66, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.65rem', color: '#1a1a1a', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
+                                <input value={exo.groupe_label || ''} onChange={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Groupe…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.62rem', color: '#6b7280', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
+                                <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button onClick={() => addExo(bloc.id)} style={{ width: '100%', background: 'none', border: `1.5px dashed ${color}50`, borderRadius: 6, color: color, fontSize: '.65rem', fontWeight: 700, padding: '4px', cursor: 'pointer', textAlign: 'center' }}>+ Exercice</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* ── Colonne timeline ── */}
+          {/* ── Colonne timeline (visuelle) ── */}
           {hasBlocs && (
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f5f6f8', minHeight: 0 }}>
 
-              {/* Stats + bouton */}
+              {/* Stats */}
               <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #e0e3e8', background: '#fff', flexShrink: 0 }}>
-                <span style={{ fontSize: '.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.07em', color: '#6b7280' }}>Séquence</span>
+                <span style={{ fontSize: '.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.07em', color: '#6b7280' }}>Aperçu</span>
                 <span style={{ fontSize: '.98rem', fontWeight: 900, color: '#1a1a1a' }}>{usedMin}</span>
                 <span style={{ color: '#d1d5db' }}>/</span>
                 <span style={{ fontSize: '.98rem', fontWeight: 900, color: '#7c3aed' }}>{totalMin || '—'}</span>
@@ -1467,7 +1543,7 @@ function SeanceModal({
                 <span style={{ fontSize: '.62rem', fontWeight: 700, color: usedMin > totalMin ? '#ef4444' : '#9aa1ac' }}>
                   {totalMin > 0 ? (usedMin > totalMin ? `⚠️ +${usedMin - totalMin} min` : `· ${totalMin - usedMin} min libres`) : ''}
                 </span>
-                <button onClick={addBloc} style={{ marginLeft: 'auto', background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: '.72rem', fontWeight: 800, cursor: 'pointer' }}>+ Bloc</button>
+                <span style={{ marginLeft: 'auto', fontSize: '.62rem', color: '#b0b7c0', fontStyle: 'italic' }}>← glisser pour ajuster</span>
               </div>
 
               {/* Zone timeline sans scroll */}
@@ -1501,7 +1577,6 @@ function SeanceModal({
                     const color = BLOC_COLORS[idx % BLOC_COLORS.length]
                     const top = bloc.startMin * pxMin
                     const height = bloc.durationMin * pxMin
-                    // Groupes d'exercices (Avants / Arrières…)
                     const groups = {}
                     for (const exo of (bloc.exos || [])) {
                       const g = exo.groupe_label?.trim() || ''
@@ -1511,53 +1586,45 @@ function SeanceModal({
                     const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
 
                     return (
-                      <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height: Math.max(height, 6), borderRadius: 6, overflow: 'visible' }}>
-                        <div style={{ height: '100%', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
-
-                          {/* Tête — une seule ligne, toujours visible */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderBottom: height > 24 ? '1px solid rgba(255,255,255,.18)' : 'none', flexShrink: 0, minHeight: 0, overflow: 'hidden' }}>
+                      <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height: Math.max(height, 6), borderRadius: 8, overflow: 'visible' }}>
+                        <div style={{ height: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
+                          {/* En-tête */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', flexShrink: 0, overflow: 'hidden', borderBottom: height > 30 ? '1px solid rgba(255,255,255,.15)' : 'none' }}>
                             <span style={{ width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.5rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                            <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.7rem', fontWeight: 800, minWidth: 0, fontFamily: 'inherit' }} />
-                            <span style={{ fontSize: '.58rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>{bloc.durationMin}'</span>
-                            <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'rgba(255,255,255,.7)', borderRadius: 4, width: 14, height: 14, fontSize: '.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                            <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bloc.nom}</span>
+                            <span style={{ fontSize: '.6rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>{bloc.durationMin}'</span>
                           </div>
-
-                          {/* Zone exercices — toujours en flex:1, se compresse avec le bloc */}
-                          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,.1)', minHeight: 0 }}>
-                            {hasGroups ? (
-                              /* Groupes côte à côte */
-                              <div style={{ display: 'flex', height: '100%', gap: 2, padding: '2px 4px 3px' }}>
-                                {gKeys.map(gk => (
-                                  <div key={gk} style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255,255,255,.2)', minWidth: 0 }}>
-                                    {gk && <div style={{ fontSize: '.5rem', fontWeight: 900, textTransform: 'uppercase', color: 'rgba(255,255,255,.9)', background: 'rgba(0,0,0,.25)', padding: '1px 5px', textAlign: 'center', flexShrink: 0 }}>{gk}</div>}
-                                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '2px 3px', gap: 2, background: 'rgba(255,255,255,.08)', minHeight: 0 }}>
-                                      {groups[gk].map(exo => (
-                                        <div key={exo.id} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,.88)', borderRadius: 4, padding: '0 3px 0 5px', minHeight: 0, overflow: 'hidden' }}>
-                                          <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.6rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', minWidth: 0, fontFamily: 'inherit' }} />
-                                          <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="…" style={{ width: 48, border: 'none', background: color + '33', borderRadius: 3, fontSize: '.55rem', fontWeight: 700, color: '#1a1a1a', padding: '1px 3px', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }} />
-                                          <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: 'rgba(0,0,0,.2)', fontSize: '.7rem', cursor: 'pointer', padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
-                                        </div>
-                                      ))}
+                          {/* Exercices (lecture seule, proportionnels) */}
+                          {height > 30 && (
+                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,.08)', minHeight: 0 }}>
+                              {hasGroups ? (
+                                <div style={{ display: 'flex', height: '100%', gap: 2, padding: '2px 5px 3px' }}>
+                                  {gKeys.map(gk => (
+                                    <div key={gk} style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255,255,255,.2)', minWidth: 0 }}>
+                                      {gk && <div style={{ fontSize: '.48rem', fontWeight: 900, textTransform: 'uppercase', color: 'rgba(255,255,255,.9)', background: 'rgba(0,0,0,.2)', padding: '1px 5px', textAlign: 'center', flexShrink: 0 }}>{gk}</div>}
+                                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '2px 3px', gap: 2, minHeight: 0 }}>
+                                        {groups[gk].map(exo => (
+                                          <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.85)', borderRadius: 4, padding: '0 5px', display: 'flex', alignItems: 'center', gap: 4, minHeight: 0, overflow: 'hidden' }}>
+                                            <span style={{ flex: 1, fontSize: '.6rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
+                                            {exo.prescription && <span style={{ fontSize: '.55rem', fontWeight: 800, color: '#fff', background: color, padding: '0 4px', borderRadius: 3, flexShrink: 0 }}>{exo.prescription}</span>}
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              /* Liste plate */
-                              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '2px 5px 3px', gap: 2, minHeight: 0 }}>
-                                {(bloc.exos || []).map(exo => (
-                                  <div key={exo.id} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,.88)', borderRadius: 4, padding: '0 4px 0 6px', minHeight: 0, overflow: 'hidden' }}>
-                                    <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.62rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', minWidth: 0, fontFamily: 'inherit' }} />
-                                    <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 60, border: 'none', background: color + '33', borderRadius: 3, fontSize: '.58rem', fontWeight: 700, color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }} />
-                                    <input value={exo.groupe_label || ''} onChange={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Grp…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 42, border: 'none', background: 'rgba(0,0,0,.08)', borderRadius: 3, fontSize: '.55rem', color: '#555', padding: '1px 3px', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }} />
-                                    <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: 'rgba(0,0,0,.2)', fontSize: '.72rem', cursor: 'pointer', padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {/* + Exercice */}
-                            <button onClick={() => addExo(bloc.id)} style={{ flexShrink: 0, background: 'rgba(255,255,255,.25)', border: 'none', borderTop: '1px solid rgba(255,255,255,.2)', color: 'rgba(255,255,255,.85)', fontSize: '.56rem', fontWeight: 800, cursor: 'pointer', padding: '2px 0', width: '100%', textAlign: 'center' }}>+ Exercice</button>
-                          </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '2px 5px 3px', gap: 2, minHeight: 0 }}>
+                                  {(bloc.exos || []).map(exo => (
+                                    <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.85)', borderRadius: 4, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 5, minHeight: 0, overflow: 'hidden' }}>
+                                      <span style={{ flex: 1, fontSize: '.6rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
+                                      {exo.prescription && <span style={{ fontSize: '.55rem', fontWeight: 800, color: '#fff', background: color, padding: '0 4px', borderRadius: 3, flexShrink: 0 }}>{exo.prescription}</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         {/* Handle drag */}
                         <div onMouseDown={e => startDrag(e, bloc)} style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 36, height: 9, background: 'rgba(255,255,255,.45)', border: '1.5px solid rgba(255,255,255,.75)', borderRadius: 5, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, userSelect: 'none' }}>
