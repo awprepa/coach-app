@@ -303,7 +303,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     if (!weekZoom) return
     const cur = new Date(weekZoom.startISO + 'T00:00:00')
     cur.setDate(cur.getDate() + delta * 7)
-    await openWeekZoom(cur.toISOString().slice(0, 10))
+    const newDate = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`
+    await openWeekZoom(newDate)
   }
   async function openEdit(e) {
     let blocs = []
