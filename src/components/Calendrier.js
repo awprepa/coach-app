@@ -79,24 +79,13 @@ function generateICS(events) {
 
 function EventChip({ ev, tiny = false }) {
   const ts = getTypeStyle(ev.type)
-  if (ev._isGroupe) {
-    return (
-      <span style={{
-        background: 'transparent', color: ts.text === 'white' ? ts.bg : ts.text,
-        border: `1.5px solid ${ts.bg === 'var(--chip-bg)' ? '#d1d5db' : ts.bg}`,
-        fontSize: tiny ? '0.6rem' : '0.7rem', fontWeight: '700',
-        padding: tiny ? '1px 4px' : '2px 6px', borderRadius: '4px',
-        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block',
-      }}>👥 {ev.titre}</span>
-    )
-  }
   return (
     <span style={{
       background: ts.bg, color: ts.text,
       fontSize: tiny ? '0.6rem' : '0.7rem', fontWeight: '700',
       padding: tiny ? '1px 4px' : '2px 6px', borderRadius: '4px',
       overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block',
-    }}>{ev.titre}</span>
+    }}>{ev._isGroupe ? '👥 ' : ''}{ev.titre}</span>
   )
 }
 
@@ -462,19 +451,14 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
               {selectedEvs.map(ev => {
                 const ts = getTypeStyle(ev.type)
                 if (ev._isGroupe) {
-                  // Événement groupe — lecture seule, type + titre uniquement
-                  const borderColor = ts.bg === 'var(--chip-bg)' ? '#d1d5db' : ts.bg
-                  const textColor   = ts.text === 'white' ? ts.bg : ts.text
                   return (
-                    <div key={`g-${ev.id}`} style={{ background: '#fafafa', color: textColor, padding: '0.55rem 0.75rem', borderRadius: 8, border: `2px solid ${borderColor}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.85rem' }}>👥</span>
+                    <div key={`g-${ev.id}`} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                         <div style={{ minWidth: 0 }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>{ev.titre || getTypeLabel(ev.type)}</span>
-                          <span style={{ fontSize: '0.68rem', opacity: 0.6, marginLeft: '0.4rem', fontWeight: 600 }}>{getTypeLabel(ev.type)}</span>
-                          {ev.heure && <span style={{ fontSize: '0.68rem', opacity: 0.5, marginLeft: '0.4rem' }}>· {ev.heure.slice(0,5)}</span>}
+                          <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>👥 {ev.titre || getTypeLabel(ev.type)}</span>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.65, marginLeft: '0.4rem' }}>{getTypeLabel(ev.type)}</span>
+                          {ev.heure && <span style={{ fontSize: '0.7rem', opacity: 0.5, marginLeft: '0.4rem' }}>· {ev.heure.slice(0,5)}</span>}
                         </div>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', background: '#f3f4f6', borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>Équipe</span>
                       </div>
                     </div>
                   )
