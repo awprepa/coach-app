@@ -485,7 +485,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     for (const ev of periodClip.events) {
       const nd = new Date(ev.date + 'T00:00:00')
       nd.setDate(nd.getDate() + offsetDays)
-      const newDate = nd.toISOString().slice(0, 10)
+      const newDate = `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`
       const payload = {
         groupe_id: groupe.id, date: newDate, heure: ev.heure || null, type: ev.type,
         titre: ev.titre || null, lieu: ev.lieu || null, duree_min: ev.duree_min || null,
@@ -1495,7 +1495,8 @@ function SeanceModal({
                                   {groups[gk].map(exo => (
                                     <div key={exo.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', borderRadius: 5, padding: '3px 6px', border: `1px solid ${color}18` }}>
                                       <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
-                                      <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 60, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.63rem', color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit' }} />
+                                      <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.63rem', color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit' }} />
+                                      <input value={exo.groupe_label || ''} onChange={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Grp…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 44, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.6rem', color: '#6b7280', padding: '1px 3px', outline: 'none', fontFamily: 'inherit' }} />
                                       <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
                                     </div>
                                   ))}
@@ -1596,7 +1597,10 @@ function SeanceModal({
                           </div>
                           {/* Exercices (lecture seule, proportionnels) */}
                           {height > 30 && (
-                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,.08)', minHeight: 0 }}>
+                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,.08)', minHeight: 0, justifyContent: (bloc.exos || []).length === 0 ? 'center' : 'flex-start', alignItems: (bloc.exos || []).length === 0 ? 'center' : 'stretch' }}>
+                              {(bloc.exos || []).length === 0 && (
+                                <span style={{ fontSize: Math.min(height * 0.4, 36) + 'px', fontWeight: 900, color: 'rgba(255,255,255,.35)', lineHeight: 1 }}>{idx + 1}</span>
+                              )}
                               {hasGroups ? (
                                 <div style={{ display: 'flex', height: '100%', gap: 2, padding: '2px 5px 3px' }}>
                                   {gKeys.map(gk => (
