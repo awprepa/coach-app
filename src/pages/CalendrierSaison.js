@@ -1634,46 +1634,52 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
 
-                  {/* Séquences — aperçu compact */}
-                  {bloc.bloc_type === 'sequences' && (
-                    <div style={{ height: h, padding:'4px 6px', background: bc+'08', display:'flex', flexDirection:'column', justifyContent:'center', gap:3 }}>
-                      {/* Mini timeline */}
-                      <div style={{ display:'flex', alignItems:'center', gap:1, overflowX:'hidden' }}>
-                        {(bloc.sequences||[]).slice(0,8).map((seq,si) => (
-                          <React.Fragment key={seq.id}>
-                            <div style={{
-                              height:22, borderRadius:4, flexShrink:0,
-                              width: seq.type==='recup' ? 14 : 30,
-                              background: seq.type==='jeu' ? '#bfdbfe' : '#bbf7d0',
-                              border:`1px solid ${seq.type==='jeu'?'#60a5fa':'#4ade80'}`,
-                              display:'flex', alignItems:'center', justifyContent:'center',
-                            }}>
-                              {seq.type==='jeu' && seq.theme && (
-                                <span style={{ fontSize:'0.45rem', fontWeight:900, color:'#1d4ed8', textOverflow:'ellipsis', overflow:'hidden', whiteSpace:'nowrap', padding:'0 2px' }}>
-                                  {seq.theme.slice(0,4)}
-                                </span>
-                              )}
-                            </div>
-                            {si < Math.min((bloc.sequences?.length||0),8)-1 && (
-                              <span style={{ color:'#d1d5db', fontSize:'0.5rem' }}>›</span>
-                            )}
-                          </React.Fragment>
-                        ))}
-                        {(bloc.sequences?.length||0) > 8 && <span style={{ fontSize:'0.5rem', color:'#9ca3af', marginLeft:2 }}>…</span>}
-                      </div>
-                      {/* Stats */}
-                      <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                        {bloc.sequences?.length > 0 && (
-                          <span style={{ fontSize:'0.6rem', fontWeight:800, color:bc }}>
-                            {calcJeuEffectif(bloc.sequences)} jeu · {calcDureeBloc(bloc.sequences)} total
+                  {/* Séquences — aperçu lisible */}
+                  {bloc.bloc_type === 'sequences' && (() => {
+                    const seqs = bloc.sequences || []
+                    const jeuSeqs = seqs.filter(s => s.type === 'jeu')
+                    return (
+                      <div style={{ padding:'6px 10px 8px', background: bc+'08', display:'flex', flexDirection:'column', gap:5 }}>
+                        {/* Stats rapides */}
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                          <span style={{ fontSize:'.62rem', fontWeight:900, color:bc, background:bc+'18', borderRadius:5, padding:'2px 7px' }}>
+                            {calcJeuEffectif(seqs)} jeu effectif
                           </span>
+                          <span style={{ fontSize:'.62rem', fontWeight:700, color:'#6b7280', background:'#f0f2f5', borderRadius:5, padding:'2px 7px' }}>
+                            {calcDureeBloc(seqs)} total
+                          </span>
+                          {bloc.conditions_jeu && (
+                            <span style={{ fontSize:'.62rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:5, padding:'2px 7px' }}>
+                              {bloc.conditions_jeu}
+                            </span>
+                          )}
+                        </div>
+                        {/* Séquences en pills lisibles */}
+                        {seqs.length > 0 && (
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:3, alignItems:'center' }}>
+                            {seqs.map((seq, si) => seq.type === 'jeu' ? (
+                              <span key={seq.id} style={{
+                                fontSize:'.62rem', fontWeight:800, padding:'3px 7px',
+                                borderRadius:6, background:'#dbeafe', color:'#1d4ed8',
+                                border:'1px solid #bfdbfe', whiteSpace:'nowrap',
+                              }}>
+                                {formatSeqDur(seq.duree_sec)}{seq.theme ? ' · '+seq.theme : ''}
+                              </span>
+                            ) : (
+                              <span key={seq.id} style={{
+                                fontSize:'.58rem', fontWeight:600, color:'#6b7280', padding:'0 3px',
+                              }}>
+                                {formatSeqDur(seq.duree_sec)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {bloc.effectif_desc && (
+                          <span style={{ fontSize:'.6rem', color:'#9ca3af', fontStyle:'italic' }}>{bloc.effectif_desc}</span>
                         )}
                       </div>
-                      {bloc.conditions_jeu && (
-                        <span style={{ fontSize:'0.58rem', color:'#92400e', fontWeight:700 }}>{bloc.conditions_jeu}</span>
-                      )}
-                    </div>
-                  )}
+                    )
+                  })()}
 
                   {/* Exercices */}
                   {bloc.bloc_type !== 'sequences' && bloc.exos?.length > 0 && (
@@ -1963,10 +1969,15 @@ function SeanceModal({
   // ── Séquences ──
   const evtId = panel.evt?.id
   const [selectedSeqId, setSelectedSeqId] = useState(null)
+  const dragSeqId = React.useRef(null)
 
   async function addSequence(blocId, type = 'jeu') {
+    // Ordre = max existant + 1
+    const allBlocs = panel.blocs || []
+    const bloc = allBlocs.find(b => b.id === blocId)
+    const maxOrdre = (bloc?.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
     const { data } = await supabase.from('groupe_seance_sequences').insert({
-      bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récupération', duree_sec: type === 'jeu' ? 90 : 35, ordre: 999
+      bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récup.', duree_sec: type === 'jeu' ? 90 : 35, ordre: maxOrdre + 1
     }).select().single()
     if (data) { reloadBlocs?.(); setSelectedSeqId(data.id) }
   }
@@ -1979,14 +1990,20 @@ function SeanceModal({
     setSelectedSeqId(null)
     reloadBlocs?.()
   }
-  // Convertit "1'30" ou "90" → secondes
-  function parseDurSec(str) {
-    const s = String(str || '').trim()
-    const m = s.match(/^(\d+)['''](\d*)$/)
-    if (m) return parseInt(m[1]) * 60 + parseInt(m[2] || 0)
-    const n = s.match(/^(\d+)$/)
-    if (n) return parseInt(n[1])
-    return null
+  async function reorderSequences(blocId, fromId, toId) {
+    const bloc = (panel.blocs || []).find(b => b.id === blocId)
+    if (!bloc) return
+    const seqs = [...(bloc.sequences || [])].sort((a, b) => a.ordre - b.ordre)
+    const fromIdx = seqs.findIndex(s => s.id === fromId)
+    const toIdx   = seqs.findIndex(s => s.id === toId)
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+    const reordered = [...seqs]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    await Promise.all(reordered.map((s, i) =>
+      supabase.from('groupe_seance_sequences').update({ ordre: i + 1 }).eq('id', s.id)
+    ))
+    reloadBlocs?.()
   }
 
   async function addBlocSequences() {
@@ -2186,7 +2203,7 @@ function SeanceModal({
                               </span>
                             ))}
                           </div>
-                          {/* Timeline */}
+                          {/* Timeline — drag & drop pour réordonner */}
                           <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:4, flexWrap:'nowrap' }}>
                             {(bloc.sequences || []).map((seq, si) => {
                               const isJeu = seq.type === 'jeu'
@@ -2194,15 +2211,23 @@ function SeanceModal({
                               return (
                                 <React.Fragment key={seq.id}>
                                   <div
-                                    onClick={() => setSelectedSeqId(isSelected ? null : seq.id)}
+                                    draggable
+                                    onDragStart={e => { dragSeqId.current = seq.id; e.dataTransfer.effectAllowed = 'move' }}
+                                    onDragOver={e => e.preventDefault()}
+                                    onDrop={e => { e.preventDefault(); reorderSequences(bloc.id, dragSeqId.current, seq.id) }}
+                                    onClick={() => setSelectedSeqId(seq.id)}
                                     style={{
                                       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                                      borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:48,
-                                      width: isJeu ? 84 : 54, cursor:'pointer',
+                                      borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:50,
+                                      width: isJeu ? 84 : 54, cursor:'grab',
                                       background: isJeu ? (isSelected ? '#93c5fd' : '#bfdbfe') : (isSelected ? '#86efac' : '#bbf7d0'),
                                       border: `${isSelected ? 2 : 1.5}px solid ${isJeu ? '#60a5fa' : '#4ade80'}`,
-                                      transition:'background 0.12s',
+                                      outline: isSelected ? `2px solid ${isJeu?'#3b82f6':'#22c55e'}` : 'none',
+                                      outlineOffset: 1,
+                                      transition:'background 0.1s',
+                                      userSelect:'none',
                                     }}>
+                                    <span style={{ fontSize:'0.6rem', color:'#c4ccd4', marginBottom:1 }}>⠿</span>
                                     <span style={{ fontSize:'0.65rem', fontWeight:900, color: isJeu?'#1e3a5f':'#14532d' }}>
                                       {formatSeqDur(seq.duree_sec)}
                                     </span>
@@ -2220,13 +2245,13 @@ function SeanceModal({
                             <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 4px' }}>›</span>
                             <div style={{ display:'flex', gap:4, flexShrink:0 }}>
                               <button onClick={() => addSequence(bloc.id, 'jeu')}
-                                style={{ padding:'4px 8px', minHeight:48, borderRadius:7, border:'1.5px dashed #93c5fd',
+                                style={{ padding:'4px 8px', minHeight:50, borderRadius:7, border:'1.5px dashed #93c5fd',
                                   background:'transparent', color:'#60a5fa', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
                                 + Séq.
                               </button>
                               <button onClick={() => addSequence(bloc.id, 'recup')}
-                                style={{ padding:'4px 8px', minHeight:48, borderRadius:7, border:'1.5px dashed #86efac',
-                                  background:'transparent', color:'#4ade80', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
+                                style={{ padding:'4px 8px', minHeight:50, borderRadius:7, border:'1.5px dashed #86efac',
+                                  background:'transparent', color:'#22c55e', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
                                 + Récup
                               </button>
                             </div>
@@ -2295,6 +2320,10 @@ function SeanceModal({
                                 <button onClick={() => deleteSequence(seq.id)}
                                   style={{ padding:'5px 10px', borderRadius:7, border:'1.5px solid #fecaca', background:'#fef2f2', color:'#dc2626', fontSize:'0.68rem', fontWeight:800, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-end' }}>
                                   Supprimer
+                                </button>
+                                <button onClick={() => setSelectedSeqId(null)}
+                                  style={{ padding:'5px 8px', borderRadius:7, border:'1.5px solid #e5e7eb', background:'#fff', color:'#6b7280', fontSize:'0.68rem', fontWeight:800, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-end' }}>
+                                  Fermer
                                 </button>
                               </div>
                             )
