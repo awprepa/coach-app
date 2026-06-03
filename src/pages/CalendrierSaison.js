@@ -1408,8 +1408,8 @@ function SeanceModal({
       {/* Backdrop */}
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 110 }} onClick={closePanel} />
 
-      {/* Modal */}
-      <div style={{ position: 'fixed', top: 70, bottom: '2vh', left: '50%', transform: 'translateX(-50%)', width: 'min(96vw, 1000px)', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Modal — onKeyDown stopPropagation empêche les raccourcis calendrier (Cmd+C/V) de se déclencher depuis la modale */}
+      <div onKeyDown={e => e.stopPropagation()} style={{ position: 'fixed', top: 70, bottom: '2vh', left: '50%', transform: 'translateX(-50%)', width: 'min(96vw, 1000px)', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '13px 20px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
@@ -1572,9 +1572,9 @@ function SeanceModal({
                                 <div style={{ padding: '3px 5px', display: 'flex', flexDirection: 'column', gap: 3 }}>
                                   {groups[gk].map(exo => (
                                     <div key={exo.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', borderRadius: 5, padding: '3px 6px', border: `1px solid ${color}18` }}>
-                                      <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
-                                      <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.63rem', color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit' }} />
-                                      <input value={exo.groupe_label || ''} onChange={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Grp…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 44, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.6rem', color: '#6b7280', padding: '1px 3px', outline: 'none', fontFamily: 'inherit' }} />
+                                      <input key={`nom-${exo.id}`} defaultValue={exo.nom} onBlur={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
+                                      <input key={`pres-${exo.id}`} defaultValue={exo.prescription || ''} onBlur={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.63rem', color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit' }} />
+                                      <input key={`grp-${exo.id}`} defaultValue={exo.groupe_label || ''} onBlur={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Grp…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 44, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.6rem', color: '#6b7280', padding: '1px 3px', outline: 'none', fontFamily: 'inherit' }} />
                                       <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
                                     </div>
                                   ))}
@@ -1586,9 +1586,9 @@ function SeanceModal({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 5 }}>
                             {(bloc.exos || []).map(exo => (
                               <div key={exo.id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', borderRadius: 6, padding: '4px 8px', border: `1px solid ${color}20` }}>
-                                <input value={exo.nom} onChange={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.7rem', fontWeight: 600, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
-                                <input value={exo.prescription || ''} onChange={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 66, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.65rem', color: '#1a1a1a', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
-                                <input value={exo.groupe_label || ''} onChange={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Groupe…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.62rem', color: '#6b7280', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
+                                <input key={`nom-${exo.id}`} defaultValue={exo.nom} onBlur={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.7rem', fontWeight: 600, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
+                                <input key={`pres-${exo.id}`} defaultValue={exo.prescription || ''} onBlur={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 66, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.65rem', color: '#1a1a1a', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
+                                <input key={`grp-${exo.id}`} defaultValue={exo.groupe_label || ''} onBlur={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Groupe…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.62rem', color: '#6b7280', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
                                 <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
                               </div>
                             ))}
