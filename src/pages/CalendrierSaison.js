@@ -420,6 +420,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     await supabase.from('groupe_seance_blocs').update(patch).eq('id', id)
   }
   async function deleteBloc(id) {
+    if (!window.confirm('Supprimer ce bloc et toutes ses séquences ?')) return
     setPanel(p => ({ ...p, blocs: p.blocs.filter(b => b.id !== id) }))
     await supabase.from('groupe_seance_blocs').delete().eq('id', id)
   }
@@ -1870,7 +1871,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           {/* ── Corps ── */}
           <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px' }}>
 
-            {processedBlocs.map(item => {
+            {processedBlocs.map((item, itemIdx) => {
+              const nextItem = processedBlocs[itemIdx + 1]
               if (item.kind === 'std') {
                 /* Blocs standards (échauffement, retour au calme…) */
                 const { bloc, bc2 } = item
@@ -1895,10 +1897,13 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               const { bloc, series } = item
               const hasMultipleSeries = series.length > 1
               // Entête colonnes
-              const seqHeaderInfo = bloc.recup_inter_seq ? `(récup entre séquences : ${bloc.recup_inter_seq})` : ''
+              const seqHeaderInfo = bloc.recup_inter_seq ? `(récup entre séq : ${bloc.recup_inter_seq})` : ''
+              // Séparateur récup entre blocs (affiché après ce bloc, sauf si dernier)
+              const showRecupAfter = nextItem != null && bloc.recup_inter_seq
 
               return (
-                <div key={bloc.id} style={{ marginBottom:20, border:cellBorder, borderRadius:10, overflow:'hidden' }}>
+                <React.Fragment key={bloc.id}>
+                <div style={{ marginBottom: showRecupAfter ? 0 : 20, border:cellBorder, borderRadius: showRecupAfter ? '10px 10px 0 0' : 10, overflow:'hidden' }}>
 
                   {/* Titre du bloc (bandeau bleu) */}
                   <div style={{ background:'#7ba7d4', padding:'7px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -1969,6 +1974,14 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     )
                   })}
                 </div>
+                {/* Récup entre blocs */}
+                {showRecupAfter && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fef9c3', border:cellBorder, borderTop:'none', borderRadius:'0 0 10px 10px', padding:'6px 16px', marginBottom:20 }}>
+                    <span style={{ fontSize:'.65rem', fontWeight:900, color:'#92400e', textTransform:'uppercase', letterSpacing:'.05em' }}>Récup entre blocs</span>
+                    <span style={{ fontSize:'.8rem', fontWeight:900, color:'#78350f' }}>· {bloc.recup_inter_seq}</span>
+                  </div>
+                )}
+                </React.Fragment>
               )
             })}
 
@@ -2196,17 +2209,22 @@ function SeanceModal({
   async function addNouvelleSerie(blocId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
     const maxOrdre = (bloc?.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
-    await supabase.from('groupe_seance_sequences').insert({
+    const r1 = await supabase.from('groupe_seance_sequences').insert({
       bloc_id: blocId, type: 'inter_bloc', ordre: maxOrdre + 1, duree_sec: 180, theme: 'Récup série'
     })
-    await supabase.from('groupe_seance_sequences').insert({
+    if (r1.error) { console.error('inter_bloc insert:', r1.error); return }
+    const r2 = await supabase.from('groupe_seance_sequences').insert({
       bloc_id: blocId, type: 'jeu', ordre: maxOrdre + 2, duree_sec: 90, theme: ''
     })
+    if (r2.error) { console.error('jeu insert:', r2.error); return }
     reloadBlocs?.()
   }
 
   async function deleteSequence(seqId) {
-    await supabase.from('groupe_seance_sequences').delete().eq('id', seqId)
+    if (!seqId) return
+    if (!window.confirm('Supprimer cette séquence ?')) return
+    const { error } = await supabase.from('groupe_seance_sequences').delete().eq('id', seqId)
+    if (error) { console.error('deleteSequence error:', error); return }
     setSelectedSeqId(null)
     reloadBlocs?.()
   }
