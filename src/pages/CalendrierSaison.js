@@ -685,7 +685,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
 
       {/* ── Onglets Calendrier / Effectif ── */}
       <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-        {[['calendrier','📅 Calendrier'],['effectif','🏉 Effectif']].map(([v,l]) => (
+        {[['calendrier','Calendrier'],['effectif','Effectif']].map(([v,l]) => (
           <button key={v} onClick={() => setCalTab(v)}
             style={{ padding:'7px 18px', borderRadius:20, border:'none', fontWeight:700, fontSize:'0.8rem',
               background: calTab===v ? groupColor : '#e5e7eb',
@@ -1665,12 +1665,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       <div style={{ display:'flex', gap:6, alignItems:'center' }}>
                         {bloc.sequences?.length > 0 && (
                           <span style={{ fontSize:'0.6rem', fontWeight:800, color:bc }}>
-                            ⚡ {calcJeuEffectif(bloc.sequences)} jeu · ⏱ {calcDureeBloc(bloc.sequences)}
+                            {calcJeuEffectif(bloc.sequences)} jeu · {calcDureeBloc(bloc.sequences)} total
                           </span>
                         )}
                       </div>
                       {bloc.conditions_jeu && (
-                        <span style={{ fontSize:'0.58rem', color:'#92400e', fontWeight:700 }}>🏉 {bloc.conditions_jeu}</span>
+                        <span style={{ fontSize:'0.58rem', color:'#92400e', fontWeight:700 }}>{bloc.conditions_jeu}</span>
                       )}
                     </div>
                   )}
@@ -1962,12 +1962,33 @@ function SeanceModal({
 
   // ── Séquences ──
   const evtId = panel.evt?.id
-  async function addSequence(blocId) {
+  const [selectedSeqId, setSelectedSeqId] = useState(null)
+
+  async function addSequence(blocId, type = 'jeu') {
     const { data } = await supabase.from('groupe_seance_sequences').insert({
-      bloc_id: blocId, type:'jeu', theme:'', duree_sec:90, ordre:999
+      bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récupération', duree_sec: type === 'jeu' ? 90 : 35, ordre: 999
     }).select().single()
-    if (data) reloadBlocs?.()
+    if (data) { reloadBlocs?.(); setSelectedSeqId(data.id) }
   }
+  async function updateSequence(seqId, patch) {
+    await supabase.from('groupe_seance_sequences').update(patch).eq('id', seqId)
+    reloadBlocs?.()
+  }
+  async function deleteSequence(seqId) {
+    await supabase.from('groupe_seance_sequences').delete().eq('id', seqId)
+    setSelectedSeqId(null)
+    reloadBlocs?.()
+  }
+  // Convertit "1'30" ou "90" → secondes
+  function parseDurSec(str) {
+    const s = String(str || '').trim()
+    const m = s.match(/^(\d+)['''](\d*)$/)
+    if (m) return parseInt(m[1]) * 60 + parseInt(m[2] || 0)
+    const n = s.match(/^(\d+)$/)
+    if (n) return parseInt(n[1])
+    return null
+  }
+
   async function addBlocSequences() {
     if (!panel?.evt) { alert("Enregistre d'abord la séance pour lui ajouter un déroulé."); return }
     const { data: nb } = await supabase.from('groupe_seance_blocs')
@@ -2117,7 +2138,7 @@ function SeanceModal({
                   <div style={Sm.sTitle}>Blocs</div>
                   <div style={{ display:'flex', gap:5 }}>
                     <button onClick={addBloc} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>+ Bloc</button>
-                    <button onClick={addBlocSequences} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>⚡ + Séquences</button>
+                    <button onClick={addBlocSequences} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>+ Déroulé jeu</button>
                   </div>
                 </div>
 
@@ -2156,50 +2177,145 @@ function SeanceModal({
                           {/* Stats rapides */}
                           <div style={{ display:'flex', gap:6, marginBottom:8 }}>
                             {[
-                              ['⚡', calcJeuEffectif(bloc.sequences) + "''", '#2f6f76'],
-                              ['⏱', calcDureeBloc(bloc.sequences) + "''", '#6b7280'],
-                              [bloc.conditions_jeu ? '🏉' : null, bloc.conditions_jeu, '#92400e'],
-                            ].filter(([i]) => i).map(([icon,val,color2]) => (
-                              <span key={icon} style={{ fontSize:'0.68rem', fontWeight:800, color:color2, background: color2+'15', padding:'2px 7px', borderRadius:6 }}>
-                                {icon} {val}
+                              ['Jeu effectif', calcJeuEffectif(bloc.sequences), '#2f6f76'],
+                              ['Total', calcDureeBloc(bloc.sequences), '#6b7280'],
+                              bloc.conditions_jeu ? ['Conditions', bloc.conditions_jeu, '#92400e'] : null,
+                            ].filter(Boolean).map(([lbl,val,color2]) => (
+                              <span key={lbl} style={{ fontSize:'0.68rem', fontWeight:800, color:color2, background: color2+'15', padding:'2px 7px', borderRadius:6 }}>
+                                {lbl} : {val}
                               </span>
                             ))}
                           </div>
                           {/* Timeline */}
-                          <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:4 }}>
-                            {(bloc.sequences || []).map((seq, si) => (
-                              <React.Fragment key={seq.id}>
-                                <div style={{
-                                  display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                                  borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:48,
-                                  width: seq.type === 'recup' ? 50 : 80,
-                                  background: seq.type === 'jeu' ? '#bfdbfe' : '#bbf7d0',
-                                  border: `1.5px solid ${seq.type === 'jeu' ? '#60a5fa' : '#4ade80'}`,
-                                }}>
-                                  <span style={{ fontSize:'0.65rem', fontWeight:900, color: seq.type==='jeu'?'#1e3a5f':'#14532d' }}>
-                                    {formatSeqDur(seq.duree_sec)}
-                                  </span>
-                                  {seq.theme && <span style={{ fontSize:'0.55rem', fontWeight:800, color: seq.type==='jeu'?'#1d4ed8':'#16a34a', textAlign:'center', textTransform:'uppercase', marginTop:1, lineHeight:1.1 }}>
-                                    {seq.theme}
-                                  </span>}
-                                </div>
-                                {si < (bloc.sequences?.length||0)-1 && (
-                                  <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 2px', flexShrink:0 }}>›</span>
-                                )}
-                              </React.Fragment>
-                            ))}
-                            {/* Bouton ajouter */}
-                            <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 2px' }}>›</span>
-                            <button onClick={() => addSequence(bloc.id)}
-                              style={{ width:42, minHeight:48, borderRadius:7, border:'1.5px dashed #c4ccd4',
-                                background:'transparent', color:'#9ca3af', fontSize:'0.7rem', cursor:'pointer', flexShrink:0 }}>
-                              ＋
-                            </button>
+                          <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:4, flexWrap:'nowrap' }}>
+                            {(bloc.sequences || []).map((seq, si) => {
+                              const isJeu = seq.type === 'jeu'
+                              const isSelected = selectedSeqId === seq.id
+                              return (
+                                <React.Fragment key={seq.id}>
+                                  <div
+                                    onClick={() => setSelectedSeqId(isSelected ? null : seq.id)}
+                                    style={{
+                                      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                                      borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:48,
+                                      width: isJeu ? 84 : 54, cursor:'pointer',
+                                      background: isJeu ? (isSelected ? '#93c5fd' : '#bfdbfe') : (isSelected ? '#86efac' : '#bbf7d0'),
+                                      border: `${isSelected ? 2 : 1.5}px solid ${isJeu ? '#60a5fa' : '#4ade80'}`,
+                                      transition:'background 0.12s',
+                                    }}>
+                                    <span style={{ fontSize:'0.65rem', fontWeight:900, color: isJeu?'#1e3a5f':'#14532d' }}>
+                                      {formatSeqDur(seq.duree_sec)}
+                                    </span>
+                                    {seq.theme && <span style={{ fontSize:'0.55rem', fontWeight:800, color: isJeu?'#1d4ed8':'#15803d', textAlign:'center', textTransform:'uppercase', marginTop:1, lineHeight:1.1, maxWidth:76, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                      {seq.theme}
+                                    </span>}
+                                  </div>
+                                  {si < (bloc.sequences?.length||0)-1 && (
+                                    <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 2px', flexShrink:0 }}>›</span>
+                                  )}
+                                </React.Fragment>
+                              )
+                            })}
+                            {/* Boutons ajouter */}
+                            <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 4px' }}>›</span>
+                            <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                              <button onClick={() => addSequence(bloc.id, 'jeu')}
+                                style={{ padding:'4px 8px', minHeight:48, borderRadius:7, border:'1.5px dashed #93c5fd',
+                                  background:'transparent', color:'#60a5fa', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
+                                + Séq.
+                              </button>
+                              <button onClick={() => addSequence(bloc.id, 'recup')}
+                                style={{ padding:'4px 8px', minHeight:48, borderRadius:7, border:'1.5px dashed #86efac',
+                                  background:'transparent', color:'#4ade80', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
+                                + Récup
+                              </button>
+                            </div>
                           </div>
-                          {/* Footer infos */}
-                          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6, fontSize:'0.7rem' }}>
-                            {bloc.recup_inter_seq && <span style={{ color:'#9ca3af' }}>Récup. inter-séq. : <strong>{bloc.recup_inter_seq}</strong></span>}
-                            {bloc.effectif_desc && <span style={{ color:'#9ca3af' }}>Effectif : <strong>{bloc.effectif_desc}</strong></span>}
+
+                          {/* Éditeur inline de la séquence sélectionnée */}
+                          {selectedSeqId && (bloc.sequences||[]).find(s => s.id === selectedSeqId) && (() => {
+                            const seq = (bloc.sequences||[]).find(s => s.id === selectedSeqId)
+                            const isJeu = seq.type === 'jeu'
+                            const seqInpStyle = { border:'1.5px solid #e5e7eb', borderRadius:7, padding:'5px 8px', fontSize:'0.75rem', fontFamily:'inherit', color:'#1f2937', outline:'none', background:'#fff' }
+                            return (
+                              <div style={{ marginTop:8, background: isJeu ? '#eff6ff' : '#f0fdf4', borderRadius:9, padding:'10px 12px', border:`1.5px solid ${isJeu?'#bfdbfe':'#bbf7d0'}`, display:'flex', flexWrap:'wrap', gap:8, alignItems:'flex-end' }}>
+                                {/* Type */}
+                                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Type</span>
+                                  <div style={{ display:'flex', gap:4 }}>
+                                    {[['jeu','Séquence'],['recup','Récup.']].map(([v,l]) => (
+                                      <button key={v} onClick={() => updateSequence(seq.id, { type:v })}
+                                        style={{ padding:'4px 8px', borderRadius:6, border:`1.5px solid ${seq.type===v?(v==='jeu'?'#3b82f6':'#22c55e'):'#e5e7eb'}`, fontSize:'0.65rem', fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+                                          background: seq.type===v ? (v==='jeu'?'#dbeafe':'#dcfce7') : '#fff',
+                                          color: seq.type===v ? (v==='jeu'?'#1d4ed8':'#15803d') : '#6b7280' }}>
+                                        {l}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Thème */}
+                                <div style={{ display:'flex', flexDirection:'column', gap:3, flex:1, minWidth:100 }}>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Thème</span>
+                                  <input
+                                    style={seqInpStyle}
+                                    defaultValue={seq.theme || ''}
+                                    placeholder={isJeu ? 'FIGHT, CONDITIONNÉ…' : 'Récupération'}
+                                    onBlur={e => updateSequence(seq.id, { theme: e.target.value })}
+                                  />
+                                </div>
+                                {/* Durée */}
+                                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Durée</span>
+                                  <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                                    <input
+                                      style={{ ...seqInpStyle, width:56, textAlign:'center' }}
+                                      type="number" min={0} max={59} placeholder="min"
+                                      defaultValue={Math.floor((seq.duree_sec||0)/60)}
+                                      onBlur={e => {
+                                        const m = parseInt(e.target.value)||0
+                                        const s = (seq.duree_sec||0) % 60
+                                        updateSequence(seq.id, { duree_sec: m*60 + s })
+                                      }}
+                                    />
+                                    <span style={{ fontSize:'0.7rem', color:'#9ca3af', fontWeight:700 }}>'</span>
+                                    <input
+                                      style={{ ...seqInpStyle, width:56, textAlign:'center' }}
+                                      type="number" min={0} max={59} placeholder="sec"
+                                      defaultValue={(seq.duree_sec||0) % 60}
+                                      onBlur={e => {
+                                        const s = parseInt(e.target.value)||0
+                                        const m = Math.floor((seq.duree_sec||0)/60)
+                                        updateSequence(seq.id, { duree_sec: m*60 + s })
+                                      }}
+                                    />
+                                    <span style={{ fontSize:'0.7rem', color:'#9ca3af', fontWeight:700 }}>''</span>
+                                  </div>
+                                </div>
+                                {/* Supprimer */}
+                                <button onClick={() => deleteSequence(seq.id)}
+                                  style={{ padding:'5px 10px', borderRadius:7, border:'1.5px solid #fecaca', background:'#fef2f2', color:'#dc2626', fontSize:'0.68rem', fontWeight:800, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-end' }}>
+                                  Supprimer
+                                </button>
+                              </div>
+                            )
+                          })()}
+
+                          {/* Footer infos bloc */}
+                          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:8, fontSize:'0.7rem', alignItems:'center' }}>
+                            <span style={{ color:'#9ca3af' }}>Conditions :</span>
+                            <input
+                              defaultValue={bloc.conditions_jeu || ''}
+                              onBlur={e => updateBloc(bloc.id, { conditions_jeu: e.target.value })}
+                              placeholder="Plaqué / Touché…"
+                              style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'2px 7px', fontSize:'0.7rem', fontFamily:'inherit', color:'#1f2937', outline:'none', width:140 }}
+                            />
+                            <span style={{ color:'#9ca3af', marginLeft:6 }}>Effectif :</span>
+                            <input
+                              defaultValue={bloc.effectif_desc || ''}
+                              onBlur={e => updateBloc(bloc.id, { effectif_desc: e.target.value })}
+                              placeholder="8c8, 7c7…"
+                              style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'2px 7px', fontSize:'0.7rem', fontFamily:'inherit', color:'#1f2937', outline:'none', width:120 }}
+                            />
                           </div>
                         </div>
                       )}
