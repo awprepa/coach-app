@@ -1637,45 +1637,56 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                   {/* Séquences — aperçu lisible */}
                   {bloc.bloc_type === 'sequences' && (() => {
                     const seqs = bloc.sequences || []
-                    const jeuSeqs = seqs.filter(s => s.type === 'jeu')
+                    // Numérotation séquences de jeu uniquement
+                    let jeuCount = 0
+                    const jeuNum = {}
+                    seqs.forEach(s => { if (s.type === 'jeu') { jeuCount++; jeuNum[s.id] = jeuCount } })
                     return (
-                      <div style={{ padding:'6px 10px 8px', background: bc+'08', display:'flex', flexDirection:'column', gap:5 }}>
-                        {/* Stats rapides */}
-                        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                          <span style={{ fontSize:'.62rem', fontWeight:900, color:bc, background:bc+'18', borderRadius:5, padding:'2px 7px' }}>
-                            {calcJeuEffectif(seqs)} jeu effectif
+                      <div style={{ background: '#eef3fb', padding: '6px 8px 8px' }}>
+                        {/* Stats + conditions */}
+                        <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:6, flexWrap:'wrap' }}>
+                          <span style={{ fontSize:'.6rem', fontWeight:800, color:'#2c5faa' }}>
+                            Jeu {calcJeuEffectif(seqs)}
                           </span>
-                          <span style={{ fontSize:'.62rem', fontWeight:700, color:'#6b7280', background:'#f0f2f5', borderRadius:5, padding:'2px 7px' }}>
+                          <span style={{ fontSize:'.6rem', color:'#9db8d8' }}>·</span>
+                          <span style={{ fontSize:'.58rem', fontWeight:600, color:'#6a8aaa' }}>
                             {calcDureeBloc(seqs)} total
                           </span>
                           {bloc.conditions_jeu && (
-                            <span style={{ fontSize:'.62rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:5, padding:'2px 7px' }}>
-                              {bloc.conditions_jeu}
-                            </span>
+                            <>
+                              <span style={{ fontSize:'.6rem', color:'#9db8d8' }}>·</span>
+                              <span style={{ fontSize:'.58rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:4, padding:'1px 5px' }}>
+                                {bloc.conditions_jeu}
+                              </span>
+                            </>
                           )}
                         </div>
-                        {/* Séquences en pills lisibles */}
-                        {seqs.length > 0 && (
-                          <div style={{ display:'flex', flexWrap:'wrap', gap:3, alignItems:'center' }}>
-                            {seqs.map((seq, si) => seq.type === 'jeu' ? (
-                              <span key={seq.id} style={{
-                                fontSize:'.62rem', fontWeight:800, padding:'3px 7px',
-                                borderRadius:6, background:'#dbeafe', color:'#1d4ed8',
-                                border:'1px solid #bfdbfe', whiteSpace:'nowrap',
-                              }}>
-                                {formatSeqDur(seq.duree_sec)}{seq.theme ? ' · '+seq.theme : ''}
-                              </span>
-                            ) : (
-                              <span key={seq.id} style={{
-                                fontSize:'.58rem', fontWeight:600, color:'#6b7280', padding:'0 3px',
-                              }}>
+                        {/* Cards séquences */}
+                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                          {seqs.map(seq => seq.type === 'jeu' ? (
+                            <div key={seq.id} style={{ background:'#fff', border:'1px solid #c4d8f0', borderRadius:7, padding:'5px 8px', display:'flex', alignItems:'center', gap:7 }}>
+                              <div style={{ width:16, height:16, borderRadius:'50%', background:'#2c5faa', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.5rem', fontWeight:900, color:'#fff', flexShrink:0 }}>
+                                {jeuNum[seq.id]}
+                              </div>
+                              <div style={{ flex:1, fontSize:'.63rem', fontWeight:700, color:'#1e2d3d', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                {seq.theme || '—'}
+                              </div>
+                              <div style={{ fontSize:'.65rem', fontWeight:900, color:'#b03030', flexShrink:0 }}>
                                 {formatSeqDur(seq.duree_sec)}
+                              </div>
+                            </div>
+                          ) : (
+                            <div key={seq.id} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'1px 0' }}>
+                              <div style={{ flex:1, height:1, background:'#b8d8c8' }}></div>
+                              <span style={{ fontSize:'.52rem', fontWeight:700, color:'#2e7d4f', fontStyle:'italic', whiteSpace:'nowrap' }}>
+                                récup {formatSeqDur(seq.duree_sec)}
                               </span>
-                            ))}
-                          </div>
-                        )}
+                              <div style={{ flex:1, height:1, background:'#b8d8c8' }}></div>
+                            </div>
+                          ))}
+                        </div>
                         {bloc.effectif_desc && (
-                          <span style={{ fontSize:'.6rem', color:'#9ca3af', fontStyle:'italic' }}>{bloc.effectif_desc}</span>
+                          <span style={{ fontSize:'.6rem', color:'#9ca3af', fontStyle:'italic', marginTop:4, display:'block' }}>{bloc.effectif_desc}</span>
                         )}
                       </div>
                     )
