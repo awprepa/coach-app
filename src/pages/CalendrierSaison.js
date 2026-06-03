@@ -1812,91 +1812,179 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     )
   }
 
-  /* ── DayPreviewModal — aperçu complet d'une séance ── */
+  /* ── DayPreviewModal — fiche séance style tableau ── */
   function DayPreviewModal({ evt, blocs }) {
     const color = evtColor(evt.type)
     const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+
+    // Découpe un tableau de séquences en séries (split à chaque inter_bloc)
+    function splitSeries(seqs) {
+      const series = []; let cur = []
+      seqs.forEach(s => {
+        if (s.type === 'inter_bloc') { series.push({ seqs: cur, interAfter: s }); cur = [] }
+        else cur.push(s)
+      })
+      series.push({ seqs: cur, interAfter: null })
+      return series
+    }
+
+    // Pré-calcul : numérotation des blocs (séries) et totaux
+    let serieCounter = 0
+    const processedBlocs = blocs.map((bloc, bidx) => {
+      const bc2 = blocColor(bidx)
+      if (bloc.bloc_type !== 'sequences') return { kind: 'std', bloc, bc2 }
+      const series = splitSeries(bloc.sequences || []).map(s => ({ ...s, num: ++serieCounter }))
+      return { kind: 'seq', bloc, bc2, series }
+    })
+
+    // Totaux généraux (jeu + total hors inter_bloc)
+    let grandJeu = 0, grandTotal = 0
+    blocs.forEach(b => {
+      if (b.bloc_type !== 'sequences') return
+      ;(b.sequences || []).forEach(s => {
+        if (s.type === 'jeu')   { grandJeu += s.duree_sec || 0; grandTotal += s.duree_sec || 0 }
+        if (s.type === 'recup') grandTotal += s.duree_sec || 0
+      })
+    })
+
+    const COL_BLOC = 58, COL_EFF = 110, COL_STAT = 62, COL_COND = 90
+    const cellBorder = '1px solid #cbd5e1'
+
     return (
       <>
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:120 }} onClick={() => setDayPreview(null)} />
-        <div style={{ position:'fixed', top:'5vh', left:'50%', transform:'translateX(-50%)', width:'min(680px, 94vw)', maxHeight:'88vh', zIndex:121, background:'#fff', borderRadius:18, overflow:'hidden', boxShadow:'0 24px 80px rgba(0,0,0,.45)', display:'flex', flexDirection:'column' }}>
-          {/* Header */}
-          <div style={{ background:color, padding:'14px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:120 }} onClick={() => setDayPreview(null)} />
+        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(960px, 96vw)', maxHeight:'90vh', zIndex:121, background:'#fff', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
+
+          {/* ── Header bleu séance ── */}
+          <div style={{ background:'#5b8ab8', padding:'12px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:'.6rem', fontWeight:700, color:'rgba(255,255,255,.65)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
+              <div style={{ fontSize:'.6rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
               <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
             </div>
-            {evt.duree_min && <span style={{ fontSize:'.75rem', fontWeight:800, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'3px 9px' }}>{evt.duree_min} min</span>}
-            <button onClick={() => setDayPreview(null)} style={{ background:'rgba(255,255,255,.15)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>×</button>
+            {evt.heure && <span style={{ fontSize:'.9rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'4px 10px' }}>{String(evt.heure).slice(0,5)}</span>}
+            <button onClick={() => setDayPreview(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
           </div>
-          {/* Corps */}
-          <div style={{ overflowY:'auto', padding:'14px 16px', display:'flex', flexDirection:'column', gap:10 }}>
-            {blocs.map((bloc, idx) => {
-              const bc2 = blocColor(idx)
-              const seqs = bloc.sequences || []
-              let jeuC = 0; const jN = {}
-              seqs.forEach(s => { if (s.type === 'jeu') { jeuC++; jN[s.id] = jeuC } })
-              return (
-                <div key={bloc.id} style={{ borderRadius:10, overflow:'hidden', border:`1.5px solid ${bc2}30` }}>
-                  {/* Tête bloc */}
-                  <div style={{ background:bc2, padding:'7px 12px', display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ width:20, height:20, borderRadius:'50%', background:'rgba(255,255,255,.25)', color:'#fff', fontSize:'.6rem', fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{idx+1}</span>
-                    <span style={{ flex:1, fontSize:'.8rem', fontWeight:900, color:'#fff' }}>{bloc.nom}</span>
-                    {bloc.duree && <span style={{ fontSize:'.68rem', fontWeight:800, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:5, padding:'2px 7px' }}>{bloc.duree}</span>}
-                  </div>
-                  {/* Séquences */}
-                  {bloc.bloc_type === 'sequences' && (
-                    <div style={{ background:'#eef3fb', padding:'8px 10px', display:'flex', flexDirection:'column', gap:4 }}>
-                      {/* Stats */}
-                      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:2 }}>
-                        <span style={{ fontSize:'.62rem', fontWeight:800, color:'#2c5faa' }}>Jeu {calcJeuEffectif(seqs)}</span>
-                        <span style={{ fontSize:'.62rem', color:'#9db8d8' }}>·</span>
-                        <span style={{ fontSize:'.6rem', fontWeight:600, color:'#6a8aaa' }}>{calcDureeBloc(seqs)} total</span>
-                        {bloc.conditions_jeu && <><span style={{ fontSize:'.62rem', color:'#9db8d8' }}>·</span><span style={{ fontSize:'.6rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:4, padding:'1px 5px' }}>{bloc.conditions_jeu}</span></>}
-                        {bloc.effectif_desc && <span style={{ fontSize:'.6rem', color:'#6b7280', fontStyle:'italic' }}>{bloc.effectif_desc}</span>}
+
+          {/* ── Corps ── */}
+          <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px' }}>
+
+            {processedBlocs.map(item => {
+              if (item.kind === 'std') {
+                /* Blocs standards (échauffement, retour au calme…) */
+                const { bloc, bc2 } = item
+                return (
+                  <div key={bloc.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder }}>
+                    <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
+                    {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
+                    {(bloc.exos||[]).length > 0 && (
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'4px 0' }}>
+                        {bloc.exos.map(e => (
+                          <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
+                            {e.nom}{e.prescription ? ' · '+e.prescription : ''}
+                          </span>
+                        ))}
                       </div>
-                      {seqs.map(seq => seq.type === 'jeu' ? (
-                        <div key={seq.id} style={{ background:'#fff', border:'1px solid #c4d8f0', borderRadius:7, padding:'6px 10px', display:'flex', alignItems:'center', gap:8 }}>
-                          <div style={{ width:18, height:18, borderRadius:'50%', background:'#2c5faa', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.55rem', fontWeight:900, color:'#fff', flexShrink:0 }}>{jN[seq.id]}</div>
-                          <div style={{ flex:1, fontSize:'.72rem', fontWeight:700, color:'#1e2d3d' }}>{seq.theme || '—'}</div>
-                          <div style={{ fontSize:'.72rem', fontWeight:900, color:'#b03030', flexShrink:0 }}>{formatSeqDur(seq.duree_sec)}</div>
+                    )}
+                  </div>
+                )
+              }
+
+              /* Blocs séquences — format tableau */
+              const { bloc, series } = item
+              const hasMultipleSeries = series.length > 1
+              // Entête colonnes
+              const seqHeaderInfo = bloc.recup_inter_seq ? `(récup entre séquences : ${bloc.recup_inter_seq})` : ''
+
+              return (
+                <div key={bloc.id} style={{ marginBottom:20, border:cellBorder, borderRadius:10, overflow:'hidden' }}>
+
+                  {/* Titre du bloc (bandeau bleu) */}
+                  <div style={{ background:'#7ba7d4', padding:'7px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:'.82rem', fontWeight:900, color:'#fff' }}>{bloc.nom}</span>
+                    {seqHeaderInfo && <span style={{ fontSize:'.65rem', color:'rgba(255,255,255,.8)', fontStyle:'italic' }}>{seqHeaderInfo}</span>}
+                  </div>
+
+                  {/* Ligne d'en-têtes colonnes */}
+                  <div style={{ display:'flex', background:'#e8f0f8', borderBottom:cellBorder, fontSize:'.6rem', fontWeight:800, color:'#374151', textTransform:'uppercase', letterSpacing:'.05em' }}>
+                    <div style={{ width:COL_BLOC, flexShrink:0, padding:'5px 6px', borderRight:cellBorder, textAlign:'center' }}>Bloc</div>
+                    <div style={{ width:COL_EFF, flexShrink:0, padding:'5px 6px', borderRight:cellBorder }}>Effectif</div>
+                    <div style={{ flex:1, padding:'5px 10px', borderRight:cellBorder, textAlign:'center' }}>Temps des séquences</div>
+                    <div style={{ width:COL_STAT, flexShrink:0, padding:'5px 4px', borderRight:cellBorder, textAlign:'center' }}>Jeu eff.</div>
+                    <div style={{ width:COL_STAT, flexShrink:0, padding:'5px 4px', borderRight:cellBorder, textAlign:'center' }}>Total</div>
+                    <div style={{ width:COL_COND, flexShrink:0, padding:'5px 6px', textAlign:'center' }}>Conditions</div>
+                  </div>
+
+                  {/* Lignes séries */}
+                  {series.map(({ seqs, interAfter, num }, si) => {
+                    const jeuSeqs = seqs.filter(s => s.type === 'jeu')
+                    const jeuSec  = jeuSeqs.reduce((a,s) => a+(s.duree_sec||0), 0)
+                    const totSec  = seqs.reduce((a,s) => a+(s.duree_sec||0), 0)
+                    return (
+                      <React.Fragment key={num}>
+                        {/* Ligne de la série */}
+                        <div style={{ display:'flex', alignItems:'stretch', borderBottom: (interAfter || si < series.length-1) ? cellBorder : 'none', minHeight:52 }}>
+                          {/* Label Bloc N */}
+                          <div style={{ width:COL_BLOC, flexShrink:0, background:'#f6c344', display:'flex', alignItems:'center', justifyContent:'center', borderRight:cellBorder, padding:'6px 4px' }}>
+                            <span style={{ fontSize:'.7rem', fontWeight:900, color:'#78350f', textAlign:'center', lineHeight:1.3 }}>Bloc {num}</span>
+                          </div>
+                          {/* Effectif */}
+                          <div style={{ width:COL_EFF, flexShrink:0, background:'#f0f4f8', display:'flex', alignItems:'center', borderRight:cellBorder, padding:'6px 8px' }}>
+                            <span style={{ fontSize:'.64rem', fontWeight:700, color:'#374151', lineHeight:1.4 }}>{bloc.effectif_desc || ''}</span>
+                          </div>
+                          {/* Cellules séquences de jeu */}
+                          <div style={{ flex:1, display:'flex', alignItems:'stretch', borderRight:cellBorder }}>
+                            {jeuSeqs.length === 0
+                              ? <div style={{ flex:1, background:'#f8fafc', display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'.65rem', color:'#9ca3af', fontStyle:'italic' }}>—</span></div>
+                              : jeuSeqs.map((seq, i) => (
+                                <div key={seq.id} style={{ flex:1, background:'#c8e6a0', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'6px 4px', borderRight: i < jeuSeqs.length-1 ? '1px solid #a3d977' : 'none', textAlign:'center' }}>
+                                  <span style={{ fontSize:'.78rem', fontWeight:900, color:'#1a4a0a' }}>{formatSeqDur(seq.duree_sec)}</span>
+                                  {seq.theme && <span style={{ fontSize:'.65rem', fontWeight:800, color:'#2d5a16', textTransform:'uppercase', marginTop:2, lineHeight:1.2 }}>{seq.theme}</span>}
+                                </div>
+                              ))
+                            }
+                          </div>
+                          {/* Jeu effectif */}
+                          <div style={{ width:COL_STAT, flexShrink:0, background:'#f5c6b0', display:'flex', alignItems:'center', justifyContent:'center', borderRight:cellBorder, padding:'4px' }}>
+                            <span style={{ fontSize:'.78rem', fontWeight:900, color:'#7c2d12' }}>{formatSeqDur(jeuSec)}</span>
+                          </div>
+                          {/* Total */}
+                          <div style={{ width:COL_STAT, flexShrink:0, background:'#b8d0ee', display:'flex', alignItems:'center', justifyContent:'center', borderRight:cellBorder, padding:'4px' }}>
+                            <span style={{ fontSize:'.78rem', fontWeight:900, color:'#1e3a8a' }}>{formatSeqDur(totSec)}</span>
+                          </div>
+                          {/* Conditions */}
+                          <div style={{ width:COL_COND, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', padding:'4px 6px', textAlign:'center' }}>
+                            <span style={{ fontSize:'.67rem', fontWeight:700, color:'#374151' }}>{bloc.conditions_jeu || '—'}</span>
+                          </div>
                         </div>
-                      ) : seq.type === 'inter_bloc' ? (
-                        <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 0' }}>
-                          <div style={{ flex:1, height:2, background:'#a3c4e8', borderRadius:1 }}></div>
-                          <span style={{ fontSize:'.65rem', fontWeight:800, color:'#2c5faa', background:'#dce8f8', border:'1px solid #a3c4e8', borderRadius:20, padding:'3px 12px', whiteSpace:'nowrap' }}>Récup série · {formatSeqDur(seq.duree_sec)}</span>
-                          <div style={{ flex:1, height:2, background:'#a3c4e8', borderRadius:1 }}></div>
-                        </div>
-                      ) : (
-                        <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:5, padding:'1px 0' }}>
-                          <div style={{ flex:1, height:1, background:'#b8d8c8' }}></div>
-                          <span style={{ fontSize:'.58rem', fontWeight:700, color:'#2e7d4f', fontStyle:'italic' }}>récup {formatSeqDur(seq.duree_sec)}</span>
-                          <div style={{ flex:1, height:1, background:'#b8d8c8' }}></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Exercices */}
-                  {bloc.bloc_type !== 'sequences' && (bloc.exos||[]).length > 0 && (
-                    <div style={{ padding:'6px 10px 8px', background: bc2+'08', display:'flex', flexDirection:'column', gap:3 }}>
-                      {bloc.exos.map(exo => (
-                        <div key={exo.id} style={{ background:'#fff', borderRadius:6, padding:'5px 9px', border:`1px solid ${bc2}25`, display:'flex', justifyContent:'space-between', alignItems:'center', gap:6 }}>
-                          <span style={{ fontSize:'.72rem', fontWeight:700, color:'#1a1a1a', flex:1 }}>{exo.nom}</span>
-                          {exo.prescription && <span style={{ fontSize:'.65rem', color:'#fff', fontWeight:800, background:bc2, borderRadius:4, padding:'1px 6px', flexShrink:0 }}>{exo.prescription}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {bloc.bloc_type !== 'sequences' && !(bloc.exos||[]).length && (
-                    <div style={{ padding:'8px 12px', background:bc2+'08' }}>
-                      <span style={{ fontSize:'.68rem', color:bc2, opacity:.5, fontStyle:'italic' }}>{bloc.nom}</span>
-                    </div>
-                  )}
+
+                        {/* Récup inter-série */}
+                        {interAfter && (
+                          <div style={{ display:'flex', alignItems:'center', background:'#fef9c3', borderBottom:cellBorder, padding:'5px 14px' }}>
+                            <span style={{ fontSize:'.72rem', fontWeight:800, color:'#78350f' }}>Récup {formatSeqDur(interAfter.duree_sec)}</span>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
                 </div>
               )
             })}
+
+            {/* ── Totaux généraux ── */}
+            {serieCounter > 0 && (
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:24, paddingTop:8, borderTop:'2px solid #e5e7eb' }}>
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:'.58rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>Jeu effectif</div>
+                  <div style={{ fontSize:'.95rem', fontWeight:900, color:'#7c2d12' }}>{formatSeqDur(grandJeu)}</div>
+                </div>
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:'.58rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>Temps total</div>
+                  <div style={{ fontSize:'.95rem', fontWeight:900, color:'#1e3a8a' }}>{formatSeqDur(grandTotal)}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </>
@@ -2107,12 +2195,13 @@ function SeanceModal({
   }
   async function addNouvelleSerie(blocId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
-    if (!bloc) return
-    const maxOrdre = (bloc.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
-    await supabase.from('groupe_seance_sequences').insert([
-      { bloc_id: blocId, type: 'inter_bloc', ordre: maxOrdre + 1, duree_sec: 180, theme: '' },
-      { bloc_id: blocId, type: 'jeu',        ordre: maxOrdre + 2, duree_sec: 90,  theme: '' },
-    ])
+    const maxOrdre = (bloc?.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
+    await supabase.from('groupe_seance_sequences').insert({
+      bloc_id: blocId, type: 'inter_bloc', ordre: maxOrdre + 1, duree_sec: 180, theme: 'Récup série'
+    })
+    await supabase.from('groupe_seance_sequences').insert({
+      bloc_id: blocId, type: 'jeu', ordre: maxOrdre + 2, duree_sec: 90, theme: ''
+    })
     reloadBlocs?.()
   }
 
