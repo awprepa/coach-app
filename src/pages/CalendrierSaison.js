@@ -1601,19 +1601,15 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 ⏱ {evt.duree_min} min
               </span>
             )}
+            {blocs.length > 0 && (
+              <button
+                onClick={() => setDayPreview({ evt, blocs })}
+                style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.35)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 2 }}>
+                Aperçu complet ↗
+              </button>
+            )}
           </div>
         </div>
-
-        {/* Bouton aperçu */}
-        {blocs.length > 0 && (
-          <div style={{ padding: '5px 14px 0', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setDayPreview({ evt, blocs })}
-              style={{ fontSize: '.62rem', fontWeight: 800, color: '#2c5faa', background: '#eef3fb', border: '1px solid #c4d8f0', borderRadius: 6, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}>
-              Aperçu complet
-            </button>
-          </div>
-        )}
 
         {/* Phases (blocs) */}
         {blocs.length > 0 ? (
@@ -2115,7 +2111,7 @@ function SeanceModal({
     const maxOrdre = (bloc.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
     await supabase.from('groupe_seance_sequences').insert([
       { bloc_id: blocId, type: 'inter_bloc', ordre: maxOrdre + 1, duree_sec: 180, theme: '' },
-      { bloc_id: blocId, type: 'jeu',        ordre: maxOrdre + 2, duree_sec: null, theme: '' },
+      { bloc_id: blocId, type: 'jeu',        ordre: maxOrdre + 2, duree_sec: 90,  theme: '' },
     ])
     reloadBlocs?.()
   }
