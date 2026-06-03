@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -96,6 +96,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [pop, setPop] = useState(null)
   // Presse-papier : { source, blocs }  (source = évènement copié)
   const [clip, setClip] = useState(null)
+  const [calTab, setCalTab] = useState('calendrier') // 'calendrier' | 'effectif'
+
   // Glisser-déposer : évènement en cours de déplacement + jour survolé
   const [dragEvt, setDragEvt] = useState(null)
   const [dragOver, setDragOver] = useState(null) // dateISO survolé
@@ -264,8 +266,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   }
   async function loadBlocs(evtId) {
     const { data } = await supabase.from('groupe_seance_blocs')
-      .select('*, groupe_seance_exercices(*)').eq('evenement_id', evtId).order('ordre')
-    return (data || []).map(b => ({ ...b, exos: (b.groupe_seance_exercices || []).sort((a, z) => a.ordre - z.ordre) }))
+      .select('*, groupe_seance_exercices(*), groupe_seance_sequences(*)')
+      .eq('evenement_id', evtId).order('ordre')
+    return (data || []).map(b => ({
+      ...b,
+      exos: (b.groupe_seance_exercices || []).sort((a, z) => a.ordre - z.ordre),
+      sequences: (b.groupe_seance_sequences || []).sort((a, z) => a.ordre - z.ordre),
+    }))
   }
 
   // ── Zoom semaine ─────────────────────────────────────────────────────────────
@@ -676,6 +683,19 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         </div>
       )}
 
+      {/* ── Onglets Calendrier / Effectif ── */}
+      <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+        {[['calendrier','📅 Calendrier'],['effectif','🏉 Effectif']].map(([v,l]) => (
+          <button key={v} onClick={() => setCalTab(v)}
+            style={{ padding:'7px 18px', borderRadius:20, border:'none', fontWeight:700, fontSize:'0.8rem',
+              background: calTab===v ? groupColor : '#e5e7eb',
+              color: calTab===v ? (isLight(groupColor)?'#1a1a1a':'#fff') : '#6b7280',
+              cursor:'pointer' }}>
+            {l}
+          </button>
+        ))}
+      </div>
+
       {/* ── Barre d'actions ── */}
       <div style={S.toolbar}>
         {!embedded && <h1 style={{ ...S.h1, borderLeft: `3px solid ${groupColor}`, paddingLeft: 10 }}>Calendrier saison</h1>}
@@ -699,6 +719,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         </div>
       </div>
 
+      {calTab === 'effectif' && <EffectifView groupeId={groupe?.id} groupColor={groupColor} />}
+
+      {calTab === 'calendrier' && (<>
       {/* ── Résumé + légende ── */}
       <div style={{ ...S.summary, borderBottom: `2px solid color-mix(in srgb, ${groupColor} 30%, #e6e8ec)`, paddingBottom: 12 }}>
         <Stat v={matchsList.length} l="Matchs" color={groupColor} />
@@ -801,6 +824,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           </p>
         </>
       )}
+      </>)}
 
       {/* ── Menu contextuel (clic droit sur séance) ── */}
       {ctx && ctx.evt && (
@@ -910,6 +934,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           saveEvent={saveEvent}
           deleteEvent={deleteEvent}
           saving={saving}
+          reloadBlocs={async () => {
+            if (!panel?.evt) return
+            const blocs = await loadBlocs(panel.evt.id)
+            setPanel(p => p ? { ...p, blocs } : p)
+          }}
         />
       )}
     </div>
@@ -963,6 +992,483 @@ function generateBlocPalette(primary, secondary) {
   // Couleur unique → rotation de teinte
   return [0,45,90,135,180,225,270,315].map(delta =>
     hslToHex((ph+delta)%360, Math.max(ps*0.9,35), clL(delta % 90 === 0 ? pl : pl+8))
+  )
+}
+
+/* ── Effectif du groupe — organigramme rugby ── */
+function EffectifView({ groupeId, groupColor }) {
+  const [joueurs, setJoueurs] = useState([])    // groupe_joueurs avec leurs postes et blessure
+  const [wellness, setWellness] = useState({})  // client_id → dernière wellness (moyenne /4)
+  const [panelPos, setPanelPos] = useState(null)   // poste | null — panneau liste
+  const [panelJoueur, setPanelJoueur] = useState(null) // joueur en édition
+  const [addForm, setAddForm] = useState(false)
+  const [newPrenom, setNewPrenom] = useState('')
+  const [newNom, setNewNom] = useState('')
+  const [newRang, setNewRang] = useState(1)
+  const [editStatut, setEditStatut] = useState('ok')
+  const [editDesc, setEditDesc] = useState('')
+  const [editDuree, setEditDuree] = useState('')
+  const [editRestrictions, setEditRestrictions] = useState([])
+  const [editRang, setEditRang] = useState(1)
+  const [editSecondaires, setEditSecondaires] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const RESTRICTIONS = [
+    'Sans contact','Sans changement de direction',
+    'Sans course haute intensité','Musculation uniquement',
+    'Vélo / aqua uniquement','Autre'
+  ]
+
+  const POSTES_RUGBY = [
+    { num:1, nom:'Pilier gauche' }, { num:2, nom:'Talonneur' }, { num:3, nom:'Pilier droit' },
+    { num:4, nom:'2ème ligne' },    { num:5, nom:'2ème ligne' },
+    { num:6, nom:'Flanker' },       { num:7, nom:'Flanker' }, { num:8, nom:'N°8' },
+    { num:9, nom:'Demi de mêlée' }, { num:10, nom:'Ouvreur' },
+    { num:12, nom:'Centre' },       { num:13, nom:'Centre' },
+    { num:11, nom:'Ailier gauche' },{ num:15, nom:'Arrière' }, { num:14, nom:'Ailier droit' },
+  ]
+  const FORMATION = [
+    [1,2,3],[4,5],[6,7,8],[9,10],[12,13],[11,15,14]
+  ]
+  const ROW_LABELS = ['1ères lignes','2èmes lignes','3èmes lignes','Demis','Centres','Ailiers & Arrière']
+
+  useEffect(() => { if (groupeId) fetchAll() }, [groupeId])
+
+  async function fetchAll() {
+    if (!groupeId) return
+    // Joueurs + leurs postes
+    const { data: jData } = await supabase
+      .from('groupe_joueurs')
+      .select('*, joueur_postes(*), joueur_blessures(*)')
+      .eq('groupe_id', groupeId)
+    setJoueurs(jData || [])
+    // Wellness — chercher les dernières entrées pour les clients liés
+    const clientIds = (jData || []).filter(j => j.client_id).map(j => j.client_id)
+    if (clientIds.length > 0) {
+      const { data: wData } = await supabase
+        .from('wellness_logs')
+        .select('client_id, score, created_at')
+        .in('client_id', clientIds)
+        .order('created_at', { ascending: false })
+      // Prendre le dernier score de chaque client
+      const wMap = {}
+      for (const w of (wData || [])) {
+        if (!wMap[w.client_id]) wMap[w.client_id] = w.score
+      }
+      setWellness(wMap)
+    }
+  }
+
+  // Joueurs au poste P triés par rang
+  function joueursAuPoste(poste) {
+    return joueurs
+      .filter(j => (j.joueur_postes || []).some(p => p.poste === poste))
+      .map(j => ({
+        ...j,
+        rang: (j.joueur_postes || []).find(p => p.poste === poste)?.rang || 99,
+        blessure: (j.joueur_blessures || [])[0] || null,
+      }))
+      .sort((a, b) => a.rang - b.rang)
+  }
+
+  function getStatut(j) { return j.blessure?.statut || 'ok' }
+  function getWellness(j) {
+    if (!j.client_id) return null
+    return wellness[j.client_id] ?? null
+  }
+  function wColor(w) {
+    if (w === null) return '#c4ccd4'
+    if (w >= 3) return '#16a34a'
+    if (w >= 2) return '#f59e0b'
+    return '#dc2626'
+  }
+  function statutBorderColor(s) {
+    if (s === 'ok')   return '#16a34a'
+    if (s === 'cond') return '#f59e0b'
+    if (s === 'out')  return '#dc2626'
+    return '#d1d5db'
+  }
+
+  // Stats globales
+  const nbOk   = joueurs.filter(j => getStatut(j) === 'ok').length
+  const nbCond  = joueurs.filter(j => getStatut(j) === 'cond').length
+  const nbOut   = joueurs.filter(j => getStatut(j) === 'out').length
+  const wScores = joueurs.filter(j => getWellness(j) !== null).map(j => getWellness(j))
+  const wMoy    = wScores.length > 0 ? (wScores.reduce((a,b)=>a+b,0)/wScores.length).toFixed(1) : null
+
+  function openPanelPos(poste) {
+    setPanelPos(poste)
+    setAddForm(false)
+    setNewPrenom(''); setNewNom(''); setNewRang(joueursAuPoste(poste).length + 1)
+  }
+  function openPanelJoueur(j, poste) {
+    setPanelJoueur({ ...j, _poste: poste })
+    setEditStatut(j.blessure?.statut || 'ok')
+    setEditDesc(j.blessure?.description || '')
+    setEditDuree(j.blessure?.duree_estimee || '')
+    setEditRestrictions(j.blessure?.restrictions || [])
+    setEditRang(j.rang)
+    const secondaires = (j.joueur_postes || [])
+      .filter(p => p.poste !== poste)
+      .map(p => p.poste)
+      .join(', ')
+    setEditSecondaires(secondaires)
+    setPanelPos(null)
+  }
+
+  async function saveJoueur() {
+    if (!panelJoueur) return
+    setSaving(true)
+    const joueurId = panelJoueur.id
+    // Mettre à jour blessure (upsert)
+    await supabase.from('joueur_blessures').upsert({
+      joueur_id: joueurId,
+      statut: editStatut,
+      description: editDesc,
+      duree_estimee: editDuree,
+      restrictions: editRestrictions,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'joueur_id' })
+    // Mettre à jour le rang au poste primaire
+    const posteRec = (panelJoueur.joueur_postes || []).find(p => p.poste === panelJoueur._poste)
+    if (posteRec) {
+      await supabase.from('joueur_postes').update({ rang: editRang }).eq('id', posteRec.id)
+    }
+    setSaving(false)
+    setPanelJoueur(null)
+    fetchAll()
+  }
+
+  async function addJoueur() {
+    if (!newPrenom.trim() || !newNom.trim() || !panelPos) return
+    setSaving(true)
+    const { data: j } = await supabase.from('groupe_joueurs').insert({
+      groupe_id: groupeId,
+      prenom: newPrenom.trim(),
+      nom: newNom.trim(),
+    }).select().single()
+    if (j) {
+      await supabase.from('joueur_postes').insert({
+        joueur_id: j.id,
+        poste: panelPos,
+        rang: newRang,
+        is_primary: true,
+      })
+    }
+    setSaving(false)
+    setAddForm(false)
+    setNewPrenom(''); setNewNom('')
+    fetchAll()
+  }
+
+  const RANK_LABELS = ['①','②','③','④','⑤','⑥','⑦','⑧']
+
+  // Rendu d'une carte de poste
+  function PosteCard({ poste }) {
+    const joueursPoste = joueursAuPoste(poste.num)
+    // Afficher max 2, "+N autres" si plus
+    const displayed = joueursPoste.slice(0, 2)
+    const extra = joueursPoste.length - 2
+
+    return (
+      <div
+        onClick={() => openPanelPos(poste.num)}
+        style={{ flex:1, maxWidth:240, borderRadius:9, overflow:'hidden',
+          border:'2px solid #e5e7eb', cursor:'pointer',
+          boxShadow:'0 1px 3px rgba(0,0,0,0.08)',
+          transition:'box-shadow 0.15s, transform 0.12s' }}
+        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,0.08)' }}
+      >
+        {/* En-tête */}
+        <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 9px', background:'#1f2937' }}>
+          <span style={{ fontSize:'1rem', fontWeight:900, color:'#e4f816', minWidth:22 }}>{poste.num}</span>
+          <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af' }}>{poste.nom}</span>
+        </div>
+        {/* Corps */}
+        <div style={{ background:'#f9fafb', padding:'4px 5px', display:'flex', flexDirection:'column', gap:3 }}>
+          {displayed.map((j, i) => {
+            const s = getStatut(j)
+            const w = getWellness(j)
+            return (
+              <div key={j.id} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 7px',
+                borderRadius:6, background:'#fff', borderLeft:`3px solid ${statutBorderColor(s)}`, minHeight:26 }}>
+                <span style={{ fontSize:'0.6rem', color:'#c4ccd4', fontWeight:700, minWidth:12 }}>
+                  {RANK_LABELS[i]}
+                </span>
+                <span style={{ fontSize:'0.73rem', fontWeight:800, color:'#1f2937', flex:1,
+                  whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {j.prenom} {j.nom}
+                </span>
+                {w !== null && (
+                  <span style={{ fontSize:'0.65rem', fontWeight:900, color:wColor(w), minWidth:20, textAlign:'right' }}>
+                    {w.toFixed(1)}
+                  </span>
+                )}
+                <span style={{ width:7, height:7, borderRadius:'50%', background:statutBorderColor(s), flexShrink:0 }} />
+              </div>
+            )
+          })}
+          {extra > 0 && (
+            <div style={{ fontSize:'0.62rem', color:'#9ca3af', fontWeight:600, textAlign:'center',
+              padding:'2px 0', cursor:'pointer' }}>
+              +{extra} autre{extra > 1 ? 's' : ''} →
+            </div>
+          )}
+          {joueursPoste.length === 0 && (
+            <div style={{ fontSize:'0.65rem', color:'#c4ccd4', fontStyle:'italic', textAlign:'center', padding:'4px 0' }}>
+              Non assigné
+            </div>
+          )}
+          <button
+            onClick={e => { e.stopPropagation(); openPanelPos(poste.num); setAddForm(true) }}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:3,
+              padding:'3px 5px', borderRadius:5, border:'1px dashed #d1d5db',
+              fontSize:'0.62rem', color:'#c4ccd4', cursor:'pointer', background:'transparent', width:'100%',
+              marginTop:2, transition:'all 0.12s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor=groupColor; e.currentTarget.style.color=groupColor }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor='#d1d5db'; e.currentTarget.style.color='#c4ccd4' }}
+          >
+            ＋ Ajouter
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const inputStyle = { width:'100%', border:'1.5px solid #e5e7eb', borderRadius:9, padding:'8px 11px', fontSize:'0.8rem', color:'#1f2937', outline:'none', marginBottom:7, fontFamily:'inherit' }
+
+  return (
+    <div style={{ padding:'0 0 40px' }}>
+      {/* Légende */}
+      <div style={{ display:'flex', gap:12, alignItems:'center', flexWrap:'wrap',
+        background:'#fff', borderRadius:8, padding:'7px 12px', fontSize:'0.68rem', marginBottom:10,
+        boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
+        {[['#16a34a','Disponible'],['#f59e0b','Avec conditions'],['#dc2626','Indisponible']].map(([c,l]) => (
+          <span key={l} style={{ display:'flex', alignItems:'center', gap:4, color:'#4b5563' }}>
+            <span style={{ width:8, height:8, borderRadius:'50%', background:c, flexShrink:0 }} />
+            {l}
+          </span>
+        ))}
+        <span style={{ color:'#c4ccd4', margin:'0 2px' }}>·</span>
+        <span style={{ color:'#9ca3af', fontSize:'0.66rem' }}>Barre à gauche = statut · chiffre = wellness /4 · ① ② = hiérarchie au poste</span>
+      </div>
+
+      {/* Terrain */}
+      <div style={{ background:'#fff', borderRadius:12, padding:'14px 10px 18px', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>
+        <div style={{ textAlign:'center', fontSize:'0.62rem', fontWeight:700, letterSpacing:'0.1em',
+          color:'#c4ccd4', textTransform:'uppercase', marginBottom:12 }}>
+          ⬆ Direction d'attaque
+        </div>
+
+        {FORMATION.map((row, rIdx) => (
+          <div key={rIdx} style={{ marginBottom: rIdx < FORMATION.length-1 ? 7 : 0 }}>
+            <div style={{ fontSize:'0.58rem', color:'#c4ccd4', fontWeight:700, letterSpacing:'0.08em',
+              textTransform:'uppercase', textAlign:'center', marginBottom:4 }}>
+              {ROW_LABELS[rIdx]}
+            </div>
+            <div style={{ display:'flex', justifyContent:'center', gap:8 }}>
+              {row.map(num => {
+                const poste = POSTES_RUGBY.find(p => p.num === num)
+                return <PosteCard key={num} poste={poste} />
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'flex', background:'#fff', borderRadius:10, overflow:'hidden',
+        boxShadow:'0 1px 4px rgba(0,0,0,0.07)', marginTop:10 }}>
+        {[
+          [joueurs.length, groupColor, 'Joueurs'],
+          [nbOk,   '#16a34a', 'Disponibles'],
+          [nbCond, '#f59e0b', 'Conditions'],
+          [nbOut,  '#dc2626', 'Indisponibles'],
+          [wMoy !== null ? wMoy : '—', '#9ca3af', 'Wellness moy. /4'],
+        ].map(([val, color, lbl], i) => (
+          <div key={lbl} style={{ flex:1, padding:'9px 6px', textAlign:'center',
+            borderRight: i < 4 ? '1px solid #f0f2f5' : 'none' }}>
+            <div style={{ fontSize:'1.1rem', fontWeight:900, color }}>{val}</div>
+            <div style={{ fontSize:'0.6rem', color:'#9ca3af', fontWeight:600, textTransform:'uppercase', marginTop:1 }}>{lbl}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── Panneau liste joueurs au poste ─── */}
+      {panelPos && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)',
+          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:500 }}
+          onClick={e => { if (e.target === e.currentTarget) setPanelPos(null) }}>
+          <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:460,
+            padding:'18px 18px 36px', maxHeight:'80vh', overflowY:'auto' }}>
+            <div style={{ width:32, height:4, background:'#e5e7eb', borderRadius:2, margin:'0 auto 16px' }} />
+            <div style={{ fontSize:'0.95rem', fontWeight:900, color:'#1f2937', marginBottom:2 }}>
+              Poste {panelPos} — {POSTES_RUGBY.find(p=>p.num===panelPos)?.nom}
+            </div>
+            <div style={{ fontSize:'0.75rem', color:'#6b7280', marginBottom:16 }}>
+              Cliquer sur un joueur pour modifier son statut
+            </div>
+
+            {joueursAuPoste(panelPos).map((j, i) => {
+              const s = getStatut(j)
+              const stBg = { ok:'#f0fdf4', cond:'#fffbeb', out:'#fef2f2' }[s]
+              const stLbl = { ok:'Dispo', cond:'Cond.', out:'Blessé' }[s]
+              const stBadgeBg = { ok:'#dcfce7', cond:'#fef3c7', out:'#fee2e2' }[s]
+              const stBadgeColor = { ok:'#15803d', cond:'#b45309', out:'#b91c1c' }[s]
+              return (
+                <div key={j.id}
+                  onClick={() => openPanelJoueur(j, panelPos)}
+                  style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
+                    background:stBg, borderRadius:9, marginBottom:5,
+                    borderLeft:`3px solid ${statutBorderColor(s)}`, cursor:'pointer' }}>
+                  <span style={{ fontSize:'0.66rem', fontWeight:900, color:'#9ca3af', minWidth:14 }}>{RANK_LABELS[i]}</span>
+                  <span style={{ fontSize:'0.83rem', fontWeight:800, flex:1 }}>{j.prenom} {j.nom}</span>
+                  {j.client_id && getWellness(j) !== null && (
+                    <span style={{ fontSize:'0.7rem', fontWeight:900, color:wColor(getWellness(j)) }}>
+                      {getWellness(j).toFixed(1)}/4
+                    </span>
+                  )}
+                  <span style={{ fontSize:'0.64rem', padding:'2px 7px', borderRadius:7,
+                    fontWeight:700, background:stBadgeBg, color:stBadgeColor }}>{stLbl}</span>
+                </div>
+              )
+            })}
+
+            <button
+              onClick={() => setAddForm(f => !f)}
+              style={{ width:'100%', padding:'9px', border:'2px dashed #c4ccd4', borderRadius:9,
+                background:'transparent', color:'#6b7280', fontSize:'0.78rem', fontWeight:700,
+                cursor:'pointer', marginTop:4, fontFamily:'inherit' }}>
+              ＋ Ajouter un joueur à ce poste
+            </button>
+
+            {addForm && (
+              <div style={{ marginTop:12 }}>
+                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Nouveau joueur</div>
+                <input style={inputStyle} placeholder="Prénom" value={newPrenom} onChange={e=>setNewPrenom(e.target.value)} />
+                <input style={inputStyle} placeholder="Nom de famille" value={newNom} onChange={e=>setNewNom(e.target.value)} />
+                <input style={{...inputStyle}} type="number" placeholder="Rang (1 = titulaire)" value={newRang} min={1} onChange={e=>setNewRang(Number(e.target.value))} />
+                <p style={{ fontSize:'0.68rem', color:'#9ca3af', marginBottom:10 }}>
+                  💡 Si ce joueur crée un compte avec ce nom exact, il sera automatiquement lié.
+                </p>
+                <button onClick={addJoueur} disabled={saving}
+                  style={{ width:'100%', padding:'11px', background:groupColor, color: isLight(groupColor)?'#1a1a1a':'#fff',
+                    border:'none', borderRadius:11, fontSize:'0.86rem', fontWeight:900, cursor:'pointer', fontFamily:'inherit' }}>
+                  {saving ? '...' : '➕ Ajouter le joueur'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Panneau édition joueur ─── */}
+      {panelJoueur && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)',
+          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:500 }}
+          onClick={e => { if (e.target === e.currentTarget) setPanelJoueur(null) }}>
+          <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:460,
+            padding:'18px 18px 36px', maxHeight:'85vh', overflowY:'auto' }}>
+            <div style={{ width:32, height:4, background:'#e5e7eb', borderRadius:2, margin:'0 auto 16px' }} />
+            <div style={{ fontSize:'0.95rem', fontWeight:900, color:'#1f2937', marginBottom:2 }}>
+              {panelJoueur.prenom} {panelJoueur.nom}
+            </div>
+            <div style={{ fontSize:'0.75rem', color:'#6b7280', marginBottom:16 }}>
+              Poste {panelJoueur._poste} — {POSTES_RUGBY.find(p=>p.num===panelJoueur._poste)?.nom}
+            </div>
+
+            {/* Compte lié */}
+            {panelJoueur.client_id ? (
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px',
+                background:'#f0fdf4', borderRadius:10, border:'1.5px solid #86efac', marginBottom:14 }}>
+                <span style={{ width:8, height:8, borderRadius:'50%', background:'#16a34a' }} />
+                <div>
+                  <div style={{ fontSize:'0.78rem', fontWeight:700, color:'#15803d' }}>Compte app lié ✓</div>
+                  {getWellness(panelJoueur) !== null && (
+                    <div style={{ fontSize:'0.7rem', color:'#4ade80', fontWeight:600 }}>
+                      Wellness : {getWellness(panelJoueur).toFixed(1)} / 4
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding:'8px 12px', background:'#f9fafb', borderRadius:10, border:'1px solid #e5e7eb', marginBottom:14,
+                fontSize:'0.72rem', color:'#9ca3af' }}>
+                Pas encore de compte app lié
+              </div>
+            )}
+
+            {/* Statut */}
+            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Statut</div>
+            <div style={{ display:'flex', gap:6, marginBottom:14 }}>
+              {[['ok','✅ Disponible'],['cond','⚠️ Conditions'],['out','🚫 Indispo.']].map(([v,l]) => {
+                const selBg = { ok:'#dcfce7', cond:'#fef3c7', out:'#fee2e2' }[v]
+                const selBorder = { ok:'#16a34a', cond:'#f59e0b', out:'#dc2626' }[v]
+                const selColor = { ok:'#15803d', cond:'#b45309', out:'#b91c1c' }[v]
+                const sel = editStatut === v
+                return (
+                  <button key={v} onClick={() => setEditStatut(v)}
+                    style={{ flex:1, padding:'8px 4px', borderRadius:8,
+                      border:`2px solid ${sel ? selBorder : 'transparent'}`,
+                      fontSize:'0.7rem', fontWeight:800, cursor:'pointer', textAlign:'center',
+                      background: sel ? selBg : '#f3f4f6',
+                      color: sel ? selColor : '#6b7280',
+                      fontFamily:'inherit' }}>
+                    {l}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Restrictions (si cond) */}
+            {editStatut === 'cond' && (
+              <>
+                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Restrictions</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10 }}>
+                  {RESTRICTIONS.map(r => {
+                    const on = editRestrictions.includes(r)
+                    return (
+                      <div key={r} onClick={() => setEditRestrictions(prev => on ? prev.filter(x=>x!==r) : [...prev,r])}
+                        style={{ padding:'4px 9px', borderRadius:12, fontSize:'0.68rem', fontWeight:700,
+                          cursor:'pointer', border:`1.5px solid ${on?'#f59e0b':'#e5e7eb'}`,
+                          background: on?'#fef3c7':'#f9fafb', color: on?'#b45309':'#374151' }}>
+                        {r}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Détail blessure */}
+            {editStatut !== 'ok' && (
+              <>
+                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Détail blessure</div>
+                <input style={inputStyle} placeholder="Ex : Entorse LLE genou droit" value={editDesc} onChange={e=>setEditDesc(e.target.value)} />
+                <input style={inputStyle} placeholder="Durée estimée (ex : 3 semaines)" value={editDuree} onChange={e=>setEditDuree(e.target.value)} />
+              </>
+            )}
+
+            {/* Rang */}
+            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7, marginTop:4 }}>Rang au poste</div>
+            <input style={inputStyle} type="number" min={1} value={editRang} onChange={e=>setEditRang(Number(e.target.value))} />
+
+            {/* Postes secondaires */}
+            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Postes secondaires (numéros)</div>
+            <input style={inputStyle} placeholder="Ex : 6, 8" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
+
+            <button onClick={saveJoueur} disabled={saving}
+              style={{ width:'100%', padding:'11px', background:groupColor,
+                color: isLight(groupColor)?'#1a1a1a':'#fff',
+                border:'none', borderRadius:11, fontSize:'0.86rem', fontWeight:900,
+                cursor:'pointer', marginTop:10, fontFamily:'inherit' }}>
+              {saving ? '...' : '💾 Enregistrer'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -1128,8 +1634,49 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
 
+                  {/* Séquences — aperçu compact */}
+                  {bloc.bloc_type === 'sequences' && (
+                    <div style={{ height: h, padding:'4px 6px', background: bc+'08', display:'flex', flexDirection:'column', justifyContent:'center', gap:3 }}>
+                      {/* Mini timeline */}
+                      <div style={{ display:'flex', alignItems:'center', gap:1, overflowX:'hidden' }}>
+                        {(bloc.sequences||[]).slice(0,8).map((seq,si) => (
+                          <React.Fragment key={seq.id}>
+                            <div style={{
+                              height:22, borderRadius:4, flexShrink:0,
+                              width: seq.type==='recup' ? 14 : 30,
+                              background: seq.type==='jeu' ? '#bfdbfe' : '#bbf7d0',
+                              border:`1px solid ${seq.type==='jeu'?'#60a5fa':'#4ade80'}`,
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                            }}>
+                              {seq.type==='jeu' && seq.theme && (
+                                <span style={{ fontSize:'0.45rem', fontWeight:900, color:'#1d4ed8', textOverflow:'ellipsis', overflow:'hidden', whiteSpace:'nowrap', padding:'0 2px' }}>
+                                  {seq.theme.slice(0,4)}
+                                </span>
+                              )}
+                            </div>
+                            {si < Math.min((bloc.sequences?.length||0),8)-1 && (
+                              <span style={{ color:'#d1d5db', fontSize:'0.5rem' }}>›</span>
+                            )}
+                          </React.Fragment>
+                        ))}
+                        {(bloc.sequences?.length||0) > 8 && <span style={{ fontSize:'0.5rem', color:'#9ca3af', marginLeft:2 }}>…</span>}
+                      </div>
+                      {/* Stats */}
+                      <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                        {bloc.sequences?.length > 0 && (
+                          <span style={{ fontSize:'0.6rem', fontWeight:800, color:bc }}>
+                            ⚡ {calcJeuEffectif(bloc.sequences)} jeu · ⏱ {calcDureeBloc(bloc.sequences)}
+                          </span>
+                        )}
+                      </div>
+                      {bloc.conditions_jeu && (
+                        <span style={{ fontSize:'0.58rem', color:'#92400e', fontWeight:700 }}>🏉 {bloc.conditions_jeu}</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Exercices */}
-                  {bloc.exos?.length > 0 && (
+                  {bloc.bloc_type !== 'sequences' && bloc.exos?.length > 0 && (
                     h < 40
                     /* Bloc trop court → juste le nom centré, pas d'exercices */
                     ? <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1164,7 +1711,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       )}
                     </div>
                   )}
-                  {!bloc.exos?.length && (
+                  {bloc.bloc_type !== 'sequences' && !bloc.exos?.length && (
                     <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: '.72rem', fontWeight: 700, color: bc, opacity: 0.5, fontStyle: 'italic' }}>{bloc.nom}</span>
                     </div>
@@ -1307,12 +1854,30 @@ function parseDurMin(s) {
   return null
 }
 
+/* ── Helpers séquences (SeanceModal + WeekZoomModal) ── */
+function formatSeqDur(sec) {
+  if (!sec) return '?'
+  const m = Math.floor(sec/60), s = sec%60
+  if (m === 0) return `${s}''`
+  if (s === 0) return `${m}'`
+  return `${m}'${String(s).padStart(2,'0')}`
+}
+function calcJeuEffectif(seqs) {
+  const total = (seqs||[]).filter(s=>s.type==='jeu').reduce((acc,s)=>acc+(s.duree_sec||0),0)
+  return formatSeqDur(total)
+}
+function calcDureeBloc(seqs) {
+  const total = (seqs||[]).reduce((acc,s)=>acc+(s.duree_sec||0),0)
+  return formatSeqDur(total)
+}
+
 /* ── SeanceModal — plein écran, remplace l'ancien panneau latéral ── */
 function SeanceModal({
   panel, groupColor, couleurSecondaire, closePanel, setForm,
   addBloc, updateBloc, deleteBloc,
   addExo, updateExo, deleteExo,
   saveEvent, deleteEvent, saving,
+  reloadBlocs,
 }) {
   const BLOC_COLORS = generateBlocPalette(groupColor, couleurSecondaire)
   const { form } = panel
@@ -1393,6 +1958,26 @@ function SeanceModal({
     dragRef.current = { id: bloc.id, startY: e.clientY, startDur: bloc.durationMin, startMin: bloc.startMin, maxDur, currentDur: bloc.durationMin }
     document.body.style.cursor = 'ns-resize'
     document.body.style.userSelect = 'none'
+  }
+
+  // ── Séquences ──
+  const evtId = panel.evt?.id
+  async function addSequence(blocId) {
+    const { data } = await supabase.from('groupe_seance_sequences').insert({
+      bloc_id: blocId, type:'jeu', theme:'', duree_sec:90, ordre:999
+    }).select().single()
+    if (data) reloadBlocs?.()
+  }
+  async function addBlocSequences() {
+    if (!panel?.evt) { alert("Enregistre d'abord la séance pour lui ajouter un déroulé."); return }
+    const { data: nb } = await supabase.from('groupe_seance_blocs')
+      .select('ordre', { count:'exact' }).eq('evenement_id', evtId)
+    const ordre = (nb?.length || 0) + 1
+    await supabase.from('groupe_seance_blocs').insert({
+      evenement_id: evtId, nom:'Opposition', duree:'30', ordre,
+      bloc_type:'sequences', conditions_jeu:'Plaqué / Touché', recup_inter_seq:"30'' à 45''"
+    })
+    reloadBlocs?.()
   }
 
   // Libellé de la date
@@ -1528,9 +2113,12 @@ function SeanceModal({
             {/* ── Section blocs (gauche) ── */}
             {hasBlocs && (
               <div style={{ padding: '14px 16px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 6 }}>
                   <div style={Sm.sTitle}>Blocs</div>
-                  <button onClick={addBloc} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>+ Bloc</button>
+                  <div style={{ display:'flex', gap:5 }}>
+                    <button onClick={addBloc} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>+ Bloc</button>
+                    <button onClick={addBlocSequences} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>⚡ + Séquences</button>
+                  </div>
                 </div>
 
                 {panel.mode === 'create' && panel.blocs.length === 0 && (
@@ -1562,8 +2150,62 @@ function SeanceModal({
                         <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                       </div>
 
+                      {/* Bloc séquences */}
+                      {bloc.bloc_type === 'sequences' && (
+                        <div style={{ padding:'8px 12px 12px' }}>
+                          {/* Stats rapides */}
+                          <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+                            {[
+                              ['⚡', calcJeuEffectif(bloc.sequences) + "''", '#2f6f76'],
+                              ['⏱', calcDureeBloc(bloc.sequences) + "''", '#6b7280'],
+                              [bloc.conditions_jeu ? '🏉' : null, bloc.conditions_jeu, '#92400e'],
+                            ].filter(([i]) => i).map(([icon,val,color2]) => (
+                              <span key={icon} style={{ fontSize:'0.68rem', fontWeight:800, color:color2, background: color2+'15', padding:'2px 7px', borderRadius:6 }}>
+                                {icon} {val}
+                              </span>
+                            ))}
+                          </div>
+                          {/* Timeline */}
+                          <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:4 }}>
+                            {(bloc.sequences || []).map((seq, si) => (
+                              <React.Fragment key={seq.id}>
+                                <div style={{
+                                  display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                                  borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:48,
+                                  width: seq.type === 'recup' ? 50 : 80,
+                                  background: seq.type === 'jeu' ? '#bfdbfe' : '#bbf7d0',
+                                  border: `1.5px solid ${seq.type === 'jeu' ? '#60a5fa' : '#4ade80'}`,
+                                }}>
+                                  <span style={{ fontSize:'0.65rem', fontWeight:900, color: seq.type==='jeu'?'#1e3a5f':'#14532d' }}>
+                                    {formatSeqDur(seq.duree_sec)}
+                                  </span>
+                                  {seq.theme && <span style={{ fontSize:'0.55rem', fontWeight:800, color: seq.type==='jeu'?'#1d4ed8':'#16a34a', textAlign:'center', textTransform:'uppercase', marginTop:1, lineHeight:1.1 }}>
+                                    {seq.theme}
+                                  </span>}
+                                </div>
+                                {si < (bloc.sequences?.length||0)-1 && (
+                                  <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 2px', flexShrink:0 }}>›</span>
+                                )}
+                              </React.Fragment>
+                            ))}
+                            {/* Bouton ajouter */}
+                            <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 2px' }}>›</span>
+                            <button onClick={() => addSequence(bloc.id)}
+                              style={{ width:42, minHeight:48, borderRadius:7, border:'1.5px dashed #c4ccd4',
+                                background:'transparent', color:'#9ca3af', fontSize:'0.7rem', cursor:'pointer', flexShrink:0 }}>
+                              ＋
+                            </button>
+                          </div>
+                          {/* Footer infos */}
+                          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6, fontSize:'0.7rem' }}>
+                            {bloc.recup_inter_seq && <span style={{ color:'#9ca3af' }}>Récup. inter-séq. : <strong>{bloc.recup_inter_seq}</strong></span>}
+                            {bloc.effectif_desc && <span style={{ color:'#9ca3af' }}>Effectif : <strong>{bloc.effectif_desc}</strong></span>}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Exercices */}
-                      <div style={{ background: color + '0a', padding: '6px 8px 7px' }}>
+                      {bloc.bloc_type !== 'sequences' && <div style={{ background: color + '0a', padding: '6px 8px 7px' }}>
                         {hasGroups ? (
                           <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
                             {gKeys.map(gk => (
@@ -1595,7 +2237,7 @@ function SeanceModal({
                           </div>
                         )}
                         <button onClick={() => addExo(bloc.id)} style={{ width: '100%', background: 'none', border: `1.5px dashed ${color}50`, borderRadius: 6, color: color, fontSize: '.65rem', fontWeight: 700, padding: '4px', cursor: 'pointer', textAlign: 'center' }}>+ Exercice</button>
-                      </div>
+                      </div>}
                     </div>
                   )
                 })}
