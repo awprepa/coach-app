@@ -3035,8 +3035,55 @@ function SeanceModal({
                             <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bloc.nom}</span>
                             <span style={{ fontSize: '.6rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>{bloc.durationMin}'</span>
                           </div>
-                          {/* Exercices (lecture seule, proportionnels) */}
+                          {/* Contenu (lecture seule, proportionnel) */}
                           {height > 30 && (
+                            bloc.bloc_type === 'sequences' ? (() => {
+                              /* ── Séquences opposition ── */
+                              const seqs = (bloc.sequences || []).slice().sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+                              const totalSec = seqs.reduce((s, q) => s + (q.duree_sec || 0), 0)
+                              if (!seqs.length) return (
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.08)' }}>
+                                  <span style={{ fontSize: '.58rem', fontWeight: 700, color: 'rgba(255,255,255,.4)', fontStyle: 'italic' }}>Aucune séquence</span>
+                                </div>
+                              )
+                              let jeuIdx = 0
+                              return (
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'rgba(255,255,255,.06)', padding: '2px 4px 3px', gap: 1, minHeight: 0 }}>
+                                  {seqs.map(seq => {
+                                    const pct = totalSec > 0 ? (seq.duree_sec || 0) / totalSec * 100 : 100 / seqs.length
+                                    if (seq.type === 'inter_bloc') {
+                                      return (
+                                        <div key={seq.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, padding: '0 2px', minHeight: 8 }}>
+                                          <div style={{ flex: 1, height: 1, background: 'rgba(253,224,71,.6)' }} />
+                                          <span style={{ fontSize: '.42rem', fontWeight: 800, color: 'rgba(253,224,71,.9)', whiteSpace: 'nowrap' }}>÷ {formatSeqDur(seq.duree_sec)}</span>
+                                          <div style={{ flex: 1, height: 1, background: 'rgba(253,224,71,.6)' }} />
+                                        </div>
+                                      )
+                                    }
+                                    if (seq.type === 'recup') {
+                                      return (
+                                        <div key={seq.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, padding: '0 2px', minHeight: 7 }}>
+                                          <div style={{ flex: 1, height: 1, background: 'rgba(134,239,172,.5)' }} />
+                                          <span style={{ fontSize: '.42rem', fontWeight: 700, color: 'rgba(134,239,172,.9)', whiteSpace: 'nowrap', fontStyle: 'italic' }}>récup {formatSeqDur(seq.duree_sec)}</span>
+                                          <div style={{ flex: 1, height: 1, background: 'rgba(134,239,172,.5)' }} />
+                                        </div>
+                                      )
+                                    }
+                                    /* type === 'jeu' */
+                                    jeuIdx++
+                                    const jNum = jeuIdx
+                                    return (
+                                      <div key={seq.id} style={{ flex: `${pct} 1 0`, background: 'rgba(255,255,255,.18)', borderRadius: 4, padding: '1px 5px', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', minHeight: 12, border: '1px solid rgba(255,255,255,.25)' }}>
+                                        <span style={{ fontSize: '.45rem', fontWeight: 900, color: 'rgba(255,255,255,.6)', flexShrink: 0 }}>{jNum}</span>
+                                        {seq.theme && <span style={{ flex: 1, fontSize: '.5rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '.03em' }}>{seq.theme}</span>}
+                                        <span style={{ fontSize: '.48rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', flexShrink: 0 }}>{formatSeqDur(seq.duree_sec)}</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )
+                            })()
+                          : (
                             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,.08)', minHeight: 0, justifyContent: (bloc.exos || []).length === 0 ? 'center' : 'flex-start', alignItems: (bloc.exos || []).length === 0 ? 'center' : 'stretch' }}>
                               {(bloc.exos || []).length === 0 && (
                                 <span style={{ fontSize: Math.min(height * 0.4, 36) + 'px', fontWeight: 900, color: 'rgba(255,255,255,.35)', lineHeight: 1 }}>{idx + 1}</span>
@@ -3068,7 +3115,7 @@ function SeanceModal({
                                 </div>
                               )}
                             </div>
-                          )}
+                          ))}
                         </div>
                         {/* Handle drag */}
                         <div onMouseDown={e => startDrag(e, bloc)} style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 36, height: 9, background: 'rgba(255,255,255,.45)', border: '1.5px solid rgba(255,255,255,.75)', borderRadius: 5, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, userSelect: 'none' }}>
