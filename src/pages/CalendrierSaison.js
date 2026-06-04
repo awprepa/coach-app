@@ -1734,50 +1734,84 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       const joue = evt.score_dom != null && evt.score_ext != null
       const gagné = joue && (evt.est_domicile ? evt.score_dom > evt.score_ext : evt.est_domicile === false ? evt.score_ext > evt.score_dom : false)
       const perdu = joue && (evt.est_domicile ? evt.score_dom < evt.score_ext : evt.est_domicile === false ? evt.score_ext < evt.score_dom : false)
-      const adversaire = evt.est_domicile ? evt.equipe_ext : evt.est_domicile === false ? evt.equipe_dom : (evt.equipe_ext || evt.equipe_dom)
-      const logoAdversaire = evt.est_domicile ? evt.logo_ext : evt.est_domicile === false ? evt.logo_dom : (evt.logo_ext || evt.logo_dom)
+      const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : groupColor
+
+      // Domicile → notre logo = logo_dom, adverse = logo_ext
+      // Extérieur → notre logo = logo_ext, adverse = logo_dom
+      const notreEquipeNom  = evt.est_domicile === true  ? evt.equipe_dom : evt.est_domicile === false ? evt.equipe_ext : (evt.equipe_dom || evt.equipe_ext)
+      const advEquipeNom    = evt.est_domicile === true  ? evt.equipe_ext : evt.est_domicile === false ? evt.equipe_dom : (evt.equipe_ext || evt.equipe_dom)
+      const notreLogoUrl    = evt.est_domicile === true  ? evt.logo_dom   : evt.est_domicile === false ? evt.logo_ext   : (evt.logo_dom || evt.logo_ext)
+      const advLogoUrl      = evt.est_domicile === true  ? evt.logo_ext   : evt.est_domicile === false ? evt.logo_dom   : (evt.logo_ext || evt.logo_dom)
+      const notreInitials   = (notreEquipeNom || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+      const advInitials     = (advEquipeNom || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
+      // Disposition : domicile → notre logo gauche / adverse droite ; extérieur → adverse gauche / notre logo droite
+      const logoGauche  = evt.est_domicile !== false ? notreLogoUrl  : advLogoUrl
+      const logoDroite  = evt.est_domicile !== false ? advLogoUrl    : notreLogoUrl
+      const nomGauche   = evt.est_domicile !== false ? notreEquipeNom : advEquipeNom
+      const nomDroite   = evt.est_domicile !== false ? advEquipeNom   : notreEquipeNom
+      const initGauche  = evt.est_domicile !== false ? notreInitials  : advInitials
+      const initDroite  = evt.est_domicile !== false ? advInitials    : notreInitials
+
       const score = joue
         ? (evt.est_domicile ? `${evt.score_dom} – ${evt.score_ext}` : evt.est_domicile === false ? `${evt.score_ext} – ${evt.score_dom}` : `${evt.score_dom} – ${evt.score_ext}`)
         : null
-      const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : groupColor
-      const initials = (adversaire || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
+      function LogoBadge({ url, initials, size = 72 }) {
+        return (
+          <div style={{ width: size, height: size, borderRadius: 16, background: 'rgba(255,255,255,.15)',
+            border: '2px solid rgba(255,255,255,.4)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            {url
+              ? <img src={url} alt={initials} style={{ width: size - 10, height: size - 10, objectFit: 'contain' }}
+                  onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+              : null}
+            <div style={{ width: '100%', height: '100%', display: url ? 'none' : 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              fontSize: size > 60 ? '1.3rem' : '0.9rem', fontWeight: 900 }}>{initials}</div>
+          </div>
+        )
+      }
+
       return (
         /* flex:1 → remplit toute la hauteur de la colonne jour */
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
           background: `linear-gradient(155deg, ${bg} 0%, color-mix(in srgb, ${bg} 60%, #000) 100%)`,
-          borderRadius: 14, padding: '20px', color: '#fff', minHeight: 160 }}>
+          borderRadius: 14, padding: '16px 14px', color: '#fff', minHeight: 160 }}>
 
           {/* Badge compétition */}
-          <div style={{ fontSize: '.6rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 14 }}>
+          <div style={{ fontSize: '.6rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>
             Match FFR{evt.journee ? ` · Journée ${evt.journee}` : ''}
           </div>
 
-          {/* Corps centré : logo + nom adversaire */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flex: 1, justifyContent: 'center', paddingBottom: 8 }}>
-            {/* Logo club adverse */}
-            <div style={{ width: 80, height: 80, borderRadius: 18, background: 'rgba(255,255,255,.15)',
-              border: '2px solid rgba(255,255,255,.4)', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-              {logoAdversaire
-                ? <img src={logoAdversaire} alt={adversaire} style={{ width: 68, height: 68, objectFit: 'contain' }}
-                    onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-                : null}
-              <div style={{ width: '100%', height: '100%', display: logoAdversaire ? 'none' : 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-.02em' }}>{initials}</div>
+          {/* Corps centré : logos face à face */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'center', paddingBottom: 6 }}>
+            {/* Ligne logos + VS */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'center' }}>
+              {/* Logo gauche */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
+                <LogoBadge url={logoGauche} initials={initGauche} size={68} />
+                <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
+                  maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomGauche}</div>
+              </div>
+              {/* VS central */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                {score
+                  ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{score}</div>
+                  : <div style={{ fontSize: '.78rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>}
+                {!score && evt.heure && <div style={{ fontSize: '.65rem', opacity: .75, fontWeight: 600 }}>🕐 {evt.heure}</div>}
+              </div>
+              {/* Logo droite */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
+                <LogoBadge url={logoDroite} initials={initDroite} size={68} />
+                <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
+                  maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomDroite}</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '.7rem', opacity: .75, fontWeight: 600, marginBottom: 4 }}>vs</div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.2 }}>{adversaire || 'Adversaire'}</div>
-            </div>
-            {score
-              ? <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1, marginTop: 4 }}>{score}</div>
-              : <div style={{ fontSize: '.82rem', opacity: .75, fontWeight: 600 }}>Résultat à venir</div>}
           </div>
 
           {/* Chips infos */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-            {evt.heure && <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 700 }}>🕐 {evt.heure}</span>}
             {evt.est_domicile != null && (
               <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 800 }}>
                 {evt.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}

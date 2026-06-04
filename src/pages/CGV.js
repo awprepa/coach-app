@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export const CURRENT_CGV_VERSION = '1.1'
+export const CURRENT_CGV_VERSION = '1.2'
 
 export const CGV_CONTENU = [
   {
@@ -12,7 +12,7 @@ export const CGV_CONTENU = [
     texte: `AWPrepa propose les services suivants :
 
 • Préparation physique (suivi premium) : 89€/mois sans engagement, 79€/mois sur 3 mois, 69€/mois sur 6 mois, 49€ le 1er mois découverte
-• Coaching remise en forme (suivi premium) : 79€/mois sans engagement, 69€/mois sur 3 mois, 59€/mois sur 6 mois, 39€ le 1er mois découverte
+• Coaching remise en forme (suivi premium) : 79€/mois sans engagement, 69€/mois sur 3 mois, 59€/mois sur 6 mois, 49€ le 1er mois découverte
 • Programme one-shot personnalisé : 30€ (sans limite de durée, sans suivi)
 
 Chaque formule inclut : programme personnalisé, suivi via l'application AWPrepa, feedback par messagerie, visioconférence de bilan mensuelle (hors programme one-shot).`,
@@ -60,7 +60,7 @@ export default function CGV() {
       </div>
 
       <div style={S.content}>
-        <p style={S.version}>Version 1.1 — Mai 2026</p>
+        <p style={S.version}>Version 1.2 — Juin 2026</p>
 
         {CGV_CONTENU.map((art, i) => (
           <div key={i} style={S.article}>

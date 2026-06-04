@@ -83,40 +83,83 @@ export default function CompetitionClient() {
     return m.heure ? <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>🕐 {m.heure}</span> : null
   }
 
+  function LogoBadge({ url, initials, size = 52 }) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.2),
+        background: 'rgba(255,255,255,.18)', border: '2px solid rgba(255,255,255,.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', flexShrink: 0 }}>
+        {url
+          ? <img src={url} alt={initials} style={{ width: size - 8, height: size - 8, objectFit: 'contain' }}
+              onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+          : null}
+        <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex',
+          alignItems:'center', justifyContent:'center',
+          fontSize: size > 40 ? '1.1rem' : '.7rem', fontWeight:900 }}>{initials}</div>
+      </div>
+    )
+  }
+
   function MatchCard({ m, big }) {
-    const adv = m.est_domicile ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
-    const logo = m.est_domicile ? m.logo_ext : m.est_domicile === false ? m.logo_dom : (m.logo_ext || m.logo_dom)
-    const initials = (adv || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
     const joue = m.score_dom != null
-    const win = joue && (m.est_domicile ? m.score_dom > m.score_ext : m.est_domicile === false ? m.score_ext > m.score_dom : null)
+    const win  = joue && (m.est_domicile ? m.score_dom > m.score_ext : m.est_domicile === false ? m.score_ext > m.score_dom : null)
     const lose = joue && (m.est_domicile ? m.score_dom < m.score_ext : m.est_domicile === false ? m.score_ext < m.score_dom : null)
     const bg = big ? (joue ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : (activeGroupe?.couleur || '#1e40af')) : '#fff'
 
+    // Logos : dom = logo_dom / ext = logo_ext ; notre équipe selon est_domicile
+    const notreNom  = m.est_domicile === true  ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : (m.equipe_dom || m.equipe_ext)
+    const advNom    = m.est_domicile === true  ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
+    const notreLogo = m.est_domicile === true  ? m.logo_dom   : m.est_domicile === false ? m.logo_ext   : (m.logo_dom || m.logo_ext)
+    const advLogo   = m.est_domicile === true  ? m.logo_ext   : m.est_domicile === false ? m.logo_dom   : (m.logo_ext || m.logo_dom)
+    const notreInit = (notreNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    const advInit   = (advNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
+    // Disposition : domicile → notre logo gauche / adverse droite ; extérieur → adverse gauche / notre droite
+    const logoG  = m.est_domicile !== false ? notreLogo : advLogo
+    const logoD  = m.est_domicile !== false ? advLogo   : notreLogo
+    const nomG   = m.est_domicile !== false ? notreNom  : advNom
+    const nomD   = m.est_domicile !== false ? advNom    : notreNom
+    const initG  = m.est_domicile !== false ? notreInit : advInit
+    const initD  = m.est_domicile !== false ? advInit   : notreInit
+
+    const scoreStr = joue
+      ? (m.est_domicile ? `${m.score_dom} - ${m.score_ext}` : m.est_domicile === false ? `${m.score_ext} - ${m.score_dom}` : `${m.score_dom} - ${m.score_ext}`)
+      : null
+
     if (big) return (
       <div style={{ background: `linear-gradient(155deg, ${bg}, color-mix(in srgb, ${bg} 60%, #000))`,
-        borderRadius: 16, padding: '20px 18px', color: '#fff', marginBottom: 16 }}>
+        borderRadius: 16, padding: '16px 14px', color: '#fff', marginBottom: 16 }}>
         <div style={{ fontSize: '.6rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>
           Prochain match{m.journee ? ` · Journée ${m.journee}` : ''}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 14, background: 'rgba(255,255,255,.18)',
-            border: '2px solid rgba(255,255,255,.4)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            {logo
-              ? <img src={logo} alt={adv} style={{ width: 52, height: 52, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-              : null}
-            <div style={{ width:'100%', height:'100%', display: logo ? 'none' : 'flex',
-              alignItems:'center', justifyContent:'center', fontSize:'1.2rem', fontWeight:900 }}>{initials}</div>
+
+        {/* Logos face à face */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 14 }}>
+          {/* Logo gauche */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
+            <LogoBadge url={logoG} initials={initG} size={60} />
+            <div style={{ fontSize: '.58rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
+              maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomG}</div>
           </div>
-          <div>
-            <div style={{ fontSize: '.72rem', opacity: .75, fontWeight: 600, marginBottom: 3 }}>vs</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, lineHeight: 1.2 }}>{adv}</div>
+          {/* Score / VS */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+            {scoreStr
+              ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{scoreStr}</div>
+              : <>
+                  <div style={{ fontSize: '.82rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>
+                  {m.heure && <div style={{ fontSize: '.65rem', opacity: .75 }}>🕐 {m.heure}</div>}
+                </>
+            }
           </div>
-          <div style={{ marginLeft: 'auto' }}>
-            <ScoreOrHour m={m} />
+          {/* Logo droite */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
+            <LogoBadge url={logoD} initials={initD} size={60} />
+            <div style={{ fontSize: '.58rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
+              maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomD}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
           <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>
             {fmtDate(m.date_match)}
           </span>
@@ -132,25 +175,45 @@ export default function CompetitionClient() {
       </div>
     )
 
+    // Carte compacte (liste résultats / calendrier)
     return (
-      <div style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', marginBottom: 8,
-        border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f3f4f6',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-          {logo
-            ? <img src={logo} alt={adv} style={{ width: 30, height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-            : null}
-          <div style={{ width:'100%', height:'100%', display: logo ? 'none' : 'flex',
-            alignItems:'center', justifyContent:'center', fontSize:'.75rem', fontWeight:900, color:'#6b7280' }}>{initials}</div>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: '.88rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>vs {adv}</div>
-          <div style={{ fontSize: '.7rem', color: '#6b7280', marginTop: 2 }}>
-            {m.journee ? `J${m.journee} · ` : ''}{fmtDate(m.date_match)}
-            {m.est_domicile != null ? ` · ${m.est_domicile ? '🏠' : '✈️'}` : ''}
+      <div style={{ background: '#fff', borderRadius: 12, padding: '10px 12px', marginBottom: 8,
+        border: '1px solid #e5e7eb' }}>
+        {/* Logos compacts côte à côte */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Logo G */}
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f3f4f6',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            {logoG
+              ? <img src={logoG} alt={initG} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+              : null}
+            <div style={{ width:'100%', height:'100%', display: logoG ? 'none' : 'flex',
+              alignItems:'center', justifyContent:'center', fontSize:'.62rem', fontWeight:900, color:'#6b7280' }}>{initG}</div>
           </div>
+          {/* Score ou VS */}
+          <div style={{ fontSize: '.75rem', fontWeight: 800, color: scoreStr ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : '#9ca3af',
+            flexShrink: 0, minWidth: 32, textAlign: 'center' }}>
+            {scoreStr || 'VS'}
+          </div>
+          {/* Logo D */}
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f3f4f6',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            {logoD
+              ? <img src={logoD} alt={initD} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+              : null}
+            <div style={{ width:'100%', height:'100%', display: logoD ? 'none' : 'flex',
+              alignItems:'center', justifyContent:'center', fontSize:'.62rem', fontWeight:900, color:'#6b7280' }}>{initD}</div>
+          </div>
+          {/* Infos texte */}
+          <div style={{ flex: 1, minWidth: 0, marginLeft: 4 }}>
+            <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{advNom}</div>
+            <div style={{ fontSize: '.68rem', color: '#6b7280', marginTop: 1 }}>
+              {m.journee ? `J${m.journee} · ` : ''}{fmtDate(m.date_match)}
+              {m.est_domicile != null ? ` · ${m.est_domicile ? '🏠' : '✈️'}` : ''}
+            </div>
+          </div>
+          {!scoreStr && m.heure && <span style={{ fontSize: '.7rem', color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>🕐 {m.heure}</span>}
         </div>
-        <ScoreOrHour m={m} />
       </div>
     )
   }
