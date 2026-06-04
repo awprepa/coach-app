@@ -141,7 +141,7 @@ export default function ClientBottomNav() {
     { label: 'Nutrition', Icon: IconNutrition, active: isNutrition,   to: '/client/nutrition' },
     { label: 'Messages',  Icon: IconChat,      active: isMessages,    to: '/client/messages' },
     ...(isPrepaPhysique ? [
-      { label: 'Compétition', Icon: IconTrophy, active: isCompetition, to: '/client/competition' },
+      { label: 'Compét.', Icon: IconTrophy, active: isCompetition, to: '/client/competition' },
     ] : []),
   ]
 

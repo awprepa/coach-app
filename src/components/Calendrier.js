@@ -309,7 +309,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
         date: m.date_match,
         type: 'ffr_match',
         _isFFR: true,
-        titre: `vs ${adv}${scoreStr ? ` (${scoreStr})` : ''}`,
+        titre: `${adv}${scoreStr ? ` ${scoreStr}` : ''}`,
         // Conserver les champs bruts pour le panneau détail
         _raw: m,
       }
