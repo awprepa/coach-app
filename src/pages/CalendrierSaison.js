@@ -96,7 +96,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [pop, setPop] = useState(null)
   // Presse-papier : { source, blocs }  (source = évènement copié)
   const [clip, setClip] = useState(null)
-  const [calTab, setCalTab] = useState('calendrier') // 'calendrier' | 'effectif'
+  const [calTab, setCalTab] = useState('calendrier') // 'calendrier' | 'effectif' | 'competition'
+  const [matchsFFR, setMatchsFFR]         = useState([])
+  const [classementFFR, setClassementFFR] = useState([])
+  const [syncingFFR, setSyncingFFR]       = useState(false)
+  const [lastSyncFFR, setLastSyncFFR]     = useState(null)
 
   // Glisser-déposer : évènement en cours de déplacement + jour survolé
   const [dragEvt, setDragEvt] = useState(null)
@@ -152,6 +156,18 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     ])
     setEvenements(evs || [])
     setPhases(phs || [])
+    // Charger les données FFR si le groupe a un lien monclubhouse
+    if (groupe.monclubhouse_url) {
+      const [{ data: ffr }, { data: cls }] = await Promise.all([
+        supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
+        supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
+      ])
+      setMatchsFFR(ffr || [])
+      setClassementFFR(cls || [])
+      if (ffr?.length) setLastSyncFFR(ffr[0].synced_at)
+    } else {
+      setMatchsFFR([]); setClassementFFR([])
+    }
     if (!silent) setLoading(false)
     else requestAnimationFrame(() => window.scrollTo(0, scrollY))
   }, [groupe, seasonStart, seasonEnd])
@@ -228,6 +244,49 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   }
   const matchsList = evenements.filter(e => e.type === 'match')
   const today = new Date(); const todayKey = ymd(today.getFullYear(), today.getMonth(), today.getDate())
+
+  // ── Index FFR par jour ─────────────────────────────────────────────────────
+  const ffrByDay = {}
+  for (const m of matchsFFR) {
+    if (!m.date_match) continue
+    const [Y, M, D] = m.date_match.split('-').map(Number)
+    const k = ymd(Y, M - 1, D)
+    ;(ffrByDay[k] ||= []).push(m)
+  }
+
+  // Sync FFR depuis l'Edge Function
+  async function syncFFR() {
+    if (!groupe?.monclubhouse_url) return
+    setSyncingFFR(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/sync-ffr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+          'apikey': process.env.REACT_APP_SUPABASE_ANON_KEY || '',
+        },
+        body: JSON.stringify({ groupe_id: groupe.id }),
+      })
+      const result = await res.json()
+      if (result.ok) {
+        // Recharger les données FFR
+        const [{ data: ffr }, { data: cls }] = await Promise.all([
+          supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
+          supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
+        ])
+        setMatchsFFR(ffr || [])
+        setClassementFFR(cls || [])
+        if (ffr?.length) setLastSyncFFR(new Date().toISOString())
+      } else {
+        alert('Erreur sync : ' + (result.error || 'inconnue'))
+      }
+    } catch (e) {
+      alert('Erreur réseau : ' + e.message)
+    }
+    setSyncingFFR(false)
+  }
 
   // phase couvrant un mois (pour le ruban + le liseré de colonne)
   const seasonPhases = phases.filter(p => p.type === 'phase')
@@ -637,9 +696,30 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   // ── Rendu cellule jour ────────────────────────────────────────────────────────
   function renderCell(y, m, d) {
     const evs = evByDay[ymd(y, m, d)] || []
-    if (!evs.length) return <div style={{ flex: 1 }} />
+    const ffr = ffrByDay[ymd(y, m, d)] || []
+    if (!evs.length && !ffr.length) return <div style={{ flex: 1 }} />
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* ── Matchs FFR (lecture seule, depuis monclubhouse) ── */}
+        {ffr.map(fm => {
+          const adversaire = fm.est_domicile ? fm.equipe_ext : fm.est_domicile === false ? fm.equipe_dom : (fm.equipe_ext || fm.equipe_dom)
+          const joue = fm.score_dom != null && fm.score_ext != null
+          const scoreAff = joue
+            ? (fm.est_domicile ? `${fm.score_dom}-${fm.score_ext}` : fm.est_domicile === false ? `${fm.score_ext}-${fm.score_dom}` : `${fm.score_dom}-${fm.score_ext}`)
+            : fm.heure || ''
+          const gagné = joue && (fm.est_domicile ? fm.score_dom > fm.score_ext : fm.est_domicile === false ? fm.score_ext > fm.score_dom : false)
+          const perdu = joue && (fm.est_domicile ? fm.score_dom < fm.score_ext : fm.est_domicile === false ? fm.score_ext < fm.score_dom : false)
+          const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : '#1e40af'
+          return (
+            <div key={fm.id} title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext}`}
+              style={{ background: bg, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px',
+                display: 'flex', justifyContent: 'space-between', gap: 4, overflow: 'hidden', whiteSpace: 'nowrap',
+                borderLeft: '3px solid rgba(255,255,255,0.35)' }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>🏉 {adversaire || 'Match FFR'}</span>
+              {scoreAff && <small style={{ fontSize: '0.52rem', fontWeight: 700, opacity: 0.92, flexShrink: 0 }}>{scoreAff}</small>}
+            </div>
+          )
+        })}
         {evs.map(e => {
           const T = TYPES[e.type] || TYPES.autre
           const onCtx = ev => openCtx(ev, e.date, e)
@@ -744,9 +824,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         </div>
       )}
 
-      {/* ── Onglets Calendrier / Effectif ── */}
+      {/* ── Onglets Calendrier / Effectif / Compétition ── */}
       <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-        {[['calendrier','Calendrier'],['effectif','Effectif']].map(([v,l]) => (
+        {[
+          ['calendrier','Calendrier'],
+          ['effectif','Effectif'],
+          ...(groupe?.monclubhouse_url ? [['competition','🏉 Compétition']] : []),
+        ].map(([v,l]) => (
           <button key={v} onClick={() => setCalTab(v)}
             style={{ padding:'7px 18px', borderRadius:20, border:'none', fontWeight:700, fontSize:'0.8rem',
               background: calTab===v ? groupColor : '#e5e7eb',
@@ -781,6 +865,18 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       </div>
 
       {calTab === 'effectif' && <EffectifView groupeId={groupe?.id} groupColor={groupColor} />}
+
+      {calTab === 'competition' && (
+        <CompetitionTab
+          matchs={matchsFFR}
+          classement={classementFFR}
+          groupColor={groupColor}
+          groupeNom={groupe?.nom || ''}
+          syncing={syncingFFR}
+          lastSync={lastSyncFFR}
+          onSync={syncFFR}
+        />
+      )}
 
       {calTab === 'calendrier' && (<>
       {/* ── Résumé + légende ── */}
@@ -2895,6 +2991,175 @@ function SeanceModal({
         </div>
       </div>
     </>
+  )
+}
+
+// ── CompetitionTab ─────────────────────────────────────────────────────────────
+function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, lastSync, onSync }) {
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Identifier notre équipe dans le classement (fuzzy match sur le nom du groupe)
+  const groupWords = groupeNom.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+  const notreEquipe = classement.find(c =>
+    groupWords.some(w => c.equipe.toLowerCase().includes(w))
+  )
+
+  // Prochains matchs (futurs)
+  const prochains = matchs.filter(m => m.date_match >= today).slice(0, 5)
+  // Derniers résultats (passés)
+  const resultats = matchs.filter(m => m.date_match < today).slice(-5).reverse()
+
+  const fmtDate = iso => {
+    if (!iso) return ''
+    const [y, mo, d] = iso.split('-')
+    return `${d}/${mo}/${y}`
+  }
+  const fmtScore = m => {
+    if (m.score_dom == null) return null
+    if (m.est_domicile) return `${m.score_dom} - ${m.score_ext}`
+    if (m.est_domicile === false) return `${m.score_ext} - ${m.score_dom}`
+    return `${m.score_dom} - ${m.score_ext}`
+  }
+  const gagné = m => {
+    if (m.score_dom == null) return null
+    if (m.est_domicile) return m.score_dom > m.score_ext
+    if (m.est_domicile === false) return m.score_ext > m.score_dom
+    return null
+  }
+  const opponent = m => m.est_domicile ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
+
+  const prochain = prochains[0]
+
+  return (
+    <div style={{ padding: '0 0 32px' }}>
+
+      {/* ── Header sync ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 0' }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>
+            {lastSync ? `Dernière sync : ${new Date(lastSync).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Pas encore synchronisé'}
+          </p>
+        </div>
+        <button onClick={onSync} disabled={syncing}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 20,
+            border: 'none', background: groupColor, color: '#fff', fontWeight: 700, fontSize: '0.8rem',
+            cursor: syncing ? 'wait' : 'pointer', opacity: syncing ? 0.7 : 1 }}>
+          {syncing ? '⏳ Sync...' : '🔄 Synchroniser'}
+        </button>
+      </div>
+
+      {classement.length === 0 && matchs.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
+          <p style={{ fontSize: '2rem', marginBottom: 8 }}>🏉</p>
+          <p style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Aucune donnée FFR</p>
+          <p style={{ fontSize: '0.82rem' }}>Clique sur "Synchroniser" pour charger les matchs et le classement depuis monclubhouse.ffr.fr</p>
+        </div>
+      ) : (<>
+
+        {/* ── Prochain match ── */}
+        {prochain && (
+          <div style={{ background: `linear-gradient(135deg, ${groupColor}, color-mix(in srgb, ${groupColor} 70%, #1e1b4b))`,
+            borderRadius: 14, padding: '16px 18px', marginBottom: 20, color: '#fff' }}>
+            <p style={{ margin: '0 0 8px', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.1em', opacity: 0.75 }}>
+              Prochain match{prochain.journee ? ` · J${prochain.journee}` : ''}
+            </p>
+            <p style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 900 }}>{opponent(prochain)}</p>
+            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.9 }}>
+              {fmtDate(prochain.date_match)}{prochain.heure ? ` · ${prochain.heure}` : ''}
+              {' · '}{prochain.est_domicile ? '🏠 Domicile' : prochain.est_domicile === false ? '✈️ Extérieur' : ''}
+            </p>
+          </div>
+        )}
+
+        {/* ── Classement ── */}
+        {classement.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ margin: '0 0 10px', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6b7280' }}>Classement</p>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                <thead>
+                  <tr style={{ background: '#f9fafb' }}>
+                    {['#','Équipe','Pts','J','G','N','P','+/-','BO','BD'].map(h => (
+                      <th key={h} style={{ padding: '6px 8px', textAlign: h === 'Équipe' ? 'left' : 'center',
+                        fontWeight: 700, color: '#6b7280', fontSize: '0.65rem', textTransform: 'uppercase',
+                        letterSpacing: '.05em', whiteSpace: 'nowrap', borderBottom: '2px solid #e5e7eb' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {classement.map(c => {
+                    const isOurs = notreEquipe?.equipe === c.equipe
+                    return (
+                      <tr key={c.equipe}
+                        style={{ background: isOurs ? `color-mix(in srgb, ${groupColor} 10%, #fff)` : 'transparent',
+                          borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700,
+                          color: isOurs ? groupColor : '#374151' }}>{c.position}</td>
+                        <td style={{ padding: '7px 8px', fontWeight: isOurs ? 800 : 500,
+                          color: isOurs ? groupColor : '#1f2937',
+                          borderLeft: isOurs ? `3px solid ${groupColor}` : '3px solid transparent',
+                          maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.equipe}
+                        </td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: isOurs ? groupColor : '#1f2937' }}>{c.pts}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6b7280' }}>{c.joues}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#16a34a', fontWeight: 600 }}>{c.gagnes}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6b7280' }}>{c.nuls}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#dc2626', fontWeight: 600 }}>{c.perdus}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: c.diff >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{c.diff > 0 ? '+' : ''}{c.diff}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6b7280' }}>{c.bonus_off}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6b7280' }}>{c.bonus_def}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Résultats récents ── */}
+        {resultats.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ margin: '0 0 10px', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6b7280' }}>Derniers résultats</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {resultats.map(m => {
+                const g = gagné(m); const score = fmtScore(m)
+                return (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                    borderRadius: 10, background: g === true ? '#f0fdf4' : g === false ? '#fef2f2' : '#f9fafb',
+                    border: `1px solid ${g === true ? '#bbf7d0' : g === false ? '#fecaca' : '#e5e7eb'}` }}>
+                    <span style={{ fontSize: '0.7rem', color: '#6b7280', minWidth: 60 }}>{fmtDate(m.date_match)}</span>
+                    <span style={{ flex: 1, fontWeight: 700, fontSize: '0.78rem', color: '#1f2937' }}>{opponent(m)}</span>
+                    {score && <span style={{ fontWeight: 800, fontSize: '0.82rem', color: g === true ? '#16a34a' : g === false ? '#dc2626' : '#374151' }}>{score}</span>}
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af' }}>{m.est_domicile ? 'dom' : m.est_domicile === false ? 'ext' : ''}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Prochains matchs ── */}
+        {prochains.length > 1 && (
+          <div>
+            <p style={{ margin: '0 0 10px', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6b7280' }}>Prochains matchs</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {prochains.slice(1).map(m => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  borderRadius: 10, background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#6b7280', minWidth: 60 }}>{fmtDate(m.date_match)}</span>
+                  <span style={{ flex: 1, fontWeight: 700, fontSize: '0.78rem', color: '#1f2937' }}>{opponent(m)}</span>
+                  {m.heure && <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>{m.heure}</span>}
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af' }}>{m.est_domicile ? '🏠' : m.est_domicile === false ? '✈️' : ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </>)}
+    </div>
   )
 }
 

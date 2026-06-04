@@ -29,7 +29,7 @@ export default function FicheGroupe() {
 
   // Modales
   const [editOpen, setEditOpen]           = useState(false)
-  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1', couleur_secondaire: '' })
+  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1', couleur_secondaire: '', monclubhouse_url: '' })
   const [editLogoFile, setEditLogoFile]   = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
@@ -61,7 +61,7 @@ export default function FicheGroupe() {
       supabase.from('programmes').select('*, seances(count)').eq('groupe_id', id).is('template_id', null).order('created_at', { ascending: false }),
     ])
     setGroupe(g)
-    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1', couleur_secondaire: g?.couleur_secondaire || '' })
+    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1', couleur_secondaire: g?.couleur_secondaire || '', monclubhouse_url: g?.monclubhouse_url || '' })
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
@@ -138,6 +138,7 @@ export default function FicheGroupe() {
       couleur: editForm.couleur,
       couleur_secondaire: editForm.couleur_secondaire || null,
       logo_url: logoUrl,
+      monclubhouse_url: editForm.monclubhouse_url?.trim() || null,
     }).eq('id', id)
     if (error) { alert(error.message); setSaving(false); return }
     await load()
@@ -587,6 +588,22 @@ export default function FicheGroupe() {
             }
             <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{editForm.nom || groupe?.nom || 'Nom du groupe'}</span>
             <span style={{ background: editForm.couleur + '18', color: editForm.couleur, border: `1px solid ${editForm.couleur}33`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: '700' }}>Groupe</span>
+          </div>
+
+          {/* Lien monclubhouse */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
+              Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel)</span>
+            </label>
+            <input
+              value={editForm.monclubhouse_url}
+              onChange={e => setEditForm({ ...editForm, monclubhouse_url: e.target.value })}
+              placeholder="https://monclubhouse.ffr.fr/clubs/mon-club/competitions/..."
+              style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151', background: '#fff' }}
+            />
+            {editForm.monclubhouse_url && !editForm.monclubhouse_url.includes('monclubhouse.ffr.fr') && (
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>⚠️ Le lien doit provenir de monclubhouse.ffr.fr</p>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
