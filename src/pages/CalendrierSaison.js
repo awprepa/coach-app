@@ -694,8 +694,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     const ffr = ffrByDay[ymd(y, m, d)] || []
     if (!evs.length && !ffr.length) return <div style={{ flex: 1 }} />
     return (
-      <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {/* ── Matchs FFR (lecture seule, depuis monclubhouse) ── */}
+      /* position:relative ici → les overlays absolus FFR sont relatifs à ce wrapper */
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', overflow: 'hidden' }}>
+        {/* ── Matchs FFR : position:absolute → ZÉRO impact sur la hauteur de la cellule ── */}
         {ffr.map(fm => {
           const adversaire = fm.est_domicile ? fm.equipe_ext : fm.est_domicile === false ? fm.equipe_dom : (fm.equipe_ext || fm.equipe_dom)
           const joue = fm.score_dom != null && fm.score_ext != null
@@ -706,16 +707,21 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           const perdu = joue && (fm.est_domicile ? fm.score_dom < fm.score_ext : fm.est_domicile === false ? fm.score_ext < fm.score_dom : false)
           const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : '#1e40af'
           return (
-            <div key={fm.id} title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext}`}
-              style={{ background: bg, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px',
-                height: 20, minHeight: 20, maxHeight: 20, lineHeight: '20px', flexShrink: 0,
-                display: 'flex', justifyContent: 'space-between', gap: 4, overflow: 'hidden', whiteSpace: 'nowrap',
-                borderLeft: '3px solid rgba(255,255,255,0.35)' }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>vs {adversaire || 'Match FFR'}</span>
-              {scoreAff && <small style={{ fontSize: '0.52rem', fontWeight: 700, opacity: 0.92, flexShrink: 0 }}>{scoreAff}</small>}
+            <div key={fm.id}
+              title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext}`}
+              style={{
+                position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 1,
+                background: bg, color: '#fff', fontWeight: 800, fontSize: '0.55rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0 4px', gap: 3, overflow: 'hidden', whiteSpace: 'nowrap',
+                borderLeft: '3px solid rgba(255,255,255,0.35)',
+              }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>vs {adversaire || 'Match'}</span>
+              {scoreAff && <small style={{ fontSize: '0.48rem', opacity: 0.9, flexShrink: 0 }}>{scoreAff}</small>}
             </div>
           )
         })}
+        {/* ── Évènements normaux (flux normal, derrière l'overlay FFR si présent) ── */}
         {evs.map(e => {
           const T = TYPES[e.type] || TYPES.autre
           const onCtx = ev => openCtx(ev, e.date, e)
