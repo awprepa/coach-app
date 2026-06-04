@@ -89,6 +89,8 @@ interface MatchRow {
   score_dom: number | null;
   score_ext: number | null;
   est_domicile: boolean | null;
+  logo_dom: string | null;
+  logo_ext: string | null;
   synced_at: string;
 }
 
@@ -104,6 +106,7 @@ interface StandingRow {
   perdus: number;
   bonus_off: number;
   bonus_def: number;
+  logo: string | null;
   synced_at: string;
 }
 
@@ -130,6 +133,8 @@ function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: st
 
       const localNom: string = local.nomEdito || local.nom || "";
       const visiteurNom: string = visiteur.nomEdito || visiteur.nom || "";
+      const logoDom: string | null = local.structureId?.embleme || null;
+      const logoExt: string | null = visiteur.structureId?.embleme || null;
 
       const est_domicile = isOurTeamLocal(localNom, clubSlug) ? true
         : isOurTeamLocal(visiteurNom, clubSlug) ? false
@@ -150,6 +155,8 @@ function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: st
         score_dom: scoreLocal !== undefined ? scoreLocal : null,
         score_ext: scoreVisit !== undefined ? scoreVisit : null,
         est_domicile,
+        logo_dom: logoDom,
+        logo_ext: logoExt,
         synced_at: now,
       });
     }
@@ -166,6 +173,7 @@ function parseStandings(data: any[], groupeId: string): StandingRow[] {
       const equipeObj = entry.competitionEquipeId || {};
       const equipe: string = equipeObj.nomEdito || equipeObj.nom || "";
       if (!equipe) return null;
+      const logo: string | null = equipeObj.structureId?.embleme || null;
       return {
         groupe_id: groupeId,
         position: Number(entry.position) || 0,
@@ -178,6 +186,7 @@ function parseStandings(data: any[], groupeId: string): StandingRow[] {
         perdus: Number(cls.perdus) || 0,
         bonus_off: Number(cls.bonusOffensif) || 0,
         bonus_def: Number(cls.bonusDefensif) || 0,
+        logo,
         synced_at: now,
       } as StandingRow;
     })

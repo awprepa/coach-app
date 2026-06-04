@@ -1733,44 +1733,56 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       const gagné = joue && (evt.est_domicile ? evt.score_dom > evt.score_ext : evt.est_domicile === false ? evt.score_ext > evt.score_dom : false)
       const perdu = joue && (evt.est_domicile ? evt.score_dom < evt.score_ext : evt.est_domicile === false ? evt.score_ext < evt.score_dom : false)
       const adversaire = evt.est_domicile ? evt.equipe_ext : evt.est_domicile === false ? evt.equipe_dom : (evt.equipe_ext || evt.equipe_dom)
+      const logoAdversaire = evt.est_domicile ? evt.logo_ext : evt.est_domicile === false ? evt.logo_dom : (evt.logo_ext || evt.logo_dom)
       const score = joue
         ? (evt.est_domicile ? `${evt.score_dom} – ${evt.score_ext}` : evt.est_domicile === false ? `${evt.score_ext} – ${evt.score_dom}` : `${evt.score_dom} – ${evt.score_ext}`)
         : null
       const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : groupColor
-      // Initiales de l'équipe adverse (2 lettres max)
       const initials = (adversaire || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
       return (
-        <div style={{ background: `linear-gradient(135deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))`,
-          borderRadius: 14, padding: '18px 20px', color: '#fff', marginBottom: 2 }}>
+        /* flex:1 → remplit toute la hauteur de la colonne jour */
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          background: `linear-gradient(155deg, ${bg} 0%, color-mix(in srgb, ${bg} 60%, #000) 100%)`,
+          borderRadius: 14, padding: '20px', color: '#fff', minHeight: 160 }}>
+
           {/* Badge compétition */}
-          <div style={{ fontSize: '.58rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 10 }}>
+          <div style={{ fontSize: '.6rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 14 }}>
             Match FFR{evt.journee ? ` · Journée ${evt.journee}` : ''}
           </div>
-          {/* Corps : logo + nom adversaire + score */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
-            {/* Logo placeholder — initiales */}
-            <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(255,255,255,.18)',
-              border: '2px solid rgba(255,255,255,.45)', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, flexShrink: 0, letterSpacing: '-.02em' }}>
-              {initials}
+
+          {/* Corps centré : logo + nom adversaire */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flex: 1, justifyContent: 'center', paddingBottom: 8 }}>
+            {/* Logo club adverse */}
+            <div style={{ width: 80, height: 80, borderRadius: 18, background: 'rgba(255,255,255,.15)',
+              border: '2px solid rgba(255,255,255,.4)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+              {logoAdversaire
+                ? <img src={logoAdversaire} alt={adversaire} style={{ width: 68, height: 68, objectFit: 'contain' }}
+                    onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+                : null}
+              <div style={{ width: '100%', height: '100%', display: logoAdversaire ? 'none' : 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-.02em' }}>{initials}</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '1.1rem', fontWeight: 900, lineHeight: 1.2, marginBottom: 4 }}>vs {adversaire || 'Adversaire'}</div>
-              {score
-                ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{score}</div>
-                : <div style={{ fontSize: '.78rem', opacity: .75, fontWeight: 600 }}>Résultat à venir</div>}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '.7rem', opacity: .75, fontWeight: 600, marginBottom: 4 }}>vs</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.2 }}>{adversaire || 'Adversaire'}</div>
             </div>
+            {score
+              ? <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1, marginTop: 4 }}>{score}</div>
+              : <div style={{ fontSize: '.82rem', opacity: .75, fontWeight: 600 }}>Résultat à venir</div>}
           </div>
+
           {/* Chips infos */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {evt.heure && <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>🕐 {evt.heure}</span>}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+            {evt.heure && <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 700 }}>🕐 {evt.heure}</span>}
             {evt.est_domicile != null && (
-              <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 800 }}>
+              <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 800 }}>
                 {evt.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}
               </span>
             )}
             {joue && (
-              <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>
+              <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 700 }}>
                 {gagné ? '✅ Victoire' : perdu ? '❌ Défaite' : '🤝 Match nul'}
               </span>
             )}
@@ -2017,10 +2029,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         </div>
 
         {/* Séances */}
-        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
+        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto', minHeight: 0 }}>
           {day.events.map(evt => (
-            <div key={evt.id}>
-              {evt.heure && (
+            <div key={evt.id} style={evt.type === 'ffr_match' ? { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 } : {}}>
+              {evt.heure && evt.type !== 'ffr_match' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                   <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
                   <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#9aa1ac' }}>{String(evt.heure).slice(0, 5)}</span>
@@ -3060,11 +3072,17 @@ function SeanceModal({
 function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, lastSync, onSync }) {
   const today = new Date().toISOString().slice(0, 10)
 
-  // Identifier notre équipe dans le classement (fuzzy match sur le nom du groupe)
-  const groupWords = groupeNom.toLowerCase().split(/\s+/).filter(w => w.length > 3)
-  const notreEquipe = classement.find(c =>
-    groupWords.some(w => c.equipe.toLowerCase().includes(w))
-  )
+  // Identifier notre équipe depuis les matchs (est_domicile → equipe_dom/ext)
+  // Méthode fiable : prend le nom le plus fréquent parmi "notre côté" dans chaque match
+  const ourNames = matchs
+    .map(m => m.est_domicile === true ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : null)
+    .filter(Boolean)
+  const ourTeamName = ourNames.length > 0
+    ? ourNames.reduce((best, name) => ourNames.filter(v => v === name).length >= ourNames.filter(v => v === best).length ? name : best)
+    : null
+  const notreEquipe = ourTeamName
+    ? classement.find(c => c.equipe.toLowerCase() === ourTeamName.toLowerCase())
+    : null
 
   // Prochains matchs (futurs)
   const prochains = matchs.filter(m => m.date_match >= today)
@@ -3141,7 +3159,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                 <thead>
                   <tr style={{ background: '#f9fafb' }}>
-                    {['#','Équipe','Pts','J','G','N','P','+/-','BO','BD'].map(h => (
+                    {['#','','Équipe','Pts','J','G','N','P','+/-','BO','BD'].map(h => (
                       <th key={h} style={{ padding: '6px 8px', textAlign: h === 'Équipe' ? 'left' : 'center',
                         fontWeight: 700, color: '#6b7280', fontSize: '0.65rem', textTransform: 'uppercase',
                         letterSpacing: '.05em', whiteSpace: 'nowrap', borderBottom: '2px solid #e5e7eb' }}>{h}</th>
@@ -3157,6 +3175,11 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
                           borderBottom: '1px solid #f3f4f6' }}>
                         <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700,
                           color: isOurs ? groupColor : '#374151' }}>{c.position}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'center', width: 28 }}>
+                          {c.logo
+                            ? <img src={c.logo} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => e.target.style.display='none'} />
+                            : null}
+                        </td>
                         <td style={{ padding: '7px 8px', fontWeight: isOurs ? 800 : 500,
                           color: isOurs ? groupColor : '#1f2937',
                           borderLeft: isOurs ? `3px solid ${groupColor}` : '3px solid transparent',
