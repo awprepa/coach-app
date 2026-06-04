@@ -420,18 +420,42 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     await supabase.from('groupe_seance_blocs').update(patch).eq('id', id)
   }
   async function deleteBloc(id) {
-    if (!window.confirm('Supprimer ce bloc et toutes ses séquences ?')) return
     setPanel(p => ({ ...p, blocs: p.blocs.filter(b => b.id !== id) }))
     await supabase.from('groupe_seance_blocs').delete().eq('id', id)
   }
-  // Retire une séquence du state local (sans reload)
+  // ── State helpers séquences ────────────────────────────────────────────────
+  function setBlocSeqs(blocId, seqsOrUpdater) {
+    setPanel(p => p ? {
+      ...p,
+      blocs: p.blocs.map(b => b.id === blocId ? {
+        ...b,
+        sequences: typeof seqsOrUpdater === 'function' ? seqsOrUpdater(b.sequences || []) : seqsOrUpdater
+      } : b)
+    } : p)
+  }
   function removeSeqFromState(blocId, seqId) {
     setPanel(p => p ? {
       ...p,
-      blocs: (p.blocs || []).map(b => b.id === blocId
+      blocs: p.blocs.map(b => b.id === blocId
         ? { ...b, sequences: (b.sequences || []).filter(s => s.id !== seqId) }
-        : b
-      )
+        : b)
+    } : p)
+  }
+  function addSeqToState(blocId, seq) {
+    setPanel(p => p ? {
+      ...p,
+      blocs: p.blocs.map(b => b.id === blocId
+        ? { ...b, sequences: [...(b.sequences || []), seq].sort((a, z) => a.ordre - z.ordre) }
+        : b)
+    } : p)
+  }
+  function patchSeqInState(seqId, patch) {
+    setPanel(p => p ? {
+      ...p,
+      blocs: p.blocs.map(b => ({
+        ...b,
+        sequences: (b.sequences || []).map(s => s.id === seqId ? { ...s, ...patch } : s)
+      }))
     } : p)
   }
   // Ajoute une séquence juste avant un inter_bloc (insertion au milieu)
@@ -440,17 +464,25 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     const seqs = (bloc?.sequences || []).slice().sort((a, b) => a.ordre - b.ordre)
     const interSeq = seqs.find(s => s.id === interBlocId)
     if (!interSeq) return
-    // Décaler vers le haut toutes les séquences à partir de l'inter_bloc
     const toShift = seqs.filter(s => s.ordre >= interSeq.ordre)
-    await Promise.all(toShift.map(s =>
-      supabase.from('groupe_seance_sequences').update({ ordre: s.ordre + 1 }).eq('id', s.id)
-    ))
-    await supabase.from('groupe_seance_sequences').insert({
-      bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récup.', duree_sec: type === 'jeu' ? 90 : 35, ordre: interSeq.ordre
-    })
-    if (!panel.evt?.id) return
-    const blocs = await loadBlocs(panel.evt.id)
-    setPanel(p => p ? { ...p, blocs } : p)
+    // Décaler en local immédiatement
+    const shifted = seqs.map(s => toShift.find(t => t.id === s.id) ? { ...s, ordre: s.ordre + 1 } : s)
+    const newSeq = { id: `tmp-${Date.now()}`, bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récup.', duree_sec: type === 'jeu' ? 90 : 35, ordre: interSeq.ordre }
+    setBlocSeqs(blocId, [...shifted, newSeq].sort((a, z) => a.ordre - z.ordre))
+    // Sync DB
+    await Promise.all(toShift.map(s => supabase.from('groupe_seance_sequences').update({ ordre: s.ordre + 1 }).eq('id', s.id)))
+    const { data } = await supabase.from('groupe_seance_sequences').insert({
+      bloc_id: blocId, type, theme: newSeq.theme, duree_sec: newSeq.duree_sec, ordre: interSeq.ordre
+    }).select().single()
+    if (data) {
+      // Remplace l'ID temporaire par le vrai
+      setPanel(p => p ? {
+        ...p,
+        blocs: p.blocs.map(b => b.id === blocId
+          ? { ...b, sequences: (b.sequences || []).map(s => s.id === newSeq.id ? data : s) }
+          : b)
+      } : p)
+    }
   }
   async function addExo(blocId) {
     const bloc = panel.blocs.find(b => b.id === blocId)
@@ -964,6 +996,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           deleteEvent={deleteEvent}
           saving={saving}
           removeSeq={removeSeqFromState}
+          addSeqToState={addSeqToState}
+          patchSeqInState={patchSeqInState}
+          setBlocSeqs={setBlocSeqs}
           addSeqBeforeInterBloc={addSeqBeforeInterBloc}
           reloadBlocs={async () => {
             if (!panel?.evt) return
@@ -2145,7 +2180,7 @@ function SeanceModal({
   addBloc, updateBloc, deleteBloc,
   addExo, updateExo, deleteExo,
   saveEvent, deleteEvent, saving,
-  removeSeq, addSeqBeforeInterBloc,
+  removeSeq, addSeqToState, patchSeqInState, setBlocSeqs, addSeqBeforeInterBloc,
   reloadBlocs,
 }) {
   const BLOC_COLORS = generateBlocPalette(groupColor, couleurSecondaire)
@@ -2235,42 +2270,54 @@ function SeanceModal({
   const dragSeqId = React.useRef(null)
 
   async function addSequence(blocId, type = 'jeu') {
-    // Ordre = max existant + 1
-    const allBlocs = panel.blocs || []
-    const bloc = allBlocs.find(b => b.id === blocId)
+    const bloc = (panel.blocs || []).find(b => b.id === blocId)
     const maxOrdre = (bloc?.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
-    const { data } = await supabase.from('groupe_seance_sequences').insert({
-      bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récup.', duree_sec: type === 'jeu' ? 90 : 35, ordre: maxOrdre + 1
-    }).select().single()
-    if (data) { reloadBlocs?.(); setSelectedSeqId(data.id) }
+    const payload = { bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récup.', duree_sec: type === 'jeu' ? 90 : 35, ordre: maxOrdre + 1 }
+    // Ajout optimiste immédiat
+    const tmpId = `tmp-${Date.now()}`
+    addSeqToState?.(blocId, { id: tmpId, ...payload })
+    setSelectedSeqId(tmpId)
+    const { data } = await supabase.from('groupe_seance_sequences').insert(payload).select().single()
+    if (data) {
+      setBlocSeqs?.(blocId, seqs => seqs.map(s => s.id === tmpId ? data : s))
+      setSelectedSeqId(data.id)
+    }
   }
-  async function updateSequence(seqId, patch) {
-    await supabase.from('groupe_seance_sequences').update(patch).eq('id', seqId)
-    reloadBlocs?.()
+  function updateSequence(seqId, patch) {
+    patchSeqInState?.(seqId, patch)   // instantané
+    supabase.from('groupe_seance_sequences').update(patch).eq('id', seqId) // fire-and-forget
   }
   async function addNouvelleSerie(blocId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
     const maxOrdre = (bloc?.sequences || []).reduce((m, s) => Math.max(m, s.ordre || 0), 0)
-    const r1 = await supabase.from('groupe_seance_sequences').insert({
-      bloc_id: blocId, type: 'inter_bloc', ordre: maxOrdre + 1, duree_sec: 180, theme: 'Récup série'
-    })
-    if (r1.error) { console.error('inter_bloc insert:', r1.error); return }
-    const r2 = await supabase.from('groupe_seance_sequences').insert({
-      bloc_id: blocId, type: 'jeu', ordre: maxOrdre + 2, duree_sec: 90, theme: ''
-    })
-    if (r2.error) { console.error('jeu insert:', r2.error); return }
-    reloadBlocs?.()
+    const interPayload = { bloc_id: blocId, type: 'inter_bloc', ordre: maxOrdre + 1, duree_sec: 180, theme: 'Récup série' }
+    const jeuPayload   = { bloc_id: blocId, type: 'jeu',        ordre: maxOrdre + 2, duree_sec: 90,  theme: '' }
+    // Ajout optimiste
+    const tmpInter = `tmp-inter-${Date.now()}`, tmpJeu = `tmp-jeu-${Date.now()}`
+    addSeqToState?.(blocId, { id: tmpInter, ...interPayload })
+    addSeqToState?.(blocId, { id: tmpJeu,   ...jeuPayload   })
+    // Sync DB
+    const { data: d1 } = await supabase.from('groupe_seance_sequences').insert(interPayload).select().single()
+    const { data: d2 } = await supabase.from('groupe_seance_sequences').insert(jeuPayload).select().single()
+    // Remplace IDs temporaires
+    if (d1 || d2) {
+      setPanel(p => p ? { ...p, blocs: p.blocs.map(b => b.id !== blocId ? b : {
+        ...b,
+        sequences: (b.sequences || []).map(s =>
+          s.id === tmpInter && d1 ? d1 :
+          s.id === tmpJeu   && d2 ? d2 : s
+        )
+      }) } : p)
+    }
   }
 
   async function deleteSequence(blocId, seqId) {
     if (!seqId || !blocId) return
-    if (!window.confirm('Supprimer cette séquence ?')) return
-    const { error } = await supabase.from('groupe_seance_sequences').delete().eq('id', seqId)
-    if (error) { console.error('deleteSequence error:', error); return }
     setSelectedSeqId(null)
-    removeSeq?.(blocId, seqId)   // mise à jour locale uniquement, pas de reload
+    removeSeq?.(blocId, seqId)   // instantané, pas de confirm
+    supabase.from('groupe_seance_sequences').delete().eq('id', seqId) // fire-and-forget
   }
-  async function reorderSequences(blocId, fromId, toId) {
+  function reorderSequences(blocId, fromId, toId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
     if (!bloc) return
     const seqs = [...(bloc.sequences || [])].sort((a, b) => a.ordre - b.ordre)
@@ -2280,10 +2327,12 @@ function SeanceModal({
     const reordered = [...seqs]
     const [moved] = reordered.splice(fromIdx, 1)
     reordered.splice(toIdx, 0, moved)
-    await Promise.all(reordered.map((s, i) =>
+    // Mise à jour locale instantanée
+    setBlocSeqs?.(blocId, reordered.map((s, i) => ({ ...s, ordre: i + 1 })))
+    // Sync DB en arrière-plan
+    Promise.all(reordered.map((s, i) =>
       supabase.from('groupe_seance_sequences').update({ ordre: i + 1 }).eq('id', s.id)
     ))
-    reloadBlocs?.()
   }
 
   async function addBlocSequences() {
@@ -2610,31 +2659,30 @@ function SeanceModal({
                                 </div>
                                 )}
                                 {/* Durée */}
-                                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Durée</span>
+                                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Durée — {formatSeqDur(seq.duree_sec)}</span>
+                                  {/* Presets rapides */}
+                                  <div style={{ display:'flex', gap:3, flexWrap:'wrap' }}>
+                                    {[30,45,60,75,90,105,120,150,180,240,300].map(sec => (
+                                      <button key={sec} onClick={() => updateSequence(seq.id, { duree_sec: sec })}
+                                        style={{ padding:'3px 6px', borderRadius:6, fontSize:'0.62rem', fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+                                          border: seq.duree_sec===sec ? '2px solid #6366f1' : '1.5px solid #e5e7eb',
+                                          background: seq.duree_sec===sec ? '#eef2ff' : '#fff',
+                                          color: seq.duree_sec===sec ? '#4338ca' : '#6b7280' }}>
+                                        {formatSeqDur(sec)}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {/* Saisie libre en secondes */}
                                   <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                                     <input
-                                      style={{ ...seqInpStyle, width:56, textAlign:'center' }}
-                                      type="number" min={0} max={59} placeholder="min"
-                                      defaultValue={Math.floor((seq.duree_sec||0)/60)}
-                                      onBlur={e => {
-                                        const m = parseInt(e.target.value)||0
-                                        const s = (seq.duree_sec||0) % 60
-                                        updateSequence(seq.id, { duree_sec: m*60 + s })
-                                      }}
+                                      key={seq.duree_sec}
+                                      style={{ ...seqInpStyle, width:64, textAlign:'center' }}
+                                      type="number" min={5} placeholder="sec"
+                                      defaultValue={seq.duree_sec || ''}
+                                      onBlur={e => { const v = parseInt(e.target.value); if (v >= 5) updateSequence(seq.id, { duree_sec: v }) }}
                                     />
-                                    <span style={{ fontSize:'0.7rem', color:'#9ca3af', fontWeight:700 }}>'</span>
-                                    <input
-                                      style={{ ...seqInpStyle, width:56, textAlign:'center' }}
-                                      type="number" min={0} max={59} placeholder="sec"
-                                      defaultValue={(seq.duree_sec||0) % 60}
-                                      onBlur={e => {
-                                        const s = parseInt(e.target.value)||0
-                                        const m = Math.floor((seq.duree_sec||0)/60)
-                                        updateSequence(seq.id, { duree_sec: m*60 + s })
-                                      }}
-                                    />
-                                    <span style={{ fontSize:'0.7rem', color:'#9ca3af', fontWeight:700 }}>''</span>
+                                    <span style={{ fontSize:'0.65rem', color:'#9ca3af' }}>secondes</span>
                                   </div>
                                 </div>
                                 {/* Supprimer */}
