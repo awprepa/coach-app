@@ -59,6 +59,19 @@ function IconChat({ active }) {
   )
 }
 
+function IconTrophy({ active }) {
+  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9H3V5h3" />
+      <path d="M18 9h3V5h-3" />
+      <path d="M6 5h12v6a6 6 0 0 1-12 0V5z" />
+      <path d="M12 17v4" />
+      <path d="M8 21h8" />
+    </svg>
+  )
+}
+
 export default function ClientBottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -113,20 +126,23 @@ export default function ClientBottomNav() {
 
   if (kbOpen) return null
 
-  const isHome      = p === '/' || p === '/client/accueil'
-  const isProgramme = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'
-  const isNutrition = p.startsWith('/client/nutrition')
-  const isMessages  = p === '/client/messages'
-  const isGPS       = p.startsWith('/client/gps')
+  const isHome        = p === '/' || p === '/client/accueil'
+  const isProgramme   = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'
+  const isNutrition   = p.startsWith('/client/nutrition')
+  const isMessages    = p === '/client/messages'
+  const isGPS         = p.startsWith('/client/gps')
+  const isCompetition = p.startsWith('/client/competition')
 
   const isPrepaPhysique = offre === 'preparation_physique'
 
   const tabs = [
-    { label: 'Accueil',   Icon: IconHome,      active: isHome,      to: '/' },
-    { label: 'Programme', Icon: IconProgramme, active: isProgramme, to: '/client/mon-programme' },
-    { label: 'Nutrition', Icon: IconNutrition, active: isNutrition, to: '/client/nutrition' },
-    { label: 'Messages',  Icon: IconChat,      active: isMessages,  to: '/client/messages' },
-    ...(isPrepaPhysique ? [{ label: 'GPS', Icon: IconGPS, active: isGPS, to: '/client/gps' }] : []),
+    { label: 'Accueil',   Icon: IconHome,      active: isHome,        to: '/' },
+    { label: 'Programme', Icon: IconProgramme, active: isProgramme,   to: '/client/mon-programme' },
+    { label: 'Nutrition', Icon: IconNutrition, active: isNutrition,   to: '/client/nutrition' },
+    { label: 'Messages',  Icon: IconChat,      active: isMessages,    to: '/client/messages' },
+    ...(isPrepaPhysique ? [
+      { label: 'Compétition', Icon: IconTrophy, active: isCompetition, to: '/client/competition' },
+    ] : []),
   ]
 
   return createPortal(

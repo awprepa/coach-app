@@ -710,6 +710,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           const gagné = joue && (fm.est_domicile ? fm.score_dom > fm.score_ext : fm.est_domicile === false ? fm.score_ext > fm.score_dom : false)
           const perdu = joue && (fm.est_domicile ? fm.score_dom < fm.score_ext : fm.est_domicile === false ? fm.score_ext < fm.score_dom : false)
           const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : '#1e40af'
+          const logoAdv = fm.est_domicile ? fm.logo_ext : fm.est_domicile === false ? fm.logo_dom : (fm.logo_ext || fm.logo_dom)
           return (
             <div key={fm.id}
               title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext} — Cliquer pour détails`}
@@ -717,10 +718,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
               style={{
                 position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 1,
                 background: bg, color: '#fff', fontWeight: 800, fontSize: '0.55rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0 4px', gap: 3, overflow: 'hidden', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: 3,
+                padding: '0 4px', overflow: 'hidden', whiteSpace: 'nowrap',
                 borderLeft: '3px solid rgba(255,255,255,0.35)', cursor: 'pointer',
               }}>
+              {logoAdv && <img src={logoAdv} alt="" style={{ width: 13, height: 13, objectFit: 'contain', flexShrink: 0, borderRadius: 2 }} onError={e => e.target.style.display='none'} />}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>vs {adversaire || 'Match'}</span>
               {scoreAff && <small style={{ fontSize: '0.48rem', opacity: 0.9, flexShrink: 0 }}>{scoreAff}</small>}
             </div>

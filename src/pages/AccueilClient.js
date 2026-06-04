@@ -242,7 +242,27 @@ export default function AccueilClient() {
       const { data: evs } = await supabase
         .from('evenements').select('*').eq('client_id', clientData.id)
         .gte('date', today).or('terminee.is.null,terminee.eq.false').order('date', { ascending: true }).limit(1)
-      setProchaineSeance(evs?.[0] || null)
+
+      // Chercher aussi le prochain match FFR (via groupe_membres)
+      let prochaineSeanceData = evs?.[0] || null
+      try {
+        const { data: membres } = await supabase
+          .from('groupe_membres').select('groupe_id').eq('client_id', clientData.id)
+        if (membres?.length) {
+          const gIds = membres.map(m => m.groupe_id)
+          const { data: ffrMatch } = await supabase
+            .from('matchs_ffr').select('*')
+            .in('groupe_id', gIds)
+            .gte('date_match', today)
+            .order('date_match', { ascending: true })
+            .limit(1)
+          const ffr = ffrMatch?.[0]
+          if (ffr && (!prochaineSeanceData || ffr.date_match <= prochaineSeanceData.date)) {
+            prochaineSeanceData = { ...ffr, _isFFR: true, titre: `vs ${ffr.est_domicile ? ffr.equipe_ext : ffr.est_domicile === false ? ffr.equipe_dom : (ffr.equipe_ext || ffr.equipe_dom)}`, date: ffr.date_match }
+          }
+        }
+      } catch (_) { /* pas bloquant */ }
+      setProchaineSeance(prochaineSeanceData)
 
       const { start, end } = getWeekBounds()
       const { data: wevs } = await supabase
@@ -363,17 +383,42 @@ export default function AccueilClient() {
 
         {prochaineSeance && (
           <div
-            onClick={() => prochaineSeance.seance_id && navigate(`/client/seance/${prochaineSeance.seance_id}`)}
-            style={{ ...styles.nextCard, cursor: prochaineSeance.seance_id ? 'pointer' : 'default' }}
+            onClick={() => prochaineSeance._isFFR ? navigate('/client/competition') : (prochaineSeance.seance_id && navigate(`/client/seance/${prochaineSeance.seance_id}`))}
+            style={{ ...styles.nextCard, cursor: (prochaineSeance._isFFR || prochaineSeance.seance_id) ? 'pointer' : 'default' }}
           >
             <p style={styles.nextLabel}>Prochain événement</p>
-            <p style={styles.nextTitle}>{prochaineSeance.titre}</p>
+            {prochaineSeance._isFFR ? (
+              /* ── Match FFR : affichage avec logo ── */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                {/* Logo adverse */}
+                {(() => {
+                  const logo = prochaineSeance.est_domicile ? prochaineSeance.logo_ext : prochaineSeance.est_domicile === false ? prochaineSeance.logo_dom : (prochaineSeance.logo_ext || prochaineSeance.logo_dom)
+                  const adv = prochaineSeance.titre?.replace(/^vs /, '') || '?'
+                  const initials = adv.split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                  return (
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                      {logo ? <img src={logo} alt={adv} style={{ width: 36, height: 36, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
+                      <div style={{ width:'100%', height:'100%', display: logo ? 'none' : 'flex', alignItems:'center', justifyContent:'center', fontSize:'.9rem', fontWeight:900, color:'var(--header-text)' }}>{initials}</div>
+                    </div>
+                  )
+                })()}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ ...styles.nextTitle, marginBottom: 2 }}>{prochaineSeance.titre}</p>
+                  {prochaineSeance.heure && <span style={{ fontSize: '0.72rem', color: 'var(--header-text)', opacity: 0.8, fontWeight: 700 }}>🕐 {prochaineSeance.heure}</span>}
+                </div>
+                <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>
+                  {prochaineSeance.est_domicile ? '🏠 Dom.' : prochaineSeance.est_domicile === false ? '✈️ Ext.' : 'Match'}
+                </span>
+              </div>
+            ) : (
+              <p style={styles.nextTitle}>{prochaineSeance.titre}</p>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <p style={styles.nextDate}>
                 {new Date(prochaineSeance.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-              {prochaineSeance.seance_id && (
-                <span style={{ color: 'var(--header-text)', opacity: 0.85, fontSize: '0.78rem', fontWeight: '700' }}>Ouvrir →</span>
+              {(prochaineSeance._isFFR || prochaineSeance.seance_id) && (
+                <span style={{ color: 'var(--header-text)', opacity: 0.85, fontSize: '0.78rem', fontWeight: '700' }}>Voir →</span>
               )}
             </div>
           </div>
