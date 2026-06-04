@@ -263,17 +263,20 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         body: { groupe_id: groupe.id },
       })
       if (fnErr) throw fnErr
-      if (result?.ok) {
-        const [{ data: ffr }, { data: cls }] = await Promise.all([
-          supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
-          supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
-        ])
-        setMatchsFFR(ffr || [])
-        setClassementFFR(cls || [])
-        if (ffr?.length) setLastSyncFFR(new Date().toISOString())
-      } else {
-        alert('Erreur sync : ' + (result?.results?.[0]?.errors?.join(', ') || 'inconnue'))
-      }
+
+      // Toujours recharger les données après sync (qu'il y ait erreur ou pas)
+      const [{ data: ffr }, { data: cls }] = await Promise.all([
+        supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
+        supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
+      ])
+      setMatchsFFR(ffr || [])
+      setClassementFFR(cls || [])
+      if (ffr?.length) setLastSyncFFR(new Date().toISOString())
+
+      // Message de résultat
+      const r = result?.results?.[0]
+      const msg = `✅ Sync terminée\n• ${ffr?.length || 0} matchs\n• ${cls?.length || 0} équipes au classement${r?.errors?.length ? '\n\n⚠️ ' + r.errors.join('\n') : ''}`
+      alert(msg)
     } catch (e) {
       alert('Erreur sync : ' + (e?.message || String(e)))
     }
@@ -3042,8 +3045,8 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
 
       {classement.length === 0 && matchs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
-          <p style={{ fontSize: '2rem', marginBottom: 8 }}>🏉</p>
-          <p style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Aucune donnée FFR</p>
+          <p style={{ fontSize: '2rem', marginBottom: 8 }}>📡</p>
+          <p style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Aucune donnée chargée</p>
           <p style={{ fontSize: '0.82rem' }}>Clique sur "Synchroniser" pour charger les matchs et le classement depuis monclubhouse.ffr.fr</p>
         </div>
       ) : (<>
@@ -3198,12 +3201,12 @@ const S = {
   mch: { position: 'sticky', top: 0, zIndex: 5, textAlign: 'center', padding: '7px 4px 6px', background: '#fbfcfd', borderBottom: '1px solid #e6e8ec' },
   mm: { fontSize: '0.74rem', fontWeight: 800 },
   my: { fontSize: '0.5rem', fontWeight: 700, color: '#9aa1ac', letterSpacing: '0.04em' },
-  drow: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, maxHeight: 20, overflow: 'hidden' },
+  drow: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', height: 22, minHeight: 22, maxHeight: 22, overflow: 'hidden' },
   drowVac: { background: '#fdf8ea' },
   drowToday: { boxShadow: 'inset 0 0 0 2px #333333', position: 'relative', zIndex: 2 },
   drowDrop: { background: '#eaf7ec', boxShadow: 'inset 0 0 0 2px #34c759', position: 'relative', zIndex: 3 },
   drowSel:  { background: '#e0e7ff', boxShadow: 'inset 0 0 0 1px #818cf8' },
-  blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, maxHeight: 20, overflow: 'hidden', background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
+  blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', height: 22, minHeight: 22, maxHeight: 22, overflow: 'hidden', background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
   dnum: { width: 17, fontSize: '0.56rem', color: '#5b626c', textAlign: 'center', fontWeight: 700, lineHeight: '20px', borderRight: '1px solid #eef0f3', flexShrink: 0 },
   ddow: { width: 13, fontSize: '0.52rem', color: '#9aa1ac', textAlign: 'center', lineHeight: '20px', textTransform: 'uppercase', flexShrink: 0 },
   vacband: { fontSize: '0.5rem', fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '1px 5px', background: '#f4e8c4', lineHeight: 1.6 },
