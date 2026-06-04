@@ -2626,7 +2626,7 @@ function SeanceModal({
                             const editorBorder = isInterBloc ? '#fcd34d' : isJeu ? '#bfdbfe' : '#bbf7d0'
                             const seqInpStyle = { border:'1.5px solid #e5e7eb', borderRadius:7, padding:'5px 8px', fontSize:'0.75rem', fontFamily:'inherit', color:'#1f2937', outline:'none', background:'#fff' }
                             return (
-                              <div style={{ marginTop:8, background: editorBg, borderRadius:9, padding:'10px 12px', border:`1.5px solid ${editorBorder}`, display:'flex', flexWrap:'wrap', gap:8, alignItems:'flex-end' }}>
+                              <div key={seq.id} style={{ marginTop:8, background: editorBg, borderRadius:9, padding:'10px 12px', border:`1.5px solid ${editorBorder}`, display:'flex', flexWrap:'wrap', gap:8, alignItems:'flex-end' }}>
                                 {/* Type — masqué pour inter_bloc */}
                                 {!isInterBloc && (
                                 <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
