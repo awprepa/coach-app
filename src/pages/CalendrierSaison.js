@@ -424,6 +424,34 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     setPanel(p => ({ ...p, blocs: p.blocs.filter(b => b.id !== id) }))
     await supabase.from('groupe_seance_blocs').delete().eq('id', id)
   }
+  // Retire une séquence du state local (sans reload)
+  function removeSeqFromState(blocId, seqId) {
+    setPanel(p => p ? {
+      ...p,
+      blocs: (p.blocs || []).map(b => b.id === blocId
+        ? { ...b, sequences: (b.sequences || []).filter(s => s.id !== seqId) }
+        : b
+      )
+    } : p)
+  }
+  // Ajoute une séquence juste avant un inter_bloc (insertion au milieu)
+  async function addSeqBeforeInterBloc(blocId, type, interBlocId) {
+    const bloc = (panel.blocs || []).find(b => b.id === blocId)
+    const seqs = (bloc?.sequences || []).slice().sort((a, b) => a.ordre - b.ordre)
+    const interSeq = seqs.find(s => s.id === interBlocId)
+    if (!interSeq) return
+    // Décaler vers le haut toutes les séquences à partir de l'inter_bloc
+    const toShift = seqs.filter(s => s.ordre >= interSeq.ordre)
+    await Promise.all(toShift.map(s =>
+      supabase.from('groupe_seance_sequences').update({ ordre: s.ordre + 1 }).eq('id', s.id)
+    ))
+    await supabase.from('groupe_seance_sequences').insert({
+      bloc_id: blocId, type, theme: type === 'jeu' ? '' : 'Récup.', duree_sec: type === 'jeu' ? 90 : 35, ordre: interSeq.ordre
+    })
+    if (!panel.evt?.id) return
+    const blocs = await loadBlocs(panel.evt.id)
+    setPanel(p => p ? { ...p, blocs } : p)
+  }
   async function addExo(blocId) {
     const bloc = panel.blocs.find(b => b.id === blocId)
     const ordre = (bloc?.exos.length || 0) + 1
@@ -935,10 +963,12 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           saveEvent={saveEvent}
           deleteEvent={deleteEvent}
           saving={saving}
+          removeSeq={removeSeqFromState}
+          addSeqBeforeInterBloc={addSeqBeforeInterBloc}
           reloadBlocs={async () => {
             if (!panel?.evt) return
             const blocs = await loadBlocs(panel.evt.id)
-            setPanel(p => p ? { ...p, blocs } : p)
+            if (blocs && blocs.length >= 0) setPanel(p => p ? { ...p, blocs } : p)
           }}
         />
       )}
@@ -1938,16 +1968,27 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                           <div style={{ width:COL_EFF, flexShrink:0, background:'#f0f4f8', display:'flex', alignItems:'center', borderRight:cellBorder, padding:'6px 8px' }}>
                             <span style={{ fontSize:'.64rem', fontWeight:700, color:'#374151', lineHeight:1.4 }}>{bloc.effectif_desc || ''}</span>
                           </div>
-                          {/* Cellules séquences de jeu */}
+                          {/* Séquences jeu + récup intercalées */}
                           <div style={{ flex:1, display:'flex', alignItems:'stretch', borderRight:cellBorder }}>
-                            {jeuSeqs.length === 0
+                            {seqs.length === 0
                               ? <div style={{ flex:1, background:'#f8fafc', display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'.65rem', color:'#9ca3af', fontStyle:'italic' }}>—</span></div>
-                              : jeuSeqs.map((seq, i) => (
-                                <div key={seq.id} style={{ flex:1, background:'#c8e6a0', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'6px 4px', borderRight: i < jeuSeqs.length-1 ? '1px solid #a3d977' : 'none', textAlign:'center' }}>
-                                  <span style={{ fontSize:'.78rem', fontWeight:900, color:'#1a4a0a' }}>{formatSeqDur(seq.duree_sec)}</span>
-                                  {seq.theme && <span style={{ fontSize:'.65rem', fontWeight:800, color:'#2d5a16', textTransform:'uppercase', marginTop:2, lineHeight:1.2 }}>{seq.theme}</span>}
-                                </div>
-                              ))
+                              : seqs.map((seq, i) => {
+                                const isJeu = seq.type === 'jeu'
+                                return (
+                                  <div key={seq.id} style={{
+                                    flex: isJeu ? 2 : 1,
+                                    background: isJeu ? '#c8e6a0' : '#fef3c7',
+                                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                                    padding:'4px 3px',
+                                    borderRight: i < seqs.length-1 ? `1px solid ${isJeu?'#a3d977':'#fde68a'}` : 'none',
+                                    textAlign:'center',
+                                  }}>
+                                    <span style={{ fontSize: isJeu?'.75rem':'.68rem', fontWeight:900, color: isJeu?'#1a4a0a':'#78350f' }}>{formatSeqDur(seq.duree_sec)}</span>
+                                    {seq.theme && <span style={{ fontSize:'.6rem', fontWeight:800, color: isJeu?'#2d5a16':'#92400e', textTransform:'uppercase', marginTop:1, lineHeight:1.2 }}>{seq.theme}</span>}
+                                    {!isJeu && <span style={{ fontSize:'.52rem', color:'#d97706', fontStyle:'italic' }}>récup</span>}
+                                  </div>
+                                )
+                              })
                             }
                           </div>
                           {/* Jeu effectif */}
@@ -2104,6 +2145,7 @@ function SeanceModal({
   addBloc, updateBloc, deleteBloc,
   addExo, updateExo, deleteExo,
   saveEvent, deleteEvent, saving,
+  removeSeq, addSeqBeforeInterBloc,
   reloadBlocs,
 }) {
   const BLOC_COLORS = generateBlocPalette(groupColor, couleurSecondaire)
@@ -2220,13 +2262,13 @@ function SeanceModal({
     reloadBlocs?.()
   }
 
-  async function deleteSequence(seqId) {
-    if (!seqId) return
+  async function deleteSequence(blocId, seqId) {
+    if (!seqId || !blocId) return
     if (!window.confirm('Supprimer cette séquence ?')) return
     const { error } = await supabase.from('groupe_seance_sequences').delete().eq('id', seqId)
     if (error) { console.error('deleteSequence error:', error); return }
     setSelectedSeqId(null)
-    reloadBlocs?.()
+    removeSeq?.(blocId, seqId)   // mise à jour locale uniquement, pas de reload
   }
   async function reorderSequences(blocId, fromId, toId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
@@ -2441,71 +2483,90 @@ function SeanceModal({
                               </span>
                             ))}
                           </div>
-                          {/* Timeline — drag & drop pour réordonner */}
-                          <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:4, flexWrap:'nowrap' }}>
-                            {(bloc.sequences || []).map((seq, si) => {
-                              const isJeu = seq.type === 'jeu'
-                              const isInterBloc = seq.type === 'inter_bloc'
-                              const isSelected = selectedSeqId === seq.id
-                              const bgNormal = isInterBloc ? '#fef3c7' : isJeu ? '#bfdbfe' : '#bbf7d0'
-                              const bgSelected = isInterBloc ? '#fcd34d' : isJeu ? '#93c5fd' : '#86efac'
-                              const borderCol = isInterBloc ? '#f59e0b' : isJeu ? '#60a5fa' : '#4ade80'
-                              const textCol = isInterBloc ? '#92400e' : isJeu ? '#1e3a5f' : '#14532d'
-                              const w = isInterBloc ? 62 : isJeu ? 84 : 54
-                              return (
-                                <React.Fragment key={seq.id}>
-                                  <div
-                                    draggable
-                                    onDragStart={e => { dragSeqId.current = seq.id; e.dataTransfer.effectAllowed = 'move' }}
-                                    onDragOver={e => e.preventDefault()}
-                                    onDrop={e => { e.preventDefault(); reorderSequences(bloc.id, dragSeqId.current, seq.id) }}
-                                    onClick={() => setSelectedSeqId(seq.id)}
-                                    style={{
-                                      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                                      borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:50,
-                                      width: w, cursor:'grab',
-                                      background: isSelected ? bgSelected : bgNormal,
-                                      border: `${isSelected ? 2 : 1.5}px solid ${borderCol}`,
-                                      outline: isSelected ? `2px solid ${borderCol}` : 'none',
-                                      outlineOffset: 1,
-                                      transition:'background 0.1s',
-                                      userSelect:'none',
-                                    }}>
-                                    <span style={{ fontSize:'0.6rem', color:'#c4ccd4', marginBottom:1 }}>⠿</span>
-                                    {isInterBloc && <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#78350f', textAlign:'center', lineHeight:1.1 }}>÷ série</span>}
-                                    <span style={{ fontSize:'0.65rem', fontWeight:900, color: textCol }}>
-                                      {formatSeqDur(seq.duree_sec)}
-                                    </span>
-                                    {!isInterBloc && seq.theme && <span style={{ fontSize:'0.55rem', fontWeight:800, color: isJeu?'#1d4ed8':'#15803d', textAlign:'center', textTransform:'uppercase', marginTop:1, lineHeight:1.1, maxWidth:76, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                                      {seq.theme}
-                                    </span>}
+                          {/* Séries — une ligne par série, séparateur récup entre */}
+                          {(() => {
+                            function splitSeries(seqs) {
+                              const out = []; let cur = []
+                              seqs.forEach(s => {
+                                if (s.type === 'inter_bloc') { out.push({ seqs: cur, interAfter: s }); cur = [] }
+                                else cur.push(s)
+                              })
+                              out.push({ seqs: cur, interAfter: null })
+                              return out
+                            }
+                            const series = splitSeries(bloc.sequences || [])
+                            const chipStyle = (isJeu, isSelected) => ({
+                              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                              borderRadius:7, padding:'5px 4px', flexShrink:0, minHeight:46,
+                              width: isJeu ? 80 : 52, cursor:'grab',
+                              background: isSelected ? (isJeu?'#93c5fd':'#86efac') : (isJeu?'#bfdbfe':'#bbf7d0'),
+                              border: `${isSelected?2:1.5}px solid ${isJeu?'#60a5fa':'#4ade80'}`,
+                              outline: isSelected ? `2px solid ${isJeu?'#60a5fa':'#4ade80'}` : 'none',
+                              outlineOffset:1, transition:'background 0.1s', userSelect:'none',
+                            })
+                            return (
+                              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                                {series.map(({ seqs, interAfter }, sIdx) => (
+                                  <div key={sIdx}>
+                                    {/* Ligne de chips pour cette série */}
+                                    <div style={{ display:'flex', alignItems:'center', gap:2, overflowX:'auto', paddingBottom:2, flexWrap:'nowrap', minHeight:52 }}>
+                                      {seqs.map((seq, si) => {
+                                        const isJeu = seq.type === 'jeu'
+                                        const isSelected = selectedSeqId === seq.id
+                                        return (
+                                          <React.Fragment key={seq.id}>
+                                            <div
+                                              draggable
+                                              onDragStart={e => { dragSeqId.current = seq.id; e.dataTransfer.effectAllowed='move' }}
+                                              onDragOver={e => e.preventDefault()}
+                                              onDrop={e => { e.preventDefault(); reorderSequences(bloc.id, dragSeqId.current, seq.id) }}
+                                              onClick={() => setSelectedSeqId(isSelected ? null : seq.id)}
+                                              style={chipStyle(isJeu, isSelected)}>
+                                              <span style={{ fontSize:'0.58rem', color:'#c4ccd4', marginBottom:1 }}>⠿</span>
+                                              <span style={{ fontSize:'0.65rem', fontWeight:900, color: isJeu?'#1e3a5f':'#14532d' }}>
+                                                {formatSeqDur(seq.duree_sec)}
+                                              </span>
+                                              {seq.theme && <span style={{ fontSize:'0.52rem', fontWeight:800, color: isJeu?'#1d4ed8':'#15803d', textAlign:'center', textTransform:'uppercase', marginTop:1, lineHeight:1.1, maxWidth:72, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                                {seq.theme}
+                                              </span>}
+                                            </div>
+                                            {si < seqs.length-1 && <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 1px', flexShrink:0 }}>›</span>}
+                                          </React.Fragment>
+                                        )
+                                      })}
+                                      {/* Boutons + pour cette série */}
+                                      {seqs.length > 0 && <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 3px' }}>›</span>}
+                                      <button
+                                        onClick={() => interAfter ? addSeqBeforeInterBloc?.(bloc.id,'jeu',interAfter.id) : addSequence(bloc.id,'jeu')}
+                                        style={{ padding:'3px 7px', minHeight:46, borderRadius:7, border:'1.5px dashed #93c5fd', background:'transparent', color:'#60a5fa', fontSize:'0.6rem', fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+                                        + Séq.
+                                      </button>
+                                      <button
+                                        onClick={() => interAfter ? addSeqBeforeInterBloc?.(bloc.id,'recup',interAfter.id) : addSequence(bloc.id,'recup')}
+                                        style={{ padding:'3px 7px', minHeight:46, borderRadius:7, border:'1.5px dashed #86efac', background:'transparent', color:'#22c55e', fontSize:'0.6rem', fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+                                        + Récup
+                                      </button>
+                                    </div>
+                                    {/* Séparateur inter_bloc (cliquable pour éditer) */}
+                                    {interAfter && (
+                                      <div
+                                        onClick={() => setSelectedSeqId(selectedSeqId === interAfter.id ? null : interAfter.id)}
+                                        style={{ display:'flex', alignItems:'center', gap:8, background: selectedSeqId===interAfter.id?'#fcd34d':'#fef3c7', border:`1.5px solid ${selectedSeqId===interAfter.id?'#f59e0b':'#fde68a'}`, borderRadius:7, padding:'5px 12px', cursor:'pointer', marginTop:2, userSelect:'none' }}>
+                                        <span style={{ fontSize:'0.68rem', fontWeight:900, color:'#78350f' }}>÷ Récup inter-série</span>
+                                        <span style={{ fontSize:'0.75rem', fontWeight:900, color:'#92400e' }}>{formatSeqDur(interAfter.duree_sec)}</span>
+                                        <span style={{ fontSize:'0.58rem', color:'#d97706', marginLeft:'auto' }}>cliquer pour modifier</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  {si < (bloc.sequences?.length||0)-1 && (
-                                    <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 2px', flexShrink:0 }}>›</span>
-                                  )}
-                                </React.Fragment>
-                              )
-                            })}
-                            {/* Boutons ajouter */}
-                            <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 4px' }}>›</span>
-                            <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                              <button onClick={() => addSequence(bloc.id, 'jeu')}
-                                style={{ padding:'4px 8px', minHeight:50, borderRadius:7, border:'1.5px dashed #93c5fd',
-                                  background:'transparent', color:'#60a5fa', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
-                                + Séq.
-                              </button>
-                              <button onClick={() => addSequence(bloc.id, 'recup')}
-                                style={{ padding:'4px 8px', minHeight:50, borderRadius:7, border:'1.5px dashed #86efac',
-                                  background:'transparent', color:'#22c55e', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
-                                + Récup
-                              </button>
-                              <button onClick={() => addNouvelleSerie(bloc.id)}
-                                style={{ padding:'4px 8px', minHeight:50, borderRadius:7, border:'1.5px dashed #f59e0b',
-                                  background:'transparent', color:'#d97706', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', lineHeight:1.3, whiteSpace:'nowrap' }}>
-                                ÷ Nouvelle<br/>série
-                              </button>
-                            </div>
-                          </div>
+                                ))}
+                                {/* Bouton nouvelle série */}
+                                <button onClick={() => addNouvelleSerie(bloc.id)}
+                                  style={{ alignSelf:'flex-start', padding:'4px 10px', height:32, borderRadius:7, border:'1.5px dashed #f59e0b', background:'transparent', color:'#d97706', fontSize:'0.62rem', fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', marginTop:2 }}>
+                                  ÷ Nouvelle série
+                                </button>
+                              </div>
+                            )
+                          })()}
 
                           {/* Éditeur inline de la séquence sélectionnée */}
                           {selectedSeqId && (bloc.sequences||[]).find(s => s.id === selectedSeqId) && (() => {
@@ -2577,7 +2638,7 @@ function SeanceModal({
                                   </div>
                                 </div>
                                 {/* Supprimer */}
-                                <button onClick={() => deleteSequence(seq.id)}
+                                <button onClick={() => deleteSequence(bloc.id, seq.id)}
                                   style={{ padding:'5px 10px', borderRadius:7, border:'1.5px solid #fecaca', background:'#fef2f2', color:'#dc2626', fontSize:'0.68rem', fontWeight:800, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-end' }}>
                                   Supprimer
                                 </button>
