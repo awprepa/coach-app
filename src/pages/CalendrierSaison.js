@@ -343,7 +343,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       cur.setUTCDate(monday.getUTCDate() + i)
       const dISO = cur.toISOString().slice(0, 10)
       const evs = evenements.filter(e => e.date === dISO)
-      days.push({ date: dISO, dow: i, events: evs })
+      // Inclure les matchs FFR comme événements (lecture seule)
+      const ffrEvs = matchsFFR
+        .filter(m => m.date_match === dISO)
+        .map(m => ({ ...m, type: 'ffr_match', date: m.date_match }))
+      days.push({ date: dISO, dow: i, events: [...ffrEvs, ...evs] })
     }
 
     // Charger les blocs de toutes les séances de la semaine
@@ -708,13 +712,14 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : '#1e40af'
           return (
             <div key={fm.id}
-              title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext}`}
+              title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext} — Cliquer pour détails`}
+              onClick={() => openWeekZoom(iso(y, m, d))}
               style={{
                 position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 1,
                 background: bg, color: '#fff', fontWeight: 800, fontSize: '0.55rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 4px', gap: 3, overflow: 'hidden', whiteSpace: 'nowrap',
-                borderLeft: '3px solid rgba(255,255,255,0.35)',
+                borderLeft: '3px solid rgba(255,255,255,0.35)', cursor: 'pointer',
               }}>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>vs {adversaire || 'Match'}</span>
               {scoreAff && <small style={{ fontSize: '0.48rem', opacity: 0.9, flexShrink: 0 }}>{scoreAff}</small>}
@@ -1651,10 +1656,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const fmtStart = new Date(sy, sm-1, sd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
   const fmtEnd   = new Date(ey, em-1, ed).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  // Seulement les jours avec séances
+  // Seulement les jours avec séances ou matchs FFR
   const activeDays = days.filter(d => d.events.length > 0)
   const allEvts = days.flatMap(d => d.events)
-  const nbMatch = allEvts.filter(e => e.type === 'match').length
+  const nbMatch = allEvts.filter(e => e.type === 'match' || e.type === 'ffr_match').length
   const nbTrain = allEvts.filter(e => e.type === 'entrainement').length
   const nbMuscu = allEvts.filter(e => e.type === 'muscu').length
 
@@ -1666,7 +1671,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   }, [onClose])
 
   function evtColor(type) {
-    if (type === 'match') return groupColor
+    if (type === 'match' || type === 'ffr_match') return groupColor
     if (type === 'entrainement') return '#6b94a3'
     if (type === 'muscu') return '#b08769'
     return '#9aa1ac'
@@ -1721,6 +1726,58 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   function EventContent({ evt }) {
     const color = evtColor(evt.type)
     const blocs = blocsMap[evt.id] || []
+
+    // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
+    if (evt.type === 'ffr_match') {
+      const joue = evt.score_dom != null && evt.score_ext != null
+      const gagné = joue && (evt.est_domicile ? evt.score_dom > evt.score_ext : evt.est_domicile === false ? evt.score_ext > evt.score_dom : false)
+      const perdu = joue && (evt.est_domicile ? evt.score_dom < evt.score_ext : evt.est_domicile === false ? evt.score_ext < evt.score_dom : false)
+      const adversaire = evt.est_domicile ? evt.equipe_ext : evt.est_domicile === false ? evt.equipe_dom : (evt.equipe_ext || evt.equipe_dom)
+      const score = joue
+        ? (evt.est_domicile ? `${evt.score_dom} – ${evt.score_ext}` : evt.est_domicile === false ? `${evt.score_ext} – ${evt.score_dom}` : `${evt.score_dom} – ${evt.score_ext}`)
+        : null
+      const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : groupColor
+      // Initiales de l'équipe adverse (2 lettres max)
+      const initials = (adversaire || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+      return (
+        <div style={{ background: `linear-gradient(135deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))`,
+          borderRadius: 14, padding: '18px 20px', color: '#fff', marginBottom: 2 }}>
+          {/* Badge compétition */}
+          <div style={{ fontSize: '.58rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 10 }}>
+            Match FFR{evt.journee ? ` · Journée ${evt.journee}` : ''}
+          </div>
+          {/* Corps : logo + nom adversaire + score */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
+            {/* Logo placeholder — initiales */}
+            <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(255,255,255,.18)',
+              border: '2px solid rgba(255,255,255,.45)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, flexShrink: 0, letterSpacing: '-.02em' }}>
+              {initials}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 900, lineHeight: 1.2, marginBottom: 4 }}>vs {adversaire || 'Adversaire'}</div>
+              {score
+                ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{score}</div>
+                : <div style={{ fontSize: '.78rem', opacity: .75, fontWeight: 600 }}>Résultat à venir</div>}
+            </div>
+          </div>
+          {/* Chips infos */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {evt.heure && <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>🕐 {evt.heure}</span>}
+            {evt.est_domicile != null && (
+              <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 800 }}>
+                {evt.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}
+              </span>
+            )}
+            {joue && (
+              <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>
+                {gagné ? '✅ Victoire' : perdu ? '❌ Défaite' : '🤝 Match nul'}
+              </span>
+            )}
+          </div>
+        </div>
+      )
+    }
 
     if (evt.type === 'match') {
       const mc = matchCatColor(evt.categorie, groupColor)
@@ -1937,17 +1994,20 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   function DayColumn({ day }) {
     const isToday = day.date === todayISO
-    const matchEvt = day.events.find(e => e.type === 'match')
-    const isMuscu  = !matchEvt && day.events.every(e => e.type === 'muscu')
+    const matchEvt   = day.events.find(e => e.type === 'match')
+    const ffrMatchEvt = day.events.find(e => e.type === 'ffr_match')
+    const anyMatch   = matchEvt || ffrMatchEvt
+    const isMuscu    = !anyMatch && day.events.every(e => e.type === 'muscu')
     const [, , dd] = day.date.split('-').map(Number)
     const borderColor = matchEvt ? matchCatColor(matchEvt.categorie, groupColor)
+      : ffrMatchEvt ? groupColor
       : isMuscu ? '#b08769'
       : isToday ? '#e4f816'
       : '#6b94a3'
-    const typeLabel = matchEvt ? 'Match' : isMuscu ? 'Musculation' : 'Entraînement'
+    const typeLabel = anyMatch ? 'Match' : isMuscu ? 'Musculation' : 'Entraînement'
 
     return (
-      <div style={{ background: matchEvt ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+      <div style={{ background: anyMatch ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
         {/* En-tête colonne */}
         <div style={{ padding: '10px 12px 8px', borderBottom: `3px solid ${borderColor}`, textAlign: 'center', flexShrink: 0 }}>
           <div style={{ fontSize: '.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: '#9aa1ac' }}>{DOW_FR[day.dow]}</div>
