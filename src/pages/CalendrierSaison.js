@@ -259,19 +259,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     if (!groupe?.monclubhouse_url) return
     setSyncingFFR(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/sync-ffr`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-          'apikey': process.env.REACT_APP_SUPABASE_ANON_KEY || '',
-        },
-        body: JSON.stringify({ groupe_id: groupe.id }),
+      const { data: result, error: fnErr } = await supabase.functions.invoke('sync-ffr', {
+        body: { groupe_id: groupe.id },
       })
-      const result = await res.json()
-      if (result.ok) {
-        // Recharger les données FFR
+      if (fnErr) throw fnErr
+      if (result?.ok) {
         const [{ data: ffr }, { data: cls }] = await Promise.all([
           supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
           supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
@@ -280,10 +272,10 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         setClassementFFR(cls || [])
         if (ffr?.length) setLastSyncFFR(new Date().toISOString())
       } else {
-        alert('Erreur sync : ' + (result.error || 'inconnue'))
+        alert('Erreur sync : ' + (result?.results?.[0]?.errors?.join(', ') || 'inconnue'))
       }
     } catch (e) {
-      alert('Erreur réseau : ' + e.message)
+      alert('Erreur sync : ' + (e?.message || String(e)))
     }
     setSyncingFFR(false)
   }
@@ -829,7 +821,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         {[
           ['calendrier','Calendrier'],
           ['effectif','Effectif'],
-          ...(groupe?.monclubhouse_url ? [['competition','🏉 Compétition']] : []),
+          ...(groupe?.monclubhouse_url ? [['competition','Compétition']] : []),
         ].map(([v,l]) => (
           <button key={v} onClick={() => setCalTab(v)}
             style={{ padding:'7px 18px', borderRadius:20, border:'none', fontWeight:700, fontSize:'0.8rem',
@@ -3005,9 +2997,9 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
   )
 
   // Prochains matchs (futurs)
-  const prochains = matchs.filter(m => m.date_match >= today).slice(0, 5)
-  // Derniers résultats (passés)
-  const resultats = matchs.filter(m => m.date_match < today).slice(-5).reverse()
+  const prochains = matchs.filter(m => m.date_match >= today)
+  // Tous les résultats (passés), du plus récent au plus ancien
+  const resultats = matchs.filter(m => m.date_match < today).reverse()
 
   const fmtDate = iso => {
     if (!iso) return ''
@@ -3206,12 +3198,12 @@ const S = {
   mch: { position: 'sticky', top: 0, zIndex: 5, textAlign: 'center', padding: '7px 4px 6px', background: '#fbfcfd', borderBottom: '1px solid #e6e8ec' },
   mm: { fontSize: '0.74rem', fontWeight: 800 },
   my: { fontSize: '0.5rem', fontWeight: 700, color: '#9aa1ac', letterSpacing: '0.04em' },
-  drow: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20 },
+  drow: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, maxHeight: 20, overflow: 'hidden' },
   drowVac: { background: '#fdf8ea' },
   drowToday: { boxShadow: 'inset 0 0 0 2px #333333', position: 'relative', zIndex: 2 },
   drowDrop: { background: '#eaf7ec', boxShadow: 'inset 0 0 0 2px #34c759', position: 'relative', zIndex: 3 },
   drowSel:  { background: '#e0e7ff', boxShadow: 'inset 0 0 0 1px #818cf8' },
-  blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
+  blank: { display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #eef0f3', minHeight: 20, maxHeight: 20, overflow: 'hidden', background: 'repeating-linear-gradient(45deg,#fafbfc,#fafbfc 5px,#f1f3f5 5px,#f1f3f5 10px)' },
   dnum: { width: 17, fontSize: '0.56rem', color: '#5b626c', textAlign: 'center', fontWeight: 700, lineHeight: '20px', borderRight: '1px solid #eef0f3', flexShrink: 0 },
   ddow: { width: 13, fontSize: '0.52rem', color: '#9aa1ac', textAlign: 'center', lineHeight: '20px', textTransform: 'uppercase', flexShrink: 0 },
   vacband: { fontSize: '0.5rem', fontWeight: 800, color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '1px 5px', background: '#f4e8c4', lineHeight: 1.6 },

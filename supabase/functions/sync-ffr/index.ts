@@ -254,12 +254,12 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const targetId: string | null = body?.groupe_id || null;
 
-    const q = supabase
+    let q = supabase
       .from("groupes")
       .select("id, monclubhouse_url")
       .not("monclubhouse_url", "is", null)
       .neq("monclubhouse_url", "");
-    if (targetId) q.eq("id", targetId);
+    if (targetId) q = q.eq("id", targetId);
 
     const { data: groupes, error } = await q;
     if (error) throw error;
