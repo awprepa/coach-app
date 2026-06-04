@@ -80,7 +80,7 @@ function generateICS(events) {
 
 function EventChip({ ev, tiny = false }) {
   const ts = getTypeStyle(ev.type)
-  const prefix = ev._isFFR ? '🏆 ' : ev._isGroupe ? '👥 ' : ''
+  const prefix = ev._isGroupe && !ev._isFFR ? '👥 ' : ''
   return (
     <span style={{
       background: ts.bg, color: ts.text,
@@ -529,7 +529,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                   return (
                     <div key={ev.id} style={{ background: `linear-gradient(135deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))`, borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
                       <div style={{ fontSize: '.58rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>
-                        🏆 Match FFR{m.journee ? ` · J${m.journee}` : ''}
+                        Match FFR{m.journee ? ` · J${m.journee}` : ''}
                       </div>
                       {/* Logos + VS */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 8 }}>

@@ -155,27 +155,27 @@ export default function ClientBottomNav() {
       flexDirection: 'column',
     }}>
       {/* Zone boutons */}
-      <div style={{ display: 'flex' }}>
+      <div style={{ display: 'flex', overflow: 'hidden' }}>
         {tabs.map(({ label, Icon, active, to, badge }) => (
           <button key={label} onClick={() => navigate(to)}
             style={{
-              flex: 1, display: 'flex', flexDirection: 'column',
+              flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              gap: '5px', padding: '12px 0 10px',
+              gap: '3px', padding: '10px 2px 8px',
               background: 'none', border: 'none', cursor: 'pointer',
               borderTop: active ? '2.5px solid var(--accent-stripe)' : '2.5px solid transparent',
               transition: 'border-color 0.15s',
             }}>
             <div style={{
-              width: 44, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 11, position: 'relative',
+              width: 36, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 9, position: 'relative',
               background: active ? 'var(--accent-stripe)' + '28' : 'transparent',
               transition: 'background 0.15s',
             }}>
               <Icon active={active} />
               {badge > 0 && (
                 <span style={{
-                  position: 'absolute', top: 2, right: 4,
+                  position: 'absolute', top: 2, right: 2,
                   background: '#ef4444', color: 'white',
                   borderRadius: 999, fontSize: '0.52rem', fontWeight: '800',
                   minWidth: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -184,9 +184,10 @@ export default function ClientBottomNav() {
               )}
             </div>
             <span style={{
-              fontSize: '0.63rem', fontWeight: active ? '700' : '500',
+              fontSize: '0.58rem', fontWeight: active ? '700' : '500',
               color: active ? 'var(--accent2-fg)' : '#b0b8c1',
-              letterSpacing: '0.01em',
+              letterSpacing: '0.01em', whiteSpace: 'nowrap',
+              overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
             }}>{label}</span>
           </button>
         ))}
