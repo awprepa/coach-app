@@ -18,6 +18,7 @@ const GROUP_EXTRA_TYPES = {
   muscu:       { label: 'Muscu',        bg: '#6366f1', text: 'white'   },
   vacances:    { label: 'Vacances',     bg: '#e5e7eb', text: '#6b7280' },
   competition: { label: 'Compétition',  bg: '#7c3aed', text: 'white'   },
+  ffr_match:   { label: 'Match FFR',    bg: '#1e3a8a', text: 'white'   },
 }
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -79,13 +80,14 @@ function generateICS(events) {
 
 function EventChip({ ev, tiny = false }) {
   const ts = getTypeStyle(ev.type)
+  const prefix = ev._isFFR ? '🏆 ' : ev._isGroupe ? '👥 ' : ''
   return (
     <span style={{
       background: ts.bg, color: ts.text,
       fontSize: tiny ? '0.6rem' : '0.7rem', fontWeight: '700',
       padding: tiny ? '1px 4px' : '2px 6px', borderRadius: '4px',
       overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block',
-    }}>{ev._isGroupe ? '👥 ' : ''}{ev.titre}</span>
+    }}>{prefix}{ev.titre}</span>
   )
 }
 
@@ -216,6 +218,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   const [currentDate, setCurrentDate] = useState(new Date())
   const [evenements, setEvenements]   = useState([])
   const [groupEvts, setGroupEvts]     = useState([])
+  const [ffrMatchs, setFfrMatchs]     = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
   const [form, setForm]               = useState({ type: 'seance', titre: '', seanceId: '', description: '' })
   const [saving, setSaving]           = useState(false)
@@ -227,6 +230,10 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   // Récupère les événements des groupes auxquels appartient ce client
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchGroupEvenements() }, [clientId])
+
+  // Matchs FFR des groupes du client
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchFFRMatchs() }, [clientId])
 
   // Temps réel — mise à jour instantanée quand le coach ou le client
   // ajoute / modifie / supprime un événement depuis n'importe quel device
@@ -280,6 +287,35 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     })))
   }
 
+  async function fetchFFRMatchs() {
+    if (!clientId) { setFfrMatchs([]); return }
+    const { data: memberships } = await supabase
+      .from('groupe_membres').select('groupe_id').eq('client_id', clientId)
+    if (!memberships?.length) { setFfrMatchs([]); return }
+    const groupIds = memberships.map(m => m.groupe_id)
+    const { data: matchs } = await supabase
+      .from('matchs_ffr').select('*').in('groupe_id', groupIds).order('date_match')
+    setFfrMatchs((matchs || []).map(m => {
+      const adv = m.est_domicile === true  ? m.equipe_ext
+                : m.est_domicile === false ? m.equipe_dom
+                : (m.equipe_ext || m.equipe_dom || 'Adversaire')
+      const joue = m.score_dom != null && m.score_ext != null
+      const scoreStr = joue
+        ? (m.est_domicile ? `${m.score_dom}-${m.score_ext}` : m.est_domicile === false ? `${m.score_ext}-${m.score_dom}` : `${m.score_dom}-${m.score_ext}`)
+        : null
+      return {
+        ...m,
+        id: `ffr-${m.id}`,
+        date: m.date_match,
+        type: 'ffr_match',
+        _isFFR: true,
+        titre: `vs ${adv}${scoreStr ? ` (${scoreStr})` : ''}`,
+        // Conserver les champs bruts pour le panneau détail
+        _raw: m,
+      }
+    }))
+  }
+
   async function ajouterEvenement() {
     const titre = (form.type === 'seance' && seances.length > 0)
       ? (seances.find(s => s.id === form.seanceId)?.nom || form.titre)
@@ -316,7 +352,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   }
 
   const eventsMap = {}
-  ;[...evenements, ...groupEvts].forEach(ev => { if (!eventsMap[ev.date]) eventsMap[ev.date] = []; eventsMap[ev.date].push(ev) })
+  ;[...evenements, ...groupEvts, ...ffrMatchs].forEach(ev => { if (!eventsMap[ev.date]) eventsMap[ev.date] = []; eventsMap[ev.date].push(ev) })
 
   const todayStr    = formatDate(new Date())
   const selectedStr = selectedDay ? formatDate(selectedDay) : null
@@ -455,6 +491,79 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.875rem' }}>
               {selectedEvs.map(ev => {
                 const ts = getTypeStyle(ev.type)
+
+                // ── Match FFR ──────────────────────────────────────────────────
+                if (ev._isFFR) {
+                  const m = ev._raw
+                  const joue = m.score_dom != null && m.score_ext != null
+                  const win  = joue && (m.est_domicile ? m.score_dom > m.score_ext : m.est_domicile === false ? m.score_ext > m.score_dom : null)
+                  const lose = joue && (m.est_domicile ? m.score_dom < m.score_ext : m.est_domicile === false ? m.score_ext < m.score_dom : null)
+                  const bg = joue ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : '#1e3a8a'
+                  const notreNom  = m.est_domicile === true  ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : (m.equipe_dom || m.equipe_ext)
+                  const advNom    = m.est_domicile === true  ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
+                  const notreLogo = m.est_domicile === true  ? m.logo_dom   : m.est_domicile === false ? m.logo_ext   : (m.logo_dom || m.logo_ext)
+                  const advLogo   = m.est_domicile === true  ? m.logo_ext   : m.est_domicile === false ? m.logo_dom   : (m.logo_ext || m.logo_dom)
+                  const notreInit = (notreNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                  const advInit   = (advNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                  const logoG  = m.est_domicile !== false ? notreLogo : advLogo
+                  const logoD  = m.est_domicile !== false ? advLogo   : notreLogo
+                  const nomG   = m.est_domicile !== false ? notreNom  : advNom
+                  const nomD   = m.est_domicile !== false ? advNom    : notreNom
+                  const initG  = m.est_domicile !== false ? notreInit : advInit
+                  const initD  = m.est_domicile !== false ? advInit   : notreInit
+                  const scoreStr = joue
+                    ? (m.est_domicile ? `${m.score_dom}-${m.score_ext}` : m.est_domicile === false ? `${m.score_ext}-${m.score_dom}` : `${m.score_dom}-${m.score_ext}`)
+                    : null
+
+                  function LogoBadgeSmall({ url, initials }) {
+                    return (
+                      <div style={{ width: 40, height: 40, borderRadius: 10,
+                        background: 'rgba(255,255,255,.18)', border: '1.5px solid rgba(255,255,255,.4)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                        {url ? <img src={url} alt={initials} style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
+                        <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex', alignItems:'center', justifyContent:'center', fontSize:'.65rem', fontWeight:900 }}>{initials}</div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={ev.id} style={{ background: `linear-gradient(135deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))`, borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
+                      <div style={{ fontSize: '.58rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>
+                        🏆 Match FFR{m.journee ? ` · J${m.journee}` : ''}
+                      </div>
+                      {/* Logos + VS */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
+                          <LogoBadgeSmall url={logoG} initials={initG} />
+                          <div style={{ fontSize: '.55rem', fontWeight: 700, opacity: .85, textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomG}</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                          {scoreStr
+                            ? <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>{scoreStr}</span>
+                            : <span style={{ fontSize: '.72rem', fontWeight: 900, opacity: .9, letterSpacing: '.04em' }}>VS</span>
+                          }
+                          {!scoreStr && m.heure && <span style={{ fontSize: '.6rem', opacity: .7 }}>🕐 {m.heure}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
+                          <LogoBadgeSmall url={logoD} initials={initD} />
+                          <div style={{ fontSize: '.55rem', fontWeight: 700, opacity: .85, textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomD}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
+                        {m.est_domicile != null && (
+                          <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '.6rem', fontWeight: 800 }}>
+                            {m.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}
+                          </span>
+                        )}
+                        {joue && <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 6, padding: '2px 8px', fontSize: '.6rem', fontWeight: 700 }}>
+                          {win ? '✅ Victoire' : lose ? '❌ Défaite' : '🤝 Nul'}
+                        </span>}
+                      </div>
+                    </div>
+                  )
+                }
+
+                // ── Événement groupe ───────────────────────────────────────────
                 if (ev._isGroupe) {
                   return (
                     <div key={`g-${ev.id}`} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8 }}>
@@ -467,6 +576,8 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                     </div>
                   )
                 }
+
+                // ── Événement personnel ────────────────────────────────────────
                 return (
                   <div key={ev.id} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8, border: ev.type === 'autre' ? '1px solid #99f6e4' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
