@@ -2283,9 +2283,9 @@ function SeanceModal({
       setSelectedSeqId(data.id)
     }
   }
-  function updateSequence(seqId, patch) {
-    patchSeqInState?.(seqId, patch)   // instantané
-    supabase.from('groupe_seance_sequences').update(patch).eq('id', seqId) // fire-and-forget
+  async function updateSequence(seqId, patch) {
+    patchSeqInState?.(seqId, patch)   // UI instantanée
+    await supabase.from('groupe_seance_sequences').update(patch).eq('id', seqId)
   }
   async function addNouvelleSerie(blocId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
@@ -2314,10 +2314,10 @@ function SeanceModal({
   async function deleteSequence(blocId, seqId) {
     if (!seqId || !blocId) return
     setSelectedSeqId(null)
-    removeSeq?.(blocId, seqId)   // instantané, pas de confirm
-    supabase.from('groupe_seance_sequences').delete().eq('id', seqId) // fire-and-forget
+    removeSeq?.(blocId, seqId)   // UI instantanée
+    await supabase.from('groupe_seance_sequences').delete().eq('id', seqId)
   }
-  function reorderSequences(blocId, fromId, toId) {
+  async function reorderSequences(blocId, fromId, toId) {
     const bloc = (panel.blocs || []).find(b => b.id === blocId)
     if (!bloc) return
     const seqs = [...(bloc.sequences || [])].sort((a, b) => a.ordre - b.ordre)
@@ -2329,8 +2329,8 @@ function SeanceModal({
     reordered.splice(toIdx, 0, moved)
     // Mise à jour locale instantanée
     setBlocSeqs?.(blocId, reordered.map((s, i) => ({ ...s, ordre: i + 1 })))
-    // Sync DB en arrière-plan
-    Promise.all(reordered.map((s, i) =>
+    // Sync DB (await pour garantir l'exécution)
+    await Promise.all(reordered.map((s, i) =>
       supabase.from('groupe_seance_sequences').update({ ordre: i + 1 }).eq('id', s.id)
     ))
   }
