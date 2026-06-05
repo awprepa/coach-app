@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
@@ -755,7 +755,7 @@ export default function Seance() {
             </thead>
             <tbody>
               {exercices.map(ex => (
-                <React.Fragment key={ex.id}>
+                <Fragment key={ex.id}>
                 <tr style={{ ...styles.tr, ...blocStyle(ex.code) }}>
                   {enEdition === ex.id ? (
                     <>
@@ -941,7 +941,7 @@ export default function Seance() {
                     </td>
                   </tr>
                 )}
-                </React.Fragment>
+                </Fragment>
               ))}
             </tbody>
           </table>
