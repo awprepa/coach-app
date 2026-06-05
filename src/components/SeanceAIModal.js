@@ -79,6 +79,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
     const newApiMsgs = [...apiMessages, { role: 'user', content: text }]
     setApiMessages(newApiMsgs)
     setAiLoading(true)
+    setPhase('chat') // repasse en chat le temps que l'IA réponde
     try {
       const { data: res } = await supabase.functions.invoke('seance-generate-ai', {
         body: { mode: 'chat', type: aiMode, messages: newApiMsgs }
@@ -273,21 +274,24 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
               <div ref={bottomRef} />
             </div>
             <div style={AI.footer}>
-              {phase === 'ready' && !aiLoading ? (
-                <button onClick={generateSession} style={AI.btnGenerate}>{genLabel}</button>
-              ) : phase === 'chat' && !aiLoading ? (
-                <div style={AI.inputRow}>
-                  <input
-                    value={userInput}
-                    onChange={e => setUserInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sendAnswer(userInput)}
-                    placeholder="Réponds ou précise…"
-                    style={AI.input}
-                    autoFocus
-                  />
-                  <button onClick={() => sendAnswer(userInput)} disabled={!userInput.trim()} style={AI.sendBtn}>→</button>
+              {!aiLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={AI.inputRow}>
+                    <input
+                      value={userInput}
+                      onChange={e => setUserInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && sendAnswer(userInput)}
+                      placeholder={phase === 'ready' ? 'Modifier ou préciser quelque chose…' : 'Réponds ou précise…'}
+                      style={AI.input}
+                      autoFocus
+                    />
+                    <button onClick={() => sendAnswer(userInput)} disabled={!userInput.trim()} style={AI.sendBtn}>→</button>
+                  </div>
+                  {phase === 'ready' && (
+                    <button onClick={generateSession} style={AI.btnGenerate}>{genLabel}</button>
+                  )}
                 </div>
-              ) : null}
+              )}
             </div>
           </>
         )}
