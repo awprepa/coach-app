@@ -1012,7 +1012,7 @@ export default function SeanceClient() {
                 <input type="number" inputMode="numeric" value={serie.reps_reelles}
                   onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
-                  placeholder={tempsMode ? (ex.repetitions?.replace('"', '') || 'sec') : (ex.repetitions || 'reps')}
+                  placeholder={tempsMode ? (effReps ? String(effReps).replace('"', '') : 'sec') : (effReps ? String(effReps) : 'reps')}
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>{tempsMode ? 's' : 'reps'}</span>
