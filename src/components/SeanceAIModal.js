@@ -40,8 +40,8 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
     const initMsg = {
       role: 'user',
       content: mode === 'cycle'
-        ? "Je veux concevoir un cycle complet d'entraînement. Aide-moi à le programmer."
-        : "Je veux créer une nouvelle séance d'entraînement. Aide-moi à la concevoir."
+        ? "Salut, je veux programmer un cycle complet pour un de mes athlètes. On discute ?"
+        : "Salut, j'ai besoin de concevoir une séance. On discute pour trouver ce qui colle le mieux ?"
     }
     const msgs = [initMsg]
     setApiMessages(msgs)
@@ -151,7 +151,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
     } catch { setPhase('error') }
   }
 
-  const genLabel = aiMode === 'cycle' ? '✨ Générer le cycle' : '✨ Générer la séance'
+  const genLabel = aiMode === 'cycle' ? '✨ Générer le cycle complet' : '✨ Générer la séance'
   const genLoadLabel = aiMode === 'cycle' ? 'Génération du cycle en cours…' : 'Génération de la séance en cours…'
 
   return createPortal(
