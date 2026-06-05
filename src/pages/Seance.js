@@ -755,7 +755,8 @@ export default function Seance() {
             </thead>
             <tbody>
               {exercices.map(ex => (
-                <tr key={ex.id} style={{ ...styles.tr, ...blocStyle(ex.code) }}>
+                <React.Fragment key={ex.id}>
+                <tr style={{ ...styles.tr, ...blocStyle(ex.code) }}>
                   {enEdition === ex.id ? (
                     <>
                       <td style={styles.td}><input value={formEdition.code} onChange={e => setFormEdition({ ...formEdition, code: e.target.value })} style={{ ...styles.cellInput, width: '50px' }} /></td>
@@ -940,6 +941,7 @@ export default function Seance() {
                     </td>
                   </tr>
                 )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
