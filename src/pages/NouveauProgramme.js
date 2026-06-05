@@ -13,6 +13,10 @@ export default function NouveauProgramme() {
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [creating, setCreating] = useState(false)
   const [aiProgrammeId, setAiProgrammeId] = useState(null) // programme créé en attente de génération IA
+  const [showImport, setShowImport] = useState(false)
+  const [importJson, setImportJson] = useState('')
+  const [importError, setImportError] = useState('')
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     supabase.from('programme_templates')
@@ -65,6 +69,55 @@ export default function NouveauProgramme() {
       }
     }
 
+    navigate(`/programme/${prog.id}`)
+  }
+
+  async function handleImport() {
+    setImportError('')
+    let data
+    try {
+      data = JSON.parse(importJson.trim())
+    } catch {
+      setImportError('JSON invalide — vérifie la syntaxe.')
+      return
+    }
+    if (!data.nom || !Array.isArray(data.seances)) {
+      setImportError('Structure incorrecte — le JSON doit avoir "nom" et "seances".')
+      return
+    }
+    setImporting(true)
+    const payload = groupeId
+      ? { nom: data.nom, semaines: data.semaines || 4, groupe_id: groupeId, date_debut: form.date_debut || null }
+      : { nom: data.nom, semaines: data.semaines || 4, client_id: id, date_debut: form.date_debut || null }
+    const { data: prog, error } = await supabase.from('programmes').insert([payload]).select().single()
+    if (error) { setImportError(error.message); setImporting(false); return }
+
+    for (const [idx, s] of data.seances.entries()) {
+      const { data: newSeance } = await supabase
+        .from('seances')
+        .insert({ programme_id: prog.id, nom: s.nom, ordre: s.ordre || idx + 1 })
+        .select().single()
+      if (newSeance && Array.isArray(s.exercices) && s.exercices.length > 0) {
+        await supabase.from('exercices').insert(
+          s.exercices.map((ex, i) => ({
+            seance_id: newSeance.id,
+            nom: ex.nom || '',
+            code: ex.code || '',
+            series: ex.series || 3,
+            repetitions: ex.repetitions || '8',
+            tempo: ex.tempo || '',
+            recuperation: ex.recuperation || '',
+            type_intensite: ex.type_intensite || 'aucune',
+            valeur_intensite: ex.valeur_intensite || null,
+            ordre: ex.ordre || i + 1,
+            note_ia: ex.note_ia || null,
+            progressions: ex.progressions || null,
+          }))
+        )
+      }
+    }
+    setImporting(false)
+    setShowImport(false)
     navigate(`/programme/${prog.id}`)
   }
 
@@ -188,8 +241,43 @@ export default function NouveauProgramme() {
           <button type="button" onClick={handleAI} disabled={creating} style={styles.btnAI}>
             ✨ Générer avec l'IA
           </button>
+          <button type="button" onClick={() => { setShowImport(true); setImportJson(''); setImportError('') }} disabled={creating} style={styles.btnImport}>
+            📥 Importer un JSON
+          </button>
         </div>
       </form>
+
+      {/* Modal import JSON */}
+      {showImport && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#111827' }}>📥 Importer un cycle JSON</h2>
+              <button onClick={() => setShowImport(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: '0 0 0.75rem' }}>
+              Colle ici le JSON généré par Claude. Il sera importé directement dans l'app avec toutes les séances, exercices et progressions.
+            </p>
+            <textarea
+              value={importJson}
+              onChange={e => { setImportJson(e.target.value); setImportError('') }}
+              placeholder={'{\n  "nom": "Cycle Force",\n  "semaines": 8,\n  "seances": [...]\n}'}
+              style={{ width: '100%', height: 220, padding: '0.75rem', border: `1.5px solid ${importError ? '#ef4444' : '#e5e7eb'}`, borderRadius: 10, fontSize: '0.78rem', fontFamily: 'monospace', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#111827' }}
+            />
+            {importError && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.4rem 0 0' }}>⚠️ {importError}</p>}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+              <button onClick={() => setShowImport(false)} style={styles.btnSecondary}>Annuler</button>
+              <button
+                onClick={handleImport}
+                disabled={importing || !importJson.trim()}
+                style={{ ...styles.btnPrimary, opacity: (importing || !importJson.trim()) ? 0.6 : 1 }}
+              >
+                {importing ? 'Import en cours…' : '📥 Importer le cycle'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {aiProgrammeId && (
         <SeanceAIModal
@@ -219,4 +307,5 @@ const styles = {
   btnPrimary: { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },
   btnAI: { background: '#111827', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.35)', borderRadius: '12px', padding: '0.75rem 1.25rem', fontSize: '0.88rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnImport: { background: 'white', color: '#374151', border: '1.5px solid #d1d5db', borderRadius: '12px', padding: '0.75rem 1.25rem', fontSize: '0.88rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
 }
