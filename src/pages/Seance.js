@@ -1108,40 +1108,53 @@ export default function Seance() {
           existingCount={exercices.length}
           onClose={() => setShowAIModal(false)}
           onInsert={insertAIExercices}
+          programmeId={seance?.programmes?.id}
         />
       )}
     </div>
   )
 }
 
-// ── Modale IA génération de séance ────────────────────────────────────────────
-function SeanceAIModal({ existingCount, onClose, onInsert }) {
-  const [biblioFull, setBiblioFull]         = useState([])
-  const [uiMessages, setUiMessages]         = useState([])
-  const [apiMessages, setApiMessages]       = useState([])
-  const [phase, setPhase]                   = useState('loading')
+// ── Modale IA génération de séance / cycle ────────────────────────────────────
+function SeanceAIModal({ existingCount, onClose, onInsert, programmeId }) {
+  const [biblioFull, setBiblioFull]             = useState([])
+  const [uiMessages, setUiMessages]             = useState([])
+  const [apiMessages, setApiMessages]           = useState([])
+  const [phase, setPhase]                       = useState('intro') // intro|loading|chat|ready|generating|preview|done|error
+  const [aiMode, setAiMode]                     = useState('seance') // 'seance' | 'cycle'
   const [generatedSession, setGeneratedSession] = useState(null)
-  const [userInput, setUserInput]           = useState('')
-  const [aiLoading, setAiLoading]           = useState(false)
+  const [generatedCycle, setGeneratedCycle]     = useState(null)
+  const [userInput, setUserInput]               = useState('')
+  const [aiLoading, setAiLoading]               = useState(false)
   const bottomRef = useRef(null)
 
-  useEffect(() => { initChat() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Précharge la bibliothèque dès l'ouverture
+  useEffect(() => {
+    supabase.from('bibliotheque_exercices').select('id, nom').order('nom')
+      .then(({ data }) => setBiblioFull(data || []))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [uiMessages, aiLoading])
 
-  async function initChat() {
-    const { data } = await supabase.from('bibliotheque_exercices').select('id, nom').order('nom')
-    const list = data || []
-    setBiblioFull(list)
-    setPhase('chat')
+  async function startChat(mode) {
+    setAiMode(mode)
+    setPhase('loading')
     setAiLoading(true)
-    const initMsg = { role: 'user', content: "Je veux créer une nouvelle séance d'entraînement. Aide-moi à la concevoir." }
+    const initMsg = {
+      role: 'user',
+      content: mode === 'cycle'
+        ? "Je veux concevoir un cycle complet d'entraînement. Aide-moi à le programmer."
+        : "Je veux créer une nouvelle séance d'entraînement. Aide-moi à la concevoir."
+    }
     const msgs = [initMsg]
     setApiMessages(msgs)
+    setPhase('chat')
     try {
-      const { data: res } = await supabase.functions.invoke('seance-generate-ai', { body: { mode: 'chat', messages: msgs } })
+      const { data: res } = await supabase.functions.invoke('seance-generate-ai', {
+        body: { mode: 'chat', type: mode, messages: msgs }
+      })
       if (!res?.ok) throw new Error(res?.error || 'Erreur')
       processAIResponse(res, msgs)
     } catch { setPhase('error') }
@@ -1172,7 +1185,9 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
     setApiMessages(newApiMsgs)
     setAiLoading(true)
     try {
-      const { data: res } = await supabase.functions.invoke('seance-generate-ai', { body: { mode: 'chat', messages: newApiMsgs } })
+      const { data: res } = await supabase.functions.invoke('seance-generate-ai', {
+        body: { mode: 'chat', type: aiMode, messages: newApiMsgs }
+      })
       if (!res?.ok) throw new Error(res?.error || 'Erreur')
       processAIResponse(res, newApiMsgs)
     } catch {
@@ -1183,17 +1198,25 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
 
   async function generateSession() {
     setPhase('generating')
-    const genMsgs = [...apiMessages, { role: 'user', content: 'Génère la séance maintenant.' }]
+    const prompt = aiMode === 'cycle' ? 'Génère le cycle complet maintenant.' : 'Génère la séance maintenant.'
+    const genMsgs = [...apiMessages, { role: 'user', content: prompt }]
     try {
       const { data: res } = await supabase.functions.invoke('seance-generate-ai', {
-        body: { mode: 'generate', messages: genMsgs, bibliotheque: biblioFull.map(e => e.nom) }
+        body: { mode: 'generate', type: aiMode, messages: genMsgs, bibliotheque: biblioFull.map(e => e.nom) }
       })
-      if (!res?.ok || !res.exercices?.length) throw new Error(res?.error || 'Génération échouée')
-      setGeneratedSession(res)
+      if (!res?.ok) throw new Error(res?.error || 'Génération échouée')
+      if (aiMode === 'cycle') {
+        if (!res.seances?.length) throw new Error('Cycle vide')
+        setGeneratedCycle(res)
+      } else {
+        if (!res.exercices?.length) throw new Error('Séance vide')
+        setGeneratedSession(res)
+      }
       setPhase('preview')
     } catch { setPhase('error') }
   }
 
+  // ── Confirmer séance unique ──────────────────────────────────────────────────
   function confirmInsert() {
     const exercicesWithBiblio = generatedSession.exercices.map(ex => {
       const match = biblioFull.find(b => b.nom.toLowerCase() === ex.nom.toLowerCase())
@@ -1203,6 +1226,41 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
     onClose()
   }
 
+  // ── Confirmer cycle complet ──────────────────────────────────────────────────
+  async function confirmInsertCycle() {
+    if (!programmeId) { alert('Programme introuvable — ouvre d\'abord une séance liée à un programme.'); return }
+    setPhase('generating')
+    try {
+      for (const s of generatedCycle.seances) {
+        const { data: newSeance, error: seanceErr } = await supabase
+          .from('seances').insert([{ programme_id: programmeId, nom: s.nom }]).select().single()
+        if (seanceErr || !newSeance) continue
+        let ordre = 1
+        for (const ex of s.exercices) {
+          const match = biblioFull.find(b => b.nom.toLowerCase() === ex.nom.toLowerCase())
+          await supabase.from('exercices').insert([{
+            seance_id: newSeance.id,
+            code: ex.code,
+            nom: ex.nom,
+            series: ex.series ? parseInt(String(ex.series)) : null,
+            repetitions: ex.repetitions || null,
+            tempo: ex.tempo || null,
+            recuperation: ex.recuperation || null,
+            type_intensite: ex.type_intensite || null,
+            valeur_intensite: ex.valeur_intensite || null,
+            progressions: ex.progressions || [],
+            ordre: ordre++,
+            bibliotheque_id: match?.id || null,
+          }])
+        }
+      }
+      setPhase('done')
+    } catch { setPhase('error') }
+  }
+
+  const genLabel = aiMode === 'cycle' ? '✨ Générer le cycle' : '✨ Générer la séance'
+  const genLoadLabel = aiMode === 'cycle' ? 'Génération du cycle en cours…' : 'Génération de la séance en cours…'
+
   return createPortal(
     <div style={AI.overlay}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}`}</style>
@@ -1211,13 +1269,39 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
       <div style={AI.header}>
         <div>
           <p style={AI.headerSup}>Préparation physique · IA</p>
-          <h2 style={AI.headerTitle}>✨ Génération de séance</h2>
+          <h2 style={AI.headerTitle}>✨ {aiMode === 'cycle' ? 'Génération de cycle' : 'Génération de séance'}</h2>
         </div>
         <button onClick={onClose} style={AI.closeBtn}>✕</button>
       </div>
 
       {/* Body */}
       <div style={AI.body}>
+
+        {/* ── Intro : choix du mode ── */}
+        {phase === 'intro' && (
+          <div style={{ ...AI.centered, gap: 24, padding: '2rem 1.5rem' }}>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Que veux-tu générer ?</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: 340 }}>
+              <button onClick={() => startChat('seance')} style={AI.modeBtn}>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🏋</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={AI.modeBtnTitle}>Séance unique</p>
+                  <p style={AI.modeBtnDesc}>Génère une séance adaptée au contexte actuel</p>
+                </div>
+              </button>
+              <button onClick={() => startChat('cycle')} style={{ ...AI.modeBtn, ...AI.modeBtnCycle }}>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>📅</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={AI.modeBtnTitle}>Cycle complet</p>
+                  <p style={AI.modeBtnDesc}>Programme N semaines · progressions automatiques par bloc</p>
+                </div>
+              </button>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: '0.7rem', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+              Fondé sur méta-analyses récentes (2019-2025)
+            </p>
+          </div>
+        )}
 
         {/* Loading / Error */}
         {(phase === 'loading' || phase === 'error') && (
@@ -1233,8 +1317,23 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
         {phase === 'generating' && (
           <div style={AI.centered}>
             <div style={AI.spinner} />
-            <p style={AI.spinnerText}>Génération de la séance en cours…</p>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', margin: '4px 0 0' }}>Cela peut prendre quelques secondes</p>
+            <p style={AI.spinnerText}>{genLoadLabel}</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', margin: '4px 0 0' }}>
+              {aiMode === 'cycle' ? 'Peut prendre 10-20 secondes…' : 'Cela peut prendre quelques secondes'}
+            </p>
+          </div>
+        )}
+
+        {/* ── Done (cycle inséré) ── */}
+        {phase === 'done' && (
+          <div style={{ ...AI.centered, gap: 12, padding: '2rem' }}>
+            <p style={{ fontSize: '2.5rem', margin: 0 }}>✅</p>
+            <p style={{ ...AI.spinnerText, fontSize: '1.05rem' }}>Cycle créé !</p>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.82rem', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+              {generatedCycle?.seances?.length} séances ont été ajoutées à ton programme.<br/>
+              Elles sont visibles dans la liste des séances.
+            </p>
+            <button onClick={onClose} style={{ ...AI.btnGenerate, marginTop: 12, width: 'auto', padding: '0.75rem 2.5rem' }}>Fermer</button>
           </div>
         )}
 
@@ -1253,7 +1352,6 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
                       <div style={{ ...AI.aiBubble, ...(msg.isReady ? AI.readyBubble : {}), ...(msg.isError ? AI.errorBubble : {}) }}>
                         {msg.isReady && '✅ '}{msg.text}
                       </div>
-                      {/* Options cliquables — seulement sur le dernier message AI */}
                       {msg.options?.length > 0 && i === uiMessages.length - 1 && !aiLoading && (
                         <div style={AI.optionsRow}>
                           {msg.options.map((opt, oi) => (
@@ -1269,7 +1367,6 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
                   )}
                 </div>
               ))}
-              {/* Typing indicator */}
               {aiLoading && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1rem' }}>
                   <span style={AI.aiAvatar}>✨</span>
@@ -1280,11 +1377,9 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
               )}
               <div ref={bottomRef} />
             </div>
-
-            {/* Footer */}
             <div style={AI.footer}>
               {phase === 'ready' && !aiLoading ? (
-                <button onClick={generateSession} style={AI.btnGenerate}>✨ Générer la séance</button>
+                <button onClick={generateSession} style={AI.btnGenerate}>{genLabel}</button>
               ) : phase === 'chat' && !aiLoading ? (
                 <div style={AI.inputRow}>
                   <input
@@ -1302,8 +1397,8 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
           </>
         )}
 
-        {/* Preview */}
-        {phase === 'preview' && generatedSession && (
+        {/* ── Preview séance unique ── */}
+        {phase === 'preview' && aiMode === 'seance' && generatedSession && (
           <>
             <div style={AI.preview}>
               <p style={AI.previewTitle}>{generatedSession.nom}</p>
@@ -1335,6 +1430,63 @@ function SeanceAIModal({ existingCount, onClose, onInsert }) {
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button onClick={() => { setPhase('chat'); setGeneratedSession(null) }} style={AI.btnSecondary}>← Recommencer</button>
                 <button onClick={confirmInsert} style={{ ...AI.btnGenerate, flex: 1 }}>✓ Insérer dans la séance</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Preview cycle complet ── */}
+        {phase === 'preview' && aiMode === 'cycle' && generatedCycle && (
+          <>
+            <div style={AI.preview}>
+              <p style={AI.previewTitle}>{generatedCycle.nom}</p>
+              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                <span style={AI.chip}>{generatedCycle.semaines} semaines</span>
+                <span style={AI.chip}>{generatedCycle.seances?.length} séances / semaine</span>
+              </div>
+              {generatedCycle.note_ia && (
+                <div style={AI.noteIA}>🤖 {generatedCycle.note_ia}</div>
+              )}
+              {generatedCycle.seances.map((s, si) => (
+                <div key={si} style={{ marginBottom: '1.25rem' }}>
+                  <p style={AI.sessionHeader}>{s.nom}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {s.exercices.map((ex, ei) => {
+                      const inBiblio = biblioFull.some(b => b.nom.toLowerCase() === ex.nom.toLowerCase())
+                      return (
+                        <div key={ei} style={AI.exRow}>
+                          <span style={AI.exCode}>{ex.code}</span>
+                          <div style={{ flex: 1 }}>
+                            <p style={AI.exNom}>{ex.nom} {inBiblio && <span style={{ fontSize: '0.7rem', color: '#e4f816', fontWeight: 700 }}>· biblio</span>}</p>
+                            {ex.progressions?.length > 0 ? (
+                              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: 3 }}>
+                                {ex.progressions.map((p, pi) => (
+                                  <span key={pi} style={{ fontSize: '0.62rem', background: 'rgba(228,248,22,0.1)', color: '#e4f816', borderRadius: 5, padding: '2px 6px', fontWeight: 700, border: '1px solid rgba(228,248,22,0.2)' }}>
+                                    {p.label}: {p.series}×{p.repetitions}{p.valeur_intensite ? ` ${p.valeur_intensite}` : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p style={AI.exDetails}>
+                                {ex.series && `${ex.series} séries`}
+                                {ex.repetitions && ` × ${ex.repetitions}`}
+                                {ex.type_intensite && ` · ${ex.type_intensite}${ex.valeur_intensite ? ' ' + ex.valeur_intensite : ''}`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={AI.footer}>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => { setPhase('chat'); setGeneratedCycle(null) }} style={AI.btnSecondary}>← Recommencer</button>
+                <button onClick={confirmInsertCycle} style={{ ...AI.btnGenerate, flex: 1 }}>
+                  ✅ Créer {generatedCycle.seances.length} séances
+                </button>
               </div>
             </div>
           </>
@@ -1380,6 +1532,14 @@ const AI = {
   exCode:       { background: '#e4f816', color: '#111827', padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.8rem', fontWeight: 900, flexShrink: 0, marginTop: 2 },
   exNom:        { color: 'white', fontWeight: 700, fontSize: '0.92rem', margin: '0 0 0.2rem' },
   exDetails:    { color: 'rgba(255,255,255,0.42)', fontSize: '0.78rem', margin: 0 },
+  // Mode selection
+  modeBtn:      { display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem', background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit', transition: 'all 0.15s' },
+  modeBtnCycle: { borderColor: 'rgba(228,248,22,0.3)', background: 'rgba(228,248,22,0.05)' },
+  modeBtnTitle: { color: 'white', fontWeight: 800, fontSize: '0.95rem', margin: '0 0 0.2rem' },
+  modeBtnDesc:  { color: 'rgba(255,255,255,0.42)', fontSize: '0.75rem', margin: 0, lineHeight: 1.4 },
+  // Cycle preview
+  chip:         { background: 'rgba(228,248,22,0.12)', color: '#e4f816', borderRadius: 20, padding: '0.25rem 0.75rem', fontSize: '0.72rem', fontWeight: 800, border: '1px solid rgba(228,248,22,0.2)' },
+  sessionHeader:{ fontSize: '0.78rem', fontWeight: 900, color: '#e4f816', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.5rem', padding: '0.3rem 0', borderBottom: '1px solid rgba(228,248,22,0.15)' },
 }
 
 const styles = {

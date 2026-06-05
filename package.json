@@ -1,6 +1,6 @@
 {
   "name": "coach-app",
-  "version": "0.6.17",
+  "version": "0.6.18",
   "private": true,
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",
