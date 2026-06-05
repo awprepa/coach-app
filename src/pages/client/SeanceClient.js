@@ -770,8 +770,9 @@ export default function SeanceClient() {
   // Résumé d'un bloc terminé (ex: "4×6 · 80 kg")
   function blocSummary(groupItems) {
     const ex = groupItems[0]
-    const series = ex.series || '?'
-    const reps = ex.repetitions || '?'
+    const progActif = (ex.progressions || []).find(p => semaineActuelle >= (p.semaine_debut || 1) && semaineActuelle <= (p.semaine_fin || 999))
+    const series = progActif?.series || ex.series || '?'
+    const reps = progActif?.repetitions || ex.repetitions || '?'
     const lastTracked = tracking[ex.id]?.find(s => s.is_done && s.poids)
     const kg = lastTracked?.poids ? `· ${lastTracked.poids} kg` : ''
     return `${series}×${reps} ${kg}`.trim()
@@ -818,7 +819,16 @@ export default function SeanceClient() {
   function isTemps(reps) { return typeof reps === 'string' && reps.includes('"') }
 
   function renderExContent(ex, showRecup, showSeries = true, groupLetter = null, groupItems = null) {
-    const tempsMode = isTemps(ex.repetitions)
+    // ── Progression : trouver le bloc actif pour la semaine courante ──
+    const progActif = (ex.progressions || []).find(p =>
+      semaineActuelle >= (p.semaine_debut || 1) && semaineActuelle <= (p.semaine_fin || 999)
+    )
+    // Valeurs effectives : progression > défaut
+    const effSeries    = progActif?.series          || ex.series
+    const effReps      = progActif?.repetitions     || ex.repetitions
+    const effIntensity = progActif?.valeur_intensite || ex.valeur_intensite
+
+    const tempsMode = isTemps(effReps)
     const seriesList = tracking[ex.id] || []
     const hasAnyCharge = Object.values(charges[ex.id] || {}).some(v => v.charge && parseFloat(v.charge) > 0)
     const isHistoOpen = histoOpen[ex.id]
@@ -839,17 +849,31 @@ export default function SeanceClient() {
             <span style={S.exCode}>{ex.code}</span>
             <span style={S.exNom}>{ex.nom}</span>
           </div>
-          <span style={S.semBadge}>S{semaineActuelle}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {progActif && (
+              <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
+                📈 {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
+              </span>
+            )}
+            <span style={S.semBadge}>S{semaineActuelle}</span>
+          </div>
         </div>
+
+        {/* Détail libre de la progression (ex: variante, charge max…) */}
+        {progActif?.detail && (
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 10px', marginBottom: '0.5rem', fontSize: '.75rem', color: '#1e40af', fontWeight: 600, lineHeight: 1.5 }}>
+            {progActif.detail}
+          </div>
+        )}
 
         {/* Barre paramètres */}
         {(() => {
           const params = [
-            showSeries && ex.series       ? { label: 'SÉRIES',              val: ex.series }                          : null,
-            ex.repetitions                ? { label: tempsMode ? 'DURÉE' : 'REPS', val: ex.repetitions }             : null,
-            ex.tempo                      ? { label: 'TEMPO',               val: ex.tempo }                           : null,
-            showRecup && ex.recuperation  ? { label: 'RÉCUP',               val: ex.recuperation }                    : null,
-            ex.type_intensite             ? { label: 'INTENSITÉ',           val: ex.valeur_intensite || ex.type_intensite } : null,
+            showSeries && effSeries        ? { label: 'SÉRIES',              val: effSeries }                           : null,
+            effReps                        ? { label: tempsMode ? 'DURÉE' : 'REPS', val: effReps }                     : null,
+            ex.tempo                       ? { label: 'TEMPO',               val: ex.tempo }                           : null,
+            showRecup && ex.recuperation   ? { label: 'RÉCUP',               val: ex.recuperation }                    : null,
+            ex.type_intensite              ? { label: 'INTENSITÉ',           val: effIntensity || ex.type_intensite }   : null,
           ].filter(Boolean)
           if (!params.length) return null
           return (

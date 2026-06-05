@@ -19,6 +19,7 @@ export default function Seance() {
   const [form, setForm] = useState({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null })
   const [enEdition, setEnEdition] = useState(null)
   const [formEdition, setFormEdition] = useState({})
+  const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
   const [biblioSearch, setBiblioSearch] = useState('')
   const [biblioResults, setBiblioResults] = useState([])
   const [showFullLibrary, setShowFullLibrary] = useState(false)
@@ -239,6 +240,41 @@ export default function Seance() {
       if (error) alert(error.message)
       else setCharges({ ...charges, [exId]: { ...charges[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: valeur } } })
     }
+  }
+
+  // ── Progressions par semaines ──────────────────────────────────────────
+  async function updateProgressions(exId, progs) {
+    setExercices(exercices.map(ex => ex.id === exId ? { ...ex, progressions: progs } : ex))
+    await supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
+  }
+  function addProgBloc(exId) {
+    const ex = exercices.find(e => e.id === exId)
+    const progs = ex?.progressions || []
+    const lastFin = progs.length > 0 ? (progs[progs.length - 1].semaine_fin || 0) : 0
+    const debut = lastFin + 1
+    const fin = debut + 1
+    const newBloc = {
+      id: Math.random().toString(36).slice(2),
+      label: `S${debut}-${fin}`,
+      semaine_debut: debut,
+      semaine_fin: fin,
+      series: ex?.series || '',
+      repetitions: ex?.repetitions || '',
+      valeur_intensite: ex?.valeur_intensite || '',
+      detail: '',
+    }
+    updateProgressions(exId, [...progs, newBloc])
+  }
+  function updateProgBloc(exId, blocId, field, val) {
+    const ex = exercices.find(e => e.id === exId)
+    const progs = (ex?.progressions || []).map(p =>
+      p.id === blocId ? { ...p, [field]: val } : p
+    )
+    updateProgressions(exId, progs)
+  }
+  function removeProgBloc(exId, blocId) {
+    const ex = exercices.find(e => e.id === exId)
+    updateProgressions(exId, (ex?.progressions || []).filter(p => p.id !== blocId))
   }
 
   async function sauvegarderTemplate() {
@@ -810,12 +846,100 @@ export default function Seance() {
                       <td style={styles.td}>
                         <div style={{ display: 'flex', gap: '0.25rem' }}>
                           <button onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '' }) }} style={styles.iconBtnSm}>✏️</button>
+                          <button
+                            onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
+                            title="Progression par semaines"
+                            style={{ ...styles.iconBtnSm, background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : undefined }}>
+                            📅
+                          </button>
                           <button onClick={() => supprimerExercice(ex.id)} style={styles.iconBtnSm}>🗑️</button>
                         </div>
                       </td>
                     </>
                   )}
                 </tr>
+                {/* ── Sous-ligne progression ── */}
+                {showProgressionFor === ex.id && (
+                  <tr>
+                    <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f0f7ff' }}>
+                      <div style={{ padding: '12px 16px', borderTop: '2px solid #bfdbfe', borderBottom: '2px solid #bfdbfe' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.06em' }}>📅 Progression — {ex.nom}</span>
+                          <button onClick={() => addProgBloc(ex.id)}
+                            style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
+                            + Bloc semaines
+                          </button>
+                          {(ex.progressions?.length > 0) && (
+                            <span style={{ fontSize: '.65rem', color: '#6b7280', marginLeft: 'auto' }}>
+                              La prescription de chaque bloc remplace automatiquement la valeur par défaut côté client
+                            </span>
+                          )}
+                        </div>
+
+                        {(!ex.progressions?.length) ? (
+                          <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                            Clique sur "+ Bloc semaines" pour définir une progression. Ex : S1-2 → 3 séries / RPE 7, S3-4 → 4 séries / RPE 8…
+                          </p>
+                        ) : (
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ borderCollapse: 'collapse', fontSize: '.72rem' }}>
+                              <thead>
+                                <tr>
+                                  <td style={{ padding: '4px 8px', fontWeight: 700, color: '#6b7280', width: 80 }}>Paramètre</td>
+                                  {ex.progressions.map(p => (
+                                    <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', minWidth: 110 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                                        <input
+                                          defaultValue={p.label}
+                                          onBlur={e => updateProgBloc(ex.id, p.id, 'label', e.target.value)}
+                                          style={{ width: 52, textAlign: 'center', fontWeight: 800, color: '#1d4ed8', border: '1.5px solid #bfdbfe', borderRadius: 6, padding: '2px 4px', fontSize: '.72rem', outline: 'none', background: '#eff6ff' }}
+                                        />
+                                        <button onClick={() => removeProgBloc(ex.id, p.id)}
+                                          style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '.8rem', lineHeight: 1, padding: 0 }}>×</button>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 3, fontSize: '.6rem', color: '#9ca3af' }}>
+                                        <span>S</span>
+                                        <input type="number" defaultValue={p.semaine_debut} min={1}
+                                          onBlur={e => updateProgBloc(ex.id, p.id, 'semaine_debut', parseInt(e.target.value))}
+                                          style={{ width: 30, textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 2px', fontSize: '.6rem', outline: 'none' }} />
+                                        <span>→</span>
+                                        <input type="number" defaultValue={p.semaine_fin} min={1}
+                                          onBlur={e => updateProgBloc(ex.id, p.id, 'semaine_fin', parseInt(e.target.value))}
+                                          style={{ width: 30, textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 2px', fontSize: '.6rem', outline: 'none' }} />
+                                      </div>
+                                    </td>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[
+                                  { key: 'series',          label: 'Séries' },
+                                  { key: 'repetitions',     label: 'Reps / RER' },
+                                  { key: 'valeur_intensite',label: 'Intensité' },
+                                  { key: 'detail',          label: 'Détail libre' },
+                                ].map(row => (
+                                  <tr key={row.key} style={{ borderTop: '1px solid #e5e7eb' }}>
+                                    <td style={{ padding: '5px 8px', fontWeight: 700, color: '#374151', background: '#f8faff', whiteSpace: 'nowrap' }}>{row.label}</td>
+                                    {ex.progressions.map(p => (
+                                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center' }}>
+                                        <input
+                                          defaultValue={p[row.key] || ''}
+                                          onBlur={e => updateProgBloc(ex.id, p.id, row.key, e.target.value)}
+                                          placeholder="—"
+                                          style={{ width: '100%', minWidth: 80, textAlign: 'center', border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '4px 6px', fontSize: '.72rem', outline: 'none', background: '#fff', fontWeight: 600 }}
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
               ))}
             </tbody>
           </table>
