@@ -98,7 +98,7 @@ export default function NouveauProgramme() {
         .insert({ programme_id: prog.id, nom: s.nom, ordre: s.ordre || idx + 1 })
         .select().single()
       if (newSeance && Array.isArray(s.exercices) && s.exercices.length > 0) {
-        await supabase.from('exercices').insert(
+        const { error: exError } = await supabase.from('exercices').insert(
           s.exercices.map((ex, i) => ({
             seance_id: newSeance.id,
             nom: ex.nom || '',
@@ -110,10 +110,10 @@ export default function NouveauProgramme() {
             type_intensite: ex.type_intensite || 'aucune',
             valeur_intensite: ex.valeur_intensite || null,
             ordre: ex.ordre || i + 1,
-            note_ia: ex.note_ia || null,
             progressions: ex.progressions || null,
           }))
         )
+        if (exError) { setImportError(`Erreur exercices (${s.nom}) : ${exError.message}`); setImporting(false); return }
       }
     }
     setImporting(false)
