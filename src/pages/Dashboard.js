@@ -87,7 +87,7 @@ export default function Dashboard() {
   const [newCatNom, setNewCatNom]     = useState('')
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
   const [tab, setTab]                 = useState('overview') // overview | clients | notifs | groupes | calendrier
-  const [showSecondaire, setShowSecondaire] = useState(false) // bilan + planning repliés par défaut
+  const [showSecondaire, setShowSecondaire] = useState(true)
   // Groupes
   const [groupes, setGroupes]               = useState([])
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
