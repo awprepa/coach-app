@@ -7,9 +7,9 @@
 // IMPORTANT : stale-while-revalidate supprimé pour Supabase — il causait l'affichage
 // de données obsolètes (wellness "non rempli", charges perdues) au retour dans l'app.
 
-const CACHE_SHELL   = 'aw-shell-v11'
-const CACHE_API     = 'aw-api-v11'
-const CACHE_PAGES   = 'aw-pages-v11'
+const CACHE_SHELL   = 'aw-shell-v12'
+const CACHE_API     = 'aw-api-v12'
+const CACHE_PAGES   = 'aw-pages-v12'
 
 // ── Install : précache le shell de l'app ─────────────────────────────────────
 self.addEventListener('install', event => {
