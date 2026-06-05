@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import SeanceAIModal from '../components/SeanceAIModal'
 
 export default function NouveauProgramme() {
   const { id: clientId, groupeId } = useParams()
@@ -11,6 +12,7 @@ export default function NouveauProgramme() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [creating, setCreating] = useState(false)
+  const [aiProgrammeId, setAiProgrammeId] = useState(null) // programme créé en attente de génération IA
 
   useEffect(() => {
     supabase.from('programme_templates')
@@ -64,6 +66,18 @@ export default function NouveauProgramme() {
     }
 
     navigate(`/programme/${prog.id}`)
+  }
+
+  async function handleAI() {
+    if (!form.nom.trim()) { alert('Donne un nom au cycle avant de générer.'); return }
+    setCreating(true)
+    const payload = groupeId
+      ? { ...form, groupe_id: groupeId, date_debut: form.date_debut || null }
+      : { ...form, client_id: id, date_debut: form.date_debut || null }
+    const { data: prog, error } = await supabase.from('programmes').insert([payload]).select().single()
+    if (error) { alert(error.message); setCreating(false); return }
+    setCreating(false)
+    setAiProgrammeId(prog.id)
   }
 
   return (
@@ -166,13 +180,25 @@ export default function NouveauProgramme() {
           <p style={styles.weeksHint}>{form.semaines} semaine{form.semaines > 1 ? 's' : ''} sélectionnée{form.semaines > 1 ? 's' : ''}</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="button" onClick={() => navigate(`/client/${id}`)} style={styles.btnSecondary}>Annuler</button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => groupeId ? navigate(`/groupe/${groupeId}`) : navigate(`/client/${id}`)} style={styles.btnSecondary}>Annuler</button>
           <button type="submit" disabled={creating} style={{ ...styles.btnPrimary, opacity: creating ? 0.7 : 1 }}>
             {creating ? 'Création…' : selectedTemplate ? '📋 Créer depuis le template' : 'Créer le cycle'}
           </button>
+          <button type="button" onClick={handleAI} disabled={creating} style={styles.btnAI}>
+            ✨ Générer avec l'IA
+          </button>
         </div>
       </form>
+
+      {aiProgrammeId && (
+        <SeanceAIModal
+          defaultMode="cycle"
+          programmeId={aiProgrammeId}
+          onClose={() => { setAiProgrammeId(null); navigate(`/programme/${aiProgrammeId}`) }}
+          onCycleDone={() => navigate(`/programme/${aiProgrammeId}`)}
+        />
+      )}
     </div>
   )
 }
@@ -192,4 +218,5 @@ const styles = {
   weeksHint: { color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.6rem' },
   btnPrimary: { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },
+  btnAI: { background: '#111827', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.35)', borderRadius: '12px', padding: '0.75rem 1.25rem', fontSize: '0.88rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' },
 }
