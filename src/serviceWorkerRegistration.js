@@ -18,7 +18,31 @@ export function register() {
 }
 
 function registerValidSW(swUrl) {
-  navigator.serviceWorker.register(swUrl).catch(() => {})
+  navigator.serviceWorker.register(swUrl).then(registration => {
+    // Dès qu'un nouveau service worker est en attente, on l'active immédiatement
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing
+      if (!newWorker) return
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // Nouvelle version disponible → skip waiting et recharge
+          newWorker.postMessage({ type: 'SKIP_WAITING' })
+        }
+      })
+    })
+
+    // Recharge la page quand le nouveau SW prend le contrôle
+    let refreshing = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true
+        window.location.reload()
+      }
+    })
+
+    // Vérifie une mise à jour toutes les 60 secondes
+    setInterval(() => registration.update(), 60 * 1000)
+  }).catch(() => {})
 }
 
 function checkValidServiceWorker(swUrl) {
