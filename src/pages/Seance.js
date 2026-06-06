@@ -1062,7 +1062,6 @@ export default function Seance() {
             </tbody>
           </table>
         )}
-        </div>
       </div>
 
       {/* Formulaire ajout */}
