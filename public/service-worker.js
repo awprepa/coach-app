@@ -1,4 +1,4 @@
-// ── AWprepa Service Worker v11 ────────────────────────────────────────────────
+// ── AWprepa Service Worker v13 ────────────────────────────────────────────────
 // Stratégies :
 //   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
 //   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
@@ -7,9 +7,9 @@
 // IMPORTANT : stale-while-revalidate supprimé pour Supabase — il causait l'affichage
 // de données obsolètes (wellness "non rempli", charges perdues) au retour dans l'app.
 
-const CACHE_SHELL   = 'aw-shell-v12'
-const CACHE_API     = 'aw-api-v12'
-const CACHE_PAGES   = 'aw-pages-v12'
+const CACHE_SHELL   = 'aw-shell-v13'
+const CACHE_API     = 'aw-api-v13'
+const CACHE_PAGES   = 'aw-pages-v13'
 
 // ── Install : précache le shell de l'app ─────────────────────────────────────
 self.addEventListener('install', event => {
@@ -33,15 +33,21 @@ self.addEventListener('install', event => {
   self.skipWaiting()
 })
 
-// ── Activate : purge les anciens caches ──────────────────────────────────────
+// ── Activate : purge les anciens caches + force rechargement des pages ouvertes ─
 self.addEventListener('activate', event => {
   const KEEP = [CACHE_SHELL, CACHE_API, CACHE_PAGES]
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clientList => {
+        // Force reload sur toutes les pages ouvertes — fonctionne même si le JS de la page est ancien
+        clientList.forEach(client => {
+          try { client.navigate(client.url) } catch (_) {}
+        })
+      })
   )
-  self.clients.claim()
 })
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
