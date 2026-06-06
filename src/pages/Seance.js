@@ -20,6 +20,8 @@ export default function Seance() {
   const [enEdition, setEnEdition] = useState(null)
   const [formEdition, setFormEdition] = useState({})
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
+  const [editAllMode, setEditAllMode] = useState(false)
+  const [formEditions, setFormEditions] = useState({}) // { [exId]: { code, nom, ... } }
   const [biblioSearch, setBiblioSearch] = useState('')
   const [biblioResults, setBiblioResults] = useState([])
   const [showFullLibrary, setShowFullLibrary] = useState(false)
@@ -205,6 +207,44 @@ export default function Seance() {
     const newCharges = { ...charges }
     inserted.forEach(ex => { newCharges[ex.id] = {} })
     setCharges(newCharges)
+  }
+
+  function startEditAll() {
+    const forms = {}
+    exercices.forEach(ex => {
+      forms[ex.id] = {
+        code: ex.code || '', nom: ex.nom || '',
+        series: ex.series || '', repetitions: ex.repetitions || '',
+        tempo: ex.tempo || '', recuperation: ex.recuperation || '',
+        type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '',
+      }
+    })
+    setFormEditions(forms)
+    setEditAllMode(true)
+    setEnEdition(null)
+  }
+
+  function updateFormEdition(exId, field, val) {
+    setFormEditions(prev => ({ ...prev, [exId]: { ...prev[exId], [field]: val } }))
+  }
+
+  async function saveAllEditions() {
+    for (const ex of exercices) {
+      const f = formEditions[ex.id]
+      if (!f) continue
+      await supabase.from('exercices').update({
+        code: f.code, nom: f.nom,
+        series: f.series ? parseInt(f.series) : null,
+        repetitions: f.repetitions, tempo: f.tempo,
+        recuperation: f.recuperation, type_intensite: f.type_intensite,
+        valeur_intensite: f.valeur_intensite
+      }).eq('id', ex.id)
+    }
+    setExercices(exercices.map(ex => {
+      const f = formEditions[ex.id]
+      return f ? { ...ex, ...f, series: f.series ? parseInt(f.series) : null } : ex
+    }))
+    setEditAllMode(false)
   }
 
   async function sauvegarderEdition(exId) {
@@ -718,14 +758,90 @@ export default function Seance() {
       </div>
 
       {/* Table exercices */}
-      <div style={{ ...styles.card, marginTop: '1rem', overflowX: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+      <div style={{ ...styles.card, marginTop: '1rem', overflowX: editAllMode ? 'visible' : 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <p style={{ ...styles.sectionTitle, margin: 0 }}>Exercices</p>
-          <button onClick={() => setShowAIModal(true)} style={styles.btnAI}>✨ Générer avec l'IA</button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {editAllMode ? (
+              <>
+                <button onClick={saveAllEditions} style={{ ...styles.btnPrimary, padding: '0.45rem 1rem', fontSize: '0.82rem' }}>✓ Sauvegarder tout</button>
+                <button onClick={() => setEditAllMode(false)} style={{ ...styles.btnSecondary, padding: '0.45rem 0.875rem', fontSize: '0.82rem' }}>✕ Annuler</button>
+              </>
+            ) : (
+              <>
+                {exercices.length > 0 && (
+                  <button onClick={startEditAll} style={{ ...styles.btnSecondary, padding: '0.45rem 0.875rem', fontSize: '0.82rem', fontWeight: '700' }}>✏️ Modifier les exercices</button>
+                )}
+                <button onClick={() => setShowAIModal(true)} style={styles.btnAI}>✨ Générer avec l'IA</button>
+              </>
+            )}
+          </div>
         </div>
-        {exercices.length === 0 ? (
+        {/* ── Mode édition globale : cartes ── */}
+        {editAllMode && exercices.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {exercices.map((ex, idx) => {
+              const f = formEditions[ex.id] || {}
+              return (
+                <div key={ex.id} style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '1rem 1.25rem', ...blocStyle(ex.code) }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af' }}>#{idx + 1}</span>
+                    <span style={styles.codeTag}>{f.code || ex.code}</span>
+                    <span style={{ fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>{f.nom || ex.nom}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Code</label>
+                      <input value={f.code} onChange={e => updateFormEdition(ex.id, 'code', e.target.value)} style={styles.editInput} placeholder="A1" />
+                    </div>
+                    <div style={{ ...styles.editField, flex: 2, minWidth: 160 }}>
+                      <label style={styles.editLabel}>Exercice</label>
+                      <input value={f.nom} onChange={e => updateFormEdition(ex.id, 'nom', e.target.value)} style={styles.editInput} placeholder="Nom" />
+                    </div>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Séries</label>
+                      <input value={f.series} onChange={e => updateFormEdition(ex.id, 'series', e.target.value)} style={styles.editInput} placeholder="4" type="number" />
+                    </div>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Reps</label>
+                      <input value={f.repetitions} onChange={e => updateFormEdition(ex.id, 'repetitions', e.target.value)} style={styles.editInput} placeholder="8" />
+                    </div>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Tempo</label>
+                      <input value={f.tempo} onChange={e => updateFormEdition(ex.id, 'tempo', e.target.value)} style={styles.editInput} placeholder="3-1-1-0" />
+                    </div>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Récup</label>
+                      <input value={f.recuperation} onChange={e => updateFormEdition(ex.id, 'recuperation', e.target.value)} style={styles.editInput} placeholder="2min" />
+                    </div>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Intensité</label>
+                      <select value={f.type_intensite} onChange={e => updateFormEdition(ex.id, 'type_intensite', e.target.value)} style={styles.editInput}>
+                        <option value="">—</option>
+                        <option value="RPE">RPE</option>
+                        <option value="RIR">RIR</option>
+                        <option value="% 1RM">% 1RM</option>
+                        <option value="Vitesse">Vitesse</option>
+                        <option value="Libre">Libre</option>
+                      </select>
+                    </div>
+                    <div style={styles.editField}>
+                      <label style={styles.editLabel}>Valeur</label>
+                      <input value={f.valeur_intensite} onChange={e => updateFormEdition(ex.id, 'valeur_intensite', e.target.value)} style={styles.editInput} placeholder="7" />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.1rem' }}>
+                      <button onClick={() => supprimerExercice(ex.id)} style={{ ...styles.iconBtnSm, color: '#dc2626', borderColor: '#fecaca' }}>🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {!editAllMode && exercices.length === 0 ? (
           <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1.5rem 0' }}>Aucun exercice. Ajoutez-en un ci-dessous.</p>
-        ) : (
+        ) : !editAllMode && (
           <table style={styles.table}>
             <thead>
               <tr style={styles.thead}>
@@ -946,6 +1062,7 @@ export default function Seance() {
             </tbody>
           </table>
         )}
+        </div>
       </div>
 
       {/* Formulaire ajout */}
@@ -1148,4 +1265,7 @@ const styles = {
   suggDropdown: { position: 'absolute', top: '100%', left: 0, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, marginTop: '3px', overflow: 'hidden', minWidth: '200px' },
   suggItem: { padding: '0.45rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: '0.85rem', color: '#333333', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white' },
   suggImg: { width: 32, height: 32, objectFit: 'cover', borderRadius: 6, flexShrink: 0 },
+  editField: { display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 80, flex: 1 },
+  editLabel: { fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  editInput: { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' },
 }
