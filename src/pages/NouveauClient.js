@@ -6,7 +6,7 @@ export default function NouveauClient() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', telephone: '',
-    objectif: '', offre: 'coaching',
+    objectif: '', offre: 'coaching', engagement_mois: '',
     date_debut: '', date_fin: '', notes: '', categorie_id: ''
   })
   const [categories, setCategories] = useState([])
@@ -32,7 +32,11 @@ export default function NouveauClient() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const payload = { ...form, categorie_id: form.categorie_id || null }
+    const payload = {
+      ...form,
+      categorie_id: form.categorie_id || null,
+      engagement_mois: form.engagement_mois ? parseInt(form.engagement_mois) : null,
+    }
     const { error } = await supabase.from('clients').insert([payload])
     if (error) alert(error.message)
     else setSucces(true)
@@ -97,11 +101,21 @@ export default function NouveauClient() {
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Offre</label>
             <select name="offre" value={form.offre} onChange={handleChange} style={styles.select}>
-              <option value="essai">Essai (1 mois)</option>
+              <option value="essai">Essai (1 mois — 49€)</option>
               <option value="preparation_physique">Préparation physique</option>
               <option value="coaching">Coaching</option>
             </select>
           </div>
+          {form.offre !== 'essai' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={styles.label}>Engagement</label>
+              <select name="engagement_mois" value={form.engagement_mois} onChange={handleChange} style={styles.select}>
+                <option value="">Sans engagement — {form.offre === 'preparation_physique' ? '89€' : '79€'}/mois</option>
+                <option value="3">3 mois — {form.offre === 'preparation_physique' ? '79€' : '69€'}/mois</option>
+                <option value="6">6 mois — {form.offre === 'preparation_physique' ? '69€' : '59€'}/mois</option>
+              </select>
+            </div>
+          )}
           {categories.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <label style={styles.label}>Catégorie</label>

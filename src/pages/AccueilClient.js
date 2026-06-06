@@ -15,6 +15,7 @@ import { sendNotif, getCoachId } from '../notifs'
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
 import ModaleContrat from '../components/ModaleContrat'
+import ConfirmationOffre from '../components/ConfirmationOffre'
 import { CURRENT_CGV_VERSION } from './CGV'
 
 function isCycleTermine(prog) {
@@ -147,6 +148,7 @@ export default function AccueilClient() {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [contratAccepte, setContratAccepte] = useState(null) // null=vérif, true=ok, false=à signer
+  const [offreConfirmee, setOffreConfirmee] = useState(null) // null=vérif, true=ok, false=à confirmer
   const [userId, setUserId] = useState(null)
   const { unread } = useNotifCtx()
 
@@ -223,6 +225,13 @@ export default function AccueilClient() {
         .limit(1)
         .maybeSingle()
       setContratAccepte(!!contrat)
+
+      // Vérifier confirmation de l'offre (seulement pour les clients payants)
+      if (clientData.offre === 'essai') {
+        setOffreConfirmee(true) // essai → pas besoin de confirmer
+      } else {
+        setOffreConfirmee(!!clientData.offre_confirmee_at)
+      }
 
       const { data: progs } = await supabase
         .from('programmes').select('*').eq('client_id', clientData.id).order('created_at', { ascending: false })
@@ -306,7 +315,7 @@ export default function AccueilClient() {
     }
   }
 
-  if (loading || contratAccepte === null) return <AccueilSkeleton />
+  if (loading || contratAccepte === null || offreConfirmee === null) return <AccueilSkeleton />
   if (!client)  return <div style={styles.centered}><p style={{ color: '#888' }}>Aucun profil trouvé.</p></div>
 
   const initiales = `${client.prenom?.[0] || ''}${client.nom?.[0] || ''}`.toUpperCase()
@@ -321,6 +330,14 @@ export default function AccueilClient() {
           userId={userId}
           offre={client.offre}
           onAccepte={() => setContratAccepte(true)}
+        />
+      )}
+
+      {/* Confirmation offre — après CGV, seulement pour les clients payants */}
+      {contratAccepte === true && offreConfirmee === false && (
+        <ConfirmationOffre
+          client={client}
+          onConfirme={() => setOffreConfirmee(true)}
         />
       )}
 
