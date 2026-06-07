@@ -216,20 +216,23 @@ export default function AccueilClient() {
       if (clientData.avatar_url) setAvatarUrl(clientData.avatar_url)
       setUserId(user.id)
 
-      // Vérifier acceptation du contrat (version actuelle obligatoire)
-      const { data: contrat } = await supabase
-        .from('acceptations_contrat')
-        .select('id')
-        .eq('client_id', clientData.id)
-        .eq('version_contrat', CURRENT_CGV_VERSION)
-        .limit(1)
-        .maybeSingle()
-      setContratAccepte(!!contrat)
+      // Contrat + confirmation offre : seulement pour les clients payants
+      const offrePayante = clientData.offre === 'coaching' || clientData.offre === 'preparation_physique'
 
-      // Vérifier confirmation de l'offre (seulement pour les clients payants)
-      if (clientData.offre === 'essai') {
-        setOffreConfirmee(true) // essai → pas besoin de confirmer
+      if (!offrePayante) {
+        // Essai ou offre non définie → aucun contrat requis
+        setContratAccepte(true)
+        setOffreConfirmee(true)
       } else {
+        // Client payant → vérifier signature contrat
+        const { data: contrat } = await supabase
+          .from('acceptations_contrat')
+          .select('id')
+          .eq('client_id', clientData.id)
+          .eq('version_contrat', CURRENT_CGV_VERSION)
+          .limit(1)
+          .maybeSingle()
+        setContratAccepte(!!contrat)
         setOffreConfirmee(!!clientData.offre_confirmee_at)
       }
 
