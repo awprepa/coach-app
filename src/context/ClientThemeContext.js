@@ -204,14 +204,21 @@ export function ClientThemeProvider({ children }) {
         return
       }
 
-      const accent  = groupe.couleur            || DEFAULT.accent
-      const accent2 = groupe.couleur_secondaire || DEFAULT.accent2
+      const accent  = groupe.couleur            || null
+      const accent2 = groupe.couleur_secondaire || null
 
-      applyPalette(accent, accent2)
+      // Si pas de couleur définie → couleurs par défaut de l'app (comme sans groupe)
+      if (accent && accent2) {
+        applyPalette(accent, accent2)
+      } else if (accent) {
+        applyPalette(accent, DEFAULT.accent2)
+      } else {
+        resetToDefaults()
+      }
 
       setTheme({
-        accent,
-        accent2,
+        accent:   accent  || DEFAULT.accent,
+        accent2:  accent2 || DEFAULT.accent2,
         logoUrl:  groupe.logo_url || null,
         clubName: groupe.nom      || null,
         loaded:   true,
