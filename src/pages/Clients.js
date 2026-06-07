@@ -68,6 +68,7 @@ export default function Clients() {
   const [uploadingLogo, setUploadingLogo]   = useState(false)
   const [extractingColors, setExtractingColors] = useState(false)
   const [pickingFor, setPickingFor]         = useState(null)
+  const [newGroupeUrl, setNewGroupeUrl]     = useState('')
   const logoPickRef = useRef(null)
 
   const navigate = useNavigate()
@@ -155,11 +156,11 @@ export default function Clients() {
       logoUrl = supabase.storage.from('groupe-logos').getPublicUrl(path).data.publicUrl
     }
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur || null, couleur_secondaire: newGroupeCouleur2 || null, logo_url: logoUrl }]).select().single()
+      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur || null, couleur_secondaire: newGroupeCouleur2 || null, logo_url: logoUrl, monclubhouse_url: newGroupeUrl.trim() || null }]).select().single()
     if (error) { alert(error.message); setUploadingLogo(false); return }
     setGroupes([...groupes, data])
     setNewGroupeNom(''); setNewGroupeLogoFile(null); setNewGroupeLogoPreview(null)
-    setNewGroupeCouleur(''); setNewGroupeCouleur2(''); setPickingFor(null)
+    setNewGroupeCouleur(''); setNewGroupeCouleur2(''); setPickingFor(null); setNewGroupeUrl('')
     setShowGroupeForm(false); setUploadingLogo(false)
   }
 
@@ -356,6 +357,18 @@ export default function Clients() {
                   <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')} style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}>🎨</button>
                 )}
               </div>
+            </div>
+            {/* Lien classement */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
+                Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel)</span>
+              </label>
+              <input value={newGroupeUrl} onChange={e => setNewGroupeUrl(e.target.value)}
+                placeholder="https://monclubhouse.ffr.fr/clubs/..."
+                style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151' }} />
+              {newGroupeUrl && !newGroupeUrl.includes('monclubhouse.ffr.fr') && (
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>⚠️ Le lien doit provenir de monclubhouse.ffr.fr</p>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               <button onClick={creerGroupe} disabled={uploadingLogo || extractingColors} style={{ ...S.btnPrimary, flex: 1, opacity: (uploadingLogo || extractingColors) ? 0.6 : 1 }}>
