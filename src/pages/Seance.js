@@ -888,6 +888,7 @@ export default function Seance() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.thead}>
+                <th style={styles.th}></th>
                 <th style={styles.th}>Code</th>
                 <th style={styles.th}>Exercice</th>
                 <th style={styles.th}>Séries</th>
@@ -899,17 +900,15 @@ export default function Seance() {
                 {colSemaines.map(s => (
                   <th key={s} style={{ ...styles.th, textAlign: 'center' }} colSpan={2}>S{s}</th>
                 ))}
-                <th style={styles.th}></th>
               </tr>
               <tr style={{ background: '#fafafa', fontSize: '0.7rem', color: '#9ca3af' }}>
-                <th colSpan={8}></th>
+                <th colSpan={9}></th>
                 {colSemaines.map(s => (
                   <>
                     <th key={`${s}-kg`} style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>kg</th>
                     <th key={`${s}-rpe`} style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>RPE</th>
                   </>
                 ))}
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -918,6 +917,12 @@ export default function Seance() {
                 <tr style={{ ...styles.tr, ...blocStyle(ex.code) }}>
                   {enEdition === ex.id ? (
                     <>
+                      <td style={styles.td}>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <button onClick={() => sauvegarderEdition(ex.id)} style={styles.iconBtnSm}>✓</button>
+                          <button onClick={() => setEnEdition(null)} style={styles.iconBtnSm}>✕</button>
+                        </div>
+                      </td>
                       <td style={styles.td}><input value={formEdition.code} onChange={e => setFormEdition({ ...formEdition, code: e.target.value })} style={{ ...styles.cellInput, width: '50px' }} /></td>
                       <td style={styles.td}>
                         <div style={{ position: 'relative' }}>
@@ -965,15 +970,21 @@ export default function Seance() {
                           <td key={`${s}-rpe`} style={styles.td}>—</td>
                         </>
                       ))}
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button onClick={() => sauvegarderEdition(ex.id)} style={styles.iconBtnSm}>✓</button>
-                          <button onClick={() => setEnEdition(null)} style={styles.iconBtnSm}>✕</button>
-                        </div>
-                      </td>
                     </>
                   ) : (
                     <>
+                      <td style={styles.td}>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <button onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '' }) }} style={styles.iconBtnSm}>✏️</button>
+                          <button
+                            onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
+                            title="Progression par semaines"
+                            style={{ ...styles.iconBtnSm, background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : undefined }}>
+                            📅
+                          </button>
+                          <button onClick={() => supprimerExercice(ex.id)} style={styles.iconBtnSm}>🗑️</button>
+                        </div>
+                      </td>
                       <td style={styles.td}>
                         <span style={styles.codeTag}>{ex.code}</span>
                       </td>
@@ -1003,18 +1014,6 @@ export default function Seance() {
                           </td>
                         </>
                       ))}
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '' }) }} style={styles.iconBtnSm}>✏️</button>
-                          <button
-                            onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
-                            title="Progression par semaines"
-                            style={{ ...styles.iconBtnSm, background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : undefined }}>
-                            📅
-                          </button>
-                          <button onClick={() => supprimerExercice(ex.id)} style={styles.iconBtnSm}>🗑️</button>
-                        </div>
-                      </td>
                     </>
                   )}
                 </tr>
