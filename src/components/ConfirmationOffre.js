@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 
 const TARIFS = {
-  essai:               { label: 'Essai 1 mois', sans: 49, m3: null, m6: null },
+  essai:               { label: 'Essai', sans: 49, m3: null, m6: null },
   preparation_physique: { label: 'Préparation physique', sans: 89, m3: 79, m6: 69 },
   coaching:             { label: 'Coaching remise en forme', sans: 79, m3: 69, m6: 59 },
 }
