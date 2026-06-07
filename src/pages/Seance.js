@@ -292,8 +292,24 @@ export default function Seance() {
       recuperation: formEdition.recuperation, type_intensite: formEdition.type_intensite,
       valeur_intensite: formEdition.valeur_intensite
     }).eq('id', exId)
-    if (error) alert(error.message)
-    else { setExercices(exercices.map(ex => ex.id === exId ? { ...ex, ...formEdition } : ex)); setEnEdition(null) }
+    if (error) { alert(error.message); return }
+
+    // Appliquer les nouvelles valeurs puis trier par code
+    const updated = exercices.map(ex => ex.id === exId ? { ...ex, ...formEdition, series: formEdition.series ? parseInt(formEdition.series) : null } : ex)
+    const sorted = [...updated].sort((a, b) => {
+      const [al, an] = sortCodeKey(a.code)
+      const [bl, bn] = sortCodeKey(b.code)
+      if (al !== bl) return al < bl ? -1 : 1
+      return an - bn
+    })
+    // Mettre à jour l'ordre en DB si ça a changé
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i].ordre !== i + 1) {
+        await supabase.from('exercices').update({ ordre: i + 1 }).eq('id', sorted[i].id)
+      }
+    }
+    setExercices(sorted.map((ex, i) => ({ ...ex, ordre: i + 1 })))
+    setEnEdition(null)
   }
 
   async function supprimerExercice(exId) {
