@@ -95,8 +95,8 @@ export default function Dashboard() {
   const [memberGroupMap, setMemberGroupMap] = useState({}) // client_id → { id, nom, couleur, logo_url }
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
-  const [newGroupeCouleur, setNewGroupeCouleur]   = useState('#333333')
-  const [newGroupeCouleur2, setNewGroupeCouleur2] = useState('#e4f816')
+  const [newGroupeCouleur, setNewGroupeCouleur]   = useState('')
+  const [newGroupeCouleur2, setNewGroupeCouleur2] = useState('')
   const [newGroupeLogoFile, setNewGroupeLogoFile] = useState(null)
   const [newGroupeLogoPreview, setNewGroupeLogoPreview] = useState(null)
   const [newGroupeUrl, setNewGroupeUrl]     = useState('')
@@ -249,12 +249,12 @@ export default function Dashboard() {
       logoUrl = supabase.storage.from('groupe-logos').getPublicUrl(path).data.publicUrl
     }
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, couleur_secondaire: newGroupeCouleur2 || null, logo_url: logoUrl, monclubhouse_url: newGroupeUrl.trim() || null }])
+      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur || null, couleur_secondaire: newGroupeCouleur2 || null, logo_url: logoUrl, monclubhouse_url: newGroupeUrl.trim() || null }])
       .select().single()
     if (error) { alert(error.message); setUploadingLogo(false); return }
     setGroupes(prev => [...prev, data])
     setNewGroupeNom(''); setNewGroupeLogoFile(null); setNewGroupeLogoPreview(null)
-    setNewGroupeCouleur('#333333'); setNewGroupeCouleur2('#e4f816'); setNewGroupeUrl('')
+    setNewGroupeCouleur(''); setNewGroupeCouleur2(''); setNewGroupeUrl('')
     setShowGroupeForm(false)
     setUploadingLogo(false)
   }
@@ -939,10 +939,20 @@ export default function Dashboard() {
             {/* Couleurs */}
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
-                  style={{ width: 32, height: 28, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
-                <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Principale</span>
-                {newGroupeLogoPreview && (
+                {newGroupeCouleur ? (
+                  <>
+                    <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
+                      style={{ width: 32, height: 28, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Principale</span>
+                    <button onClick={() => setNewGroupeCouleur('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                  </>
+                ) : (
+                  <button onClick={() => setNewGroupeCouleur('#6366f1')}
+                    style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                    + Couleur principale
+                  </button>
+                )}
+                {newGroupeLogoPreview && newGroupeCouleur && (
                   <button onClick={() => setPickingFor(pickingFor === 'primary' ? null : 'primary')}
                     title="Pipette — cliquer sur le logo"
                     style={{ background: pickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
@@ -951,18 +961,25 @@ export default function Dashboard() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input type="color" value={newGroupeCouleur2 || '#cccccc'} onChange={e => setNewGroupeCouleur2(e.target.value)}
-                  style={{ width: 32, height: 28, border: `1.5px solid ${newGroupeCouleur2 ? '#e5e7eb' : '#d1d5db'}`, borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white', opacity: newGroupeCouleur2 ? 1 : 0.45 }} />
-                <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Secondaire</span>
-                {newGroupeLogoPreview && (
+                {newGroupeCouleur2 ? (
+                  <>
+                    <input type="color" value={newGroupeCouleur2} onChange={e => setNewGroupeCouleur2(e.target.value)}
+                      style={{ width: 32, height: 28, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Secondaire</span>
+                    <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                  </>
+                ) : (
+                  <button onClick={() => setNewGroupeCouleur2('#e5e7eb')}
+                    style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                    + Couleur secondaire
+                  </button>
+                )}
+                {newGroupeLogoPreview && newGroupeCouleur2 && (
                   <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')}
                     title="Pipette — cliquer sur le logo"
                     style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
                     🎨
                   </button>
-                )}
-                {newGroupeCouleur2 && (
-                  <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
                 )}
               </div>
             </div>
