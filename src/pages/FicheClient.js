@@ -137,12 +137,16 @@ export default function FicheClient() {
   }
 
   async function sauvegarderClient() {
+    // Si l'offre change, on remet offre_confirmee_at à null
+    // pour que le client re-confirme son abonnement à la prochaine connexion
+    const offreChangee = form.offre !== client.offre
     const { error } = await supabase.from('clients').update({
       prenom: form.prenom, nom: form.nom, email: form.email,
       telephone: form.telephone, objectif: form.objectif,
       offre: form.offre, engagement_mois: form.engagement_mois || null,
       date_debut: form.date_debut, date_fin: form.date_fin,
-      notes: form.notes, categorie_id: form.categorie_id || null
+      notes: form.notes, categorie_id: form.categorie_id || null,
+      ...(offreChangee ? { offre_confirmee_at: null } : {}),
     }).eq('id', id)
     if (error) alert(error.message)
     else { await fetchClient(); setEditMode(false) }
