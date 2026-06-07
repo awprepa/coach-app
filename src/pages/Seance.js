@@ -758,7 +758,7 @@ export default function Seance() {
       </div>
 
       {/* Table exercices */}
-      <div style={{ ...styles.card, marginTop: '1rem', overflowX: editAllMode ? 'visible' : 'auto' }}>
+      <div style={{ ...styles.card, marginTop: '1rem', overflowX: 'hidden', padding: editAllMode ? '1.25rem 1rem' : '1.25rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <p style={{ ...styles.sectionTitle, margin: 0 }}>Exercices</p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -842,6 +842,7 @@ export default function Seance() {
         {!editAllMode && exercices.length === 0 ? (
           <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1.5rem 0' }}>Aucun exercice. Ajoutez-en un ci-dessous.</p>
         ) : !editAllMode && (
+          <div style={{ overflowX: 'auto', margin: '0 -1.5rem', padding: '0 1.5rem' }}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.thead}>
@@ -1061,6 +1062,7 @@ export default function Seance() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -1232,11 +1234,11 @@ export default function Seance() {
 }
 const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  page: { padding: '2rem', maxWidth: '100%', overflowX: 'auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page: { padding: '1.25rem', maxWidth: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
   progLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
   title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  rpeGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+  rpeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.25rem 1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1rem' },
   rpeTable: { borderCollapse: 'collapse', width: '100%' },
