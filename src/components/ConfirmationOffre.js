@@ -100,8 +100,8 @@ export default function ConfirmationOffre({ client, onConfirme }) {
 }
 
 const S = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
-  modal: { background: 'white', borderRadius: 20, padding: '2rem 1.5rem', width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto', paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))', boxSizing: 'border-box' },
+  modal: { background: 'white', borderRadius: 20, padding: '2rem 1.25rem', width: '100%', maxWidth: 440, boxSizing: 'border-box', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
   header: { textAlign: 'center', marginBottom: '1.5rem' },
   icon: { fontSize: '2rem', marginBottom: '0.75rem' },
   title: { fontSize: '1.2rem', fontWeight: '800', color: '#111827', margin: '0 0 0.4rem' },
