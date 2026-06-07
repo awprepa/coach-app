@@ -330,10 +330,28 @@ export default function SeanceClient() {
 
     const wMap = {}
     data.forEach(ex => {
-      wMap[ex.id] = (rows || [])
+      const tracked = (rows || [])
         .filter(r => r.exercice_id === ex.id && r.serie >= 1000)
         .sort((a, b) => a.serie - b.serie)
-        .map(r => ({ serie: r.serie, poids: r.poids || '', reps_reelles: r.reps_reelles?.toString() || '' }))
+        .map(r => ({ serie: r.serie, poids: r.poids || '', reps_reelles: r.reps_reelles?.toString() || '', fromCoach: r.serie < 2000, pourcentage: null }))
+
+      // Si aucune série de chauffe enregistrée ET le coach en a défini → pré-remplir
+      if (tracked.length === 0 && ex.series_echauffement?.length > 0) {
+        const chargeBase = parseFloat(map[ex.id]?.[sem]?.charge) || null
+        wMap[ex.id] = ex.series_echauffement.map((def, i) => {
+          const pct = parseFloat(def.pourcentage) || null
+          const poidsCalc = chargeBase && pct ? Math.round(chargeBase * pct / 100 * 2) / 2 : null
+          return {
+            serie: 1000 + i,
+            poids: poidsCalc ? String(poidsCalc) : '',
+            reps_reelles: def.reps ? String(def.reps) : '',
+            fromCoach: true,
+            pourcentage: pct,
+          }
+        })
+      } else {
+        wMap[ex.id] = tracked
+      }
     })
     setWarmupTracking(wMap)
 
@@ -972,8 +990,10 @@ export default function SeanceClient() {
                     }}>+ Série</button>
                   </div>
                   {warmups.map((ws, wi) => (
-                    <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: '1.5px solid #e5e7eb' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', width: 22, textAlign: 'center', flexShrink: 0 }}>É{wi + 1}</span>
+                    <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: ws.fromCoach ? '#fff7ed' : '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: `1.5px solid ${ws.fromCoach ? '#fed7aa' : '#e5e7eb'}` }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: ws.fromCoach ? '#ea580c' : '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        É{wi + 1}{ws.fromCoach && ws.pourcentage ? ` · ${ws.pourcentage}%` : ''}
+                      </span>
                       <input type="text" inputMode="decimal" value={ws.poids}
                         onChange={e => updateWarmupField(ex.id, wi, 'poids', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}

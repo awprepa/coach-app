@@ -20,6 +20,7 @@ export default function Seance() {
   const [enEdition, setEnEdition] = useState(null)
   const [formEdition, setFormEdition] = useState({})
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
+  const [showWarmupFor, setShowWarmupFor]           = useState(null) // exercice id
   const [editAllMode, setEditAllMode] = useState(false)
   const [formEditions, setFormEditions] = useState({}) // { [exId]: { code, nom, ... } }
   const [biblioSearch, setBiblioSearch] = useState('')
@@ -373,6 +374,26 @@ export default function Seance() {
   function removeProgBloc(exId, blocId) {
     const ex = exercices.find(e => e.id === exId)
     updateProgressions(exId, (ex?.progressions || []).filter(p => p.id !== blocId))
+  }
+
+  // ── Séries d'échauffement (définies par le coach) ──────────────────────
+  async function saveSeriesEchauffement(exId, series) {
+    setExercices(prev => prev.map(ex => ex.id === exId ? { ...ex, series_echauffement: series } : ex))
+    await supabase.from('exercices').update({ series_echauffement: series }).eq('id', exId)
+  }
+  function addWarmupCoach(exId) {
+    const ex = exercices.find(e => e.id === exId)
+    const current = ex?.series_echauffement || []
+    saveSeriesEchauffement(exId, [...current, { reps: '', pourcentage: '' }])
+  }
+  function updateWarmupCoach(exId, idx, field, val) {
+    const ex = exercices.find(e => e.id === exId)
+    const current = (ex?.series_echauffement || []).map((s, i) => i === idx ? { ...s, [field]: val } : s)
+    saveSeriesEchauffement(exId, current)
+  }
+  function removeWarmupCoach(exId, idx) {
+    const ex = exercices.find(e => e.id === exId)
+    saveSeriesEchauffement(exId, (ex?.series_echauffement || []).filter((_, i) => i !== idx))
   }
 
   async function sauvegarderTemplate() {
@@ -998,6 +1019,12 @@ export default function Seance() {
                             style={{ ...styles.iconBtnSm, background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : undefined }}>
                             📅
                           </button>
+                          <button
+                            onClick={() => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id)}
+                            title="Séries d'échauffement"
+                            style={{ ...styles.iconBtnSm, background: (ex.series_echauffement?.length > 0) ? '#fff7ed' : undefined, color: (ex.series_echauffement?.length > 0) ? '#ea580c' : undefined }}>
+                            🔥
+                          </button>
                           <button onClick={() => supprimerExercice(ex.id)} style={styles.iconBtnSm}>🗑️</button>
                         </div>
                       </td>
@@ -1110,6 +1137,59 @@ export default function Seance() {
                                 ))}
                               </tbody>
                             </table>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {/* ── Sous-ligne séries d'échauffement ── */}
+                {showWarmupFor === ex.id && (
+                  <tr>
+                    <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#fff7ed' }}>
+                      <div style={{ padding: '12px 16px', borderTop: '2px solid #fed7aa', borderBottom: '2px solid #fed7aa' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.06em' }}>🔥 Séries d'échauffement — {ex.nom}</span>
+                          <button onClick={() => addWarmupCoach(ex.id)}
+                            style={{ background: '#ea580c', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
+                            + Série
+                          </button>
+                          <span style={{ fontSize: '.65rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                            Visibles côté client, pré-remplies avec le % de la charge de travail
+                          </span>
+                        </div>
+
+                        {(!ex.series_echauffement?.length) ? (
+                          <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                            Clique sur "+ Série" pour ajouter une série de chauffe. Ex : 10 reps à 40%, puis 8 reps à 70%…
+                          </p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {(ex.series_echauffement || []).map((s, si) => (
+                              <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '0.4rem 0.75rem' }}>
+                                <span style={{ fontSize: '.72rem', fontWeight: 900, color: '#ea580c', width: 24, flexShrink: 0 }}>É{si + 1}</span>
+                                <input
+                                  type="text"
+                                  value={s.reps}
+                                  onChange={e => updateWarmupCoach(ex.id, si, 'reps', e.target.value)}
+                                  placeholder="Reps"
+                                  style={{ width: 64, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                                />
+                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>reps</span>
+                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>@</span>
+                                <input
+                                  type="number"
+                                  value={s.pourcentage}
+                                  onChange={e => updateWarmupCoach(ex.id, si, 'pourcentage', e.target.value)}
+                                  placeholder="%"
+                                  min="1" max="100"
+                                  style={{ width: 56, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                                />
+                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>% de la charge</span>
+                                <button onClick={() => removeWarmupCoach(ex.id, si)}
+                                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0 }}>×</button>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
