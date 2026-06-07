@@ -61,7 +61,16 @@ export default function Seance() {
     const { data, error } = await supabase.from('exercices').select('*, charges(*)').eq('seance_id', id).order('ordre', { ascending: true })
     if (error) console.log(error)
     else {
-      setExercices(data)
+      // Garantir que chaque bloc de progression a un id unique
+      // (les anciens enregistrements en DB peuvent ne pas en avoir)
+      const normalized = (data || []).map(ex => ({
+        ...ex,
+        progressions: (ex.progressions || []).map(p => ({
+          ...p,
+          id: p.id || Math.random().toString(36).slice(2),
+        })),
+      }))
+      setExercices(normalized)
       const chargesMap = {}
       data.forEach(ex => {
         chargesMap[ex.id] = {}
@@ -284,7 +293,7 @@ export default function Seance() {
 
   // ── Progressions par semaines ──────────────────────────────────────────
   async function updateProgressions(exId, progs) {
-    setExercices(exercices.map(ex => ex.id === exId ? { ...ex, progressions: progs } : ex))
+    setExercices(prev => prev.map(ex => ex.id === exId ? { ...ex, progressions: progs } : ex))
     await supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
   }
   function addProgBloc(exId) {
@@ -306,11 +315,15 @@ export default function Seance() {
     updateProgressions(exId, [...progs, newBloc])
   }
   function updateProgBloc(exId, blocId, field, val) {
-    const ex = exercices.find(e => e.id === exId)
-    const progs = (ex?.progressions || []).map(p =>
-      p.id === blocId ? { ...p, [field]: val } : p
-    )
-    updateProgressions(exId, progs)
+    setExercices(prev => {
+      const ex = prev.find(e => e.id === exId)
+      const progs = (ex?.progressions || []).map(p =>
+        // Comparaison stricte : les deux doivent être définis ET égaux
+        p.id && blocId && p.id === blocId ? { ...p, [field]: val } : p
+      )
+      supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
+      return prev.map(e => e.id === exId ? { ...e, progressions: progs } : e)
+    })
   }
   function removeProgBloc(exId, blocId) {
     const ex = exercices.find(e => e.id === exId)
