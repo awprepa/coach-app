@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export const CURRENT_CGV_VERSION = '1.2'
+export const CURRENT_CGV_VERSION = '1.3'
 
 export const CGV_CONTENU = [
   {
@@ -22,10 +22,9 @@ Chaque formule inclut : programme personnalisé, suivi via l'application AWPrepa
     texte: `Le paiement est dû à la souscription. Pour les formules avec engagement, le montant total est exigible selon les modalités convenues (mensuel ou en une fois). Tout retard entraîne la suspension des services.`,
   },
   {
-    titre: 'Article 3 — Rétractation et remboursement',
-    texte: `Conformément à l'article L221-18 du Code de la consommation, le client dispose d'un délai de 14 jours pour exercer son droit de rétractation, à compter de la signature du contrat.
+    titre: 'Article 3 — Remboursement et annulation',
+    texte: `Le premier mois de prestation est dû en totalité, sans remboursement possible, quelle que soit la date d'annulation.
 
-Passé ce délai :
 • Formules sans engagement : résiliation possible avec 30 jours de préavis, le mois en cours reste dû
 • Formules avec engagement (3 ou 6 mois) : aucun remboursement en cas d'arrêt anticipé
 • Programme one-shot : aucun remboursement une fois le programme livré`,

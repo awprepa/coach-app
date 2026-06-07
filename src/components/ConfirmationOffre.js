@@ -74,7 +74,7 @@ export default function ConfirmationOffre({ client, onConfirme }) {
           <div style={S.warning}>
             <span style={{ fontSize: '1rem' }}>⚠️</span>
             <p style={{ margin: 0, fontSize: '0.8rem', color: '#92400e', lineHeight: 1.5 }}>
-              Formule avec engagement de <strong>{dureeLabel}</strong>. Conformément aux CGV, aucun remboursement n'est accordé en cas d'arrêt anticipé passé le délai légal de rétractation de 14 jours.
+              Formule avec engagement de <strong>{dureeLabel}</strong>. Le premier mois est dû en totalité sans remboursement possible. Aucun remboursement n'est accordé en cas d'arrêt anticipé.
             </p>
           </div>
         )}
