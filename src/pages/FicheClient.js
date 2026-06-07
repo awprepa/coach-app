@@ -10,7 +10,8 @@ import { ChargePanel } from './ChargeEntrainement'
 
 
 const OFFRES = {
-  essai:               { label: 'Essai',          bg: '#fff7ed', color: '#c2410c' },
+  gratuit:             { label: 'Gratuit',         bg: '#f0fdf4', color: '#15803d' },
+  essai:               { label: 'Essai',           bg: '#fff7ed', color: '#c2410c' },
   preparation_physique:{ label: 'Prépa physique',  bg: '#eff6ff', color: '#1d4ed8' },
   coaching:            { label: 'Coaching',        bg: '#f5f3ff', color: '#6d28d9' },
 }
@@ -314,6 +315,7 @@ export default function FicheClient() {
               }
               setForm(updated)
             }} style={styles.select}>
+              <option value="gratuit">Gratuit</option>
               <option value="essai">Essai (1 mois)</option>
               <option value="preparation_physique">Préparation physique</option>
               <option value="coaching">Coaching</option>
