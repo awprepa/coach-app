@@ -847,7 +847,7 @@ export default function SeanceClient() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={S.exCode}>{ex.code}</span>
-            <span style={S.exNom}>{ex.nom}</span>
+            <span style={S.exNom}>{progActif?.nom_variante || ex.nom}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {progActif && (

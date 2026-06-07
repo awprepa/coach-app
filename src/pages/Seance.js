@@ -237,7 +237,16 @@ export default function Seance() {
     setFormEditions(prev => ({ ...prev, [exId]: { ...prev[exId], [field]: val } }))
   }
 
+  // Trie les exercices par code (A1 < A2 < B1 < B2 < …)
+  function sortCodeKey(code) {
+    if (!code) return ['~', 9999]
+    const letter = (code.match(/^[A-Za-z]+/)?.[0] || '~').toUpperCase()
+    const num    = parseInt(code.match(/\d+/)?.[0] || '9999')
+    return [letter, num]
+  }
+
   async function saveAllEditions() {
+    // 1. Sauvegarder chaque exercice
     for (const ex of exercices) {
       const f = formEditions[ex.id]
       if (!f) continue
@@ -246,13 +255,32 @@ export default function Seance() {
         series: f.series ? parseInt(f.series) : null,
         repetitions: f.repetitions, tempo: f.tempo,
         recuperation: f.recuperation, type_intensite: f.type_intensite,
-        valeur_intensite: f.valeur_intensite
+        valeur_intensite: f.valeur_intensite,
       }).eq('id', ex.id)
     }
-    setExercices(exercices.map(ex => {
+
+    // 2. Appliquer les nouvelles valeurs localement
+    const updated = exercices.map(ex => {
       const f = formEditions[ex.id]
       return f ? { ...ex, ...f, series: f.series ? parseInt(f.series) : null } : ex
-    }))
+    })
+
+    // 3. Trier par code (A1, A2, B1, B2…)
+    const sorted = [...updated].sort((a, b) => {
+      const [al, an] = sortCodeKey(a.code)
+      const [bl, bn] = sortCodeKey(b.code)
+      if (al !== bl) return al < bl ? -1 : 1
+      return an - bn
+    })
+
+    // 4. Mettre à jour l'ordre en DB si ça a changé
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i].ordre !== i + 1) {
+        await supabase.from('exercices').update({ ordre: i + 1 }).eq('id', sorted[i].id)
+      }
+    }
+
+    setExercices(sorted.map((ex, i) => ({ ...ex, ordre: i + 1 })))
     setEditAllMode(false)
   }
 
@@ -311,6 +339,7 @@ export default function Seance() {
       repetitions: ex?.repetitions || '',
       valeur_intensite: ex?.valeur_intensite || '',
       detail: '',
+      nom_variante: '',
     }
     updateProgressions(exId, [...progs, newBloc])
   }
@@ -1044,6 +1073,7 @@ export default function Seance() {
                               </thead>
                               <tbody>
                                 {[
+                                  { key: 'nom_variante',    label: 'Exercice' },
                                   { key: 'series',          label: 'Séries' },
                                   { key: 'repetitions',     label: 'Reps / RER' },
                                   { key: 'valeur_intensite',label: 'Intensité' },
