@@ -1012,20 +1012,34 @@ export default function Seance() {
                     <>
                       <td style={styles.td}>
                         <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '' }) }} style={styles.iconBtnSm}>✏️</button>
+                          {/* Modifier */}
                           <button
-                            onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
+                            title="Modifier"
+                            onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '' }) }}
+                            style={styles.iconBtnSm}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          {/* Périodisation */}
+                          <button
                             title="Progression par semaines"
-                            style={{ ...styles.iconBtnSm, background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : undefined }}>
-                            📅
+                            onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
+                            style={{ ...styles.iconBtnSm, background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : '#6b7280' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                           </button>
+                          {/* Séries d'échauffement */}
                           <button
-                            onClick={() => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id)}
                             title="Séries d'échauffement"
-                            style={{ ...styles.iconBtnSm, background: (ex.series_echauffement?.length > 0) ? '#fff7ed' : undefined, color: (ex.series_echauffement?.length > 0) ? '#ea580c' : undefined }}>
-                            🔥
+                            onClick={() => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id)}
+                            style={{ ...styles.iconBtnSm, background: (ex.series_echauffement?.length > 0) ? '#fff7ed' : undefined, color: (ex.series_echauffement?.length > 0) ? '#ea580c' : '#6b7280' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"/></svg>
                           </button>
-                          <button onClick={() => supprimerExercice(ex.id)} style={styles.iconBtnSm}>🗑️</button>
+                          {/* Supprimer */}
+                          <button
+                            title="Supprimer"
+                            onClick={() => supprimerExercice(ex.id)}
+                            style={{ ...styles.iconBtnSm, color: '#dc2626' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
                         </div>
                       </td>
                       <td style={styles.td}>
@@ -1066,7 +1080,7 @@ export default function Seance() {
                     <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f0f7ff' }}>
                       <div style={{ padding: '12px 16px', borderTop: '2px solid #bfdbfe', borderBottom: '2px solid #bfdbfe' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.06em' }}>📅 Progression — {ex.nom}</span>
+                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Progression — {ex.nom}</span>
                           <button onClick={() => addProgBloc(ex.id)}
                             style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
                             + Bloc semaines
@@ -1149,7 +1163,7 @@ export default function Seance() {
                     <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#fff7ed' }}>
                       <div style={{ padding: '12px 16px', borderTop: '2px solid #fed7aa', borderBottom: '2px solid #fed7aa' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.06em' }}>🔥 Séries d'échauffement — {ex.nom}</span>
+                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.06em' }}>Séries d'échauffement — {ex.nom}</span>
                           <button onClick={() => addWarmupCoach(ex.id)}
                             style={{ background: '#ea580c', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
                             + Série
@@ -1167,6 +1181,10 @@ export default function Seance() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                             {(ex.series_echauffement || []).map((s, si) => (
                               <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '0.4rem 0.75rem' }}>
+                                <button onClick={() => removeWarmupCoach(ex.id, si)}
+                                  style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
                                 <span style={{ fontSize: '.72rem', fontWeight: 900, color: '#ea580c', width: 24, flexShrink: 0 }}>É{si + 1}</span>
                                 <input
                                   type="text"
@@ -1186,8 +1204,6 @@ export default function Seance() {
                                   style={{ width: 56, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
                                 />
                                 <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>% de la charge</span>
-                                <button onClick={() => removeWarmupCoach(ex.id, si)}
-                                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0 }}>×</button>
                               </div>
                             ))}
                           </div>
