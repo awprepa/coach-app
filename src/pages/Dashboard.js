@@ -269,8 +269,11 @@ export default function Dashboard() {
   const today = new Date().toISOString().slice(0, 10)
   const dateLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
+  // Exclure les clients inactifs de tous les calculs du dashboard
+  const clientsActifs = clients.filter(c => c.actif !== false)
+
   // Alertes
-  const wellnessAlertes = clients.filter(c => {
+  const wellnessAlertes = clientsActifs.filter(c => {
     const w = c.wellness_today
     if (!w) return false
     return (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 <= 2
@@ -280,7 +283,7 @@ export default function Dashboard() {
   })
 
   const todayDate = new Date(); todayDate.setHours(0,0,0,0)
-  const expirations = clients.filter(c => {
+  const expirations = clientsActifs.filter(c => {
     if (!c.date_fin) return false
     const fin = new Date(c.date_fin + 'T00:00:00')
     const days = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
@@ -290,10 +293,10 @@ export default function Dashboard() {
     return { ...c, daysLeft: Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24)) }
   })
 
-  // Programmes se terminant dans les 7 prochains jours (client doit exister)
+  // Programmes se terminant dans les 7 prochains jours (client actif uniquement)
   const progFinBientot = programmes.filter(p => {
     if (!p.date_debut) return false
-    if (!clients.find(c => c.id === p.client_id)) return false  // client supprimé → on ignore
+    if (!clientsActifs.find(c => c.id === p.client_id)) return false
     const fin = new Date(p.date_debut + 'T00:00:00')
     fin.setDate(fin.getDate() + p.semaines * 7)
     const days = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
@@ -302,14 +305,14 @@ export default function Dashboard() {
     const fin = new Date(p.date_debut + 'T00:00:00')
     fin.setDate(fin.getDate() + p.semaines * 7)
     const daysLeft = Math.ceil((fin - todayDate) / (1000 * 60 * 60 * 24))
-    const client = clients.find(c => c.id === p.client_id)
+    const client = clientsActifs.find(c => c.id === p.client_id)
     return { ...p, daysLeft, clientNom: `${client.prenom} ${client.nom}`, clientId: p.client_id }
   })
 
-  // Clients sans wellness depuis 3+ jours
+  // Clients sans wellness depuis 3+ jours (actifs uniquement)
   const trois = new Date(todayDate); trois.setDate(trois.getDate() - 3)
   const troisStr = trois.toISOString().slice(0, 10)
-  const sansWellness = clients.filter(c => {
+  const sansWellness = clientsActifs.filter(c => {
     const lastEntry = c.wellness_week?.sort((a, b) => b.date.localeCompare(a.date))[0]
     return !lastEntry || lastEntry.date < troisStr
   })
@@ -317,16 +320,15 @@ export default function Dashboard() {
   // Séances prévues aujourd'hui
   const seancesAujourdhui = weekEvents.filter(e => e.date === today)
 
-  const nouveaux = clients.filter(c => c.coach_notifie === false)
+  const nouveaux = clientsActifs.filter(c => c.coach_notifie === false)
   const totalAlertes = wellnessAlertes.length + expirations.length + nouveaux.length + progFinBientot.length
 
-  // Bilan hebdo
+  // Bilan hebdo (actifs uniquement)
   const { start: wStart, end: wEnd } = getWeekBounds()
-  const bilanRows = clients.map(c => {
+  const bilanRows = clientsActifs.map(c => {
     const evs = weekEvents.filter(e => e.client_id === c.id)
     return { ...c, eventsCount: evs.length }
   }).sort((a, b) => {
-    // inactifs d'abord, puis par wellness le plus bas
     const aInactif = a.wellness_week?.length === 0 && a.eventsCount === 0
     const bInactif = b.wellness_week?.length === 0 && b.eventsCount === 0
     if (aInactif && !bInactif) return -1
@@ -337,10 +339,10 @@ export default function Dashboard() {
     return 0
   })
 
-  // Clients individuels (pas membres d'un groupe)
-  const clientsIndividuels = clients.filter(c => !groupMemberIds.has(c.id))
-  // Membres de groupes
-  const clientsMembres = clients.filter(c => groupMemberIds.has(c.id))
+  // Clients individuels (pas membres d'un groupe, actifs)
+  const clientsIndividuels = clientsActifs.filter(c => !groupMemberIds.has(c.id))
+  // Membres de groupes (actifs)
+  const clientsMembres = clientsActifs.filter(c => groupMemberIds.has(c.id))
 
   const matchFiltre = c =>
     `${c.prenom} ${c.nom}`.toLowerCase().includes(search.toLowerCase()) &&
