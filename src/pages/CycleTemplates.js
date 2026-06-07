@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import SeanceAIModal from '../components/SeanceAIModal'
 
 export default function CycleTemplates() {
   const navigate = useNavigate()
@@ -10,6 +11,7 @@ export default function CycleTemplates() {
   const [current, setCurrent] = useState(null) // template en cours d'édition
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [showAI, setShowAI] = useState(false)
 
   // ── Envoyer à un client ──────────────────────────────────────────────────────
   const [sendModal, setSendModal] = useState(null) // template à envoyer
@@ -40,6 +42,29 @@ export default function CycleTemplates() {
       programme_template_seances: [],
     })
     setView('edit')
+  }
+
+  // Sauvegarde un cycle généré par l'IA comme template
+  async function handleAICycleSave(cycle) {
+    // Créer le template
+    const { data: tmpl, error: tmplErr } = await supabase
+      .from('programme_templates')
+      .insert({ nom: cycle.nom, semaines: cycle.semaines, description: cycle.note_ia || '' })
+      .select().single()
+    if (tmplErr) throw tmplErr
+
+    // Créer les séances du template
+    let ordre = 0
+    for (const s of (cycle.seances || [])) {
+      await supabase.from('programme_template_seances').insert({
+        template_id: tmpl.id,
+        nom: s.nom,
+        jour: ordre + 1,
+        ordre: ordre++,
+        exercices: s.exercices || [],
+      })
+    }
+    await load()
   }
 
   function editTemplate(t) {
@@ -195,8 +220,20 @@ export default function CycleTemplates() {
             <div style={S.title}>Templates de cycles</div>
             <div style={S.subtitle}>{templates.length} template{templates.length > 1 ? 's' : ''}</div>
           </div>
-          <button style={S.btnPrimary} onClick={newTemplate}>+ Nouveau template</button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button style={S.btnAI} onClick={() => setShowAI(true)}>✨ Générer avec l'IA</button>
+            <button style={S.btnPrimary} onClick={newTemplate}>+ Nouveau template</button>
+          </div>
         </div>
+
+        {showAI && (
+          <SeanceAIModal
+            defaultMode="cycle"
+            onClose={() => setShowAI(false)}
+            onCycleGenerated={handleAICycleSave}
+            onCycleDone={() => setShowAI(false)}
+          />
+        )}
 
         {loading ? (
           <div style={S.empty}>Chargement…</div>
@@ -437,6 +474,7 @@ const S = {
   seanceRow: { display: 'flex', gap: '0.5rem', alignItems: 'center' },
   seanceNum: { background: '#333333', color: '#e4f816', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', minWidth: '32px', textAlign: 'center' },
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer' },
+  btnAI:      { background: '#111827', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.35)', borderRadius: '8px', padding: '0.5rem 1.25rem', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' },
   btnGhost: { background: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
   btnDanger: { background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },

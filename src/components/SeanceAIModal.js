@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 
-export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultMode = null, onCycleDone }) {
+export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultMode = null, onCycleDone, onCycleGenerated }) {
   const [biblioFull, setBiblioFull]             = useState([])
   const [uiMessages, setUiMessages]             = useState([])
   const [apiMessages, setApiMessages]           = useState([])
@@ -122,6 +122,13 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
   }
 
   async function confirmInsertCycle() {
+    // Mode externe : le parent gère la sauvegarde (ex: template bibliothèque)
+    if (onCycleGenerated) {
+      setPhase('generating')
+      try { await onCycleGenerated(generatedCycle); setPhase('done') }
+      catch { setPhase('error') }
+      return
+    }
     if (!programmeId) { alert("Programme introuvable."); return }
     setPhase('generating')
     try {
