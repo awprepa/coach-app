@@ -60,8 +60,15 @@ export default function FicheGroupe() {
       supabase.from('groupe_membres').select('client_id, clients(id, prenom, nom, offre, date_fin)').eq('groupe_id', id),
       supabase.from('programmes').select('*, seances(count)').eq('groupe_id', id).is('template_id', null).order('created_at', { ascending: false }),
     ])
-    setGroupe(g)
-    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '', couleur_secondaire: g?.couleur_secondaire || '', monclubhouse_url: g?.monclubhouse_url || '' })
+    // Si le groupe n'a pas de logo et que les couleurs correspondent aux anciens défauts
+    // imposés automatiquement, on les efface en DB et on n'affiche rien
+    let cleanedG = g
+    if (g && !g.logo_url && (g.couleur === '#333333' || g.couleur_secondaire === '#e4f816')) {
+      await supabase.from('groupes').update({ couleur: null, couleur_secondaire: null }).eq('id', g.id)
+      cleanedG = { ...g, couleur: null, couleur_secondaire: null }
+    }
+    setGroupe(cleanedG)
+    setEditForm({ nom: cleanedG?.nom || '', couleur: cleanedG?.couleur || '', couleur_secondaire: cleanedG?.couleur_secondaire || '', monclubhouse_url: cleanedG?.monclubhouse_url || '' })
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
@@ -555,6 +562,9 @@ export default function FicheGroupe() {
                 style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
               <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280' }}>Principale</span>
               <span style={{ fontSize: '0.7rem', color: '#d1d5db', fontFamily: 'monospace' }}>{editForm.couleur}</span>
+              {editForm.couleur && (
+                <button onClick={() => setEditForm({ ...editForm, couleur: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+              )}
               {(editLogoPreview || groupe?.logo_url) && (
                 <button onClick={() => setEditPickingFor(editPickingFor === 'primary' ? null : 'primary')}
                   title="Pipette — cliquer sur le logo"
