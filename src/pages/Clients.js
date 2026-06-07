@@ -60,7 +60,7 @@ export default function Clients() {
   const [newCatLogo, setNewCatLogo]         = useState('')
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
-  const [newGroupeCouleur, setNewGroupeCouleur] = useState(PALETTE_GROUPES[0])
+  const [newGroupeCouleur, setNewGroupeCouleur] = useState('')
   const [newGroupeLogo, setNewGroupeLogo]   = useState('')
 
   const navigate = useNavigate()
@@ -110,7 +110,7 @@ export default function Clients() {
       .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, logo_url: newGroupeLogo.trim() || null }]).select().single()
     if (error) { alert(error.message); return }
     setGroupes([...groupes, data])
-    setNewGroupeNom(''); setNewGroupeLogo(''); setNewGroupeCouleur(PALETTE_GROUPES[0]); setShowGroupeForm(false)
+    setNewGroupeNom(''); setNewGroupeLogo(''); setNewGroupeCouleur(''); setShowGroupeForm(false)
   }
 
   async function supprimerCategorie(catId) {
@@ -255,7 +255,9 @@ export default function Clients() {
             <p style={{ margin: 0, fontWeight: '800', color: '#1a1a1a', fontSize: '0.95rem' }}>Nouveau groupe</p>
             <input autoFocus value={newGroupeNom} onChange={e => setNewGroupeNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && creerGroupe()}
               placeholder="Nom du groupe..." style={{ padding: '0.65rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', outline: 'none' }} />
-            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={() => setNewGroupeCouleur('')}
+                style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newGroupeCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
               {PALETTE_GROUPES.map(c => (
                 <button key={c} onClick={() => setNewGroupeCouleur(c)}
                   style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newGroupeCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
