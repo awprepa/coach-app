@@ -87,6 +87,9 @@ export default function FicheClient() {
   const [nutritionWater, setNutritionWater] = useState(null)
   const [seancesClient, setSeancesClient] = useState([])
   const [showAllSeancesClient, setShowAllSeancesClient] = useState(false)
+  const [notesCoach, setNotesCoach] = useState('')
+  const [notesSaved, setNotesSaved] = useState(true)
+  const [notesSavedAt, setNotesSavedAt] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => { if (user) setCoachId(user.id) })
@@ -107,6 +110,12 @@ export default function FicheClient() {
     setWellness(data || [])
   }
 
+  async function sauvegarderNotesCoach(val) {
+    await supabase.from('clients').update({ notes_coach: val || null }).eq('id', id)
+    setNotesSaved(true)
+    setNotesSavedAt(new Date())
+  }
+
   async function fetchSeancesClient() {
     const { data } = await supabase.from('evenements')
       .select('*, seances_libres_exercices(id, nom, ordre, seances_libres_series(num_serie, poids, reps))')
@@ -118,7 +127,7 @@ export default function FicheClient() {
   async function fetchClient() {
     const { data, error } = await supabase.from('clients').select('*, categories(id, nom, couleur)').eq('id', id).single()
     if (error) console.log(error)
-    else { setClient(data); setForm(data) }
+    else { setClient(data); setForm(data); setNotesCoach(data.notes_coach || '') }
     setLoading(false)
   }
 
@@ -421,6 +430,30 @@ export default function FicheClient() {
               <button onClick={inviterClient} style={styles.btnSecondary}>Inviter par email</button>
               <button onClick={supprimerClient} style={styles.btnDanger}>Supprimer</button>
             </div>
+          </div>
+
+          {/* ── Notes coach ── */}
+          <div style={{ ...styles.card, marginTop: '1rem', border: '1.5px solid #fef08a', background: '#fefce8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '1rem' }}>📝</span>
+              <p style={{ ...styles.sectionTitle, margin: 0 }}>Notes entretiens</p>
+              <span style={{ marginLeft: 'auto', fontSize: '0.65rem', fontWeight: '700', color: '#a16207', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 999, padding: '0.1rem 0.5rem' }}>🔒 Visible uniquement par toi</span>
+            </div>
+            <textarea
+              value={notesCoach}
+              onChange={e => { setNotesCoach(e.target.value); setNotesSaved(false) }}
+              onBlur={e => sauvegarderNotesCoach(e.target.value)}
+              placeholder={`Notes sur ${client.prenom} — entretiens, observations, points à suivre…`}
+              rows={6}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '0.75rem', border: '1.5px solid #fde68a', borderRadius: 10, fontSize: '0.88rem', lineHeight: 1.6, outline: 'none', resize: 'vertical', background: 'white', fontFamily: 'inherit', color: '#333' }}
+            />
+            <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#a16207' }}>
+              {notesSaved
+                ? notesSavedAt
+                  ? `✓ Sauvegardé à ${notesSavedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+                  : '✓ Sauvegardé'
+                : '● Non sauvegardé — quitte le champ pour sauvegarder'}
+            </p>
           </div>
         </>
       )}
