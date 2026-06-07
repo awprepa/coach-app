@@ -29,7 +29,7 @@ export default function FicheGroupe() {
 
   // Modales
   const [editOpen, setEditOpen]           = useState(false)
-  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#6366f1', couleur_secondaire: '', monclubhouse_url: '' })
+  const [editForm, setEditForm]           = useState({ nom: '', couleur: '#333333', couleur_secondaire: '#e4f816', monclubhouse_url: '' })
   const [editLogoFile, setEditLogoFile]   = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
@@ -41,7 +41,7 @@ export default function FicheGroupe() {
 
   const [showAddSG, setShowAddSG]         = useState(false)
   const [newSGNom, setNewSGNom]           = useState('')
-  const [newSGCouleur, setNewSGCouleur]   = useState('#6366f1')
+  const [newSGCouleur, setNewSGCouleur]   = useState('#333333')
 
   const [showAddMembre, setShowAddMembre] = useState(false)
   const [searchMembre, setSearchMembre]   = useState('')
@@ -61,7 +61,7 @@ export default function FicheGroupe() {
       supabase.from('programmes').select('*, seances(count)').eq('groupe_id', id).is('template_id', null).order('created_at', { ascending: false }),
     ])
     setGroupe(g)
-    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#6366f1', couleur_secondaire: g?.couleur_secondaire || '', monclubhouse_url: g?.monclubhouse_url || '' })
+    setEditForm({ nom: g?.nom || '', couleur: g?.couleur || '#333333', couleur_secondaire: g?.couleur_secondaire || '#e4f816', monclubhouse_url: g?.monclubhouse_url || '' })
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
@@ -319,7 +319,7 @@ export default function FicheGroupe() {
   )
   if (!groupe) return null
 
-  const accent = groupe.couleur || '#6366f1'
+  const accent = groupe.couleur || '#333333'
 
   return (
     <div style={tab === 'calendrier' ? S.pageWide : S.page}>

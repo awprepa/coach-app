@@ -12,13 +12,14 @@ const OFFRE_LABELS = {
 
 export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
   const navigate = useNavigate()
-  const [checked,    setChecked]    = useState(false)
-  const [mention,    setMention]    = useState('')
-  const [saving,     setSaving]     = useState(false)
-  const [error,      setError]      = useState(null)
+  const [checked,      setChecked]      = useState(false)
+  const [checkedRetro, setCheckedRetro] = useState(false)
+  const [mention,      setMention]      = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState(null)
 
   const mentionValide = mention.trim().toLowerCase() === 'lu et approuvé'
-  const peutValider   = checked && mentionValide
+  const peutValider   = checked && checkedRetro && mentionValide
 
   async function handleValider() {
     if (!peutValider) return
@@ -72,7 +73,7 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
           Lire les CGV dans un onglet dédié →
         </button>
 
-        {/* Case à cocher */}
+        {/* Case à cocher CGV */}
         <label style={S.checkLabel}>
           <div style={{ ...S.checkbox, ...(checked ? S.checkboxOn : {}) }}
             onClick={() => setChecked(v => !v)}>
@@ -80,6 +81,17 @@ export default function ModaleContrat({ clientId, userId, offre, onAccepte }) {
           </div>
           <span style={S.checkText}>
             J'ai lu et j'accepte les Conditions Générales de Vente et le contrat de prestation de services AWPrepa
+          </span>
+        </label>
+
+        {/* Case renonciation droit de rétractation */}
+        <label style={{ ...S.checkLabel, marginBottom: '1.1rem' }}>
+          <div style={{ ...S.checkbox, ...(checkedRetro ? S.checkboxOn : {}) }}
+            onClick={() => setCheckedRetro(v => !v)}>
+            {checkedRetro && <span style={S.checkmark}>✓</span>}
+          </div>
+          <span style={S.checkText}>
+            Je demande expressément le début immédiat de la prestation et reconnais renoncer à mon droit de rétractation conformément à l'article L221-25 du Code de la consommation. Le premier mois est dû en totalité.
           </span>
         </label>
 

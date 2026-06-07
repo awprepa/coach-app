@@ -95,8 +95,8 @@ export default function Dashboard() {
   const [memberGroupMap, setMemberGroupMap] = useState({}) // client_id → { id, nom, couleur, logo_url }
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
-  const [newGroupeCouleur, setNewGroupeCouleur]   = useState('#6366f1')
-  const [newGroupeCouleur2, setNewGroupeCouleur2] = useState('')
+  const [newGroupeCouleur, setNewGroupeCouleur]   = useState('#333333')
+  const [newGroupeCouleur2, setNewGroupeCouleur2] = useState('#e4f816')
   const [newGroupeLogoFile, setNewGroupeLogoFile] = useState(null)
   const [newGroupeLogoPreview, setNewGroupeLogoPreview] = useState(null)
   const [newGroupeUrl, setNewGroupeUrl]     = useState('')
@@ -254,7 +254,7 @@ export default function Dashboard() {
     if (error) { alert(error.message); setUploadingLogo(false); return }
     setGroupes(prev => [...prev, data])
     setNewGroupeNom(''); setNewGroupeLogoFile(null); setNewGroupeLogoPreview(null)
-    setNewGroupeCouleur('#6366f1'); setNewGroupeCouleur2(''); setNewGroupeUrl('')
+    setNewGroupeCouleur('#333333'); setNewGroupeCouleur2('#e4f816'); setNewGroupeUrl('')
     setShowGroupeForm(false)
     setUploadingLogo(false)
   }
