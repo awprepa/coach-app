@@ -60,12 +60,13 @@ export default function FicheGroupe() {
       supabase.from('groupe_membres').select('client_id, clients(id, prenom, nom, offre, date_fin)').eq('groupe_id', id),
       supabase.from('programmes').select('*, seances(count)').eq('groupe_id', id).is('template_id', null).order('created_at', { ascending: false }),
     ])
-    // Si le groupe n'a pas de logo et que les couleurs correspondent aux anciens défauts
-    // imposés automatiquement, on les efface en DB et on n'affiche rien
-    let cleanedG = g
-    if (g && !g.logo_url && (g.couleur === '#333333' || g.couleur_secondaire === '#e4f816')) {
-      await supabase.from('groupes').update({ couleur: null, couleur_secondaire: null }).eq('id', g.id)
-      cleanedG = { ...g, couleur: null, couleur_secondaire: null }
+    // Traiter les anciennes couleurs par défaut comme "aucune couleur"
+    const couleurEffective = (g?.couleur && g.couleur !== '#333333') ? g.couleur : null
+    const couleur2Effective = (g?.couleur_secondaire && g.couleur_secondaire !== '#e4f816') ? g.couleur_secondaire : null
+    const cleanedG = g ? { ...g, couleur: couleurEffective, couleur_secondaire: couleur2Effective } : g
+    // Nettoyer en DB si nécessaire
+    if (g && (g.couleur !== couleurEffective || g.couleur_secondaire !== couleur2Effective)) {
+      await supabase.from('groupes').update({ couleur: couleurEffective, couleur_secondaire: couleur2Effective }).eq('id', g.id)
     }
     setGroupe(cleanedG)
     setEditForm({ nom: cleanedG?.nom || '', couleur: cleanedG?.couleur || '', couleur_secondaire: cleanedG?.couleur_secondaire || '', monclubhouse_url: cleanedG?.monclubhouse_url || '' })
@@ -142,7 +143,7 @@ export default function FicheGroupe() {
     }
     const { error } = await supabase.from('groupes').update({
       nom: editForm.nom.trim(),
-      couleur: editForm.couleur,
+      couleur: editForm.couleur || null,
       couleur_secondaire: editForm.couleur_secondaire || null,
       logo_url: logoUrl,
       monclubhouse_url: editForm.monclubhouse_url?.trim() || null,
@@ -157,7 +158,7 @@ export default function FicheGroupe() {
   async function creerSousGroupe() {
     if (!newSGNom.trim()) return
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newSGNom.trim(), couleur: newSGCouleur, parent_id: id }]).select().single()
+      .insert([{ nom: newSGNom.trim(), couleur: newSGCouleur || null, parent_id: id }]).select().single()
     if (error) { alert(error.message); return }
     setSousGroupes([...sousGroupes, data])
     setNewSGNom('')
@@ -402,16 +403,24 @@ export default function FicheGroupe() {
         )}
 
         {showAddSG ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', padding: '0.75rem', background: '#f9fafb', borderRadius: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.75rem', background: '#f9fafb', borderRadius: 12 }}>
             <input
               autoFocus value={newSGNom} onChange={e => setNewSGNom(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && creerSousGroupe()}
               placeholder="Nom du sous-groupe..." style={S.input}
             />
-            <input type="color" value={newSGCouleur} onChange={e => setNewSGCouleur(e.target.value)}
-              style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', padding: '2px', background: 'white', flexShrink: 0 }} />
-            <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
-            <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
+            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={() => setNewSGCouleur('')}
+                style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              {PALETTE_SG.map(c => (
+                <button key={c} onClick={() => setNewSGCouleur(c)}
+                  style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
+              <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#9ca3af', fontWeight: '600' }}>Annuler</button>
+            </div>
           </div>
         ) : (
           <button onClick={() => setShowAddSG(true)} style={S.btnAdd}>+ Créer un sous-groupe</button>

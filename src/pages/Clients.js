@@ -107,7 +107,7 @@ export default function Clients() {
   async function creerGroupe() {
     if (!newGroupeNom.trim()) return
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur, logo_url: newGroupeLogo.trim() || null }]).select().single()
+      .insert([{ nom: newGroupeNom.trim(), couleur: newGroupeCouleur || null, logo_url: newGroupeLogo.trim() || null }]).select().single()
     if (error) { alert(error.message); return }
     setGroupes([...groupes, data])
     setNewGroupeNom(''); setNewGroupeLogo(''); setNewGroupeCouleur(''); setShowGroupeForm(false)
