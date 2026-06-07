@@ -140,9 +140,9 @@ export default function FicheClient() {
     const { error } = await supabase.from('clients').update({
       prenom: form.prenom, nom: form.nom, email: form.email,
       telephone: form.telephone, objectif: form.objectif,
-      offre: form.offre, date_debut: form.date_debut,
-      date_fin: form.date_fin, notes: form.notes,
-      categorie_id: form.categorie_id || null
+      offre: form.offre, engagement_mois: form.engagement_mois || null,
+      date_debut: form.date_debut, date_fin: form.date_fin,
+      notes: form.notes, categorie_id: form.categorie_id || null
     }).eq('id', id)
     if (error) alert(error.message)
     else { await fetchClient(); setEditMode(false) }
@@ -306,7 +306,7 @@ export default function FicheClient() {
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Offre</label>
             <select value={form.offre} onChange={e => {
-              const updated = { ...form, offre: e.target.value }
+              const updated = { ...form, offre: e.target.value, engagement_mois: null }
               if (e.target.value === 'essai') {
                 const base = updated.date_debut || new Date().toISOString().slice(0, 10)
                 const fin = new Date(base + 'T00:00:00')
@@ -321,6 +321,39 @@ export default function FicheClient() {
               <option value="coaching">Coaching</option>
             </select>
           </div>
+          {['coaching', 'preparation_physique'].includes(form.offre) && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={styles.label}>Engagement</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {[
+                  { val: null, label: 'Sans engagement' },
+                  { val: 1,    label: '1 mois' },
+                  { val: 3,    label: '3 mois' },
+                  { val: 6,    label: '6 mois' },
+                ].map(opt => {
+                  const active = (form.engagement_mois || null) === opt.val
+                  return (
+                    <button key={String(opt.val)} type="button" onClick={() => {
+                      const base = form.date_debut || new Date().toISOString().slice(0, 10)
+                      let date_fin = form.date_fin || null
+                      if (opt.val) {
+                        const fin = new Date(base + 'T00:00:00')
+                        fin.setMonth(fin.getMonth() + opt.val)
+                        date_fin = fin.toISOString().slice(0, 10)
+                      }
+                      setForm({ ...form, engagement_mois: opt.val, date_fin })
+                    }} style={{
+                      flex: 1, padding: '0.5rem 0.25rem', border: '1.5px solid',
+                      borderColor: active ? '#333' : '#e5e7eb',
+                      background: active ? '#333' : 'white',
+                      color: active ? '#e4f816' : '#374151',
+                      borderRadius: 10, fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer',
+                    }}>{opt.label}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Catégorie</label>
             <select value={form.categorie_id || ''} onChange={e => setForm({ ...form, categorie_id: e.target.value || null })} style={styles.select}>
