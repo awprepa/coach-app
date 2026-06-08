@@ -867,32 +867,43 @@ export default function SeanceClient() {
         {(() => {
           const mediaUrl = ex.media_url || ex.bibliotheque_exercices?.image_url || null
           const isYt = mediaUrl && youtubeId(mediaUrl)
+          const ytId = isYt ? youtubeId(mediaUrl) : null
           return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={S.exCode}>{ex.code}</span>
-                <span style={S.exNom}>{progActif?.nom_variante || ex.nom}</span>
-                {mediaUrl && (
-                  <button
-                    onClick={() => setMediaModal({ nom: progActif?.nom_variante || ex.nom, url: mediaUrl })}
-                    style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}
-                    title="Voir le mouvement"
-                  >
-                    {isYt
-                      ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                      : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
-                    }
-                  </button>
-                )}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
+              {/* Infos exercice */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span style={S.exCode}>{ex.code}</span>
+                  <span style={S.exNom}>{progActif?.nom_variante || ex.nom}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                  {progActif && (
+                    <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
+                      📈 {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
+                    </span>
+                  )}
+                  <span style={S.semBadge}>S{semaineActuelle}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                {progActif && (
-                  <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
-                    📈 {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
-                  </span>
-                )}
-                <span style={S.semBadge}>S{semaineActuelle}</span>
-              </div>
+              {/* Miniature média — visible dès le départ, tap = modal plein écran */}
+              {mediaUrl && (
+                <button
+                  onClick={() => setMediaModal({ nom: progActif?.nom_variante || ex.nom, url: mediaUrl })}
+                  style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative', display: 'block' }}
+                  title="Voir le mouvement"
+                >
+                  {ytId ? (
+                    <>
+                      <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.38)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      </div>
+                    </>
+                  ) : (
+                    <img src={mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  )}
+                </button>
+              )}
             </div>
           )
         })()}
