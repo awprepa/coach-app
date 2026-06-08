@@ -402,8 +402,18 @@ export default function Seance() {
       code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions,
       tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite,
       valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id,
+      progressions: ex.progressions?.length > 0 ? ex.progressions : null,
+      series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
     }))
-    const { error } = await supabase.from('seance_templates').insert([{ nom: seance.nom, exercices: exData }])
+    // RPE cibles uniquement (pas les réels)
+    const rpeCibles = {}
+    Object.entries(rpeSeances).forEach(([sem, r]) => { if (r?.rpe_cible) rpeCibles[sem] = r.rpe_cible })
+    const { error } = await supabase.from('seance_templates').insert([{
+      nom: seance.nom,
+      exercices: exData,
+      echauffement: echauffement?.length > 0 ? echauffement : [],
+      rpe_cibles: rpeCibles,
+    }])
     if (error) alert(error.message)
     else { setTemplateSaved(true); setTimeout(() => setTemplateSaved(false), 2500) }
   }

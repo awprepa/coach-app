@@ -126,7 +126,10 @@ export default function Programme() {
 
   async function chargerTemplate(template) {
     const { data: newSeance, error } = await supabase
-      .from('seances').insert([{ programme_id: id, nom: template.nom, ordre: seances.length + 1 }]).select().single()
+      .from('seances').insert([{
+        programme_id: id, nom: template.nom, ordre: seances.length + 1,
+        echauffement: template.echauffement?.length > 0 ? template.echauffement : [],
+      }]).select().single()
     if (error) { alert(error.message); return }
     if (template.exercices?.length > 0) {
       const exInserts = template.exercices.map(ex => ({
@@ -134,8 +137,17 @@ export default function Programme() {
         repetitions: ex.repetitions, tempo: ex.tempo, recuperation: ex.recuperation,
         type_intensite: ex.type_intensite, valeur_intensite: ex.valeur_intensite,
         ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id || null,
+        progressions: ex.progressions || null,
+        series_echauffement: ex.series_echauffement || null,
       }))
       await supabase.from('exercices').insert(exInserts)
+    }
+    // RPE cibles
+    const rpeCibles = template.rpe_cibles || {}
+    if (Object.keys(rpeCibles).length > 0) {
+      await supabase.from('rpe_seances').insert(
+        Object.entries(rpeCibles).map(([sem, val]) => ({ seance_id: newSeance.id, semaine: parseInt(sem), rpe_cible: val }))
+      )
     }
     setSeances(prev => [...prev, newSeance])
     setShowTemplates(false)
@@ -185,13 +197,15 @@ export default function Programme() {
         .select('id').single()
       if (tplErr) throw tplErr
 
-      // 2. Pour chaque séance, récupérer ses exercices et insérer dans programme_template_seances
+      // 2. Pour chaque séance, récupérer exercices + échauffement + RPE cibles
       if (seances.length > 0) {
-        const { data: exos } = await supabase
-          .from('exercices')
-          .select('*')
-          .in('seance_id', seances.map(s => s.id))
-          .order('ordre', { ascending: true })
+        const seanceIds = seances.map(s => s.id)
+
+        const [{ data: exos }, { data: seancesData }, { data: rpeData }] = await Promise.all([
+          supabase.from('exercices').select('*').in('seance_id', seanceIds).order('ordre', { ascending: true }),
+          supabase.from('seances').select('id, echauffement').in('id', seanceIds),
+          supabase.from('rpe_seances').select('seance_id, semaine, rpe_cible').in('seance_id', seanceIds).not('rpe_cible', 'is', null),
+        ])
 
         const bySeance = {}
         ;(exos || []).forEach(ex => {
@@ -202,7 +216,18 @@ export default function Programme() {
             recuperation: ex.recuperation, type_intensite: ex.type_intensite,
             valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
             bibliotheque_id: ex.bibliotheque_id || null,
+            progressions: ex.progressions?.length > 0 ? ex.progressions : null,
+            series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
           })
+        })
+
+        const echauffMap = {}
+        ;(seancesData || []).forEach(s => { echauffMap[s.id] = s.echauffement || [] })
+
+        const rpeMap = {}
+        ;(rpeData || []).forEach(r => {
+          if (!rpeMap[r.seance_id]) rpeMap[r.seance_id] = {}
+          rpeMap[r.seance_id][r.semaine] = r.rpe_cible
         })
 
         await supabase.from('programme_template_seances').insert(
@@ -212,6 +237,8 @@ export default function Programme() {
             jour: idx + 1,
             ordre: s.ordre || idx + 1,
             exercices: bySeance[s.id] || [],
+            echauffement: echauffMap[s.id] || [],
+            rpe_cibles: rpeMap[s.id] || {},
           }))
         )
       }
