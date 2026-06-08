@@ -11,6 +11,7 @@ export default function Seance() {
   const navigate = useNavigate()
   const [seance, setSeance] = useState(null)
   const [exercices, setExercices] = useState([])
+  const exercicesRef = useRef([]) // ref synchrone pour updateProgBloc
   const [charges, setCharges] = useState({})
   const [trackingMap, setTrackingMap] = useState({})
   const [rpeSeances, setRpeSeances] = useState({})
@@ -51,6 +52,9 @@ export default function Seance() {
   const [showEchauffPaste, setShowEchauffPaste]   = useState(false)
   const [echauffPasteText, setEchauffPasteText]   = useState('')
   const [echauffParsed, setEchauffParsed]         = useState(null)
+
+  // Garder le ref synchrone avec le state pour updateProgBloc
+  useEffect(() => { exercicesRef.current = exercices }, [exercices])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -368,15 +372,19 @@ export default function Seance() {
     updateProgressions(exId, [...progs, newBloc])
   }
   function updateProgBloc(exId, blocId, field, val) {
-    setExercices(prev => {
-      const ex = prev.find(e => e.id === exId)
-      const progs = (ex?.progressions || []).map(p =>
-        // Comparaison stricte : les deux doivent être définis ET égaux
-        p.id && blocId && p.id === blocId ? { ...p, [field]: val } : p
-      )
-      supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
-      return prev.map(e => e.id === exId ? { ...e, progressions: progs } : e)
-    })
+    // Lire depuis le ref (synchrone) — évite les race conditions quand
+    // plusieurs champs sont quittés rapidement avant le re-render React
+    const ex = exercicesRef.current.find(e => e.id === exId)
+    if (!ex) return
+    const progs = (ex.progressions || []).map(p =>
+      p.id && blocId && p.id === blocId ? { ...p, [field]: val } : p
+    )
+    // Mettre à jour le ref immédiatement pour que le prochain appel voie ces données
+    exercicesRef.current = exercicesRef.current.map(e =>
+      e.id === exId ? { ...e, progressions: progs } : e
+    )
+    setExercices(exercicesRef.current)
+    supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
   }
   function removeProgBloc(exId, blocId) {
     const ex = exercices.find(e => e.id === exId)
