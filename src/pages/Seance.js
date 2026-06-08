@@ -3,6 +3,7 @@ import SeanceAIModal from '../components/SeanceAIModal'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { autoLinkBiblio } from '../utils/exerciceMatch'
 
 function newId() { return Math.random().toString(36).slice(2) }
 
@@ -42,6 +43,8 @@ export default function Seance() {
   const [templateSaved, setTemplateSaved] = useState(false)
   const [progSaved, setProgSaved] = useState({})   // { [exId]: true } flash feedback
   const [progDraft, setProgDraft] = useState(null)  // blocs en cours d'édition (inputs contrôlés)
+  const [biblioFull, setBiblioFull] = useState([])  // toute la bibliothèque pour auto-matching
+  const [autoLinked, setAutoLinked] = useState({})  // { [exId]: nomBiblio } flash feedback
   const [showAIModal, setShowAIModal] = useState(false)
   // Échauffement
   const [echauffement, setEchauffement]           = useState([])
@@ -57,7 +60,12 @@ export default function Seance() {
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchSeance() }, [])
+  useEffect(() => { fetchSeance(); fetchBiblioFull() }, [])
+
+  async function fetchBiblioFull() {
+    const { data } = await supabase.from('bibliotheque_exercices').select('id, nom').order('nom')
+    if (data) setBiblioFull(data)
+  }
 
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
@@ -178,8 +186,14 @@ export default function Seance() {
         .insert([{ nom: form.nom, image_url }]).select().single()
       if (libData) {
         bibliotheque_id = libData.id
+        setBiblioFull(prev => [...prev, { id: libData.id, nom: libData.nom }].sort((a, b) => a.nom.localeCompare(b.nom)))
         setAllBiblio(prev => [...prev, libData].sort((a, b) => a.nom.localeCompare(b.nom)))
       }
+    }
+
+    // ── Auto-matching bibliothèque si pas encore lié ──
+    if (!bibliotheque_id && biblioFull.length > 0) {
+      bibliotheque_id = autoLinkBiblio(form.nom, biblioFull)
     }
 
     const { data, error } = await supabase.from('exercices').insert([{
@@ -194,6 +208,14 @@ export default function Seance() {
     else {
       setExercices([...exercices, { ...data, charges: [] }])
       setCharges({ ...charges, [data.id]: {} })
+      // Flash feedback si auto-linked
+      if (bibliotheque_id && !form.bibliotheque_id && !saveToLibrary) {
+        const matchedNom = biblioFull.find(b => b.id === bibliotheque_id)?.nom
+        if (matchedNom) {
+          setAutoLinked(prev => ({ ...prev, [data.id]: matchedNom }))
+          setTimeout(() => setAutoLinked(prev => { const n = { ...prev }; delete n[data.id]; return n }), 4000)
+        }
+      }
       setForm({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null, media_url: '' })
       setBiblioSearch('')
       setSaveToLibrary(false)
@@ -296,6 +318,13 @@ export default function Seance() {
   }
 
   async function sauvegarderEdition(exId) {
+    // Auto-matching biblio si le nom a changé et pas encore lié
+    const exOriginal = exercices.find(e => e.id === exId)
+    let bibliotheque_id = formEdition.bibliotheque_id ?? exOriginal?.bibliotheque_id ?? null
+    if (!bibliotheque_id && formEdition.nom && biblioFull.length > 0) {
+      bibliotheque_id = autoLinkBiblio(formEdition.nom, biblioFull)
+    }
+
     const { error } = await supabase.from('exercices').update({
       code: formEdition.code, nom: formEdition.nom,
       series: formEdition.series ? parseInt(formEdition.series) : null,
@@ -303,8 +332,18 @@ export default function Seance() {
       recuperation: formEdition.recuperation, type_intensite: formEdition.type_intensite,
       valeur_intensite: formEdition.valeur_intensite,
       media_url: formEdition.media_url || null,
+      bibliotheque_id,
     }).eq('id', exId)
     if (error) { alert(error.message); return }
+
+    // Flash feedback auto-link
+    if (bibliotheque_id && !exOriginal?.bibliotheque_id) {
+      const matchedNom = biblioFull.find(b => b.id === bibliotheque_id)?.nom
+      if (matchedNom) {
+        setAutoLinked(prev => ({ ...prev, [exId]: matchedNom }))
+        setTimeout(() => setAutoLinked(prev => { const n = { ...prev }; delete n[exId]; return n }), 4000)
+      }
+    }
 
     // Appliquer les nouvelles valeurs puis trier par code
     const updated = exercices.map(ex => ex.id === exId ? { ...ex, ...formEdition, series: formEdition.series ? parseInt(formEdition.series) : null } : ex)
@@ -1149,7 +1188,14 @@ export default function Seance() {
                       <td style={styles.td}>
                         <span style={styles.codeTag}>{ex.code}</span>
                       </td>
-                      <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>{ex.nom}</td>
+                      <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>
+                        {ex.nom}
+                        {autoLinked[ex.id] && (
+                          <span style={{ marginLeft: 6, fontSize: '0.62rem', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 5, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            🔗 Lié → {autoLinked[ex.id]}
+                          </span>
+                        )}
+                      </td>
                       <td style={styles.tdCenter}>{ex.series}</td>
                       <td style={styles.tdCenter}>{ex.repetitions}</td>
                       <td style={styles.tdCenter}>{ex.tempo}</td>
