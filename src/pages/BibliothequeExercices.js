@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../supabase'
 import { findMuscles, MUSCLES } from '../data/muscleData'
+import { findBiblioMatch } from '../utils/exerciceMatch'
 
 // ── Helpers média ──────────────────────────────────────────────────────────
 function youtubeId(url) {
@@ -118,6 +119,8 @@ export default function BibliothequeExercices() {
   const [addSaving, setAddSaving]       = useState(false)
   const [mediaModal, setMediaModal]     = useState(null) // { nom, url }
   const [uploadingFor, setUploadingFor] = useState(null) // 'create' | exId
+  const [backfillState, setBackfillState] = useState(null) // null | 'loading' | 'preview' | 'applying' | 'done'
+  const [backfillResult, setBackfillResult] = useState(null) // { matched: [], skipped: 0 }
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -249,6 +252,57 @@ export default function BibliothequeExercices() {
     setAddForm({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
   }
 
+  // ── Backfill : liaison automatique des anciens exercices ──────────────────
+  async function lancerBackfill() {
+    setBackfillState('loading')
+    // Récupère tous les exercices de séances sans bibliotheque_id
+    const { data: unlinked, error } = await supabase
+      .from('exercices')
+      .select('id, nom')
+      .is('bibliotheque_id', null)
+    if (error) { alert(error.message); setBackfillState(null); return }
+    if (!unlinked?.length) {
+      setBackfillResult({ matched: [], skipped: 0 })
+      setBackfillState('done')
+      return
+    }
+    // Matche chaque exercice contre la bibliothèque
+    const matched = []
+    for (const ex of unlinked) {
+      const result = findBiblioMatch(ex.nom, exercices)
+      if (result) {
+        matched.push({
+          exercice_id:  ex.id,
+          exercice_nom: ex.nom,
+          biblio_id:    result.match.id,
+          biblio_nom:   result.match.nom,
+          score:        result.score,
+        })
+      }
+    }
+    setBackfillResult({ matched, skipped: unlinked.length - matched.length })
+    setBackfillState('preview')
+  }
+
+  async function appliquerBackfill() {
+    if (!backfillResult?.matched?.length) { setBackfillState('done'); return }
+    setBackfillState('applying')
+    // Grouper par biblio_id pour minimiser les requêtes
+    const groups = {}
+    for (const m of backfillResult.matched) {
+      if (!groups[m.biblio_id]) groups[m.biblio_id] = []
+      groups[m.biblio_id].push(m.exercice_id)
+    }
+    for (const [biblioId, ids] of Object.entries(groups)) {
+      const { error } = await supabase
+        .from('exercices')
+        .update({ bibliotheque_id: biblioId })
+        .in('id', ids)
+      if (error) { alert('Erreur : ' + error.message); setBackfillState('preview'); return }
+    }
+    setBackfillState('done')
+  }
+
   const allCats  = ['Tous', ...CATEGORIES]
   const filtered = exercices.filter(ex => {
     const matchCat    = catFilter === 'Tous' || ex.categorie === catFilter
@@ -280,15 +334,111 @@ export default function BibliothequeExercices() {
         </div>
       )}
 
+      {/* ── Modal backfill ── */}
+      {backfillState && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+
+            {/* Loading */}
+            {backfillState === 'loading' && (
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔍</div>
+                <p style={{ fontWeight: 700, color: '#333' }}>Analyse en cours…</p>
+                <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Comparaison de tous les exercices sans lien</p>
+              </div>
+            )}
+
+            {/* Applying */}
+            {backfillState === 'applying' && (
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+                <p style={{ fontWeight: 700, color: '#333' }}>Liaison en cours…</p>
+                <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Mise à jour de la base de données</p>
+              </div>
+            )}
+
+            {/* Done */}
+            {backfillState === 'done' && (
+              <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
+                <p style={{ fontWeight: 800, fontSize: '1.1rem', color: '#333', marginBottom: '0.5rem' }}>
+                  {backfillResult?.matched?.length
+                    ? `${backfillResult.matched.length} exercice${backfillResult.matched.length > 1 ? 's' : ''} lié${backfillResult.matched.length > 1 ? 's' : ''} !`
+                    : 'Aucun exercice à lier'}
+                </p>
+                <p style={{ fontSize: '0.82rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
+                  {backfillResult?.matched?.length
+                    ? 'Tes clients verront maintenant les images en séance.'
+                    : 'Tous les exercices sont déjà liés ou aucune correspondance trouvée.'}
+                </p>
+                <button onClick={() => { setBackfillState(null); setBackfillResult(null) }} style={S.btnPrimary}>
+                  Fermer
+                </button>
+              </div>
+            )}
+
+            {/* Preview */}
+            {backfillState === 'preview' && backfillResult && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div>
+                    <p style={{ fontWeight: 800, fontSize: '1rem', color: '#333', margin: 0 }}>🔗 Liaison automatique</p>
+                    <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0.25rem 0 0' }}>
+                      {backfillResult.matched.length} correspondance{backfillResult.matched.length !== 1 ? 's' : ''} trouvée{backfillResult.matched.length !== 1 ? 's' : ''}
+                      {backfillResult.skipped > 0 && ` · ${backfillResult.skipped} sans correspondance`}
+                    </p>
+                  </div>
+                  <button onClick={() => { setBackfillState(null); setBackfillResult(null) }} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+                </div>
+
+                {backfillResult.matched.length === 0 ? (
+                  <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                    Aucune correspondance trouvée. Vérifie que tes exercices dans la bibliothèque ont des noms similaires.
+                  </p>
+                ) : (
+                  <div style={{ overflowY: 'auto', flex: 1, marginBottom: '1rem' }}>
+                    {backfillResult.matched.map(m => (
+                      <div key={m.exercice_id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0', borderBottom: '1px solid #f3f4f6' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.exercice_nom}</p>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>→ {m.biblio_nom}</p>
+                        </div>
+                        <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 6, padding: '2px 7px' }}>
+                          {Math.round(m.score * 100)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {backfillResult.matched.length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                    <button onClick={() => { setBackfillState(null); setBackfillResult(null) }} style={S.btnSecondary}>Annuler</button>
+                    <button onClick={appliquerBackfill} style={S.btnPrimary}>
+                      ✅ Lier les {backfillResult.matched.length} exercices
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Bibliothèque d'exercices</h1>
           <p style={S.subtitle}>{exercices.length} exercice{exercices.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
-          {showForm ? '✕ Annuler' : '+ Ajouter un exercice'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button onClick={lancerBackfill} style={{ ...S.btnSecondary, fontSize: '0.82rem' }} title="Lier automatiquement les exercices existants à la bibliothèque">
+            🔗 Lier les anciens exercices
+          </button>
+          <button onClick={() => { setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
+            {showForm ? '✕ Annuler' : '+ Ajouter un exercice'}
+          </button>
+        </div>
       </div>
 
       {/* ── Formulaire ajout ── */}
