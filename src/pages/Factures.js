@@ -140,6 +140,15 @@ export default function Factures() {
       body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif; color:#111; background:white; }
       @page { size:A4 portrait; margin:18mm 14mm 14mm 14mm; }
       @media print { body { print-color-adjust:exact; -webkit-print-color-adjust:exact; } }
+      #invoice-print-wrap {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 1.5rem !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
     </style></head><body>`)
     win.document.write(content.innerHTML)
     win.document.write('</body></html>')
@@ -178,7 +187,7 @@ export default function Factures() {
               { key: 'facture_adresse',        label: 'Adresse',               placeholder: '41 rue Fénelon, 31200 Toulouse' },
               { key: 'facture_siret',          label: 'SIRET',                 placeholder: '106 026 883 00012' },
               { key: 'facture_iban',           label: 'IBAN (virement)',       placeholder: 'FR76 3000…' },
-              { key: 'facture_email',          label: 'Email',                 placeholder: 'arthur@awprepa.app' },
+              { key: 'facture_email',          label: 'Email',                 placeholder: 'wehrey.arthur@gmail.com' },
               { key: 'facture_numero_debut',   label: 'Numéro de départ',      placeholder: '1' },
             ].map(f => (
               <div key={f.key}>
@@ -222,6 +231,41 @@ export default function Factures() {
               <label style={S.label}>Date d'échéance</label>
               <input type="date" value={form.date_echeance} onChange={e => setForm(f => ({ ...f, date_echeance: e.target.value }))} style={S.input} />
             </div>
+          </div>
+
+          {/* Preset prestations */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={S.label}>Ajouter une prestation prédéfinie</label>
+            <select
+              value=""
+              onChange={e => {
+                if (!e.target.value) return
+                const [desc, prix] = e.target.value.split('||')
+                setForm(f => ({
+                  ...f,
+                  lignes: [...f.lignes.filter(l => l.description.trim()), { id: Math.random().toString(36).slice(2), description: desc, quantite: 1, prix: parseFloat(prix) }]
+                }))
+                e.target.value = ''
+              }}
+              style={{ ...S.input, color: '#374151', cursor: 'pointer' }}
+            >
+              <option value="">— Choisir une prestation —</option>
+              <optgroup label="Préparation physique">
+                <option value="Préparation physique — sans engagement||89">Préparation physique — sans engagement — 89 €/mois</option>
+                <option value="Préparation physique — 3 mois||79">Préparation physique — 3 mois — 79 €/mois</option>
+                <option value="Préparation physique — 6 mois||69">Préparation physique — 6 mois — 69 €/mois</option>
+                <option value="Préparation physique — séance découverte||49">Préparation physique — séance découverte — 49 €</option>
+              </optgroup>
+              <optgroup label="Coaching remise en forme">
+                <option value="Coaching remise en forme — sans engagement||79">Coaching remise en forme — sans engagement — 79 €/mois</option>
+                <option value="Coaching remise en forme — 3 mois||69">Coaching remise en forme — 3 mois — 69 €/mois</option>
+                <option value="Coaching remise en forme — 6 mois||59">Coaching remise en forme — 6 mois — 59 €/mois</option>
+                <option value="Coaching remise en forme — séance découverte||49">Coaching remise en forme — séance découverte — 49 €</option>
+              </optgroup>
+              <optgroup label="Autre">
+                <option value="Programme one-shot||30">Programme one-shot — 30 €</option>
+              </optgroup>
+            </select>
           </div>
 
           {/* Lignes */}
@@ -391,11 +435,11 @@ function InvoiceTemplate({ facture, settings, total }) {
     : null
 
   return (
-    <div style={INV.wrap}>
+    <div id="invoice-print-wrap" style={INV.wrap}>
       {/* ── Bandeau supérieur ── */}
       <div style={INV.topBand}>
         <div style={INV.topLeft}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 42, marginBottom: 6 }} onError={e => e.target.style.display='none'} />
+          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 42, width: 'auto', maxWidth: 200, objectFit: 'contain', marginBottom: 6 }} onError={e => e.target.style.display='none'} />
           <p style={INV.nomCoach}>{nomCoach}</p>
           <p style={INV.sm}>{activite}</p>
         </div>
