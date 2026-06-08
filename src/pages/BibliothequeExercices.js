@@ -1,6 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../supabase'
 import { findMuscles, MUSCLES } from '../data/muscleData'
+
+// ── Helpers média ──────────────────────────────────────────────────────────
+function youtubeId(url) {
+  if (!url) return null
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
+function isImage(url) {
+  return url && /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url)
+}
+function mediaThumbnail(url) {
+  const ytId = youtubeId(url)
+  if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`
+  if (isImage(url)) return url
+  return null
+}
 
 const CATEGORIES = ['Musculation', 'Prépa physique', 'Cardio', 'Mobilité', 'Pliométrie', 'Haltérophilie', 'Gainage', 'Autre']
 const MUSCLE_KEYS = Object.keys(MUSCLES)
@@ -92,7 +108,7 @@ export default function BibliothequeExercices() {
   const [search, setSearch]             = useState('')
   const [catFilter, setCatFilter]       = useState('Tous')
   const [showForm, setShowForm]         = useState(false)
-  const [form, setForm]                 = useState({ nom: '', categorie: '', primary: [], secondary: [] })
+  const [form, setForm]                 = useState({ nom: '', categorie: '', primary: [], secondary: [], image_url: '' })
   const [saving, setSaving]             = useState(false)
   const [enEdition, setEnEdition]       = useState(null)
   const [formEdit, setFormEdit]         = useState({})
@@ -100,6 +116,9 @@ export default function BibliothequeExercices() {
   const [addingToSeance, setAddingToSeance] = useState(null)
   const [addForm, setAddForm]           = useState({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
   const [addSaving, setAddSaving]       = useState(false)
+  const [mediaModal, setMediaModal]     = useState(null) // { nom, url }
+  const [uploadingFor, setUploadingFor] = useState(null) // 'create' | exId
+  const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
 
@@ -117,6 +136,32 @@ export default function BibliothequeExercices() {
     setSeances(data || [])
   }
 
+  // ── Upload fichier image/GIF ──────────────────────────────────────────
+  async function uploadMedia(file, target) {
+    // target = 'create' | exId
+    const ext  = file.name.split('.').pop().toLowerCase()
+    const path = `biblio/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    setUploadingFor(target)
+    const { error: upErr } = await supabase.storage.from('exercices').upload(path, file, { upsert: true })
+    setUploadingFor(null)
+    if (upErr) { alert('Erreur upload : ' + upErr.message); return null }
+    const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
+    return publicUrl
+  }
+
+  async function handleFileChange(e, target) {
+    const file = e.target.files[0]
+    if (!file) return
+    const url = await uploadMedia(file, target)
+    if (!url) return
+    if (target === 'create') {
+      setForm(prev => ({ ...prev, image_url: url }))
+    } else {
+      setFormEdit(prev => ({ ...prev, image_url: url }))
+    }
+    e.target.value = ''
+  }
+
   // Auto-remplissage muscles au changement de nom
   function applyAutoMuscles(nom, isEdit) {
     const m = findMuscles(nom)
@@ -131,7 +176,7 @@ export default function BibliothequeExercices() {
     e.preventDefault()
     if (!form.nom.trim()) return
     setSaving(true)
-    const payload = { nom: form.nom.trim(), categorie: form.categorie || null }
+    const payload = { nom: form.nom.trim(), categorie: form.categorie || null, image_url: form.image_url || null }
     const { data, error } = await supabase
       .from('bibliotheque_exercices')
       .insert({ ...payload, muscles_primaires: form.primary, muscles_secondaires: form.secondary })
@@ -147,14 +192,14 @@ export default function BibliothequeExercices() {
     } else {
       setExercices(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
     }
-    setForm({ nom: '', categorie: '', primary: [], secondary: [] })
+    setForm({ nom: '', categorie: '', primary: [], secondary: [], image_url: '' })
     setShowForm(false)
     setSaving(false)
   }
 
   async function sauvegarderEdition(exId) {
     setSaving(true)
-    const payload = { nom: formEdit.nom, categorie: formEdit.categorie || null }
+    const payload = { nom: formEdit.nom, categorie: formEdit.categorie || null, image_url: formEdit.image_url || null }
     const { error } = await supabase
       .from('bibliotheque_exercices')
       .update({ ...payload, muscles_primaires: formEdit.primary, muscles_secondaires: formEdit.secondary })
@@ -213,7 +258,29 @@ export default function BibliothequeExercices() {
 
   return (
     <div style={S.page}>
-      {/* Header */}
+
+      {/* ── Modal média plein écran ── */}
+      {mediaModal && (
+        <div onClick={() => setMediaModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#111', borderRadius: 16, overflow: 'hidden', maxWidth: 720, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#1a1a1a' }}>
+              <span style={{ color: '#e4f816', fontWeight: 700, fontSize: '0.9rem' }}>{mediaModal.nom}</span>
+              <button onClick={() => setMediaModal(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            </div>
+            {youtubeId(mediaModal.url)
+              ? <iframe
+                  src={`https://www.youtube.com/embed/${youtubeId(mediaModal.url)}?autoplay=1`}
+                  style={{ width: '100%', aspectRatio: '16/9', border: 'none' }}
+                  allow="autoplay; fullscreen"
+                  title={mediaModal.nom}
+                />
+              : <img src={mediaModal.url} alt={mediaModal.nom} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain' }} />
+            }
+          </div>
+        </div>
+      )}
+
+      {/* ── Header ── */}
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Bibliothèque d'exercices</h1>
@@ -224,7 +291,7 @@ export default function BibliothequeExercices() {
         </button>
       </div>
 
-      {/* Formulaire ajout */}
+      {/* ── Formulaire ajout ── */}
       {showForm && (
         <div style={S.formCard}>
           <p style={S.formTitle}>Nouvel exercice</p>
@@ -262,6 +329,13 @@ export default function BibliothequeExercices() {
                 />
               </div>
             </div>
+            {/* Média */}
+            <MediaField
+              value={form.image_url}
+              onChange={url => setForm(prev => ({ ...prev, image_url: url }))}
+              onFile={e => handleFileChange(e, 'create')}
+              uploading={uploadingFor === 'create'}
+            />
             <button type="submit" disabled={saving} style={S.btnPrimary}>
               {saving ? 'Enregistrement...' : '✓ Créer'}
             </button>
@@ -303,7 +377,7 @@ export default function BibliothequeExercices() {
                 {enEdition === ex.id ? (
                   // ── Mode édition ──
                   <div style={{ padding: '1rem' }}>
-                    <p style={{ ...S.formTitle, marginBottom: '0.875rem' }}>Modifier</p>
+                    <p style={{ ...S.formTitle, marginBottom: '0.875rem' }}>Modifier — {ex.nom}</p>
                     <label style={S.label}>Nom</label>
                     <input value={formEdit.nom} onChange={e => applyAutoMuscles(e.target.value, true)} style={{ ...S.input, marginBottom: '0.75rem' }} />
                     <label style={S.label}>Catégorie</label>
@@ -319,6 +393,13 @@ export default function BibliothequeExercices() {
                         onChange={({ primary: p, secondary: s }) => setFormEdit(prev => ({ ...prev, primary: p, secondary: s }))}
                       />
                     </div>
+                    {/* Média */}
+                    <MediaField
+                      value={formEdit.image_url || ''}
+                      onChange={url => setFormEdit(prev => ({ ...prev, image_url: url }))}
+                      onFile={e => handleFileChange(e, ex.id)}
+                      uploading={uploadingFor === ex.id}
+                    />
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
                         {saving ? '...' : '✓ Sauvegarder'}
@@ -329,6 +410,31 @@ export default function BibliothequeExercices() {
                 ) : (
                   // ── Mode lecture ──
                   <>
+                    {/* Miniature média */}
+                    {ex.image_url && (() => {
+                      const thumb = mediaThumbnail(ex.image_url)
+                      const isYt  = !!youtubeId(ex.image_url)
+                      return (
+                        <div
+                          onClick={() => setMediaModal({ nom: ex.nom, url: ex.image_url })}
+                          style={{ position: 'relative', cursor: 'pointer', background: '#111', height: 130, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
+                        >
+                          {thumb
+                            ? <img src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
+                                <span style={{ fontSize: '2rem' }}>🔗</span>
+                              </div>
+                          }
+                          {isYt && (
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ background: 'rgba(0,0,0,0.65)', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="#e4f816" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                     <div style={{ padding: '0.875rem 0.875rem 0.5rem' }}>
                       <p style={S.cardName}>{ex.nom}</p>
                       {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
@@ -381,7 +487,7 @@ export default function BibliothequeExercices() {
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button onClick={() => {
                           setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
-                          setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary })
+                          setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary, image_url: ex.image_url || '' })
                         }} style={S.iconBtn}>✏️ Modifier</button>
                         <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
                       </div>
@@ -393,6 +499,62 @@ export default function BibliothequeExercices() {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── Champ média réutilisable (URL + upload fichier) ── */
+function MediaField({ value, onChange, onFile, uploading }) {
+  const fileRef = useRef()
+  const thumb = mediaThumbnail(value)
+  const isYt  = !!youtubeId(value)
+
+  return (
+    <div style={{ marginBottom: '1.25rem' }}>
+      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+        Média (YouTube · image · GIF)
+      </label>
+
+      {/* Aperçu si URL renseignée */}
+      {value && thumb && (
+        <div style={{ marginBottom: '0.5rem', borderRadius: 10, overflow: 'hidden', position: 'relative', height: 100, background: '#111' }}>
+          <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+          {isYt && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#e4f816" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: 24, height: 24, color: 'white', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <input
+          type="url"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="https://youtube.com/watch?v=… ou https://example.com/image.gif"
+          style={{ flex: 1, padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box' }}
+        />
+        <input type="file" ref={fileRef} onChange={onFile} accept="image/*,video/gif,.gif" style={{ display: 'none' }} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          style={{ background: uploading ? '#f3f4f6' : 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: uploading ? 'wait' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+          {uploading ? '⏳ Upload…' : '📎 Fichier'}
+        </button>
+      </div>
+      <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '0.3rem 0 0' }}>
+        Colle un lien YouTube, une URL d'image/GIF, ou clique sur "Fichier" pour uploader depuis ton appareil.
+      </p>
     </div>
   )
 }
