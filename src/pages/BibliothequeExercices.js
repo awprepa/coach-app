@@ -373,7 +373,7 @@ export default function BibliothequeExercices() {
           {filtered.map(ex => {
             const { primary, secondary } = parseMuscles(ex)
             return (
-              <div key={ex.id} style={S.card}>
+              <div key={ex.id} style={{ ...S.card, ...(enEdition === ex.id ? { overflow: 'visible', gridColumn: 'span 2' } : {}) }}>
                 {enEdition === ex.id ? (
                   // ── Mode édition ──
                   <div style={{ padding: '1rem' }}>
@@ -534,26 +534,29 @@ function MediaField({ value, onChange, onFile, uploading }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch', flexWrap: 'wrap' }}>
         <input
           type="url"
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="https://youtube.com/watch?v=… ou https://example.com/image.gif"
-          style={{ flex: 1, padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box' }}
+          placeholder="https://youtube.com/watch?v=… ou URL image/GIF"
+          style={{ flex: '1 1 180px', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box', minWidth: 0 }}
         />
-        <input type="file" ref={fileRef} onChange={onFile} accept="image/*,video/gif,.gif" style={{ display: 'none' }} />
+        <input type="file" ref={fileRef} onChange={onFile} accept="image/*,.gif" style={{ display: 'none' }} />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          style={{ background: uploading ? '#f3f4f6' : 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: uploading ? 'wait' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          style={{ flex: '0 0 auto', background: uploading ? '#f3f4f6' : '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: uploading ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
         >
-          {uploading ? '⏳ Upload…' : '📎 Fichier'}
+          {uploading ? '⏳ Upload…' : '📎 Upload fichier'}
         </button>
       </div>
+      {value && !thumb && (
+        <p style={{ fontSize: '0.7rem', color: '#6366f1', margin: '0.3rem 0 0', wordBreak: 'break-all' }}>🔗 {value}</p>
+      )}
       <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '0.3rem 0 0' }}>
-        Colle un lien YouTube, une URL d'image/GIF, ou clique sur "Fichier" pour uploader depuis ton appareil.
+        Lien YouTube · image directe (.jpg .png .gif .webp) · ou upload depuis ton appareil
       </p>
     </div>
   )
