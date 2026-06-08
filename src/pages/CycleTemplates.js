@@ -221,6 +221,51 @@ export default function CycleTemplates() {
     }))
   }
 
+  // ── Gestion exercices dans le template ──────────────────────────────────────
+  const [expandedSeances, setExpandedSeances] = useState(new Set())
+
+  function toggleExpandSeance(idx) {
+    setExpandedSeances(prev => {
+      const next = new Set(prev)
+      next.has(idx) ? next.delete(idx) : next.add(idx)
+      return next
+    })
+  }
+
+  function addExToSeance(seanceIdx) {
+    setCurrent(p => {
+      const seances = [...p.programme_template_seances]
+      const exs = seances[seanceIdx].exercices || []
+      const lastCode = exs.length > 0 ? exs[exs.length - 1].code || '' : ''
+      seances[seanceIdx] = {
+        ...seances[seanceIdx],
+        exercices: [...exs, { code: lastCode, nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', media_url: '', ordre: exs.length + 1 }],
+      }
+      return { ...p, programme_template_seances: seances }
+    })
+  }
+
+  function updateExInSeance(seanceIdx, exIdx, field, val) {
+    setCurrent(p => {
+      const seances = [...p.programme_template_seances]
+      const exs = [...(seances[seanceIdx].exercices || [])]
+      exs[exIdx] = { ...exs[exIdx], [field]: val }
+      seances[seanceIdx] = { ...seances[seanceIdx], exercices: exs }
+      return { ...p, programme_template_seances: seances }
+    })
+  }
+
+  function removeExFromSeance(seanceIdx, exIdx) {
+    setCurrent(p => {
+      const seances = [...p.programme_template_seances]
+      seances[seanceIdx] = {
+        ...seances[seanceIdx],
+        exercices: (seances[seanceIdx].exercices || []).filter((_, i) => i !== exIdx),
+      }
+      return { ...p, programme_template_seances: seances }
+    })
+  }
+
   // ─── LISTE ───────────────────────────────────────────────────────────────────
   if (view === 'list') {
     return (
@@ -438,19 +483,79 @@ export default function CycleTemplates() {
         </div>
 
         <div style={S.sectionTitle}>Séances ({current.programme_template_seances.length})</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {current.programme_template_seances.map((s, idx) => (
-            <div key={idx} style={S.seanceRow}>
-              <div style={S.seanceNum}>J{s.jour}</div>
-              <input style={{ ...S.input, flex: 1, marginBottom: 0 }} value={s.nom}
-                onChange={e => updateSeance(idx, 'nom', e.target.value)}
-                placeholder="Nom de la séance" />
-              <input style={{ ...S.input, width: '70px', marginBottom: 0 }} type="number" min={1}
-                value={s.jour} onChange={e => updateSeance(idx, 'jour', parseInt(e.target.value) || 1)}
-                title="Jour" />
-              <button style={S.btnRemove} onClick={() => removeSeance(idx)}>✕</button>
-            </div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {current.programme_template_seances.map((s, idx) => {
+            const isOpen = expandedSeances.has(idx)
+            const exs = s.exercices || []
+            return (
+              <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
+                {/* Ligne séance */}
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#fafafa' }}>
+                  <div style={S.seanceNum}>J{s.jour}</div>
+                  <input style={{ ...S.input, flex: 1, marginBottom: 0 }} value={s.nom}
+                    onChange={e => updateSeance(idx, 'nom', e.target.value)}
+                    placeholder="Nom de la séance" />
+                  <input style={{ ...S.input, width: '60px', marginBottom: 0, textAlign: 'center' }} type="number" min={1}
+                    value={s.jour} onChange={e => updateSeance(idx, 'jour', parseInt(e.target.value) || 1)}
+                    title="Jour" />
+                  <button
+                    onClick={() => toggleExpandSeance(idx)}
+                    style={{ ...S.btnSecondary, padding: '0.4rem 0.6rem', fontSize: '0.78rem', marginBottom: 0, whiteSpace: 'nowrap' }}>
+                    {isOpen ? '▲' : '▼'} {exs.length} ex.
+                  </button>
+                  <button style={S.btnRemove} onClick={() => removeSeance(idx)}>✕</button>
+                </div>
+
+                {/* Exercices expandables */}
+                {isOpen && (
+                  <div style={{ padding: '0.75rem', background: 'white', borderTop: '1px solid #f3f4f6' }}>
+                    {exs.length === 0 && (
+                      <p style={{ fontSize: '0.78rem', color: '#9ca3af', fontStyle: 'italic', margin: '0 0 0.5rem' }}>
+                        Aucun exercice — ajoute-en ci-dessous.
+                      </p>
+                    )}
+                    {exs.map((ex, ei) => (
+                      <div key={ei} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center', marginBottom: '0.5rem', padding: '0.5rem 0.6rem', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                        <button onClick={() => removeExFromSeance(idx, ei)}
+                          style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '0.85rem', padding: '0 2px', flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                        <input value={ex.code} onChange={e => updateExInSeance(idx, ei, 'code', e.target.value)}
+                          placeholder="A1" style={{ ...S.input, width: '52px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
+                        <input value={ex.nom} onChange={e => updateExInSeance(idx, ei, 'nom', e.target.value)}
+                          placeholder="Exercice" style={{ ...S.input, flex: 2, minWidth: '120px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
+                        <input value={ex.series} onChange={e => updateExInSeance(idx, ei, 'series', e.target.value)}
+                          placeholder="Séries" style={{ ...S.input, width: '58px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} type="number" />
+                        <input value={ex.repetitions} onChange={e => updateExInSeance(idx, ei, 'repetitions', e.target.value)}
+                          placeholder="Reps" style={{ ...S.input, width: '64px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
+                        <input value={ex.tempo} onChange={e => updateExInSeance(idx, ei, 'tempo', e.target.value)}
+                          placeholder="Tempo" style={{ ...S.input, width: '72px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
+                        <input value={ex.recuperation} onChange={e => updateExInSeance(idx, ei, 'recuperation', e.target.value)}
+                          placeholder="Récup" style={{ ...S.input, width: '64px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
+                        <select value={ex.type_intensite} onChange={e => updateExInSeance(idx, ei, 'type_intensite', e.target.value)}
+                          style={{ ...S.input, width: '82px', marginBottom: 0, padding: '0.3rem 0.35rem', fontSize: '0.78rem' }}>
+                          <option value="">Intensité</option>
+                          <option value="RPE">RPE</option>
+                          <option value="RIR">RIR</option>
+                          <option value="% 1RM">% 1RM</option>
+                          <option value="Vitesse">Vitesse</option>
+                          <option value="Libre">Libre</option>
+                        </select>
+                        <input value={ex.valeur_intensite} onChange={e => updateExInSeance(idx, ei, 'valeur_intensite', e.target.value)}
+                          placeholder="Val." style={{ ...S.input, width: '52px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
+                        <input value={ex.media_url || ''} onChange={e => updateExInSeance(idx, ei, 'media_url', e.target.value)}
+                          placeholder="URL média" style={{ ...S.input, flex: 3, minWidth: '120px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.78rem', color: '#6366f1' }} />
+                      </div>
+                    ))}
+                    <button onClick={() => addExToSeance(idx)}
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.35rem 0.75rem', marginTop: '0.25rem' }}>
+                      + Exercice
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
         <button style={{ ...S.btnSecondary, marginTop: '0.75rem' }} onClick={addSeance}>
           + Ajouter une séance

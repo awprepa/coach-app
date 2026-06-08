@@ -21,6 +21,10 @@ export default function Seance() {
   const [formEdition, setFormEdition] = useState({})
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
   const [showWarmupFor, setShowWarmupFor]           = useState(null) // exercice id
+  const [showLibraryFor, setShowLibraryFor]         = useState(null) // exercice id
+  const [librarySuggestions, setLibrarySuggestions] = useState([])
+  const [librarySearching, setLibrarySearching]     = useState(false)
+  const [libraryLinked, setLibraryLinked]           = useState({}) // { exId: true } flash feedback
   const [editAllMode, setEditAllMode] = useState(false)
   const [formEditions, setFormEditions] = useState({}) // { [exId]: { code, nom, ... } }
   const [biblioSearch, setBiblioSearch] = useState('')
@@ -397,6 +401,50 @@ export default function Seance() {
   function removeWarmupCoach(exId, idx) {
     const ex = exercices.find(e => e.id === exId)
     saveSeriesEchauffement(exId, (ex?.series_echauffement || []).filter((_, i) => i !== idx))
+  }
+
+  // ── Bibliothèque d'exercices ──────────────────────────────────────────────
+  async function openLibraryPanel(exId) {
+    if (showLibraryFor === exId) { setShowLibraryFor(null); return }
+    setShowLibraryFor(exId)
+    setLibrarySuggestions([])
+    const ex = exercices.find(e => e.id === exId)
+    if (!ex?.nom) return
+    setLibrarySearching(true)
+    // Chercher par les premiers mots significatifs du nom
+    const baseWords = ex.nom.trim().split(/\s+/).slice(0, 3).join(' ')
+    const { data } = await supabase.from('bibliotheque_exercices')
+      .select('id, nom, image_url')
+      .ilike('nom', `%${baseWords.split(' ')[0]}%`)
+      .order('nom').limit(12)
+    setLibrarySuggestions(data || [])
+    setLibrarySearching(false)
+  }
+
+  async function searchLibrarySuggestions(exId, query) {
+    if (!query.trim()) { setLibrarySuggestions([]); return }
+    const { data } = await supabase.from('bibliotheque_exercices')
+      .select('id, nom, image_url').ilike('nom', `%${query}%`).order('nom').limit(12)
+    setLibrarySuggestions(data || [])
+  }
+
+  async function lierABibliotheque(exId, biblioId) {
+    await supabase.from('exercices').update({ bibliotheque_id: biblioId }).eq('id', exId)
+    setExercices(prev => prev.map(e => e.id === exId ? { ...e, bibliotheque_id: biblioId } : e))
+    setLibraryLinked(prev => ({ ...prev, [exId]: true }))
+    setTimeout(() => setLibraryLinked(prev => { const n = { ...prev }; delete n[exId]; return n }), 2000)
+    setShowLibraryFor(null)
+  }
+
+  async function creerEtLierBibliotheque(exId) {
+    const ex = exercices.find(e => e.id === exId)
+    if (!ex) return
+    const { data, error } = await supabase.from('bibliotheque_exercices')
+      .insert([{ nom: ex.nom, image_url: ex.bibliotheque_exercices?.image_url || null }])
+      .select().single()
+    if (error) { alert(error.message); return }
+    setAllBiblio(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
+    await lierABibliotheque(exId, data.id)
   }
 
   async function sauvegarderTemplate() {
@@ -1038,34 +1086,44 @@ export default function Seance() {
                   ) : (
                     <>
                       <td style={styles.td}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.2rem', width: 'fit-content' }}>
-                          {/* Modifier */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: 'fit-content' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.2rem' }}>
+                            {/* Modifier */}
+                            <button
+                              title="Modifier"
+                              onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '', media_url: ex.media_url || '' }) }}
+                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            {/* Périodisation */}
+                            <button
+                              title="Progression par semaines"
+                              onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
+                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : '#6b7280' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </button>
+                            {/* Séries d'échauffement */}
+                            <button
+                              title="Séries d'échauffement"
+                              onClick={() => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id)}
+                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (ex.series_echauffement?.length > 0) ? '#fff7ed' : undefined, color: (ex.series_echauffement?.length > 0) ? '#ea580c' : '#6b7280' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"/></svg>
+                            </button>
+                            {/* Supprimer */}
+                            <button
+                              title="Supprimer"
+                              onClick={() => supprimerExercice(ex.id)}
+                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            </button>
+                          </div>
+                          {/* Bibliothèque */}
                           <button
-                            title="Modifier"
-                            onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '', media_url: ex.media_url || '' }) }}
-                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          </button>
-                          {/* Périodisation */}
-                          <button
-                            title="Progression par semaines"
-                            onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
-                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : '#6b7280' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                          </button>
-                          {/* Séries d'échauffement */}
-                          <button
-                            title="Séries d'échauffement"
-                            onClick={() => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id)}
-                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (ex.series_echauffement?.length > 0) ? '#fff7ed' : undefined, color: (ex.series_echauffement?.length > 0) ? '#ea580c' : '#6b7280' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"/></svg>
-                          </button>
-                          {/* Supprimer */}
-                          <button
-                            title="Supprimer"
-                            onClick={() => supprimerExercice(ex.id)}
-                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            title={ex.bibliotheque_id ? 'Lié à la bibliothèque' : 'Ajouter à la bibliothèque'}
+                            onClick={() => openLibraryPanel(ex.id)}
+                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', fontSize: '0.6rem', fontWeight: 700, color: libraryLinked[ex.id] ? '#16a34a' : ex.bibliotheque_id ? '#6366f1' : '#9ca3af', background: libraryLinked[ex.id] ? '#f0fdf4' : ex.bibliotheque_id ? '#f5f3ff' : undefined, borderColor: libraryLinked[ex.id] ? '#bbf7d0' : ex.bibliotheque_id ? '#ddd6fe' : undefined }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            {libraryLinked[ex.id] ? '✓' : ex.bibliotheque_id ? 'lié' : '—'}
                           </button>
                         </div>
                       </td>
@@ -1243,6 +1301,68 @@ export default function Seance() {
                             ))}
                           </div>
                         )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {/* ── Panneau bibliothèque ── */}
+                {showLibraryFor === ex.id && (
+                  <tr>
+                    <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f5f3ff' }}>
+                      <div style={{ padding: '12px 16px', borderTop: '2px solid #ddd6fe', borderBottom: '2px solid #ddd6fe' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                            Bibliothèque — {ex.nom}
+                          </span>
+                          {ex.bibliotheque_id && (
+                            <span style={{ fontSize: '.65rem', background: '#ede9fe', color: '#6d28d9', borderRadius: 6, padding: '2px 8px', fontWeight: 700 }}>
+                              ✓ Déjà lié
+                            </span>
+                          )}
+                          <span style={{ fontSize: '.62rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                            Clique pour lier ou cherche ci-dessous
+                          </span>
+                        </div>
+
+                        {/* Barre de recherche */}
+                        <input
+                          defaultValue={ex.nom}
+                          onChange={e => searchLibrarySuggestions(ex.id, e.target.value)}
+                          placeholder="Chercher dans la bibliothèque…"
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.65rem', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: '.82rem', outline: 'none', marginBottom: '0.6rem', background: 'white' }}
+                        />
+
+                        {librarySearching && <p style={{ fontSize: '.72rem', color: '#9ca3af', margin: 0 }}>Recherche…</p>}
+
+                        {/* Suggestions */}
+                        {librarySuggestions.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 220, overflowY: 'auto', marginBottom: '0.6rem' }}>
+                            {librarySuggestions.map(b => (
+                              <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white', border: `1.5px solid ${b.id === ex.bibliotheque_id ? '#a78bfa' : '#ede9fe'}`, borderRadius: 8, padding: '0.35rem 0.65rem' }}>
+                                {b.image_url && <img src={b.image_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
+                                <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, color: '#374151' }}>{b.nom}</span>
+                                {b.id === ex.bibliotheque_id
+                                  ? <span style={{ fontSize: '.68rem', color: '#6d28d9', fontWeight: 700 }}>✓ Lié</span>
+                                  : <button onClick={() => lierABibliotheque(ex.id, b.id)}
+                                      style={{ background: '#6d28d9', color: 'white', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                                      Lier
+                                    </button>
+                                }
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {librarySuggestions.length === 0 && !librarySearching && (
+                          <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: '0 0 0.6rem' }}>
+                            Aucun résultat similaire. Crée une nouvelle entrée ci-dessous.
+                          </p>
+                        )}
+
+                        <button onClick={() => creerEtLierBibliotheque(ex.id)}
+                          style={{ background: 'white', border: '1.5px solid #ddd6fe', color: '#6d28d9', borderRadius: 7, padding: '5px 14px', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                          + Créer "{ex.nom}" dans la bibliothèque
+                        </button>
                       </div>
                     </td>
                   </tr>
