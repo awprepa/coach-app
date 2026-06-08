@@ -40,6 +40,7 @@ export default function Seance() {
   const [nomSuggestions, setNomSuggestions] = useState([])
   const [editNomSuggestions, setEditNomSuggestions] = useState([])
   const [templateSaved, setTemplateSaved] = useState(false)
+  const [progSaved, setProgSaved] = useState({}) // { [exId]: true } flash feedback
   const [showAIModal, setShowAIModal] = useState(false)
   // Échauffement
   const [echauffement, setEchauffement]           = useState([])
@@ -372,19 +373,25 @@ export default function Seance() {
     updateProgressions(exId, [...progs, newBloc])
   }
   function updateProgBloc(exId, blocId, field, val) {
-    // Lire depuis le ref (synchrone) — évite les race conditions quand
-    // plusieurs champs sont quittés rapidement avant le re-render React
+    // Met à jour uniquement le state/ref local — PAS de save Supabase ici.
+    // Le save se fait via le bouton "Sauvegarder" pour éviter les race conditions
+    // quand plusieurs champs sont quittés rapidement (deux requêtes en parallèle
+    // pouvaient s'écraser mutuellement selon l'ordre d'arrivée réseau).
     const ex = exercicesRef.current.find(e => e.id === exId)
     if (!ex) return
     const progs = (ex.progressions || []).map(p =>
       p.id && blocId && p.id === blocId ? { ...p, [field]: val } : p
     )
-    // Mettre à jour le ref immédiatement pour que le prochain appel voie ces données
     exercicesRef.current = exercicesRef.current.map(e =>
       e.id === exId ? { ...e, progressions: progs } : e
     )
-    setExercices(exercicesRef.current)
-    supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
+    setExercices([...exercicesRef.current])
+  }
+  async function saveProgression(exId) {
+    const progs = exercicesRef.current.find(e => e.id === exId)?.progressions || []
+    await supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
+    setProgSaved(prev => ({ ...prev, [exId]: true }))
+    setTimeout(() => setProgSaved(prev => ({ ...prev, [exId]: false })), 2000)
   }
   function removeProgBloc(exId, blocId) {
     const ex = exercices.find(e => e.id === exId)
@@ -1180,12 +1187,21 @@ export default function Seance() {
                   <tr>
                     <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f0f7ff' }}>
                       <div style={{ padding: '12px 16px', borderTop: '2px solid #bfdbfe', borderBottom: '2px solid #bfdbfe' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Progression — {ex.nom}</span>
                           <button onClick={() => addProgBloc(ex.id)}
                             style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
                             + Bloc semaines
                           </button>
+                          {(ex.progressions?.length > 0) && (
+                            <button onClick={() => saveProgression(ex.id)}
+                              style={{ background: progSaved[ex.id] ? '#16a34a' : '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 14px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'background .2s' }}>
+                              {progSaved[ex.id]
+                                ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Sauvegardé !</>
+                                : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Sauvegarder</>
+                              }
+                            </button>
+                          )}
                           {(ex.progressions?.length > 0) && (
                             <span style={{ fontSize: '.65rem', color: '#6b7280', marginLeft: 'auto' }}>
                               La prescription de chaque bloc remplace automatiquement la valeur par défaut côté client
