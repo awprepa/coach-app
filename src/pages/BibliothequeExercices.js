@@ -126,33 +126,84 @@ function AuthGif({ url, apiKey, style, alt }) {
 
 // ── Traduction FR→EN pour la recherche WorkoutX ───────────────────────────
 function frToEn(nom) {
-  return nom.toLowerCase()
-    .replace(/développé couché/g, 'bench press')
-    .replace(/développé incliné/g, 'incline bench press')
-    .replace(/développé décliné/g, 'decline bench press')
-    .replace(/développé militaire/g, 'overhead press')
-    .replace(/développé/g, 'press')
-    .replace(/soulevé de terre/g, 'deadlift')
-    .replace(/tirage horizontal/g, 'seated row')
-    .replace(/tirage nuque/g, 'lat pulldown behind neck')
-    .replace(/tirage poitrine/g, 'lat pulldown')
-    .replace(/tirage/g, 'row')
-    .replace(/tractions?/g, 'pull up')
-    .replace(/fentes?/g, 'lunge')
-    .replace(/élévations? latérales?/g, 'lateral raise')
-    .replace(/élévations? frontales?/g, 'front raise')
-    .replace(/écarté/g, 'fly')
-    .replace(/mollets?/g, 'calf raise')
-    .replace(/haltères?/g, 'dumbbell')
-    .replace(/barre/g, 'barbell')
-    .replace(/câble|poulie/g, 'cable')
-    .replace(/incliné/g, 'incline')
-    .replace(/décliné/g, 'decline')
-    .replace(/marteau/g, 'hammer curl')
-    .replace(/presse/g, 'press')
-    .replace(/unilatéral/g, 'single arm')
-    .replace(/rowing/g, 'row')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  // Appliquer d'abord les expressions composées (ordre important : plus long en premier)
+  const rules = [
+    [/soulevé de terre roumain/gi, 'romanian deadlift'],
+    [/soulevé de terre/gi,         'deadlift'],
+    [/développé couché prise serrée/gi, 'close grip bench press'],
+    [/développé couché/gi,         'bench press'],
+    [/développé incliné/gi,        'incline bench press'],
+    [/développé décliné/gi,        'decline bench press'],
+    [/développé militaire/gi,      'overhead press'],
+    [/développé nuque/gi,          'behind neck press'],
+    [/développé/gi,                'press'],
+    [/tirage horizontal/gi,        'seated row'],
+    [/tirage nuque/gi,             'lat pulldown behind neck'],
+    [/tirage poitrine/gi,          'lat pulldown'],
+    [/tirage vertical/gi,          'lat pulldown'],
+    [/tirage/gi,                   'row'],
+    [/tractions? prise serrée/gi,  'close grip pull up'],
+    [/tractions? pronation/gi,     'pull up'],
+    [/tractions? supination/gi,    'chin up'],
+    [/tractions?/gi,               'pull up'],
+    [/élévations? latérales?/gi,   'lateral raise'],
+    [/élévations? frontales?/gi,   'front raise'],
+    [/élévations? postérieures?/gi,'rear delt raise'],
+    [/oiseau|oiseau/gi,            'rear delt fly'],
+    [/écarté couché/gi,            'chest fly'],
+    [/écarté incliné/gi,           'incline fly'],
+    [/écarté/gi,                   'fly'],
+    [/curl marteau/gi,             'hammer curl'],
+    [/curl incliné/gi,             'incline curl'],
+    [/curl concentré/gi,           'concentration curl'],
+    [/curl/gi,                     'curl'],
+    [/extension nuque/gi,          'skull crusher'],
+    [/extension tricep/gi,         'tricep extension'],
+    [/extension/gi,                'extension'],
+    [/leg press/gi,                'leg press'],
+    [/leg curl/gi,                 'leg curl'],
+    [/mollets? debout/gi,          'standing calf raise'],
+    [/mollets? assis/gi,           'seated calf raise'],
+    [/mollets?/gi,                 'calf raise'],
+    [/fentes? marchées?/gi,        'walking lunge'],
+    [/fentes? bulgares?/gi,        'bulgarian split squat'],
+    [/fentes?/gi,                  'lunge'],
+    [/squat goblet/gi,             'goblet squat'],
+    [/squat bulgare/gi,            'bulgarian split squat'],
+    [/squat sumo/gi,               'sumo squat'],
+    [/squat/gi,                    'squat'],
+    [/hip thrust/gi,               'hip thrust'],
+    [/rowing/gi,                   'row'],
+    [/gainage/gi,                  'plank'],
+    [/pompes?/gi,                  'push up'],
+    [/dips?/gi,                    'dip'],
+    [/presse cuisse/gi,            'leg press'],
+    [/presse/gi,                   'press'],
+    [/haltères?/gi,                'dumbbell'],
+    [/barre/gi,                    'barbell'],
+    [/câble|poulie haute/gi,       'cable'],
+    [/câble|poulie basse/gi,       'cable'],
+    [/câble|poulie/gi,             'cable'],
+    [/smith/gi,                    'smith machine'],
+    [/incliné/gi,                  'incline'],
+    [/décliné/gi,                  'decline'],
+    [/couché/gi,                   'lying'],
+    [/debout/gi,                   'standing'],
+    [/assis/gi,                    'seated'],
+    [/unilatéral|uni\b/gi,         'single arm'],
+    [/bilatéral/gi,                ''],
+    [/prise large/gi,              'wide grip'],
+    [/prise serrée/gi,             'close grip'],
+    [/prise neutre/gi,             'neutral grip'],
+    [/prise inversée/gi,           'reverse grip'],
+  ]
+  let s = nom
+  for (const [pattern, replacement] of rules) {
+    s = s.replace(pattern, replacement)
+  }
+  return s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // supprime accents résiduels
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
@@ -181,6 +232,7 @@ export default function BibliothequeExercices() {
   const [gifResults, setGifResults] = useState([])
   const [gifSearching, setGifSearching] = useState(false)
   const [gifQuery, setGifQuery] = useState('')
+  const [gifTranslated, setGifTranslated] = useState('')
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -322,18 +374,58 @@ export default function BibliothequeExercices() {
     if (!query.trim()) return
     setGifSearching(true)
     setGifResults([])
+
+    const translated = frToEn(query)
+    setGifTranslated(translated)
+    const words = translated.split(/\s+/).filter(w => w.length > 2)
+
+    // Plusieurs termes pour maximiser les chances de trouver
+    const terms = [...new Set([
+      translated,                                           // phrase complète traduite
+      words.slice(0, 2).join(' '),                          // 2 premiers mots
+      words[0],                                             // mot principal seul
+      words.length > 2 ? words.slice(1).join(' ') : null,  // sans le premier mot
+    ].filter(Boolean))]
+
+    async function fetchTerm(term) {
+      try {
+        const res = await fetch(
+          `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(term)}`,
+          { headers: { 'X-WorkoutX-Key': workoutxKey } }
+        )
+        if (!res.ok) return []
+        const json = await res.json()
+        return Array.isArray(json) ? json : (json.data || [])
+      } catch { return [] }
+    }
+
     try {
-      const translated = frToEn(query)
-      // Plan gratuit : /v1/exercises/name/:name (path param, pas query param)
-      const res = await fetch(
-        `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(translated)}`,
-        { headers: { 'X-WorkoutX-Key': workoutxKey } }
-      )
-      if (!res.ok) throw new Error(`Erreur ${res.status}`)
-      const json = await res.json()
-      // Résultats : tableau direct ou objet { data: [...] }
-      const list = Array.isArray(json) ? json : (json.data || [])
-      setGifResults(list.slice(0, 9))
+      // Recherches parallèles
+      const allArrays = await Promise.all(terms.map(fetchTerm))
+
+      // Fusion + déduplication
+      const seen = new Set()
+      const merged = []
+      for (const arr of allArrays) {
+        for (const ex of arr) {
+          if (!seen.has(ex.id)) { seen.add(ex.id); merged.push(ex) }
+        }
+      }
+
+      // Tri par pertinence (Jaccard sur les mots)
+      const qWords = new Set(translated.toLowerCase().split(/\s+/).filter(w => w.length > 1))
+      const scored = merged.map(ex => {
+        const nWords = new Set((ex.name || '').toLowerCase().split(/\s+/).filter(w => w.length > 1))
+        const inter = [...qWords].filter(w => nWords.has(w)).length
+        const union = new Set([...qWords, ...nWords]).size
+        return { ...ex, _score: union ? inter / union : 0 }
+      })
+      scored.sort((a, b) => b._score - a._score)
+
+      if (scored.length === 0) {
+        alert(`Aucun résultat pour "${translated}".\nEssaie en anglais dans la barre de recherche (ex: "bench press", "squat").`)
+      }
+      setGifResults(scored.slice(0, 9))
     } catch (e) {
       alert('Erreur WorkoutX : ' + e.message + '\nVérifie ta clé API.')
     }
@@ -344,6 +436,7 @@ export default function BibliothequeExercices() {
     if (!workoutxKey) { setShowKeyInput(true); return }
     const q = nom || ''
     setGifQuery(q)
+    setGifTranslated('')
     setGifModal({ target, nom: q })
     setGifResults([])
     doGifSearch(q)
@@ -557,17 +650,25 @@ export default function BibliothequeExercices() {
               <button onClick={() => { setGifModal(null); setGifResults([]) }} style={{ background: 'none', border: 'none', fontSize: '1.3rem', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
             </div>
             {/* Barre de recherche */}
-            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: '0.5rem' }}>
-              <input
-                value={gifQuery}
-                onChange={e => setGifQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && doGifSearch(gifQuery)}
-                placeholder="Nom de l'exercice en FR ou EN…"
-                style={{ ...S.input, flex: 1, fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
-              />
-              <button onClick={() => doGifSearch(gifQuery)} disabled={gifSearching} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem', flexShrink: 0 }}>
-                {gifSearching ? '⏳' : '🔍 Chercher'}
-              </button>
+            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  value={gifQuery}
+                  onChange={e => setGifQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doGifSearch(gifQuery)}
+                  placeholder="Nom de l'exercice en FR ou EN…"
+                  style={{ ...S.input, flex: 1, fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
+                />
+                <button onClick={() => doGifSearch(gifQuery)} disabled={gifSearching} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem', flexShrink: 0 }}>
+                  {gifSearching ? '⏳' : '🔍 Chercher'}
+                </button>
+              </div>
+              {gifTranslated && gifTranslated !== gifQuery && (
+                <p style={{ margin: '0.4rem 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
+                  🔤 Recherche en anglais : <strong style={{ color: '#6366f1' }}>{gifTranslated}</strong>
+                  <span style={{ marginLeft: 6, color: '#d1d5db' }}>· tape en EN directement pour affiner</span>
+                </p>
+              )}
             </div>
             {/* Résultats */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
