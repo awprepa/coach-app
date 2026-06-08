@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { findMuscles, MUSCLES } from '../data/muscleData'
 import { findBiblioMatch } from '../utils/exerciceMatch'
@@ -101,6 +101,27 @@ function MusclePicker({ primary, secondary, onChange }) {
       </div>
     </div>
   )
+}
+
+// ── Composant image authentifiée (WorkoutX GIFs nécessitent un header auth) ──
+function AuthGif({ url, apiKey, style, alt }) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    if (!url || !apiKey) return
+    let objectUrl = null
+    fetch(url, { headers: { 'X-WorkoutX-Key': apiKey } })
+      .then(r => r.blob())
+      .then(blob => { objectUrl = URL.createObjectURL(blob); setSrc(objectUrl) })
+      .catch(() => {})
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [url, apiKey])
+
+  if (!src) return (
+    <div style={{ ...style, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ fontSize: '1.2rem', opacity: 0.4 }}>⏳</span>
+    </div>
+  )
+  return <img src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
 }
 
 // ── Traduction FR→EN pour la recherche WorkoutX ───────────────────────────
@@ -328,12 +349,26 @@ export default function BibliothequeExercices() {
     doGifSearch(q)
   }
 
-  function choisirGif(gifUrl) {
+  async function choisirGif(r) {
     if (!gifModal) return
-    if (gifModal.target === 'create') setForm(prev => ({ ...prev, image_url: gifUrl }))
-    else setFormEdit(prev => ({ ...prev, image_url: gifUrl }))
-    setGifModal(null)
-    setGifResults([])
+    // Les GIFs WorkoutX sont derrière auth → on télécharge et on upload
+    // dans Supabase Storage pour avoir une URL publique permanente
+    setGifSearching(true)
+    try {
+      const res = await fetch(r.gifUrl, { headers: { 'X-WorkoutX-Key': workoutxKey } })
+      if (!res.ok) throw new Error(`Erreur ${res.status}`)
+      const blob = await res.blob()
+      const file = new File([blob], `wx_${r.id}.gif`, { type: 'image/gif' })
+      const publicUrl = await uploadMedia(file, 'workoutx_tmp')
+      if (!publicUrl) throw new Error('Upload échoué')
+      if (gifModal.target === 'create') setForm(prev => ({ ...prev, image_url: publicUrl }))
+      else setFormEdit(prev => ({ ...prev, image_url: publicUrl }))
+      setGifModal(null)
+      setGifResults([])
+    } catch (e) {
+      alert('Erreur lors de la récupération du GIF : ' + e.message)
+    }
+    setGifSearching(false)
   }
 
   // ── Backfill : liaison automatique des anciens exercices ──────────────────
@@ -536,10 +571,15 @@ export default function BibliothequeExercices() {
             </div>
             {/* Résultats */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
-              {gifSearching && (
+              {gifSearching && gifResults.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
                   <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</p>
                   <p style={{ fontSize: '0.85rem' }}>Recherche en cours…</p>
+                </div>
+              )}
+              {gifSearching && gifResults.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '0.75rem', background: '#fffbeb', borderRadius: 10, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
+                  ⬇️ Téléchargement du GIF en cours… (quelques secondes)
                 </div>
               )}
               {!gifSearching && gifResults.length === 0 && (
@@ -553,13 +593,14 @@ export default function BibliothequeExercices() {
                   {gifResults.map(r => (
                     <button
                       key={r.id}
-                      onClick={() => choisirGif(r.gifUrl)}
-                      style={{ background: '#111', border: '2px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', transition: 'border-color 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#e4f816'}
+                      onClick={() => choisirGif(r)}
+                      style={{ background: '#111', border: '2px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', cursor: gifSearching ? 'wait' : 'pointer', padding: 0, display: 'flex', flexDirection: 'column', transition: 'border-color 0.15s' }}
+                      onMouseEnter={e => { if (!gifSearching) e.currentTarget.style.borderColor = '#e4f816' }}
                       onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      disabled={gifSearching}
                       title={r.name}
                     >
-                      <img src={r.gifUrl} alt={r.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                      <AuthGif url={r.gifUrl} apiKey={workoutxKey} alt={r.name} style={{ width: '100%', aspectRatio: '1' }} />
                       <p style={{ margin: 0, padding: '0.4rem 0.5rem', fontSize: '0.65rem', fontWeight: 600, color: '#e5e7eb', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#1a1a1a' }}>{r.name}</p>
                     </button>
                   ))}
