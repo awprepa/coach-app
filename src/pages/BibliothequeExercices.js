@@ -479,17 +479,21 @@ export default function BibliothequeExercices() {
       return
     }
     // Matche chaque exercice contre la bibliothèque
+    // 1re passe : correspondance exacte (insensible à la casse et aux espaces)
+    // 2e passe : fuzzy matching pour les noms proches
     const matched = []
     for (const ex of unlinked) {
+      const nomNorm = ex.nom.toLowerCase().trim()
+      // Exact match d'abord
+      const exact = exercices.find(b => b.nom.toLowerCase().trim() === nomNorm)
+      if (exact) {
+        matched.push({ exercice_id: ex.id, exercice_nom: ex.nom, biblio_id: exact.id, biblio_nom: exact.nom, score: 1.0 })
+        continue
+      }
+      // Sinon fuzzy
       const result = findBiblioMatch(ex.nom, exercices)
       if (result) {
-        matched.push({
-          exercice_id:  ex.id,
-          exercice_nom: ex.nom,
-          biblio_id:    result.match.id,
-          biblio_nom:   result.match.nom,
-          score:        result.score,
-        })
+        matched.push({ exercice_id: ex.id, exercice_nom: ex.nom, biblio_id: result.match.id, biblio_nom: result.match.nom, score: result.score })
       }
     }
     setBackfillResult({ matched, skipped: unlinked.length - matched.length })

@@ -139,6 +139,11 @@ function levenshteinSimilarity(a, b) {
 export function findBiblioMatch(nom, bibliotheque, threshold = 0.72) {
   if (!nom?.trim() || !bibliotheque?.length) return null
 
+  // Correspondance exacte en priorité (insensible à la casse + espaces)
+  const nomExact = nom.toLowerCase().trim()
+  const exact = bibliotheque.find(ex => ex.nom.toLowerCase().trim() === nomExact)
+  if (exact) return { match: exact, score: 1.0 }
+
   const normNom  = normalize(nom)
   const diffsNom = getDiffs(normNom)
 
