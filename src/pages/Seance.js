@@ -11,7 +11,7 @@ export default function Seance() {
   const navigate = useNavigate()
   const [seance, setSeance] = useState(null)
   const [exercices, setExercices] = useState([])
-  const exercicesRef = useRef([]) // ref synchrone pour updateProgBloc
+  // exercicesRef supprimé — la progression utilise maintenant progDraft (state contrôlé)
   const [charges, setCharges] = useState({})
   const [trackingMap, setTrackingMap] = useState({})
   const [rpeSeances, setRpeSeances] = useState({})
@@ -40,7 +40,8 @@ export default function Seance() {
   const [nomSuggestions, setNomSuggestions] = useState([])
   const [editNomSuggestions, setEditNomSuggestions] = useState([])
   const [templateSaved, setTemplateSaved] = useState(false)
-  const [progSaved, setProgSaved] = useState({}) // { [exId]: true } flash feedback
+  const [progSaved, setProgSaved] = useState({})   // { [exId]: true } flash feedback
+  const [progDraft, setProgDraft] = useState(null)  // blocs en cours d'édition (inputs contrôlés)
   const [showAIModal, setShowAIModal] = useState(false)
   // Échauffement
   const [echauffement, setEchauffement]           = useState([])
@@ -54,8 +55,6 @@ export default function Seance() {
   const [echauffPasteText, setEchauffPasteText]   = useState('')
   const [echauffParsed, setEchauffParsed]         = useState(null)
 
-  // Garder le ref synchrone avec le state pour updateProgBloc
-  useEffect(() => { exercicesRef.current = exercices }, [exercices])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -349,13 +348,29 @@ export default function Seance() {
   }
 
   // ── Progressions par semaines ──────────────────────────────────────────
-  async function updateProgressions(exId, progs) {
-    setExercices(prev => prev.map(ex => ex.id === exId ? { ...ex, progressions: progs } : ex))
-    await supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
+  // Initialise le draft quand on ouvre/ferme le panel de progression
+  useEffect(() => {
+    if (showProgressionFor) {
+      const ex = exercices.find(e => e.id === showProgressionFor)
+      // Deep copy pour que le draft soit indépendant du state exercices
+      setProgDraft(JSON.parse(JSON.stringify(ex?.progressions || [])))
+    } else {
+      setProgDraft(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showProgressionFor])
+
+  // Met à jour un champ d'un bloc dans le draft (inputs contrôlés — aucun Supabase)
+  function updateDraftField(blocId, field, val) {
+    setProgDraft(prev => (prev || []).map(p =>
+      p.id === blocId ? { ...p, [field]: val } : p
+    ))
   }
+
+  // Ajoute un nouveau bloc dans le draft
   function addProgBloc(exId) {
     const ex = exercices.find(e => e.id === exId)
-    const progs = ex?.progressions || []
+    const progs = progDraft || ex?.progressions || []
     const lastFin = progs.length > 0 ? (progs[progs.length - 1].semaine_fin || 0) : 0
     const debut = lastFin + 1
     const fin = debut + 1
@@ -370,32 +385,21 @@ export default function Seance() {
       detail: '',
       nom_variante: '',
     }
-    updateProgressions(exId, [...progs, newBloc])
+    setProgDraft(prev => [...(prev || []), newBloc])
   }
-  function updateProgBloc(exId, blocId, field, val) {
-    // Met à jour uniquement le state/ref local — PAS de save Supabase ici.
-    // Le save se fait via le bouton "Sauvegarder" pour éviter les race conditions
-    // quand plusieurs champs sont quittés rapidement (deux requêtes en parallèle
-    // pouvaient s'écraser mutuellement selon l'ordre d'arrivée réseau).
-    const ex = exercicesRef.current.find(e => e.id === exId)
-    if (!ex) return
-    const progs = (ex.progressions || []).map(p =>
-      p.id && blocId && p.id === blocId ? { ...p, [field]: val } : p
-    )
-    exercicesRef.current = exercicesRef.current.map(e =>
-      e.id === exId ? { ...e, progressions: progs } : e
-    )
-    setExercices([...exercicesRef.current])
+
+  // Supprime un bloc du draft
+  function removeProgBloc(blocId) {
+    setProgDraft(prev => (prev || []).filter(p => p.id !== blocId))
   }
+
+  // Sauvegarde le draft dans Supabase + met à jour exercices state
   async function saveProgression(exId) {
-    const progs = exercicesRef.current.find(e => e.id === exId)?.progressions || []
+    const progs = progDraft || []
+    setExercices(prev => prev.map(e => e.id === exId ? { ...e, progressions: progs } : e))
     await supabase.from('exercices').update({ progressions: progs }).eq('id', exId)
     setProgSaved(prev => ({ ...prev, [exId]: true }))
     setTimeout(() => setProgSaved(prev => ({ ...prev, [exId]: false })), 2000)
-  }
-  function removeProgBloc(exId, blocId) {
-    const ex = exercices.find(e => e.id === exId)
-    updateProgressions(exId, (ex?.progressions || []).filter(p => p.id !== blocId))
   }
 
   // ── Séries d'échauffement (définies par le coach) ──────────────────────
@@ -1193,7 +1197,7 @@ export default function Seance() {
                             style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
                             + Bloc semaines
                           </button>
-                          {(ex.progressions?.length > 0) && (
+                          {(progDraft?.length > 0) && (
                             <button onClick={() => saveProgression(ex.id)}
                               style={{ background: progSaved[ex.id] ? '#16a34a' : '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 14px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'background .2s' }}>
                               {progSaved[ex.id]
@@ -1202,14 +1206,14 @@ export default function Seance() {
                               }
                             </button>
                           )}
-                          {(ex.progressions?.length > 0) && (
+                          {(progDraft?.length > 0) && (
                             <span style={{ fontSize: '.65rem', color: '#6b7280', marginLeft: 'auto' }}>
                               La prescription de chaque bloc remplace automatiquement la valeur par défaut côté client
                             </span>
                           )}
                         </div>
 
-                        {(!ex.progressions?.length) ? (
+                        {(!(progDraft?.length)) ? (
                           <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
                             Clique sur "+ Bloc semaines" pour définir une progression. Ex : S1-2 → 3 séries / RPE 7, S3-4 → 4 séries / RPE 8…
                           </p>
@@ -1219,25 +1223,25 @@ export default function Seance() {
                               <thead>
                                 <tr>
                                   <td style={{ padding: '4px 8px', fontWeight: 700, color: '#6b7280', width: 80 }}>Paramètre</td>
-                                  {ex.progressions.map(p => (
+                                  {progDraft.map(p => (
                                     <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', minWidth: 110 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
                                         <input
-                                          defaultValue={p.label}
-                                          onBlur={e => updateProgBloc(ex.id, p.id, 'label', e.target.value)}
+                                          value={p.label ?? ''}
+                                          onChange={e => updateDraftField(p.id, 'label', e.target.value)}
                                           style={{ width: 52, textAlign: 'center', fontWeight: 800, color: '#1d4ed8', border: '1.5px solid #bfdbfe', borderRadius: 6, padding: '2px 4px', fontSize: '.72rem', outline: 'none', background: '#eff6ff' }}
                                         />
-                                        <button onClick={() => removeProgBloc(ex.id, p.id)}
+                                        <button onClick={() => removeProgBloc(p.id)}
                                           style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '.8rem', lineHeight: 1, padding: 0 }}>×</button>
                                       </div>
                                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 3, fontSize: '.6rem', color: '#9ca3af' }}>
                                         <span>S</span>
-                                        <input type="number" defaultValue={p.semaine_debut} min={1}
-                                          onBlur={e => updateProgBloc(ex.id, p.id, 'semaine_debut', parseInt(e.target.value))}
+                                        <input type="number" value={p.semaine_debut ?? ''} min={1}
+                                          onChange={e => updateDraftField(p.id, 'semaine_debut', parseInt(e.target.value) || '')}
                                           style={{ width: 30, textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 2px', fontSize: '.6rem', outline: 'none' }} />
                                         <span>→</span>
-                                        <input type="number" defaultValue={p.semaine_fin} min={1}
-                                          onBlur={e => updateProgBloc(ex.id, p.id, 'semaine_fin', parseInt(e.target.value))}
+                                        <input type="number" value={p.semaine_fin ?? ''} min={1}
+                                          onChange={e => updateDraftField(p.id, 'semaine_fin', parseInt(e.target.value) || '')}
                                           style={{ width: 30, textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 2px', fontSize: '.6rem', outline: 'none' }} />
                                       </div>
                                     </td>
@@ -1254,11 +1258,11 @@ export default function Seance() {
                                 ].map(row => (
                                   <tr key={row.key} style={{ borderTop: '1px solid #e5e7eb' }}>
                                     <td style={{ padding: '5px 8px', fontWeight: 700, color: '#374151', background: '#f8faff', whiteSpace: 'nowrap' }}>{row.label}</td>
-                                    {ex.progressions.map(p => (
+                                    {progDraft.map(p => (
                                       <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center' }}>
                                         <input
-                                          defaultValue={p[row.key] || ''}
-                                          onBlur={e => updateProgBloc(ex.id, p.id, row.key, e.target.value)}
+                                          value={p[row.key] ?? ''}
+                                          onChange={e => updateDraftField(p.id, row.key, e.target.value)}
                                           placeholder="—"
                                           style={{ width: '100%', minWidth: 80, textAlign: 'center', border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '4px 6px', fontSize: '.72rem', outline: 'none', background: '#fff', fontWeight: 600 }}
                                         />
