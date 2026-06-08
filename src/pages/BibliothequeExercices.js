@@ -103,6 +103,38 @@ function MusclePicker({ primary, secondary, onChange }) {
   )
 }
 
+// ── Traduction FR→EN pour la recherche WorkoutX ───────────────────────────
+function frToEn(nom) {
+  return nom.toLowerCase()
+    .replace(/développé couché/g, 'bench press')
+    .replace(/développé incliné/g, 'incline bench press')
+    .replace(/développé décliné/g, 'decline bench press')
+    .replace(/développé militaire/g, 'overhead press')
+    .replace(/développé/g, 'press')
+    .replace(/soulevé de terre/g, 'deadlift')
+    .replace(/tirage horizontal/g, 'seated row')
+    .replace(/tirage nuque/g, 'lat pulldown behind neck')
+    .replace(/tirage poitrine/g, 'lat pulldown')
+    .replace(/tirage/g, 'row')
+    .replace(/tractions?/g, 'pull up')
+    .replace(/fentes?/g, 'lunge')
+    .replace(/élévations? latérales?/g, 'lateral raise')
+    .replace(/élévations? frontales?/g, 'front raise')
+    .replace(/écarté/g, 'fly')
+    .replace(/mollets?/g, 'calf raise')
+    .replace(/haltères?/g, 'dumbbell')
+    .replace(/barre/g, 'barbell')
+    .replace(/câble|poulie/g, 'cable')
+    .replace(/incliné/g, 'incline')
+    .replace(/décliné/g, 'decline')
+    .replace(/marteau/g, 'hammer curl')
+    .replace(/presse/g, 'press')
+    .replace(/unilatéral/g, 'single arm')
+    .replace(/rowing/g, 'row')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .trim()
+}
+
 export default function BibliothequeExercices() {
   const [exercices, setExercices]       = useState([])
   const [loading, setLoading]           = useState(true)
@@ -121,6 +153,13 @@ export default function BibliothequeExercices() {
   const [uploadingFor, setUploadingFor] = useState(null) // 'create' | exId
   const [backfillState, setBackfillState] = useState(null) // null | 'loading' | 'preview' | 'applying' | 'done'
   const [backfillResult, setBackfillResult] = useState(null) // { matched: [], skipped: 0 }
+  // WorkoutX GIF search
+  const [workoutxKey, setWorkoutxKey] = useState(() => localStorage.getItem('workoutx_key') || '')
+  const [showKeyInput, setShowKeyInput] = useState(false)
+  const [gifModal, setGifModal] = useState(null) // { target: 'create'|exId, nom: string }
+  const [gifResults, setGifResults] = useState([])
+  const [gifSearching, setGifSearching] = useState(false)
+  const [gifQuery, setGifQuery] = useState('')
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -250,6 +289,47 @@ export default function BibliothequeExercices() {
     if (error) { alert(error.message); return }
     setAddingToSeance(null)
     setAddForm({ seance_id: '', code: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '' })
+  }
+
+  // ── WorkoutX GIF search ────────────────────────────────────────────────────
+  function saveKey(key) {
+    setWorkoutxKey(key)
+    localStorage.setItem('workoutx_key', key)
+  }
+
+  async function doGifSearch(query) {
+    if (!query.trim()) return
+    setGifSearching(true)
+    setGifResults([])
+    try {
+      const res = await fetch(
+        `https://api.workoutxapp.com/v1/exercises/search?name=${encodeURIComponent(frToEn(query))}&limit=9`,
+        { headers: { 'X-WorkoutX-Key': workoutxKey } }
+      )
+      if (!res.ok) throw new Error(`Erreur ${res.status}`)
+      const json = await res.json()
+      setGifResults(json.data || [])
+    } catch (e) {
+      alert('Erreur WorkoutX : ' + e.message + '\nVérifie ta clé API.')
+    }
+    setGifSearching(false)
+  }
+
+  function ouvrirGifSearch(nom, target) {
+    if (!workoutxKey) { setShowKeyInput(true); return }
+    const q = nom || ''
+    setGifQuery(q)
+    setGifModal({ target, nom: q })
+    setGifResults([])
+    doGifSearch(q)
+  }
+
+  function choisirGif(gifUrl) {
+    if (!gifModal) return
+    if (gifModal.target === 'create') setForm(prev => ({ ...prev, image_url: gifUrl }))
+    else setFormEdit(prev => ({ ...prev, image_url: gifUrl }))
+    setGifModal(null)
+    setGifResults([])
   }
 
   // ── Backfill : liaison automatique des anciens exercices ──────────────────
@@ -425,6 +505,88 @@ export default function BibliothequeExercices() {
         </div>
       )}
 
+      {/* ── Modal GIF WorkoutX ── */}
+      {gifModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 600, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            {/* Header */}
+            <div style={{ padding: '1.25rem 1.25rem 0.75rem', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 800, color: '#333', fontSize: '0.95rem' }}>🎬 Choisir un GIF</p>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>Clique sur le GIF à utiliser pour cet exercice</p>
+              </div>
+              <button onClick={() => { setGifModal(null); setGifResults([]) }} style={{ background: 'none', border: 'none', fontSize: '1.3rem', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            </div>
+            {/* Barre de recherche */}
+            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: '0.5rem' }}>
+              <input
+                value={gifQuery}
+                onChange={e => setGifQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && doGifSearch(gifQuery)}
+                placeholder="Nom de l'exercice en FR ou EN…"
+                style={{ ...S.input, flex: 1, fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
+              />
+              <button onClick={() => doGifSearch(gifQuery)} disabled={gifSearching} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem', flexShrink: 0 }}>
+                {gifSearching ? '⏳' : '🔍 Chercher'}
+              </button>
+            </div>
+            {/* Résultats */}
+            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
+              {gifSearching && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</p>
+                  <p style={{ fontSize: '0.85rem' }}>Recherche en cours…</p>
+                </div>
+              )}
+              {!gifSearching && gifResults.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🤷</p>
+                  <p style={{ fontSize: '0.85rem' }}>Aucun résultat. Essaie en anglais (ex : "bench press", "squat")</p>
+                </div>
+              )}
+              {!gifSearching && gifResults.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                  {gifResults.map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => choisirGif(r.gifUrl)}
+                      style={{ background: '#111', border: '2px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', transition: 'border-color 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = '#e4f816'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      title={r.name}
+                    >
+                      <img src={r.gifUrl} alt={r.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                      <p style={{ margin: 0, padding: '0.4rem 0.5rem', fontSize: '0.65rem', fontWeight: 600, color: '#e5e7eb', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#1a1a1a' }}>{r.name}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bannière clé API WorkoutX ── */}
+      {showKeyInput && (
+        <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#92400e' }}>
+              🔑 Clé API WorkoutX
+              <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#b45309', fontWeight: 400, fontSize: '0.72rem' }}>
+                Obtenir une clé gratuite →
+              </a>
+            </p>
+            <input
+              value={workoutxKey}
+              onChange={e => saveKey(e.target.value)}
+              placeholder="Colle ta clé API ici…"
+              style={{ ...S.input, fontSize: '0.82rem', padding: '0.55rem 0.75rem' }}
+            />
+          </div>
+          <button onClick={() => setShowKeyInput(false)} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem' }}>OK</button>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div style={S.header}>
         <div>
@@ -432,6 +594,13 @@ export default function BibliothequeExercices() {
           <p style={S.subtitle}>{exercices.length} exercice{exercices.length !== 1 ? 's' : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setShowKeyInput(v => !v)}
+            style={{ ...S.btnSecondary, fontSize: '0.82rem', color: workoutxKey ? '#16a34a' : '#92400e', borderColor: workoutxKey ? '#bbf7d0' : '#fde68a', background: workoutxKey ? '#f0fdf4' : '#fffbeb' }}
+            title={workoutxKey ? 'Clé WorkoutX configurée' : 'Configurer la clé API WorkoutX'}
+          >
+            {workoutxKey ? '🔑 GIF configuré' : '🔑 Config clé GIF'}
+          </button>
           <button onClick={lancerBackfill} style={{ ...S.btnSecondary, fontSize: '0.82rem' }} title="Lier automatiquement les exercices existants à la bibliothèque">
             🔗 Lier les anciens exercices
           </button>
@@ -486,6 +655,13 @@ export default function BibliothequeExercices() {
               onFile={e => handleFileChange(e, 'create')}
               uploading={uploadingFor === 'create'}
             />
+            <button
+              type="button"
+              onClick={() => ouvrirGifSearch(form.nom, 'create')}
+              style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              🎬 Trouver GIF automatiquement
+            </button>
             <button type="submit" disabled={saving} style={S.btnPrimary}>
               {saving ? 'Enregistrement...' : '✓ Créer'}
             </button>
@@ -550,6 +726,13 @@ export default function BibliothequeExercices() {
                       onFile={e => handleFileChange(e, ex.id)}
                       uploading={uploadingFor === ex.id}
                     />
+                    <button
+                      type="button"
+                      onClick={() => ouvrirGifSearch(formEdit.nom || ex.nom, ex.id)}
+                      style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    >
+                      🎬 Trouver GIF automatiquement
+                    </button>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
                         {saving ? '...' : '✓ Sauvegarder'}
