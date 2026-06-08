@@ -49,7 +49,7 @@ export default function ProgrammeClient() {
 
     const { data: seancesData, error: errSeances } = await supabase
       .from('seances')
-      .select('id, nom, ordre, exercices(charges(semaine)), rpe_seances(semaine)')
+      .select('id, nom, ordre, exercices(charges(semaine)), rpe_seances(semaine, rpe_reel)')
       .eq('programme_id', id)
       .order('ordre', { ascending: true })
     if (errSeances) { console.log(errSeances); setLoading(false); return }
@@ -59,7 +59,7 @@ export default function ProgrammeClient() {
     const renseignees = {}
     seancesData.forEach(s => {
       const aCharge = s.exercices.some(ex => ex.charges.some(c => c.semaine === semaine))
-      const aRpe = s.rpe_seances.some(r => r.semaine === semaine)
+      const aRpe = s.rpe_seances.some(r => r.semaine === semaine && r.rpe_reel != null)
       renseignees[s.id] = aCharge || aRpe
     })
     setSeancesRenseignees(renseignees)
