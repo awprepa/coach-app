@@ -7,31 +7,34 @@ const STATUTS = {
   payee:     { label: 'Payée',     bg: '#f0fdf4', color: '#15803d' },
 }
 
-const SETTINGS_KEYS = ['facture_nom', 'facture_adresse', 'facture_siret', 'facture_iban', 'facture_email', 'facture_numero_debut']
+const SETTINGS_KEYS = ['facture_nom', 'facture_adresse', 'facture_siret', 'facture_iban', 'facture_email', 'facture_numero_debut', 'facture_activite']
 
 function newLigne() { return { id: Math.random().toString(36).slice(2), description: '', quantite: 1, prix: 0 } }
 
+const EMPTY_FORM = () => ({
+  client_id: '', date_emission: new Date().toISOString().slice(0, 10),
+  date_echeance: '', notes: '', lignes: [newLigne()],
+})
+
 export default function Factures() {
-  const [factures, setFactures]       = useState([])
-  const [clients, setClients]         = useState([])
-  const [settings, setSettings]       = useState({})
-  const [loading, setLoading]         = useState(true)
-  const [showForm, setShowForm]       = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [printId, setPrintId]         = useState(null)
-  const [settingsForm, setSettingsForm] = useState({})
-  const [form, setForm] = useState({
-    client_id: '', date_emission: new Date().toISOString().slice(0, 10),
-    date_echeance: '', notes: '', lignes: [newLigne()],
-  })
+  const [factures, setFactures]           = useState([])
+  const [clients, setClients]             = useState([])
+  const [settings, setSettings]           = useState({})
+  const [loading, setLoading]             = useState(true)
+  const [showForm, setShowForm]           = useState(false)
+  const [editingId, setEditingId]         = useState(null) // null = création, sinon id
+  const [showSettings, setShowSettings]   = useState(false)
+  const [printId, setPrintId]             = useState(null)
+  const [settingsForm, setSettingsForm]   = useState({})
+  const [form, setForm]                   = useState(EMPTY_FORM())
   const printRef = useRef()
 
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {
     const [{ data: f }, { data: c }, { data: s }] = await Promise.all([
-      supabase.from('factures').select('*, clients(prenom, nom)').order('created_at', { ascending: false }),
-      supabase.from('clients').select('id, prenom, nom').order('nom'),
+      supabase.from('factures').select('*, clients(prenom, nom, email)').order('created_at', { ascending: false }),
+      supabase.from('clients').select('id, prenom, nom, email').order('nom'),
       supabase.from('app_settings').select('key, value').in('key', SETTINGS_KEYS),
     ])
     setFactures(f || [])
@@ -41,11 +44,6 @@ export default function Factures() {
     setSettings(map)
     setSettingsForm(map)
     setLoading(false)
-  }
-
-  async function saveSetting(key, value) {
-    await supabase.from('app_settings').upsert({ key, value }, { onConflict: 'key' })
-    setSettings(prev => ({ ...prev, [key]: value }))
   }
 
   async function saveAllSettings() {
@@ -61,22 +59,58 @@ export default function Factures() {
     return String(debut + factures.length).padStart(4, '0')
   }
 
-  async function createFacture() {
-    const numero = nextNumero()
-    const { data, error } = await supabase.from('factures').insert([{
-      client_id: form.client_id || null,
-      numero,
+  function openCreate() {
+    setEditingId(null)
+    setForm(EMPTY_FORM())
+    setShowForm(true)
+    setPrintId(null)
+  }
+
+  function openEdit(f) {
+    setEditingId(f.id)
+    setForm({
+      client_id:     f.client_id || '',
+      date_emission: f.date_emission,
+      date_echeance: f.date_echeance || '',
+      notes:         f.notes || '',
+      lignes:        f.lignes?.length ? f.lignes.map(l => ({ ...l, id: l.id || Math.random().toString(36).slice(2) })) : [newLigne()],
+    })
+    setShowForm(true)
+    setPrintId(null)
+  }
+
+  async function submitForm() {
+    const payload = {
+      client_id:     form.client_id || null,
       date_emission: form.date_emission,
       date_echeance: form.date_echeance || null,
-      lignes: form.lignes.filter(l => l.description.trim()),
-      notes: form.notes || null,
-      statut: 'brouillon',
-    }]).select('*, clients(prenom, nom)').single()
-    if (error) { alert(error.message); return }
-    setFactures(prev => [data, ...prev])
+      lignes:        form.lignes.filter(l => l.description.trim()),
+      notes:         form.notes || null,
+    }
+
+    if (editingId) {
+      // Mise à jour
+      const { data, error } = await supabase.from('factures')
+        .update(payload)
+        .eq('id', editingId)
+        .select('*, clients(prenom, nom, email)').single()
+      if (error) { alert(error.message); return }
+      setFactures(prev => prev.map(f => f.id === editingId ? data : f))
+      setPrintId(editingId)
+    } else {
+      // Création
+      const numero = nextNumero()
+      const { data, error } = await supabase.from('factures')
+        .insert([{ ...payload, numero, statut: 'brouillon' }])
+        .select('*, clients(prenom, nom, email)').single()
+      if (error) { alert(error.message); return }
+      setFactures(prev => [data, ...prev])
+      setPrintId(data.id)
+    }
+
     setShowForm(false)
-    setForm({ client_id: '', date_emission: new Date().toISOString().slice(0, 10), date_echeance: '', notes: '', lignes: [newLigne()] })
-    setPrintId(data.id)
+    setEditingId(null)
+    setForm(EMPTY_FORM())
   }
 
   async function updateStatut(id, statut) {
@@ -89,6 +123,7 @@ export default function Factures() {
     await supabase.from('factures').delete().eq('id', id)
     setFactures(prev => prev.filter(f => f.id !== id))
     if (printId === id) setPrintId(null)
+    if (editingId === id) { setShowForm(false); setEditingId(null) }
   }
 
   function totalFacture(lignes) {
@@ -99,11 +134,12 @@ export default function Factures() {
     const content = printRef.current
     if (!content) return
     const win = window.open('', '_blank')
-    win.document.write(`<html><head><title>Facture</title><style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111; background: white; }
-      @page { size: A4; margin: 20mm 15mm; }
-      @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    win.document.write(`<!DOCTYPE html><html><head><title>Facture ${facturePrint?.numero || ''}</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif; color:#111; background:white; }
+      @page { size:A4 portrait; margin:18mm 14mm 14mm 14mm; }
+      @media print { body { print-color-adjust:exact; -webkit-print-color-adjust:exact; } }
     </style></head><body>`)
     win.document.write(content.innerHTML)
     win.document.write('</body></html>')
@@ -118,30 +154,32 @@ export default function Factures() {
 
   return (
     <div style={S.page}>
-      {/* En-tête */}
+
+      {/* ── En-tête ── */}
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Factures</h1>
-          <p style={S.sub}>{factures.length} facture{factures.length !== 1 ? 's' : ''}</p>
+          <p style={S.sub}>{factures.length} facture{factures.length !== 1 ? 's' : ''} · {factures.filter(f=>f.statut==='payee').length} payée{factures.filter(f=>f.statut==='payee').length!==1?'s':''}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button onClick={() => setShowSettings(v => !v)} style={S.btnSecondary}>⚙️ Mes infos</button>
-          <button onClick={() => setShowForm(true)} style={S.btnPrimary}>+ Nouvelle facture</button>
+          <button onClick={openCreate} style={S.btnPrimary}>+ Nouvelle facture</button>
         </div>
       </div>
 
-      {/* Paramètres coach */}
+      {/* ── Paramètres coach ── */}
       {showSettings && (
         <div style={S.card}>
-          <p style={S.sectionTitle}>Informations coach (apparaissent sur les factures)</p>
+          <p style={S.sectionTitle}>Mes informations (apparaissent sur chaque facture)</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
             {[
-              { key: 'facture_nom', label: 'Nom / Raison sociale', placeholder: 'Arthur Wehrey' },
-              { key: 'facture_adresse', label: 'Adresse', placeholder: '12 rue des Stades, 75001 Paris' },
-              { key: 'facture_siret', label: 'SIRET', placeholder: '123 456 789 00012' },
-              { key: 'facture_iban', label: 'IBAN (virement)', placeholder: 'FR76 3000…' },
-              { key: 'facture_email', label: 'Email facturation', placeholder: 'arthur@awprepa.app' },
-              { key: 'facture_numero_debut', label: 'N° de départ', placeholder: '1' },
+              { key: 'facture_nom',           label: 'Nom / Raison sociale',  placeholder: 'Arthur Wehrey' },
+              { key: 'facture_activite',       label: 'Activité',              placeholder: 'Préparateur physique' },
+              { key: 'facture_adresse',        label: 'Adresse',               placeholder: '41 rue Fénelon, 31200 Toulouse' },
+              { key: 'facture_siret',          label: 'SIRET',                 placeholder: '106 026 883 00012' },
+              { key: 'facture_iban',           label: 'IBAN (virement)',       placeholder: 'FR76 3000…' },
+              { key: 'facture_email',          label: 'Email',                 placeholder: 'arthur@awprepa.app' },
+              { key: 'facture_numero_debut',   label: 'Numéro de départ',      placeholder: '1' },
             ].map(f => (
               <div key={f.key}>
                 <label style={S.label}>{f.label}</label>
@@ -158,19 +196,21 @@ export default function Factures() {
         </div>
       )}
 
-      {/* Formulaire nouvelle facture */}
+      {/* ── Formulaire création / édition ── */}
       {showForm && (
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <p style={{ ...S.sectionTitle, margin: 0 }}>Nouvelle facture — N° {nextNumero()}</p>
-            <button onClick={() => setShowForm(false)} style={S.btnClose}>✕</button>
+            <p style={{ ...S.sectionTitle, margin: 0 }}>
+              {editingId ? 'Modifier la facture' : `Nouvelle facture — N° ${nextNumero()}`}
+            </p>
+            <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnClose}>✕</button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label style={S.label}>Client</label>
               <select value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))} style={S.input}>
-                <option value="">— Aucun —</option>
+                <option value="">— Aucun / Particulier —</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
               </select>
             </div>
@@ -188,195 +228,147 @@ export default function Factures() {
           <p style={S.label}>Prestations</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
             {form.lignes.map((l, i) => (
-              <div key={l.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div key={l.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
-                  value={l.description} onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j === i ? { ...x, description: e.target.value } : x) }))}
-                  placeholder="Description (ex : Coaching — Janvier 2026)"
-                  style={{ ...S.input, flex: 3 }}
+                  value={l.description}
+                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, description: e.target.value } : x) }))}
+                  placeholder="Ex : Coaching mensuel — Juin 2026"
+                  style={{ ...S.input, flex: '3 1 180px' }}
                 />
                 <input
                   type="number" value={l.quantite} min="1"
-                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j === i ? { ...x, quantite: e.target.value } : x) }))}
-                  style={{ ...S.input, width: 70 }} placeholder="Qté"
+                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, quantite: e.target.value } : x) }))}
+                  style={{ ...S.input, width: 72, flex: '0 0 72px' }} placeholder="Qté"
                 />
                 <input
-                  type="number" value={l.prix} min="0"
-                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j === i ? { ...x, prix: e.target.value } : x) }))}
-                  style={{ ...S.input, width: 90 }} placeholder="Prix €"
+                  type="number" value={l.prix} min="0" step="0.01"
+                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, prix: e.target.value } : x) }))}
+                  style={{ ...S.input, width: 96, flex: '0 0 96px' }} placeholder="Prix €"
                 />
-                <span style={{ minWidth: 70, textAlign: 'right', fontWeight: '700', fontSize: '0.9rem' }}>
-                  {((parseFloat(l.prix) || 0) * (parseFloat(l.quantite) || 1)).toFixed(2)} €
+                <span style={{ minWidth: 78, textAlign: 'right', fontWeight: '700', fontSize: '0.9rem', color: '#111' }}>
+                  {((parseFloat(l.prix)||0) * (parseFloat(l.quantite)||1)).toFixed(2)} €
                 </span>
                 {form.lignes.length > 1 && (
-                  <button onClick={() => setForm(f => ({ ...f, lignes: f.lignes.filter((_, j) => j !== i) }))} style={S.btnClose}>✕</button>
+                  <button onClick={() => setForm(f => ({ ...f, lignes: f.lignes.filter((_, j) => j!==i) }))} style={S.btnClose}>✕</button>
                 )}
               </div>
             ))}
-            <button onClick={() => setForm(f => ({ ...f, lignes: [...f.lignes, newLigne()] }))} style={{ ...S.btnSecondary, alignSelf: 'flex-start', fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}>+ Ligne</button>
+            <button
+              onClick={() => setForm(f => ({ ...f, lignes: [...f.lignes, newLigne()] }))}
+              style={{ ...S.btnSecondary, alignSelf: 'flex-start', fontSize: '0.8rem', padding: '0.35rem 0.7rem' }}
+            >+ Ligne</button>
           </div>
 
+          {/* Total */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-            <div style={{ background: '#f9fafb', borderRadius: 10, padding: '0.75rem 1.25rem', textAlign: 'right' }}>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.2rem' }}>TOTAL HT</p>
+            <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1.25rem', textAlign: 'right' }}>
+              <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.15rem', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Total</p>
               <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 }}>
                 {totalFacture(form.lignes).toFixed(2)} €
               </p>
-              <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0.2rem 0 0' }}>TVA non applicable — Art. 293B CGI</p>
+              <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '0.2rem 0 0' }}>TVA non applicable — Art. 293B CGI</p>
             </div>
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
             <label style={S.label}>Notes (optionnel)</label>
-            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            <textarea
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               placeholder="Conditions de règlement, informations complémentaires…"
-              rows={2} style={{ ...S.input, width: '100%', resize: 'vertical', boxSizing: 'border-box' }} />
+              rows={2}
+              style={{ ...S.input, width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
+            />
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={() => setShowForm(false)} style={S.btnSecondary}>Annuler</button>
-            <button onClick={createFacture} style={S.btnPrimary}>✓ Créer la facture</button>
+            <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnSecondary}>Annuler</button>
+            <button onClick={submitForm} style={S.btnPrimary}>
+              {editingId ? '✓ Enregistrer les modifications' : '✓ Créer la facture'}
+            </button>
           </div>
         </div>
       )}
 
-      {/* Liste des factures */}
+      {/* ── Liste ── */}
       {factures.length === 0 && !showForm ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
-          <p style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🧾</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Aucune facture. Crée ta première ci-dessus.</p>
+          <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🧾</p>
+          <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucune facture pour l'instant.</p>
+          <button onClick={openCreate} style={S.btnPrimary}>+ Créer ma première facture</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {factures.map(f => (
-            <div key={f.id} style={{ ...S.card, padding: '1rem 1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {/* Numéro + client */}
-                <div style={{ flex: 1, minWidth: 160 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                    <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#111' }}>N° {f.numero}</span>
-                    <span style={{ ...S.badge, ...STATUTS[f.statut] }}>{STATUTS[f.statut]?.label}</span>
+          {factures.map(f => {
+            const isOpen = printId === f.id
+            return (
+              <div key={f.id} style={{ ...S.card, padding: '1rem 1.25rem', border: isOpen ? '1.5px solid #333' : '1.5px solid transparent' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {/* Numéro + client */}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#111' }}>N° {f.numero}</span>
+                      <span style={{ ...S.badge, background: STATUTS[f.statut]?.bg, color: STATUTS[f.statut]?.color }}>
+                        {STATUTS[f.statut]?.label}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b7280' }}>
+                      {f.clients ? `${f.clients.prenom} ${f.clients.nom}` : 'Sans client'} · {new Date(f.date_emission + 'T12:00:00').toLocaleDateString('fr-FR')}
+                      {f.date_echeance && ` · Échéance ${new Date(f.date_echeance + 'T12:00:00').toLocaleDateString('fr-FR')}`}
+                    </p>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b7280' }}>
-                    {f.clients ? `${f.clients.prenom} ${f.clients.nom}` : 'Sans client'} · {new Date(f.date_emission).toLocaleDateString('fr-FR')}
-                  </p>
-                </div>
 
-                {/* Montant */}
-                <div style={{ textAlign: 'right', minWidth: 90 }}>
-                  <p style={{ margin: 0, fontWeight: '800', fontSize: '1.1rem', color: '#111' }}>{totalFacture(f.lignes).toFixed(2)} €</p>
-                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{(f.lignes || []).length} ligne{f.lignes?.length !== 1 ? 's' : ''}</p>
-                </div>
+                  {/* Montant */}
+                  <div style={{ textAlign: 'right', minWidth: 90 }}>
+                    <p style={{ margin: 0, fontWeight: '800', fontSize: '1.1rem', color: '#111' }}>{totalFacture(f.lignes).toFixed(2)} €</p>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{(f.lignes||[]).filter(l=>l.description).length} prestation{f.lignes?.length!==1?'s':''}</p>
+                  </div>
 
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <select
-                    value={f.statut}
-                    onChange={e => updateStatut(f.id, e.target.value)}
-                    style={{ ...S.input, padding: '0.3rem 0.5rem', fontSize: '0.78rem', width: 'auto' }}
-                  >
-                    <option value="brouillon">Brouillon</option>
-                    <option value="envoyee">Envoyée</option>
-                    <option value="payee">Payée</option>
-                  </select>
-                  <button onClick={() => setPrintId(printId === f.id ? null : f.id)} style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}>
-                    {printId === f.id ? '▲ Fermer' : '🖨️ Voir / Imprimer'}
-                  </button>
-                  <button onClick={() => deleteFacture(f.id)} style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', color: '#dc2626', borderColor: '#fecaca' }}>🗑️</button>
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <select
+                      value={f.statut}
+                      onChange={e => updateStatut(f.id, e.target.value)}
+                      style={{ ...S.input, padding: '0.3rem 0.5rem', fontSize: '0.78rem', width: 'auto', cursor: 'pointer' }}
+                    >
+                      <option value="brouillon">Brouillon</option>
+                      <option value="envoyee">Envoyée</option>
+                      <option value="payee">Payée</option>
+                    </select>
+                    <button
+                      onClick={() => { openEdit(f); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}
+                    >✏️ Modifier</button>
+                    <button
+                      onClick={() => setPrintId(isOpen ? null : f.id)}
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', background: isOpen ? '#333' : 'white', color: isOpen ? '#e4f816' : '#374151', borderColor: isOpen ? '#333' : '#e5e7eb' }}
+                    >🖨️ {isOpen ? 'Fermer' : 'Aperçu PDF'}</button>
+                    <button
+                      onClick={() => deleteFacture(f.id)}
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', color: '#dc2626', borderColor: '#fecaca' }}
+                    >🗑️</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
-      {/* Aperçu + impression */}
+      {/* ── Aperçu + impression ── */}
       {facturePrint && (
         <div style={{ ...S.card, marginTop: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <p style={{ ...S.sectionTitle, margin: 0 }}>Aperçu — Facture N° {facturePrint.numero}</p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={handlePrint} style={S.btnPrimary}>🖨️ Imprimer / PDF</button>
+              <button onClick={handlePrint} style={S.btnPrimary}>🖨️ Imprimer / Exporter PDF</button>
               <button onClick={() => setPrintId(null)} style={S.btnSecondary}>✕ Fermer</button>
             </div>
           </div>
 
-          {/* Zone d'impression */}
+          {/* Zone imprimable */}
           <div ref={printRef}>
-            <div style={S.invoice}>
-              {/* Header facture */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
-                <div>
-                  <p style={{ fontWeight: '900', fontSize: '1.1rem', color: '#111', margin: '0 0 0.25rem' }}>{settings.facture_nom || 'Nom du coach'}</p>
-                  {settings.facture_adresse && <p style={S.inv_sm}>{settings.facture_adresse}</p>}
-                  {settings.facture_siret  && <p style={S.inv_sm}>SIRET : {settings.facture_siret}</p>}
-                  {settings.facture_email  && <p style={S.inv_sm}>{settings.facture_email}</p>}
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontWeight: '900', fontSize: '1.8rem', color: '#111', margin: '0 0 0.25rem', letterSpacing: '-1px' }}>FACTURE</p>
-                  <p style={S.inv_sm}>N° {facturePrint.numero}</p>
-                  <p style={S.inv_sm}>Émise le {new Date(facturePrint.date_emission).toLocaleDateString('fr-FR')}</p>
-                  {facturePrint.date_echeance && <p style={S.inv_sm}>Échéance : {new Date(facturePrint.date_echeance).toLocaleDateString('fr-FR')}</p>}
-                </div>
-              </div>
-
-              {/* Client */}
-              {facturePrint.clients && (
-                <div style={{ background: '#f9fafb', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '2rem' }}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>Facturé à</p>
-                  <p style={{ fontWeight: '700', fontSize: '0.95rem', color: '#111', margin: 0 }}>{facturePrint.clients.prenom} {facturePrint.clients.nom}</p>
-                </div>
-              )}
-
-              {/* Lignes */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #111' }}>
-                    <th style={{ ...S.inv_th, textAlign: 'left', flex: 1 }}>Description</th>
-                    <th style={{ ...S.inv_th, textAlign: 'center', width: 60 }}>Qté</th>
-                    <th style={{ ...S.inv_th, textAlign: 'right', width: 100 }}>Prix unit.</th>
-                    <th style={{ ...S.inv_th, textAlign: 'right', width: 100 }}>Montant</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(facturePrint.lignes || []).map((l, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={S.inv_td}>{l.description}</td>
-                      <td style={{ ...S.inv_td, textAlign: 'center' }}>{l.quantite}</td>
-                      <td style={{ ...S.inv_td, textAlign: 'right' }}>{parseFloat(l.prix).toFixed(2)} €</td>
-                      <td style={{ ...S.inv_td, textAlign: 'right', fontWeight: '700' }}>{((parseFloat(l.prix) || 0) * (parseFloat(l.quantite) || 1)).toFixed(2)} €</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Total */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2rem' }}>
-                <div style={{ minWidth: 220 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #111', paddingTop: '0.75rem' }}>
-                    <span style={{ fontWeight: '900', fontSize: '1rem' }}>TOTAL TTC</span>
-                    <span style={{ fontWeight: '900', fontSize: '1.1rem' }}>{totalFacture(facturePrint.lignes).toFixed(2)} €</span>
-                  </div>
-                  <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0.4rem 0 0', textAlign: 'right' }}>TVA non applicable — Art. 293B CGI</p>
-                </div>
-              </div>
-
-              {/* Règlement */}
-              {settings.facture_iban && (
-                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1.25rem', marginBottom: '1rem' }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.3rem' }}>Règlement par virement</p>
-                  <p style={S.inv_sm}>IBAN : {settings.facture_iban}</p>
-                  <p style={S.inv_sm}>Référence : Facture {facturePrint.numero} — {facturePrint.clients ? `${facturePrint.clients.prenom} ${facturePrint.clients.nom}` : ''}</p>
-                </div>
-              )}
-
-              {/* Notes */}
-              {facturePrint.notes && (
-                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.3rem' }}>Notes</p>
-                  <p style={S.inv_sm}>{facturePrint.notes}</p>
-                </div>
-              )}
-            </div>
+            <InvoiceTemplate facture={facturePrint} settings={settings} total={totalFacture(facturePrint.lignes)} />
           </div>
         </div>
       )}
@@ -384,8 +376,138 @@ export default function Factures() {
   )
 }
 
+/* ── Composant facture imprimable ─────────────────────────────────────── */
+function InvoiceTemplate({ facture, settings, total }) {
+  const nomCoach    = settings.facture_nom      || 'Arthur Wehrey'
+  const activite    = settings.facture_activite || 'Préparateur physique'
+  const adresse     = settings.facture_adresse  || ''
+  const siret       = settings.facture_siret    || ''
+  const emailCoach  = settings.facture_email    || ''
+  const iban        = settings.facture_iban     || ''
+
+  const dateEmission = new Date(facture.date_emission + 'T12:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })
+  const dateEcheance = facture.date_echeance
+    ? new Date(facture.date_echeance + 'T12:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })
+    : null
+
+  return (
+    <div style={INV.wrap}>
+      {/* ── Bandeau supérieur ── */}
+      <div style={INV.topBand}>
+        <div style={INV.topLeft}>
+          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 42, marginBottom: 6 }} onError={e => e.target.style.display='none'} />
+          <p style={INV.nomCoach}>{nomCoach}</p>
+          <p style={INV.sm}>{activite}</p>
+        </div>
+        <div style={INV.topRight}>
+          <p style={INV.factureTitle}>FACTURE</p>
+          <p style={INV.numero}>N° {facture.numero}</p>
+        </div>
+      </div>
+
+      {/* ── Infos coach + client ── */}
+      <div style={INV.metaRow}>
+        {/* Coach */}
+        <div style={INV.metaBox}>
+          <p style={INV.metaLabel}>Émetteur</p>
+          {adresse  && <p style={INV.sm}>{adresse}</p>}
+          {siret    && <p style={INV.sm}>SIRET : {siret}</p>}
+          {emailCoach && <p style={INV.sm}>{emailCoach}</p>}
+        </div>
+        {/* Client */}
+        <div style={INV.metaBox}>
+          <p style={INV.metaLabel}>Facturé à</p>
+          {facture.clients
+            ? <>
+                <p style={{ ...INV.sm, fontWeight: 700, color: '#111' }}>{facture.clients.prenom} {facture.clients.nom}</p>
+                {facture.clients.email && <p style={INV.sm}>{facture.clients.email}</p>}
+              </>
+            : <p style={{ ...INV.sm, color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</p>
+          }
+        </div>
+        {/* Dates */}
+        <div style={INV.metaBox}>
+          <p style={INV.metaLabel}>Dates</p>
+          <p style={INV.sm}>Émise le <strong>{dateEmission}</strong></p>
+          {dateEcheance && <p style={{ ...INV.sm, color: dateEcheance ? '#dc2626' : undefined }}>Échéance : <strong>{dateEcheance}</strong></p>}
+        </div>
+      </div>
+
+      {/* ── Tableau prestations ── */}
+      <table style={INV.table}>
+        <thead>
+          <tr style={{ background: '#111' }}>
+            <th style={{ ...INV.th, textAlign: 'left', width: '55%' }}>Description</th>
+            <th style={{ ...INV.th, textAlign: 'center', width: '12%' }}>Qté</th>
+            <th style={{ ...INV.th, textAlign: 'right', width: '16%' }}>Prix unit.</th>
+            <th style={{ ...INV.th, textAlign: 'right', width: '17%' }}>Montant</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(facture.lignes || []).filter(l => l.description).map((l, i) => (
+            <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
+              <td style={INV.td}>{l.description}</td>
+              <td style={{ ...INV.td, textAlign: 'center' }}>{l.quantite}</td>
+              <td style={{ ...INV.td, textAlign: 'right' }}>{parseFloat(l.prix).toFixed(2)} €</td>
+              <td style={{ ...INV.td, textAlign: 'right', fontWeight: 700 }}>
+                {((parseFloat(l.prix)||0) * (parseFloat(l.quantite)||1)).toFixed(2)} €
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* ── Total ── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '0.75rem 0 1.5rem' }}>
+        <div style={INV.totalBox}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '3rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Sous-total HT</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{total.toFixed(2)} €</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '3rem', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>TVA</span>
+            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Non applicable</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '3rem', borderTop: '2px solid #111', paddingTop: '0.5rem' }}>
+            <span style={{ fontWeight: 900, fontSize: '1rem' }}>TOTAL TTC</span>
+            <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>{total.toFixed(2)} €</span>
+          </div>
+          <p style={{ fontSize: '0.62rem', color: '#9ca3af', marginTop: '0.3rem', textAlign: 'right' }}>
+            TVA non applicable — Article 293 B du CGI
+          </p>
+        </div>
+      </div>
+
+      {/* ── Règlement ── */}
+      {iban && (
+        <div style={INV.infoSection}>
+          <p style={INV.infoTitle}>Règlement par virement bancaire</p>
+          <p style={INV.sm}>IBAN : <strong>{iban}</strong></p>
+          <p style={INV.sm}>Référence obligatoire : <strong>Facture {facture.numero}{facture.clients ? ` — ${facture.clients.prenom} ${facture.clients.nom}` : ''}</strong></p>
+        </div>
+      )}
+
+      {/* ── Notes ── */}
+      {facture.notes && (
+        <div style={INV.infoSection}>
+          <p style={INV.infoTitle}>Notes</p>
+          <p style={INV.sm}>{facture.notes}</p>
+        </div>
+      )}
+
+      {/* ── Pied de page ── */}
+      <div style={INV.footer}>
+        <p>{nomCoach}{activite ? ` · ${activite}` : ''}</p>
+        {siret && <p>SIRET {siret}</p>}
+        {adresse && <p>{adresse}</p>}
+      </div>
+    </div>
+  )
+}
+
+/* ── Styles page ── */
 const S = {
-  page:        { padding: '1.5rem', maxWidth: 900, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:        { padding: '1.5rem', maxWidth: 960, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' },
   title:       { fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 },
   sub:         { fontSize: '0.82rem', color: '#9ca3af', margin: '0.2rem 0 0' },
@@ -395,11 +517,29 @@ const S = {
   input:       { width: '100%', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', color: '#333', outline: 'none', boxSizing: 'border-box', background: 'white' },
   btnPrimary:  { background: '#333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.65rem 1.25rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary:{ background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnClose:    { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem 0.4rem' },
+  btnClose:    { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem 0.4rem', flexShrink: 0 },
   badge:       { padding: '0.15rem 0.55rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: '700' },
-  // Styles facture imprimable
-  invoice:     { padding: '2rem', background: 'white', maxWidth: 700, margin: '0 auto', fontSize: '0.88rem', color: '#111' },
-  inv_sm:      { fontSize: '0.82rem', color: '#4b5563', margin: '0.15rem 0 0', lineHeight: 1.5 },
-  inv_th:      { padding: '0.5rem 0.75rem', fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#111' },
-  inv_td:      { padding: '0.65rem 0.75rem', fontSize: '0.88rem', color: '#374151' },
+}
+
+/* ── Styles facture imprimable ── */
+const INV = {
+  wrap:       { padding: '2rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12 },
+  topBand:    { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '2px solid #111' },
+  topLeft:    { display: 'flex', flexDirection: 'column' },
+  topRight:   { textAlign: 'right' },
+  nomCoach:   { fontWeight: 900, fontSize: '1.05rem', color: '#111', margin: 0 },
+  factureTitle:{ fontWeight: 900, fontSize: '2rem', color: '#111', margin: '0 0 0.1rem', letterSpacing: '-1.5px' },
+  numero:     { fontSize: '0.9rem', color: '#6b7280', margin: 0, fontWeight: 600 },
+  metaRow:    { display: 'flex', gap: '1.5rem', marginBottom: '1.75rem', flexWrap: 'wrap' },
+  metaBox:    { flex: '1 1 160px' },
+  metaLabel:  { fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.35rem' },
+  sm:         { fontSize: '0.82rem', color: '#4b5563', margin: '0.12rem 0 0', lineHeight: 1.5 },
+  table:      { width: '100%', borderCollapse: 'collapse', marginBottom: 0 },
+  th:         { padding: '0.55rem 0.75rem', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#e4f816' },
+  td:         { padding: '0.6rem 0.75rem', fontSize: '0.86rem', color: '#374151', borderBottom: '1px solid #f3f4f6' },
+  totalBox:   { background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.875rem 1.25rem', minWidth: 240 },
+  infoSection:{ borderTop: '1px solid #e5e7eb', paddingTop: '0.875rem', marginBottom: '0.875rem' },
+  infoTitle:  { fontSize: '0.68rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' },
+  footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '1rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
+  footerTxt:  { fontSize: '0.68rem', color: '#9ca3af', margin: 0, textAlign: 'center' },
 }
