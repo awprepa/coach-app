@@ -72,6 +72,7 @@ export default function SeanceClient() {
   const [histoOpen, setHistoOpen] = useState({})
   const [histoTracking, setHistoTracking] = useState({}) // { exId: { semaine: [{ poids, reps_reelles, valide, serie }] } }
   const [histoLoading, setHistoLoading] = useState({})
+  const [mediaModal, setMediaModal] = useState(null) // { nom, url }
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
   const [expandedDone, setExpandedDone] = useState(new Set())
@@ -763,6 +764,15 @@ export default function SeanceClient() {
     }
   }
 
+  // ── Helpers média ──────────────────────────────────────────────────────────
+  function youtubeId(url) {
+    const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+    return m ? m[1] : null
+  }
+  function isImageUrl(url) {
+    return /\.(png|gif|jpe?g|webp|svg)(\?.*)?$/i.test(url) || (!youtubeId(url) && !/youtube|youtu\.be/i.test(url))
+  }
+
   if (loading) return <PageLoading />
   if (!seance) return <div style={S.centered}><p style={{ color: '#888' }}>Séance introuvable.</p></div>
 
@@ -853,29 +863,39 @@ export default function SeanceClient() {
 
     return (
       <div key={ex.id}>
-        {/* Image */}
-        {ex.bibliotheque_exercices?.image_url && (
-          <div style={{ marginBottom: '0.75rem', borderRadius: '10px', overflow: 'hidden' }}>
-            <img src={ex.bibliotheque_exercices.image_url} alt={ex.nom}
-              style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
-          </div>
-        )}
-
         {/* Titre exercice */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={S.exCode}>{ex.code}</span>
-            <span style={S.exNom}>{progActif?.nom_variante || ex.nom}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {progActif && (
-              <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
-                📈 {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
-              </span>
-            )}
-            <span style={S.semBadge}>S{semaineActuelle}</span>
-          </div>
-        </div>
+        {(() => {
+          const mediaUrl = ex.media_url || ex.bibliotheque_exercices?.image_url || null
+          const isYt = mediaUrl && youtubeId(mediaUrl)
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={S.exCode}>{ex.code}</span>
+                <span style={S.exNom}>{progActif?.nom_variante || ex.nom}</span>
+                {mediaUrl && (
+                  <button
+                    onClick={() => setMediaModal({ nom: progActif?.nom_variante || ex.nom, url: mediaUrl })}
+                    style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}
+                    title="Voir le mouvement"
+                  >
+                    {isYt
+                      ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                {progActif && (
+                  <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
+                    📈 {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
+                  </span>
+                )}
+                <span style={S.semBadge}>S{semaineActuelle}</span>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Détail libre de la progression (ex: variante, charge max…) */}
         {progActif?.detail && (
@@ -1588,6 +1608,42 @@ export default function SeanceClient() {
         </div>
       </div>
       <ClientBottomNav />
+
+      {/* ── Modale média exercice ── */}
+      {mediaModal && (
+        <div
+          onClick={() => setMediaModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: 20, overflow: 'hidden', width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{mediaModal.nom}</span>
+              <button onClick={() => setMediaModal(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
+            </div>
+            {/* Contenu */}
+            {youtubeId(mediaModal.url)
+              ? <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${youtubeId(mediaModal.url)}?autoplay=1&rel=0`}
+                    title={mediaModal.nom}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+                  />
+                </div>
+              : <img
+                  src={mediaModal.url}
+                  alt={mediaModal.nom}
+                  style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', display: 'block', background: '#f9fafb' }}
+                />
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
 

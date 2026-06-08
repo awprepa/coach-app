@@ -139,6 +139,7 @@ export default function Programme() {
         ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id || null,
         progressions: ex.progressions || null,
         series_echauffement: ex.series_echauffement || null,
+        media_url: ex.media_url || null,
       }))
       await supabase.from('exercices').insert(exInserts)
     }
@@ -218,6 +219,7 @@ export default function Programme() {
             bibliotheque_id: ex.bibliotheque_id || null,
             progressions: ex.progressions?.length > 0 ? ex.progressions : null,
             series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
+            media_url: ex.media_url || null,
           })
         })
 

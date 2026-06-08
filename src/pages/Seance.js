@@ -16,7 +16,7 @@ export default function Seance() {
   const [rpeSeances, setRpeSeances] = useState({})
   const [semaines, setSemaines] = useState(4)
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null })
+  const [form, setForm] = useState({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null, media_url: '' })
   const [enEdition, setEnEdition] = useState(null)
   const [formEdition, setFormEdition] = useState({})
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
@@ -180,13 +180,13 @@ export default function Seance() {
       repetitions: form.repetitions, tempo: form.tempo,
       recuperation: form.recuperation, type_intensite: form.type_intensite,
       valeur_intensite: form.valeur_intensite, ordre: exercices.length + 1,
-      bibliotheque_id
+      bibliotheque_id, media_url: form.media_url || null,
     }]).select().single()
     if (error) alert(error.message)
     else {
       setExercices([...exercices, { ...data, charges: [] }])
       setCharges({ ...charges, [data.id]: {} })
-      setForm({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null })
+      setForm({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null, media_url: '' })
       setBiblioSearch('')
       setSaveToLibrary(false)
       setLibraryImageFile(null)
@@ -227,6 +227,7 @@ export default function Seance() {
         series: ex.series || '', repetitions: ex.repetitions || '',
         tempo: ex.tempo || '', recuperation: ex.recuperation || '',
         type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '',
+        media_url: ex.media_url || '',
       }
     })
     setFormEditions(forms)
@@ -257,6 +258,7 @@ export default function Seance() {
         repetitions: f.repetitions, tempo: f.tempo,
         recuperation: f.recuperation, type_intensite: f.type_intensite,
         valeur_intensite: f.valeur_intensite,
+        media_url: f.media_url || null,
       }).eq('id', ex.id)
     }
 
@@ -291,7 +293,8 @@ export default function Seance() {
       series: formEdition.series ? parseInt(formEdition.series) : null,
       repetitions: formEdition.repetitions, tempo: formEdition.tempo,
       recuperation: formEdition.recuperation, type_intensite: formEdition.type_intensite,
-      valeur_intensite: formEdition.valeur_intensite
+      valeur_intensite: formEdition.valeur_intensite,
+      media_url: formEdition.media_url || null,
     }).eq('id', exId)
     if (error) { alert(error.message); return }
 
@@ -404,6 +407,7 @@ export default function Seance() {
       valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id,
       progressions: ex.progressions?.length > 0 ? ex.progressions : null,
       series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
+      media_url: ex.media_url || null,
     }))
     // RPE cibles uniquement (pas les réels)
     const rpeCibles = {}
@@ -918,6 +922,10 @@ export default function Seance() {
                       <label style={styles.editLabel}>Valeur</label>
                       <input value={f.valeur_intensite} onChange={e => updateFormEdition(ex.id, 'valeur_intensite', e.target.value)} style={styles.editInput} placeholder="7" />
                     </div>
+                    <div style={{ ...styles.editField, flex: 3, minWidth: 180 }}>
+                      <label style={styles.editLabel}>Lien média (YouTube / image)</label>
+                      <input value={f.media_url} onChange={e => updateFormEdition(ex.id, 'media_url', e.target.value)} style={styles.editInput} placeholder="https://youtube.com/..." />
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.1rem' }}>
                       <button onClick={() => supprimerExercice(ex.id)} style={{ ...styles.iconBtnSm, color: '#dc2626', borderColor: '#fecaca' }}>🗑️</button>
                     </div>
@@ -944,6 +952,7 @@ export default function Seance() {
                 <th style={styles.th}>Récup</th>
                 <th style={{ ...styles.th, textAlign: 'center' }}>Intensité</th>
                 <th style={{ ...styles.th, textAlign: 'center' }}>Valeur</th>
+                <th style={{ ...styles.th, textAlign: 'center' }}>Média</th>
                 {colSemaines.map(s => (
                   <th key={s} style={{ ...styles.th, textAlign: 'center' }} colSpan={2}>S{s}</th>
                 ))}
@@ -1011,6 +1020,14 @@ export default function Seance() {
                         </select>
                       </td>
                       <td style={styles.td}><input value={formEdition.valeur_intensite} onChange={e => setFormEdition({ ...formEdition, valeur_intensite: e.target.value })} style={{ ...styles.cellInput, width: '60px' }} /></td>
+                      <td style={styles.td}>
+                        <input
+                          value={formEdition.media_url}
+                          onChange={e => setFormEdition({ ...formEdition, media_url: e.target.value })}
+                          placeholder="URL YouTube / image"
+                          style={{ ...styles.cellInput, width: '160px' }}
+                        />
+                      </td>
                       {colSemaines.map(s => (
                         <>
                           <td key={`${s}-kg`} style={styles.td}>—</td>
@@ -1025,7 +1042,7 @@ export default function Seance() {
                           {/* Modifier */}
                           <button
                             title="Modifier"
-                            onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '' }) }}
+                            onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '', media_url: ex.media_url || '' }) }}
                             style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           </button>
@@ -1064,6 +1081,14 @@ export default function Seance() {
                         {ex.type_intensite && <span style={styles.intensiteTag}>{ex.type_intensite}</span>}
                       </td>
                       <td style={styles.tdCenter}>{ex.valeur_intensite}</td>
+                      <td style={styles.tdCenter}>
+                        {ex.media_url
+                          ? <span title={ex.media_url} style={{ fontSize: '0.8rem', cursor: 'default' }}>
+                              {/youtube|youtu\.be/i.test(ex.media_url) ? '▶' : '🖼'}
+                            </span>
+                          : <span style={{ color: '#e5e7eb', fontSize: '0.75rem' }}>—</span>
+                        }
+                      </td>
                       {colSemaines.map(s => (
                         <>
                           <td key={`${s}-kg`} style={styles.tdCenter}>
@@ -1354,6 +1379,13 @@ export default function Seance() {
               <option value="Libre">Libre</option>
             </select>
             <input name="valeur_intensite" value={form.valeur_intensite} onChange={e => setForm({ ...form, valeur_intensite: e.target.value })} placeholder="Valeur" style={{ ...styles.formInput, width: '80px' }} />
+          </div>
+
+          {/* Lien média */}
+          <div style={{ marginTop: '0.5rem' }}>
+            <input name="media_url" value={form.media_url} onChange={e => setForm({ ...form, media_url: e.target.value })}
+              placeholder="Lien média (YouTube, image PNG/GIF) — optionnel"
+              style={{ ...styles.formInput, width: '100%', boxSizing: 'border-box' }} />
           </div>
 
           {/* Option sauvegarde bibliothèque */}

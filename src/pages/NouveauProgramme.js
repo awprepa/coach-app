@@ -65,6 +65,7 @@ export default function NouveauProgramme() {
               bibliotheque_id: ex.bibliotheque_id || null,
               progressions: ex.progressions || null,
               series_echauffement: ex.series_echauffement || null,
+              media_url: ex.media_url || null,
             }))
           )
         }
