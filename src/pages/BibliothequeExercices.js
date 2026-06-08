@@ -302,13 +302,17 @@ export default function BibliothequeExercices() {
     setGifSearching(true)
     setGifResults([])
     try {
+      const translated = frToEn(query)
+      // Plan gratuit : /v1/exercises/name/:name (path param, pas query param)
       const res = await fetch(
-        `https://api.workoutxapp.com/v1/exercises/search?name=${encodeURIComponent(frToEn(query))}&limit=9`,
+        `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(translated)}`,
         { headers: { 'X-WorkoutX-Key': workoutxKey } }
       )
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       const json = await res.json()
-      setGifResults(json.data || [])
+      // Résultats : tableau direct ou objet { data: [...] }
+      const list = Array.isArray(json) ? json : (json.data || [])
+      setGifResults(list.slice(0, 9))
     } catch (e) {
       alert('Erreur WorkoutX : ' + e.message + '\nVérifie ta clé API.')
     }
