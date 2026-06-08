@@ -1273,7 +1273,15 @@ export default function SeanceClient() {
                 {warmGroups.map((g, gi) => {
                   if (!g.groupe) {
                     return g.items.map((l, i) => (
-                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.4rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
+                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
+                        {l.image_url && (
+                          <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0 }}>
+                            {youtubeId(l.image_url)
+                              ? <><img src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
+                              : <img src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            }
+                          </button>
+                        )}
                         <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                         <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
                       </div>
@@ -1284,7 +1292,15 @@ export default function SeanceClient() {
                     <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid var(--accent)', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem' }}>
                       <div style={{ flex: 1 }}>
                         {g.items.map((l, i) => (
-                          <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                          <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                            {l.image_url && (
+                              <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative' }}>
+                                {youtubeId(l.image_url)
+                                  ? <><img src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
+                                  : <img src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                }
+                              </button>
+                            )}
                             <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                             <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
                           </div>

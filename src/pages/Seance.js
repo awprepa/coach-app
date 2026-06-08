@@ -53,7 +53,9 @@ export default function Seance() {
   const [echauffTemplates, setEchauffTemplates]   = useState([])
   const [loadingTemplates, setLoadingTemplates]   = useState(false)
   const [editingEchauffId, setEditingEchauffId]   = useState(null)
-  const [editEchauffForm, setEditEchauffForm]     = useState({ nom: '', reps: '', groupe: '', tours: '' })
+  const [editEchauffForm, setEditEchauffForm]     = useState({ nom: '', reps: '', groupe: '', tours: '', image_url: '' })
+  const [uploadingEchauff, setUploadingEchauff]   = useState(false)
+  const echauffImgRef = useRef(null)
   const [showEchauffPaste, setShowEchauffPaste]   = useState(false)
   const [echauffPasteText, setEchauffPasteText]   = useState('')
   const [echauffParsed, setEchauffParsed]         = useState(null)
@@ -624,7 +626,7 @@ export default function Seance() {
 
   function startEditEchauffLine(l) {
     setEditingEchauffId(l.id)
-    setEditEchauffForm({ nom: l.nom || '', reps: l.reps || '', groupe: l.groupe || '', tours: l.tours ? String(l.tours) : '' })
+    setEditEchauffForm({ nom: l.nom || '', reps: l.reps || '', groupe: l.groupe || '', tours: l.tours ? String(l.tours) : '', image_url: l.image_url || '' })
   }
 
   function saveEditEchauffLine() {
@@ -632,12 +634,25 @@ export default function Seance() {
     const g = editEchauffForm.groupe.trim().toUpperCase() || null
     const tours = g && editEchauffForm.tours ? parseInt(editEchauffForm.tours) || null : null
     const updated = echauffement.map(l => {
-      if (l.id === editingEchauffId) return { ...l, nom: editEchauffForm.nom.trim(), reps: editEchauffForm.reps.trim(), groupe: g, tours: g ? tours : null }
+      if (l.id === editingEchauffId) return { ...l, nom: editEchauffForm.nom.trim(), reps: editEchauffForm.reps.trim(), groupe: g, tours: g ? tours : null, image_url: editEchauffForm.image_url || null }
       if (g && l.groupe === g) return { ...l, tours }
       return l
     })
     persistEchauff(updated)
     setEditingEchauffId(null)
+  }
+
+  async function uploadEchauffImage(file) {
+    if (!file) return
+    const ext  = file.name.split('.').pop().toLowerCase()
+    const path = `echauff/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    setUploadingEchauff(true)
+    const { error } = await supabase.storage.from('exercices').upload(path, file, { upsert: true })
+    setUploadingEchauff(false)
+    if (error) { alert('Erreur upload : ' + error.message); return }
+    const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
+    setEditEchauffForm(f => ({ ...f, image_url: publicUrl }))
+    if (echauffImgRef.current) echauffImgRef.current.value = ''
   }
 
   function removeEchauffLine(lid) { persistEchauff(echauffement.filter(l => l.id !== lid)) }
@@ -842,19 +857,45 @@ export default function Seance() {
               <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', border: l.groupe ? '1.5px solid #e9f7a8' : '1.5px solid #f3f4f6', borderLeft: l.groupe ? '3px solid #e4f816' : '1.5px solid #f3f4f6', borderRadius: l.groupe ? '0 10px 10px 0' : 10, marginTop: groupeChange && i > 0 ? '0.25rem' : 0 }}>
                 {editingEchauffId === l.id ? (
                   /* ── Mode édition ── */
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', padding: '0.5rem 0.875rem' }}>
-                    <input value={editEchauffForm.nom} onChange={e => setEditEchauffForm(f => ({ ...f, nom: e.target.value }))}
-                      placeholder="Exercice" style={{ ...styles.formInput, flex: 1, minWidth: 120, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} autoFocus />
-                    <input value={editEchauffForm.reps} onChange={e => setEditEchauffForm(f => ({ ...f, reps: e.target.value }))}
-                      placeholder="Reps / durée" style={{ ...styles.formInput, width: 100, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} />
-                    <input value={editEchauffForm.groupe} onChange={e => setEditEchauffForm(f => ({ ...f, groupe: e.target.value }))}
-                      placeholder="Bloc" style={{ ...styles.formInput, width: 60, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} maxLength={2} />
-                    {editEchauffForm.groupe.trim() && (
-                      <input value={editEchauffForm.tours} onChange={e => setEditEchauffForm(f => ({ ...f, tours: e.target.value }))}
-                        placeholder="Tours" style={{ ...styles.formInput, width: 68, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} type="number" min="1" />
-                    )}
-                    <button onClick={saveEditEchauffLine} style={{ ...styles.iconBtnSm, color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800' }}>✓</button>
-                    <button onClick={() => setEditingEchauffId(null)} style={styles.iconBtnSm}>✕</button>
+                  <div style={{ padding: '0.5rem 0.875rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <input value={editEchauffForm.nom} onChange={e => setEditEchauffForm(f => ({ ...f, nom: e.target.value }))}
+                        placeholder="Exercice" style={{ ...styles.formInput, flex: 1, minWidth: 120, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} autoFocus />
+                      <input value={editEchauffForm.reps} onChange={e => setEditEchauffForm(f => ({ ...f, reps: e.target.value }))}
+                        placeholder="Reps / durée" style={{ ...styles.formInput, width: 100, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} />
+                      <input value={editEchauffForm.groupe} onChange={e => setEditEchauffForm(f => ({ ...f, groupe: e.target.value }))}
+                        placeholder="Bloc" style={{ ...styles.formInput, width: 60, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} maxLength={2} />
+                      {editEchauffForm.groupe.trim() && (
+                        <input value={editEchauffForm.tours} onChange={e => setEditEchauffForm(f => ({ ...f, tours: e.target.value }))}
+                          placeholder="Tours" style={{ ...styles.formInput, width: 68, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} type="number" min="1" />
+                      )}
+                      <button onClick={saveEditEchauffLine} style={{ ...styles.iconBtnSm, color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800' }}>✓</button>
+                      <button onClick={() => setEditingEchauffId(null)} style={styles.iconBtnSm}>✕</button>
+                    </div>
+                    {/* Image / GIF */}
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {editEchauffForm.image_url && (
+                        <img src={editEchauffForm.image_url} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                      )}
+                      <input
+                        value={editEchauffForm.image_url}
+                        onChange={e => setEditEchauffForm(f => ({ ...f, image_url: e.target.value }))}
+                        placeholder="🖼 URL image / YouTube (optionnel)"
+                        style={{ ...styles.formInput, flex: 1, minWidth: 180, padding: '0.35rem 0.6rem', fontSize: '0.78rem' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => echauffImgRef.current?.click()}
+                        disabled={uploadingEchauff}
+                        style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}
+                      >
+                        {uploadingEchauff ? '⏳' : '📎 Upload'}
+                      </button>
+                      {editEchauffForm.image_url && (
+                        <button type="button" onClick={() => setEditEchauffForm(f => ({ ...f, image_url: '' }))} style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
+                      )}
+                      <input ref={echauffImgRef} type="file" accept="image/*,video/gif" style={{ display: 'none' }} onChange={e => uploadEchauffImage(e.target.files[0])} />
+                    </div>
                   </div>
                 ) : (
                   /* ── Mode affichage ── */
@@ -864,6 +905,9 @@ export default function Seance() {
                         {l.groupe}{l.tours && echauffement.findIndex(x => x.groupe === l.groupe) === i ? ` · ${l.tours}t` : ''}
                       </span>
                     ) : <span style={{ width: 0 }} />}
+                    {l.image_url && (
+                      <img src={l.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                    )}
                     <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                     <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
                     <button onClick={() => startEditEchauffLine(l)} style={{ ...styles.iconBtnSm, fontSize: '0.75rem' }}>✏️</button>
