@@ -14,6 +14,7 @@ function newLigne() { return { id: Math.random().toString(36).slice(2), descript
 const EMPTY_FORM = () => ({
   client_id: '', date_emission: new Date().toISOString().slice(0, 10),
   date_echeance: '', notes: '', lignes: [newLigne()],
+  dest_manuel: false, dest_nom: '', dest_adresse: '', dest_siret: '',
 })
 
 export default function Factures() {
@@ -82,6 +83,10 @@ export default function Factures() {
       date_echeance: f.date_echeance || '',
       notes:         f.notes || '',
       lignes:        f.lignes?.length ? f.lignes.map(l => ({ ...l, id: l.id || Math.random().toString(36).slice(2) })) : [newLigne()],
+      dest_manuel:   !!f.destinataire,
+      dest_nom:      f.destinataire?.nom      || '',
+      dest_adresse:  f.destinataire?.adresse  || '',
+      dest_siret:    f.destinataire?.siret    || '',
     })
     setShowForm(true)
     setPrintId(null)
@@ -89,11 +94,14 @@ export default function Factures() {
 
   async function submitForm() {
     const payload = {
-      client_id:     form.client_id || null,
+      client_id:     form.dest_manuel ? null : (form.client_id || null),
       date_emission: form.date_emission,
       date_echeance: form.date_echeance || null,
       lignes:        form.lignes.filter(l => l.description.trim()),
       notes:         form.notes || null,
+      destinataire:  form.dest_manuel && form.dest_nom.trim()
+                       ? { nom: form.dest_nom.trim(), adresse: form.dest_adresse.trim(), siret: form.dest_siret.trim() }
+                       : null,
     }
 
     if (editingId) {
@@ -234,47 +242,93 @@ export default function Factures() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={S.label}>Client</label>
-              {/* 1er select : individuels sans groupe + groupes */}
-              <select
-                value={selectedGroupId ? `group:${selectedGroupId}` : (form.client_id || '')}
-                onChange={e => {
-                  const val = e.target.value
-                  if (val.startsWith('group:')) {
-                    setSelectedGroupId(val.replace('group:', ''))
-                    setForm(f => ({ ...f, client_id: '' }))
-                  } else {
-                    setSelectedGroupId(null)
-                    setForm(f => ({ ...f, client_id: val }))
-                  }
-                }}
-                style={S.input}
-              >
-                <option value="">— Aucun / Particulier —</option>
-                {clients.filter(c => !c.categorie_id).map(c => (
-                  <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
-                ))}
-                {categories.length > 0 && (
-                  <optgroup label="Groupes / Équipes">
-                    {categories.map(cat => (
-                      <option key={cat.id} value={`group:${cat.id}`}>👥 {cat.nom}</option>
+            <div style={{ gridColumn: form.dest_manuel ? '1 / -1' : undefined }}>
+              <label style={S.label}>Facturer à</label>
+              {/* Toggle client enregistré / manuel */}
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setForm(f => ({ ...f, dest_manuel: false })); setSelectedGroupId(null) }}
+                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', background: !form.dest_manuel ? '#333' : 'white', color: !form.dest_manuel ? '#e4f816' : '#374151', borderColor: !form.dest_manuel ? '#333' : '#e5e7eb' }}
+                >👤 Client enregistré</button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, dest_manuel: true, client_id: '' }))}
+                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', background: form.dest_manuel ? '#333' : 'white', color: form.dest_manuel ? '#e4f816' : '#374151', borderColor: form.dest_manuel ? '#333' : '#e5e7eb' }}
+                >🏢 Club / Autre</button>
+              </div>
+
+              {!form.dest_manuel ? (
+                <>
+                  <select
+                    value={selectedGroupId ? `group:${selectedGroupId}` : (form.client_id || '')}
+                    onChange={e => {
+                      const val = e.target.value
+                      if (val.startsWith('group:')) {
+                        setSelectedGroupId(val.replace('group:', ''))
+                        setForm(f => ({ ...f, client_id: '' }))
+                      } else {
+                        setSelectedGroupId(null)
+                        setForm(f => ({ ...f, client_id: val }))
+                      }
+                    }}
+                    style={S.input}
+                  >
+                    <option value="">— Aucun / Particulier —</option>
+                    {clients.filter(c => !c.categorie_id).map(c => (
+                      <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
                     ))}
-                  </optgroup>
-                )}
-              </select>
-              {/* 2e select : joueurs du groupe sélectionné */}
-              {selectedGroupId && (
-                <select
-                  value={form.client_id || ''}
-                  onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
-                  style={{ ...S.input, marginTop: '0.4rem' }}
-                >
-                  <option value="">— Choisir un joueur —</option>
-                  {clients.filter(c => c.categorie_id === selectedGroupId).map(c => (
-                    <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
-                  ))}
-                </select>
+                    {categories.length > 0 && (
+                      <optgroup label="Groupes / Équipes">
+                        {categories.map(cat => (
+                          <option key={cat.id} value={`group:${cat.id}`}>👥 {cat.nom}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  {selectedGroupId && (
+                    <select
+                      value={form.client_id || ''}
+                      onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
+                      style={{ ...S.input, marginTop: '0.4rem' }}
+                    >
+                      <option value="">— Choisir un joueur —</option>
+                      {clients.filter(c => c.categorie_id === selectedGroupId).map(c => (
+                        <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
+                      ))}
+                    </select>
+                  )}
+                </>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ ...S.label, marginTop: 0 }}>Nom / Club *</label>
+                    <input
+                      value={form.dest_nom}
+                      onChange={e => setForm(f => ({ ...f, dest_nom: e.target.value }))}
+                      placeholder="Ex : FC Toulouse, M. Dupont…"
+                      style={S.input}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...S.label, marginTop: 0 }}>Adresse</label>
+                    <input
+                      value={form.dest_adresse}
+                      onChange={e => setForm(f => ({ ...f, dest_adresse: e.target.value }))}
+                      placeholder="Ex : 12 rue des Sports, 31000 Toulouse"
+                      style={S.input}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...S.label, marginTop: 0 }}>SIRET (optionnel)</label>
+                    <input
+                      value={form.dest_siret}
+                      onChange={e => setForm(f => ({ ...f, dest_siret: e.target.value }))}
+                      placeholder="Ex : 123 456 789 00012"
+                      style={S.input}
+                    />
+                  </div>
+                </div>
               )}
             </div>
             <div>
@@ -515,12 +569,18 @@ function InvoiceTemplate({ facture, settings, total }) {
         {/* Client */}
         <div style={INV.metaBox}>
           <p style={INV.metaLabel}>Facturé à</p>
-          {facture.clients
+          {facture.destinataire
             ? <>
-                <p style={{ ...INV.sm, fontWeight: 700, color: '#111' }}>{facture.clients.prenom} {facture.clients.nom}</p>
-                {facture.clients.email && <p style={INV.sm}>{facture.clients.email}</p>}
+                <p style={{ ...INV.sm, fontWeight: 700, color: '#111' }}>{facture.destinataire.nom}</p>
+                {facture.destinataire.adresse && <p style={INV.sm}>{facture.destinataire.adresse}</p>}
+                {facture.destinataire.siret && <p style={INV.sm}>SIRET : {facture.destinataire.siret}</p>}
               </>
-            : <p style={{ ...INV.sm, color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</p>
+            : facture.clients
+              ? <>
+                  <p style={{ ...INV.sm, fontWeight: 700, color: '#111' }}>{facture.clients.prenom} {facture.clients.nom}</p>
+                  {facture.clients.email && <p style={INV.sm}>{facture.clients.email}</p>}
+                </>
+              : <p style={{ ...INV.sm, color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</p>
           }
         </div>
         {/* Dates */}
