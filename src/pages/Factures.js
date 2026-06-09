@@ -144,11 +144,14 @@ export default function Factures() {
         max-width: 100% !important;
         width: 100% !important;
         margin: 0 !important;
-        padding: 1.5rem !important;
+        padding: 0 !important;
         border: none !important;
         border-radius: 0 !important;
         box-shadow: none !important;
+        font-size: 9.5pt !important;
       }
+      #invoice-print-wrap table { font-size: 9pt !important; }
+      #invoice-print-wrap p, #invoice-print-wrap td, #invoice-print-wrap th { line-height: 1.4 !important; }
     </style></head><body>`)
     win.document.write(content.innerHTML)
     win.document.write('</body></html>')
@@ -541,9 +544,16 @@ function InvoiceTemplate({ facture, settings, total }) {
 
       {/* ── Pied de page ── */}
       <div style={INV.footer}>
-        <p>{nomCoach}{activite ? ` · ${activite}` : ''}</p>
-        {siret && <p>SIRET {siret}</p>}
-        {adresse && <p>{adresse}</p>}
+        <p style={INV.footerTxt}>{nomCoach}{activite ? ` · ${activite}` : ''}</p>
+        {siret && <p style={INV.footerTxt}>SIRET {siret}</p>}
+        {adresse && <p style={INV.footerTxt}>{adresse}</p>}
+        {emailCoach && <p style={INV.footerTxt}>{emailCoach}</p>}
+      </div>
+
+      {/* ── Mentions légales ── */}
+      <div style={INV.legal}>
+        <p style={INV.legalTxt}>TVA non applicable — Article 293 B du CGI.</p>
+        <p style={INV.legalTxt}>En cas de retard de paiement, des pénalités de retard au taux de 3 fois le taux d'intérêt légal en vigueur seront appliquées, ainsi qu'une indemnité forfaitaire de recouvrement de 40 € (art. L.441-10 du Code de commerce). Pas d'escompte pour paiement anticipé.</p>
       </div>
     </div>
   )
@@ -579,11 +589,13 @@ const INV = {
   metaLabel:  { fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.35rem' },
   sm:         { fontSize: '0.82rem', color: '#4b5563', margin: '0.12rem 0 0', lineHeight: 1.5 },
   table:      { width: '100%', borderCollapse: 'collapse', marginBottom: 0 },
-  th:         { padding: '0.55rem 0.75rem', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#e4f816' },
+  th:         { padding: '0.55rem 0.75rem', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'white' },
   td:         { padding: '0.6rem 0.75rem', fontSize: '0.86rem', color: '#374151', borderBottom: '1px solid #f3f4f6' },
   totalBox:   { background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.875rem 1.25rem', minWidth: 240 },
   infoSection:{ borderTop: '1px solid #e5e7eb', paddingTop: '0.875rem', marginBottom: '0.875rem' },
   infoTitle:  { fontSize: '0.68rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' },
   footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '1rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
   footerTxt:  { fontSize: '0.68rem', color: '#9ca3af', margin: 0, textAlign: 'center' },
+  legal:      { borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem', marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' },
+  legalTxt:   { fontSize: '0.62rem', color: '#9ca3af', margin: 0, lineHeight: 1.5 },
 }
