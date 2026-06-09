@@ -7,6 +7,59 @@ import { autoLinkBiblio } from '../utils/exerciceMatch'
 
 function newId() { return Math.random().toString(36).slice(2) }
 
+/* ── WorkoutX GIF helpers (échauffement) ─────────────────────────────────── */
+function AuthGif({ url, apiKey, style, alt }) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    if (!url || !apiKey) return
+    let objectUrl = null
+    fetch(url, { headers: { 'X-WorkoutX-Key': apiKey } })
+      .then(r => r.blob())
+      .then(blob => { objectUrl = URL.createObjectURL(blob); setSrc(objectUrl) })
+      .catch(() => {})
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [url, apiKey])
+  if (!src) return <div style={{ ...style, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ opacity: 0.4 }}>…</span></div>
+  return <img src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
+}
+
+function frToEnEchauff(nom) {
+  const rules = [
+    [/soulevé de terre roumain/gi,'romanian deadlift'],[/soulevé de terre/gi,'deadlift'],
+    [/développé couché prise serrée/gi,'close grip bench press'],[/développé couché/gi,'bench press'],
+    [/développé incliné/gi,'incline bench press'],[/développé décliné/gi,'decline bench press'],
+    [/développé militaire/gi,'overhead press'],[/développé/gi,'press'],
+    [/tirage horizontal/gi,'seated row'],[/tirage nuque/gi,'lat pulldown behind neck'],
+    [/tirage poitrine/gi,'lat pulldown'],[/tirage vertical/gi,'lat pulldown'],[/tirage/gi,'row'],
+    [/tractions? prise serrée/gi,'close grip pull up'],[/tractions? pronation/gi,'pull up'],
+    [/tractions? supination/gi,'chin up'],[/tractions?/gi,'pull up'],
+    [/élévations? latérales?/gi,'lateral raise'],[/élévations? frontales?/gi,'front raise'],
+    [/élévations? postérieures?/gi,'rear delt raise'],[/écarté couché/gi,'chest fly'],
+    [/écarté incliné/gi,'incline fly'],[/écarté/gi,'fly'],
+    [/curl marteau/gi,'hammer curl'],[/curl incliné/gi,'incline curl'],
+    [/curl concentré/gi,'concentration curl'],[/curl/gi,'curl'],
+    [/extension nuque/gi,'skull crusher'],[/extension tricep/gi,'tricep extension'],
+    [/extension/gi,'extension'],[/leg press/gi,'leg press'],[/leg curl/gi,'leg curl'],
+    [/mollets? debout/gi,'standing calf raise'],[/mollets? assis/gi,'seated calf raise'],
+    [/mollets?/gi,'calf raise'],[/fentes? marchées?/gi,'walking lunge'],
+    [/fentes? bulgares?/gi,'bulgarian split squat'],[/fentes?/gi,'lunge'],
+    [/squat goblet/gi,'goblet squat'],[/squat bulgare/gi,'bulgarian split squat'],
+    [/squat sumo/gi,'sumo squat'],[/squat/gi,'squat'],
+    [/hip thrust/gi,'hip thrust'],[/rowing/gi,'row'],[/gainage/gi,'plank'],
+    [/pompes?/gi,'push up'],[/dips?/gi,'dip'],[/presse cuisse/gi,'leg press'],
+    [/presse/gi,'press'],[/haltères?/gi,'dumbbell'],[/barre/gi,'barbell'],
+    [/câble|poulie/gi,'cable'],[/smith/gi,'smith machine'],
+    [/incliné/gi,'incline'],[/décliné/gi,'decline'],[/couché/gi,'lying'],
+    [/debout/gi,'standing'],[/assis/gi,'seated'],
+    [/unilatéral|uni\b/gi,'single arm'],[/bilatéral/gi,''],
+    [/prise large/gi,'wide grip'],[/prise serrée/gi,'close grip'],
+    [/prise neutre/gi,'neutral grip'],[/prise inversée/gi,'reverse grip'],
+  ]
+  let s = nom
+  for (const [p, r] of rules) s = s.replace(p, r)
+  return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim()
+}
+
 export default function Seance() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -59,6 +112,14 @@ export default function Seance() {
   const [showEchauffPaste, setShowEchauffPaste]   = useState(false)
   const [echauffPasteText, setEchauffPasteText]   = useState('')
   const [echauffParsed, setEchauffParsed]         = useState(null)
+  // WorkoutX GIF pour échauffement
+  const [wxKey, setWxKey]                         = useState(() => localStorage.getItem('workoutx_key') || '')
+  const [showWxKeyInput, setShowWxKeyInput]        = useState(false)
+  const [gifEchauffOpen, setGifEchauffOpen]        = useState(false)
+  const [gifResults, setGifResults]               = useState([])
+  const [gifSearching, setGifSearching]           = useState(false)
+  const [gifQuery, setGifQuery]                   = useState('')
+  const [gifTranslated, setGifTranslated]         = useState('')
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -655,6 +716,63 @@ export default function Seance() {
     if (echauffImgRef.current) echauffImgRef.current.value = ''
   }
 
+  async function doGifEchauffSearch(query) {
+    if (!query.trim()) return
+    setGifSearching(true); setGifResults([])
+    const translated = frToEnEchauff(query)
+    setGifTranslated(translated)
+    const words = translated.split(/\s+/).filter(w => w.length > 2)
+    const terms = [...new Set([translated, words.slice(0,2).join(' '), words[0], words.length > 2 ? words.slice(1).join(' ') : null].filter(Boolean))]
+    async function fetchTerm(term) {
+      try {
+        const res = await fetch(`https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(term)}`, { headers: { 'X-WorkoutX-Key': wxKey } })
+        if (!res.ok) return []
+        const json = await res.json()
+        return Array.isArray(json) ? json : (json.data || [])
+      } catch { return [] }
+    }
+    try {
+      const allArrays = await Promise.all(terms.map(fetchTerm))
+      const seen = new Set(); const merged = []
+      for (const arr of allArrays) for (const ex of arr) if (!seen.has(ex.id)) { seen.add(ex.id); merged.push(ex) }
+      const qWords = new Set(translated.toLowerCase().split(/\s+/).filter(w => w.length > 1))
+      const scored = merged.map(ex => {
+        const nWords = new Set((ex.name||'').toLowerCase().split(/\s+/).filter(w => w.length > 1))
+        const inter = [...qWords].filter(w => nWords.has(w)).length
+        const union = new Set([...qWords,...nWords]).size
+        return { ...ex, _score: union ? inter/union : 0 }
+      })
+      scored.sort((a,b) => b._score - a._score)
+      if (scored.length === 0) alert(`Aucun résultat pour "${translated}". Essaie en anglais (ex: "squat", "push up").`)
+      setGifResults(scored.slice(0,9))
+    } catch(e) { alert('Erreur WorkoutX : ' + e.message) }
+    setGifSearching(false)
+  }
+
+  function ouvrirGifEchauff(nom) {
+    if (!wxKey) { setShowWxKeyInput(true); return }
+    setGifQuery(nom || ''); setGifTranslated(''); setGifResults([])
+    setGifEchauffOpen(true)
+    if (nom) doGifEchauffSearch(nom)
+  }
+
+  async function choisirGifEchauff(r) {
+    setGifSearching(true)
+    try {
+      const res = await fetch(r.gifUrl, { headers: { 'X-WorkoutX-Key': wxKey } })
+      if (!res.ok) throw new Error(`Erreur ${res.status}`)
+      const blob = await res.blob()
+      const file = new File([blob], `wx_${r.id}.gif`, { type: 'image/gif' })
+      const path = `echauff/wx_${Date.now()}_${r.id}.gif`
+      const { error } = await supabase.storage.from('exercices').upload(path, file, { upsert: true })
+      if (error) throw new Error(error.message)
+      const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
+      setEditEchauffForm(f => ({ ...f, image_url: publicUrl }))
+      setGifEchauffOpen(false)
+    } catch(e) { alert('Erreur : ' + e.message) }
+    setGifSearching(false)
+  }
+
   function removeEchauffLine(lid) { persistEchauff(echauffement.filter(l => l.id !== lid)) }
 
   function moveEchauffLine(idx, dir) {
@@ -889,8 +1007,13 @@ export default function Seance() {
                         disabled={uploadingEchauff}
                         style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}
                       >
-                        {uploadingEchauff ? '⏳' : '📎 Upload'}
+                        {uploadingEchauff ? '…' : '↑ Upload'}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => ouvrirGifEchauff(editEchauffForm.nom)}
+                        style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem', background: wxKey ? '#f9fafb' : '#fffbeb', borderColor: wxKey ? '#e5e7eb' : '#fde68a', color: wxKey ? '#374151' : '#92400e' }}
+                      >GIF</button>
                       {editEchauffForm.image_url && (
                         <button type="button" onClick={() => setEditEchauffForm(f => ({ ...f, image_url: '' }))} style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
                       )}
@@ -1662,6 +1785,89 @@ export default function Seance() {
           onInsert={insertAIExercices}
           programmeId={seance?.programmes?.id}
         />
+      )}
+
+      {/* ── Modal GIF WorkoutX — Échauffement ── */}
+      {gifEchauffOpen && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={e => { if (e.target === e.currentTarget) setGifEchauffOpen(false) }}>
+          <div style={{ background:'white', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:600, maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+            <div style={{ padding:'1rem 1.25rem 0.75rem', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <p style={{ fontWeight:800, fontSize:'0.9rem', margin:0 }}>GIF échauffement — WorkoutX</p>
+              <button onClick={() => setGifEchauffOpen(false)} style={{ background:'none', border:'none', fontSize:'1rem', cursor:'pointer', color:'#9ca3af' }}>✕</button>
+            </div>
+            <div style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid #f3f4f6' }}>
+              <div style={{ display:'flex', gap:'0.5rem' }}>
+                <input
+                  value={gifQuery}
+                  onChange={e => setGifQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doGifEchauffSearch(gifQuery)}
+                  placeholder="Nom de l'exercice (FR ou EN)"
+                  style={{ flex:1, padding:'0.55rem 0.75rem', border:'1.5px solid #e5e7eb', borderRadius:10, fontSize:'0.85rem', outline:'none' }}
+                />
+                <button onClick={() => doGifEchauffSearch(gifQuery)} disabled={gifSearching}
+                  style={{ ...styles.btnPrimary, padding:'0.55rem 1rem', fontSize:'0.82rem', flexShrink:0 }}>
+                  {gifSearching ? '…' : 'Chercher'}
+                </button>
+              </div>
+              {gifTranslated && gifTranslated !== gifQuery && (
+                <p style={{ fontSize:'0.75rem', color:'#6b7280', margin:'0.4rem 0 0' }}>
+                  Recherche en anglais : <strong style={{ color:'#6366f1' }}>{gifTranslated}</strong>
+                </p>
+              )}
+            </div>
+            <div style={{ flex:1, overflowY:'auto', padding:'0.75rem 1.25rem' }}>
+              {gifSearching && gifResults.length === 0 && <p style={{ textAlign:'center', color:'#9ca3af', fontSize:'0.85rem' }}>Recherche en cours…</p>}
+              {!gifSearching && gifResults.length === 0 && <p style={{ textAlign:'center', color:'#9ca3af', fontSize:'0.85rem' }}>Aucun résultat. Essaie un autre terme (en anglais : "squat", "plank"…)</p>}
+              {gifResults.length > 0 && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.5rem' }}>
+                  {gifResults.map(r => (
+                    <button key={r.id} onClick={() => choisirGifEchauff(r)} disabled={gifSearching}
+                      style={{ background:'#111', border:'2px solid #333', borderRadius:12, overflow:'hidden', cursor: gifSearching ? 'wait' : 'pointer', padding:0, display:'flex', flexDirection:'column' }}
+                      onMouseEnter={e => { if (!gifSearching) e.currentTarget.style.borderColor='#e4f816' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor='#333' }}>
+                      <AuthGif url={r.gifUrl} apiKey={wxKey} alt={r.name} style={{ width:'100%', aspectRatio:'1' }} />
+                      <span style={{ color:'white', fontSize:'0.6rem', padding:'0.3rem 0.4rem', textAlign:'center', lineHeight:1.2 }}>{r.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ padding:'0.6rem 1.25rem 1rem', borderTop:'1px solid #f3f4f6', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+              <span style={{ fontSize:'0.7rem', color:'#9ca3af', flex:1 }}>GIF par <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ color:'#b45309' }}>WorkoutX</a></span>
+              {!showWxKeyInput ? (
+                <button onClick={() => setShowWxKeyInput(true)}
+                  style={{ fontSize:'0.72rem', color: wxKey ? '#16a34a' : '#92400e', background: wxKey ? '#f0fdf4' : '#fffbeb', border:`1.5px solid ${wxKey ? '#bbf7d0':'#fde68a'}`, borderRadius:8, padding:'0.3rem 0.6rem', cursor:'pointer' }}>
+                  {wxKey ? 'Clé OK' : 'Configurer clé'}
+                </button>
+              ) : (
+                <div style={{ display:'flex', gap:'0.4rem', flex:1 }}>
+                  <input value={wxKey} onChange={e => setWxKey(e.target.value)}
+                    placeholder="Clé API WorkoutX"
+                    style={{ flex:1, padding:'0.35rem 0.6rem', border:'1.5px solid #e5e7eb', borderRadius:8, fontSize:'0.78rem', outline:'none' }} />
+                  <button onClick={() => { localStorage.setItem('workoutx_key', wxKey); setShowWxKeyInput(false) }}
+                    style={{ ...styles.btnPrimary, fontSize:'0.78rem', padding:'0.35rem 0.75rem' }}>OK</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saisie clé si pas encore configurée */}
+      {showWxKeyInput && !gifEchauffOpen && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowWxKeyInput(false) }}>
+          <div style={{ background:'white', borderRadius:16, padding:'1.5rem', width:'100%', maxWidth:360 }}>
+            <p style={{ fontWeight:800, marginBottom:'0.75rem' }}>Clé API WorkoutX</p>
+            <input value={wxKey} onChange={e => setWxKey(e.target.value)} placeholder="Colle ta clé ici"
+              style={{ width:'100%', padding:'0.6rem 0.75rem', border:'1.5px solid #e5e7eb', borderRadius:10, fontSize:'0.88rem', outline:'none', boxSizing:'border-box', marginBottom:'0.75rem' }} />
+            <div style={{ display:'flex', gap:'0.5rem' }}>
+              <button onClick={() => setShowWxKeyInput(false)} style={styles.btnSecondary}>Annuler</button>
+              <button onClick={() => { localStorage.setItem('workoutx_key', wxKey); setShowWxKeyInput(false) }} style={styles.btnPrimary}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
