@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 
+/* ── Icônes SVG ─────────────────────────────────────────────────────────── */
+const Ico = {
+  settings: (s=15) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  edit:     (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  print:    (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
+  trash:    (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  invoice:  (s=36) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>,
+  person:   (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.5 8.5 0 0 1 13 0"/></svg>,
+  building: (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="18" height="13" rx="1"/><path d="M8 9V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>,
+  group:    (s=13) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a5 5 0 0 1 10 0v2"/><circle cx="17" cy="8" r="2.5" strokeOpacity=".6"/><path d="M21 21v-2a5 5 0 0 0-5.27-4.98" strokeOpacity=".6"/></svg>,
+}
+
 const STATUTS = {
   brouillon: { label: 'Brouillon', bg: '#f3f4f6', color: '#6b7280' },
   envoyee:   { label: 'Envoyée',   bg: '#eff6ff', color: '#1d4ed8' },
@@ -197,8 +209,8 @@ export default function Factures() {
           <p style={S.sub}>{factures.length} facture{factures.length !== 1 ? 's' : ''} · {factures.filter(f=>f.statut==='payee').length} payée{factures.filter(f=>f.statut==='payee').length!==1?'s':''}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setShowSettings(v => !v)} style={S.btnSecondary}>⚙️ Mes infos</button>
-          <button onClick={openCreate} style={S.btnPrimary}>+ Nouvelle facture</button>
+          <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
+          <button onClick={openCreate} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouvelle facture</button>
         </div>
       </div>
 
@@ -227,7 +239,7 @@ export default function Factures() {
               </div>
             ))}
           </div>
-          <button onClick={saveAllSettings} style={S.btnPrimary}>✓ Sauvegarder</button>
+          <button onClick={saveAllSettings} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Sauvegarder</button>
         </div>
       )}
 
@@ -249,13 +261,13 @@ export default function Factures() {
                 <button
                   type="button"
                   onClick={() => { setForm(f => ({ ...f, dest_manuel: false })); setSelectedGroupId(null) }}
-                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', background: !form.dest_manuel ? '#333' : 'white', color: !form.dest_manuel ? '#e4f816' : '#374151', borderColor: !form.dest_manuel ? '#333' : '#e5e7eb' }}
-                >👤 Client enregistré</button>
+                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', display:'flex', alignItems:'center', gap:'0.35rem', background: !form.dest_manuel ? '#333' : 'white', color: !form.dest_manuel ? '#e4f816' : '#374151', borderColor: !form.dest_manuel ? '#333' : '#e5e7eb' }}
+                >{Ico.person()} Client enregistré</button>
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, dest_manuel: true, client_id: '' }))}
-                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', background: form.dest_manuel ? '#333' : 'white', color: form.dest_manuel ? '#e4f816' : '#374151', borderColor: form.dest_manuel ? '#333' : '#e5e7eb' }}
-                >🏢 Club / Autre</button>
+                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', display:'flex', alignItems:'center', gap:'0.35rem', background: form.dest_manuel ? '#333' : 'white', color: form.dest_manuel ? '#e4f816' : '#374151', borderColor: form.dest_manuel ? '#333' : '#e5e7eb' }}
+                >{Ico.building()} Club / Autre</button>
               </div>
 
               {!form.dest_manuel ? (
@@ -275,13 +287,13 @@ export default function Factures() {
                     style={S.input}
                   >
                     <option value="">— Aucun / Particulier —</option>
-                    {clients.filter(c => !c.categorie_id).map(c => (
+                    {clients.map(c => (
                       <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
                     ))}
                     {categories.length > 0 && (
-                      <optgroup label="Groupes / Équipes">
+                      <optgroup label="── Groupes / Équipes ──">
                         {categories.map(cat => (
-                          <option key={cat.id} value={`group:${cat.id}`}>👥 {cat.nom}</option>
+                          <option key={cat.id} value={`group:${cat.id}`}>{cat.nom} (groupe)</option>
                         ))}
                       </optgroup>
                     )}
@@ -407,8 +419,8 @@ export default function Factures() {
             ))}
             <button
               onClick={() => setForm(f => ({ ...f, lignes: [...f.lignes, newLigne()] }))}
-              style={{ ...S.btnSecondary, alignSelf: 'flex-start', fontSize: '0.8rem', padding: '0.35rem 0.7rem' }}
-            >+ Ligne</button>
+              style={{ ...S.btnSecondary, alignSelf: 'flex-start', fontSize: '0.8rem', padding: '0.35rem 0.7rem', display:'flex', alignItems:'center', gap:'0.3rem' }}
+            ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ligne</button>
           </div>
 
           {/* Total */}
@@ -435,8 +447,9 @@ export default function Factures() {
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnSecondary}>Annuler</button>
-            <button onClick={submitForm} style={S.btnPrimary}>
-              {editingId ? '✓ Enregistrer les modifications' : '✓ Créer la facture'}
+            <button onClick={submitForm} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {editingId ? 'Enregistrer les modifications' : 'Créer la facture'}
             </button>
           </div>
         </div>
@@ -445,9 +458,9 @@ export default function Factures() {
       {/* ── Liste ── */}
       {factures.length === 0 && !showForm ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
-          <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🧾</p>
+          <p style={{ marginBottom: '0.75rem', color: '#d1d5db' }}>{Ico.invoice(36)}</p>
           <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucune facture pour l'instant.</p>
-          <button onClick={openCreate} style={S.btnPrimary}>+ Créer ma première facture</button>
+          <button onClick={openCreate} style={{ ...S.btnPrimary, display:'inline-flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Créer ma première facture</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -489,16 +502,16 @@ export default function Factures() {
                     </select>
                     <button
                       onClick={() => { openEdit(f); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}
-                    >✏️ Modifier</button>
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', display:'flex', alignItems:'center', gap:'0.35rem' }}
+                    >{Ico.edit()} Modifier</button>
                     <button
                       onClick={() => setPrintId(isOpen ? null : f.id)}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', background: isOpen ? '#333' : 'white', color: isOpen ? '#e4f816' : '#374151', borderColor: isOpen ? '#333' : '#e5e7eb' }}
-                    >🖨️ {isOpen ? 'Fermer' : 'Aperçu PDF'}</button>
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', display:'flex', alignItems:'center', gap:'0.35rem', background: isOpen ? '#333' : 'white', color: isOpen ? '#e4f816' : '#374151', borderColor: isOpen ? '#333' : '#e5e7eb' }}
+                    >{Ico.print()} {isOpen ? 'Fermer' : 'Aperçu PDF'}</button>
                     <button
                       onClick={() => deleteFacture(f.id)}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', color: '#dc2626', borderColor: '#fecaca' }}
-                    >🗑️</button>
+                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', color: '#dc2626', borderColor: '#fecaca', display:'flex', alignItems:'center' }}
+                    >{Ico.trash()}</button>
                   </div>
                 </div>
               </div>
@@ -513,7 +526,7 @@ export default function Factures() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <p style={{ ...S.sectionTitle, margin: 0 }}>Aperçu — Facture N° {facturePrint.numero}</p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={handlePrint} style={S.btnPrimary}>🖨️ Imprimer / Exporter PDF</button>
+              <button onClick={handlePrint} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.print()} Imprimer / Exporter PDF</button>
               <button onClick={() => setPrintId(null)} style={S.btnSecondary}>✕ Fermer</button>
             </div>
           </div>
