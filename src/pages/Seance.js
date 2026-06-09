@@ -1244,7 +1244,7 @@ export default function Seance() {
                 ))}
               </tr>
               <tr style={{ background: '#fafafa', fontSize: '0.7rem', color: '#9ca3af' }}>
-                <th colSpan={9}></th>
+                <th colSpan={10}></th>
                 {colSemaines.map(s => (
                   <>
                     <th key={`${s}-kg`} style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>kg</th>
