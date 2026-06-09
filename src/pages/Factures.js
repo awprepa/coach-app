@@ -59,8 +59,10 @@ export default function Factures() {
   }
 
   function nextNumero() {
-    const debut = parseInt(settings.facture_numero_debut || '1')
-    return String(debut + factures.length).padStart(4, '0')
+    const yy = new Date().getFullYear().toString().slice(2) // "26"
+    const offset = parseInt(settings.facture_numero_debut || '0')
+    const yearCount = factures.filter(f => f.numero?.startsWith(yy)).length
+    return yy + String(offset + yearCount + 1).padStart(3, '0')
   }
 
   function openCreate() {
@@ -204,7 +206,7 @@ export default function Factures() {
               { key: 'facture_siret',          label: 'SIRET',                 placeholder: '106 026 883 00012' },
               { key: 'facture_iban',           label: 'IBAN (virement)',       placeholder: 'FR76 3000…' },
               { key: 'facture_email',          label: 'Email',                 placeholder: 'wehrey.arthur@gmail.com' },
-              { key: 'facture_numero_debut',   label: 'Numéro de départ',      placeholder: '1' },
+              { key: 'facture_numero_debut',   label: 'Décalage numérotation (si factures existantes avant l\'app)', placeholder: '0' },
             ].map(f => (
               <div key={f.key}>
                 <label style={S.label}>{f.label}</label>
