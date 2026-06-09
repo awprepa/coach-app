@@ -69,6 +69,7 @@ export default function Seance() {
   // exercicesRef supprimé — la progression utilise maintenant progDraft (state contrôlé)
   const [charges, setCharges] = useState({})
   const [trackingMap, setTrackingMap] = useState({})
+  const [serieTrackingMap, setSerieTrackingMap] = useState({}) // { [exId]: { [semaine]: [{ serie, poids, reps_reelles, valide }] } }
   const [rpeSeances, setRpeSeances] = useState({})
   const [semaines, setSemaines] = useState(4)
   const [loading, setLoading] = useState(true)
@@ -77,6 +78,7 @@ export default function Seance() {
   const [formEdition, setFormEdition] = useState({})
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
   const [showWarmupFor, setShowWarmupFor]           = useState(null) // exercice id
+  const [showSeriesFor, setShowSeriesFor]           = useState(null) // exercice id
   const [showLibraryFor, setShowLibraryFor]         = useState(null) // exercice id
   const [librarySuggestions, setLibrarySuggestions] = useState([])
   const [librarySearching, setLibrarySearching]     = useState(false)
@@ -159,24 +161,34 @@ export default function Seance() {
       })
       setCharges(chargesMap)
 
-      // Fallback : séries réellement effectuées (serie_tracking) quand le petit tableau est vide
+      // Séries réellement effectuées par le client (serie_tracking, travail uniquement : serie < 1000)
       const exIds = data.map(ex => ex.id)
       if (exIds.length > 0) {
         const { data: series } = await supabase
           .from('serie_tracking')
-          .select('exercice_id, semaine, poids')
+          .select('exercice_id, semaine, serie, poids, reps_reelles, valide')
           .in('exercice_id', exIds)
-          .not('poids', 'is', null)
-        const tMap = {}
+          .lt('serie', 1000)
+          .order('serie', { ascending: true })
+        const tMap = {}  // poids max par exercice/semaine (fallback charge cible)
+        const stMap = {} // détail par serie : { [exId]: { [semaine]: [{ serie, poids, reps_reelles, valide }] } }
         ;(series || []).forEach(s => {
+          if (s.semaine == null) return
           const poids = parseFloat(s.poids)
-          if (!poids || !s.semaine) return
-          if (!tMap[s.exercice_id]) tMap[s.exercice_id] = {}
-          if (!tMap[s.exercice_id][s.semaine] || poids > tMap[s.exercice_id][s.semaine]) {
-            tMap[s.exercice_id][s.semaine] = poids
+          // tMap : poids max (existant)
+          if (poids) {
+            if (!tMap[s.exercice_id]) tMap[s.exercice_id] = {}
+            if (!tMap[s.exercice_id][s.semaine] || poids > tMap[s.exercice_id][s.semaine]) {
+              tMap[s.exercice_id][s.semaine] = poids
+            }
           }
+          // stMap : détail complet
+          if (!stMap[s.exercice_id]) stMap[s.exercice_id] = {}
+          if (!stMap[s.exercice_id][s.semaine]) stMap[s.exercice_id][s.semaine] = []
+          stMap[s.exercice_id][s.semaine].push({ serie: s.serie, poids: s.poids, reps_reelles: s.reps_reelles, valide: s.valide })
         })
         setTrackingMap(tMap)
+        setSerieTrackingMap(stMap)
       }
     }
   }
@@ -1355,6 +1367,14 @@ export default function Seance() {
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                             </button>
                           </div>
+                          {/* Séries réalisées */}
+                          <button
+                            title="Séries réalisées par le client"
+                            onClick={() => setShowSeriesFor(showSeriesFor === ex.id ? null : ex.id)}
+                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', fontSize: '0.6rem', fontWeight: 700, color: serieTrackingMap[ex.id] ? '#0369a1' : '#9ca3af', background: showSeriesFor === ex.id ? '#e0f2fe' : serieTrackingMap[ex.id] ? '#f0f9ff' : undefined, borderColor: showSeriesFor === ex.id ? '#7dd3fc' : serieTrackingMap[ex.id] ? '#bae6fd' : undefined }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M5 4h2v2H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2V4h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+                            {serieTrackingMap[ex.id] ? 'réalisé' : '—'}
+                          </button>
                           {/* Bibliothèque */}
                           <button
                             title={ex.bibliotheque_id ? 'Lié à la bibliothèque' : 'Ajouter à la bibliothèque'}
@@ -1559,6 +1579,65 @@ export default function Seance() {
                     </td>
                   </tr>
                 )}
+                {/* ── Sous-ligne séries réalisées ── */}
+                {showSeriesFor === ex.id && (() => {
+                  const exData = serieTrackingMap[ex.id] || {}
+                  const trackSemaines = Object.keys(exData).map(Number).sort((a, b) => a - b)
+                  const maxSeries = trackSemaines.length
+                    ? Math.max(...trackSemaines.map(s => exData[s].length))
+                    : 0
+                  return (
+                    <tr>
+                      <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f0f9ff' }}>
+                        <div style={{ padding: '12px 16px', borderTop: '2px solid #7dd3fc', borderBottom: '2px solid #7dd3fc' }}>
+                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                            Séries réalisées — {ex.nom}
+                          </span>
+                          {!trackSemaines.length ? (
+                            <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: '8px 0 0 0' }}>
+                              Aucune série enregistrée par le client pour cet exercice.
+                            </p>
+                          ) : (
+                            <div style={{ overflowX: 'auto', marginTop: 10 }}>
+                              <table style={{ borderCollapse: 'collapse', fontSize: '.73rem' }}>
+                                <thead>
+                                  <tr>
+                                    <th style={{ padding: '4px 10px', fontWeight: 700, color: '#6b7280', background: '#e0f2fe', borderRadius: '6px 0 0 6px', textAlign: 'left' }}>Série</th>
+                                    {trackSemaines.map(s => (
+                                      <th key={s} style={{ padding: '4px 14px', fontWeight: 800, color: '#0369a1', background: '#e0f2fe', textAlign: 'center', minWidth: 90 }}>S{s}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {Array.from({ length: maxSeries }, (_, i) => (
+                                    <tr key={i} style={{ borderTop: '1px solid #e0f2fe' }}>
+                                      <td style={{ padding: '5px 10px', fontWeight: 700, color: '#374151', background: '#f8fcff', whiteSpace: 'nowrap' }}>S{i + 1}</td>
+                                      {trackSemaines.map(s => {
+                                        const row = exData[s]?.[i]
+                                        if (!row) return <td key={s} style={{ padding: '5px 14px', textAlign: 'center', color: '#d1d5db' }}>—</td>
+                                        const kg = row.poids ? `${row.poids} kg` : null
+                                        const reps = row.reps_reelles != null ? `× ${row.reps_reelles}` : null
+                                        const ok = row.valide
+                                        return (
+                                          <td key={s} style={{ padding: '5px 14px', textAlign: 'center' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: ok ? 700 : 400, color: ok ? '#15803d' : '#374151' }}>
+                                              {kg || '—'}{reps ? <span style={{ color: ok ? '#16a34a' : '#6b7280' }}>{reps}</span> : null}
+                                              {ok && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                                            </span>
+                                          </td>
+                                        )
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })()}
                 {/* ── Panneau bibliothèque ── */}
                 {showLibraryFor === ex.id && (
                   <tr>
