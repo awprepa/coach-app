@@ -177,12 +177,15 @@ export default function Factures() {
       #invoice-print-wrap {
         width: 100% !important;
         max-width: 100% !important;
+        min-height: calc(297mm - 32mm) !important;
         margin: 0 !important;
         padding: 0 !important;
         border: none !important;
         border-radius: 0 !important;
         box-shadow: none !important;
         font-size: 9.5pt !important;
+        display: flex !important;
+        flex-direction: column !important;
       }
       #invoice-print-wrap table { width:100%; font-size:9pt !important; }
       #invoice-print-wrap p, #invoice-print-wrap td, #invoice-print-wrap th { line-height:1.4 !important; }
@@ -666,6 +669,9 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
       )}
 
+      {/* Spacer — pousse le pied de page en bas */}
+      <div style={{ flex: 1 }} />
+
       {/* ── Pied de page ── */}
       <div style={INV.footer}>
         <p style={INV.footerTxt}>{nomCoach}{activite ? ` · ${activite}` : ''}</p>
@@ -701,7 +707,7 @@ const S = {
 
 /* ── Styles facture imprimable ── */
 const INV = {
-  wrap:       { padding: '2rem 2rem 2rem 1.25rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12 },
+  wrap:       { padding: '2rem 2rem 2rem 1.25rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12, display: 'flex', flexDirection: 'column', minHeight: '265mm' },
   topBand:    { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '2px solid #111' },
   topLeft:    { display: 'flex', flexDirection: 'column' },
   topRight:   { textAlign: 'right' },
@@ -718,7 +724,7 @@ const INV = {
   totalBox:   { background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.875rem 1.25rem', minWidth: 240 },
   infoSection:{ borderTop: '1px solid #e5e7eb', paddingTop: '0.875rem', marginBottom: '0.875rem' },
   infoTitle:  { fontSize: '0.68rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' },
-  footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '4rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
+  footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '0', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
   footerTxt:  { fontSize: '0.68rem', color: '#9ca3af', margin: 0, textAlign: 'center' },
   legal:      { borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem', marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' },
   legalTxt:   { fontSize: '0.62rem', color: '#9ca3af', margin: 0, lineHeight: 1.5 },
