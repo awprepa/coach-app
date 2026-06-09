@@ -19,26 +19,30 @@ const EMPTY_FORM = () => ({
 export default function Factures() {
   const [factures, setFactures]           = useState([])
   const [clients, setClients]             = useState([])
+  const [categories, setCategories]       = useState([])
   const [settings, setSettings]           = useState({})
   const [loading, setLoading]             = useState(true)
   const [showForm, setShowForm]           = useState(false)
-  const [editingId, setEditingId]         = useState(null) // null = création, sinon id
+  const [editingId, setEditingId]         = useState(null)
   const [showSettings, setShowSettings]   = useState(false)
   const [printId, setPrintId]             = useState(null)
   const [settingsForm, setSettingsForm]   = useState({})
   const [form, setForm]                   = useState(EMPTY_FORM())
+  const [selectedGroupId, setSelectedGroupId] = useState(null) // groupe sélectionné dans le dropdown client
   const printRef = useRef()
 
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {
-    const [{ data: f }, { data: c }, { data: s }] = await Promise.all([
+    const [{ data: f }, { data: c }, { data: s }, { data: cats }] = await Promise.all([
       supabase.from('factures').select('*, clients(prenom, nom, email)').order('created_at', { ascending: false }),
-      supabase.from('clients').select('id, prenom, nom, email').order('nom'),
+      supabase.from('clients').select('id, prenom, nom, email, categorie_id').order('nom'),
       supabase.from('app_settings').select('key, value').in('key', SETTINGS_KEYS),
+      supabase.from('categories').select('id, nom').order('nom'),
     ])
     setFactures(f || [])
     setClients(c || [])
+    setCategories(cats || [])
     const map = {}
     ;(s || []).forEach(r => { map[r.key] = r.value })
     setSettings(map)
@@ -62,12 +66,14 @@ export default function Factures() {
   function openCreate() {
     setEditingId(null)
     setForm(EMPTY_FORM())
+    setSelectedGroupId(null)
     setShowForm(true)
     setPrintId(null)
   }
 
   function openEdit(f) {
     setEditingId(f.id)
+    setSelectedGroupId(null)
     setForm({
       client_id:     f.client_id || '',
       date_emission: f.date_emission,
@@ -158,7 +164,7 @@ export default function Factures() {
       }
       #invoice-print-wrap table { width:100%; font-size:9pt !important; }
       #invoice-print-wrap p, #invoice-print-wrap td, #invoice-print-wrap th { line-height:1.4 !important; }
-      #invoice-print-wrap img { max-width:160px; height:auto !important; object-fit:contain; }
+      #invoice-print-wrap img { max-height:42px !important; width:auto !important; object-fit:contain; }
     </style></head><body>`)
     win.document.write(content.innerHTML)
     win.document.write('</body></html>')
@@ -228,10 +234,46 @@ export default function Factures() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label style={S.label}>Client</label>
-              <select value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))} style={S.input}>
+              {/* 1er select : individuels sans groupe + groupes */}
+              <select
+                value={selectedGroupId ? `group:${selectedGroupId}` : (form.client_id || '')}
+                onChange={e => {
+                  const val = e.target.value
+                  if (val.startsWith('group:')) {
+                    setSelectedGroupId(val.replace('group:', ''))
+                    setForm(f => ({ ...f, client_id: '' }))
+                  } else {
+                    setSelectedGroupId(null)
+                    setForm(f => ({ ...f, client_id: val }))
+                  }
+                }}
+                style={S.input}
+              >
                 <option value="">— Aucun / Particulier —</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
+                {clients.filter(c => !c.categorie_id).map(c => (
+                  <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
+                ))}
+                {categories.length > 0 && (
+                  <optgroup label="Groupes / Équipes">
+                    {categories.map(cat => (
+                      <option key={cat.id} value={`group:${cat.id}`}>👥 {cat.nom}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+              {/* 2e select : joueurs du groupe sélectionné */}
+              {selectedGroupId && (
+                <select
+                  value={form.client_id || ''}
+                  onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
+                  style={{ ...S.input, marginTop: '0.4rem' }}
+                >
+                  <option value="">— Choisir un joueur —</option>
+                  {clients.filter(c => c.categorie_id === selectedGroupId).map(c => (
+                    <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div>
               <label style={S.label}>Date d'émission</label>
@@ -264,13 +306,13 @@ export default function Factures() {
                 <option value="Préparation physique — sans engagement||89">Préparation physique — sans engagement — 89 €/mois</option>
                 <option value="Préparation physique — 3 mois||79">Préparation physique — 3 mois — 79 €/mois</option>
                 <option value="Préparation physique — 6 mois||69">Préparation physique — 6 mois — 69 €/mois</option>
-                <option value="Préparation physique — séance découverte||49">Préparation physique — séance découverte — 49 €</option>
+                <option value="Préparation physique — mois d'essai||49">Préparation physique — mois d'essai — 49 €</option>
               </optgroup>
               <optgroup label="Coaching remise en forme">
                 <option value="Coaching remise en forme — sans engagement||79">Coaching remise en forme — sans engagement — 79 €/mois</option>
                 <option value="Coaching remise en forme — 3 mois||69">Coaching remise en forme — 3 mois — 69 €/mois</option>
                 <option value="Coaching remise en forme — 6 mois||59">Coaching remise en forme — 6 mois — 59 €/mois</option>
-                <option value="Coaching remise en forme — séance découverte||49">Coaching remise en forme — séance découverte — 49 €</option>
+                <option value="Coaching remise en forme — mois d'essai||49">Coaching remise en forme — mois d'essai — 49 €</option>
               </optgroup>
               <optgroup label="Autre">
                 <option value="Programme one-shot||30">Programme one-shot — 30 €</option>
@@ -449,7 +491,7 @@ function InvoiceTemplate({ facture, settings, total }) {
       {/* ── Bandeau supérieur ── */}
       <div style={INV.topBand}>
         <div style={INV.topLeft}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 42, width: 'auto', maxWidth: 200, objectFit: 'contain', marginBottom: 6 }} onError={e => e.target.style.display='none'} />
+          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 42, width: 'auto', marginBottom: 6 }} onError={e => e.target.style.display='none'} />
           <p style={INV.nomCoach}>{nomCoach}</p>
           <p style={INV.sm}>{activite}</p>
         </div>
@@ -601,7 +643,7 @@ const INV = {
   totalBox:   { background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.875rem 1.25rem', minWidth: 240 },
   infoSection:{ borderTop: '1px solid #e5e7eb', paddingTop: '0.875rem', marginBottom: '0.875rem' },
   infoTitle:  { fontSize: '0.68rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' },
-  footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '1rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
+  footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '4rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
   footerTxt:  { fontSize: '0.68rem', color: '#9ca3af', margin: 0, textAlign: 'center' },
   legal:      { borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem', marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' },
   legalTxt:   { fontSize: '0.62rem', color: '#9ca3af', margin: 0, lineHeight: 1.5 },
