@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { findMuscles, MUSCLES } from '../data/muscleData'
 import { findBiblioMatch } from '../utils/exerciceMatch'
+import { searchFreeExDB } from '../utils/freeExerciseDB'
 
 // ── Helpers média ──────────────────────────────────────────────────────────
 function youtubeId(url) {
@@ -408,7 +409,10 @@ export default function BibliothequeExercices() {
       const allArrays = await Promise.all(terms.map(fetchTerm))
 
       if (keyError) {
-        alert('Clé API WorkoutX invalide ou expirée.\nReconfigure ta clé dans le bouton 🔑.')
+        // Fallback automatique sur la base libre (sans clé, sans limite)
+        setGifTranslated(translated + ' · DB Libre')
+        const freeResults = await searchFreeExDB(translated)
+        setGifResults(freeResults)
         setGifSearching(false)
         return
       }
@@ -439,7 +443,6 @@ export default function BibliothequeExercices() {
   }
 
   function ouvrirGifSearch(nom, target) {
-    if (!workoutxKey) { setShowKeyInput(true); return }
     const q = nom || ''
     setGifQuery(q)
     setGifTranslated('')
@@ -450,14 +453,15 @@ export default function BibliothequeExercices() {
 
   async function choisirGif(r) {
     if (!gifModal) return
-    // Les GIFs WorkoutX sont derrière auth → on télécharge et on upload
-    // dans Supabase Storage pour avoir une URL publique permanente
     setGifSearching(true)
     try {
-      const res = await fetch(r.gifUrl, { headers: { 'X-WorkoutX-Key': workoutxKey } })
+      const url = r.gifUrl || r.imageUrl
+      const headers = r._source === 'freedb' ? {} : { 'X-WorkoutX-Key': workoutxKey }
+      const res = await fetch(url, { headers })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       const blob = await res.blob()
-      const file = new File([blob], `wx_${r.id}.gif`, { type: 'image/gif' })
+      const ext = r._source === 'freedb' ? 'jpg' : 'gif'
+      const file = new File([blob], `ex_${r.id}.${ext}`, { type: blob.type || 'image/jpeg' })
       const publicUrl = await uploadMedia(file, 'workoutx_tmp')
       if (!publicUrl) throw new Error('Upload échoué')
       if (gifModal.target === 'create') setForm(prev => ({ ...prev, image_url: publicUrl }))
@@ -711,7 +715,10 @@ export default function BibliothequeExercices() {
                       disabled={gifSearching}
                       title={r.name}
                     >
-                      <AuthGif url={r.gifUrl} apiKey={workoutxKey} alt={r.name} style={{ width: '100%', aspectRatio: '1' }} />
+                      {r._source === 'freedb'
+                        ? <img src={r.imageUrl} alt={r.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                        : <AuthGif url={r.gifUrl} apiKey={workoutxKey} alt={r.name} style={{ width: '100%', aspectRatio: '1' }} />
+                      }
                       <p style={{ margin: 0, padding: '0.4rem 0.5rem', fontSize: '0.65rem', fontWeight: 600, color: '#e5e7eb', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#1a1a1a' }}>{r.name}</p>
                     </button>
                   ))}

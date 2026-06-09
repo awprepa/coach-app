@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { autoLinkBiblio } from '../utils/exerciceMatch'
+import { searchFreeExDB } from '../utils/freeExerciseDB'
 
 function newId() { return Math.random().toString(36).slice(2) }
 
@@ -737,7 +738,10 @@ export default function Seance() {
     try {
       const allArrays = await Promise.all(terms.map(fetchTerm))
       if (keyError) {
-        setGifTranslated('❌ Clé API invalide — reconfigure-la en bas de la fenêtre')
+        // Fallback automatique sur la base libre
+        setGifTranslated(translated + ' · DB Libre')
+        const freeResults = await searchFreeExDB(translated)
+        setGifResults(freeResults)
         setGifSearching(false)
         return
       }
@@ -757,7 +761,6 @@ export default function Seance() {
   }
 
   function ouvrirGifEchauff(nom) {
-    if (!wxKey) { setShowWxKeyInput(true); return }
     setGifQuery(nom || ''); setGifTranslated(''); setGifResults([])
     setGifEchauffOpen(true)
     if (nom) doGifEchauffSearch(nom)
@@ -766,11 +769,14 @@ export default function Seance() {
   async function choisirGifEchauff(r) {
     setGifSearching(true)
     try {
-      const res = await fetch(r.gifUrl, { headers: { 'X-WorkoutX-Key': wxKey } })
+      const url = r.gifUrl || r.imageUrl
+      const headers = r._source === 'freedb' ? {} : { 'X-WorkoutX-Key': wxKey }
+      const res = await fetch(url, { headers })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       const blob = await res.blob()
-      const file = new File([blob], `wx_${r.id}.gif`, { type: 'image/gif' })
-      const path = `echauff/wx_${Date.now()}_${r.id}.gif`
+      const ext = r._source === 'freedb' ? 'jpg' : 'gif'
+      const file = new File([blob], `ex_${r.id}.${ext}`, { type: blob.type || 'image/jpeg' })
+      const path = `echauff/ex_${Date.now()}_${r.id}.${ext}`
       const { error } = await supabase.storage.from('exercices').upload(path, file, { upsert: true })
       if (error) throw new Error(error.message)
       const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
@@ -1833,7 +1839,10 @@ export default function Seance() {
                       style={{ background:'#111', border:'2px solid #333', borderRadius:12, overflow:'hidden', cursor: gifSearching ? 'wait' : 'pointer', padding:0, display:'flex', flexDirection:'column' }}
                       onMouseEnter={e => { if (!gifSearching) e.currentTarget.style.borderColor='#e4f816' }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor='#333' }}>
-                      <AuthGif url={r.gifUrl} apiKey={wxKey} alt={r.name} style={{ width:'100%', aspectRatio:'1' }} />
+                      {r._source === 'freedb'
+                        ? <img src={r.imageUrl} alt={r.name} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
+                        : <AuthGif url={r.gifUrl} apiKey={wxKey} alt={r.name} style={{ width:'100%', aspectRatio:'1' }} />
+                      }
                       <span style={{ color:'white', fontSize:'0.6rem', padding:'0.3rem 0.4rem', textAlign:'center', lineHeight:1.2 }}>{r.name}</span>
                     </button>
                   ))}
