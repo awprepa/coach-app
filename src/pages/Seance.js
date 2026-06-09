@@ -743,7 +743,7 @@ export default function Seance() {
         return { ...ex, _score: union ? inter/union : 0 }
       })
       scored.sort((a,b) => b._score - a._score)
-      if (scored.length === 0) alert(`Aucun résultat pour "${translated}". Essaie en anglais (ex: "squat", "push up").`)
+      // pas d'alert si vide — le message inline suffit
       setGifResults(scored.slice(0,9))
     } catch(e) { alert('Erreur WorkoutX : ' + e.message) }
     setGifSearching(false)
@@ -1789,9 +1789,9 @@ export default function Seance() {
 
       {/* ── Modal GIF WorkoutX — Échauffement ── */}
       {gifEchauffOpen && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}
           onClick={e => { if (e.target === e.currentTarget) setGifEchauffOpen(false) }}>
-          <div style={{ background:'white', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:600, maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          <div style={{ background:'white', borderRadius:20, width:'100%', maxWidth:560, maxHeight:'85vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
             <div style={{ padding:'1rem 1.25rem 0.75rem', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <p style={{ fontWeight:800, fontSize:'0.9rem', margin:0 }}>GIF échauffement — WorkoutX</p>
               <button onClick={() => setGifEchauffOpen(false)} style={{ background:'none', border:'none', fontSize:'1rem', cursor:'pointer', color:'#9ca3af' }}>✕</button>
