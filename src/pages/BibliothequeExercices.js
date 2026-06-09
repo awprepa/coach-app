@@ -387,21 +387,31 @@ export default function BibliothequeExercices() {
       words.length > 2 ? words.slice(1).join(' ') : null,  // sans le premier mot
     ].filter(Boolean))]
 
+    let keyError = false
     async function fetchTerm(term) {
       try {
         const res = await fetch(
           `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(term)}`,
           { headers: { 'X-WorkoutX-Key': workoutxKey } }
         )
+        if (res.status === 401 || res.status === 403) { keyError = true; return [] }
         if (!res.ok) return []
         const json = await res.json()
-        return Array.isArray(json) ? json : (json.data || [])
+        // Gère les formats : tableau direct, { data: [] }, { exercises: [] }, { results: [] }
+        if (Array.isArray(json)) return json
+        return json.data || json.exercises || json.results || []
       } catch { return [] }
     }
 
     try {
       // Recherches parallèles
       const allArrays = await Promise.all(terms.map(fetchTerm))
+
+      if (keyError) {
+        alert('Clé API WorkoutX invalide ou expirée.\nReconfigure ta clé dans le bouton 🔑.')
+        setGifSearching(false)
+        return
+      }
 
       // Fusion + déduplication
       const seen = new Set()
@@ -421,10 +431,6 @@ export default function BibliothequeExercices() {
         return { ...ex, _score: union ? inter / union : 0 }
       })
       scored.sort((a, b) => b._score - a._score)
-
-      if (scored.length === 0) {
-        alert(`Aucun résultat pour "${translated}".\nEssaie en anglais dans la barre de recherche (ex: "bench press", "squat").`)
-      }
       setGifResults(scored.slice(0, 9))
     } catch (e) {
       alert('Erreur WorkoutX : ' + e.message + '\nVérifie ta clé API.')

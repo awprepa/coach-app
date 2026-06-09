@@ -723,16 +723,24 @@ export default function Seance() {
     setGifTranslated(translated)
     const words = translated.split(/\s+/).filter(w => w.length > 2)
     const terms = [...new Set([translated, words.slice(0,2).join(' '), words[0], words.length > 2 ? words.slice(1).join(' ') : null].filter(Boolean))]
+    let keyError = false
     async function fetchTerm(term) {
       try {
         const res = await fetch(`https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(term)}`, { headers: { 'X-WorkoutX-Key': wxKey } })
+        if (res.status === 401 || res.status === 403) { keyError = true; return [] }
         if (!res.ok) return []
         const json = await res.json()
-        return Array.isArray(json) ? json : (json.data || [])
+        if (Array.isArray(json)) return json
+        return json.data || json.exercises || json.results || []
       } catch { return [] }
     }
     try {
       const allArrays = await Promise.all(terms.map(fetchTerm))
+      if (keyError) {
+        setGifTranslated('❌ Clé API invalide — reconfigure-la en bas de la fenêtre')
+        setGifSearching(false)
+        return
+      }
       const seen = new Set(); const merged = []
       for (const arr of allArrays) for (const ex of arr) if (!seen.has(ex.id)) { seen.add(ex.id); merged.push(ex) }
       const qWords = new Set(translated.toLowerCase().split(/\s+/).filter(w => w.length > 1))
@@ -743,7 +751,6 @@ export default function Seance() {
         return { ...ex, _score: union ? inter/union : 0 }
       })
       scored.sort((a,b) => b._score - a._score)
-      // pas d'alert si vide — le message inline suffit
       setGifResults(scored.slice(0,9))
     } catch(e) { alert('Erreur WorkoutX : ' + e.message) }
     setGifSearching(false)
