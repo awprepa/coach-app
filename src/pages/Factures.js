@@ -137,12 +137,18 @@ export default function Factures() {
     win.document.write(`<!DOCTYPE html><html><head><title>Facture ${facturePrint?.numero || ''}</title>
     <style>
       * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif; color:#111; background:white; }
-      @page { size:A4 portrait; margin:18mm 14mm 14mm 14mm; }
+      html, body { width:210mm; }
+      body {
+        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
+        color:#111;
+        background:white;
+        padding:18mm 14mm 14mm 14mm;
+      }
+      @page { size:A4 portrait; margin:0; }
       @media print { body { print-color-adjust:exact; -webkit-print-color-adjust:exact; } }
       #invoice-print-wrap {
-        max-width: 100% !important;
         width: 100% !important;
+        max-width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
         border: none !important;
@@ -150,8 +156,9 @@ export default function Factures() {
         box-shadow: none !important;
         font-size: 9.5pt !important;
       }
-      #invoice-print-wrap table { font-size: 9pt !important; }
-      #invoice-print-wrap p, #invoice-print-wrap td, #invoice-print-wrap th { line-height: 1.4 !important; }
+      #invoice-print-wrap table { width:100%; font-size:9pt !important; }
+      #invoice-print-wrap p, #invoice-print-wrap td, #invoice-print-wrap th { line-height:1.4 !important; }
+      #invoice-print-wrap img { max-width:160px; height:auto !important; object-fit:contain; }
     </style></head><body>`)
     win.document.write(content.innerHTML)
     win.document.write('</body></html>')
@@ -577,7 +584,7 @@ const S = {
 
 /* ── Styles facture imprimable ── */
 const INV = {
-  wrap:       { padding: '2rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12 },
+  wrap:       { padding: '2rem 2rem 2rem 1.25rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12 },
   topBand:    { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '2px solid #111' },
   topLeft:    { display: 'flex', flexDirection: 'column' },
   topRight:   { textAlign: 'right' },
