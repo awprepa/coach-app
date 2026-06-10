@@ -163,6 +163,7 @@ export default function Factures() {
     if (!content) return
     const win = window.open('', '_blank')
     win.document.write(`<!DOCTYPE html><html><head><title>Facture ${facturePrint?.numero || ''}</title>
+    <base href="${window.location.origin}/">
     <style>
       * { margin:0; padding:0; box-sizing:border-box; }
       html, body { width:210mm; }
