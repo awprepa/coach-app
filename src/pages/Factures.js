@@ -561,52 +561,64 @@ function InvoiceTemplate({ facture, settings, total }) {
 
   return (
     <div id="invoice-print-wrap" style={INV.wrap}>
-      {/* ── Bandeau supérieur ── */}
-      <div style={INV.topBand}>
-        <div style={INV.topLeft}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ height: 42, width: 'auto', marginBottom: 6 }} onError={e => e.target.style.display='none'} />
-          <p style={INV.nomCoach}>{nomCoach}</p>
-          <p style={INV.sm}>{activite}</p>
+
+      {/* ── Ligne 1 : Logo + nom  ·  Boîte référence ── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'2.75rem' }}>
+
+        {/* Gauche : logo + identité */}
+        <div style={{ display:'flex', flexDirection:'column' }}>
+          <img src="/logo-noir.png" alt="AWprepa" style={{ height:48, width:'auto', marginBottom:10 }} onError={e => e.target.style.display='none'} />
+          <p style={{ fontWeight:900, fontSize:'1rem', color:'#111', margin:0 }}>{nomCoach}</p>
+          {activite && <p style={{ fontSize:'0.78rem', color:'#6b7280', margin:'3px 0 0' }}>{activite}</p>}
         </div>
-        <div style={INV.topRight}>
-          <p style={INV.factureTitle}>FACTURE</p>
-          <p style={INV.numero}>N° {facture.numero}</p>
+
+        {/* Droite : boîte référence grisée (style Sosh) */}
+        <div style={{ background:'#f3f4f6', borderRadius:8, padding:'0.8rem 1.1rem', textAlign:'right', minWidth:185 }}>
+          <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>N° de facture</p>
+          <p style={{ fontWeight:800, fontSize:'0.92rem', color:'#111', margin:'0 0 10px' }}>{facture.numero}</p>
+          <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Date d'émission</p>
+          <p style={{ fontWeight:600, fontSize:'0.85rem', color:'#374151', margin:0 }}>{dateEmission}</p>
+          {dateEcheance && <>
+            <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'8px 0 1px' }}>Échéance</p>
+            <p style={{ fontWeight:700, fontSize:'0.85rem', color:'#dc2626', margin:0 }}>{dateEcheance}</p>
+          </>}
         </div>
       </div>
 
-      {/* ── Infos coach + client ── */}
-      <div style={INV.metaRow}>
-        {/* Coach */}
-        <div style={INV.metaBox}>
-          <p style={INV.metaLabel}>Émetteur</p>
-          {adresse  && <p style={INV.sm}>{adresse}</p>}
-          {siret    && <p style={INV.sm}>SIRET : {siret}</p>}
-          {emailCoach && <p style={INV.sm}>{emailCoach}</p>}
+      {/* ── Ligne 2 : Titre FACTURE + émetteur  ·  Destinataire (fenêtre enveloppe) ── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'2rem' }}>
+
+        {/* Gauche : grand titre + infos émetteur */}
+        <div>
+          <p style={{ fontWeight:900, fontSize:'2rem', letterSpacing:'-1px', color:'#111', margin:'0 0 0.875rem' }}>FACTURE</p>
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            {adresse    && <p style={{ fontSize:'0.78rem', color:'#4b5563', margin:0 }}>{adresse}</p>}
+            {siret      && <p style={{ fontSize:'0.78rem', color:'#4b5563', margin:0 }}>SIRET : {siret}</p>}
+            {emailCoach && <p style={{ fontSize:'0.78rem', color:'#4b5563', margin:0 }}>{emailCoach}</p>}
+          </div>
         </div>
-        {/* Client */}
-        <div style={INV.metaBox}>
-          <p style={INV.metaLabel}>Facturé à</p>
+
+        {/* Droite : destinataire — fenêtre enveloppe */}
+        <div style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'0.875rem 1.1rem', minWidth:200, maxWidth:240 }}>
+          <p style={{ fontSize:'0.62rem', fontWeight:800, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>Facturé à</p>
           {facture.destinataire
             ? <>
-                <p style={{ ...INV.sm, fontWeight: 700, color: '#111' }}>{facture.destinataire.nom}</p>
-                {facture.destinataire.adresse && <p style={INV.sm}>{facture.destinataire.adresse}</p>}
-                {facture.destinataire.siret && <p style={INV.sm}>SIRET : {facture.destinataire.siret}</p>}
+                <p style={{ fontWeight:700, fontSize:'0.88rem', color:'#111', margin:'0 0 2px' }}>{facture.destinataire.nom}</p>
+                {facture.destinataire.adresse && <p style={{ fontSize:'0.82rem', color:'#4b5563', margin:'2px 0 0', lineHeight:1.5 }}>{facture.destinataire.adresse}</p>}
+                {facture.destinataire.siret   && <p style={{ fontSize:'0.82rem', color:'#4b5563', margin:'2px 0 0' }}>SIRET : {facture.destinataire.siret}</p>}
               </>
             : facture.clients
               ? <>
-                  <p style={{ ...INV.sm, fontWeight: 700, color: '#111' }}>{facture.clients.prenom} {facture.clients.nom}</p>
-                  {facture.clients.email && <p style={INV.sm}>{facture.clients.email}</p>}
+                  <p style={{ fontWeight:700, fontSize:'0.88rem', color:'#111', margin:'0 0 2px' }}>{facture.clients.prenom} {facture.clients.nom}</p>
+                  {facture.clients.email && <p style={{ fontSize:'0.82rem', color:'#4b5563', margin:'2px 0 0' }}>{facture.clients.email}</p>}
                 </>
-              : <p style={{ ...INV.sm, color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</p>
+              : <p style={{ fontSize:'0.82rem', color:'#9ca3af', fontStyle:'italic', margin:0 }}>Non renseigné</p>
           }
         </div>
-        {/* Dates */}
-        <div style={INV.metaBox}>
-          <p style={INV.metaLabel}>Dates</p>
-          <p style={INV.sm}>Émise le <strong>{dateEmission}</strong></p>
-          {dateEcheance && <p style={{ ...INV.sm, color: dateEcheance ? '#dc2626' : undefined }}>Échéance : <strong>{dateEcheance}</strong></p>}
-        </div>
       </div>
+
+      {/* ── Séparateur ── */}
+      <div style={{ height:1, background:'#e5e7eb', marginBottom:'1.25rem' }} />
 
       {/* ── Tableau prestations ── */}
       <table style={INV.table}>
@@ -708,16 +720,7 @@ const S = {
 
 /* ── Styles facture imprimable ── */
 const INV = {
-  wrap:       { padding: '2rem 2rem 2rem 1.25rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12, display: 'flex', flexDirection: 'column', minHeight: '265mm' },
-  topBand:    { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '2px solid #111' },
-  topLeft:    { display: 'flex', flexDirection: 'column' },
-  topRight:   { textAlign: 'right' },
-  nomCoach:   { fontWeight: 900, fontSize: '1.05rem', color: '#111', margin: 0 },
-  factureTitle:{ fontWeight: 900, fontSize: '2rem', color: '#111', margin: '0 0 0.1rem', letterSpacing: '-1.5px' },
-  numero:     { fontSize: '0.9rem', color: '#6b7280', margin: 0, fontWeight: 600 },
-  metaRow:    { display: 'flex', gap: '1.5rem', marginBottom: '1.75rem', flexWrap: 'wrap' },
-  metaBox:    { flex: '1 1 160px' },
-  metaLabel:  { fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.35rem' },
+  wrap:       { padding: '2.25rem 2.25rem 2rem', background: 'white', maxWidth: 740, margin: '0 auto', fontSize: '0.88rem', color: '#111', border: '1px solid #e5e7eb', borderRadius: 12, display: 'flex', flexDirection: 'column', minHeight: '265mm' },
   sm:         { fontSize: '0.82rem', color: '#4b5563', margin: '0.12rem 0 0', lineHeight: 1.5 },
   table:      { width: '100%', borderCollapse: 'collapse', marginBottom: 0 },
   th:         { padding: '0.55rem 0.75rem', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'white' },
