@@ -96,7 +96,7 @@ export default function FicheClient() {
   }, [])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient() }, [])
+  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchCategories() {
     const { data } = await supabase.from('categories').select('*').order('created_at')
@@ -193,18 +193,21 @@ export default function FicheClient() {
 
       for (const s of (seancesOrig || [])) {
         // 3. Créer la séance
-        const { data: newSeance } = await supabase.from('seances')
+        const { data: newSeance, error: e2 } = await supabase.from('seances')
           .insert([{ programme_id: newProg.id, nom: s.nom, ordre: s.ordre, echauffement: s.echauffement }])
           .select().single()
+        if (e2) throw e2
+        if (!newSeance) throw new Error('Erreur création séance')
 
         // 4. Récupérer et copier les exercices
         const { data: exos } = await supabase.from('exercices')
           .select('*').eq('seance_id', s.id).order('ordre')
 
         for (const ex of (exos || [])) {
-          const { data: newEx } = await supabase.from('exercices')
+          const { data: newEx, error: e3 } = await supabase.from('exercices')
             .insert([{ seance_id: newSeance.id, code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions, tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite, valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id }])
             .select().single()
+          if (e3) throw e3
 
           // 5. Copier les charges
           const { data: charges } = await supabase.from('charges').select('*').eq('exercice_id', ex.id)
@@ -240,7 +243,7 @@ export default function FicheClient() {
       const key = exo.nom
       if (!byExo[key]) byExo[key] = {}
       const sem = `S${t.semaine}`
-      if (!byExo[key][sem] || t.poids > byExo[key][sem]) byExo[key][sem] = t.poids
+      if (!byExo[key][sem] || parseFloat(t.poids) > parseFloat(byExo[key][sem])) byExo[key][sem] = t.poids
     })
 
     // Convertir en tableau pour Recharts

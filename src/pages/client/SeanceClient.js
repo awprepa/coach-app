@@ -80,6 +80,7 @@ export default function SeanceClient() {
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
   const [localSavedAt, setLocalSavedAt] = useState(null)
+  const [validatingSet, setValidatingSet] = useState(new Set()) // anti double-tap : clés "exId-si"
   const blocRefs = useRef({})
   const prNotifiedRef = useRef({}) // { [exId]: maxPoidsNotifié } — évite les doublons dans la même séance
 
@@ -523,6 +524,9 @@ export default function SeanceClient() {
 
   async function validerSerie(exId, serieIdx, groupLetter, groupItems, targetReps) {
     if (!exId) return
+    const vKey = `${exId}-${serieIdx}`
+    if (validatingSet.has(vKey)) return // anti double-tap
+    setValidatingSet(prev => new Set([...prev, vKey]))
     const serie = tracking[exId]?.[serieIdx] || {}
     // Vérifie si les reps ont été atteintes
     const repsOk = !targetReps || !serie.reps_reelles ||
@@ -638,6 +642,8 @@ export default function SeanceClient() {
       }
     }
 
+    // Déverrouiller le bouton Valider une fois toutes les opérations terminées
+    setValidatingSet(prev => { const n = new Set(prev); n.delete(vKey); return n })
   }
 
   function terminerBloc(groupLetter) {
@@ -1110,7 +1116,11 @@ export default function SeanceClient() {
                         style={serie.valide ? S.serieDoneBadge : S.serieDoneWarnBadge}>
                         {serie.valide ? '✓' : '⚠'}
                       </button>
-                  : <button onClick={() => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions)} style={S.serieValBtn}>Valider</button>
+                  : <button
+                      onClick={() => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions)}
+                      disabled={validatingSet.has(`${ex.id}-${si}`)}
+                      style={{ ...S.serieValBtn, opacity: validatingSet.has(`${ex.id}-${si}`) ? 0.5 : 1 }}
+                    >{validatingSet.has(`${ex.id}-${si}`) ? '…' : 'Valider'}</button>
                 }
               </div>
               )

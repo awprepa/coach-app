@@ -142,13 +142,15 @@ export default function Factures() {
   }
 
   async function updateStatut(id, statut) {
-    await supabase.from('factures').update({ statut }).eq('id', id)
+    const { error } = await supabase.from('factures').update({ statut }).eq('id', id)
+    if (error) { alert('Erreur mise à jour statut : ' + error.message); return }
     setFactures(prev => prev.map(f => f.id === id ? { ...f, statut } : f))
   }
 
   async function deleteFacture(id) {
     if (!window.confirm('Supprimer cette facture ?')) return
-    await supabase.from('factures').delete().eq('id', id)
+    const { error } = await supabase.from('factures').delete().eq('id', id)
+    if (error) { alert('Erreur suppression : ' + error.message); return }
     setFactures(prev => prev.filter(f => f.id !== id))
     if (printId === id) setPrintId(null)
     if (editingId === id) { setShowForm(false); setEditingId(null) }

@@ -11,14 +11,24 @@ function newId() { return Math.random().toString(36).slice(2) }
 /* ── WorkoutX GIF helpers (échauffement) ─────────────────────────────────── */
 function AuthGif({ url, apiKey, style, alt }) {
   const [src, setSrc] = useState(null)
+  const objRef = useRef(null)
   useEffect(() => {
     if (!url || !apiKey) return
-    let objectUrl = null
+    let mounted = true
     fetch(url, { headers: { 'X-WorkoutX-Key': apiKey } })
       .then(r => r.blob())
-      .then(blob => { objectUrl = URL.createObjectURL(blob); setSrc(objectUrl) })
+      .then(blob => {
+        if (!mounted) return
+        if (objRef.current) URL.revokeObjectURL(objRef.current)
+        const u = URL.createObjectURL(blob)
+        objRef.current = u
+        setSrc(u)
+      })
       .catch(() => {})
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+    return () => {
+      mounted = false
+      if (objRef.current) { URL.revokeObjectURL(objRef.current); objRef.current = null }
+    }
   }, [url, apiKey])
   if (!src) return <div style={{ ...style, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ opacity: 0.4 }}>…</span></div>
   return <img src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
@@ -1336,10 +1346,10 @@ export default function Seance() {
               <tr style={{ background: '#fafafa', fontSize: '0.7rem', color: '#9ca3af' }}>
                 <th colSpan={10}></th>
                 {colSemaines.map(s => (
-                  <>
-                    <th key={`${s}-kg`} style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>kg</th>
-                    <th key={`${s}-rpe`} style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>RPE</th>
-                  </>
+                  <Fragment key={s}>
+                    <th style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>kg</th>
+                    <th style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>RPE</th>
+                  </Fragment>
                 ))}
               </tr>
             </thead>
@@ -1405,10 +1415,10 @@ export default function Seance() {
                         />
                       </td>
                       {colSemaines.map(s => (
-                        <>
-                          <td key={`${s}-kg`} style={styles.td}>—</td>
-                          <td key={`${s}-rpe`} style={styles.td}>—</td>
-                        </>
+                        <Fragment key={s}>
+                          <td style={styles.td}>—</td>
+                          <td style={styles.td}>—</td>
+                        </Fragment>
                       ))}
                     </>
                   ) : (
@@ -1491,21 +1501,21 @@ export default function Seance() {
                         }
                       </td>
                       {colSemaines.map(s => (
-                        <>
-                          <td key={`${s}-kg`} style={styles.tdCenter}>
+                        <Fragment key={s}>
+                          <td style={styles.tdCenter}>
                             <input type="text" inputMode="decimal"
                               defaultValue={charges[ex.id]?.[s]?.charge || trackingMap[ex.id]?.[s] || ''}
                               onBlur={e => updateCharge(ex.id, s, 'charge', e.target.value)}
                               style={{ ...styles.chargeInput, ...((!charges[ex.id]?.[s]?.charge && trackingMap[ex.id]?.[s]) ? { color: '#6b7280', fontStyle: 'italic' } : {}) }}
                               placeholder="—" />
                           </td>
-                          <td key={`${s}-rpe`} style={styles.tdCenter}>
+                          <td style={styles.tdCenter}>
                             <input type="number" inputMode="decimal" min="1" max="10" step="0.5"
                               defaultValue={charges[ex.id]?.[s]?.rpe_reel || ''}
                               onBlur={e => updateCharge(ex.id, s, 'rpe_reel', e.target.value)}
                               style={{ ...styles.chargeInput, color: '#16a34a' }} placeholder="—" />
                           </td>
-                        </>
+                        </Fragment>
                       ))}
                     </>
                   )}

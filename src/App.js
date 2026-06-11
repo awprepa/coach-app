@@ -339,12 +339,17 @@ function PageLoader() {
 // Gestion des erreurs de chargement de chunk (après nouveau déploiement)
 class ChunkErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false } }
-  static getDerivedStateFromError(err) {
-    // Chunk introuvable (hash périmé après déploiement) → reload forcé
-    if (err?.name === 'ChunkLoadError' || err?.message?.includes('Loading chunk')) {
-      window.location.reload(true)
-    }
+  static getDerivedStateFromError() {
     return { hasError: true }
+  }
+  componentDidCatch(err) {
+    // Chunk introuvable (hash périmé après déploiement) → reload forcé une seule fois
+    if (err?.name === 'ChunkLoadError' || err?.message?.includes('Loading chunk')) {
+      if (!sessionStorage.getItem('chunk_reload')) {
+        sessionStorage.setItem('chunk_reload', '1')
+        window.location.reload(true)
+      }
+    }
   }
   render() {
     if (this.state.hasError) return (
