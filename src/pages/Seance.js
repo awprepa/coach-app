@@ -114,6 +114,7 @@ export default function Seance() {
   const [loadingTemplates, setLoadingTemplates]   = useState(false)
   const [editingEchauffId, setEditingEchauffId]   = useState(null)
   const [editEchauffForm, setEditEchauffForm]     = useState({ nom: '', reps: '', groupe: '', tours: '', image_url: '' })
+  const [echauffBiblioFlash, setEchauffBiblioFlash] = useState({}) // { [lid]: 'saved'|'exists'|'saving' }
   const [uploadingEchauff, setUploadingEchauff]   = useState(false)
   const echauffImgRef = useRef(null)
   const [showEchauffPaste, setShowEchauffPaste]   = useState(false)
@@ -841,6 +842,29 @@ export default function Seance() {
 
   function removeEchauffLine(lid) { persistEchauff(echauffement.filter(l => l.id !== lid)) }
 
+  async function sauvegarderEchauffEnBiblio(l) {
+    if (!l.nom?.trim()) return
+    setEchauffBiblioFlash(f => ({ ...f, [l.id]: 'saving' }))
+    // Vérifie si le nom existe déjà (is_echauffement = true)
+    const { data: existing } = await supabase
+      .from('bibliotheque_exercices')
+      .select('id, image_url')
+      .eq('nom', l.nom.trim())
+      .eq('is_echauffement', true)
+      .maybeSingle()
+    if (existing) {
+      // Si une image est dispo et que la biblio n'en a pas, on met à jour
+      if (l.image_url && !existing.image_url) {
+        await supabase.from('bibliotheque_exercices').update({ image_url: l.image_url }).eq('id', existing.id)
+      }
+      setEchauffBiblioFlash(f => ({ ...f, [l.id]: 'exists' }))
+    } else {
+      await supabase.from('bibliotheque_exercices').insert({ nom: l.nom.trim(), image_url: l.image_url || null, is_echauffement: true })
+      setEchauffBiblioFlash(f => ({ ...f, [l.id]: 'saved' }))
+    }
+    setTimeout(() => setEchauffBiblioFlash(f => { const n = { ...f }; delete n[l.id]; return n }), 2500)
+  }
+
   function moveEchauffLine(idx, dir) {
     const arr = [...echauffement]
     const ni = idx + dir
@@ -1100,6 +1124,19 @@ export default function Seance() {
                     <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                     <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
                     <button onClick={() => startEditEchauffLine(l)} style={{ ...styles.iconBtnSm, fontSize: '0.75rem' }}>✏️</button>
+                    {l.nom?.trim() && (
+                      <button
+                        onClick={() => sauvegarderEchauffEnBiblio(l)}
+                        title="Sauvegarder dans la bibliothèque d'échauffements"
+                        style={{ ...styles.iconBtnSm, fontSize: '0.75rem',
+                          color: echauffBiblioFlash[l.id] === 'saved' ? '#16a34a' : echauffBiblioFlash[l.id] === 'exists' ? '#6366f1' : '#6b7280',
+                          borderColor: echauffBiblioFlash[l.id] === 'saved' ? '#bbf7d0' : echauffBiblioFlash[l.id] === 'exists' ? '#ddd6fe' : undefined,
+                          background: echauffBiblioFlash[l.id] === 'saved' ? '#f0fdf4' : echauffBiblioFlash[l.id] === 'exists' ? '#f5f3ff' : undefined
+                        }}
+                      >
+                        {echauffBiblioFlash[l.id] === 'saved' ? '✓' : echauffBiblioFlash[l.id] === 'exists' ? '~' : '📚'}
+                      </button>
+                    )}
                     <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.iconBtnSm, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
                     <button onClick={() => moveEchauffLine(i, 1)} disabled={i === echauffement.length - 1} style={{ ...styles.iconBtnSm, opacity: i === echauffement.length - 1 ? 0.3 : 1 }}>↓</button>
                     <button onClick={() => removeEchauffLine(l.id)} style={{ ...styles.iconBtnSm, color: '#dc2626' }}>✕</button>
