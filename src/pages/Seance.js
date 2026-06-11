@@ -79,6 +79,10 @@ export default function Seance() {
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
   const [showWarmupFor, setShowWarmupFor]           = useState(null) // exercice id
   const [showSeriesFor, setShowSeriesFor]           = useState(null) // exercice id
+  const [biblioEchauffOpen, setBiblioEchauffOpen]  = useState(null) // exercice id
+  const [biblioEchauffList, setBiblioEchauffList]  = useState([])
+  const [biblioEchauffSearch, setBiblioEchauffSearch] = useState('')
+  const [biblioEchauffLoading, setBiblioEchauffLoading] = useState(false)
   const [showLibraryFor, setShowLibraryFor]         = useState(null) // exercice id
   const [librarySuggestions, setLibrarySuggestions] = useState([])
   const [librarySearching, setLibrarySearching]     = useState(false)
@@ -525,7 +529,7 @@ export default function Seance() {
   function addWarmupCoach(exId) {
     const ex = exercices.find(e => e.id === exId)
     const current = ex?.series_echauffement || []
-    saveSeriesEchauffement(exId, [...current, { reps: '', pourcentage: '' }])
+    saveSeriesEchauffement(exId, [...current, { reps: '', pourcentage: '', nom: '', image_url: null }])
   }
   function updateWarmupCoach(exId, idx, field, val) {
     const ex = exercices.find(e => e.id === exId)
@@ -535,6 +539,43 @@ export default function Seance() {
   function removeWarmupCoach(exId, idx) {
     const ex = exercices.find(e => e.id === exId)
     saveSeriesEchauffement(exId, (ex?.series_echauffement || []).filter((_, i) => i !== idx))
+  }
+
+  // ── Bibliothèque d'échauffements ─────────────────────────────────────────
+  async function openBiblioEchauff(exId) {
+    if (biblioEchauffOpen === exId) { setBiblioEchauffOpen(null); return }
+    setBiblioEchauffOpen(exId)
+    setBiblioEchauffSearch('')
+    setBiblioEchauffLoading(true)
+    const { data } = await supabase.from('bibliotheque_exercices')
+      .select('id, nom, image_url')
+      .eq('is_echauffement', true)
+      .order('nom')
+    setBiblioEchauffList(data || [])
+    setBiblioEchauffLoading(false)
+  }
+
+  async function searchBiblioEchauff(q) {
+    setBiblioEchauffSearch(q)
+    if (!q.trim()) {
+      setBiblioEchauffLoading(true)
+      const { data } = await supabase.from('bibliotheque_exercices')
+        .select('id, nom, image_url').eq('is_echauffement', true).order('nom')
+      setBiblioEchauffList(data || [])
+      setBiblioEchauffLoading(false)
+      return
+    }
+    const { data } = await supabase.from('bibliotheque_exercices')
+      .select('id, nom, image_url').eq('is_echauffement', true)
+      .ilike('nom', `%${q}%`).order('nom').limit(20)
+    setBiblioEchauffList(data || [])
+  }
+
+  function choisirDepuisBiblioEchauff(exId, item) {
+    const current = exercices.find(e => e.id === exId)?.series_echauffement || []
+    const newSerie = { poids_pct: null, reps: '', image_url: item.image_url || null, nom: item.nom }
+    saveSeriesEchauffement(exId, [...current, newSerie])
+    setBiblioEchauffOpen(null)
   }
 
   // ── Bibliothèque d'exercices ──────────────────────────────────────────────
@@ -1529,20 +1570,59 @@ export default function Seance() {
                   <tr>
                     <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#fff7ed' }}>
                       <div style={{ padding: '12px 16px', borderTop: '2px solid #fed7aa', borderBottom: '2px solid #fed7aa' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.06em' }}>Séries d'échauffement — {ex.nom}</span>
                           <button onClick={() => addWarmupCoach(ex.id)}
                             style={{ background: '#ea580c', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
-                            + Série
+                            + Série vierge
+                          </button>
+                          <button onClick={() => openBiblioEchauff(ex.id)}
+                            style={{ background: biblioEchauffOpen === ex.id ? '#fff7ed' : 'white', color: '#ea580c', border: '1.5px solid #fed7aa', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            Depuis la bibliothèque
                           </button>
                           <span style={{ fontSize: '.65rem', color: '#9ca3af', marginLeft: 'auto' }}>
-                            Visibles côté client, pré-remplies avec le % de la charge de travail
+                            Visibles côté client, pré-remplies avec le % de la charge
                           </span>
                         </div>
 
+                        {/* Picker bibliothèque échauffements */}
+                        {biblioEchauffOpen === ex.id && (
+                          <div style={{ background: '#fffbf5', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.75rem' }}>
+                            <input
+                              value={biblioEchauffSearch}
+                              onChange={e => searchBiblioEchauff(e.target.value)}
+                              placeholder="Chercher un échauffement…"
+                              style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.65rem', border: '1.5px solid #fed7aa', borderRadius: 7, fontSize: '.82rem', outline: 'none', marginBottom: '0.5rem', background: 'white' }}
+                            />
+                            {biblioEchauffLoading && <p style={{ fontSize: '.72rem', color: '#9ca3af', margin: 0 }}>Chargement…</p>}
+                            {!biblioEchauffLoading && biblioEchauffList.length === 0 && (
+                              <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                                Aucun exercice d'échauffement dans la bibliothèque. Ajoute-en depuis "Bibliothèque d'exercices → Échauffements".
+                              </p>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 200, overflowY: 'auto' }}>
+                              {biblioEchauffList.map(item => (
+                                <div key={item.id}
+                                  onClick={() => choisirDepuisBiblioEchauff(ex.id, item)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white', border: '1.5px solid #fed7aa', borderRadius: 8, padding: '0.35rem 0.65rem', cursor: 'pointer' }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#fff7ed'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                                >
+                                  {item.image_url && (
+                                    <img src={item.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                                  )}
+                                  <span style={{ fontSize: '.82rem', fontWeight: 600, color: '#374151', flex: 1 }}>{item.nom}</span>
+                                  <span style={{ fontSize: '.68rem', color: '#ea580c', fontWeight: 700 }}>+ Ajouter</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {(!ex.series_echauffement?.length) ? (
                           <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
-                            Clique sur "+ Série" pour ajouter une série de chauffe. Ex : 10 reps à 40%, puis 8 reps à 70%…
+                            Clique sur "+ Série vierge" ou choisis depuis la bibliothèque. Ex : 10 reps à 40%, puis 8 reps à 70%…
                           </p>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -1552,25 +1632,25 @@ export default function Seance() {
                                   style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                 </button>
-                                <span style={{ fontSize: '.72rem', fontWeight: 900, color: '#ea580c', width: 24, flexShrink: 0 }}>É{si + 1}</span>
+                                {s.image_url && <img src={s.image_url} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
+                                <span style={{ fontSize: '.72rem', fontWeight: 900, color: '#ea580c', flexShrink: 0 }}>É{si + 1}{s.nom ? ` · ${s.nom}` : ''}</span>
                                 <input
                                   type="text"
                                   value={s.reps}
                                   onChange={e => updateWarmupCoach(ex.id, si, 'reps', e.target.value)}
                                   placeholder="Reps"
-                                  style={{ width: 64, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                                  style={{ width: 54, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
                                 />
-                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>reps</span>
-                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>@</span>
+                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>reps @</span>
                                 <input
                                   type="number"
-                                  value={s.pourcentage}
+                                  value={s.pourcentage ?? ''}
                                   onChange={e => updateWarmupCoach(ex.id, si, 'pourcentage', e.target.value)}
                                   placeholder="%"
                                   min="1" max="100"
-                                  style={{ width: 56, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                                  style={{ width: 50, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
                                 />
-                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>% de la charge</span>
+                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>% charge</span>
                               </div>
                             ))}
                           </div>

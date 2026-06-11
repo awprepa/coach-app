@@ -234,6 +234,7 @@ export default function BibliothequeExercices() {
   const [gifSearching, setGifSearching] = useState(false)
   const [gifQuery, setGifQuery] = useState('')
   const [gifTranslated, setGifTranslated] = useState('')
+  const [modeEchauff, setModeEchauff]     = useState(false) // false = exercices, true = échauffements
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -292,7 +293,7 @@ export default function BibliothequeExercices() {
     e.preventDefault()
     if (!form.nom.trim()) return
     setSaving(true)
-    const payload = { nom: form.nom.trim(), categorie: form.categorie || null, image_url: form.image_url || null }
+    const payload = { nom: form.nom.trim(), categorie: form.categorie || null, image_url: form.image_url || null, is_echauffement: modeEchauff }
     const { data, error } = await supabase
       .from('bibliotheque_exercices')
       .insert({ ...payload, muscles_primaires: form.primary, muscles_secondaires: form.secondary })
@@ -531,9 +532,10 @@ export default function BibliothequeExercices() {
 
   const allCats  = ['Tous', ...CATEGORIES]
   const filtered = exercices.filter(ex => {
-    const matchCat    = catFilter === 'Tous' || ex.categorie === catFilter
+    const matchMode   = !!ex.is_echauffement === modeEchauff
+    const matchCat    = modeEchauff || catFilter === 'Tous' || ex.categorie === catFilter
     const matchSearch = ex.nom.toLowerCase().includes(search.toLowerCase())
-    return matchCat && matchSearch
+    return matchMode && matchCat && matchSearch
   })
 
   return (
@@ -754,7 +756,7 @@ export default function BibliothequeExercices() {
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Bibliothèque d'exercices</h1>
-          <p style={S.subtitle}>{exercices.length} exercice{exercices.length !== 1 ? 's' : ''}</p>
+          <p style={S.subtitle}>{filtered.length} exercice{filtered.length !== 1 ? 's' : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button
@@ -764,19 +766,38 @@ export default function BibliothequeExercices() {
           >
             {workoutxKey ? '🔑 GIF configuré' : '🔑 Config clé GIF'}
           </button>
-          <button onClick={lancerBackfill} style={{ ...S.btnSecondary, fontSize: '0.82rem' }} title="Lier automatiquement les exercices existants à la bibliothèque">
-            🔗 Lier les anciens exercices
-          </button>
+          {!modeEchauff && (
+            <button onClick={lancerBackfill} style={{ ...S.btnSecondary, fontSize: '0.82rem' }} title="Lier automatiquement les exercices existants à la bibliothèque">
+              🔗 Lier les anciens exercices
+            </button>
+          )}
           <button onClick={() => { setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
-            {showForm ? '✕ Annuler' : '+ Ajouter un exercice'}
+            {showForm ? '✕ Annuler' : modeEchauff ? '+ Ajouter un échauffement' : '+ Ajouter un exercice'}
           </button>
         </div>
+      </div>
+
+      {/* ── Onglets Exercices / Échauffements ── */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: '1.25rem', background: '#f3f4f6', borderRadius: 12, padding: 4, width: 'fit-content' }}>
+        {[{ label: 'Exercices de travail', val: false }, { label: 'Échauffements', val: true }].map(tab => (
+          <button
+            key={String(tab.val)}
+            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch('') }}
+            style={{
+              border: 'none', borderRadius: 9, padding: '0.45rem 1.1rem', fontSize: '0.82rem', fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.15s',
+              background: modeEchauff === tab.val ? 'white' : 'transparent',
+              color: modeEchauff === tab.val ? '#111' : '#6b7280',
+              boxShadow: modeEchauff === tab.val ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+            }}
+          >{tab.label}</button>
+        ))}
       </div>
 
       {/* ── Formulaire ajout ── */}
       {showForm && (
         <div style={S.formCard}>
-          <p style={S.formTitle}>Nouvel exercice</p>
+          <p style={S.formTitle}>{modeEchauff ? 'Nouvel échauffement' : 'Nouvel exercice'}</p>
           <form onSubmit={ajouterExercice}>
             <div style={S.formRow}>
               <div style={{ flex: 1, minWidth: 200 }}>

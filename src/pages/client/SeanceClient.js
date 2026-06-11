@@ -71,6 +71,7 @@ export default function SeanceClient() {
   const { timerSecs, timerTotal, isRunning: timerRunning, isDone: timerDone, startTimer, stopTimer } = useTimer()
   const [histoOpen, setHistoOpen] = useState({})
   const [histoTracking, setHistoTracking] = useState({}) // { exId: { semaine: [{ poids, reps_reelles, valide, serie }] } }
+  const [variantImageMap, setVariantImageMap] = useState({}) // { nom_lower: image_url } pour les variantes de progression
   const [histoLoading, setHistoLoading] = useState({})
   const [mediaModal, setMediaModal] = useState(null) // { nom, url }
   const [rpeOpen, setRpeOpen] = useState(false)
@@ -379,6 +380,20 @@ export default function SeanceClient() {
     const allLetters = [...new Set(data.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
     const firstActive = allLetters.find(l => !done.has(l) && !skipped.has(l))
     setActiveBloc(firstActive || null)
+
+    // Charger les images des variantes de progression (nom_variante) depuis la bibliothèque
+    const variantNoms = [...new Set(
+      data.flatMap(ex => (ex.progressions || []).map(p => p.nom_variante).filter(Boolean))
+    )]
+    if (variantNoms.length > 0) {
+      const { data: variantData } = await supabase
+        .from('bibliotheque_exercices')
+        .select('nom, image_url')
+        .in('nom', variantNoms)
+      const vMap = {}
+      ;(variantData || []).forEach(v => { if (v.image_url) vMap[v.nom.toLowerCase()] = v.image_url })
+      setVariantImageMap(vMap)
+    }
 
     return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done, blocsSkippes: skipped }
   }
@@ -865,7 +880,8 @@ export default function SeanceClient() {
       <div key={ex.id}>
         {/* Titre exercice */}
         {(() => {
-          const mediaUrl = ex.media_url || ex.bibliotheque_exercices?.image_url || null
+          const variantImg = progActif?.nom_variante ? variantImageMap[progActif.nom_variante.toLowerCase()] : null
+          const mediaUrl = ex.media_url || variantImg || ex.bibliotheque_exercices?.image_url || null
           const isYt = mediaUrl && youtubeId(mediaUrl)
           const ytId = isYt ? youtubeId(mediaUrl) : null
           return (
