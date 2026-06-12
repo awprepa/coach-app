@@ -42,6 +42,8 @@ export default function Factures() {
   const [settingsForm, setSettingsForm]   = useState({})
   const [form, setForm]                   = useState(EMPTY_FORM())
   const [selectedGroupId, setSelectedGroupId] = useState(null) // groupe sélectionné dans le dropdown client
+  const [sendingMail, setSendingMail]     = useState(false)
+  const [mailFlash, setMailFlash]         = useState(null)   // message flash après envoi
   const printRef = useRef()
 
   useEffect(() => { fetchAll() }, [])
@@ -158,6 +160,67 @@ export default function Factures() {
 
   function totalFacture(lignes) {
     return (lignes || []).reduce((s, l) => s + (parseFloat(l.prix) || 0) * (parseFloat(l.quantite) || 1), 0)
+  }
+
+  async function handleEnvoyerMail() {
+    if (!facturePrint || sendingMail) return
+    setSendingMail(true)
+    try {
+      // 1. Capturer l'aperçu et générer le PDF
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: jsPDF }       = await import('jspdf')
+
+      const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
+      if (!element) throw new Error('Élément introuvable')
+
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+      const imgData = canvas.toDataURL('image/jpeg', 0.95)
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pw = pdf.internal.pageSize.getWidth()
+      const ph = (canvas.height * pw) / canvas.width
+      pdf.addImage(imgData, 'JPEG', 0, 0, pw, ph)
+      pdf.save(`Facture_${facturePrint.numero}.pdf`)
+
+      // 2. Construire le mailto
+      const dest       = facturePrint.destinataire
+      const cli        = facturePrint.clients
+      const prenom     = dest?.nom?.split(' ')[0] || cli?.prenom || ''
+      const emailDest  = dest?.email || cli?.email || ''
+      const total      = totalFacture(facturePrint.lignes).toFixed(2).replace('.', ',')
+      const nomCoach   = settings.facture_nom      || 'Arthur Wehrey'
+      const activite   = settings.facture_activite || 'Préparateur physique'
+      const emailCoach = settings.facture_email    || ''
+      const iban       = settings.facture_iban     || ''
+      const dateEmission = new Date(facturePrint.date_emission + 'T12:00:00')
+        .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+      const ibanBlock = iban
+        ? `\n---\nRèglement par virement bancaire\nIBAN : ${iban}\nRéférence : Facture ${facturePrint.numero}${cli ? ` — ${cli.prenom} ${cli.nom}` : ''}\n---`
+        : ''
+
+      const sujet = `Facture n°${facturePrint.numero} — Préparation physique`
+      const corps =
+`Bonjour${prenom ? ` ${prenom}` : ''},
+
+Veuillez trouver ci-joint la facture n°${facturePrint.numero} d'un montant de ${total} €, établie le ${dateEmission}.
+${ibanBlock}
+
+N'hésitez pas à me contacter si vous avez la moindre question.
+
+Bien cordialement,
+${nomCoach}
+${activite}${emailCoach ? `\n${emailCoach}` : ''}`
+
+      window.open(`mailto:${emailDest}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`)
+      setMailFlash('✓ PDF téléchargé — joignez-le au mail avant d\'envoyer')
+      // Passer la facture en "envoyée" si elle est en brouillon
+      if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
+    } catch (e) {
+      console.error('[mail]', e)
+      setMailFlash('Erreur lors de la génération du PDF')
+    }
+    setSendingMail(false)
+    setTimeout(() => setMailFlash(null), 6000)
   }
 
   function handlePrint() {
@@ -531,8 +594,20 @@ export default function Factures() {
         <div style={{ ...S.card, marginTop: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <p style={{ ...S.sectionTitle, margin: 0 }}>Aperçu — Facture N° {facturePrint.numero}</p>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={handlePrint} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.print()} Imprimer / Exporter PDF</button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {mailFlash && (
+                <span style={{ fontSize: '0.78rem', color: mailFlash.startsWith('✓') ? '#15803d' : '#dc2626', background: mailFlash.startsWith('✓') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${mailFlash.startsWith('✓') ? '#bbf7d0' : '#fecaca'}`, borderRadius: 8, padding: '0.3rem 0.75rem', fontWeight: 600 }}>
+                  {mailFlash}
+                </span>
+              )}
+              <button
+                onClick={handleEnvoyerMail}
+                disabled={sendingMail}
+                style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem', background: '#2563eb', opacity: sendingMail ? 0.6 : 1 }}
+              >
+                {sendingMail ? '…' : '✉️'} {sendingMail ? 'Génération PDF…' : 'Envoyer par mail'}
+              </button>
+              <button onClick={handlePrint} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.print()} Imprimer / PDF</button>
               <button onClick={() => setPrintId(null)} style={S.btnSecondary}>✕ Fermer</button>
             </div>
           </div>
