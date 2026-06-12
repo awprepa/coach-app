@@ -44,6 +44,7 @@ export default function Factures() {
   const [selectedGroupId, setSelectedGroupId] = useState(null) // groupe sélectionné dans le dropdown client
   const [sendingMail, setSendingMail]     = useState(false)
   const [mailFlash, setMailFlash]         = useState(null)   // message flash après envoi
+  const [mailModalData, setMailModalData] = useState(null)   // { sujet, corps, emailDest } — modale desktop
   const printRef = useRef()
 
   useEffect(() => { fetchAll() }, [])
@@ -166,22 +167,7 @@ export default function Factures() {
     if (!facturePrint || sendingMail) return
     setSendingMail(true)
     try {
-      // 1. Capturer l'aperçu et générer le PDF
-      const { default: html2canvas } = await import('html2canvas')
-      const { default: jsPDF }       = await import('jspdf')
-
-      const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
-      if (!element) throw new Error('Élément introuvable')
-
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-      const imgData = canvas.toDataURL('image/jpeg', 0.95)
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pw = pdf.internal.pageSize.getWidth()
-      const ph = (canvas.height * pw) / canvas.width
-      pdf.addImage(imgData, 'JPEG', 0, 0, pw, ph)
-      pdf.save(`Facture_${facturePrint.numero}.pdf`)
-
-      // 2. Construire le mailto
+      // ── Infos communes ──────────────────────────────────────────────────
       const dest       = facturePrint.destinataire
       const cli        = facturePrint.clients
       const prenom     = dest?.nom?.split(' ')[0] || cli?.prenom || ''
@@ -193,34 +179,63 @@ export default function Factures() {
       const iban       = settings.facture_iban     || ''
       const dateEmission = new Date(facturePrint.date_emission + 'T12:00:00')
         .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-
       const ibanBlock = iban
-        ? `\n---\nRèglement par virement bancaire\nIBAN : ${iban}\nRéférence : Facture ${facturePrint.numero}${cli ? ` — ${cli.prenom} ${cli.nom}` : ''}\n---`
+        ? `\nRèglement par virement bancaire\nIBAN : ${iban}\nRéférence : Facture ${facturePrint.numero}${cli ? ` — ${cli.prenom} ${cli.nom}` : ''}\n`
         : ''
-
       const sujet = `Facture n°${facturePrint.numero} — Préparation physique`
       const corps =
 `Bonjour${prenom ? ` ${prenom}` : ''},
 
 Veuillez trouver ci-joint la facture n°${facturePrint.numero} d'un montant de ${total} €, établie le ${dateEmission}.
 ${ibanBlock}
-
 N'hésitez pas à me contacter si vous avez la moindre question.
 
 Bien cordialement,
 ${nomCoach}
 ${activite}${emailCoach ? `\n${emailCoach}` : ''}`
 
-      window.open(`mailto:${emailDest}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`)
-      setMailFlash('✓ PDF téléchargé — joignez-le au mail avant d\'envoyer')
-      // Passer la facture en "envoyée" si elle est en brouillon
+      // ── Génération du PDF (blob) ────────────────────────────────────────
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: jsPDF }       = await import('jspdf')
+      const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
+      if (!element) throw new Error('Élément introuvable')
+      const canvas  = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+      const imgData = canvas.toDataURL('image/jpeg', 0.92)
+      const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pw = pdf.internal.pageSize.getWidth()
+      const ph = (canvas.height * pw) / canvas.width
+      pdf.addImage(imgData, 'JPEG', 0, 0, pw, ph)
+      const pdfBlob    = pdf.output('blob')
+      const fileName   = `Facture_${facturePrint.numero}.pdf`
+      const pdfFile    = new File([pdfBlob], fileName, { type: 'application/pdf' })
+
+      // ── Stratégie 1 : Web Share API avec fichier (iOS / Android) ───────
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({ files: [pdfFile], title: sujet, text: corps })
+        setMailFlash('✓ Partagé avec succès')
+      }
+      // ── Stratégie 2 : Téléchargement + modale de composition ───────────
+      else {
+        // Télécharge le PDF
+        const url = URL.createObjectURL(pdfBlob)
+        const a   = document.createElement('a')
+        a.href = url; a.download = fileName; a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 5000)
+        // Ouvre la modale de composition (remplace mailto: qui ouvrait le navigateur)
+        setMailFlash('✓ PDF téléchargé')
+        setMailModalData({ sujet, corps, emailDest })
+      }
+
+      // Passer en "envoyée" si brouillon
       if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
     } catch (e) {
-      console.error('[mail]', e)
-      setMailFlash('Erreur lors de la génération du PDF')
+      if (e?.name !== 'AbortError') { // AbortError = l'utilisateur a annulé le share, pas une erreur
+        console.error('[mail]', e)
+        setMailFlash('Erreur : ' + e.message)
+      }
     }
     setSendingMail(false)
-    setTimeout(() => setMailFlash(null), 6000)
+    setTimeout(() => setMailFlash(null), 5000)
   }
 
   function handlePrint() {
@@ -615,6 +630,71 @@ ${activite}${emailCoach ? `\n${emailCoach}` : ''}`
           {/* Zone imprimable */}
           <div ref={printRef}>
             <InvoiceTemplate facture={facturePrint} settings={settings} total={totalFacture(facturePrint.lignes)} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Modale composition mail (desktop / fallback) ── */}
+      {mailModalData && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}
+          onClick={e => { if (e.target === e.currentTarget) setMailModalData(null) }}>
+          <div style={{ background:'white', borderRadius:18, padding:'1.75rem', maxWidth:560, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', gap:'1rem' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <p style={{ fontWeight:800, fontSize:'1rem', color:'#111', margin:0 }}>✉️ Composition du mail</p>
+              <button onClick={() => setMailModalData(null)} style={{ background:'none', border:'none', fontSize:'1.2rem', cursor:'pointer', color:'#9ca3af' }}>✕</button>
+            </div>
+
+            {/* Info PDF */}
+            <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:10, padding:'0.6rem 0.875rem', fontSize:'0.8rem', color:'#15803d', fontWeight:600 }}>
+              ✓ Le PDF a été téléchargé dans vos Téléchargements — joignez-le au mail.
+            </div>
+
+            {/* Destinataire */}
+            <div>
+              <label style={S.label}>À</label>
+              <input
+                value={mailModalData.emailDest}
+                onChange={e => setMailModalData(d => ({ ...d, emailDest: e.target.value }))}
+                style={S.input} placeholder="email@client.fr"
+              />
+            </div>
+
+            {/* Objet */}
+            <div>
+              <label style={S.label}>Objet</label>
+              <input
+                value={mailModalData.sujet}
+                onChange={e => setMailModalData(d => ({ ...d, sujet: e.target.value }))}
+                style={S.input}
+              />
+            </div>
+
+            {/* Corps */}
+            <div>
+              <label style={S.label}>Corps du mail</label>
+              <textarea
+                value={mailModalData.corps}
+                onChange={e => setMailModalData(d => ({ ...d, corps: e.target.value }))}
+                rows={10}
+                style={{ ...S.input, resize:'vertical', lineHeight:1.6, fontFamily:'inherit' }}
+              />
+            </div>
+
+            {/* Boutons */}
+            <div style={{ display:'flex', gap:'0.75rem', justifyContent:'flex-end', flexWrap:'wrap' }}>
+              <button onClick={() => { navigator.clipboard?.writeText(mailModalData.corps); setMailFlash('✓ Corps copié dans le presse-papier') }} style={S.btnSecondary}>
+                📋 Copier le texte
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = `mailto:${mailModalData.emailDest}?subject=${encodeURIComponent(mailModalData.sujet)}&body=${encodeURIComponent(mailModalData.corps)}`
+                  setMailModalData(null)
+                }}
+                style={{ ...S.btnPrimary, background:'#2563eb' }}
+              >
+                ✉️ Ouvrir dans Mail
+              </button>
+            </div>
           </div>
         </div>
       )}
