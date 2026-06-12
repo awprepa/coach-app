@@ -199,7 +199,7 @@ export default function Factures() {
   }
 
   async function genererEtEnvoyer({ emailDest, sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach }) {
-    // ── Génération PDF ──────────────────────────────────────────────────
+    // ── 1. Téléchargement automatique du PDF ────────────────────────────
     const { default: html2canvas } = await import('html2canvas')
     const { default: jsPDF }       = await import('jspdf')
     const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
@@ -210,36 +210,31 @@ export default function Factures() {
     const pw = pdf.internal.pageSize.getWidth()
     pdf.addImage(imgData, 'JPEG', 0, 0, pw, (canvas.height * pw) / canvas.width)
     const fileName = `Facture_${facturePrint.numero}.pdf`
-    const pdfB64   = pdf.output('datauristring').split(',')[1] // base64 pur
+    pdf.save(fileName) // téléchargement auto
 
-    // ── HTML email ──────────────────────────────────────────────────────
-    const htmlBody = buildEmailHtml({ prenom, numero: facturePrint.numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach })
+    // ── 2. Corps du mail (texte brut lisible) ───────────────────────────
+    const ibanBlock = iban
+      ? `\nRèglement par virement bancaire\nIBAN : ${iban}\nRéférence : Facture ${facturePrint.numero}${nomDest ? ` — ${nomDest}` : ''}\n`
+      : ''
+    const corps =
+`Bonjour${prenom ? ` ${prenom}` : ''},
 
-    // ── Appel Edge Function → Resend ────────────────────────────────────
-    const { supabase } = await import('../supabase')
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch(
-      `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          to: emailDest,
-          subject: sujet,
-          html: htmlBody,
-          pdfBase64: pdfB64,
-          pdfName: fileName,
-          fromName: nomCoach,
-        }),
-      }
-    )
-    const result = await res.json()
-    if (!res.ok) throw new Error(result.error || 'Erreur envoi')
+Veuillez trouver ci-joint la facture n°${facturePrint.numero} d'un montant de ${total} €, établie le ${dateEmission}.
+${ibanBlock}
+N'hésitez pas à me contacter si vous avez la moindre question.
 
-    setMailFlash('✓ Mail envoyé à ' + emailDest)
+Bien cordialement,
+${nomCoach}
+${activite}${emailCoach ? `\n${emailCoach}` : ''}`
+
+    // ── 3. Ouverture Gmail compose (avec tout pré-rempli) ───────────────
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1`
+      + `&to=${encodeURIComponent(emailDest)}`
+      + `&su=${encodeURIComponent(sujet)}`
+      + `&body=${encodeURIComponent(corps)}`
+    window.open(gmailUrl, '_blank')
+
+    setMailFlash('✓ PDF téléchargé — Gmail ouvert, joignez le PDF et envoyez')
     if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
   }
 
