@@ -1231,6 +1231,8 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
           const currentW = myLastWeek !== undefined ? exo.weeks[myLastWeek] : null
           const firstW = myFirstWeek !== undefined ? exo.weeks[myFirstWeek] : null
           const isPR = currentW && parseFloat(currentW.poids) >= exo.allTimeMax
+          // Première semaine où le PR actuel a été atteint (seule semaine qui affiche l'étoile)
+          const prWeek = exoWeeks.find(w => parseFloat(exo.weeks[w]?.poids) >= exo.allTimeMax)
           let evo = null
           if (currentW && firstW && myLastWeek !== myFirstWeek) evo = parseFloat(currentW.poids) - parseFloat(firstW.poids)
           let progPct = null
@@ -1247,12 +1249,13 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 if (!wd) return <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}><span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span></td>
                 const level = weightLevel(wd.poids, exo.allTimeMax)
                 const isCellPR = wd.poids >= exo.allTimeMax
+                const isCellPRFirst = isCellPR && w === prWeek // étoile uniquement sur la 1re semaine du PR
                 const bg = isCellPR ? PR_COLOR : (LEVEL_COLORS[level] || '#e5e7eb')
                 return (
                   <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative' }}>
                       {wd.poids}
-                      {isCellPR && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 8, color: '#fff' }}>★</span>}
+                      {isCellPRFirst && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 8, color: '#fff' }}>★</span>}
                     </div>
                   </td>
                 )
@@ -1271,7 +1274,10 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                   : <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>}
               </td>
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
-                {isPR ? <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>★ PR</span>
+                {isPR
+                  ? myLastWeek === prWeek
+                    ? <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>★ PR</span>
+                    : <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>PR</span>
                   : <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>}
               </td>
             </tr>

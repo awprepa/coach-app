@@ -569,7 +569,7 @@ function InvoiceTemplate({ facture, settings, total }) {
 
         {/* Gauche : logo + identité */}
         <div style={{ display:'flex', flexDirection:'column' }}>
-          <img src="/logo-noir.png" alt="AWprepa" style={{ height:48, width:'auto', marginBottom:10, marginLeft:-8 }} onError={e => e.target.style.display='none'} />
+          <img src="/logo-noir.png" alt="AWprepa" style={{ height:48, width:'auto', marginBottom:10, marginLeft:-18 }} onError={e => e.target.style.display='none'} />
           <p style={{ fontWeight:900, fontSize:'1rem', color:'#111', margin:0 }}>{nomCoach}</p>
           {activite && <p style={{ fontSize:'0.78rem', color:'#6b7280', margin:'3px 0 0' }}>{activite}</p>}
         </div>
