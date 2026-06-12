@@ -1,4 +1,7 @@
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!
+import nodemailer from "npm:nodemailer@6"
+
+const GMAIL_USER = Deno.env.get("GMAIL_USER")!          // wehrey.arthur@gmail.com
+const GMAIL_PASS = Deno.env.get("GMAIL_APP_PASSWORD")!  // mot de passe d'application Google
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,48 +23,35 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Construction du payload Resend
-    const payload: Record<string, unknown> = {
-      from: `${fromName || "AWprepa"} <onboarding@resend.dev>`,
-      to: [to],
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+    })
+
+    const mailOptions: Record<string, unknown> = {
+      from: `"${fromName || "AWprepa"}" <${GMAIL_USER}>`,
+      to,
       subject,
       html,
     }
 
-    // Pièce jointe PDF (optionnel)
     if (pdfBase64 && pdfName) {
-      payload.attachments = [
+      mailOptions.attachments = [
         {
           filename: pdfName,
           content: pdfBase64,
+          encoding: "base64",
         },
       ]
     }
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    })
+    await transporter.sendMail(mailOptions)
 
-    const data = await res.json()
-
-    if (!res.ok) {
-      console.error("[send-invoice] Resend error:", data)
-      return new Response(JSON.stringify({ error: data.message || "Erreur Resend" }), {
-        status: res.status,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      })
-    }
-
-    return new Response(JSON.stringify({ success: true, id: data.id }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     })
   } catch (e) {
-    console.error("[send-invoice] Exception:", e)
+    console.error("[send-invoice] Erreur:", e)
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
