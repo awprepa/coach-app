@@ -26,7 +26,7 @@ function newLigne() { return { id: Math.random().toString(36).slice(2), descript
 const EMPTY_FORM = () => ({
   client_id: '', date_emission: new Date().toISOString().slice(0, 10),
   date_echeance: '', notes: '', lignes: [newLigne()],
-  dest_manuel: false, dest_nom: '', dest_adresse: '', dest_siret: '',
+  dest_manuel: false, dest_nom: '', dest_adresse: '', dest_siret: '', dest_email: '',
 })
 
 export default function Factures() {
@@ -102,6 +102,7 @@ export default function Factures() {
       dest_nom:      f.destinataire?.nom      || '',
       dest_adresse:  f.destinataire?.adresse  || '',
       dest_siret:    f.destinataire?.siret    || '',
+      dest_email:    f.destinataire?.email    || '',
     })
     setShowForm(true)
     setPrintId(null)
@@ -115,7 +116,7 @@ export default function Factures() {
       lignes:        form.lignes.filter(l => l.description.trim()),
       notes:         form.notes || null,
       destinataire:  form.dest_manuel && form.dest_nom.trim()
-                       ? { nom: form.dest_nom.trim(), adresse: form.dest_adresse.trim(), siret: form.dest_siret.trim() }
+                       ? { nom: form.dest_nom.trim(), adresse: form.dest_adresse.trim(), siret: form.dest_siret.trim(), email: form.dest_email.trim() }
                        : null,
     }
 
@@ -165,77 +166,212 @@ export default function Factures() {
 
   async function handleEnvoyerMail() {
     if (!facturePrint || sendingMail) return
+
+    // ── Infos ───────────────────────────────────────────────────────────
+    const dest       = facturePrint.destinataire
+    const cli        = facturePrint.clients
+    const prenom     = dest?.nom?.split(' ')[0] || cli?.prenom || ''
+    const nomDest    = dest?.nom || (cli ? `${cli.prenom} ${cli.nom}` : '')
+    const emailDest  = dest?.email || cli?.email || ''
+    const total      = totalFacture(facturePrint.lignes).toFixed(2).replace('.', ',')
+    const nomCoach   = settings.facture_nom      || 'Arthur Wehrey'
+    const activite   = settings.facture_activite || 'Préparateur physique'
+    const emailCoach = settings.facture_email    || ''
+    const iban       = settings.facture_iban     || ''
+    const dateEmission = new Date(facturePrint.date_emission + 'T12:00:00')
+      .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    const sujet = `Facture n°${facturePrint.numero} — Préparation physique`
+
+    // Si pas d'email connu, ouvrir la modale pour le saisir
+    if (!emailDest) {
+      setMailModalData({ sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach, emailDest: '', numero: facturePrint.numero, nomFichier: `Facture_${facturePrint.numero}.pdf` })
+      return
+    }
+
     setSendingMail(true)
     try {
-      // ── Infos communes ──────────────────────────────────────────────────
-      const dest       = facturePrint.destinataire
-      const cli        = facturePrint.clients
-      const prenom     = dest?.nom?.split(' ')[0] || cli?.prenom || ''
-      const emailDest  = dest?.email || cli?.email || ''
-      const total      = totalFacture(facturePrint.lignes).toFixed(2).replace('.', ',')
-      const nomCoach   = settings.facture_nom      || 'Arthur Wehrey'
-      const activite   = settings.facture_activite || 'Préparateur physique'
-      const emailCoach = settings.facture_email    || ''
-      const iban       = settings.facture_iban     || ''
-      const dateEmission = new Date(facturePrint.date_emission + 'T12:00:00')
-        .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-      const ibanBlock = iban
-        ? `\nRèglement par virement bancaire\nIBAN : ${iban}\nRéférence : Facture ${facturePrint.numero}${cli ? ` — ${cli.prenom} ${cli.nom}` : ''}\n`
-        : ''
-      const sujet = `Facture n°${facturePrint.numero} — Préparation physique`
-      const corps =
-`Bonjour${prenom ? ` ${prenom}` : ''},
-
-Veuillez trouver ci-joint la facture n°${facturePrint.numero} d'un montant de ${total} €, établie le ${dateEmission}.
-${ibanBlock}
-N'hésitez pas à me contacter si vous avez la moindre question.
-
-Bien cordialement,
-${nomCoach}
-${activite}${emailCoach ? `\n${emailCoach}` : ''}`
-
-      // ── Génération du PDF (blob) ────────────────────────────────────────
-      const { default: html2canvas } = await import('html2canvas')
-      const { default: jsPDF }       = await import('jspdf')
-      const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
-      if (!element) throw new Error('Élément introuvable')
-      const canvas  = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-      const imgData = canvas.toDataURL('image/jpeg', 0.92)
-      const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pw = pdf.internal.pageSize.getWidth()
-      const ph = (canvas.height * pw) / canvas.width
-      pdf.addImage(imgData, 'JPEG', 0, 0, pw, ph)
-      const pdfBlob    = pdf.output('blob')
-      const fileName   = `Facture_${facturePrint.numero}.pdf`
-      const pdfFile    = new File([pdfBlob], fileName, { type: 'application/pdf' })
-
-      // ── Stratégie 1 : Web Share API avec fichier (iOS / Android) ───────
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({ files: [pdfFile], title: sujet, text: corps })
-        setMailFlash('✓ Partagé avec succès')
-      }
-      // ── Stratégie 2 : Téléchargement + modale de composition ───────────
-      else {
-        // Télécharge le PDF
-        const url = URL.createObjectURL(pdfBlob)
-        const a   = document.createElement('a')
-        a.href = url; a.download = fileName; a.click()
-        setTimeout(() => URL.revokeObjectURL(url), 5000)
-        // Ouvre la modale de composition (remplace mailto: qui ouvrait le navigateur)
-        setMailFlash('✓ PDF téléchargé')
-        setMailModalData({ sujet, corps, emailDest })
-      }
-
-      // Passer en "envoyée" si brouillon
-      if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
+      await genererEtEnvoyer({ emailDest, sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach })
     } catch (e) {
-      if (e?.name !== 'AbortError') { // AbortError = l'utilisateur a annulé le share, pas une erreur
-        console.error('[mail]', e)
-        setMailFlash('Erreur : ' + e.message)
-      }
+      if (e?.name !== 'AbortError') { console.error('[mail]', e); setMailFlash('Erreur : ' + e.message) }
     }
     setSendingMail(false)
-    setTimeout(() => setMailFlash(null), 5000)
+    setTimeout(() => setMailFlash(null), 6000)
+  }
+
+  async function genererEtEnvoyer({ emailDest, sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach }) {
+    // ── Génération PDF ──────────────────────────────────────────────────
+    const { default: html2canvas } = await import('html2canvas')
+    const { default: jsPDF }       = await import('jspdf')
+    const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
+    if (!element) throw new Error('Élément introuvable')
+    const canvas  = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+    const imgData = canvas.toDataURL('image/jpeg', 0.92)
+    const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pw = pdf.internal.pageSize.getWidth()
+    pdf.addImage(imgData, 'JPEG', 0, 0, pw, (canvas.height * pw) / canvas.width)
+    const fileName = `Facture_${facturePrint.numero}.pdf`
+    const pdfBlob  = pdf.output('blob')
+    const pdfFile  = new File([pdfBlob], fileName, { type: 'application/pdf' })
+
+    // ── HTML email ──────────────────────────────────────────────────────
+    const htmlBody = buildEmailHtml({ prenom, numero: facturePrint.numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach })
+
+    // ── Stratégie 1 : Web Share (iOS/Android) ───────────────────────────
+    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      await navigator.share({ files: [pdfFile], title: sujet, text: htmlBody.replace(/<[^>]+>/g, '') })
+      setMailFlash('✓ Partagé avec succès')
+    }
+    // ── Stratégie 2 : Fichier .eml (Mac/PC) ─────────────────────────────
+    else {
+      const pdfB64  = await blobToBase64(pdfBlob)
+      const emlContent = buildEml({ to: emailDest, subject: sujet, htmlBody, pdfBase64: pdfB64, pdfName: fileName })
+      const emlBlob = new Blob([emlContent], { type: 'message/rfc822' })
+      const emlUrl  = URL.createObjectURL(emlBlob)
+      const a = document.createElement('a'); a.href = emlUrl; a.download = `${fileName.replace('.pdf','')}.eml`; a.click()
+      setTimeout(() => URL.revokeObjectURL(emlUrl), 5000)
+      setMailFlash('✓ Fichier .eml téléchargé — double-cliquez pour ouvrir dans Mail')
+    }
+
+    if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
+  }
+
+  // ── Helpers email ─────────────────────────────────────────────────────
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  function buildEml({ to, subject, htmlBody, pdfBase64, pdfName }) {
+    const boundary = `bound_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    const encodeB64 = str => btoa(unescape(encodeURIComponent(str)))
+    const htmlB64 = encodeB64(htmlBody)
+    const wrap = s => s.match(/.{1,76}/g).join('\r\n')
+    return [
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      `To: ${to}`,
+      `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+      'X-Mailer: AWprepa',
+      '',
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      wrap(htmlB64),
+      '',
+      `--${boundary}`,
+      `Content-Type: application/pdf; name="${pdfName}"`,
+      'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${pdfName}"`,
+      '',
+      wrap(pdfBase64),
+      '',
+      `--${boundary}--`,
+    ].join('\r\n')
+  }
+
+  function buildEmailHtml({ prenom, numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach }) {
+    const ibanBlock = iban ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin:0 0 28px 0;">
+        <tr><td style="padding:16px 22px;">
+          <p style="color:#1e40af;font-size:13px;font-weight:700;margin:0 0 6px 0;font-family:sans-serif;">Règlement par virement bancaire</p>
+          <p style="color:#374151;font-size:13px;margin:0 0 3px 0;font-family:sans-serif;">IBAN : <strong>${iban}</strong></p>
+          <p style="color:#374151;font-size:13px;margin:0;font-family:sans-serif;">Référence : <strong>Facture ${numero}${nomDest ? ` — ${nomDest}` : ''}</strong></p>
+        </td></tr>
+      </table>` : ''
+
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;">
+<tr><td align="center" style="padding:40px 16px;">
+
+  <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+    <!-- Header -->
+    <tr><td style="background:#1a1a1a;border-radius:14px 14px 0 0;padding:28px 36px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <p style="margin:0;font-size:20px;font-weight:800;color:#e4f816;letter-spacing:-0.5px;font-family:sans-serif;">AWprepa</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#9ca3af;font-family:sans-serif;">${activite}</p>
+          </td>
+          <td align="right">
+            <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;font-family:sans-serif;">Facture</p>
+            <p style="margin:2px 0 0;font-size:18px;font-weight:800;color:#ffffff;font-family:sans-serif;">n°${numero}</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- Body -->
+    <tr><td style="background:#ffffff;padding:36px 36px 28px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+
+      <p style="font-size:15px;color:#374151;margin:0 0 20px;line-height:1.65;font-family:sans-serif;">Bonjour${prenom ? ` <strong style="color:#111;">${prenom}</strong>` : ''},</p>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 28px;line-height:1.65;font-family:sans-serif;">
+        Veuillez trouver ci-joint la facture <strong style="color:#111;">n°${numero}</strong> d'un montant de <strong style="color:#111;">${total} €</strong>, établie le ${dateEmission}.
+      </p>
+
+      <!-- Récap facture -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;margin:0 0 28px 0;">
+        <tr><td style="padding:20px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="color:#6b7280;font-size:13px;font-family:sans-serif;padding-bottom:10px;">N° de facture</td>
+              <td align="right" style="font-weight:700;color:#111;font-size:14px;font-family:sans-serif;padding-bottom:10px;">${numero}</td>
+            </tr>
+            <tr>
+              <td style="color:#6b7280;font-size:13px;font-family:sans-serif;padding-bottom:10px;border-top:1px solid #f0f0f0;padding-top:10px;">Date d'émission</td>
+              <td align="right" style="color:#374151;font-size:14px;font-family:sans-serif;border-top:1px solid #f0f0f0;padding-top:10px;padding-bottom:10px;">${dateEmission}</td>
+            </tr>
+            <tr>
+              <td style="color:#6b7280;font-size:13px;font-family:sans-serif;border-top:1px solid #f0f0f0;padding-top:10px;">Montant total TTC</td>
+              <td align="right" style="font-weight:800;color:#111;font-size:20px;font-family:sans-serif;border-top:1px solid #f0f0f0;padding-top:10px;">${total} €</td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+
+      ${ibanBlock}
+
+      <p style="font-size:15px;color:#374151;margin:0 0 28px;line-height:1.65;font-family:sans-serif;">
+        N'hésitez pas à me contacter si vous avez la moindre question.
+      </p>
+
+      <!-- Signature -->
+      <table cellpadding="0" cellspacing="0" style="border-top:1px solid #f3f4f6;padding-top:20px;margin-top:4px;width:100%;">
+        <tr>
+          <td style="width:44px;vertical-align:top;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;">
+              <span style="color:#e4f816;font-weight:800;font-size:14px;font-family:sans-serif;">${nomCoach.charAt(0)}</span>
+            </div>
+          </td>
+          <td style="vertical-align:top;padding-left:10px;">
+            <p style="margin:0;font-weight:700;font-size:14px;color:#111;font-family:sans-serif;">${nomCoach}</p>
+            <p style="margin:2px 0 0;font-size:13px;color:#6b7280;font-family:sans-serif;">${activite}</p>
+            ${emailCoach ? `<p style="margin:2px 0 0;font-size:13px;color:#6b7280;font-family:sans-serif;">${emailCoach}</p>` : ''}
+          </td>
+        </tr>
+      </table>
+
+    </td></tr>
+
+    <!-- Footer -->
+    <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:18px 36px;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;font-family:sans-serif;">
+        ${nomCoach} · ${activite} · TVA non applicable, art. 293 B du CGI
+      </p>
+    </td></tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body></html>`
   }
 
   function handlePrint() {
@@ -421,6 +557,16 @@ ${activite}${emailCoach ? `\n${emailCoach}` : ''}`
                       value={form.dest_siret}
                       onChange={e => setForm(f => ({ ...f, dest_siret: e.target.value }))}
                       placeholder="Ex : 123 456 789 00012"
+                      style={S.input}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...S.label, marginTop: 0 }}>Email (pour envoi mail)</label>
+                    <input
+                      type="email"
+                      value={form.dest_email}
+                      onChange={e => setForm(f => ({ ...f, dest_email: e.target.value }))}
+                      placeholder="contact@club.fr"
                       style={S.input}
                     />
                   </div>
@@ -634,65 +780,44 @@ ${activite}${emailCoach ? `\n${emailCoach}` : ''}`
         </div>
       )}
 
-      {/* ── Modale composition mail (desktop / fallback) ── */}
+      {/* ── Modale : email manquant ── */}
       {mailModalData && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}
           onClick={e => { if (e.target === e.currentTarget) setMailModalData(null) }}>
-          <div style={{ background:'white', borderRadius:18, padding:'1.75rem', maxWidth:560, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', gap:'1rem' }}>
+          <div style={{ background:'white', borderRadius:18, padding:'1.75rem', maxWidth:420, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', gap:'1rem' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <p style={{ fontWeight:800, fontSize:'1rem', color:'#111', margin:0 }}>✉️ Composition du mail</p>
+              <p style={{ fontWeight:800, fontSize:'1rem', color:'#111', margin:0 }}>✉️ Adresse email du destinataire</p>
               <button onClick={() => setMailModalData(null)} style={{ background:'none', border:'none', fontSize:'1.2rem', cursor:'pointer', color:'#9ca3af' }}>✕</button>
             </div>
-
-            {/* Info PDF */}
-            <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:10, padding:'0.6rem 0.875rem', fontSize:'0.8rem', color:'#15803d', fontWeight:600 }}>
-              ✓ Le PDF a été téléchargé dans vos Téléchargements — joignez-le au mail.
-            </div>
-
-            {/* Destinataire */}
+            <p style={{ fontSize:'0.85rem', color:'#6b7280', margin:0 }}>
+              Aucun email n'est enregistré pour ce destinataire. Saisissez-le ici pour générer le mail, ou ajoutez-le à la fiche pour la prochaine fois.
+            </p>
             <div>
-              <label style={S.label}>À</label>
+              <label style={S.label}>Email</label>
               <input
+                type="email"
+                autoFocus
                 value={mailModalData.emailDest}
                 onChange={e => setMailModalData(d => ({ ...d, emailDest: e.target.value }))}
-                style={S.input} placeholder="email@client.fr"
+                onKeyDown={e => { if (e.key === 'Enter' && mailModalData.emailDest.trim()) { const d = { ...mailModalData }; setMailModalData(null); setSendingMail(true); genererEtEnvoyer({ emailDest: d.emailDest.trim(), sujet: d.sujet, prenom: d.prenom, nomDest: d.nomDest, total: d.total, dateEmission: d.dateEmission, iban: d.iban, nomCoach: d.nomCoach, activite: d.activite, emailCoach: d.emailCoach }).catch(console.error).finally(() => setSendingMail(false)) } }}
+                style={S.input} placeholder="client@email.fr"
               />
             </div>
-
-            {/* Objet */}
-            <div>
-              <label style={S.label}>Objet</label>
-              <input
-                value={mailModalData.sujet}
-                onChange={e => setMailModalData(d => ({ ...d, sujet: e.target.value }))}
-                style={S.input}
-              />
-            </div>
-
-            {/* Corps */}
-            <div>
-              <label style={S.label}>Corps du mail</label>
-              <textarea
-                value={mailModalData.corps}
-                onChange={e => setMailModalData(d => ({ ...d, corps: e.target.value }))}
-                rows={10}
-                style={{ ...S.input, resize:'vertical', lineHeight:1.6, fontFamily:'inherit' }}
-              />
-            </div>
-
-            {/* Boutons */}
-            <div style={{ display:'flex', gap:'0.75rem', justifyContent:'flex-end', flexWrap:'wrap' }}>
-              <button onClick={() => { navigator.clipboard?.writeText(mailModalData.corps); setMailFlash('✓ Corps copié dans le presse-papier') }} style={S.btnSecondary}>
-                📋 Copier le texte
-              </button>
+            <div style={{ display:'flex', gap:'0.75rem', justifyContent:'flex-end' }}>
+              <button onClick={() => setMailModalData(null)} style={S.btnSecondary}>Annuler</button>
               <button
+                disabled={!mailModalData.emailDest.trim()}
                 onClick={() => {
-                  window.location.href = `mailto:${mailModalData.emailDest}?subject=${encodeURIComponent(mailModalData.sujet)}&body=${encodeURIComponent(mailModalData.corps)}`
+                  const d = { ...mailModalData }
                   setMailModalData(null)
+                  setSendingMail(true)
+                  genererEtEnvoyer({ emailDest: d.emailDest.trim(), sujet: d.sujet, prenom: d.prenom, nomDest: d.nomDest, total: d.total, dateEmission: d.dateEmission, iban: d.iban, nomCoach: d.nomCoach, activite: d.activite, emailCoach: d.emailCoach })
+                    .catch(e => { console.error(e); setMailFlash('Erreur : ' + e.message) })
+                    .finally(() => { setSendingMail(false); setTimeout(() => setMailFlash(null), 6000) })
                 }}
-                style={{ ...S.btnPrimary, background:'#2563eb' }}
+                style={{ ...S.btnPrimary, background:'#2563eb', opacity: mailModalData.emailDest.trim() ? 1 : 0.5 }}
               >
-                ✉️ Ouvrir dans Mail
+                ✉️ Générer et envoyer
               </button>
             </div>
           </div>
