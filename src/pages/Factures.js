@@ -210,68 +210,37 @@ export default function Factures() {
     const pw = pdf.internal.pageSize.getWidth()
     pdf.addImage(imgData, 'JPEG', 0, 0, pw, (canvas.height * pw) / canvas.width)
     const fileName = `Facture_${facturePrint.numero}.pdf`
-    const pdfBlob  = pdf.output('blob')
-    const pdfFile  = new File([pdfBlob], fileName, { type: 'application/pdf' })
+    const pdfB64   = pdf.output('datauristring').split(',')[1] // base64 pur
 
     // ── HTML email ──────────────────────────────────────────────────────
     const htmlBody = buildEmailHtml({ prenom, numero: facturePrint.numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach })
 
-    // ── Stratégie 1 : Web Share (iOS/Android) ───────────────────────────
-    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-      await navigator.share({ files: [pdfFile], title: sujet, text: htmlBody.replace(/<[^>]+>/g, '') })
-      setMailFlash('✓ Partagé avec succès')
-    }
-    // ── Stratégie 2 : Fichier .eml (Mac/PC) ─────────────────────────────
-    else {
-      const pdfB64  = await blobToBase64(pdfBlob)
-      const emlContent = buildEml({ to: emailDest, subject: sujet, htmlBody, pdfBase64: pdfB64, pdfName: fileName })
-      const emlBlob = new Blob([emlContent], { type: 'message/rfc822' })
-      const emlUrl  = URL.createObjectURL(emlBlob)
-      const a = document.createElement('a'); a.href = emlUrl; a.download = `${fileName.replace('.pdf','')}.eml`; a.click()
-      setTimeout(() => URL.revokeObjectURL(emlUrl), 5000)
-      setMailFlash('✓ Fichier .eml téléchargé — double-cliquez pour ouvrir dans Mail')
-    }
+    // ── Appel Edge Function → Resend ────────────────────────────────────
+    const { supabase } = await import('../supabase')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch(
+      `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          to: emailDest,
+          subject: sujet,
+          html: htmlBody,
+          pdfBase64: pdfB64,
+          pdfName: fileName,
+          fromName: nomCoach,
+        }),
+      }
+    )
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.error || 'Erreur envoi')
 
+    setMailFlash('✓ Mail envoyé à ' + emailDest)
     if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
-  }
-
-  // ── Helpers email ─────────────────────────────────────────────────────
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1])
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-  }
-
-  function buildEml({ to, subject, htmlBody, pdfBase64, pdfName }) {
-    const boundary = `bound_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    const encodeB64 = str => btoa(unescape(encodeURIComponent(str)))
-    const htmlB64 = encodeB64(htmlBody)
-    const wrap = s => s.match(/.{1,76}/g).join('\r\n')
-    return [
-      'MIME-Version: 1.0',
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      `To: ${to}`,
-      `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
-      'X-Mailer: AWprepa',
-      '',
-      `--${boundary}`,
-      'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
-      '',
-      wrap(htmlB64),
-      '',
-      `--${boundary}`,
-      `Content-Type: application/pdf; name="${pdfName}"`,
-      'Content-Transfer-Encoding: base64',
-      `Content-Disposition: attachment; filename="${pdfName}"`,
-      '',
-      wrap(pdfBase64),
-      '',
-      `--${boundary}--`,
-    ].join('\r\n')
   }
 
   function buildEmailHtml({ prenom, numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach }) {
