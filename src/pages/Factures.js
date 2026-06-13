@@ -199,7 +199,7 @@ export default function Factures() {
   }
 
   async function genererEtEnvoyer({ emailDest, sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach }) {
-    // ── 1. Téléchargement automatique du PDF ────────────────────────────
+    // ── 1. Génération du PDF en base64 ──────────────────────────────────
     const { default: html2canvas } = await import('html2canvas')
     const { default: jsPDF }       = await import('jspdf')
     const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
@@ -207,34 +207,38 @@ export default function Factures() {
     const canvas  = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
     const imgData = canvas.toDataURL('image/jpeg', 0.92)
     const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const pw = pdf.internal.pageSize.getWidth()
+    const pw      = pdf.internal.pageSize.getWidth()
     pdf.addImage(imgData, 'JPEG', 0, 0, pw, (canvas.height * pw) / canvas.width)
-    const fileName = `Facture_${facturePrint.numero}.pdf`
-    pdf.save(fileName) // téléchargement auto
+    const fileName  = `Facture_${facturePrint.numero}.pdf`
+    const pdfBase64 = pdf.output('datauristring').split(',')[1] // base64 brut
 
-    // ── 2. Corps du mail (texte brut lisible) ───────────────────────────
-    const ibanBlock = iban
-      ? `\nRèglement par virement bancaire\nIBAN : ${iban}\nRéférence : Facture ${facturePrint.numero}${nomDest ? ` — ${nomDest}` : ''}\n`
-      : ''
-    const corps =
-`Bonjour${prenom ? ` ${prenom}` : ''},
+    // ── 2. Construction du HTML du mail ─────────────────────────────────
+    const htmlBody = buildEmailHtml({ prenom, numero: facturePrint.numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach })
 
-Veuillez trouver ci-joint la facture n°${facturePrint.numero} d'un montant de ${total} €, établie le ${dateEmission}.
-${ibanBlock}
-N'hésitez pas à me contacter si vous avez la moindre question.
+    // ── 3. Envoi via Edge Function Resend ────────────────────────────────
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch(
+      'https://ytdqyhajqxnmkwxehwmg.supabase.co/functions/v1/send-invoice',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          to:        emailDest,
+          subject:   sujet,
+          html:      htmlBody,
+          pdfBase64,
+          pdfName:   fileName,
+          fromName:  nomCoach || 'AWprepa',
+        }),
+      }
+    )
+    const result = await res.json()
+    if (!res.ok) throw new Error(result?.error || 'Erreur envoi mail')
 
-Bien cordialement,
-${nomCoach}
-${activite}${emailCoach ? `\n${emailCoach}` : ''}`
-
-    // ── 3. Ouverture Gmail compose (avec tout pré-rempli) ───────────────
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1`
-      + `&to=${encodeURIComponent(emailDest)}`
-      + `&su=${encodeURIComponent(sujet)}`
-      + `&body=${encodeURIComponent(corps)}`
-    window.open(gmailUrl, '_blank')
-
-    setMailFlash('✓ PDF téléchargé — Gmail ouvert, joignez le PDF et envoyez')
+    setMailFlash('✓ Mail envoyé avec la facture en pièce jointe !')
     if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
   }
 
