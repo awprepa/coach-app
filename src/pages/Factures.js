@@ -42,9 +42,6 @@ export default function Factures() {
   const [settingsForm, setSettingsForm]   = useState({})
   const [form, setForm]                   = useState(EMPTY_FORM())
   const [selectedGroupId, setSelectedGroupId] = useState(null) // groupe sélectionné dans le dropdown client
-  const [sendingMail, setSendingMail]     = useState(false)
-  const [mailFlash, setMailFlash]         = useState(null)   // message flash après envoi
-  const [mailModalData, setMailModalData] = useState(null)   // { sujet, corps, emailDest } — modale desktop
   const printRef = useRef()
 
   useEffect(() => { fetchAll() }, [])
@@ -162,84 +159,6 @@ export default function Factures() {
 
   function totalFacture(lignes) {
     return (lignes || []).reduce((s, l) => s + (parseFloat(l.prix) || 0) * (parseFloat(l.quantite) || 1), 0)
-  }
-
-  async function handleEnvoyerMail() {
-    if (!facturePrint || sendingMail) return
-
-    // ── Infos ───────────────────────────────────────────────────────────
-    const dest       = facturePrint.destinataire
-    const cli        = facturePrint.clients
-    const prenom     = dest?.nom?.split(' ')[0] || cli?.prenom || ''
-    const nomDest    = dest?.nom || (cli ? `${cli.prenom} ${cli.nom}` : '')
-    const emailDest  = dest?.email || cli?.email || ''
-    const total      = totalFacture(facturePrint.lignes).toFixed(2).replace('.', ',')
-    const nomCoach   = settings.facture_nom      || 'Arthur Wehrey'
-    const activite   = settings.facture_activite || 'Préparateur physique'
-    const emailCoach = settings.facture_email    || ''
-    const iban       = settings.facture_iban     || ''
-    const dateEmission = new Date(facturePrint.date_emission + 'T12:00:00')
-      .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-    const sujet = `Facture n°${facturePrint.numero} — Préparation physique`
-
-    // Si pas d'email connu, ouvrir la modale pour le saisir
-    if (!emailDest) {
-      setMailModalData({ sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach, emailDest: '', numero: facturePrint.numero, nomFichier: `Facture_${facturePrint.numero}.pdf` })
-      return
-    }
-
-    setSendingMail(true)
-    try {
-      await genererEtEnvoyer({ emailDest, sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach })
-    } catch (e) {
-      if (e?.name !== 'AbortError') { console.error('[mail]', e); setMailFlash('Erreur : ' + e.message) }
-    }
-    setSendingMail(false)
-    setTimeout(() => setMailFlash(null), 6000)
-  }
-
-  async function genererEtEnvoyer({ emailDest, sujet, prenom, nomDest, total, dateEmission, iban, nomCoach, activite, emailCoach }) {
-    // ── 1. Génération du PDF en base64 ──────────────────────────────────
-    const { default: html2canvas } = await import('html2canvas')
-    const { default: jsPDF }       = await import('jspdf')
-    const element = printRef.current?.querySelector('#invoice-print-wrap') || printRef.current
-    if (!element) throw new Error('Élément introuvable')
-    const canvas  = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-    const imgData = canvas.toDataURL('image/jpeg', 0.92)
-    const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const pw      = pdf.internal.pageSize.getWidth()
-    pdf.addImage(imgData, 'JPEG', 0, 0, pw, (canvas.height * pw) / canvas.width)
-    const fileName  = `Facture_${facturePrint.numero}.pdf`
-    const pdfBase64 = pdf.output('datauristring').split(',')[1] // base64 brut
-
-    // ── 2. Construction du HTML du mail ─────────────────────────────────
-    const htmlBody = buildEmailHtml({ prenom, numero: facturePrint.numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach })
-
-    // ── 3. Envoi via Edge Function Resend ────────────────────────────────
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch(
-      'https://ytdqyhajqxnmkwxehwmg.supabase.co/functions/v1/send-invoice',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          to:        emailDest,
-          subject:   sujet,
-          html:      htmlBody,
-          pdfBase64,
-          pdfName:   fileName,
-          fromName:  nomCoach || 'AWprepa',
-        }),
-      }
-    )
-    const result = await res.json()
-    if (!res.ok) throw new Error(result?.error || 'Erreur envoi mail')
-
-    setMailFlash('✓ Mail envoyé avec la facture en pièce jointe !')
-    if (facturePrint.statut === 'brouillon') updateStatut(facturePrint.id, 'envoyee')
   }
 
   function buildEmailHtml({ prenom, numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach }) {
@@ -724,18 +643,6 @@ export default function Factures() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <p style={{ ...S.sectionTitle, margin: 0 }}>Aperçu — Facture N° {facturePrint.numero}</p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              {mailFlash && (
-                <span style={{ fontSize: '0.78rem', color: mailFlash.startsWith('✓') ? '#15803d' : '#dc2626', background: mailFlash.startsWith('✓') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${mailFlash.startsWith('✓') ? '#bbf7d0' : '#fecaca'}`, borderRadius: 8, padding: '0.3rem 0.75rem', fontWeight: 600 }}>
-                  {mailFlash}
-                </span>
-              )}
-              <button
-                onClick={handleEnvoyerMail}
-                disabled={sendingMail}
-                style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem', background: '#2563eb', opacity: sendingMail ? 0.6 : 1 }}
-              >
-                {sendingMail ? '…' : '✉️'} {sendingMail ? 'Génération PDF…' : 'Envoyer par mail'}
-              </button>
               <button onClick={handlePrint} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.print()} Imprimer / PDF</button>
               <button onClick={() => setPrintId(null)} style={S.btnSecondary}>✕ Fermer</button>
             </div>
@@ -748,49 +655,6 @@ export default function Factures() {
         </div>
       )}
 
-      {/* ── Modale : email manquant ── */}
-      {mailModalData && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}
-          onClick={e => { if (e.target === e.currentTarget) setMailModalData(null) }}>
-          <div style={{ background:'white', borderRadius:18, padding:'1.75rem', maxWidth:420, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', gap:'1rem' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <p style={{ fontWeight:800, fontSize:'1rem', color:'#111', margin:0 }}>✉️ Adresse email du destinataire</p>
-              <button onClick={() => setMailModalData(null)} style={{ background:'none', border:'none', fontSize:'1.2rem', cursor:'pointer', color:'#9ca3af' }}>✕</button>
-            </div>
-            <p style={{ fontSize:'0.85rem', color:'#6b7280', margin:0 }}>
-              Aucun email n'est enregistré pour ce destinataire. Saisissez-le ici pour générer le mail, ou ajoutez-le à la fiche pour la prochaine fois.
-            </p>
-            <div>
-              <label style={S.label}>Email</label>
-              <input
-                type="email"
-                autoFocus
-                value={mailModalData.emailDest}
-                onChange={e => setMailModalData(d => ({ ...d, emailDest: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter' && mailModalData.emailDest.trim()) { const d = { ...mailModalData }; setMailModalData(null); setSendingMail(true); genererEtEnvoyer({ emailDest: d.emailDest.trim(), sujet: d.sujet, prenom: d.prenom, nomDest: d.nomDest, total: d.total, dateEmission: d.dateEmission, iban: d.iban, nomCoach: d.nomCoach, activite: d.activite, emailCoach: d.emailCoach }).catch(console.error).finally(() => setSendingMail(false)) } }}
-                style={S.input} placeholder="client@email.fr"
-              />
-            </div>
-            <div style={{ display:'flex', gap:'0.75rem', justifyContent:'flex-end' }}>
-              <button onClick={() => setMailModalData(null)} style={S.btnSecondary}>Annuler</button>
-              <button
-                disabled={!mailModalData.emailDest.trim()}
-                onClick={() => {
-                  const d = { ...mailModalData }
-                  setMailModalData(null)
-                  setSendingMail(true)
-                  genererEtEnvoyer({ emailDest: d.emailDest.trim(), sujet: d.sujet, prenom: d.prenom, nomDest: d.nomDest, total: d.total, dateEmission: d.dateEmission, iban: d.iban, nomCoach: d.nomCoach, activite: d.activite, emailCoach: d.emailCoach })
-                    .catch(e => { console.error(e); setMailFlash('Erreur : ' + e.message) })
-                    .finally(() => { setSendingMail(false); setTimeout(() => setMailFlash(null), 6000) })
-                }}
-                style={{ ...S.btnPrimary, background:'#2563eb', opacity: mailModalData.emailDest.trim() ? 1 : 0.5 }}
-              >
-                ✉️ Générer et envoyer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
