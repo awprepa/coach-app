@@ -1,4 +1,4 @@
-import { lazy, Suspense, Component, useState, useEffect, useCallback } from 'react'
+import { lazy, Suspense, Component, useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthGate from './AuthGate'
@@ -370,18 +370,39 @@ function OfflineBanner() {
   const [online, setOnline]   = useState(navigator.onLine)
   const [pending, setPending] = useState(0)
   const [syncing, setSyncing] = useState(false)
+  const [show, setShow]       = useState(false)
+  const timerRef              = useRef(null)
+  const wasShowingRef         = useRef(false)
 
   const refreshPending = useCallback(async () => {
     setPending(await pendingCount())
   }, [])
 
+  // Affiche le bandeau dès qu'il se passe quelque chose ; cache après 1,5 s une fois tout synchronisé
   useEffect(() => {
-    // Sync initial au démarrage
+    const isDone = online && !syncing && pending === 0
+    if (!isDone) {
+      clearTimeout(timerRef.current)
+      wasShowingRef.current = true
+      setShow(true)
+    } else if (wasShowingRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => {
+        setShow(false)
+        wasShowingRef.current = false
+      }, 1500)
+    }
+  }, [online, syncing, pending])
+
+  useEffect(() => {
+    // Au démarrage : flush + sync uniquement s'il y a des actions en attente
     if (navigator.onLine) {
-      setSyncing(true)
-      _flushQueue()
-        .then(() => syncDown())
-        .finally(() => { setSyncing(false); refreshPending() })
+      pendingCount().then(n => {
+        if (n > 0) setSyncing(true)
+        _flushQueue()
+          .then(() => syncDown())
+          .finally(() => { setSyncing(false); refreshPending() })
+      })
     }
 
     const onOnline  = () => { setOnline(true);  refreshPending() }
@@ -398,10 +419,11 @@ function OfflineBanner() {
       window.removeEventListener('offline',          onOffline)
       window.removeEventListener('aw:queue-updated', onQueue)
       window.removeEventListener('aw:synced',        onSynced)
+      clearTimeout(timerRef.current)
     }
   }, [refreshPending])
 
-  if (online && pending === 0 && !syncing) return null
+  if (!show) return null
 
   return (
     <div style={{
@@ -414,7 +436,7 @@ function OfflineBanner() {
         ? `📴 Hors ligne${pending > 0 ? ` — ${pending} action${pending > 1 ? 's' : ''} en attente` : ''}`
         : syncing
           ? '🔄 Synchronisation en cours…'
-          : `✓ ${pending} action${pending > 1 ? 's' : ''} synchronisée${pending > 1 ? 's' : ''}`
+          : '✓ Synchronisé'
       }
     </div>
   )
