@@ -367,77 +367,69 @@ class ChunkErrorBoundary extends Component {
 }
 
 function OfflineBanner() {
-  const [online, setOnline]   = useState(navigator.onLine)
-  const [pending, setPending] = useState(0)
-  const [syncing, setSyncing] = useState(false)
-  const [show, setShow]       = useState(false)
-  const timerRef              = useRef(null)
-  const wasShowingRef         = useRef(false)
+  const [msg, setMsg] = useState(null)   // null = caché
+  const timerRef = useRef(null)
 
-  const refreshPending = useCallback(async () => {
-    setPending(await pendingCount())
-  }, [])
-
-  // Affiche le bandeau dès qu'il se passe quelque chose ; cache après 1,5 s une fois tout synchronisé
   useEffect(() => {
-    const isDone = online && !syncing && pending === 0
-    if (!isDone) {
+    const show = (text, hideAfterMs) => {
       clearTimeout(timerRef.current)
-      wasShowingRef.current = true
-      setShow(true)
-    } else if (wasShowingRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => {
-        setShow(false)
-        wasShowingRef.current = false
-      }, 1500)
+      setMsg(text)
+      if (hideAfterMs != null) timerRef.current = setTimeout(() => setMsg(null), hideAfterMs)
     }
-  }, [online, syncing, pending])
 
-  useEffect(() => {
-    // Au démarrage : flush + sync uniquement s'il y a des actions en attente
+    // Démarrage : flush si des actions en attente, silencieux sinon
     if (navigator.onLine) {
-      pendingCount().then(n => {
-        if (n > 0) setSyncing(true)
-        _flushQueue()
-          .then(() => syncDown())
-          .finally(() => { setSyncing(false); refreshPending() })
+      pendingCount().then(async n => {
+        if (n > 0) {
+          show('🔄 Synchronisation en cours…')
+          await _flushQueue()
+          await syncDown()
+          show('✓ Synchronisé', 1500)
+        }
       })
     }
 
-    const onOnline  = () => { setOnline(true);  refreshPending() }
-    const onOffline = () => { setOnline(false);  refreshPending() }
-    const onQueue   = () => refreshPending()
-    const onSynced  = () => { setSyncing(false); refreshPending() }
+    const onOffline = async () => {
+      const n = await pendingCount()
+      show(`📴 Hors ligne${n > 0 ? ` — ${n} action${n > 1 ? 's' : ''} en attente` : ''}`)
+    }
+    const onOnline  = () => {
+      // supabase.js lance le flush+sync et dispatche aw:synced quand c'est fini
+      setMsg(prev => prev !== null ? '🔄 Synchronisation en cours…' : null)
+    }
+    const onSynced  = () => show('✓ Synchronisé', 1500)
+    const onQueue   = async () => {
+      if (!navigator.onLine) {
+        const n = await pendingCount()
+        setMsg(`📴 Hors ligne${n > 0 ? ` — ${n} action${n > 1 ? 's' : ''} en attente` : ''}`)
+      }
+    }
 
-    window.addEventListener('online',           onOnline)
     window.addEventListener('offline',          onOffline)
-    window.addEventListener('aw:queue-updated', onQueue)
+    window.addEventListener('online',           onOnline)
     window.addEventListener('aw:synced',        onSynced)
+    window.addEventListener('aw:queue-updated', onQueue)
     return () => {
-      window.removeEventListener('online',           onOnline)
       window.removeEventListener('offline',          onOffline)
-      window.removeEventListener('aw:queue-updated', onQueue)
+      window.removeEventListener('online',           onOnline)
       window.removeEventListener('aw:synced',        onSynced)
+      window.removeEventListener('aw:queue-updated', onQueue)
       clearTimeout(timerRef.current)
     }
-  }, [refreshPending])
+  }, [])
 
-  if (!show) return null
+  if (!msg) return null
 
+  const isOffline = msg.startsWith('📴')
+  const isSyncing = msg.startsWith('🔄')
   return (
     <div style={{
-      background: online ? (syncing ? '#1d4ed8' : '#15803d') : '#b45309',
+      background: isOffline ? '#b45309' : isSyncing ? '#1d4ed8' : '#15803d',
       color: '#fff', fontSize: '0.78rem', fontWeight: 600,
       textAlign: 'center', padding: '0.35rem 1rem',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     }}>
-      {!online
-        ? `📴 Hors ligne${pending > 0 ? ` — ${pending} action${pending > 1 ? 's' : ''} en attente` : ''}`
-        : syncing
-          ? '🔄 Synchronisation en cours…'
-          : '✓ Synchronisé'
-      }
+      {msg}
     </div>
   )
 }
