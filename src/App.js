@@ -1,9 +1,10 @@
-import { lazy, Suspense, Component, useState, useEffect } from 'react'
+import { lazy, Suspense, Component, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
 import APP_VERSION from './version'
+import { syncDown, _flushQueue, pendingCount } from './supabase'
 import { NotifProvider } from './context/NotifContext'
 import { TimerProvider } from './context/TimerContext'
 import { ClientThemeProvider } from './context/ClientThemeContext'
@@ -364,10 +365,66 @@ class ChunkErrorBoundary extends Component {
   }
 }
 
+function OfflineBanner() {
+  const [online, setOnline]   = useState(navigator.onLine)
+  const [pending, setPending] = useState(0)
+  const [syncing, setSyncing] = useState(false)
+
+  const refreshPending = useCallback(async () => {
+    setPending(await pendingCount())
+  }, [])
+
+  useEffect(() => {
+    // Sync initial au démarrage
+    if (navigator.onLine) {
+      setSyncing(true)
+      _flushQueue()
+        .then(() => syncDown())
+        .finally(() => { setSyncing(false); refreshPending() })
+    }
+
+    const onOnline  = () => { setOnline(true);  refreshPending() }
+    const onOffline = () => { setOnline(false);  refreshPending() }
+    const onQueue   = () => refreshPending()
+    const onSynced  = () => { setSyncing(false); refreshPending() }
+
+    window.addEventListener('online',           onOnline)
+    window.addEventListener('offline',          onOffline)
+    window.addEventListener('aw:queue-updated', onQueue)
+    window.addEventListener('aw:synced',        onSynced)
+    return () => {
+      window.removeEventListener('online',           onOnline)
+      window.removeEventListener('offline',          onOffline)
+      window.removeEventListener('aw:queue-updated', onQueue)
+      window.removeEventListener('aw:synced',        onSynced)
+    }
+  }, [refreshPending])
+
+  if (online && pending === 0 && !syncing) return null
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9990,
+      background: online ? (syncing ? '#1d4ed8' : '#15803d') : '#b45309',
+      color: '#fff', fontSize: '0.78rem', fontWeight: 600,
+      textAlign: 'center', padding: '0.35rem 1rem',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}>
+      {!online
+        ? `📴 Hors ligne${pending > 0 ? ` — ${pending} action${pending > 1 ? 's' : ''} en attente` : ''}`
+        : syncing
+          ? '🔄 Synchronisation en cours…'
+          : `✓ ${pending} action${pending > 1 ? 's' : ''} synchronisée${pending > 1 ? 's' : ''}`
+      }
+    </div>
+  )
+}
+
 function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <OfflineBanner />
       <BanniereNavigateur />
       <IOSInstallWall />
       <GlobalInstallGuide />

@@ -1,33 +1,35 @@
-// ── AWprepa Service Worker v13 ────────────────────────────────────────────────
+// ── AWprepa Service Worker v14 ────────────────────────────────────────────────
 // Stratégies :
 //   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
 //   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
 //   • API Supabase GET     → network-first (données fraîches), fallback cache si hors-ligne
-//   • API Supabase POST/PATCH/DELETE → réseau uniquement (mutations)
-// IMPORTANT : stale-while-revalidate supprimé pour Supabase — il causait l'affichage
-// de données obsolètes (wellness "non rempli", charges perdues) au retour dans l'app.
+// v14 : pre-cache TOUS les chunks via asset-manifest.json pour navigation offline complète
 
-const CACHE_SHELL   = 'aw-shell-v13'
-const CACHE_API     = 'aw-api-v13'
-const CACHE_PAGES   = 'aw-pages-v13'
+const CACHE_SHELL   = 'aw-shell-v14'
+const CACHE_API     = 'aw-api-v14'
+const CACHE_PAGES   = 'aw-pages-v14'
 
-// ── Install : précache le shell de l'app ─────────────────────────────────────
+// ── Install : précache l'intégralité du bundle via asset-manifest.json ────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_SHELL).then(async cache => {
-      // Récupère la page principale et capture tous les assets (JS, CSS) qu'elle référence
-      const res  = await fetch('/', { credentials: 'same-origin' })
-      const html = await res.clone().text()
-      await cache.put('/', res)
+      // 1. Page principale
+      const res = await fetch('/', { credentials: 'same-origin' })
+      await cache.put('/', res.clone())
 
-      // Extrait les URLs de scripts et styles depuis le HTML
-      const assetUrls = []
-      const re = /(?:src|href)="(\/static\/[^"]+)"/g
-      let m
-      while ((m = re.exec(html)) !== null) assetUrls.push(m[1])
-
-      // Met en cache chaque asset en parallèle (erreurs silencieuses)
-      await Promise.allSettled(assetUrls.map(url => cache.add(url)))
+      // 2. Tous les assets listés dans asset-manifest.json (JS chunks, CSS, images)
+      try {
+        const manifestRes = await fetch('/asset-manifest.json')
+        const manifest    = await manifestRes.json()
+        // Le manifest a { files: { 'main.js': '/static/js/main.xxx.js', ... } }
+        const urls = Object.values(manifest.files || manifest)
+          .filter(u => typeof u === 'string' && u.startsWith('/'))
+        await Promise.allSettled(urls.map(url =>
+          fetch(url, { credentials: 'same-origin' })
+            .then(r => r.ok ? cache.put(url, r) : null)
+            .catch(() => null)
+        ))
+      } catch {}
     })
   )
   self.skipWaiting()
@@ -35,7 +37,7 @@ self.addEventListener('install', event => {
 
 // ── Activate : purge les anciens caches + force rechargement des pages ouvertes ─
 self.addEventListener('activate', event => {
-  const KEEP = [CACHE_SHELL, CACHE_API, CACHE_PAGES]
+  const KEEP = ['aw-shell-v14', 'aw-api-v14', 'aw-pages-v14']
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k))))
