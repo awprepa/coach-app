@@ -21,8 +21,7 @@ const NAV = [
   { to: '/gps',         icon: 'gps',       label: 'GPS' },
   { to: '/tests',       icon: 'tests',     label: 'Tests' },
   { to: '/messages',    icon: 'messages',  label: 'Messagerie' },
-  { to: '/paiements',   icon: 'paiements', label: 'Paiements' },
-  { to: '/factures',    icon: 'factures',  label: 'Factures' },
+  { to: '/factures',    icon: 'factures',  label: 'Facturation' },
 ]
 
 export default function CoachNav() {

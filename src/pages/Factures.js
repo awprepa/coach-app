@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
 
 /* ── Icônes SVG ─────────────────────────────────────────────────────────── */
@@ -41,21 +41,47 @@ export default function Factures() {
   const [printId, setPrintId]             = useState(null)
   const [settingsForm, setSettingsForm]   = useState({})
   const [form, setForm]                   = useState(EMPTY_FORM())
-  const [selectedGroupId, setSelectedGroupId] = useState(null) // groupe sélectionné dans le dropdown client
+  const [selectedGroupId, setSelectedGroupId] = useState(null)
   const printRef = useRef()
+
+  // ── Paiements ────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab]             = useState('factures')
+  const [paiements, setPaiements]             = useState([])
+  const [pFilterClient, setPFilterClient]     = useState('tous')
+  const [pFilterStatut, setPFilterStatut]     = useState('tous')
+  const [pModal, setPModal]                   = useState(null)
+  const [pSaving, setPSaving]                 = useState(false)
+  const [pDeleteConfirm, setPDeleteConfirm]   = useState(null)
+  const [pForm, setPForm]                     = useState({ client_id: '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
 
   useEffect(() => { fetchAll() }, [])
 
+  const loadPaiements = useCallback(async () => {
+    const { data } = await supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false })
+    setPaiements(data || [])
+  }, [])
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    paiements.forEach(async p => {
+      if (p.statut === 'en_attente' && p.date_echeance && p.date_echeance < today) {
+        await supabase.from('paiements').update({ statut: 'en_retard' }).eq('id', p.id)
+      }
+    })
+  }, [paiements])
+
   async function fetchAll() {
-    const [{ data: f }, { data: c }, { data: s }, { data: cats }] = await Promise.all([
+    const [{ data: f }, { data: c }, { data: s }, { data: cats }, { data: pays }] = await Promise.all([
       supabase.from('factures').select('*, clients(prenom, nom, email)').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, prenom, nom, email, categorie_id').order('nom'),
       supabase.from('app_settings').select('key, value').in('key', SETTINGS_KEYS),
       supabase.from('categories').select('id, nom').order('nom'),
+      supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false }),
     ])
     setFactures(f || [])
     setClients(c || [])
     setCategories(cats || [])
+    setPaiements(pays || [])
     const map = {}
     ;(s || []).forEach(r => { map[r.key] = r.value })
     setSettings(map)
@@ -159,6 +185,44 @@ export default function Factures() {
 
   function totalFacture(lignes) {
     return (lignes || []).reduce((s, l) => s + (parseFloat(l.prix) || 0) * (parseFloat(l.quantite) || 1), 0)
+  }
+
+  // ── Fonctions paiements ──────────────────────────────────────────────────
+  function openNewPaiement() {
+    setPForm({ client_id: clients[0]?.id || '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
+    setPModal('new')
+  }
+
+  function openEditPaiement(p) {
+    setPForm({ client_id: p.client_id, montant: p.montant, description: p.description || '', date_echeance: p.date_echeance || '', date_paiement: p.date_paiement || '', statut: p.statut })
+    setPModal(p)
+  }
+
+  async function savePaiement() {
+    if (!pForm.client_id || !pForm.montant) return
+    setPSaving(true)
+    const payload = { client_id: pForm.client_id, montant: parseFloat(pForm.montant), description: pForm.description || null, date_echeance: pForm.date_echeance || null, date_paiement: pForm.date_paiement || null, statut: pForm.statut }
+    if (pModal === 'new') {
+      await supabase.from('paiements').insert(payload)
+    } else {
+      await supabase.from('paiements').update(payload).eq('id', pModal.id)
+    }
+    setPSaving(false)
+    setPModal(null)
+    loadPaiements()
+  }
+
+  async function updateStatutPaiement(id, statut) {
+    const updates = { statut }
+    if (statut === 'paye') updates.date_paiement = new Date().toISOString().split('T')[0]
+    await supabase.from('paiements').update(updates).eq('id', id)
+    loadPaiements()
+  }
+
+  async function deletePaiement(id) {
+    await supabase.from('paiements').delete().eq('id', id)
+    setPDeleteConfirm(null)
+    loadPaiements()
   }
 
   function buildEmailHtml({ prenom, numero, total, dateEmission, iban, nomDest, nomCoach, activite, emailCoach }) {
@@ -306,20 +370,45 @@ export default function Factures() {
 
   if (loading) return <div style={S.page}><p style={{ color: '#9ca3af' }}>Chargement…</p></div>
 
+  const pFiltered    = paiements.filter(p => (pFilterClient === 'tous' || p.client_id === pFilterClient) && (pFilterStatut === 'tous' || p.statut === pFilterStatut))
+  const pTotalAttendu = pFiltered.reduce((s, p) => s + parseFloat(p.montant || 0), 0)
+  const pTotalPercu   = pFiltered.filter(p => p.statut === 'paye').reduce((s, p) => s + parseFloat(p.montant || 0), 0)
+  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
+
+  const PSTATUTS = [
+    { key: 'en_attente', label: 'En attente', color: '#f59e0b', bg: '#fef3c7' },
+    { key: 'paye',       label: 'Payé',       color: '#22c55e', bg: '#dcfce7' },
+    { key: 'en_retard',  label: 'En retard',  color: '#ef4444', bg: '#fee2e2' },
+  ]
+
   return (
     <div style={S.page}>
 
       {/* ── En-tête ── */}
       <div style={S.header}>
-        <div>
-          <h1 style={S.title}>Factures</h1>
-          <p style={S.sub}>{factures.length} facture{factures.length !== 1 ? 's' : ''} · {factures.filter(f=>f.statut==='payee').length} payée{factures.filter(f=>f.statut==='payee').length!==1?'s':''}</p>
-        </div>
+        <h1 style={S.title}>Facturation</h1>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
-          <button onClick={openCreate} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouvelle facture</button>
+          {activeTab === 'factures' && <>
+            <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
+            <button onClick={openCreate} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouvelle facture</button>
+          </>}
+          {activeTab === 'paiements' && (
+            <button onClick={openNewPaiement} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouveau paiement</button>
+          )}
         </div>
       </div>
+
+      {/* ── Onglets ── */}
+      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: '#f3f4f6', borderRadius: 10, padding: '0.25rem' }}>
+        {[{ key: 'factures', label: '🧾 Factures' }, { key: 'paiements', label: '💳 Paiements' }].map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{ flex: 1, padding: '0.55rem 1rem', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', transition: 'all .15s', background: activeTab === t.key ? '#333' : 'transparent', color: activeTab === t.key ? '#e4f816' : '#6b7280' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ══ ONGLET FACTURES ══════════════════════════════════════════════════ */}
+      {activeTab === 'factures' && <>
 
       {/* ── Paramètres coach ── */}
       {showSettings && (
@@ -654,6 +743,140 @@ export default function Factures() {
           </div>
         </div>
       )}
+
+      </> /* fin onglet factures */ }
+
+      {/* ══ ONGLET PAIEMENTS ══════════════════════════════════════════════════ */}
+      {activeTab === 'paiements' && <>
+
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          {[
+            { val: `${pTotalPercu.toFixed(0)} €`,   label: 'Perçu',      color: '#22c55e' },
+            { val: `${(pTotalAttendu - pTotalPercu).toFixed(0)} €`, label: 'En attente', color: '#f59e0b' },
+            { val: pFiltered.filter(p => p.statut === 'en_retard').length, label: 'En retard', color: '#ef4444' },
+            { val: `${pTotalAttendu.toFixed(0)} €`, label: 'Total',      color: '#111827' },
+          ].map((k, i) => (
+            <div key={i} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: '1rem 1.25rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: k.color }}>{k.val}</div>
+              <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2, fontWeight: 500 }}>{k.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filtres */}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+          <select style={{ ...S.input, width: 'auto', cursor: 'pointer' }} value={pFilterClient} onChange={e => setPFilterClient(e.target.value)}>
+            <option value="tous">Tous les clients</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
+          </select>
+          <select style={{ ...S.input, width: 'auto', cursor: 'pointer' }} value={pFilterStatut} onChange={e => setPFilterStatut(e.target.value)}>
+            <option value="tous">Tous les statuts</option>
+            {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </div>
+
+        {/* Liste */}
+        {pFiltered.length === 0 ? (
+          <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💳</div>
+            <div style={{ fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>Aucun paiement</div>
+            <button style={{ ...S.btnPrimary, display:'inline-flex', alignItems:'center', gap:'0.4rem' }} onClick={openNewPaiement}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter</button>
+          </div>
+        ) : (
+          <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f9fafb' }}>
+                  {['Client', 'Description', 'Montant', 'Échéance', 'Paiement', 'Statut', ''].map(h => (
+                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pFiltered.map(p => {
+                  const st = PSTATUTS.find(s => s.key === p.statut) || PSTATUTS[0]
+                  return (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: 600, color: '#111' }}>{p.clients?.prenom} {p.clients?.nom}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{p.description || <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '1rem', fontWeight: 700, color: '#111' }}>{parseFloat(p.montant).toFixed(0)} €</td>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{fmtDate(p.date_echeance)}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{fmtDate(p.date_paiement)}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <select value={p.statut} onChange={e => updateStatutPaiement(p.id, e.target.value)}
+                          style={{ padding: '0.25rem 0.5rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', outline: 'none', background: st.bg, color: st.color, border: `1px solid ${st.color}40` }}>
+                          {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button onClick={() => openEditPaiement(p)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 6, padding: '0.3rem 0.5rem', cursor: 'pointer' }}>✏️</button>
+                          {pDeleteConfirm === p.id ? <>
+                            <button onClick={() => deletePaiement(p.id)} style={{ background: '#fef2f2', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', color: '#ef4444', fontWeight: 700 }}>Oui</button>
+                            <button onClick={() => setPDeleteConfirm(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', color: '#6b7280', fontWeight: 700 }}>Non</button>
+                          </> : (
+                            <button onClick={() => setPDeleteConfirm(p.id)} style={{ background: '#fef2f2', border: 'none', borderRadius: 6, padding: '0.3rem 0.5rem', cursor: 'pointer' }}>🗑️</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Modal paiement */}
+        {pModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+            onClick={() => setPModal(null)}>
+            <div style={{ background: 'white', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 500, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+              onClick={e => e.stopPropagation()}>
+              <p style={{ fontWeight: 700, fontSize: '1.05rem', color: '#111', margin: '0 0 1.25rem' }}>{pModal === 'new' ? 'Nouveau paiement' : 'Modifier le paiement'}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div>
+                  <label style={S.label}>Client *</label>
+                  <select style={S.input} value={pForm.client_id} onChange={e => setPForm(p => ({ ...p, client_id: e.target.value }))}>
+                    <option value="">Choisir…</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label}>Montant (€) *</label>
+                  <input style={S.input} type="number" min={0} step={0.01} value={pForm.montant} onChange={e => setPForm(p => ({ ...p, montant: e.target.value }))} placeholder="150" />
+                </div>
+                <div>
+                  <label style={S.label}>Description</label>
+                  <input style={S.input} value={pForm.description} onChange={e => setPForm(p => ({ ...p, description: e.target.value }))} placeholder="Mensualité mai, Bilan…" />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={S.label}>Date d'échéance</label>
+                    <input style={S.input} type="date" value={pForm.date_echeance} onChange={e => setPForm(p => ({ ...p, date_echeance: e.target.value }))} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={S.label}>Date de paiement</label>
+                    <input style={S.input} type="date" value={pForm.date_paiement} onChange={e => setPForm(p => ({ ...p, date_paiement: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label style={S.label}>Statut</label>
+                  <select style={S.input} value={pForm.statut} onChange={e => setPForm(p => ({ ...p, statut: e.target.value }))}>
+                    {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button style={S.btnSecondary} onClick={() => setPModal(null)}>Annuler</button>
+                <button style={{ ...S.btnPrimary, opacity: pSaving ? 0.7 : 1 }} onClick={savePaiement} disabled={pSaving}>{pSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </> /* fin onglet paiements */ }
 
     </div>
   )

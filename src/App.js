@@ -53,7 +53,6 @@ const SeanceProjection     = lazy(() => import('./pages/SeanceProjection'))
 const ImportClientExcel    = lazy(() => import('./pages/ImportClientExcel'))
 const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
-const Paiements            = lazy(() => import('./pages/Paiements'))
 const FicheGroupe          = lazy(() => import('./pages/FicheGroupe'))
 const Factures             = lazy(() => import('./pages/Factures'))
 // ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
@@ -425,7 +424,6 @@ function App() {
               <Route path="/tests"                       element={<WithNav><Tests /></WithNav>} />
               <Route path="/messages"                    element={<WithNav><CoachMessages /></WithNav>} />
               <Route path="/charge"                      element={<WithNav><ChargeEntrainement /></WithNav>} />
-              <Route path="/paiements"                   element={<WithNav><Paiements /></WithNav>} />
               <Route path="/groupe/:id"                  element={<WithNav><FicheGroupe /></WithNav>} />
               <Route path="/groupe/:groupeId/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/factures"                        element={<WithNav><Factures /></WithNav>} />
