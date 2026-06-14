@@ -307,6 +307,7 @@ function WithNav({ children }) {
   return (
     <>
       <CoachNav />
+      <OfflineBanner />
       {children}
       <div style={{ textAlign: 'center', padding: '18px 0 10px', color: '#c0c4cc', fontSize: '0.68rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', letterSpacing: '.03em' }}>
         AWprepa v{APP_VERSION}
@@ -404,7 +405,6 @@ function OfflineBanner() {
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9990,
       background: online ? (syncing ? '#1d4ed8' : '#15803d') : '#b45309',
       color: '#fff', fontSize: '0.78rem', fontWeight: 600,
       textAlign: 'center', padding: '0.35rem 1rem',
@@ -424,7 +424,6 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <OfflineBanner />
       <BanniereNavigateur />
       <IOSInstallWall />
       <GlobalInstallGuide />
