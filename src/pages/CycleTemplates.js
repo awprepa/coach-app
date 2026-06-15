@@ -20,6 +20,10 @@ export default function CycleTemplates() {
   const [sendForm, setSendForm] = useState({ client_id: '', date_debut: '', nom: '' })
   const [sending, setSending] = useState(false)
   const [sendSuccess, setSendSuccess] = useState(null) // nom du client
+  const [sendMode, setSendMode] = useState('nouveau') // 'nouveau' | 'ecraser'
+  const [clientProgrammes, setClientProgrammes] = useState([])
+  const [programmeToOverwrite, setProgrammeToOverwrite] = useState(null)
+  const [loadingProgrammes, setLoadingProgrammes] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -122,6 +126,9 @@ export default function CycleTemplates() {
     setSendModal(t)
     setSendForm({ client_id: '', date_debut: '', nom: t.nom })
     setSendSuccess(null)
+    setSendMode('nouveau')
+    setClientProgrammes([])
+    setProgrammeToOverwrite(null)
     setClientsLoading(true)
     const { data } = await supabase
       .from('clients')
@@ -131,34 +138,54 @@ export default function CycleTemplates() {
     setClientsLoading(false)
   }
 
+  async function fetchClientProgrammes(clientId) {
+    setLoadingProgrammes(true)
+    setProgrammeToOverwrite(null)
+    const { data } = await supabase
+      .from('programmes')
+      .select('id, nom, semaines, date_debut')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+    setClientProgrammes(data || [])
+    setLoadingProgrammes(false)
+  }
+
   async function sendToClient() {
     if (!sendForm.client_id || !sendModal) return
+    if (sendMode === 'ecraser' && !programmeToOverwrite) return
     setSending(true)
 
-    // 1. Créer le programme pour le client
-    const { data: prog, error } = await supabase
-      .from('programmes')
-      .insert({
-        nom: sendForm.nom || sendModal.nom,
-        semaines: sendModal.semaines,
-        client_id: sendForm.client_id,
-        date_debut: sendForm.date_debut || null,
-      })
-      .select()
-      .single()
+    let progId
 
-    if (error) { alert(error.message); setSending(false); return }
+    if (sendMode === 'nouveau') {
+      const { data: prog, error } = await supabase
+        .from('programmes')
+        .insert({ nom: sendForm.nom || sendModal.nom, semaines: sendModal.semaines, client_id: sendForm.client_id, date_debut: sendForm.date_debut || null })
+        .select().single()
+      if (error) { alert(error.message); setSending(false); return }
+      progId = prog.id
+    } else {
+      // Écraser le cycle existant
+      progId = programmeToOverwrite.id
+      await supabase.from('programmes')
+        .update({ nom: sendForm.nom || sendModal.nom, semaines: sendModal.semaines, date_debut: sendForm.date_debut || programmeToOverwrite.date_debut })
+        .eq('id', progId)
+      // Supprimer les séances existantes (exercices supprimés en cascade)
+      const { data: oldSeances } = await supabase.from('seances').select('id').eq('programme_id', progId)
+      const oldIds = (oldSeances || []).map(s => s.id)
+      if (oldIds.length > 0) {
+        await supabase.from('exercices').delete().in('seance_id', oldIds)
+        await supabase.from('seances').delete().eq('programme_id', progId)
+      }
+    }
 
-    // 2. Dupliquer les séances du template
-    const seances = [...(sendModal.programme_template_seances || [])]
-      .sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
-
+    // Insérer les séances du template
+    const seances = [...(sendModal.programme_template_seances || [])].sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
     for (const [idx, ts] of seances.entries()) {
       const { data: newSeance } = await supabase
         .from('seances')
-        .insert({ programme_id: prog.id, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [] })
-        .select()
-        .single()
+        .insert({ programme_id: progId, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [] })
+        .select().single()
       if (newSeance && ts.exercices?.length > 0) {
         await supabase.from('exercices').insert(
           ts.exercices.map(ex => ({
@@ -174,7 +201,6 @@ export default function CycleTemplates() {
           }))
         )
       }
-      // RPE cibles
       const rpeCibles = ts.rpe_cibles || {}
       if (newSeance && Object.keys(rpeCibles).length > 0) {
         await supabase.from('rpe_seances').insert(
@@ -186,12 +212,7 @@ export default function CycleTemplates() {
     const client = clients.find(c => c.id === sendForm.client_id)
     setSendSuccess(`${client?.prenom} ${client?.nom}`)
     setSending(false)
-
-    // Naviguer vers le programme créé après 1.5s
-    setTimeout(() => {
-      setSendModal(null)
-      navigate(`/programme/${prog.id}`)
-    }, 1500)
+    setTimeout(() => { setSendModal(null); navigate(`/programme/${progId}`) }, 1500)
   }
 
   function addSeance() {
@@ -345,10 +366,10 @@ export default function CycleTemplates() {
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
                 <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827', marginBottom: '0.4rem' }}>
-                  Cycle envoyé !
+                  {sendMode === 'ecraser' ? 'Cycle mis à jour !' : 'Cycle envoyé !'}
                 </div>
                 <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  « {sendModal.nom} » a été créé pour <strong>{sendSuccess}</strong>
+                  « {sendModal.nom} » {sendMode === 'ecraser' ? 'a été appliqué à' : 'a été créé pour'} <strong>{sendSuccess}</strong>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
                   Redirection vers le programme…
@@ -394,11 +415,11 @@ export default function CycleTemplates() {
                   {clientsLoading ? (
                     <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.5rem 0' }}>Chargement…</div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '180px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem' }}>
                       {clients.map(c => (
                         <button
                           key={c.id}
-                          onClick={() => setSendForm(f => ({ ...f, client_id: c.id }))}
+                          onClick={() => { setSendForm(f => ({ ...f, client_id: c.id })); fetchClientProgrammes(c.id) }}
                           style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '0.6rem 0.75rem', borderRadius: '6px', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -427,18 +448,83 @@ export default function CycleTemplates() {
                   )}
                 </div>
 
+                {/* Mode : nouveau cycle ou écraser l'existant */}
+                {sendForm.client_id && (
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Mode d'application</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {[
+                        { key: 'nouveau',  label: '✨ Nouveau cycle' },
+                        { key: 'ecraser', label: '🔄 Écraser le cycle actuel' },
+                      ].map(m => (
+                        <button
+                          key={m.key}
+                          onClick={() => setSendMode(m.key)}
+                          style={{
+                            flex: 1, padding: '0.55rem 0.5rem', borderRadius: '10px', border: '1.5px solid',
+                            fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer',
+                            borderColor: sendMode === m.key ? '#1a1a1a' : '#e5e7eb',
+                            background: sendMode === m.key ? '#1a1a1a' : 'white',
+                            color: sendMode === m.key ? '#e4f816' : '#374151',
+                          }}
+                        >{m.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Picker du cycle à écraser */}
+                {sendMode === 'ecraser' && sendForm.client_id && (
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Cycle à remplacer *</label>
+                    {loadingProgrammes ? (
+                      <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.4rem 0' }}>Chargement…</div>
+                    ) : clientProgrammes.length === 0 ? (
+                      <div style={{ color: '#ef4444', fontSize: '0.82rem', padding: '0.4rem 0' }}>Ce client n'a pas encore de cycle.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '160px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem' }}>
+                        {clientProgrammes.map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => setProgrammeToOverwrite(p)}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '0.6rem 0.75rem', borderRadius: '6px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                              background: programmeToOverwrite?.id === p.id ? '#1a1a1a' : 'transparent',
+                            }}
+                          >
+                            <span style={{ fontWeight: '600', fontSize: '0.875rem', color: programmeToOverwrite?.id === p.id ? '#e4f816' : '#111827' }}>
+                              {p.nom}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: programmeToOverwrite?.id === p.id ? 'rgba(228,248,22,0.7)' : '#6b7280' }}>
+                              {p.semaines} sem.
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {programmeToOverwrite && (
+                      <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '0.4rem', padding: '0.4rem 0.75rem', background: '#fef3c7', borderRadius: '8px' }}>
+                        ⚠️ Les séances et exercices de « {programmeToOverwrite.nom} » seront effacés et remplacés par le template.
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                   <button onClick={() => setSendModal(null)} style={{ ...S.btnSecondary, flex: 1 }}>Annuler</button>
                   <button
                     onClick={sendToClient}
-                    disabled={!sendForm.client_id || sending}
+                    disabled={!sendForm.client_id || sending || (sendMode === 'ecraser' && !programmeToOverwrite)}
                     style={{
                       ...S.btnPrimary, flex: 2,
-                      opacity: !sendForm.client_id || sending ? 0.5 : 1,
-                      cursor: !sendForm.client_id || sending ? 'not-allowed' : 'pointer',
+                      opacity: (!sendForm.client_id || sending || (sendMode === 'ecraser' && !programmeToOverwrite)) ? 0.5 : 1,
+                      cursor: (!sendForm.client_id || sending || (sendMode === 'ecraser' && !programmeToOverwrite)) ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {sending ? 'Création en cours…' : '📤 Envoyer le cycle'}
+                    {sending
+                      ? (sendMode === 'ecraser' ? 'Mise à jour…' : 'Création en cours…')
+                      : sendMode === 'ecraser' ? '🔄 Écraser le cycle' : '📤 Envoyer le cycle'}
                   </button>
                 </div>
               </>
