@@ -1839,43 +1839,16 @@ export default function Seance() {
       <div style={{ ...styles.card, marginTop: '1rem' }}>
         <p style={styles.sectionTitle}>Ajouter un exercice</p>
 
-        {/* Recherche bibliothèque */}
-        <div style={{ marginBottom: '0.875rem', position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              value={biblioSearch}
-              onChange={e => { setBiblioSearch(e.target.value); searchBiblio(e.target.value); setShowFullLibrary(false) }}
-              placeholder="Chercher dans la bibliothèque..."
-              style={{ ...styles.formInput, flex: 1 }}
-            />
-            <button type="button" onClick={() => showFullLibrary ? setShowFullLibrary(false) : openFullLibrary()}
-              style={{ ...styles.btnSecondary, whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '0.55rem 0.875rem' }}>
-              {showFullLibrary ? '✕ Fermer' : 'Voir tout'}
-            </button>
-            {form.bibliotheque_id && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ Lié</span>
-            )}
-          </div>
-
-          {/* Résultats recherche en temps réel */}
-          {biblioResults.length > 0 && !showFullLibrary && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, marginTop: '4px', overflow: 'hidden' }}>
-              {biblioResults.map(ex => (
-                <div key={ex.id} onClick={() => selectFromBiblio(ex)}
-                  style={{ padding: '0.5rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: '0.875rem', color: '#333333', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                >
-                  {ex.image_url
-                    ? <img src={ex.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
-                    : <div style={{ width: 36, height: 36, background: '#f3f4f6', borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>💪</div>
-                  }
-                  <span style={{ flex: 1 }}>{ex.nom}</span>
-                  {ex.categorie && <span style={{ color: '#9ca3af', fontSize: '0.75rem', fontWeight: '500' }}>{ex.categorie}</span>}
-                </div>
-              ))}
-            </div>
+        {/* Bibliothèque — bouton unique */}
+        <div style={{ marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button type="button" onClick={() => showFullLibrary ? setShowFullLibrary(false) : openFullLibrary()}
+            style={{ ...styles.btnSecondary, whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '0.55rem 0.875rem' }}>
+            {showFullLibrary ? '✕ Fermer la bibliothèque' : '📚 Choisir dans la bibliothèque'}
+          </button>
+          {form.bibliotheque_id && (
+            <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ Lié</span>
           )}
+        </div>
 
           {/* Panel bibliothèque complète */}
           {showFullLibrary && (
