@@ -1843,7 +1843,7 @@ export default function Seance() {
         <div style={{ marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button type="button" onClick={() => showFullLibrary ? setShowFullLibrary(false) : openFullLibrary()}
             style={{ ...styles.btnSecondary, whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '0.55rem 0.875rem' }}>
-            {showFullLibrary ? '✕ Fermer la bibliothèque' : '📚 Choisir dans la bibliothèque'}
+            {showFullLibrary ? '✕ Fermer la bibliothèque' : 'Choisir dans la bibliothèque'}
           </button>
           {form.bibliotheque_id && (
             <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ Lié</span>
