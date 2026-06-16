@@ -7,11 +7,11 @@ import usePageFade from '../../hooks/usePageFade'
 function toISO(date) { return date.toISOString().slice(0, 10) }
 
 const MEAL_LABELS = {
-  petit_dej: { label: 'Petit-déj', emoji: '🥐' },
-  dejeuner:  { label: 'Déjeuner',  emoji: '🍽️' },
-  collation: { label: 'Collation', emoji: '🍎' },
-  diner:     { label: 'Dîner',     emoji: '🌙' },
-  collation_2: { label: 'Collation 2', emoji: '🍌' },
+  petit_dej:   { label: 'Petit-déj',   color: '#f59e0b' },
+  dejeuner:    { label: 'Déjeuner',    color: '#3b82f6' },
+  collation:   { label: 'Collation',   color: '#22c55e' },
+  diner:       { label: 'Dîner',       color: '#8b5cf6' },
+  collation_2: { label: 'Collation 2', color: '#f97316' },
 }
 
 const TYPE_JOUR_LABELS = {
@@ -196,7 +196,6 @@ export default function NutritionPlanClient() {
       </div>
       <div style={S.content}>
         <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-          <p style={{ fontSize: '2rem', margin: '0 0 0.75rem' }}>🥗</p>
           <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Aucun plan actif</p>
           <p style={{ color: '#6b7280', fontSize: '0.83rem', lineHeight: 1.5, margin: 0 }}>
             Ton coach n'a pas encore activé de plan nutritionnel pour toi.
@@ -335,7 +334,7 @@ export default function NutritionPlanClient() {
               meals.map(meal => {
                 const log = logs.find(l => l.meal_id === meal.id)
                 const statut = log?.statut || null
-                const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, emoji: '🍴' }
+                const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#9ca3af' }
                 const foods = (meal.nutrition_plan_foods || []).sort((a, b) => a.ordre - b.ordre)
                 const [expanded, setExpanded] = useState(false)
 
@@ -343,7 +342,7 @@ export default function NutritionPlanClient() {
                   <div key={meal.id} style={{ ...S.mealCard, borderLeft: `3px solid ${statut === 'fait' ? '#16a34a' : statut === 'hors_plan' ? '#d97706' : statut === 'saute' ? '#ef4444' : '#e5e7eb'}` }}>
                     {/* En-tête repas */}
                     <button onClick={() => setExpanded(v => !v)} style={S.mealHeader}>
-                      <span style={{ fontSize: '1.2rem' }}>{ml.emoji}</span>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
                       <div style={{ flex: 1, textAlign: 'left' }}>
                         <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</div>
                         <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
@@ -443,10 +442,10 @@ export default function NutritionPlanClient() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {(day.nutrition_plan_meals || []).sort((a, b) => a.ordre - b.ordre).map(meal => {
-                    const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, emoji: '🍴' }
+                    const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#9ca3af' }
                     return (
                       <div key={meal.id} style={S.weekMealRow}>
-                        <span style={{ fontSize: '1rem', flexShrink: 0 }}>{ml.emoji}</span>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
                           <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</span>
                           <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>

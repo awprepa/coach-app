@@ -165,7 +165,7 @@ export default function NutritionCoach() {
 
         {/* Header */}
         <div style={S.header}>
-          <h1 style={S.title}>🥗 Suivi Nutrition</h1>
+          <h1 style={S.title}>Suivi Nutrition</h1>
           <p style={S.subtitle}>
             {clients.length} client{clients.length !== 1 ? 's' : ''} ·{' '}
             {enriched.filter(c => c.goal).length} avec objectifs
@@ -174,7 +174,11 @@ export default function NutritionCoach() {
 
         {/* Barre de recherche */}
         <div style={S.searchWrapper}>
-          <span style={S.searchIcon}>🔍</span>
+          <span style={S.searchIcon}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -297,8 +301,11 @@ const S = {
   searchIcon: {
     position: 'absolute',
     left: 14,
-    fontSize: '0.95rem',
     pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    top: 0,
+    bottom: 0,
   },
   searchInput: {
     width: '100%',

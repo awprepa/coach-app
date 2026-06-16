@@ -375,7 +375,6 @@ export default function NutritionClient() {
               boxShadow: '0 4px 16px rgba(22,101,52,0.3)',
             }}
           >
-            <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🥗</span>
             <div style={{ flex: 1, textAlign: 'left' }}>
               <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>Plan prescrit actif</div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{activePlan.nom}</div>

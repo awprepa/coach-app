@@ -77,7 +77,6 @@ export default function NutritionPlansCoach() {
           <div style={S.empty}>Chargement…</div>
         ) : plans.length === 0 ? (
           <div style={S.emptyCard}>
-            <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>🥗</p>
             <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.3rem' }}>Aucun plan nutritionnel</p>
             <p style={{ color: '#6b7280', fontSize: '0.83rem', margin: '0 0 1rem', lineHeight: 1.5 }}>
               Crée un plan en important un JSON généré par l'IA.
