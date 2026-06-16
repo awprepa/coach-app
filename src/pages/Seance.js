@@ -1888,7 +1888,6 @@ export default function Seance() {
               </div>
             </div>
           )}
-        </div>
 
         <form onSubmit={ajouterExercice}>
           <div style={styles.formGrid}>

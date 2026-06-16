@@ -26,6 +26,7 @@ const SeancePonctuelleClient    = lazy(() => import('./pages/client/SeancePonctu
 const NotificationsClient  = lazy(() => import('./pages/client/NotificationsClient'))
 const MessagesClient       = lazy(() => import('./pages/client/MessagesClient'))
 const NutritionClient      = lazy(() => import('./pages/client/NutritionClient'))
+const NutritionPlanClient  = lazy(() => import('./pages/client/NutritionPlanClient'))
 const AjouterRepas         = lazy(() => import('./pages/client/AjouterRepas'))
 const HistoriqueNutrition  = lazy(() => import('./pages/client/HistoriqueNutrition'))
 const ProfilNutrition      = lazy(() => import('./pages/client/ProfilNutrition'))
@@ -56,6 +57,8 @@ const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const FicheGroupe          = lazy(() => import('./pages/FicheGroupe'))
 const Factures             = lazy(() => import('./pages/Factures'))
+const NutritionPlansCoach  = lazy(() => import('./pages/NutritionPlansCoach'))
+const NutritionPlanEditor  = lazy(() => import('./pages/NutritionPlanEditor'))
 // ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
 function InAppBrowserSheet({ onDismiss }) {
   const ua         = navigator.userAgent
@@ -460,6 +463,7 @@ function App() {
               <Route path="/client/notifications"        element={<WithNotifs><NotificationsClient /></WithNotifs>} />
               <Route path="/client/messages"             element={<WithNotifs><MessagesClient /></WithNotifs>} />
               <Route path="/client/nutrition"            element={<WithNotifs><NutritionClient /></WithNotifs>} />
+              <Route path="/client/nutrition/plan"       element={<WithNotifs><NutritionPlanClient /></WithNotifs>} />
               <Route path="/client/nutrition/ajouter"    element={<WithNotifs><AjouterRepas /></WithNotifs>} />
               <Route path="/client/nutrition/historique" element={<WithNotifs><HistoriqueNutrition /></WithNotifs>} />
               <Route path="/client/nutrition/profil"     element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
@@ -497,6 +501,8 @@ function App() {
               <Route path="/groupe/:id"                  element={<WithNav><FicheGroupe /></WithNav>} />
               <Route path="/groupe/:groupeId/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/factures"                        element={<WithNav><Factures /></WithNav>} />
+              <Route path="/nutrition/:clientId"             element={<WithNav><NutritionPlansCoach /></WithNav>} />
+              <Route path="/nutrition/plan/:planId"          element={<WithNav><NutritionPlanEditor /></WithNav>} />
             </Routes>
           </Suspense>
         </TimerProvider>

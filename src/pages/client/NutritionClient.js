@@ -93,6 +93,7 @@ export default function NutritionClient() {
   const [addingFood,    setAddingFood]    = useState(null)  // id en cours d'ajout rapide
   const [hasProfile,   setHasProfile]    = useState(true)  // false = invite à créer le profil
   const [consentOk,    setConsentOk]     = useState(null)  // null=chargement, true=ok, false=manquant
+  const [activePlan,   setActivePlan]    = useState(null)  // plan prescrit actif
 
   // Charger client + goals
   useEffect(() => {
@@ -121,6 +122,14 @@ export default function NutritionClient() {
       const { data: g } = await supabase.from('nutrition_goals').select('*').eq('client_id', c.id)
         .or(`active_to.is.null,active_to.gte.${today}`).order('active_from', { ascending: false }).limit(1).maybeSingle()
       setGoals(g)
+
+      // Plan prescrit actif
+      const { data: ap } = await supabase.from('nutrition_plans').select('id, nom')
+        .eq('client_id', c.id).eq('statut', 'actif')
+        .or(`date_fin.is.null,date_fin.gte.${today}`)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      setActivePlan(ap)
+
       setLoading(false)
     }
     loadClient()
@@ -354,6 +363,28 @@ export default function NutritionClient() {
       </div>
 
       <div style={S.content}>
+
+        {/* ── Plan prescrit actif ─────────────────────────────────── */}
+        {activePlan && (
+          <button
+            onClick={() => navigate('/client/nutrition/plan')}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              background: 'linear-gradient(135deg, #166534 0%, #15803d 100%)',
+              borderRadius: 16, padding: '14px 16px', border: 'none', cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(22,101,52,0.3)',
+            }}
+          >
+            <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🥗</span>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>Plan prescrit actif</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{activePlan.nom}</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        )}
 
         {/* ── Invite à créer le profil si absent ──────────────────── */}
         {!hasProfile && (

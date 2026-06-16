@@ -210,7 +210,7 @@ export default function NutritionCoach() {
               return (
                 <div
                   key={client.id}
-                  onClick={() => navigate(`/client/${client.id}`)}
+                  onClick={() => navigate(`/nutrition/${client.id}`)}
                   style={S.card}
                 >
                   {/* Ligne supérieure : nom + badge offre */}
