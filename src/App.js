@@ -57,6 +57,7 @@ const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
 const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
 const FicheGroupe          = lazy(() => import('./pages/FicheGroupe'))
 const Factures             = lazy(() => import('./pages/Factures'))
+const NutritionCoach       = lazy(() => import('./pages/NutritionCoach'))
 const NutritionPlansCoach  = lazy(() => import('./pages/NutritionPlansCoach'))
 const NutritionPlanEditor  = lazy(() => import('./pages/NutritionPlanEditor'))
 // ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
@@ -501,6 +502,7 @@ function App() {
               <Route path="/groupe/:id"                  element={<WithNav><FicheGroupe /></WithNav>} />
               <Route path="/groupe/:groupeId/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/factures"                        element={<WithNav><Factures /></WithNav>} />
+              <Route path="/nutrition"                       element={<WithNav><NutritionCoach /></WithNav>} />
               <Route path="/nutrition/:clientId"             element={<WithNav><NutritionPlansCoach /></WithNav>} />
               <Route path="/nutrition/plan/:planId"          element={<WithNav><NutritionPlanEditor /></WithNav>} />
             </Routes>
