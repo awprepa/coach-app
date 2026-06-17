@@ -632,8 +632,8 @@ export default function Dashboard() {
               <div style={S.cardHead}><span style={S.sectionTitle}>Notifications</span></div>
               {notifs.length === 0 && <p style={S.empty}>Aucune notification</p>}
               {notifs.slice(0, 50).map(n => (
-                <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/') && !n.lien.startsWith('/client/')) navigate(n.lien) }}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: n.lu ? 'white' : '#fafff0', cursor: n.lien && !n.lien.startsWith('/client/') ? 'pointer' : 'default' }}>
+                <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/')) navigate(n.lien) }}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: n.lu ? 'white' : '#fafff0', cursor: n.lien ? 'pointer' : 'default' }}>
                   <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a' }}>{n.titre}</p>

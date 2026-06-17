@@ -200,7 +200,7 @@ export default function SeanceClient() {
                 titre: '✅ Séance terminée',
                 corps: `${prenom} a terminé "${seance?.nom || 'sa séance'}"`,
                 type: 'seance',
-                lien: clientId ? `/clients/${clientId}` : '/clients',
+                lien: clientId ? `/client/${clientId}` : '/',
               })
             }
           } catch (e) { console.warn('[notif-seance] échec:', e) }
@@ -592,7 +592,7 @@ export default function SeanceClient() {
                 titre: '🏆 Nouveau 1RM !',
                 corps: `${prenom} — ${exoNom} : ${poids1RM} kg`,
                 type: 'pr',
-                lien: `/clients/${clientId}`,
+                lien: `/client/${clientId}`,
               })
             }
             // Insérer dans tests_resultats
