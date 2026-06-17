@@ -71,35 +71,34 @@ Deno.serve(async (_req) => {
       else console.error(`[wellness-reminder] wellness push #${i} envoyé ✓`);
     });
 
-    // ── 2. Rappel nutrition (uniquement clients avec objectifs mais sans repas aujourd'hui) ──
+    // ── 2. Rappel nutrition (clients avec plan actif mais sans log aujourd'hui) ──
     if (clientIds.length) {
-      // Clients ayant des objectifs actifs
-      const { data: goalsData } = await supabase
-        .from("nutrition_goals").select("client_id")
+      // Clients ayant un plan nutritionnel actif
+      const { data: plansData } = await supabase
+        .from("nutrition_plans").select("client_id")
         .in("client_id", clientIds)
-        .or(`active_to.is.null,active_to.gte.${today}`);
-      const clientsWithGoals = new Set((goalsData || []).map((g: any) => g.client_id));
+        .eq("statut", "actif")
+        .or(`date_fin.is.null,date_fin.gte.${today}`);
+      const clientsWithPlan = new Set((plansData || []).map((p: any) => p.client_id));
 
-      // Clients ayant déjà loggé un repas aujourd'hui
-      const { data: mealsData } = await supabase
-        .from("nutrition_meals").select("client_id")
-        .in("client_id", [...clientsWithGoals])
-        .eq("date", today);
-      const clientsWithMeals = new Set((mealsData || []).map((m: any) => m.client_id));
+      // Clients ayant déjà loggé au moins un repas du plan aujourd'hui
+      const { data: logsData } = clientsWithPlan.size ? await supabase
+        .from("nutrition_plan_logs").select("client_id")
+        .in("client_id", [...clientsWithPlan])
+        .eq("date", today)
+        .not("meal_id", "is", null)
+        .limit(clientsWithPlan.size * 10) : { data: [] };
+      const clientsWithLog = new Set((logsData || []).map((l: any) => l.client_id));
 
       const nutritionPayload = JSON.stringify({
-        titre: "🥗 N'oublie pas ton suivi nutrition",
-        corps: "Log ton premier repas de la journée.",
-        lien: "/client/nutrition",
+        titre: "N'oublie pas ton suivi nutrition",
+        corps: "Valide tes repas du plan pour aujourd'hui.",
+        lien: "/client/nutrition/plan",
       });
-
-      // Construire user_id → client_id inverse
-      const clientToUser: Record<string, string> = {};
-      (clients || []).forEach((c: any) => { clientToUser[c.id] = c.user_id; });
 
       const nutritionTargets = subs.filter((s: any) => {
         const cid = clientMap[s.user_id];
-        return cid && clientsWithGoals.has(cid) && !clientsWithMeals.has(cid);
+        return cid && clientsWithPlan.has(cid) && !clientsWithLog.has(cid);
       });
 
       if (nutritionTargets.length) {

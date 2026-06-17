@@ -80,11 +80,9 @@ export default function FicheClient() {
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
   const [coachId, setCoachId] = useState(null)
-  const [nutritionGoals, setNutritionGoals] = useState(null)
-  const [nutritionMeals7, setNutritionMeals7] = useState([])
-  const [nutritionMealsDetail, setNutritionMealsDetail] = useState([])
+  const [nutritionPlan, setNutritionPlan]     = useState(null)  // null=pas chargé, false=aucun plan actif
+  const [nutritionAdher, setNutritionAdher]   = useState([])   // 7 derniers jours
   const [nutritionProfile, setNutritionProfile] = useState(null)
-  const [nutritionWater, setNutritionWater] = useState(null)
   const [seancesClient, setSeancesClient] = useState([])
   const [showAllSeancesClient, setShowAllSeancesClient] = useState(false)
   const [notesCoach, setNotesCoach] = useState('')
@@ -258,45 +256,56 @@ export default function FicheClient() {
 
   async function fetchNutrition() {
     const today = new Date().toISOString().slice(0, 10)
-    const sevenDaysAgo  = new Date(Date.now() -  6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-    const fourteenDaysAgo = new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const from7  = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
 
-    const [goalsRes, mealsSimpleRes, mealsDetailRes, profileRes, waterRes] = await Promise.all([
-      supabase.from('nutrition_goals').select('*').eq('client_id', id)
-        .or(`active_to.is.null,active_to.gte.${today}`)
-        .order('active_from', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('nutrition_meals').select('date, kcal').eq('client_id', id)
-        .gte('date', sevenDaysAgo).lte('date', today),
-      supabase.from('nutrition_meals')
-        .select('id, date, time, meal_type, name, kcal, prot_g, carbs_g, fat_g, source, quality_score, notes, coach_comment, nutrition_meal_items(name, quantity, unit, kcal)')
-        .eq('client_id', id)
-        .gte('date', fourteenDaysAgo).lte('date', today)
-        .order('date', { ascending: false }).order('time', { ascending: false }),
+    const [planRes, profileRes] = await Promise.all([
+      supabase.from('nutrition_plans')
+        .select('id, nom, statut, date_debut, date_fin, nutrition_plan_days(id, jour, type_jour, nutrition_plan_meals(id, nom, meal_type, kcal, prot_g, carbs_g, fat_g))')
+        .eq('client_id', id).eq('statut', 'actif')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('nutrition_profile').select('*').eq('client_id', id).maybeSingle(),
-      supabase.from('nutrition_water').select('date, quantity_ml').eq('client_id', id)
-        .eq('date', today).maybeSingle(),
     ])
 
-    if (profileRes.error)      console.error('[fetchNutrition] profil:', profileRes.error)
-    if (goalsRes.error)        console.error('[fetchNutrition] goals:',  goalsRes.error)
-    if (mealsDetailRes.error)  console.error('[fetchNutrition] meals:',  mealsDetailRes.error)
-
-    const g = goalsRes.data
-
-    setNutritionGoals(g)
-
-    // Agréger kcal par date sur 7 jours
-    const byDate = {}
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-      byDate[d] = 0
-    }
-    ;(mealsSimpleRes.data || []).forEach(m => { if (byDate[m.date] !== undefined) byDate[m.date] += (m.kcal || 0) })
-    setNutritionMeals7(Object.entries(byDate).map(([date, kcal]) => ({ date, kcal })))
-
-    setNutritionMealsDetail(mealsDetailRes.data || [])
     setNutritionProfile(profileRes.data)
-    setNutritionWater(waterRes.data)
+
+    const plan = planRes.data
+    if (!plan) { setNutritionPlan(false); setNutritionAdher([]); return }
+    setNutritionPlan(plan)
+
+    const { data: logs } = await supabase
+      .from('nutrition_plan_logs')
+      .select('date, statut, meal_id, kcal')
+      .eq('client_id', id)
+      .gte('date', from7).lte('date', today)
+
+    function getDayNum(dateISO) {
+      if (!plan.date_debut) return 1
+      const diff = Math.floor((new Date(dateISO + 'T00:00:00') - new Date(plan.date_debut + 'T00:00:00')) / 86400000)
+      if (diff < 0) return null
+      return (diff % 7) + 1
+    }
+
+    const adher = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+      const dayNum  = getDayNum(d)
+      const planDay = dayNum ? (plan.nutrition_plan_days || []).find(pd => pd.jour === dayNum) : null
+      const planMeals = planDay?.nutrition_plan_meals || []
+      const dayLogs   = (logs || []).filter(l => l.date === d)
+      const planLogs  = dayLogs.filter(l => l.meal_id !== null)
+      const extraLogs = dayLogs.filter(l => l.meal_id === null)
+      const fait     = planLogs.filter(l => l.statut === 'fait').length
+      const horsplan = planLogs.filter(l => l.statut === 'hors_plan').length
+      const saute    = planLogs.filter(l => l.statut === 'saute').length
+      const total    = planMeals.length
+      const kcalPrevu = planMeals.reduce((s, m) => s + (m.kcal || 0), 0)
+      const kcalMange = planLogs.filter(l => l.statut === 'fait' || l.statut === 'hors_plan')
+        .reduce((s, l) => s + (l.kcal || 0), 0)
+        + extraLogs.reduce((s, l) => s + (l.kcal || 0), 0)
+      const adherPct = total > 0 ? Math.round((fait + horsplan) / total * 100) : null
+      adher.push({ date: d, fait, horsplan, saute, total, kcalPrevu, kcalMange, adherPct })
+    }
+    setNutritionAdher(adher)
   }
 
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
@@ -821,163 +830,94 @@ export default function FicheClient() {
       {activeTab === 'nutrition' && (
         <div style={{ marginTop: '1rem' }}>
 
-          {/* ── Objectifs (lecture seule) ── */}
-          {nutritionGoals ? (
-            <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
-              <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>🎯 Objectifs nutritionnels</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.6rem' }}>
-                {[
-                  { label: 'Calories', value: nutritionGoals.kcal_target, unit: 'kcal' },
-                  { label: 'Protéines', value: nutritionGoals.prot_g, unit: 'g' },
-                  { label: 'Glucides',  value: nutritionGoals.carbs_g, unit: 'g' },
-                  { label: 'Lipides',   value: nutritionGoals.fat_g,   unit: 'g' },
-                  { label: 'Hydrat.', value: nutritionGoals.hydration_ml ? Math.round(nutritionGoals.hydration_ml / 100) / 10 : null, unit: 'L' },
-                ].map(({ label, value, unit }) => value ? (
-                  <div key={label} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.5rem', textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 0.2rem' }}>{label}</p>
-                    <p style={{ fontSize: '1rem', fontWeight: 800, color: '#1a1a1a', margin: 0 }}>{value}<span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#9ca3af', marginLeft: 2 }}>{unit}</span></p>
-                  </div>
-                ) : null)}
-              </div>
-              {nutritionGoals.active_from && (
-                <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.6rem', textAlign: 'right' }}>
-                  {nutritionProfile?.goals_source === 'auto' ? '🤖 Calculés automatiquement' : '✏️ Saisis manuellement'} · depuis le {new Date(nutritionGoals.active_from + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                </p>
-              )}
+          {/* ── Plan actif ── */}
+          {nutritionPlan === null ? (
+            <div style={{ ...styles.emptyCard, marginBottom: '0.75rem' }}>Chargement…</div>
+          ) : nutritionPlan === false ? (
+            <div style={{ ...styles.emptyCard, marginBottom: '0.75rem' }}>
+              Aucun plan nutritionnel actif.{' '}
+              <button onClick={() => navigate(`/nutrition/${id}`)} style={{ background: 'none', border: 'none', color: '#6d28d9', fontWeight: 700, cursor: 'pointer', padding: 0, fontSize: '0.85rem' }}>
+                Créer un plan →
+              </button>
             </div>
           ) : (
-            <div style={{ ...styles.emptyCard, marginBottom: '0.75rem' }}>
-              Aucun objectif nutritionnel — le client doit compléter son profil dans l'app.
+            <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <p style={{ ...styles.sectionTitle, margin: 0 }}>Plan actif</p>
+                <button onClick={() => navigate(`/nutrition/${id}`)} style={{ background: 'none', border: 'none', color: '#6d28d9', fontWeight: 700, cursor: 'pointer', padding: 0, fontSize: '0.78rem' }}>
+                  Modifier →
+                </button>
+              </div>
+              <div style={{ background: '#f5f3ff', border: '1px solid #e9d5ff', borderRadius: 10, padding: '0.75rem 1rem' }}>
+                <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a', margin: '0 0 3px' }}>{nutritionPlan.nom}</p>
+                <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>
+                  {nutritionPlan.date_debut ? `Depuis le ${new Date(nutritionPlan.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : 'Plan en cours'}
+                  {' · '}{(nutritionPlan.nutrition_plan_days || []).length} jours définis
+                </p>
+              </div>
             </div>
           )}
 
-          {/* ── Bilan 7 jours ── */}
-          <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <p style={{ ...styles.sectionTitle, margin: 0 }}>📅 Calories — 7 derniers jours</p>
-              {nutritionWater?.quantity_ml > 0 && (
-                <span style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600 }}>
-                  💧 {(nutritionWater.quantity_ml / 1000).toFixed(1)} L aujourd'hui
-                </span>
-              )}
-            </div>
-            {nutritionMeals7.every(d => d.kcal === 0) ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '0.75rem 0' }}>Aucun repas enregistré sur 7 jours.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {nutritionMeals7.map(({ date, kcal }) => {
-                  const target = nutritionGoals?.kcal_target
-                  const pct = target > 0 ? Math.min(kcal / target, 1) : 0
-                  const color = !target ? '#9ca3af' : pct >= 0.85 && pct <= 1.15 ? '#22c55e' : pct >= 0.65 ? '#f97316' : '#ef4444'
-                  const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+          {/* ── Adhérence 7 jours ── */}
+          {nutritionAdher.length > 0 && (
+            <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <p style={{ ...styles.sectionTitle, margin: 0 }}>Adhérence — 7 derniers jours</p>
+                {(() => {
+                  const withData = nutritionAdher.filter(d => d.total > 0)
+                  if (!withData.length) return null
+                  const avg = Math.round(withData.reduce((s, d) => s + (d.adherPct || 0), 0) / withData.length)
                   return (
-                    <div key={date} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#6b7280', width: 82, flexShrink: 0 }}>{dayLabel}</span>
-                      <div style={{ flex: 1, height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
-                        {kcal > 0 && <div style={{ height: '100%', width: `${pct * 100}%`, background: color, borderRadius: 999 }} />}
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: avg >= 80 ? '#16a34a' : avg >= 50 ? '#d97706' : '#ef4444' }}>
+                      {avg}% moy.
+                    </span>
+                  )
+                })()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {nutritionAdher.map(({ date, fait, horsplan, saute, total, kcalPrevu, kcalMange, adherPct }) => {
+                  const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                  const isToday  = date === new Date().toISOString().slice(0, 10)
+                  const noData   = total === 0 || (fait + horsplan + saute) === 0
+                  const dotColor = noData ? '#d1d5db' : adherPct >= 80 ? '#16a34a' : adherPct >= 50 ? '#d97706' : '#ef4444'
+                  return (
+                    <div key={date} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <span style={{ fontSize: '0.7rem', color: isToday ? '#1a1a1a' : '#6b7280', fontWeight: isToday ? 700 : 400, width: 74, flexShrink: 0 }}>{dayLabel}</span>
+                      <div style={{ flex: 1, height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', display: 'flex' }}>
+                        {total > 0 && (
+                          <>
+                            <div style={{ height: '100%', width: `${fait / total * 100}%`, background: '#16a34a' }} />
+                            <div style={{ height: '100%', width: `${horsplan / total * 100}%`, background: '#d97706' }} />
+                            <div style={{ height: '100%', width: `${saute / total * 100}%`, background: '#ef4444' }} />
+                          </>
+                        )}
                       </div>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: kcal > 0 ? color : '#d1d5db', width: 56, textAlign: 'right', flexShrink: 0 }}>
-                        {kcal > 0 ? `${Math.round(kcal)} kcal` : '—'}
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: dotColor, width: 34, textAlign: 'right', flexShrink: 0 }}>
+                        {noData ? '—' : `${adherPct}%`}
                       </span>
+                      {kcalPrevu > 0 && (
+                        <span style={{ fontSize: '0.65rem', color: '#9ca3af', width: 70, textAlign: 'right', flexShrink: 0 }}>
+                          {kcalMange > 0 ? `${Math.round(kcalMange)} kcal` : '—'}
+                        </span>
+                      )}
                     </div>
                   )
                 })}
-                {nutritionGoals?.kcal_target && (
-                  <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.25rem', textAlign: 'center' }}>
-                    Objectif : {nutritionGoals.kcal_target} kcal/jour
-                  </p>
-                )}
               </div>
-            )}
-          </div>
-
-          {/* ── Journal des repas (14 jours) ── */}
-          <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
-            <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>🍽️ Journal — 14 derniers jours</p>
-            {nutritionMealsDetail.length === 0 ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '0.75rem 0' }}>Aucun repas enregistré.</p>
-            ) : (() => {
-              // Grouper par date
-              const grouped = {}
-              nutritionMealsDetail.forEach(m => {
-                if (!grouped[m.date]) grouped[m.date] = []
-                grouped[m.date].push(m)
-              })
-              const MEAL_LABELS = { petit_dej: 'Petit-déj 🥐', dejeuner: 'Déjeuner 🍽️', collation: 'Collation 🍎', diner: 'Dîner 🌙' }
-              const SOURCE_LABELS = { barcode: '▦', photo_ai: '📷', voice_ai: '🎤', manual: '✏️', template: '⭐' }
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {Object.entries(grouped).map(([date, meals]) => {
-                    const dayTotal = meals.reduce((s, m) => s + (m.kcal || 0), 0)
-                    const dayProt  = meals.reduce((s, m) => s + (m.prot_g || 0), 0)
-                    const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-                    return (
-                      <div key={date}>
-                        {/* En-tête du jour */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
-                          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', margin: 0, textTransform: 'capitalize' }}>{dayLabel}</p>
-                          <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
-                            {dayTotal > 0 ? `${Math.round(dayTotal)} kcal` : ''}
-                            {dayProt > 0 ? ` · ${Math.round(dayProt)}g prot.` : ''}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                          {meals.map(meal => (
-                            <div key={meal.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.65rem 0.85rem' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a1a1a' }}>
-                                  {SOURCE_LABELS[meal.source] || ''} {meal.name || MEAL_LABELS[meal.meal_type] || meal.meal_type || 'Repas'}
-                                </span>
-                                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>
-                                  {meal.kcal ? `${meal.kcal} kcal` : ''}
-                                </span>
-                              </div>
-                              {/* Macros */}
-                              {(meal.prot_g || meal.carbs_g || meal.fat_g) ? (
-                                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.2rem' }}>
-                                  {meal.prot_g  && <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>P {Math.round(meal.prot_g)}g</span>}
-                                  {meal.carbs_g && <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>G {Math.round(meal.carbs_g)}g</span>}
-                                  {meal.fat_g   && <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>L {Math.round(meal.fat_g)}g</span>}
-                                </div>
-                              ) : null}
-                              {/* Items du repas */}
-                              {meal.nutrition_meal_items?.length > 0 && (
-                                <div style={{ marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px solid #e5e7eb' }}>
-                                  {meal.nutrition_meal_items.map((item, i) => (
-                                    <p key={i} style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.1rem 0' }}>
-                                      · {item.name}{item.quantity ? ` — ${item.quantity}${item.unit || 'g'}` : ''}{item.kcal ? ` (${item.kcal} kcal)` : ''}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Note client */}
-                              {meal.notes && (
-                                <p style={{ fontSize: '0.72rem', color: '#6b7280', fontStyle: 'italic', margin: '0.35rem 0 0' }}>
-                                  💬 {meal.notes}
-                                </p>
-                              )}
-                              {/* Score qualité */}
-                              {meal.quality_score && (
-                                <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.68rem', fontWeight: 700, color: meal.quality_score >= 7 ? '#22c55e' : meal.quality_score >= 5 ? '#f97316' : '#ef4444', background: meal.quality_score >= 7 ? '#f0fdf4' : meal.quality_score >= 5 ? '#fff7ed' : '#fef2f2', padding: '1px 7px', borderRadius: 999 }}>
-                                  Note IA : {meal.quality_score}/10
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-          </div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+                {[{ color: '#16a34a', label: 'Fait' }, { color: '#d97706', label: 'Hors plan' }, { color: '#ef4444', label: 'Sauté' }].map(({ color, label }) => (
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', color: '#6b7280' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: 'inline-block' }} />{label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Profil nutritionnel ── */}
           {nutritionProfile ? (
             <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-              <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>👤 Profil nutritionnel</p>
-
+              <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>Profil nutritionnel</p>
               <div style={{ marginBottom: '1rem' }}>
                 <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
                   Données physiques
@@ -985,41 +925,20 @@ export default function FicheClient() {
                 {(nutritionProfile.poids_kg || nutritionProfile.taille_cm || nutritionProfile.age_ans) ? (
                   <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                      {nutritionProfile.poids_kg   && <InfoItem label="Poids"   value={`${nutritionProfile.poids_kg} kg`} />}
-                      {nutritionProfile.taille_cm  && <InfoItem label="Taille"  value={`${nutritionProfile.taille_cm} cm`} />}
-                      {nutritionProfile.age_ans    && <InfoItem label="Âge"     value={`${nutritionProfile.age_ans} ans`} />}
+                      {nutritionProfile.poids_kg  && <InfoItem label="Poids"  value={`${nutritionProfile.poids_kg} kg`} />}
+                      {nutritionProfile.taille_cm && <InfoItem label="Taille" value={`${nutritionProfile.taille_cm} cm`} />}
+                      {nutritionProfile.age_ans   && <InfoItem label="Âge"    value={`${nutritionProfile.age_ans} ans`} />}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                      {nutritionProfile.sexe && (
-                        <InfoItem label="Sexe" value={nutritionProfile.sexe === 'homme' ? '♂ Homme' : '♀ Femme'} />
-                      )}
-                      {nutritionProfile.niveau_activite && (
-                        <InfoItem label="Activité" value={{
-                          sedentaire: 'Sédentaire',
-                          leger: 'Légèrement actif',
-                          modere: 'Modérément actif',
-                          actif: 'Actif',
-                          tres_actif: 'Très actif',
-                        }[nutritionProfile.niveau_activite] || nutritionProfile.niveau_activite} />
-                      )}
-                      {nutritionProfile.objectif_physique && (
-                        <InfoItem label="Objectif" value={{
-                          masse:         'Prise de masse',
-                          perte:         'Perte de poids',
-                          maintien:      'Maintien du poids',
-                          recomposition: 'Recomposition corporelle',
-                        }[nutritionProfile.objectif_physique] || nutritionProfile.objectif_physique} full />
-                      )}
-                      {nutritionProfile.goals_source && (
-                        <InfoItem label="Objectifs calculés par" value={nutritionProfile.goals_source === 'auto' ? '🤖 Algorithme scientifique' : '✏️ Saisie manuelle'} full />
-                      )}
+                      {nutritionProfile.sexe && <InfoItem label="Sexe" value={nutritionProfile.sexe === 'homme' ? '♂ Homme' : '♀ Femme'} />}
+                      {nutritionProfile.niveau_activite && <InfoItem label="Activité" value={{ sedentaire: 'Sédentaire', leger: 'Légèrement actif', modere: 'Modérément actif', actif: 'Actif', tres_actif: 'Très actif' }[nutritionProfile.niveau_activite] || nutritionProfile.niveau_activite} />}
+                      {nutritionProfile.objectif_physique && <InfoItem label="Objectif" value={{ masse: 'Prise de masse', perte: 'Perte de poids', maintien: 'Maintien', recomposition: 'Recomposition' }[nutritionProfile.objectif_physique] || nutritionProfile.objectif_physique} full />}
                     </div>
                   </>
                 ) : (
-                  <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>Questionnaire physique non renseigné (le client doit compléter son profil dans l'app).</p>
+                  <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>Questionnaire physique non renseigné.</p>
                 )}
               </div>
-
               {(nutritionProfile.regime || nutritionProfile.allergenes?.length > 0 || nutritionProfile.exclusions?.length > 0 || nutritionProfile.notes) && (
                 <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem' }}>
                   <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
