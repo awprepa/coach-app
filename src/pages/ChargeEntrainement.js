@@ -543,7 +543,19 @@ export default function ChargeEntrainement() {
           {lastRow && (
             <div style={S.indicateursSection}>
               <div style={S.indicateursTitle}>
-                Dernière semaine enregistrée — {lastRow.prog_nom} · Semaine {lastRow.semaine}
+                {(() => {
+                  const currentSem = lastRow.date_debut
+                    ? Math.min(
+                        lastRow.prog_semaines || 99,
+                        Math.max(1, Math.floor((Date.now() - new Date(lastRow.date_debut + 'T00:00:00')) / (7 * 86400000)) + 1)
+                      )
+                    : null
+                  return <>
+                    {lastRow.prog_nom}
+                    {currentSem ? <> · <strong>Semaine actuelle : S{currentSem}</strong></> : null}
+                    <span style={{ color: '#9ca3af', fontWeight: 400, marginLeft: 8 }}>(dernier enregistrement : S{lastRow.semaine})</span>
+                  </>
+                })()}
               </div>
               <div style={S.indicateursGrid}>
 
@@ -1001,7 +1013,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       if (!prog) return
       const key = `${progId}_S${r.semaine}`
       if (!weekMap[key]) {
-        weekMap[key] = { key, prog_nom: prog.nom, prog_id: progId, semaine: r.semaine, date_debut: prog.date_debut, rpe_sum: 0, nb_seances: 0 }
+        weekMap[key] = { key, prog_nom: prog.nom, prog_id: progId, semaine: r.semaine, date_debut: prog.date_debut, prog_semaines: prog.semaines, rpe_sum: 0, nb_seances: 0 }
         weekRpeDetails[key] = []
       }
       weekMap[key].rpe_sum += parseFloat(r.rpe_reel) || 0

@@ -258,7 +258,7 @@ export default function FicheClient() {
       data: Object.entries(semaines).sort((a, b) => parseInt(a[0].slice(1)) - parseInt(b[0].slice(1)))
         .map(([sem, poids]) => ({ semaine: sem, poids }))
     }))
-      .filter(e => e.data.length >= 2)
+      .filter(e => e.data.length >= 1)
       .sort((a, b) => {
         const gA = MUSCLES[a.groupe]?.label || 'ZZZ'
         const gB = MUSCLES[b.groupe]?.label || 'ZZZ'
