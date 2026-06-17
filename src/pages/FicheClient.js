@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
-import ChatBox from '../components/ChatBox'
-import { sendPushOnly } from '../notifs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { CGV_CONTENU } from './CGV'
 import { ChargePanel } from './ChargeEntrainement'
 
 
@@ -74,12 +71,10 @@ export default function FicheClient() {
   const [showPastCycles, setShowPastCycles] = useState(false)
   const [wellness, setWellness] = useState([])
   const [showAllWellness, setShowAllWellness] = useState(false)
-  const [activeTab, setActiveTab] = useState('profil') // 'profil' | 'progression' | 'messages' | 'nutrition' | 'contrat' | 'charge'
+  const [activeTab, setActiveTab] = useState('suivi') // 'suivi' | 'perf' | 'nutrition'
   const [contratData, setContratData] = useState(null)
-  const [contratLoading, setContratLoading] = useState(false)
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
-  const [coachId, setCoachId] = useState(null)
   const [nutritionPlan, setNutritionPlan]     = useState(null)  // null=pas chargé, false=aucun plan actif
   const [nutritionAdher, setNutritionAdher]   = useState([])   // 7 derniers jours
   const [nutritionProfile, setNutritionProfile] = useState(null)
@@ -89,12 +84,16 @@ export default function FicheClient() {
   const [notesSaved, setNotesSaved] = useState(true)
   const [notesSavedAt, setNotesSavedAt] = useState(null)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => { if (user) setCoachId(user.id) })
-  }, [])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function fetchContrat() {
+    const { data } = await supabase.from('acceptations_contrat')
+      .select('created_at, version_contrat, formule')
+      .eq('client_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    setContratData(data || null)
+  }
 
   async function fetchCategories() {
     const { data } = await supabase.from('categories').select('*').order('created_at')
@@ -433,6 +432,15 @@ export default function FicheClient() {
               {client.telephone && <InfoItem label="Téléphone" value={client.telephone} />}
               {client.date_debut && <InfoItem label="Début" value={client.date_debut} />}
               {client.date_fin && <InfoItem label="Fin" value={client.date_fin} />}
+              <InfoItem
+                label="Contrat"
+                value={
+                  contratData
+                    ? `Signé le ${new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} · v${contratData.version_contrat || '1.0'}`
+                    : 'Non signé'
+                }
+                valueStyle={{ color: contratData ? '#16a34a' : '#ef4444', fontWeight: 700 }}
+              />
               {client.objectif && <InfoItem label="Objectif" value={client.objectif} full />}
               {client.notes && <InfoItem label="Notes" value={client.notes} full />}
             </div>
@@ -473,90 +481,77 @@ export default function FicheClient() {
       {/* Onglets navigation */}
       <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 12, padding: 3, gap: 3, marginTop: '1.5rem' }}>
         {[
-          { k: 'profil', l: '📋 Données' },
-          { k: 'progression', l: '📈 Progression' },
-          { k: 'messages', l: '💬 Messages' },
-          { k: 'nutrition', l: '🥗 Nutrition' },
-          { k: 'contrat', l: '📄 Contrat' },
-          { k: 'charge', l: '📊 Charge' },
+          { k: 'suivi', l: 'Suivi', icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          )},
+          { k: 'perf', l: 'Entraînement', icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M6.5 6.5h11M6.5 17.5h11M3 10h3v4H3zM18 10h3v4h-3zM6.5 12h11"/>
+            </svg>
+          )},
+          { k: 'nutrition', l: 'Nutrition', icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/>
+            </svg>
+          )},
         ].map(t => (
           <button key={t.k} onClick={() => {
             setActiveTab(t.k)
-            if (t.k === 'progression' && progression.length === 0) fetchProgression()
+            if (t.k === 'perf' && progression.length === 0) fetchProgression()
             if (t.k === 'nutrition') fetchNutrition()
-            if (t.k === 'contrat' && !contratData && !contratLoading) {
-              setContratLoading(true)
-              supabase.from('acceptations_contrat').select('*').eq('client_id', id)
-                .order('created_at', { ascending: false }).limit(1).maybeSingle()
-                .then(({ data }) => { setContratData(data || null); setContratLoading(false) })
-            }
           }} style={{
             flex: 1, padding: '0.45rem 0.5rem', border: 'none', borderRadius: 9, fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer',
             background: activeTab === t.k ? 'white' : 'transparent',
             color: activeTab === t.k ? '#333333' : '#9ca3af',
             boxShadow: activeTab === t.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            whiteSpace: 'nowrap',
-          }}>{t.l}</button>
+            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          }}>{t.icon}{t.l}</button>
         ))}
       </div>
 
-      {/* Contenu onglet Messages */}
-      {activeTab === 'messages' && (
-        <div style={{ marginTop: '1rem', background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          {!client.user_id ? (
-            <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>Le client doit ouvrir l'app au moins une fois pour activer la messagerie.</p>
-          ) : (
-            <ChatBox
-              myId={coachId}
-              otherId={client.user_id}
-              myLabel="Coach"
-              onAfterSend={(msg) => sendPushOnly(client.user_id, {
-                titre: 'Message de Arthur',
-                corps: msg,
-                lien: '/client/messages',
-              })}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Contenu onglet Progression */}
-      {activeTab === 'progression' && (
+      {/* Onglet Entraînement — Charge + Progression */}
+      {activeTab === 'perf' && client && (
         <div style={{ marginTop: '1rem' }}>
-          {progression.length === 0 ? (
-            <div style={styles.emptyCard}>Chargement… ou aucune série trackée pour ce client.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {progression.map(({ nom, data }) => (
-                <div key={nom} style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                  <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.88rem', color: '#333' }}>{nom}</p>
-                  <ResponsiveContainer width="100%" height={140}>
-                    <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                      <XAxis dataKey="semaine" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                      <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} unit=" kg" />
-                      <Tooltip formatter={(v) => [`${v} kg`, 'Charge max']} />
-                      <Line type="monotone" dataKey="poids" stroke="#333333" strokeWidth={2.5}
-                        dot={{ fill: '#e4f816', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Début : <strong style={{ color: '#333' }}>{data[0]?.poids} kg</strong></span>
-                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>→</span>
-                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Actuel : <strong style={{ color: data[data.length-1]?.poids > data[0]?.poids ? '#16a34a' : '#dc2626' }}>{data[data.length-1]?.poids} kg</strong></span>
-                    {data[data.length-1]?.poids > data[0]?.poids && (
-                      <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700' }}>+{(data[data.length-1]?.poids - data[0]?.poids).toFixed(1)} kg ↑</span>
-                    )}
+          <ChargePanel clientId={id} clientPrenom={client.prenom} clientNom={client.nom} />
+          <div style={{ marginTop: '1.5rem' }}>
+            <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>Progression des charges</p>
+            {progression.length === 0 ? (
+              <div style={styles.emptyCard}>Aucune série trackée pour ce client.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {progression.map(({ nom, data }) => (
+                  <div key={nom} style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                    <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.88rem', color: '#333' }}>{nom}</p>
+                    <ResponsiveContainer width="100%" height={140}>
+                      <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                        <XAxis dataKey="semaine" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                        <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} unit=" kg" />
+                        <Tooltip formatter={(v) => [`${v} kg`, 'Charge max']} />
+                        <Line type="monotone" dataKey="poids" stroke="#333333" strokeWidth={2.5}
+                          dot={{ fill: '#e4f816', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Début : <strong style={{ color: '#333' }}>{data[0]?.poids} kg</strong></span>
+                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>→</span>
+                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Actuel : <strong style={{ color: data[data.length-1]?.poids > data[0]?.poids ? '#16a34a' : '#dc2626' }}>{data[data.length-1]?.poids} kg</strong></span>
+                      {data[data.length-1]?.poids > data[0]?.poids && (
+                        <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700' }}>+{(data[data.length-1]?.poids - data[0]?.poids).toFixed(1)} kg ↑</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Onglet Données (profil) */}
-      {activeTab === 'profil' && <>
+      {/* Onglet Suivi */}
+      {activeTab === 'suivi' && <>
 
       {/* Cycles */}
       <div style={{ marginTop: '1.5rem' }}>
@@ -959,61 +954,16 @@ export default function FicheClient() {
         </div>
       )}
 
-      {/* ─── Onglet Contrat ─────────────────────────────────────── */}
-      {activeTab === 'contrat' && (
-        <div style={{ marginTop: '1rem' }}>
-          {contratLoading && <div style={styles.emptyCard}>Chargement…</div>}
-          {!contratLoading && !contratData && (
-            <div style={styles.emptyCard}>
-              ⚠️ Ce client n'a pas encore signé le contrat.
-            </div>
-          )}
-          {!contratLoading && contratData && (
-            <>
-              {/* Bandeau signature */}
-              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 12, padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>✅</span>
-                <div>
-                  <p style={{ fontWeight: 700, color: '#166534', margin: 0, fontSize: '0.9rem' }}>Contrat signé électroniquement</p>
-                  <p style={{ color: '#16a34a', fontSize: '0.78rem', margin: '2px 0 0' }}>
-                    {contratData.created_at
-                      ? `Le ${new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-                      : 'Date inconnue'}
-                    {contratData.formule ? ` · ${contratData.formule}` : ''}
-                    {` · v${contratData.version_contrat || '1.0'}`}
-                  </p>
-                </div>
-              </div>
-
-              {/* Texte CGV */}
-              <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6' }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 1rem' }}>Conditions générales acceptées</p>
-                {CGV_CONTENU.map((section, i) => (
-                  <div key={i} style={{ marginBottom: '1.1rem' }}>
-                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#333', margin: '0 0 0.3rem' }}>{section.titre}</p>
-                    <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{section.texte}</p>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Contenu onglet Charge */}
-      {activeTab === 'charge' && client && (
-        <ChargePanel clientId={id} clientPrenom={client.prenom} clientNom={client.nom} />
-      )}
 
     </div>
   )
 }
 
-function InfoItem({ label, value, full }) {
+function InfoItem({ label, value, full, valueStyle }) {
   return (
     <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
       <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>{label}</p>
-      <p style={{ fontSize: '0.9rem', color: '#333333', margin: 0 }}>{value}</p>
+      <p style={{ fontSize: '0.9rem', color: '#333333', margin: 0, ...valueStyle }}>{value}</p>
     </div>
   )
 }
