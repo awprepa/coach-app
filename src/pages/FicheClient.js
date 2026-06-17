@@ -5,6 +5,7 @@ import Calendrier from '../components/Calendrier'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { ChargePanel } from './ChargeEntrainement'
 import { CGV_CONTENU } from './CGV'
+import { MUSCLES } from '../data/muscleData'
 
 
 const OFFRES = {
@@ -230,28 +231,40 @@ export default function FicheClient() {
     if (!progs?.length) return
     const { data: seancesAll } = await supabase.from('seances').select('id, nom').in('programme_id', progs.map(p => p.id))
     if (!seancesAll?.length) return
-    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id').in('seance_id', seancesAll.map(s => s.id))
+    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id, muscles_primaires').in('seance_id', seancesAll.map(s => s.id))
     if (!exosAll?.length) return
     const { data: tracking } = await supabase.from('serie_tracking').select('exercice_id, semaine, poids, valide').in('exercice_id', exosAll.map(e => e.id)).eq('valide', true)
     if (!tracking?.length) return
 
-    // Grouper par nom d'exercice → max poids par semaine
+    // Grouper par nom d'exercice → max poids par semaine + groupe musculaire
     const byExo = {}
+    const byExoGroupe = {}
     tracking.forEach(t => {
       const exo = exosAll.find(e => e.id === t.exercice_id)
       if (!exo || !t.poids) return
       const key = exo.nom
-      if (!byExo[key]) byExo[key] = {}
+      if (!byExo[key]) {
+        byExo[key] = {}
+        byExoGroupe[key] = exo.muscles_primaires?.[0] || ''
+      }
       const sem = `S${t.semaine}`
       if (!byExo[key][sem] || parseFloat(t.poids) > parseFloat(byExo[key][sem])) byExo[key][sem] = t.poids
     })
 
-    // Convertir en tableau pour Recharts
+    // Convertir en tableau pour Recharts, trier par groupe puis par nom
     const result = Object.entries(byExo).map(([nom, semaines]) => ({
       nom,
+      groupe: byExoGroupe[nom] || '',
       data: Object.entries(semaines).sort((a, b) => parseInt(a[0].slice(1)) - parseInt(b[0].slice(1)))
         .map(([sem, poids]) => ({ semaine: sem, poids }))
-    })).filter(e => e.data.length >= 2) // au moins 2 points pour une courbe
+    }))
+      .filter(e => e.data.length >= 2)
+      .sort((a, b) => {
+        const gA = MUSCLES[a.groupe]?.label || 'ZZZ'
+        const gB = MUSCLES[b.groupe]?.label || 'ZZZ'
+        if (gA !== gB) return gA.localeCompare(gB, 'fr')
+        return a.nom.localeCompare(b.nom, 'fr')
+      })
 
     setProgression(result)
   }
@@ -533,9 +546,24 @@ export default function FicheClient() {
                 <select
                   value={selectedExo || progression[0]?.nom}
                   onChange={e => setSelectedExo(e.target.value)}
-                  style={{ fontSize: '0.8rem', fontWeight: 700, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '4px 8px', background: 'white', color: '#333', cursor: 'pointer', maxWidth: 200 }}
+                  style={{ fontSize: '0.8rem', fontWeight: 600, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '4px 8px', background: 'white', color: '#333', cursor: 'pointer', maxWidth: 220 }}
                 >
-                  {progression.map(({ nom }) => <option key={nom} value={nom}>{nom}</option>)}
+                  {(() => {
+                    const groups = {}
+                    progression.forEach(({ nom, groupe }) => {
+                      const g = groupe || ''
+                      if (!groups[g]) groups[g] = []
+                      groups[g].push(nom)
+                    })
+                    return Object.entries(groups).map(([g, noms]) => {
+                      const label = MUSCLES[g]?.label || 'Autre'
+                      return (
+                        <optgroup key={g} label={label}>
+                          {noms.map(n => <option key={n} value={n}>{n}</option>)}
+                        </optgroup>
+                      )
+                    })
+                  })()}
                 </select>
               </div>
               {(() => {
