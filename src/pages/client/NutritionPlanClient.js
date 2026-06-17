@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -12,6 +11,7 @@ const MEAL_LABELS = {
   collation:   { label: 'Collation',   color: '#22c55e' },
   diner:       { label: 'Dîner',       color: '#8b5cf6' },
   collation_2: { label: 'Collation 2', color: '#f97316' },
+  autre:       { label: 'Autre',       color: '#9ca3af' },
 }
 
 const TYPE_JOUR_LABELS = {
@@ -114,9 +114,111 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
   )
 }
 
+// ─── Carte repas libre ajouté par le client ───────────────────────────────────
+function ExtraCard({ log, onDelete }) {
+  return (
+    <div style={{ ...S.mealCard, borderLeft: '3px solid #6366f1' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366f1', display: 'inline-block', flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>{log.hors_plan_nom || 'Repas ajouté'}</div>
+          <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
+            {[log.hors_plan_kcal && `${log.hors_plan_kcal} kcal`, log.hors_plan_prot && `P ${log.hors_plan_prot}g`, log.hors_plan_carbs && `G ${log.hors_plan_carbs}g`, log.hors_plan_fat && `L ${log.hors_plan_fat}g`].filter(Boolean).join(' · ') || 'Sans info nutritionnelle'}
+          </div>
+        </div>
+        <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: 20, background: '#ede9fe', color: '#6d28d9', flexShrink: 0 }}>Ajouté</span>
+        <button onClick={() => onDelete(log.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#d1d5db', display: 'flex' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Carte compensation kcal ──────────────────────────────────────────────────
+function CompensationCard({ meals, logs, tomorrowDay }) {
+  const totalPlan = meals.reduce((s, m) => s + (m.kcal || 0), 0)
+  if (!totalPlan) return null
+
+  const planLogs  = logs.filter(l => l.meal_id !== null)
+  const extraLogs = logs.filter(l => l.meal_id === null)
+  if (!planLogs.length && !extraLogs.length) return null
+
+  let mange = 0
+  for (const l of planLogs) {
+    const m = meals.find(m => m.id === l.meal_id)
+    if (l.statut === 'fait')           mange += m?.kcal || 0
+    else if (l.statut === 'hors_plan') mange += l.hors_plan_kcal ?? m?.kcal ?? 0
+  }
+  for (const l of extraLogs) mange += l.hors_plan_kcal || 0
+
+  const loggedIds     = new Set(planLogs.map(l => l.meal_id))
+  const resteKcal     = meals.filter(m => !loggedIds.has(m.id)).reduce((s, m) => s + (m.kcal || 0), 0)
+  const prevuMange    = totalPlan - resteKcal
+  const surplus       = mange - prevuMange
+  const isOver        = surplus > 80
+  const isUnder       = resteKcal === 0 && (totalPlan - mange) > 100
+
+  if (!isOver && !isUnder) return null
+
+  function getTomorrowSuggestion() {
+    if (!tomorrowDay) return null
+    const tmMeals = (tomorrowDay.nutrition_plan_meals || []).filter(m => m.kcal > 0)
+    if (!tmMeals.length) return null
+    const best = tmMeals.reduce((prev, cur) => Math.abs(cur.kcal - surplus) < Math.abs(prev.kcal - surplus) ? cur : prev)
+    const ml = MEAL_LABELS[best.meal_type]
+    return ml ? ml.label.toLowerCase() : best.nom
+  }
+
+  const tmLabel = isOver ? getTomorrowSuggestion() : null
+  const c = isOver
+    ? { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2', iconStroke: '#dc2626', title: '#dc2626' }
+    : { bg: '#f0fdf4', border: '#bbf7d0', iconBg: '#dcfce7', iconStroke: '#16a34a', title: '#16a34a' }
+
+  return (
+    <div style={{ borderRadius: 14, padding: '14px 16px', background: c.bg, border: `1.5px solid ${c.border}` }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: c.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {isOver
+            ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c.iconStroke} strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c.iconStroke} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          }
+        </div>
+        <div style={{ flex: 1 }}>
+          {isOver && (
+            <>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem', color: c.title, marginBottom: 4 }}>
+                +{Math.round(surplus)} kcal au-dessus de l'objectif
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#6b7280', lineHeight: 1.6 }}>
+                Tu as mangé <strong>{Math.round(mange)} kcal</strong> pour <strong>{Math.round(prevuMange)} prévues</strong>.
+                {tmLabel
+                  ? <span> Pour compenser demain, allège ta <strong>{tmLabel}</strong>.</span>
+                  : <span> Pense à alléger un repas sur le prochain jour.</span>
+                }
+              </div>
+            </>
+          )}
+          {isUnder && (
+            <>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem', color: c.title, marginBottom: 4 }}>
+                Journée complète · {Math.round(totalPlan - mange)} kcal sous l'objectif
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#6b7280', lineHeight: 1.6 }}>
+                Tu as mangé <strong>{Math.round(mange)} kcal</strong> sur <strong>{Math.round(totalPlan)} prévues</strong>. Tu peux ajouter un repas ci-dessous si c'est non intentionnel.
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function NutritionPlanClient() {
-  const navigate = useNavigate()
   const fadeStyle = usePageFade()
   const [client, setClient] = useState(null)
   const [plan, setPlan]     = useState(null)
@@ -129,6 +231,9 @@ export default function NutritionPlanClient() {
   const [savingLog, setSavingLog] = useState(null)
   const [horsplanModal, setHorsplanModal] = useState(null)
   const [horsplanForm, setHorsplanForm]   = useState({ nom: '', kcal: '', prot_g: '', carbs_g: '', fat_g: '' })
+  const [showAddModal, setShowAddModal]   = useState(false)
+  const [addForm, setAddForm]             = useState({ nom: '', kcal: '', prot_g: '', carbs_g: '', fat_g: '', meal_type: 'autre' })
+  const [savingExtra, setSavingExtra]     = useState(false)
 
   // ── Chargement ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -199,6 +304,34 @@ export default function NutritionPlanClient() {
       if (inserted) setLogs(prev => [...prev, inserted])
     }
     setSavingLog(null)
+  }
+
+  // ── Ajouter repas libre ──────────────────────────────────────────────────
+  async function addExtraMeal() {
+    if (!client || !plan || !addForm.nom.trim()) return
+    setSavingExtra(true)
+    const iso    = toISO(viewDate)
+    const dayNum = getPlanDayNumber(iso, plan) || 1
+    const { data: ins } = await supabase.from('nutrition_plan_logs').insert({
+      plan_id: plan.id, client_id: client.id,
+      date: iso, jour_numero: dayNum,
+      meal_id: null, statut: 'extra',
+      hors_plan_nom:   addForm.nom.trim(),
+      hors_plan_kcal:  addForm.kcal    ? Number(addForm.kcal)    : null,
+      hors_plan_prot:  addForm.prot_g  ? Number(addForm.prot_g)  : null,
+      hors_plan_carbs: addForm.carbs_g ? Number(addForm.carbs_g) : null,
+      hors_plan_fat:   addForm.fat_g   ? Number(addForm.fat_g)   : null,
+    }).select().single()
+    if (ins) setLogs(prev => [...prev, ins])
+    setAddForm({ nom: '', kcal: '', prot_g: '', carbs_g: '', fat_g: '', meal_type: 'autre' })
+    setShowAddModal(false)
+    setSavingExtra(false)
+  }
+
+  // ── Supprimer repas libre ────────────────────────────────────────────────
+  async function deleteExtraLog(logId) {
+    await supabase.from('nutrition_plan_logs').delete().eq('id', logId)
+    setLogs(prev => prev.filter(l => l.id !== logId))
   }
 
   // ── Hors-plan ────────────────────────────────────────────────────────────
@@ -303,12 +436,25 @@ export default function NutritionPlanClient() {
   const currentDay = days.find(d => d.jour_numero === dayNum)
   const meals = (currentDay?.nutrition_plan_meals || []).sort((a, b) => a.ordre - b.ordre)
 
+  const planLogs  = logs.filter(l => l.meal_id !== null)
+  const extraLogs = logs.filter(l => l.meal_id === null)
+
   const totalKcalPlan = meals.reduce((s, m) => s + (m.kcal || 0), 0)
-  const totalKcalFait = logs.filter(l => l.statut === 'fait').reduce((acc, l) => {
+  let totalKcalMange = 0
+  for (const l of planLogs) {
     const m = meals.find(m => m.id === l.meal_id)
-    return acc + (m?.kcal || 0)
-  }, 0)
-  const adherence = totalKcalPlan > 0 ? Math.round(totalKcalFait / totalKcalPlan * 100) : 0
+    if (l.statut === 'fait')           totalKcalMange += m?.kcal || 0
+    else if (l.statut === 'hors_plan') totalKcalMange += l.hors_plan_kcal ?? m?.kcal ?? 0
+  }
+  for (const l of extraLogs) totalKcalMange += l.hors_plan_kcal || 0
+
+  const isOver    = totalKcalMange > totalKcalPlan && totalKcalPlan > 0
+  const adherence = totalKcalPlan > 0 ? Math.min(Math.round(totalKcalMange / totalKcalPlan * 100), 150) : 0
+
+  // Jour de demain dans le plan (pour suggestion de compensation)
+  const tomorrowDate = new Date(viewDate); tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const tomorrowNum  = getPlanDayNumber(toISO(tomorrowDate), plan)
+  const tomorrowDay  = days.find(d => d.jour_numero === tomorrowNum)
 
   function changeDay(delta) {
     const d = new Date(viewDate); d.setDate(d.getDate() + delta)
@@ -373,11 +519,11 @@ export default function NutritionPlanClient() {
             </div>
 
             {/* Résumé kcal */}
-            {totalKcalPlan > 0 && (
+            {(totalKcalPlan > 0 || totalKcalMange > 0) && (
               <div style={S.kcalCard}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--accent-fg-dark)', lineHeight: 1 }}>{totalKcalFait}</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: isOver ? '#fca5a5' : 'var(--accent-fg-dark)', lineHeight: 1 }}>{Math.round(totalKcalMange)}</div>
                     <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase' }}>kcal mangés</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -386,9 +532,11 @@ export default function NutritionPlanClient() {
                   </div>
                 </div>
                 <div style={{ height: 5, background: 'rgba(255,255,255,0.18)', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', background: '#e4f816', borderRadius: 999, width: `${Math.min(adherence, 100)}%`, transition: 'width 0.4s' }} />
+                  <div style={{ height: '100%', borderRadius: 999, width: `${Math.min(adherence, 100)}%`, transition: 'width 0.4s', background: isOver ? '#f87171' : '#e4f816' }} />
                 </div>
-                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)', marginTop: 4, textAlign: 'right' }}>{adherence}% du plan suivi</div>
+                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)', marginTop: 4, textAlign: 'right' }}>
+                  {isOver ? `+${Math.round(totalKcalMange - totalKcalPlan)} kcal au-dessus` : `${Math.min(adherence, 100)}% du plan`}
+                </div>
               </div>
             )}
 
@@ -418,8 +566,8 @@ export default function NutritionPlanClient() {
               )
             })()}
 
-            {/* Repas */}
-            {meals.length === 0 ? (
+            {/* Repas prescrits */}
+            {meals.length === 0 && extraLogs.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0', fontSize: '0.85rem' }}>
                 Aucun repas prescrit pour ce jour.
               </div>
@@ -428,7 +576,7 @@ export default function NutritionPlanClient() {
                 <MealCard
                   key={meal.id}
                   meal={meal}
-                  log={logs.find(l => l.meal_id === meal.id)}
+                  log={planLogs.find(l => l.meal_id === meal.id)}
                   dayNum={dayNum}
                   saving={savingLog === meal.id}
                   onLog={logMeal}
@@ -436,6 +584,22 @@ export default function NutritionPlanClient() {
                 />
               ))
             )}
+
+            {/* Repas libres ajoutés */}
+            {extraLogs.map(log => (
+              <ExtraCard key={log.id} log={log} onDelete={deleteExtraLog} />
+            ))}
+
+            {/* Compensation kcal */}
+            <CompensationCard meals={meals} logs={logs} tomorrowDay={tomorrowDay} />
+
+            {/* Bouton ajouter un repas */}
+            <button onClick={() => setShowAddModal(true)} style={S.addMealBtn}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Ajouter un repas à la journée
+            </button>
 
             {/* Hydratation */}
             <HydratationCard water={water} onUpdate={updateWater} />
@@ -518,6 +682,45 @@ export default function NutritionPlanClient() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setHorsplanModal(null)} style={S.cancelBtn}>Annuler</button>
               <button onClick={() => saveHorsPlan(horsplanModal.meal, horsplanModal.dayNum)} style={S.saveBtn}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal ajouter repas libre ─────────────────────────────────────── */}
+      {showAddModal && (
+        <div style={S.overlay} onClick={() => setShowAddModal(false)}>
+          <div style={S.sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1rem' }} />
+            <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.3rem', color: '#1a1a1a' }}>Ajouter un repas</p>
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 1rem', lineHeight: 1.5 }}>
+              Repas non prévu dans le plan — pris en compte dans le bilan kcal du jour.
+            </p>
+            <div style={{ marginBottom: '0.65rem' }}>
+              <label style={S.fieldLabel}>Nom du repas *</label>
+              <input value={addForm.nom} onChange={e => setAddForm(f => ({ ...f, nom: e.target.value }))} style={S.fieldInput} placeholder="Ex: Yaourt grec, barre protéinée…" autoFocus />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.6rem', marginBottom: '0.8rem' }}>
+              {[{ key: 'kcal', label: 'Calories (kcal)' }, { key: 'prot_g', label: 'Prot (g)' }, { key: 'carbs_g', label: 'Gluc (g)' }, { key: 'fat_g', label: 'Lip (g)' }].map(f => (
+                <div key={f.key}>
+                  <label style={S.fieldLabel}>{f.label}</label>
+                  <input type="number" inputMode="numeric" value={addForm[f.key]} onChange={e => setAddForm(p => ({ ...p, [f.key]: e.target.value }))} style={S.fieldInput} placeholder="—" />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={S.fieldLabel}>Type de repas</label>
+              <select value={addForm.meal_type} onChange={e => setAddForm(f => ({ ...f, meal_type: e.target.value }))}
+                style={{ ...S.fieldInput, appearance: 'none', WebkitAppearance: 'none' }}>
+                {Object.entries(MEAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowAddModal(false)} style={S.cancelBtn}>Annuler</button>
+              <button onClick={addExtraMeal} disabled={!addForm.nom.trim() || savingExtra}
+                style={{ ...S.saveBtn, opacity: !addForm.nom.trim() ? 0.5 : 1 }}>
+                {savingExtra ? 'Enregistrement…' : 'Ajouter'}
+              </button>
             </div>
           </div>
         </div>
@@ -608,6 +811,7 @@ const S = {
   sheet: { background: 'white', borderRadius: '22px 22px 0 0', padding: '1rem 1.25rem 2.5rem', width: '100%', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' },
   fieldLabel: { display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '0.3rem' },
   fieldInput: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit' },
-  cancelBtn: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280' },
-  saveBtn: { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
+  cancelBtn: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280', fontFamily: 'inherit' },
+  saveBtn:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit' },
+  addMealBtn: { width: '100%', padding: '0.9rem', borderRadius: 14, border: '2px dashed #c7d2fe', background: '#f5f3ff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#6366f1', fontWeight: 700, fontSize: '0.88rem', fontFamily: 'inherit' },
 }
