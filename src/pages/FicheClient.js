@@ -618,9 +618,18 @@ export default function FicheClient() {
           </div>
         </div>
         {(() => {
-          const actifs   = programmes.filter(p => !isCycleTermine(p))
-          const termines = programmes.filter(p => isCycleTermine(p))
-          const visibles = showPastCycles ? programmes : actifs
+          const vraisActifs = programmes
+            .filter(p => p.date_debut && !isCycleTermine(p))
+            .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut))
+          const sansDates = programmes
+            .filter(p => !p.date_debut)
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          const termines = programmes
+            .filter(p => p.date_debut && isCycleTermine(p))
+            .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut))
+          const visibles = showPastCycles
+            ? [...vraisActifs, ...sansDates, ...termines]
+            : [...vraisActifs, ...sansDates]
           return (
             <>
               {visibles.length === 0 && !showPastCycles ? (

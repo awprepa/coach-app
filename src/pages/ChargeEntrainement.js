@@ -790,7 +790,14 @@ async function loadExerciseWeights(cid) {
     .order('created_at', { ascending: false })
   if (!progs?.length) return null
 
-  const prog = progs[0]
+  // Prefer active programme (has date_debut, not yet terminated), fall back to most recent
+  const now = new Date()
+  const prog = progs.find(p => {
+    if (!p.date_debut) return false
+    const fin = new Date(p.date_debut + 'T00:00:00')
+    fin.setDate(fin.getDate() + p.semaines * 7)
+    return fin >= now
+  }) || progs[0]
 
   // Séances avec nom et ordre
   const { data: seances } = await supabase
