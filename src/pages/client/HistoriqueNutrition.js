@@ -1,336 +1,270 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
-  ReferenceLine, ResponsiveContainer, CartesianGrid,
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import usePageFade from '../../hooks/usePageFade'
 
-// ─── Helpers date ──────────────────────────────────────────────────────────────
+function toISO(date) { return date.toISOString().slice(0, 10) }
+function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return toISO(d) }
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10)
+function getPlanDayNumber(dateISO, plan) {
+  if (!plan?.date_debut) return 1
+  const debut  = new Date(plan.date_debut + 'T00:00:00')
+  const target = new Date(dateISO + 'T00:00:00')
+  const diff   = Math.floor((target - debut) / 86400000)
+  if (diff < 0) return null
+  return (diff % 7) + 1
 }
 
-function addDays(isoDate, n) {
-  const d = new Date(isoDate + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
-function thirtyDaysAgoISO() {
-  return addDays(todayISO(), -29)
-}
-
-// Génère la liste des 30 jours ISO du plus ancien au plus récent
-function last30Days() {
-  const start = thirtyDaysAgoISO()
-  return Array.from({ length: 30 }, (_, i) => addDays(start, i))
-}
-
-function formatDateAxis(isoDate) {
-  const [, m, d] = isoDate.split('-')
+function formatAxis(iso) {
+  const [, m, d] = iso.split('-')
   return `${d}/${m}`
 }
 
-// ─── Tooltip Recharts personnalisé ────────────────────────────────────────────
+function adherenceColor(pct) {
+  if (pct === null) return '#e5e7eb'
+  if (pct >= 80)  return '#16a34a'
+  if (pct >= 50)  return '#d97706'
+  return '#ef4444'
+}
 
-function CustomTooltip({ active, payload, label, kcalTarget }) {
-  if (!active || !payload || !payload.length) return null
-  const kcal = payload[0]?.value ?? 0
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const d = payload[0]?.payload
   return (
-    <div style={{
-      background: '#1a1a1a', color: 'white', borderRadius: 10,
-      padding: '0.5rem 0.75rem', fontSize: '0.78rem', lineHeight: 1.6,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-    }}>
-      <div style={{ fontWeight: 800, color: 'var(--accent-fg)', marginBottom: 2 }}>{label}</div>
-      <div>{Math.round(kcal)} kcal</div>
-      {kcalTarget > 0 && (
-        <div style={{ color: '#9ca3af' }}>
-          objectif : {kcalTarget} kcal
-        </div>
-      )}
+    <div style={{ background: '#1a1a1a', color: 'white', borderRadius: 10, padding: '0.5rem 0.75rem', fontSize: '0.78rem', lineHeight: 1.6, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+      <div style={{ fontWeight: 800, color: '#e4f816', marginBottom: 2 }}>{label}</div>
+      <div>{Math.round(d?.kcalMange || 0)} kcal mangés</div>
+      {d?.kcalPrevu > 0 && <div style={{ color: '#9ca3af' }}>objectif : {d.kcalPrevu} kcal</div>}
+      {d?.adherPct !== null && <div style={{ color: adherenceColor(d.adherPct) }}>adhérence : {d.adherPct}%</div>}
     </div>
   )
 }
 
-// ─── Couleur de la case calendrier ────────────────────────────────────────────
-
-function dayCircleColor(kcal, kcalTarget) {
-  if (!kcal) return '#e5e7eb' // pas de données
-  if (!kcalTarget) return '#22c55e' // données mais pas d'objectif
-  const ratio = kcal / kcalTarget
-  if (ratio < 0.5)  return '#ef4444'
-  if (ratio < 0.8)  return '#f97316'
-  if (ratio < 1.0)  return '#eab308'
-  return '#22c55e'
-}
-
-// ─── Composant principal ──────────────────────────────────────────────────────
-
 export default function HistoriqueNutrition() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const fadeStyle = usePageFade()
   const [client,  setClient]  = useState(null)
-  const [goals,   setGoals]   = useState(null)
-  const [rawMeals, setRawMeals] = useState([])
+  const [plan,    setPlan]    = useState(null)
+  const [days,    setDays]    = useState([])
+  const [logs,    setLogs]    = useState([])
   const [loading, setLoading] = useState(true)
 
-  // ─── Chargement ───────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       const { data: sess } = await supabase.auth.getSession()
       const userId = sess?.session?.user?.id
       if (!userId) { setLoading(false); return }
 
-      // Client
-      const { data: c } = await supabase
-        .from('clients')
-        .select('id, prenom')
-        .eq('user_id', userId)
-        .maybeSingle()
+      const { data: c } = await supabase.from('clients').select('id, prenom').eq('user_id', userId).maybeSingle()
       if (!c) { setLoading(false); return }
       setClient(c)
 
-      const today = todayISO()
+      const today = toISO(new Date())
+      const { data: activePlan } = await supabase
+        .from('nutrition_plans').select('*').eq('client_id', c.id).eq('statut', 'actif')
+        .or(`date_fin.is.null,date_fin.gte.${today}`)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
 
-      // Goals actifs (plus récent avec active_to IS NULL ou >= today)
-      const { data: g } = await supabase
-        .from('nutrition_goals')
-        .select('*')
-        .eq('client_id', c.id)
-        .or(`active_to.is.null,active_to.gte.${today}`)
-        .order('active_from', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      setGoals(g)
-
-      // Repas des 30 derniers jours
-      const { data: m } = await supabase
-        .from('nutrition_meals')
-        .select('date, kcal, prot_g, carbs_g, fat_g, meal_type')
-        .eq('client_id', c.id)
-        .gte('date', thirtyDaysAgoISO())
-        .order('date', { ascending: true })
-      setRawMeals(m || [])
-
+      if (activePlan) {
+        setPlan(activePlan)
+        const from = daysAgo(27)
+        const [{ data: daysData }, { data: logsData }] = await Promise.all([
+          supabase.from('nutrition_plan_days')
+            .select('jour_numero, label, objectif_kcal, nutrition_plan_meals(id, kcal)')
+            .eq('plan_id', activePlan.id).order('jour_numero'),
+          supabase.from('nutrition_plan_logs')
+            .select('*').eq('client_id', c.id).eq('plan_id', activePlan.id)
+            .gte('date', from).lte('date', today),
+        ])
+        setDays(daysData || [])
+        setLogs(logsData || [])
+      }
       setLoading(false)
     }
     load()
   }, [])
 
-  // ─── Agrégation par date ──────────────────────────────────────────────────
-  const byDate = useMemo(() => {
-    const map = {}
-    for (const row of rawMeals) {
-      if (!map[row.date]) {
-        map[row.date] = { date: row.date, kcal: 0, prot: 0, carbs: 0, fat: 0, count: 0 }
-      }
-      map[row.date].kcal  += Number(row.kcal)    || 0
-      map[row.date].prot  += Number(row.prot_g)  || 0
-      map[row.date].carbs += Number(row.carbs_g) || 0
-      map[row.date].fat   += Number(row.fat_g)   || 0
-      map[row.date].count += 1
+  // ── Données dérivées ─────────────────────────────────────────────────────
+  const { byDate, daysMap } = useMemo(() => {
+    const dm = {}
+    for (const d of days) dm[d.jour_numero] = d
+    const logsMap = {}
+    for (const l of logs) {
+      if (!logsMap[l.date]) logsMap[l.date] = []
+      logsMap[l.date].push(l)
     }
-    return map
-  }, [rawMeals])
+    return { byDate: logsMap, daysMap: dm }
+  }, [days, logs])
 
-  // Jours avec données
-  const daysWithData = Object.keys(byDate)
+  // Calcule les stats pour une date ISO
+  const dayStats = useMemo(() => {
+    if (!plan) return {}
+    const result = {}
+    for (let i = 27; i >= 0; i--) {
+      const iso    = daysAgo(i)
+      if (plan.date_debut && iso < plan.date_debut) continue
+      const dayNum = getPlanDayNumber(iso, plan)
+      if (!dayNum) continue
+      const dayData = daysMap[dayNum]
+      const meals   = dayData?.nutrition_plan_meals || []
+      const dayLogs = byDate[iso] || []
+      const planLogs = dayLogs.filter(l => l.meal_id !== null)
+      const extras   = dayLogs.filter(l => l.meal_id === null)
 
-  // Moyenne kcal / jour sur les jours loggués
-  const avgKcal = useMemo(() => {
-    if (!daysWithData.length) return 0
-    const total = daysWithData.reduce((acc, d) => acc + byDate[d].kcal, 0)
-    return Math.round(total / daysWithData.length)
-  }, [byDate, daysWithData])
+      let kcalMange = 0
+      let fait = 0, horsplan = 0, saute = 0
+      for (const meal of meals) {
+        const log = planLogs.find(l => l.meal_id === meal.id)
+        const s   = log?.statut || 'non_loggé'
+        if (s === 'fait')       { kcalMange += meal.kcal || 0; fait++ }
+        else if (s === 'hors_plan') { kcalMange += log.hors_plan_kcal ?? meal.kcal ?? 0; horsplan++ }
+        else if (s === 'saute') saute++
+      }
+      for (const e of extras) kcalMange += e.hors_plan_kcal || 0
 
-  // % adhérence (jours >= 80% de l'objectif / 30 jours)
-  const adherencePct = useMemo(() => {
-    if (!goals?.kcal_target || !daysWithData.length) return null
-    const goodDays = daysWithData.filter(
-      d => byDate[d].kcal >= goals.kcal_target * 0.8
-    ).length
-    return Math.round((goodDays / 30) * 100)
-  }, [goals, byDate, daysWithData])
+      const total     = meals.length
+      const loggued   = fait + horsplan + saute
+      const kcalPrevu = dayData?.objectif_kcal || plan.objectif_kcal || meals.reduce((s, m) => s + (m.kcal || 0), 0) || 0
+      const adherPct  = total > 0 && loggued > 0 ? Math.round((fait + horsplan) / total * 100) : null
 
-  // Données graphique Recharts : 14 derniers jours AVEC données
+      result[iso] = { iso, fait, horsplan, saute, total, loggued, kcalMange, kcalPrevu, adherPct }
+    }
+    return result
+  }, [plan, daysMap, byDate])
+
+  const allDates     = Object.keys(dayStats).sort()
+  const datesLoggued = allDates.filter(d => dayStats[d].loggued > 0)
+
+  // Stats résumé 14 jours
+  const last14 = allDates.slice(-14)
+  const totalMeals14 = last14.reduce((s, d) => s + dayStats[d].total, 0)
+  const totalFait14  = last14.reduce((s, d) => s + dayStats[d].fait, 0)
+  const totalHP14    = last14.reduce((s, d) => s + dayStats[d].horsplan, 0)
+  const totalSaute14 = last14.reduce((s, d) => s + dayStats[d].saute, 0)
+  const adher14      = totalMeals14 > 0 ? Math.round((totalFait14 + totalHP14) / totalMeals14 * 100) : null
+
+  // Données graphique (14 derniers jours avec logs)
   const chartData = useMemo(() => {
-    const allDays = last30Days().slice(-14)
-    return allDays
-      .filter(d => byDate[d])
-      .map(d => ({
-        date: formatDateAxis(d),
-        kcal: Math.round(byDate[d].kcal),
-      }))
-  }, [byDate])
+    return last14
+      .filter(d => dayStats[d]?.loggued > 0)
+      .map(d => ({ date: formatAxis(d), kcalMange: Math.round(dayStats[d].kcalMange), kcalPrevu: dayStats[d].kcalPrevu, adherPct: dayStats[d].adherPct }))
+  }, [dayStats, last14])
 
-  // Grille calendrier : 30 jours dans l'ordre chronologique
-  const calendarDays = useMemo(() => last30Days(), [])
+  const avgKcalPrevu = plan?.objectif_kcal || (last14.length ? Math.round(last14.reduce((s, d) => s + dayStats[d].kcalPrevu, 0) / last14.length) : 0)
 
-  // ─── Loading ──────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div style={S.page}>
-        <div style={S.header}>
-          <button onClick={() => navigate(-1)} style={S.backBtn}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          <span style={S.headerTitle}>Historique</span>
-          <div style={{ width: 32 }} />
-        </div>
-        <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem 1rem' }}>Chargement…</p>
-        <ClientBottomNav />
-      </div>
-    )
-  }
-
-  // ─── Rendu principal ──────────────────────────────────────────────────────
-  return (
+  if (loading) return (
     <div style={S.page}>
-      {/* Header */}
+      <div style={S.header}>
+        <button onClick={() => navigate(-1)} style={S.backBtn}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <span style={S.headerTitle}>Historique</span>
+        <div style={{ width: 32 }} />
+      </div>
+      <div style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>Chargement…</div>
+      <ClientBottomNav />
+    </div>
+  )
+
+  return (
+    <div style={{ ...S.page, ...fadeStyle }}>
       <div style={S.header}>
         <button onClick={() => navigate(-1)} style={S.backBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <span style={S.headerTitle}>Historique</span>
+        <span style={S.headerTitle}>Historique nutrition</span>
         <div style={{ width: 32 }} />
       </div>
 
       <div style={S.content}>
 
-        {/* ─── État vide ─────────────────────────────────────────────────── */}
-        {daysWithData.length === 0 && (
-          <div style={{ ...S.card, textAlign: 'center', padding: '2.5rem 1.25rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📊</div>
-            <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem', fontSize: '1rem' }}>
-              Aucun repas dans les 30 derniers jours
-            </p>
-            <p style={{ color: '#6b7280', fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
-              Commence à logger tes repas depuis la page Nutrition pour voir tes tendances ici.
-            </p>
+        {/* Pas de plan */}
+        {!plan && (
+          <div style={S.card}>
+            <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem', textAlign: 'center' }}>Aucun plan actif</p>
+            <p style={{ color: '#6b7280', fontSize: '0.83rem', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>L'historique d'adhérence sera disponible dès que ton coach active un plan.</p>
           </div>
         )}
 
-        {/* ─── Résumé 30 jours ───────────────────────────────────────────── */}
-        {daysWithData.length > 0 && (
+        {/* Résumé 14 jours */}
+        {plan && (
           <div style={S.card}>
             <div style={S.cardHeader}>
-              <span style={S.cardTitle}>Résumé 30 jours</span>
-              <span style={S.cardSub}>{daysWithData.length} jour{daysWithData.length > 1 ? 's' : ''} loggué{daysWithData.length > 1 ? 's' : ''}</span>
+              <span style={S.cardTitle}>Résumé — 14 jours</span>
+              <span style={S.cardSub}>{datesLoggued.length} jour{datesLoggued.length > 1 ? 's' : ''} loggué{datesLoggued.length > 1 ? 's' : ''}</span>
             </div>
-            <div style={S.statsRow}>
-              <div style={S.statBox}>
-                <span style={S.statValue}>{daysWithData.length}</span>
-                <span style={S.statLabel}>jours loggués</span>
-              </div>
-              <div style={S.statDivider} />
-              <div style={S.statBox}>
-                <span style={S.statValue}>{avgKcal}</span>
-                <span style={S.statLabel}>kcal moy / jour</span>
-              </div>
-              {adherencePct !== null && (
-                <>
-                  <div style={S.statDivider} />
-                  <div style={S.statBox}>
-                    <span style={{
-                      ...S.statValue,
-                      color: adherencePct >= 80 ? '#22c55e' : adherencePct >= 50 ? '#f97316' : '#ef4444',
-                    }}>
-                      {adherencePct}%
-                    </span>
-                    <span style={S.statLabel}>adhérence</span>
-                  </div>
-                </>
-              )}
-            </div>
-            {goals?.kcal_target && (
-              <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.6rem 0 0', textAlign: 'center' }}>
-                Objectif : {goals.kcal_target} kcal/jour — adhérence = jours ≥ 80% de l'objectif
+
+            {datesLoggued.length === 0 ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.83rem', textAlign: 'center', margin: '0.5rem 0 0', lineHeight: 1.5 }}>
+                Commence à cocher tes repas depuis la page plan pour voir tes stats ici.
               </p>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  {[
+                    { label: 'Adhérence', val: adher14 !== null ? `${adher14}%` : '—', color: adherenceColor(adher14) },
+                    { label: 'Fait',      val: totalFait14,  color: '#16a34a' },
+                    { label: 'Hors-plan', val: totalHP14,    color: '#d97706' },
+                    { label: 'Sauté',     val: totalSaute14, color: '#ef4444' },
+                  ].map(stat => (
+                    <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: stat.color + '15', borderRadius: 10, padding: '8px 4px' }}>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: stat.color, lineHeight: 1 }}>{stat.val}</div>
+                      <div style={{ fontSize: '0.58rem', fontWeight: 700, color: stat.color, opacity: 0.8, marginTop: 3, textTransform: 'uppercase' }}>{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {totalMeals14 > 0 && (
+                  <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ background: '#16a34a', width: `${totalFait14 / totalMeals14 * 100}%` }} />
+                    <div style={{ background: '#d97706', width: `${totalHP14 / totalMeals14 * 100}%` }} />
+                    <div style={{ background: '#ef4444', width: `${totalSaute14 / totalMeals14 * 100}%` }} />
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
 
-        {/* ─── Calendrier 30 jours ───────────────────────────────────────── */}
-        {daysWithData.length > 0 && (
-          <div style={S.card}>
-            <div style={S.cardHeader}>
-              <span style={S.cardTitle}>Calendrier</span>
-              <span style={S.cardSub}>30 derniers jours</span>
-            </div>
-
-            {/* Légende jours semaine */}
-            <div style={S.weekLabels}>
-              {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => (
-                <span key={d} style={S.weekLabel}>{d}</span>
-              ))}
-            </div>
-
-            {/* Grille — on démarre le premier jour sur la bonne colonne */}
-            <CalendarGrid days={calendarDays} byDate={byDate} kcalTarget={goals?.kcal_target} />
-          </div>
-        )}
-
-        {/* ─── Graphique Recharts ────────────────────────────────────────── */}
-        {chartData.length > 0 && (
+        {/* Graphique kcal */}
+        {chartData.length > 1 && (
           <div style={{ ...S.card, background: '#1a1a1a', overflow: 'hidden' }}>
             <div style={S.cardHeader}>
-              <span style={{ ...S.cardTitle, color: '#f9fafb' }}>Évolution kcal</span>
-              <span style={{ ...S.cardSub, color: '#6b7280' }}>14 derniers jours</span>
+              <span style={{ ...S.cardTitle, color: '#f9fafb' }}>Kcal consommés</span>
+              <span style={{ ...S.cardSub, color: '#6b7280' }}>14 derniers jours loggués</span>
             </div>
-
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={170}>
+              <LineChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2d2d2d" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: '#6b7280', fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={40}
-                  tickFormatter={v => `${v}`}
-                />
-                <Tooltip content={<CustomTooltip kcalTarget={goals?.kcal_target || 0} />} />
-                {goals?.kcal_target > 0 && (
-                  <ReferenceLine
-                    y={goals.kcal_target}
-                    stroke="#ef4444"
-                    strokeDasharray="5 3"
-                    strokeWidth={1.5}
-                    label={{
-                      value: `obj. ${goals.kcal_target}`,
-                      position: 'insideTopRight',
-                      fill: '#ef4444',
-                      fontSize: 10,
-                      fontWeight: 700,
-                    }}
-                  />
+                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} width={42} />
+                <Tooltip content={<CustomTooltip />} />
+                {avgKcalPrevu > 0 && (
+                  <ReferenceLine y={avgKcalPrevu} stroke="#e4f816" strokeDasharray="5 3" strokeWidth={1.5}
+                    label={{ value: `${avgKcalPrevu} kcal`, position: 'insideTopRight', fill: '#e4f816', fontSize: 10, fontWeight: 700 }} />
                 )}
-                <Line
-                  type="monotone"
-                  dataKey="kcal"
-                  stroke="var(--accent)"
-                  strokeWidth={2.5}
-                  dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }}
-                  activeDot={{ fill: 'white', r: 4, strokeWidth: 0 }}
-                />
+                <Line type="monotone" dataKey="kcalMange" stroke="#e4f816" strokeWidth={2.5}
+                  dot={{ fill: '#e4f816', r: 3, strokeWidth: 0 }} activeDot={{ fill: 'white', r: 4, strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
 
-        {/* Espace BottomNav */}
+        {/* Calendrier 28 jours */}
+        {plan && allDates.length > 0 && (
+          <div style={S.card}>
+            <div style={S.cardHeader}>
+              <span style={S.cardTitle}>Calendrier</span>
+              <span style={S.cardSub}>28 derniers jours</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: 6 }}>
+              {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+                <span key={i} style={{ textAlign: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>{d}</span>
+              ))}
+            </div>
+            <CalendarGrid dayStats={dayStats} />
+          </div>
+        )}
+
         <div style={{ height: 20 }} />
       </div>
 
@@ -339,53 +273,39 @@ export default function HistoriqueNutrition() {
   )
 }
 
-// ─── Grille calendrier ────────────────────────────────────────────────────────
+// ─── Calendrier ───────────────────────────────────────────────────────────────
+function CalendarGrid({ dayStats }) {
+  const today = toISO(new Date())
+  // 28 derniers jours
+  const allDates = Array.from({ length: 28 }, (_, i) => daysAgo(27 - i))
 
-function CalendarGrid({ days, byDate, kcalTarget }) {
-  // Quel jour de la semaine est le premier jour de la liste ? (0=dim, 1=lun…)
-  // On veut que Lundi = colonne 0
-  const firstDate = new Date(days[0] + 'T00:00:00')
-  const jsDay = firstDate.getDay() // 0=dim, 1=lun, …, 6=sam
-  const offset = jsDay === 0 ? 6 : jsDay - 1 // nombre de cases vides avant le 1er jour
+  const firstDate = new Date(allDates[0] + 'T00:00:00')
+  const jsDay     = firstDate.getDay()
+  const offset    = jsDay === 0 ? 6 : jsDay - 1
 
   const cells = [
-    ...Array.from({ length: offset }, (_, i) => ({ key: `empty-${i}`, empty: true })),
-    ...days.map(iso => {
-      const dayNum = parseInt(iso.split('-')[2], 10)
-      const data   = byDate[iso]
-      const kcal   = data?.kcal || 0
-      const color  = dayCircleColor(kcal, kcalTarget)
-      const isToday = iso === todayISO()
-      return { key: iso, dayNum, kcal, color, isToday, empty: false }
+    ...Array.from({ length: offset }, (_, i) => ({ key: `e${i}`, empty: true })),
+    ...allDates.map(iso => {
+      const s = dayStats[iso]
+      const pct = s?.adherPct ?? (s?.loggued > 0 ? 0 : null)
+      return { key: iso, iso, dayNum: parseInt(iso.split('-')[2], 10), color: adherenceColor(pct), isToday: iso === today, hasData: (s?.loggued || 0) > 0 }
     }),
   ]
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(7, 1fr)',
-      gap: '6px',
-    }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
       {cells.map(cell => {
         if (cell.empty) return <div key={cell.key} />
         return (
-          <div key={cell.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <div key={cell.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: cell.color,
+              width: 30, height: 30, borderRadius: '50%',
+              background: cell.hasData ? cell.color : '#f3f4f6',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              outline: cell.isToday ? '2px solid #1a1a1a' : 'none',
+              outline: cell.isToday ? '2.5px solid #1a1a1a' : 'none',
               outlineOffset: 1,
-              boxSizing: 'border-box',
             }}>
-              <span style={{
-                fontSize: '0.68rem',
-                fontWeight: cell.isToday ? 900 : 700,
-                color: cell.color === '#e5e7eb' ? '#9ca3af' : 'white',
-                lineHeight: 1,
-              }}>
-                {cell.dayNum}
-              </span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: cell.hasData ? 'white' : '#9ca3af', lineHeight: 1 }}>{cell.dayNum}</span>
             </div>
           </div>
         )
@@ -395,67 +315,14 @@ function CalendarGrid({ days, byDate, kcalTarget }) {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-
 const S = {
-  page: {
-    background: '#fafafa',
-    minHeight: '100vh',
-    paddingBottom: '90px',
-  },
-  header: {
-    background: 'var(--header-bg)',
-    padding: '1.1rem 1.25rem',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    color: 'white',
-  },
-  headerTitle: {
-    fontSize: '1.05rem', fontWeight: 800, letterSpacing: '0.01em',
-  },
-  backBtn: {
-    width: 32, height: 32, borderRadius: 999,
-    background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  content: {
-    padding: '1rem',
-    display: 'flex', flexDirection: 'column', gap: '1rem',
-  },
-  card: {
-    background: 'white', borderRadius: 16, padding: '1.1rem',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-  },
-  cardHeader: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: '0.85rem',
-  },
-  cardTitle: { fontSize: '0.92rem', fontWeight: 800, color: '#1a1a1a' },
-  cardSub:   { fontSize: '0.74rem', fontWeight: 600, color: '#9ca3af' },
-  statsRow: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-    padding: '0.25rem 0',
-  },
-  statBox: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-    flex: 1,
-  },
-  statValue: {
-    fontSize: '1.45rem', fontWeight: 900, color: '#1a1a1a', lineHeight: 1,
-  },
-  statLabel: {
-    fontSize: '0.68rem', fontWeight: 600, color: '#9ca3af', textAlign: 'center',
-    lineHeight: 1.3,
-  },
-  statDivider: {
-    width: 1, height: 36, background: '#f3f4f6', flexShrink: 0,
-  },
-  weekLabels: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '6px',
-    marginBottom: '6px',
-  },
-  weekLabel: {
-    textAlign: 'center', fontSize: '0.62rem', fontWeight: 700,
-    color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em',
-  },
+  page:       { background: '#fafafa', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  header:     { background: 'var(--header-bg)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', position: 'sticky', top: 0, zIndex: 60 },
+  headerTitle:{ fontSize: '1rem', fontWeight: 800 },
+  backBtn:    { width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  content:    { padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
+  card:       { background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' },
+  cardTitle:  { fontSize: '0.92rem', fontWeight: 800, color: '#1a1a1a' },
+  cardSub:    { fontSize: '0.74rem', fontWeight: 600, color: '#9ca3af' },
 }

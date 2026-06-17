@@ -50,22 +50,31 @@ export default function NutritionCoach() {
         if (isValidActif && !plansMap[p.client_id].actif) plansMap[p.client_id].actif = p
       }
 
-      // Kcal aujourd'hui (libre — indicatif)
-      const { data: todayMeals } = await supabase
-        .from('nutrition_meals')
-        .select('client_id, kcal')
+      // Adhérence 7 derniers jours (plan logs)
+      const from7 = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
+      const { data: recentLogs } = await supabase
+        .from('nutrition_plan_logs')
+        .select('client_id, statut, meal_id')
         .in('client_id', ids)
-        .eq('date', today)
+        .gte('date', from7)
+        .lte('date', today)
 
-      const kcalMap = {}
-      for (const m of (todayMeals || [])) {
-        kcalMap[m.client_id] = (kcalMap[m.client_id] || 0) + (Number(m.kcal) || 0)
+      const adherMap = {}
+      for (const l of (recentLogs || [])) {
+        if (!adherMap[l.client_id]) adherMap[l.client_id] = { total: 0, ok: 0 }
+        if (l.meal_id !== null) {
+          adherMap[l.client_id].total++
+          if (l.statut === 'fait' || l.statut === 'hors_plan') adherMap[l.client_id].ok++
+        }
       }
 
       const result = allClients.map(c => ({
         ...c,
         plans:   plansMap[c.id] || { total: 0, actif: null },
-        kcalDay: kcalMap[c.id] || 0,
+        adher7:  adherMap[c.id] && adherMap[c.id].total > 0
+          ? Math.round(adherMap[c.id].ok / adherMap[c.id].total * 100)
+          : null,
+        logsCount7: adherMap[c.id]?.total || 0,
       }))
 
       setEnriched(result)
@@ -161,9 +170,20 @@ export default function NutritionCoach() {
                     </div>
                   )}
 
-                  {/* Kcal libre du jour (si > 0) */}
-                  {client.kcalDay > 0 && (
-                    <div style={S.kcalLine}>{Math.round(client.kcalDay)} kcal loggés aujourd'hui</div>
+                  {/* Adhérence 7 jours */}
+                  {client.adher7 !== null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <div style={{ flex: 1, height: 4, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 999,
+                          background: client.adher7 >= 80 ? '#16a34a' : client.adher7 >= 50 ? '#d97706' : '#ef4444',
+                          width: `${client.adher7}%`,
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: client.adher7 >= 80 ? '#16a34a' : client.adher7 >= 50 ? '#d97706' : '#ef4444', flexShrink: 0 }}>
+                        {client.adher7}% / 7j
+                      </span>
+                    </div>
                   )}
 
                   {/* Flèche */}
@@ -210,6 +230,5 @@ const S = {
   planActif: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '8px 10px', marginBottom: 6 },
   planDot: { width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block', flexShrink: 0 },
   noPlan: { fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', marginBottom: 6 },
-  kcalLine: { fontSize: '0.68rem', color: '#9ca3af', marginTop: 4 },
   arrow: { position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' },
 }

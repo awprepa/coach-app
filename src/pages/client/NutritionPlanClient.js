@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -219,6 +220,7 @@ function CompensationCard({ meals, logs, tomorrowDay }) {
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function NutritionPlanClient() {
+  const navigate  = useNavigate()
   const fadeStyle = usePageFade()
   const [client, setClient] = useState(null)
   const [plan, setPlan]     = useState(null)
@@ -476,7 +478,9 @@ export default function NutritionPlanClient() {
           <div style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>{plan.nom}</div>
           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.62rem' }}>Plan prescrit</div>
         </div>
-        <div style={{ width: 32 }} />
+        <button onClick={() => navigate('/client/nutrition/historique')} style={{ width: 32, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </button>
       </div>
 
       {/* Onglets */}
