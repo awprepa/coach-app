@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -221,6 +221,7 @@ function CompensationCard({ meals, logs, tomorrowDay }) {
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function NutritionPlanClient() {
   const navigate  = useNavigate()
+  const location  = useLocation()
   const fadeStyle = usePageFade()
   const [client, setClient] = useState(null)
   const [plan, setPlan]     = useState(null)
@@ -236,6 +237,25 @@ export default function NutritionPlanClient() {
   const [showAddModal, setShowAddModal]   = useState(false)
   const [addForm, setAddForm]             = useState({ nom: '', kcal: '', prot_g: '', carbs_g: '', fat_g: '', meal_type: 'autre' })
   const [savingExtra, setSavingExtra]     = useState(false)
+
+  // Retour depuis scanner avec produit pré-rempli
+  useEffect(() => {
+    const food = location.state?.prefillFood
+    if (!food) return
+    // food vient du scanner : champs kcal_100, prot_100… (valeurs pour 100g)
+    setAddForm({
+      nom:     food.name || food.nom || '',
+      kcal:    food.kcal_100 != null ? String(Math.round(food.kcal_100)) : '',
+      prot_g:  food.prot_100 != null ? String(Math.round(food.prot_100)) : '',
+      carbs_g: food.carbs_100 != null ? String(Math.round(food.carbs_100)) : '',
+      fat_g:   food.fat_100 != null ? String(Math.round(food.fat_100)) : '',
+      meal_type: 'autre',
+    })
+    setShowAddModal(true)
+    // Nettoyer l'état de navigation pour éviter ré-ouverture au refresh
+    window.history.replaceState({}, '')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Chargement ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -696,7 +716,19 @@ export default function NutritionPlanClient() {
         <div style={S.overlay} onClick={() => setShowAddModal(false)}>
           <div style={S.sheet} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1rem' }} />
-            <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.3rem', color: '#1a1a1a' }}>Ajouter un repas</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+              <p style={{ fontWeight: 800, fontSize: '1rem', margin: 0, color: '#1a1a1a' }}>Ajouter un repas</p>
+              <button
+                onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f3f4f6', border: 'none', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
+                </svg>
+                Scanner
+              </button>
+            </div>
             <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 1rem', lineHeight: 1.5 }}>
               Repas non prévu dans le plan — pris en compte dans le bilan kcal du jour.
             </p>

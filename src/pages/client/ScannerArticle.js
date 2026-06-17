@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
 import { supabase } from '../../supabase'
@@ -75,6 +75,7 @@ function buildTags(food, grade) {
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ScannerArticle() {
   const navigate    = useNavigate()
+  const location    = useLocation()
   const videoRef    = useRef(null)
   const readerRef   = useRef(null)
   const [phase, setPhase]       = useState('scan')    // 'scan' | 'loading' | 'result' | 'notfound' | 'error'
@@ -192,7 +193,8 @@ export default function ScannerArticle() {
 
   // Ajouter aux repas du jour
   function addToMeal() {
-    navigate('/client/nutrition/ajouter', { state: { prefillFood: food } })
+    const returnTo = location.state?.returnTo || '/client/nutrition/ajouter'
+    navigate(returnTo, { state: { prefillFood: food } })
   }
 
   // Rescanner
