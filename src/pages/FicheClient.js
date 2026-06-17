@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { ChargePanel } from './ChargeEntrainement'
+import { CGV_CONTENU } from './CGV'
 
 
 const OFFRES = {
@@ -73,7 +74,9 @@ export default function FicheClient() {
   const [showAllWellness, setShowAllWellness] = useState(false)
   const [activeTab, setActiveTab] = useState('suivi') // 'suivi' | 'perf' | 'nutrition'
   const [contratData, setContratData] = useState(null)
+  const [showContratModal, setShowContratModal] = useState(false)
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
+  const [selectedExo, setSelectedExo] = useState(null)
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
   const [nutritionPlan, setNutritionPlan]     = useState(null)  // null=pas chargé, false=aucun plan actif
   const [nutritionAdher, setNutritionAdher]   = useState([])   // 7 derniers jours
@@ -254,6 +257,8 @@ export default function FicheClient() {
   }
 
   async function fetchNutrition() {
+    setNutritionPlan(null)
+    setNutritionAdher([])
     const today = new Date().toISOString().slice(0, 10)
     const from7  = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
 
@@ -273,7 +278,7 @@ export default function FicheClient() {
 
     const { data: logs } = await supabase
       .from('nutrition_plan_logs')
-      .select('date, statut, meal_id, kcal')
+      .select('date, statut, meal_id, hors_plan_kcal')
       .eq('client_id', id)
       .gte('date', from7).lte('date', today)
 
@@ -298,9 +303,13 @@ export default function FicheClient() {
       const saute    = planLogs.filter(l => l.statut === 'saute').length
       const total    = planMeals.length
       const kcalPrevu = planMeals.reduce((s, m) => s + (m.kcal || 0), 0)
-      const kcalMange = planLogs.filter(l => l.statut === 'fait' || l.statut === 'hors_plan')
-        .reduce((s, l) => s + (l.kcal || 0), 0)
-        + extraLogs.reduce((s, l) => s + (l.kcal || 0), 0)
+      // fait → kcal du plan meal ; hors_plan → hors_plan_kcal (ou plan meal) ; extra → hors_plan_kcal
+      const kcalMange =
+        planLogs.filter(l => l.statut === 'fait')
+          .reduce((s, l) => s + (planMeals.find(m => m.id === l.meal_id)?.kcal || 0), 0)
+        + planLogs.filter(l => l.statut === 'hors_plan')
+          .reduce((s, l) => s + (l.hors_plan_kcal ?? planMeals.find(m => m.id === l.meal_id)?.kcal ?? 0), 0)
+        + extraLogs.reduce((s, l) => s + (l.hors_plan_kcal || 0), 0)
       const adherPct = total > 0 ? Math.round((fait + horsplan) / total * 100) : null
       adher.push({ date: d, fait, horsplan, saute, total, kcalPrevu, kcalMange, adherPct })
     }
@@ -432,15 +441,16 @@ export default function FicheClient() {
               {client.telephone && <InfoItem label="Téléphone" value={client.telephone} />}
               {client.date_debut && <InfoItem label="Début" value={client.date_debut} />}
               {client.date_fin && <InfoItem label="Fin" value={client.date_fin} />}
-              <InfoItem
-                label="Contrat"
-                value={
-                  contratData
-                    ? `Signé le ${new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} · v${contratData.version_contrat || '1.0'}`
-                    : 'Non signé'
-                }
-                valueStyle={{ color: contratData ? '#16a34a' : '#ef4444', fontWeight: 700 }}
-              />
+              <div style={{ gridColumn: 'auto' }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Contrat</p>
+                {contratData ? (
+                  <button onClick={() => setShowContratModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.9rem', color: '#16a34a', fontWeight: 700, textAlign: 'left', textDecoration: 'underline dotted' }}>
+                    Signé le {new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </button>
+                ) : (
+                  <p style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 700, margin: 0 }}>Non signé</p>
+                )}
+              </div>
               {client.objectif && <InfoItem label="Objectif" value={client.objectif} full />}
               {client.notes && <InfoItem label="Notes" value={client.notes} full />}
             </div>
@@ -492,8 +502,9 @@ export default function FicheClient() {
             </svg>
           )},
           { k: 'nutrition', l: 'Nutrition', icon: (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M4 11h16"/><path d="M5 11c0 5 2 8 7 8s7-3 7-8"/>
+              <path d="M9 7 Q10 5 9 3"/><path d="M12 7 Q13 5 12 3"/><path d="M15 7 Q16 5 15 3"/>
             </svg>
           )},
         ].map(t => (
@@ -515,26 +526,35 @@ export default function FicheClient() {
       {activeTab === 'perf' && client && (
         <div style={{ marginTop: '1rem' }}>
           <ChargePanel clientId={id} clientPrenom={client.prenom} clientNom={client.nom} />
-          <div style={{ marginTop: '1.5rem' }}>
-            <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>Progression des charges</p>
-            {progression.length === 0 ? (
-              <div style={styles.emptyCard}>Aucune série trackée pour ce client.</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {progression.map(({ nom, data }) => (
-                  <div key={nom} style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                    <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.88rem', color: '#333' }}>{nom}</p>
-                    <ResponsiveContainer width="100%" height={140}>
+          {progression.length > 0 && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <p style={{ ...styles.sectionTitle, margin: 0 }}>Progression des charges</p>
+                <select
+                  value={selectedExo || progression[0]?.nom}
+                  onChange={e => setSelectedExo(e.target.value)}
+                  style={{ fontSize: '0.8rem', fontWeight: 700, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '4px 8px', background: 'white', color: '#333', cursor: 'pointer', maxWidth: 200 }}
+                >
+                  {progression.map(({ nom }) => <option key={nom} value={nom}>{nom}</option>)}
+                </select>
+              </div>
+              {(() => {
+                const exo = progression.find(p => p.nom === (selectedExo || progression[0]?.nom))
+                if (!exo) return null
+                const { nom, data } = exo
+                return (
+                  <div style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                    <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                         <XAxis dataKey="semaine" tick={{ fontSize: 10, fill: '#9ca3af' }} />
                         <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} unit=" kg" />
-                        <Tooltip formatter={(v) => [`${v} kg`, 'Charge max']} />
+                        <Tooltip formatter={(v) => [`${v} kg`, nom]} />
                         <Line type="monotone" dataKey="poids" stroke="#333333" strokeWidth={2.5}
                           dot={{ fill: '#e4f816', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Début : <strong style={{ color: '#333' }}>{data[0]?.poids} kg</strong></span>
                       <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>→</span>
                       <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Actuel : <strong style={{ color: data[data.length-1]?.poids > data[0]?.poids ? '#16a34a' : '#dc2626' }}>{data[data.length-1]?.poids} kg</strong></span>
@@ -543,10 +563,10 @@ export default function FicheClient() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                )
+              })()}
+            </div>
+          )}
         </div>
       )}
 
@@ -954,6 +974,33 @@ export default function FicheClient() {
         </div>
       )}
 
+      {/* ── Modal contrat ── */}
+      {showContratModal && contratData && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto' }} onClick={() => setShowContratModal(false)}>
+          <div style={{ background: 'white', borderRadius: 18, padding: '1.75rem', maxWidth: 620, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div>
+                <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#166534', margin: '0 0 4px' }}>Contrat signé électroniquement</p>
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: 0 }}>
+                  {new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {contratData.formule ? ` · ${contratData.formule}` : ''}
+                  {` · v${contratData.version_contrat || '1.0'}`}
+                </p>
+              </div>
+              <button onClick={() => setShowContratModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
+            </div>
+            <div style={{ maxHeight: '60vh', overflowY: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 1rem' }}>Conditions générales acceptées</p>
+              {CGV_CONTENU.map((section, i) => (
+                <div key={i} style={{ marginBottom: '1rem' }}>
+                  <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#333', margin: '0 0 0.25rem' }}>{section.titre}</p>
+                  <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{section.texte}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
