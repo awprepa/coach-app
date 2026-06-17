@@ -19,11 +19,11 @@ const NAV = [
   { to: '/',            icon: 'dashboard', label: 'Tableau de bord', end: true },
   { to: '/clients',     icon: 'clients',   label: 'Clients' },
   { to: '/bibliotheque',icon: 'book',      label: 'Bibliothèque' },
+  { to: '/nutrition',   icon: 'nutrition', label: 'Nutrition' },
   { to: '/gps',         icon: 'gps',       label: 'GPS' },
   { to: '/tests',       icon: 'tests',     label: 'Tests' },
   { to: '/messages',    icon: 'messages',  label: 'Messagerie' },
   { to: '/factures',    icon: 'factures',  label: 'Facturation' },
-  { to: '/nutrition',   icon: 'nutrition', label: 'Nutrition' },
 ]
 
 export default function CoachNav() {
