@@ -31,7 +31,11 @@ export default function MonProgrammeClient() {
         .from('programmes').select('id, date_debut, semaines')
         .eq('client_id', client.id).order('created_at', { ascending: false })
 
-      const active = (progs || []).find(p => !isCycleTermine(p))
+      const list = progs || []
+      const vraisActifs = list.filter(p => p.date_debut && !isCycleTermine(p))
+      const active = vraisActifs.length > 0
+        ? vraisActifs[0]
+        : list.find(p => !p.date_debut)
       if (active) navigate(`/client/programme/${active.id}`, { replace: true })
       else setNoProg(true)
     }

@@ -245,14 +245,10 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
         event: '*', schema: 'public', table: 'evenements',
         filter: `client_id=eq.${clientId}`,
       }, payload => {
-        if (payload.eventType === 'INSERT') {
-          setEvenements(prev =>
-            prev.find(e => e.id === payload.new.id) ? prev : [...prev, payload.new]
-          )
-        } else if (payload.eventType === 'DELETE') {
+        if (payload.eventType === 'DELETE') {
           setEvenements(prev => prev.filter(e => e.id !== payload.old.id))
-        } else if (payload.eventType === 'UPDATE') {
-          setEvenements(prev => prev.map(e => e.id === payload.new.id ? payload.new : e))
+        } else {
+          fetchEvenements()
         }
       })
       .subscribe()
@@ -260,8 +256,15 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   }, [clientId])
 
   async function fetchEvenements() {
-    const { data } = await supabase.from('evenements').select('*').eq('client_id', clientId).order('date', { ascending: true })
-    setEvenements(data || [])
+    const { data } = await supabase
+      .from('evenements')
+      .select('*, seances(nom)')
+      .eq('client_id', clientId)
+      .order('date', { ascending: true })
+    setEvenements((data || []).map(ev => ({
+      ...ev,
+      titre: ev.seances?.nom || ev.titre,
+    })))
   }
 
   async function fetchGroupEvenements() {
