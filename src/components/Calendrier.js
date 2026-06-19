@@ -59,6 +59,8 @@ function getPeriodWeeks(startDate, numWeeks) {
 function getCycleWeek(date, programmeDebut, programmeSemaines) {
   if (!programmeDebut) return null
   const debut = new Date(programmeDebut + 'T00:00:00')
+  const debutDay = debut.getDay()
+  debut.setDate(debut.getDate() + (debutDay === 0 ? -6 : 1 - debutDay))
   const d = new Date(date); d.setHours(0, 0, 0, 0)
   const diff = Math.floor((d - debut) / (1000 * 60 * 60 * 24))
   if (diff < 0) return null

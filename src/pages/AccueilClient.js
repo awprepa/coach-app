@@ -593,8 +593,8 @@ export default function AccueilClient() {
               clientId={client.id}
               readOnly={false}
               eventSource='client'
-              programmeDebut={programmes[0]?.date_debut || client.date_debut}
-              programmeSemaines={programmes[0]?.semaines || 8}
+              programmeDebut={(programmes.find(p => p.date_debut && !isCycleTermine(p)) || programmes.find(p => !p.date_debut))?.date_debut || client.date_debut}
+              programmeSemaines={(programmes.find(p => p.date_debut && !isCycleTermine(p)) || programmes.find(p => !p.date_debut) || programmes[0])?.semaines || 8}
               seances={seances}
               onViewSeance={(id, semaine) => navigate(`/client/seance/${id}${semaine ? `?semaine=${semaine}` : ''}`)}
             />
