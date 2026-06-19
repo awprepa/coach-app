@@ -180,13 +180,13 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
 function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onDayClick }) {
   const weeks = getPeriodWeeks(startDate, numWeeks)
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '36px repeat(7,1fr)', gap: 3, marginBottom: 3, minWidth: 560 }}>
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '24px repeat(7,1fr)', gap: 3, marginBottom: 3 }}>
         <div />
         {JOURS.map(j => <div key={j} style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af' }}>{j}</div>)}
       </div>
       {weeks.map((week, wi) => (
-        <div key={wi} style={{ display: 'grid', gridTemplateColumns: '36px repeat(7,1fr)', gap: 3, marginBottom: 4, alignItems: 'stretch', minWidth: 560 }}>
+        <div key={wi} style={{ display: 'grid', gridTemplateColumns: '24px repeat(7,1fr)', gap: 3, marginBottom: 4, alignItems: 'stretch' }}>
           <div style={{ background: 'var(--chip-bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: '0.62rem', fontWeight: '900', color: 'var(--chip-text)', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>S{wi + 1}</span>
           </div>
