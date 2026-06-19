@@ -113,15 +113,18 @@ export default function SeanceClient() {
           })
           return next
         })
-        // Recalculer les blocs terminés
+        // Recalculer les blocs terminés — on compare au nombre de séries ATTENDU, pas juste les rows en base
         const done = new Set()
         exercices.forEach(ex => {
           const letter = ex.code?.match(/^([A-Za-z]+)/)?.[1]
           if (!letter) return
           const group = exercices.filter(e => e.code?.match(/^([A-Za-z]+)/)?.[1] === letter)
+          const expectedN = group.length > 1
+            ? Math.max(...group.map(m => Math.max(parseInt(m.series) || 0, 1)))
+            : Math.max(parseInt(ex.series) || 0, 1)
           const allDone = group.every(e => {
             const exRows = rows.filter(r => r.exercice_id === e.id && r.serie < 1000)
-            return exRows.length > 0 && exRows.every(r => r.is_done)
+            return exRows.length >= expectedN && exRows.every(r => r.is_done)
           })
           if (allDone) done.add(letter)
         })
@@ -239,12 +242,7 @@ export default function SeanceClient() {
       : (dateDebut ? getSemaineActuelle(dateDebut) : 1)
     if (dateDebut) setSemaineActuelle(semAct)
 
-    const exData   = await fetchExercices(data.programmes.semaines, dateDebut, semAct, !!paramSemaine)
-    // fetchExercices peut avoir détecté un rattrapage et utilisé sem-1
-    if (exData?.effectiveSemaine && exData.effectiveSemaine !== semAct) {
-      semAct = exData.effectiveSemaine
-      setSemaineActuelle(semAct)
-    }
+    const exData   = await fetchExercices(data.programmes.semaines, dateDebut, semAct)
     const rpeData  = await fetchRpeSeances(semAct)
     const commData = await fetchCommentaires(semAct)
 
@@ -292,7 +290,7 @@ export default function SeanceClient() {
     if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
   }
 
-  async function fetchExercices(totalSem, dateDebut, semAct, forceWeek = false) {
+  async function fetchExercices(totalSem, dateDebut, semAct) {
     const { data, error } = await supabase
       .from('exercices').select('*, charges(*), bibliotheque_exercices(image_url)')
       .eq('seance_id', id).order('ordre', { ascending: true })
@@ -308,20 +306,7 @@ export default function SeanceClient() {
     let sem = semAct ?? (dateDebut ? getSemaineActuelle(dateDebut) : 1)
     const exIds = data.map(e => e.id)
     const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
-    let rows = allRows || []
-
-    // Rattrapage : si la semaine actuelle a déjà des séries validées ET la semaine précédente
-    // n'a aucune donnée pour cette séance → on bascule sur sem-1 (sans affichage particulier)
-    if (!forceWeek && sem > 1 && rows.some(r => r.valide)) {
-      const { data: prevCheck } = await supabase
-        .from('serie_tracking').select('id').in('exercice_id', exIds).eq('semaine', sem - 1).limit(1)
-      if (!prevCheck?.length) {
-        sem = sem - 1
-        const { data: prevRows } = await supabase
-          .from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
-        rows = prevRows || []
-      }
-    }
+    const rows = allRows || []
 
     const groupMap = {}
     data.forEach(ex => {
@@ -413,7 +398,7 @@ export default function SeanceClient() {
       setVariantImageMap(vMap)
     }
 
-    return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done, blocsSkippes: skipped, effectiveSemaine: sem }
+    return { exercices: data, charges: map, tracking: t, warmupTracking: wMap, blocsTermines: done, blocsSkippes: skipped }
   }
 
   async function fetchCommentaires(semAct) {
