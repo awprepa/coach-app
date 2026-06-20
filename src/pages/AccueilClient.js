@@ -283,10 +283,11 @@ export default function AccueilClient() {
       setProgrammes(progs || [])
 
       if (progs && progs.length > 0) {
-        const active = progs.filter(p => !isCycleTermine(p))
-        if (active.length > 0) {
+        const vraisActifs = progs.filter(p => p.date_debut && !isCycleTermine(p))
+        const progActif = vraisActifs.length > 0 ? vraisActifs[0] : progs.find(p => !p.date_debut)
+        if (progActif) {
           const { data: sd } = await supabase
-            .from('seances').select('id, nom, ordre').in('programme_id', active.map(p => p.id)).order('ordre', { ascending: true })
+            .from('seances').select('id, nom, ordre').eq('programme_id', progActif.id).order('ordre', { ascending: true })
           setSeances(sd || [])
         }
       }
@@ -549,9 +550,11 @@ export default function AccueilClient() {
         </div>
 
         {(() => {
-          const actifs   = programmes.filter(p => !isCycleTermine(p))
-          const termines = programmes.filter(p => isCycleTermine(p))
-          const visibles = showPastCycles ? programmes : actifs
+          const vraisActifs = programmes.filter(p => p.date_debut && !isCycleTermine(p))
+          const sansDates   = programmes.filter(p => !p.date_debut)
+          const termines    = programmes.filter(p => p.date_debut && isCycleTermine(p))
+          const actifs      = [...vraisActifs, ...sansDates]
+          const visibles    = showPastCycles ? [...vraisActifs, ...sansDates, ...termines] : actifs
           return (
             <>
               {visibles.length === 0 ? (
