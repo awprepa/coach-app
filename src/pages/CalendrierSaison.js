@@ -44,6 +44,17 @@ function matchCatColor(categorie, groupColor) {
   const c = MATCH_CAT_COLORS[categorie]
   return (c === undefined || c === null) ? groupColor : c
 }
+// Planification entraînement
+const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
+const CONTACT_LEVELS = [
+  { label: 'Sans contact', color: '#9ca3af' },
+  { label: 'Léger',        color: '#fbbf24' },
+  { label: 'Contrôlé',     color: '#f97316' },
+  { label: 'Intense',      color: '#ef4444' },
+  { label: 'Match',        color: '#7f1d1d' },
+]
+const COURSE_VOLUMES    = ['Sans course', 'Peu de course', 'Volume moyen', 'Gros volume']
+const COURSE_INTENSITES = ['Légère', 'Haute intensité', 'Très haute intensité', 'Vitesse maximale']
 // types qui ont un déroulé en blocs/exercices
 const HAS_BLOCS = ['entrainement', 'muscu', 'vitesse', 'prevention', 'recup', 'autre']
 
@@ -312,7 +323,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     return {
       type: 'entrainement', date: dateISO || seasonStart, heure: '', titre: '',
       style: '', adversaire: '', categorie: 'Championnat', domicile: true, journee: '',
-      lieu: '', duree_min: '', charge: '', note: '',
+      lieu: '', duree_min: '', charge: '', note: '', themes_seance: '',
     }
   }
   function openCreate(dateISO) {
@@ -381,6 +392,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         style: e.style || '', adversaire: e.adversaire || '', categorie: e.categorie || 'Championnat',
         domicile: e.domicile ?? true, journee: e.journee || '',
         lieu: e.lieu || '', duree_min: e.duree_min || '', charge: e.charge || '', note: e.note || '',
+        themes_seance: e.themes_seance || '',
       },
       blocs,
     })
@@ -394,7 +406,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       groupe_id: groupe.id, date: f.date, heure: f.heure || null, type: f.type,
       titre: f.titre || null, lieu: f.lieu || null,
       duree_min: f.duree_min ? Number(f.duree_min) : null, charge: f.charge || null, note: f.note || null,
-      style:      f.type === 'entrainement' ? (f.style || null) : null,
+      style:          f.type === 'entrainement' ? (f.style || null) : null,
+      themes_seance:  f.type === 'entrainement' ? (f.themes_seance || null) : null,
       adversaire: isMatch ? (f.adversaire || null) : null,
       categorie:  isMatch ? (f.categorie || null) : null,
       domicile:   isMatch ? !!f.domicile : null,
@@ -446,6 +459,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       groupe_id: groupe.id, date: dateISO, heure: s.heure || null, type: s.type,
       titre: s.titre || null, lieu: s.lieu || null, duree_min: s.duree_min || null,
       charge: s.charge || null, note: s.note || null, style: s.style || null,
+      themes_seance: s.themes_seance || null,
       adversaire: s.adversaire || null, categorie: s.categorie || null,
       domicile: s.domicile, journee: s.journee || null,
     }
@@ -454,7 +468,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     // dupliquer blocs + exercices
     for (const b of clip.blocs) {
       const { data: nb } = await supabase.from('groupe_seance_blocs')
-        .insert([{ evenement_id: data.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre }]).select('id').single()
+        .insert([{ evenement_id: data.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre, contact_intensite: b.contact_intensite ?? null, course_volume: b.course_volume || null, course_intensite: b.course_intensite || null }]).select('id').single()
       if (nb && b.exos?.length) {
         await supabase.from('groupe_seance_exercices').insert(
           b.exos.map(x => ({ bloc_id: nb.id, nom: x.nom, prescription: x.prescription || '', detail: x.detail || '', ordre: x.ordre }))
@@ -2644,6 +2658,23 @@ function SeanceModal({
               {form.type === 'entrainement' && (
                 <>
                   <div style={{ marginBottom: 10 }}>
+                    <div style={Sm.fLabel}>Thèmes</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                      {THEMES_SEANCE.map(t => {
+                        const active = (form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean).includes(t)
+                        return (
+                          <button key={t} onClick={() => {
+                            const cur = (form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean)
+                            const next = active ? cur.filter(x => x !== t) : [...cur, t]
+                            setForm({ themes_seance: next.join(', ') })
+                          }} style={{ ...Sm.chip, ...(active ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>
+                            {t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
                     <div style={Sm.fLabel}>Style</div>
                     <input value={form.style} onChange={e => setForm({ style: e.target.value })} placeholder="ex. Vitesse, Collectif, Prévention…" style={Sm.input} />
                   </div>
@@ -2722,6 +2753,49 @@ function SeanceModal({
                         <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
                         <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                       </div>
+
+                      {/* Planification intensité (entrainement uniquement) */}
+                      {panel.form?.type === 'entrainement' && (
+                        <div style={{ padding: '8px 10px', background: '#fafbfc', borderBottom: '1px solid #f0f2f5', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          {/* Contact 0-4 */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', width: 54, flexShrink: 0 }}>Contact</span>
+                            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                              {CONTACT_LEVELS.map((cl, i) => (
+                                <button key={i} title={cl.label} onClick={() => updateBloc(bloc.id, { contact_intensite: bloc.contact_intensite === i ? null : i })}
+                                  style={{ width: 20, height: 20, borderRadius: '50%', background: cl.color, border: bloc.contact_intensite === i ? '2.5px solid #1a1a1a' : '2px solid transparent', boxShadow: bloc.contact_intensite === i ? `0 0 0 1.5px ${cl.color}` : 'none', cursor: 'pointer', outline: 'none', flexShrink: 0, transition: 'border .1s' }} />
+                              ))}
+                              {bloc.contact_intensite != null && (
+                                <span style={{ fontSize: '.65rem', color: '#6b7280', fontWeight: 600, marginLeft: 2 }}>{CONTACT_LEVELS[bloc.contact_intensite]?.label}</span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Volume course */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', width: 54, flexShrink: 0 }}>Volume</span>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {COURSE_VOLUMES.map(v => (
+                                <button key={v} onClick={() => updateBloc(bloc.id, { course_volume: bloc.course_volume === v ? null : v })}
+                                  style={{ ...Sm.chip, padding: '3px 8px', fontSize: '.62rem', ...(bloc.course_volume === v ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>
+                                  {v}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Intensité course */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', width: 54, flexShrink: 0 }}>Intensité</span>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {COURSE_INTENSITES.map(v => (
+                                <button key={v} onClick={() => updateBloc(bloc.id, { course_intensite: bloc.course_intensite === v ? null : v })}
+                                  style={{ ...Sm.chip, padding: '3px 8px', fontSize: '.62rem', ...(bloc.course_intensite === v ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>
+                                  {v}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Bloc séquences */}
                       {bloc.bloc_type === 'sequences' && (

@@ -395,6 +395,20 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
 
   const periodeDebut = programmeDebut ? new Date(programmeDebut + 'T00:00:00') : currentDate
 
+  // Séances disponibles seulement si le jour sélectionné est dans la période du cycle actif
+  const dayInCycle = selectedDay
+    ? (getCycleWeek(selectedDay, programmeDebut, programmeSemaines) !== null && seances.length > 0)
+    : seances.length > 0
+  const visibleTypes = EVENT_TYPES.filter(t => t.value !== 'seance' || dayInCycle)
+
+  function handleDayClick(day) {
+    setSelectedDay(day)
+    if (form.type === 'seance') {
+      const inC = getCycleWeek(day, programmeDebut, programmeSemaines) !== null && seances.length > 0
+      if (!inC) setForm(f => ({ ...f, type: 'autre', seanceId: '' }))
+    }
+  }
+
   // Formulaire d'ajout — rendu selon le type
   function renderForm() {
     if (form.type === 'seance' && seances.length > 0) {
@@ -473,9 +487,9 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
       </div>
 
       {/* Vues */}
-      {vue === 'mois'    && <MonthView  year={currentDate.getFullYear()} month={currentDate.getMonth()} todayStr={todayStr} selectedStr={selectedStr} eventsMap={eventsMap} onDayClick={setSelectedDay} programmeDebut={programmeDebut} programmeSemaines={programmeSemaines} />}
-      {vue === 'semaine' && <WeekView   date={currentDate} todayStr={todayStr} selectedStr={selectedStr} eventsMap={eventsMap} onDayClick={setSelectedDay} programmeDebut={programmeDebut} programmeSemaines={programmeSemaines} />}
-      {vue === 'periode' && <PeriodView startDate={periodeDebut} numWeeks={programmeSemaines} todayStr={todayStr} selectedStr={selectedStr} eventsMap={eventsMap} onDayClick={setSelectedDay} />}
+      {vue === 'mois'    && <MonthView  year={currentDate.getFullYear()} month={currentDate.getMonth()} todayStr={todayStr} selectedStr={selectedStr} eventsMap={eventsMap} onDayClick={handleDayClick} programmeDebut={programmeDebut} programmeSemaines={programmeSemaines} />}
+      {vue === 'semaine' && <WeekView   date={currentDate} todayStr={todayStr} selectedStr={selectedStr} eventsMap={eventsMap} onDayClick={handleDayClick} programmeDebut={programmeDebut} programmeSemaines={programmeSemaines} />}
+      {vue === 'periode' && <PeriodView startDate={periodeDebut} numWeeks={programmeSemaines} todayStr={todayStr} selectedStr={selectedStr} eventsMap={eventsMap} onDayClick={handleDayClick} />}
 
       {/* Panel jour sélectionné */}
       {selectedDay && (
@@ -618,7 +632,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
           {!readOnly && (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <select value={form.type} onChange={e => setForm({ type: e.target.value, titre: '', seanceId: '', description: '' })} style={S.formInput}>
-                {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                {visibleTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
               {renderForm()}
               <button onClick={ajouterEvenement} disabled={saving} style={{ ...S.addBtn, alignSelf: 'flex-start' }}>{saving ? '...' : '+ Ajouter'}</button>
