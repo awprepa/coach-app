@@ -767,6 +767,23 @@ export default function SeanceClient() {
       setCharges(prev => ({ ...prev, [exId]: { ...prev[exId], [semaine]: { id: data.id, charge: '', rpe_reel: null, [field]: cleanVal } } }))
       flashSaved()
     }
+
+    // Auto-remplir RPE séance = moyenne des RPE exercices (avec conversion RIR→RPE)
+    if (field === 'rpe_reel') {
+      const vals = []
+      for (const ex of exercices) {
+        const raw = ex.id === exId ? cleanVal : charges[ex.id]?.[semaine]?.rpe_reel
+        if (!raw) continue
+        const num = parseFloat(raw)
+        if (isNaN(num) || num <= 0) continue
+        const rpe = ex.type_intensite === 'RIR' ? 10 - num : num
+        if (rpe >= 1 && rpe <= 10) vals.push(rpe)
+      }
+      if (vals.length > 0) {
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+        await updateRpeReel(semaine, String(Math.round(avg * 10) / 10))
+      }
+    }
   }
 
   async function updateRpeReel(semaine, valeur) {
