@@ -781,7 +781,7 @@ export default function SeanceClient() {
       }
       if (vals.length > 0) {
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
-        await updateRpeReel(semaine, String(Math.round(avg * 10) / 10))
+        await updateRpeReel(semaine, String(Math.round(avg)))
       }
     }
   }
