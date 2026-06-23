@@ -119,7 +119,20 @@ export default function Seance() {
   const [progSaved, setProgSaved] = useState({})   // { [exId]: true } flash feedback
   const [progDraft, setProgDraft] = useState(null)  // blocs en cours d'édition (inputs contrôlés)
   const [biblioFull, setBiblioFull] = useState([])  // toute la bibliothèque pour auto-matching
-  const [autoLinked, setAutoLinked] = useState({})  // { [exId]: nomBiblio } flash feedback
+  const [pendingAutoLink, setPendingAutoLink] = useState(null) // { exerciceNom, biblioNom }
+  const autoLinkResolverRef = useRef(null)
+
+  function waitForAutoLinkConfirm(exerciceNom, biblioNom) {
+    return new Promise(resolve => {
+      autoLinkResolverRef.current = resolve
+      setPendingAutoLink({ exerciceNom, biblioNom })
+    })
+  }
+  function handleAutoLinkDecision(accept) {
+    setPendingAutoLink(null)
+    autoLinkResolverRef.current?.(accept)
+    autoLinkResolverRef.current = null
+  }
   const [showAIModal, setShowAIModal] = useState(false)
   // Cardio — objet { [semaine]: { type, duree_min, intensite, note, media_url } | null }
   const [cardioDebut, setCardioDebut]       = useState({})
@@ -310,7 +323,12 @@ export default function Seance() {
 
     // ── Auto-matching bibliothèque si pas encore lié ──
     if (!bibliotheque_id && biblioFull.length > 0) {
-      bibliotheque_id = autoLinkBiblio(form.nom, biblioFull)
+      const autoFound = autoLinkBiblio(form.nom, biblioFull)
+      if (autoFound) {
+        const foundNom = biblioFull.find(b => b.id === autoFound)?.nom
+        const accepted = await waitForAutoLinkConfirm(form.nom, foundNom)
+        if (accepted) bibliotheque_id = autoFound
+      }
     }
 
     const { data, error } = await supabase.from('exercices').insert([{
@@ -335,14 +353,6 @@ export default function Seance() {
       })
       setExercices(sorted.map((ex, i) => ({ ...ex, ordre: i + 1 })))
       setCharges({ ...charges, [data.id]: {} })
-      // Flash feedback si auto-linked
-      if (bibliotheque_id && !form.bibliotheque_id && !saveToLibrary) {
-        const matchedNom = biblioFull.find(b => b.id === bibliotheque_id)?.nom
-        if (matchedNom) {
-          setAutoLinked(prev => ({ ...prev, [data.id]: matchedNom }))
-          setTimeout(() => setAutoLinked(prev => { const n = { ...prev }; delete n[data.id]; return n }), 4000)
-        }
-      }
       setForm({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null, media_url: '' })
       setBiblioSearch('')
       setSaveToLibrary(false)
@@ -459,7 +469,12 @@ export default function Seance() {
     const exOriginal = exercices.find(e => e.id === exId)
     let bibliotheque_id = formEdition.bibliotheque_id ?? exOriginal?.bibliotheque_id ?? null
     if (!bibliotheque_id && formEdition.nom && biblioFull.length > 0) {
-      bibliotheque_id = autoLinkBiblio(formEdition.nom, biblioFull)
+      const autoFound = autoLinkBiblio(formEdition.nom, biblioFull)
+      if (autoFound) {
+        const foundNom = biblioFull.find(b => b.id === autoFound)?.nom
+        const accepted = await waitForAutoLinkConfirm(formEdition.nom, foundNom)
+        if (accepted) bibliotheque_id = autoFound
+      }
     }
 
     const { error } = await supabase.from('exercices').update({
@@ -472,15 +487,6 @@ export default function Seance() {
       bibliotheque_id,
     }).eq('id', exId)
     if (error) { alert(error.message); return }
-
-    // Flash feedback auto-link
-    if (bibliotheque_id && !exOriginal?.bibliotheque_id) {
-      const matchedNom = biblioFull.find(b => b.id === bibliotheque_id)?.nom
-      if (matchedNom) {
-        setAutoLinked(prev => ({ ...prev, [exId]: matchedNom }))
-        setTimeout(() => setAutoLinked(prev => { const n = { ...prev }; delete n[exId]; return n }), 4000)
-      }
-    }
 
     // Appliquer les nouvelles valeurs puis trier par code
     const updated = exercices.map(ex => ex.id === exId ? { ...ex, ...formEdition, series: formEdition.series ? parseInt(formEdition.series) : null } : ex)
@@ -1001,6 +1007,29 @@ export default function Seance() {
 
   return (
     <div style={styles.page}>
+
+      {/* ── Confirmation liaison bibliothèque ── */}
+      {pendingAutoLink && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+          <div style={{ background: '#fff', borderRadius: 18, padding: '1.5rem 1.75rem', width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.22)' }}>
+            <p style={{ fontWeight: 900, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 0.5rem' }}>Lier à la bibliothèque ?</p>
+            <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+              <strong style={{ color: '#374151' }}>{pendingAutoLink.exerciceNom}</strong> ressemble à{' '}
+              <strong style={{ color: '#1d4ed8' }}>{pendingAutoLink.biblioNom}</strong> dans ta bibliothèque.
+              Veux-tu les lier ?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => handleAutoLinkDecision(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.5rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Non
+              </button>
+              <button onClick={() => handleAutoLinkDecision(true)} style={{ background: '#1a1a1a', border: 'none', borderRadius: 9, padding: '0.5rem 1.25rem', fontSize: '0.85rem', fontWeight: 800, color: '#e4f816', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Oui, lier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button onClick={() => navigate(`/programme/${seance.programmes.id}`)} style={styles.backBtn}>← Retour</button>
 
       {/* En-tête */}
@@ -1665,11 +1694,6 @@ export default function Seance() {
                       </td>
                       <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>
                         {ex.nom}
-                        {autoLinked[ex.id] && (
-                          <span style={{ marginLeft: 6, fontSize: '0.62rem', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 5, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            🔗 Lié → {autoLinked[ex.id]}
-                          </span>
-                        )}
                       </td>
                       <td style={styles.tdCenter}>{ex.series}</td>
                       <td style={styles.tdCenter}>{ex.repetitions}</td>
