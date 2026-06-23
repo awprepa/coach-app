@@ -75,6 +75,8 @@ export default function SeanceClient() {
   const [mediaModal, setMediaModal] = useState(null) // { nom, url }
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
+  const [cardioDebut, setCardioDebut]   = useState(null)
+  const [cardioFin, setCardioFin]       = useState(null)
   const [expandedDone, setExpandedDone] = useState(new Set())
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
@@ -233,6 +235,8 @@ export default function SeanceClient() {
     }
     setSeance(data)
     setEchauffement(data.echauffement || [])
+    setCardioDebut(data.cardio_debut || null)
+    setCardioFin(data.cardio_fin || null)
     const total = data.programmes.semaines
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.created_at
@@ -251,6 +255,8 @@ export default function SeanceClient() {
       await saveSeanceLocally(id, {
         seance:          data,
         echauffement:    data.echauffement || [],
+        cardio_debut:    data.cardio_debut || null,
+        cardio_fin:      data.cardio_fin || null,
         semaines:        total,
         semaineActuelle: semAct,
         exercices:       exData.exercices,
@@ -269,6 +275,8 @@ export default function SeanceClient() {
   function restoreFromLocal(local) {
     setSeance(local.seance)
     setEchauffement(local.echauffement || [])
+    setCardioDebut(local.cardio_debut || null)
+    setCardioFin(local.cardio_fin || null)
     setSemaines(local.semaines)
     setSemaineActuelle(local.semaineActuelle)
     setExercices(local.exercices || [])
@@ -1303,6 +1311,19 @@ export default function SeanceClient() {
           </div>
         )}
 
+        {/* Cardio avant séance */}
+        {cardioDebut?.type && (
+          <div style={{ ...S.card, marginBottom: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
+            <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>Cardio — avant séance</p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardioDebut.type}</span>
+              {cardioDebut.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardioDebut.duree_min} min</span>}
+              {cardioDebut.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardioDebut.intensite}</span>}
+            </div>
+            {cardioDebut.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardioDebut.note}</p>}
+          </div>
+        )}
+
         {/* Échauffement */}
         {echauffement.length > 0 && (() => {
           const warmGroups = []
@@ -1585,6 +1606,19 @@ export default function SeanceClient() {
             </div>
           )
         })()}
+
+        {/* Cardio après séance */}
+        {cardioFin?.type && (
+          <div style={{ ...S.card, marginTop: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
+            <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>Cardio — après séance</p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardioFin.type}</span>
+              {cardioFin.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardioFin.duree_min} min</span>}
+              {cardioFin.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardioFin.intensite}</span>}
+            </div>
+            {cardioFin.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardioFin.note}</p>}
+          </div>
+        )}
 
         {/* Intensité RPE — section repliable */}
         <div style={{ marginTop: '1.25rem' }}>
