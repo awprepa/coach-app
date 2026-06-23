@@ -1217,10 +1217,9 @@ export default function Seance() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f9fafb', borderRadius: 10, padding: '0.75rem' }}>
                 <div style={styles.editField}>
                   <label style={styles.editLabel}>Type</label>
-                  <select value={cardio.type} onChange={e => set(c => ({ ...c, type: e.target.value }))} style={styles.editInput}>
-                    <option value="">—</option>
-                    {['Footing', 'Vélo', 'Rameur', 'PPG', 'Fractionné', 'Natation'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <input placeholder="ex : Footing, Vélo…" value={cardio.type}
+                    onChange={e => set(c => ({ ...c, type: e.target.value }))}
+                    style={styles.editInput} />
                 </div>
                 <div style={styles.editField}>
                   <label style={styles.editLabel}>Durée (min)</label>
