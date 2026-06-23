@@ -47,13 +47,13 @@ function matchCatColor(categorie, groupColor) {
 // Planification entraînement
 const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
 const CONTACT_LEVELS = [
-  { label: 'Sans contact', color: '#9ca3af' },
-  { label: 'Léger',        color: '#fbbf24' },
-  { label: 'Contrôlé',     color: '#f97316' },
-  { label: 'Intense',      color: '#ef4444' },
-  { label: 'Match',        color: '#7f1d1d' },
+  { label: 'Aucun contact',      desc: 'Échauffement, technique sans opposition' },
+  { label: 'Contact technique',  desc: 'Placages au ralenti, initiation' },
+  { label: 'Contact contrôlé',   desc: 'Opposition maîtrisée, intensité partielle' },
+  { label: 'Contact intense',    desc: 'Opposition pleine, simulation match' },
+  { label: 'Match',              desc: 'Conditions de match réelles' },
 ]
-const COURSE_VOLUMES    = ['Sans course', 'Peu de course', 'Volume moyen', 'Gros volume']
+const COURSE_VOLUMES    = ['Faible', 'Modéré', 'Élevé', 'Très élevé']
 const COURSE_INTENSITES = ['Légère', 'Haute intensité', 'Très haute intensité', 'Vitesse maximale']
 // types qui ont un déroulé en blocs/exercices
 const HAS_BLOCS = ['entrainement', 'muscu', 'vitesse', 'prevention', 'recup', 'autre']
@@ -2943,15 +2943,24 @@ function SeanceModal({
                       {panel.form?.type === 'entrainement' && (
                         <div style={{ padding: '8px 10px', background: '#fafbfc', borderBottom: '1px solid #f0f2f5', display: 'flex', flexDirection: 'column', gap: 7 }}>
                           {/* Contact 0-4 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', width: 54, flexShrink: 0 }}>Contact</span>
-                            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                              {CONTACT_LEVELS.map((cl, i) => (
-                                <button key={i} title={cl.label} onClick={() => updateBloc(bloc.id, { contact_intensite: bloc.contact_intensite === i ? null : i })}
-                                  style={{ width: 20, height: 20, borderRadius: '50%', background: cl.color, border: bloc.contact_intensite === i ? '2.5px solid #1a1a1a' : '2px solid transparent', boxShadow: bloc.contact_intensite === i ? `0 0 0 1.5px ${cl.color}` : 'none', cursor: 'pointer', outline: 'none', flexShrink: 0, transition: 'border .1s' }} />
-                              ))}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', width: 54, flexShrink: 0, paddingTop: 3 }}>Contact</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                {CONTACT_LEVELS.map((cl, i) => {
+                                  const active = bloc.contact_intensite === i
+                                  return (
+                                    <button key={i} title={cl.desc} onClick={() => updateBloc(bloc.id, { contact_intensite: active ? null : i })}
+                                      style={{ width: 24, height: 24, borderRadius: 6, border: active ? '2px solid #1a1a1a' : '1.5px solid #d1d5db', background: active ? '#1a1a1a' : 'white', color: active ? '#e4f816' : '#374151', fontSize: '.72rem', fontWeight: 900, cursor: 'pointer', outline: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .1s' }}>
+                                      {i}
+                                    </button>
+                                  )
+                                })}
+                              </div>
                               {bloc.contact_intensite != null && (
-                                <span style={{ fontSize: '.65rem', color: '#6b7280', fontWeight: 600, marginLeft: 2 }}>{CONTACT_LEVELS[bloc.contact_intensite]?.label}</span>
+                                <span style={{ fontSize: '.6rem', color: '#6b7280', fontWeight: 600 }}>
+                                  {CONTACT_LEVELS[bloc.contact_intensite]?.label} — <span style={{ fontWeight: 400, fontStyle: 'italic' }}>{CONTACT_LEVELS[bloc.contact_intensite]?.desc}</span>
+                                </span>
                               )}
                             </div>
                           </div>
