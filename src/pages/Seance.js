@@ -181,7 +181,20 @@ export default function Seance() {
           id: p.id || Math.random().toString(36).slice(2),
         })),
       }))
-      setExercices(normalized)
+      // Toujours trier par code au chargement (A1 < A2 < B1 < B2…)
+      const byCode = [...normalized].sort((a, b) => {
+        const letterA = (a.code?.match(/^[A-Za-z]+/)?.[0] || '~').toUpperCase()
+        const letterB = (b.code?.match(/^[A-Za-z]+/)?.[0] || '~').toUpperCase()
+        if (letterA !== letterB) return letterA < letterB ? -1 : 1
+        const numA = parseInt(a.code?.match(/\d+/)?.[0] || '9999')
+        const numB = parseInt(b.code?.match(/\d+/)?.[0] || '9999')
+        return numA - numB
+      })
+      // Répercuter l'ordre corrigé en DB si nécessaire
+      byCode.forEach(async (ex, i) => {
+        if (ex.ordre !== i + 1) await supabase.from('exercices').update({ ordre: i + 1 }).eq('id', ex.id)
+      })
+      setExercices(byCode)
       const chargesMap = {}
       data.forEach(ex => {
         chargesMap[ex.id] = {}
