@@ -2104,7 +2104,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           return (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '5px 12px', background: '#f5f6f8', borderBottom: '1px solid #eceef1' }}>
               {maxCI >= 0 && (
-                <span style={{ fontSize: '.57rem', fontWeight: 800, background: '#1a1a1a', color: '#e4f816', borderRadius: 4, padding: '2px 7px' }}>
+                <span style={{ fontSize: '.57rem', fontWeight: 800, background: '#dc262618', color: '#b91c1c', border: '1px solid #dc262630', borderRadius: 4, padding: '2px 7px' }}>
                   Contact {maxCI}/4
                 </span>
               )}
@@ -2152,26 +2152,6 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
-                  {(bloc.contact_intensite != null || bloc.course_volume || bloc.course_intensite) && (
-                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', padding: '3px 10px 4px', background: bc + '0a', borderBottom: `1px solid ${bc}18` }}>
-                      {bloc.contact_intensite != null && (
-                        <span style={{ fontSize: '.55rem', fontWeight: 800, background: '#1a1a1a', color: '#e4f816', borderRadius: 3, padding: '1px 6px' }}>
-                          Contact {bloc.contact_intensite}/4
-                        </span>
-                      )}
-                      {bloc.course_volume && (
-                        <span style={{ fontSize: '.55rem', fontWeight: 800, background: '#2563eb18', color: '#1d4ed8', border: '1px solid #2563eb30', borderRadius: 3, padding: '1px 6px' }}>
-                          Vol. {bloc.course_volume}
-                        </span>
-                      )}
-                      {bloc.course_intensite && (
-                        <span style={{ fontSize: '.55rem', fontWeight: 800, background: '#7c3aed18', color: '#6d28d9', border: '1px solid #7c3aed30', borderRadius: 3, padding: '1px 6px' }}>
-                          {bloc.course_intensite}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
                   {/* Séquences — aperçu lisible */}
                   {bloc.bloc_type === 'sequences' && (() => {
                     const seqs = bloc.sequences || []
