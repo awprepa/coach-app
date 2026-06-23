@@ -568,7 +568,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   // ── Blocs / exercices (édition d'une séance existante) ──────────────────────
   async function addBloc() {
     if (!panel?.evt) { alert("Enregistre d'abord la séance pour lui ajouter un déroulé."); return }
-    const ordre = (panel.blocs.length || 0) + 1
+    const ordre = Math.max(0, ...(panel.blocs.map(b => b.ordre || 0))) + 1
     const { data } = await supabase.from('groupe_seance_blocs')
       .insert([{ evenement_id: panel.evt.id, nom: 'Nouveau bloc', duree: '', ordre }]).select('*').single()
     if (data) setPanel(p => ({ ...p, blocs: [...p.blocs, { ...data, exos: [] }] }))
@@ -2786,7 +2786,7 @@ function SeanceModal({
     if (!panel?.evt) { alert("Enregistre d'abord la séance pour lui ajouter un déroulé."); return }
     const { data: nb } = await supabase.from('groupe_seance_blocs')
       .select('ordre', { count:'exact' }).eq('evenement_id', evtId)
-    const ordre = (nb?.length || 0) + 1
+    const ordre = Math.max(0, ...((nb || []).map(b => b.ordre || 0))) + 1
     await supabase.from('groupe_seance_blocs').insert({
       evenement_id: evtId, nom:'Opposition', duree:'30', ordre,
       bloc_type:'sequences', conditions_jeu:'Plaqué / Touché', recup_inter_seq:"30'' à 45''"
