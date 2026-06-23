@@ -10,6 +10,7 @@ import { TimerProvider } from './context/TimerContext'
 import { ClientThemeProvider } from './context/ClientThemeContext'
 import GlobalTimerBubble from './components/GlobalTimerBubble'
 import InstallGuide, { shouldShowInstall, markInstalled } from './components/InstallGuide'
+import WellnessGate from './components/WellnessGate'
 
 // ── Pages chargées immédiatement (Auth critique) ──────────────────────────────
 import Login from './pages/Login'
@@ -321,7 +322,7 @@ function WithNav({ children }) {
 }
 
 function WithNotifs({ children }) {
-  return <NotifProvider>{children}</NotifProvider>
+  return <NotifProvider><WellnessGate>{children}</WellnessGate></NotifProvider>
 }
 
 // Fallback minimaliste — évite un flash blanc prolongé
