@@ -11,6 +11,7 @@ const OFFRES = {
   essai:                { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
   preparation_physique: { label: 'Prépa physique', bg: '#eff6ff', color: '#1d4ed8' },
   coaching:             { label: 'Coaching',       bg: '#f5f3ff', color: '#6d28d9' },
+  club:                 { label: 'Club',           bg: '#f0fdf4', color: '#15803d' },
 }
 
 export default function FicheGroupe() {
@@ -48,14 +49,19 @@ export default function FicheGroupe() {
   const [candidats, setCandidats]         = useState([])   // clients individuels disponibles
   const [selectedCandidats, setSelectedCandidats] = useState(new Set())
   const [addingMembres, setAddingMembres] = useState(false)
+  const [showPushToNew, setShowPushToNew]   = useState(false)
+  const [newMembresIds, setNewMembresIds]   = useState([])
+  const [progsDispos, setProgsDispos]       = useState([])
+  const [selectedProgsForNew, setSelectedProgsForNew] = useState(new Set())
+  const [pushingToNew, setPushingToNew]     = useState(false)
 
   const [pushLoading, setPushLoading]     = useState(null) // programme id en cours
 
   // ── Chargement ────────────────────────────────────────────────────────────
   useEffect(() => { load() }, [id]) // eslint-disable-line
 
-  async function load() {
-    setLoading(true)
+  async function load(silent = false) {
+    if (!silent) setLoading(true)
     const [{ data: g }, { data: sg }, { data: gm }, { data: progs }] = await Promise.all([
       supabase.from('groupes').select('*').eq('id', id).single(),
       supabase.from('groupes').select('*').eq('parent_id', id).order('created_at'),
@@ -84,7 +90,7 @@ export default function FicheGroupe() {
     } else {
       setParent(null)
     }
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
 
   // ── Édition du groupe ──────────────────────────────────────────────────────
@@ -211,12 +217,100 @@ export default function FicheGroupe() {
   async function ajouterMembresSelectionnes() {
     if (!selectedCandidats.size) return
     setAddingMembres(true)
-    const rows = [...selectedCandidats].map(clientId => ({ groupe_id: id, client_id: clientId }))
+    const newIds = [...selectedCandidats]
+    const rows = newIds.map(clientId => ({ groupe_id: id, client_id: clientId }))
     const { error } = await supabase.from('groupe_membres').insert(rows)
+    if (error) { setAddingMembres(false); alert(error.message); return }
+
+    // Passer l'offre à 'club' pour chaque nouveau membre
+    await supabase.from('clients').update({ offre: 'club' }).in('id', newIds)
+
     setAddingMembres(false)
-    if (error) { alert(error.message); return }
-    await load()
     setShowAddMembre(false)
+    setSelectedCandidats(new Set())
+
+    // Rafraîchir les données sans passer par le spinner (silent)
+    await load(true)
+
+    // Proposer de pousser les programmes existants aux nouveaux membres
+    const { data: progs } = await supabase
+      .from('programmes')
+      .select('id, nom, semaines')
+      .eq('groupe_id', id)
+      .is('template_id', null)
+      .order('created_at', { ascending: false })
+    if (progs?.length > 0) {
+      setNewMembresIds(newIds)
+      setProgsDispos(progs)
+      setSelectedProgsForNew(new Set(progs.map(p => p.id)))
+      setShowPushToNew(true)
+    }
+  }
+
+  async function pousserANouveaux() {
+    if (!selectedProgsForNew.size || !newMembresIds.length) return
+    setPushingToNew(true)
+
+    const progsToPush = progsDispos.filter(p => selectedProgsForNew.has(p.id))
+
+    // Récupérer les copies déjà existantes pour éviter les doublons
+    const templateIds = progsToPush.map(p => p.id)
+    const { data: existingCopies } = await supabase
+      .from('programmes')
+      .select('client_id, template_id')
+      .in('template_id', templateIds)
+      .in('client_id', newMembresIds)
+    const alreadyHas = new Set((existingCopies || []).map(r => `${r.client_id}:${r.template_id}`))
+
+    for (const prog of progsToPush) {
+      const { data: seancesData } = await supabase
+        .from('seances')
+        .select('*, exercices(*)')
+        .eq('programme_id', prog.id)
+        .order('ordre', { ascending: true })
+
+      for (const clientId of newMembresIds) {
+        if (alreadyHas.has(`${clientId}:${prog.id}`)) continue
+
+        const { data: progCopy, error: pe } = await supabase.from('programmes').insert({
+          nom: prog.nom,
+          semaines: prog.semaines,
+          client_id: clientId,
+          groupe_id: id,
+          template_id: prog.id,
+        }).select().single()
+
+        if (pe || !progCopy) continue
+
+        for (const s of seancesData || []) {
+          const { data: sc } = await supabase.from('seances').insert({
+            programme_id: progCopy.id,
+            nom: s.nom,
+            ordre: s.ordre,
+            echauffement: s.echauffement || null,
+          }).select().single()
+
+          if (sc && s.exercices?.length) {
+            await supabase.from('exercices').insert(
+              s.exercices.map(ex => ({
+                seance_id: sc.id,
+                code: ex.code, nom: ex.nom, series: ex.series,
+                repetitions: ex.repetitions, tempo: ex.tempo,
+                recuperation: ex.recuperation, type_intensite: ex.type_intensite,
+                valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
+                bibliotheque_id: ex.bibliotheque_id || null,
+              }))
+            )
+          }
+        }
+      }
+    }
+
+    setPushingToNew(false)
+    setShowPushToNew(false)
+    setNewMembresIds([])
+    setProgsDispos([])
+    setSelectedProgsForNew(new Set())
   }
 
   async function retirerMembre(clientId) {
@@ -712,6 +806,47 @@ export default function FicheGroupe() {
             </button>
           )}
         </Modal>
+      )}
+
+      {/* Modal — pousser programmes aux nouveaux membres */}
+      {showPushToNew && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ background: '#fff', borderRadius: 18, padding: '1.5rem 1.75rem', width: '100%', maxWidth: 420, boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+            <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '0.4rem', color: '#111' }}>
+              Envoyer des programmes ?
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#555', marginBottom: '1rem' }}>
+              {newMembresIds.length} nouveau{newMembresIds.length > 1 ? 'x membres ajoutés' : ' membre ajouté'}. Veux-tu leur envoyer des programmes existants ?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.25rem' }}>
+              {progsDispos.map(prog => (
+                <label key={prog.id} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '0.6rem 0.8rem', borderRadius: 10, border: `1.5px solid ${selectedProgsForNew.has(prog.id) ? accent : '#e0e3e8'}`, background: selectedProgsForNew.has(prog.id) ? accent + '12' : '#fafafa' }}>
+                  <input type="checkbox" checked={selectedProgsForNew.has(prog.id)}
+                    onChange={() => setSelectedProgsForNew(prev => {
+                      const next = new Set(prev)
+                      next.has(prog.id) ? next.delete(prog.id) : next.add(prog.id)
+                      return next
+                    })}
+                    style={{ accentColor: accent, width: 16, height: 16 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#111' }}>{prog.nom}</div>
+                    {prog.semaines && <div style={{ fontSize: '0.72rem', color: '#888' }}>{prog.semaines} semaine{prog.semaines > 1 ? 's' : ''}</div>}
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => { setShowPushToNew(false); setNewMembresIds([]); setProgsDispos([]); setSelectedProgsForNew(new Set()) }}
+                style={{ flex: 1, background: '#f1f3f5', border: 'none', borderRadius: 10, padding: '0.7rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', color: '#444' }}>
+                Pas maintenant
+              </button>
+              <button onClick={pousserANouveaux} disabled={pushingToNew || !selectedProgsForNew.size}
+                style={{ flex: 1, background: selectedProgsForNew.size ? accent : '#ccc', border: 'none', borderRadius: 10, padding: '0.7rem', fontSize: '0.85rem', fontWeight: 800, cursor: selectedProgsForNew.size ? 'pointer' : 'not-allowed', fontFamily: 'inherit', color: '#fff' }}>
+                {pushingToNew ? 'Envoi…' : `Envoyer (${selectedProgsForNew.size})`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de recadrage logo */}

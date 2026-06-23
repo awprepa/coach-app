@@ -6,6 +6,7 @@ const OFFRES = {
   essai:                { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
   preparation_physique: { label: 'Prépa physique', bg: '#eff6ff', color: '#1d4ed8' },
   coaching:             { label: 'Coaching',       bg: '#f5f3ff', color: '#6d28d9' },
+  club:                 { label: 'Club',           bg: '#f0fdf4', color: '#15803d' },
 }
 
 function formatDate(iso) {

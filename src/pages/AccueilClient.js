@@ -167,7 +167,7 @@ export default function AccueilClient() {
       setUserId(user.id)
 
       // Contrat + confirmation offre : seulement pour les clients payants
-      const offrePayante = ['coaching', 'preparation_physique', 'essai'].includes(clientData.offre)
+      const offrePayante = ['coaching', 'preparation_physique', 'essai', 'club'].includes(clientData.offre)
 
       if (!offrePayante) {
         // Essai ou offre non définie → aucun contrat requis

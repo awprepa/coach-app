@@ -11,6 +11,7 @@ const OFFRES = {
   essai:               { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
   preparation_physique:{ label: 'Prépa physique', bg: '#eff6ff', color: '#1d4ed8' },
   coaching:            { label: 'Coaching',       bg: '#f5f3ff', color: '#6d28d9' },
+  club:                { label: 'Club',           bg: '#f0fdf4', color: '#15803d' },
 }
 const FILTRES_OFFRE = [
   { key: 'tous',               label: 'Tous' },
@@ -18,6 +19,7 @@ const FILTRES_OFFRE = [
   { key: 'preparation_physique', label: 'Prépa physique' },
   { key: 'essai',              label: 'Essai' },
   { key: 'gratuit',            label: 'Gratuit' },
+  { key: 'club',               label: 'Club' },
 ]
 function offreLabel(offre) { return OFFRES[offre]?.label || (offre || '—') }
 function offreBadge(offre) { const o = OFFRES[offre]; return o ? { background: o.bg, color: o.color } : { background: '#f3f4f6', color: '#6b7280' } }

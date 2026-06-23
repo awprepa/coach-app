@@ -104,6 +104,7 @@ export default function NouveauClient() {
               <option value="essai">Essai (1 mois — 49€)</option>
               <option value="preparation_physique">Préparation physique</option>
               <option value="coaching">Coaching</option>
+              <option value="club">Club</option>
             </select>
           </div>
           {form.offre !== 'essai' && (
