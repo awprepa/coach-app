@@ -43,6 +43,55 @@ function formatTimer(secs) {
 const COL = 52
 const COL_LABEL = 56
 
+function CardioCard({ cardio, label, youtubeId, S }) {
+  const [mediaOpen, setMediaOpen] = useState(false)
+  const ytId = cardio.media_url ? youtubeId(cardio.media_url) : null
+  return (
+    <div style={{ ...S.card, marginBottom: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
+      <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>{label}</p>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+        {cardio.media_url && (
+          <button onClick={() => setMediaOpen(true)}
+            style={{ flexShrink: 0, width: 64, height: 56, borderRadius: 10, overflow: 'hidden', border: '2px solid #bfdbfe', cursor: 'pointer', background: '#1a1a1a', padding: 0, position: 'relative' }}>
+            {ytId
+              ? <><img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
+              : <img src={cardio.media_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            }
+          </button>
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardio.type}</span>
+            {cardio.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardio.duree_min} min</span>}
+            {cardio.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardio.intensite}</span>}
+          </div>
+          {cardio.note && <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardio.note}</p>}
+        </div>
+      </div>
+      {mediaOpen && cardio.media_url && (
+        <div onClick={() => setMediaOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: 20, overflow: 'hidden', width: '100%', maxWidth: 480 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{cardio.type}</span>
+              <button onClick={() => setMediaOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#9ca3af', cursor: 'pointer' }}>×</button>
+            </div>
+            {ytId
+              ? <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                  <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`} title={cardio.type}
+                    frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+                </div>
+              : <img src={cardio.media_url} alt="" style={{ width: '100%', display: 'block', maxHeight: '70vh', objectFit: 'contain' }} />
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SeanceClient() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -1312,17 +1361,7 @@ export default function SeanceClient() {
         )}
 
         {/* Cardio avant séance */}
-        {cardioDebut?.type && (
-          <div style={{ ...S.card, marginBottom: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
-            <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>Cardio — avant séance</p>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardioDebut.type}</span>
-              {cardioDebut.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardioDebut.duree_min} min</span>}
-              {cardioDebut.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardioDebut.intensite}</span>}
-            </div>
-            {cardioDebut.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardioDebut.note}</p>}
-          </div>
-        )}
+        {cardioDebut?.type && <CardioCard cardio={cardioDebut} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
 
         {/* Échauffement */}
         {echauffement.length > 0 && (() => {
@@ -1608,17 +1647,7 @@ export default function SeanceClient() {
         })()}
 
         {/* Cardio après séance */}
-        {cardioFin?.type && (
-          <div style={{ ...S.card, marginTop: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
-            <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>Cardio — après séance</p>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardioFin.type}</span>
-              {cardioFin.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardioFin.duree_min} min</span>}
-              {cardioFin.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardioFin.intensite}</span>}
-            </div>
-            {cardioFin.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardioFin.note}</p>}
-          </div>
-        )}
+        {cardioFin?.type && <CardioCard cardio={cardioFin} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
 
         {/* Intensité RPE — section repliable */}
         <div style={{ marginTop: '1.25rem' }}>

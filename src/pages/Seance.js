@@ -7,6 +7,11 @@ import { autoLinkBiblio } from '../utils/exerciceMatch'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
 
 function newId() { return Math.random().toString(36).slice(2) }
+function youtubeId(url) {
+  if (!url) return null
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
 
 /* ── WorkoutX GIF helpers (échauffement) ─────────────────────────────────── */
 function AuthGif({ url, apiKey, style, alt }) {
@@ -117,8 +122,11 @@ export default function Seance() {
   const [autoLinked, setAutoLinked] = useState({})  // { [exId]: nomBiblio } flash feedback
   const [showAIModal, setShowAIModal] = useState(false)
   // Cardio
-  const [cardioDebut, setCardioDebut] = useState(null)
-  const [cardioFin, setCardioFin]     = useState(null)
+  const [cardioDebut, setCardioDebut]   = useState(null)
+  const [cardioFin, setCardioFin]       = useState(null)
+  const [uploadingCardio, setUploadingCardio] = useState(false)
+  const cardioImgDebutRef = useRef(null)
+  const cardioImgFinRef   = useRef(null)
   // Échauffement
   const [echauffement, setEchauffement]           = useState([])
   const [echauffForm, setEchauffForm]             = useState({ nom: '', reps: '', groupe: '', tours: '' })
@@ -910,6 +918,20 @@ export default function Seance() {
     else alert('Template sauvegardé !')
   }
 
+  async function uploadCardioImage(position, set, file) {
+    if (!file) return
+    const ext  = file.name.split('.').pop().toLowerCase()
+    const path = `cardio/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    setUploadingCardio(true)
+    const { error } = await supabase.storage.from('exercices').upload(path, file, { upsert: true })
+    setUploadingCardio(false)
+    if (error) { alert('Erreur upload : ' + error.message); return }
+    const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
+    set(c => ({ ...c, media_url: publicUrl }))
+    const ref = position === 'debut' ? cardioImgDebutRef : cardioImgFinRef
+    if (ref.current) ref.current.value = ''
+  }
+
   async function saveCardio(position, val) {
     const col = position === 'debut' ? 'cardio_debut' : 'cardio_fin'
     if (position === 'debut') setCardioDebut(val)
@@ -1243,6 +1265,31 @@ export default function Seance() {
                 <button onClick={() => saveCardio(position, cardio)} style={styles.btnPrimary}>
                   Enregistrer
                 </button>
+                {/* Media */}
+                <div style={{ width: '100%', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                  {cardio.media_url && (() => {
+                    const ytId = youtubeId(cardio.media_url)
+                    return ytId
+                      ? <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                      : <img src={cardio.media_url} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                  })()}
+                  <input value={cardio.media_url || ''}
+                    onChange={e => set(c => ({ ...c, media_url: e.target.value }))}
+                    placeholder="URL image / GIF / YouTube (optionnel)"
+                    style={{ ...styles.editInput, flex: 1, minWidth: 180, fontSize: '0.78rem' }} />
+                  <button type="button" onClick={() => { const ref = position === 'debut' ? cardioImgDebutRef : cardioImgFinRef; ref.current?.click() }}
+                    disabled={uploadingCardio}
+                    style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}>
+                    {uploadingCardio ? '…' : '↑ Upload'}
+                  </button>
+                  {cardio.media_url && (
+                    <button type="button" onClick={() => set(c => ({ ...c, media_url: '' }))}
+                      style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
+                  )}
+                  <input ref={position === 'debut' ? cardioImgDebutRef : cardioImgFinRef}
+                    type="file" accept="image/*,video/gif" style={{ display: 'none' }}
+                    onChange={e => uploadCardioImage(position, set, e.target.files[0])} />
+                </div>
               </div>
             )}
           </div>
