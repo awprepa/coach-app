@@ -192,7 +192,12 @@ export default function AccueilClient() {
 
       if (progs && progs.length > 0) {
         const vraisActifs = progs.filter(p => p.date_debut && !isCycleTermine(p))
-        const progActif = vraisActifs.length > 0 ? vraisActifs[0] : progs.find(p => !p.date_debut)
+        const todayD = new Date()
+        // Préférer un cycle déjà commencé (date_debut <= aujourd'hui) sur un cycle futur
+        const dejaCommence = vraisActifs.filter(p => new Date(p.date_debut + 'T00:00:00') <= todayD)
+        const progActif = dejaCommence.length > 0 ? dejaCommence[0]
+          : vraisActifs.length > 0 ? vraisActifs[0]
+          : progs.find(p => !p.date_debut)
         if (progActif) {
           const { data: sd } = await supabase
             .from('seances').select('id, nom, ordre').eq('programme_id', progActif.id).order('ordre', { ascending: true })
@@ -444,11 +449,15 @@ export default function AccueilClient() {
         </div>
 
         {(() => {
+          const todayD2 = new Date()
           const vraisActifs = programmes.filter(p => p.date_debut && !isCycleTermine(p))
-          const sansDates   = programmes.filter(p => !p.date_debut)
-          const termines    = programmes.filter(p => p.date_debut && isCycleTermine(p))
-          const actifs      = [...vraisActifs, ...sansDates]
-          const visibles    = showPastCycles ? [...vraisActifs, ...sansDates, ...termines] : actifs
+          // Trier : cycles commencés d'abord, puis futurs, puis sans date
+          const commences = vraisActifs.filter(p => new Date(p.date_debut + 'T00:00:00') <= todayD2)
+          const futurs    = vraisActifs.filter(p => new Date(p.date_debut + 'T00:00:00') > todayD2)
+          const sansDates = programmes.filter(p => !p.date_debut)
+          const termines  = programmes.filter(p => p.date_debut && isCycleTermine(p))
+          const actifs    = [...commences, ...futurs, ...sansDates]
+          const visibles  = showPastCycles ? [...commences, ...futurs, ...sansDates, ...termines] : actifs
           return (
             <>
               {visibles.length === 0 ? (
@@ -490,8 +499,8 @@ export default function AccueilClient() {
               clientId={client.id}
               readOnly={false}
               eventSource='client'
-              programmeDebut={(programmes.find(p => p.date_debut && !isCycleTermine(p)) || programmes.find(p => !p.date_debut))?.date_debut || client.date_debut}
-              programmeSemaines={(programmes.find(p => p.date_debut && !isCycleTermine(p)) || programmes.find(p => !p.date_debut) || programmes[0])?.semaines || 8}
+              programmeDebut={(() => { const todayD3 = new Date(); const va = programmes.filter(p => p.date_debut && !isCycleTermine(p)); const dc = va.filter(p => new Date(p.date_debut + 'T00:00:00') <= todayD3); return (dc[0] || va[0] || programmes.find(p => !p.date_debut))?.date_debut || client.date_debut })()}
+              programmeSemaines={(() => { const todayD3 = new Date(); const va = programmes.filter(p => p.date_debut && !isCycleTermine(p)); const dc = va.filter(p => new Date(p.date_debut + 'T00:00:00') <= todayD3); return (dc[0] || va[0] || programmes.find(p => !p.date_debut) || programmes[0])?.semaines || 8 })()}
               seances={seances}
               onViewSeance={(id, semaine) => navigate(`/client/seance/${id}${semaine ? `?semaine=${semaine}` : ''}`)}
             />
