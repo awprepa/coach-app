@@ -124,6 +124,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   const [selMode, setSelMode]   = useState('main') // 'main' | 'period'
   const [selForm, setSelForm]   = useState({ type: 'vacances', label: '', couleur: '#f4e8c4' })
   const [periodClip, setPeriodClip] = useState(null) // { start, end, events, blocsMap }
+
+  // Panneau IA planification
+  const [aiOpen, setAiOpen]       = useState(false)
+  const [aiMessages, setAiMessages] = useState([])
+  const [aiProposed, setAiProposed] = useState([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiInput, setAiInput]     = useState('')
   const selRef     = useRef(null)
   selRef.current   = sel
   const lastDateRef = useRef(null) // dernier jour survolé/cliqué (pour coller via clavier)
@@ -398,6 +405,83 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     })
   }
   function closePanel() { setPanel(null) }
+
+  // ── IA Planification ─────────────────────────────────────────────────────────
+  async function sendToAI() {
+    if (!aiInput.trim() || aiLoading || !groupe) return
+    const userMsg = { role: 'user', content: aiInput.trim() }
+    const newMessages = [...aiMessages, userMsg]
+    setAiMessages(newMessages)
+    setAiInput('')
+    setAiLoading(true)
+    const today = new Date()
+    const cutoff = new Date(today); cutoff.setDate(today.getDate() - 28)
+    const cutoffISO = cutoff.toISOString().slice(0, 10)
+    const context = {
+      groupe: { nom: groupe.nom },
+      phases: seasonPhases.map(p => ({ label: p.label, debut: p.date_debut, fin: p.date_fin })),
+      recentEvents: evenements
+        .filter(e => e.date >= cutoffISO)
+        .map(e => ({ date: e.date, type: e.type, titre: e.titre, charge: e.charge })),
+      currentDate: today.toISOString().slice(0, 10),
+    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/calendar-ai`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ messages: newMessages, context }),
+        }
+      )
+      const data = await res.json()
+      if (data.ok) {
+        setAiMessages(prev => [...prev, { role: 'assistant', content: data.texte }])
+        if (data.evenements?.length > 0) setAiProposed(data.evenements)
+      } else {
+        setAiMessages(prev => [...prev, { role: 'assistant', content: `Erreur : ${data.error}` }])
+      }
+    } catch {
+      setAiMessages(prev => [...prev, { role: 'assistant', content: 'Erreur de connexion.' }])
+    }
+    setAiLoading(false)
+  }
+
+  async function confirmAI() {
+    if (!aiProposed.length || !groupe) return
+    setAiLoading(true)
+    let created = 0
+    for (const ev of aiProposed) {
+      const isMatch = ev.type === 'match'
+      const payload = {
+        groupe_id: groupe.id, date: ev.date, type: ev.type || 'entrainement',
+        heure: ev.heure || null, titre: ev.titre || null, lieu: ev.lieu || null,
+        duree_min: ev.duree_min ? Number(ev.duree_min) : null,
+        charge: ev.charge || null, note: ev.note || null,
+        style: null, themes_seance: ev.themes_seance || null,
+        adversaire: isMatch ? (ev.adversaire || null) : null,
+        categorie: isMatch ? (ev.categorie || 'Championnat') : null,
+        domicile: isMatch ? (ev.domicile ?? true) : null,
+        journee: isMatch ? (ev.journee || null) : null,
+      }
+      const { data: newEvt, error } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
+      if (error) continue
+      created++
+      if (ev.contact_intensite != null || ev.course_volume || ev.course_intensite) {
+        await supabase.from('groupe_seance_blocs').insert([{
+          evenement_id: newEvt.id, nom: 'Séance', duree: ev.duree_min ? String(ev.duree_min) : '', ordre: 1,
+          contact_intensite: ev.contact_intensite ?? null,
+          course_volume: ev.course_volume || null,
+          course_intensite: ev.course_intensite || null,
+        }])
+      }
+    }
+    await loadSeason(true)
+    setAiProposed([])
+    setAiMessages(prev => [...prev, { role: 'assistant', content: `${created} séance${created > 1 ? 's' : ''} créée${created > 1 ? 's' : ''} sur le calendrier.` }])
+    setAiLoading(false)
+  }
   const setForm = patch => setPanel(p => ({ ...p, form: { ...p.form, ...patch } }))
 
   function buildPayload(f) {
@@ -884,6 +968,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
             onClick={() => openCreate()}>
             <span style={{ fontWeight: 900 }}>+</span> Ajouter
           </button>
+          <button style={S.btn} onClick={() => setAiOpen(true)}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 5, verticalAlign: 'middle' }}>
+              <path d="M12 2a7 7 0 0 1 7 7c0 3-1.5 5.5-4 6.7V18H9v-2.3C6.5 14.5 5 12 5 9a7 7 0 0 1 7-7z"/>
+              <line x1="9" y1="21" x2="15" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/>
+            </svg>
+            IA Planif.
+          </button>
         </div>
       </div>
 
@@ -1096,6 +1187,89 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           onClose={() => setWeekZoom(null)}
           onNavigate={navigateWeekZoom}
         />
+      )}
+
+      {/* ── Panneau IA Planification ── */}
+      {aiOpen && (
+        <>
+          <div style={S.scrim} onClick={() => setAiOpen(false)} />
+          <div style={{ ...S.panel, display: 'flex', flexDirection: 'column' }}>
+            <div style={S.phead}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#15181d' }}>Planification IA</span>
+                <button onClick={() => setAiOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#9aa1ac', lineHeight: 1 }}>×</button>
+              </div>
+              <p style={{ fontSize: '0.72rem', color: '#9aa1ac', margin: '4px 0 0' }}>
+                Décris les séances à créer — dates, charge, thèmes, intensité
+              </p>
+            </div>
+
+            {/* Historique du chat */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {aiMessages.length === 0 && (
+                <p style={{ color: '#9aa1ac', fontSize: '0.76rem', fontStyle: 'italic', lineHeight: 1.5 }}>
+                  Ex : "Mardi 24 juin entraînement charge haute, contact intense et gros volume de course. Vendredi séance récup légère."
+                </p>
+              )}
+              {aiMessages.map((m, i) => (
+                <div key={i} style={{
+                  alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '85%',
+                  background: m.role === 'user' ? '#1a1a1a' : '#f0f2f5',
+                  color: m.role === 'user' ? '#e4f816' : '#15181d',
+                  borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                  padding: '8px 12px', fontSize: '0.78rem', lineHeight: 1.5,
+                }}>
+                  {m.content}
+                </div>
+              ))}
+              {aiLoading && (
+                <div style={{ alignSelf: 'flex-start', background: '#f0f2f5', borderRadius: '12px 12px 12px 4px', padding: '8px 14px', fontSize: '0.78rem', color: '#9aa1ac', letterSpacing: '0.1em' }}>
+                  · · ·
+                </div>
+              )}
+            </div>
+
+            {/* Aperçu des séances proposées */}
+            {aiProposed.length > 0 && (
+              <div style={{ padding: '10px 16px', borderTop: '1px solid #f0f2f5', background: '#fafbfc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.08em' }}>{aiProposed.length} séance{aiProposed.length > 1 ? 's' : ''} proposée{aiProposed.length > 1 ? 's' : ''}</span>
+                  <button onClick={() => setAiProposed([])} style={{ background: 'none', border: 'none', fontSize: '0.7rem', color: '#9aa1ac', cursor: 'pointer' }}>Annuler</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 150, overflowY: 'auto', marginBottom: 8 }}>
+                  {aiProposed.map((ev, i) => (
+                    <div key={i} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: '0.73rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, color: '#15181d' }}>{ev.date}</span>
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: TYPES[ev.type]?.color || '#9aa1ac', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 700, color: TYPES[ev.type]?.color || '#6b7280' }}>{TYPES[ev.type]?.label || ev.type}</span>
+                      {ev.titre && <span style={{ color: '#6b7280' }}>{ev.titre}</span>}
+                      {ev.charge && <span style={{ color: '#9aa1ac', fontSize: '0.68rem' }}>{ev.charge}</span>}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={confirmAI} disabled={aiLoading} style={{ width: '100%', background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 8, padding: '9px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}>
+                  Créer {aiProposed.length} séance{aiProposed.length > 1 ? 's' : ''} sur le calendrier
+                </button>
+              </div>
+            )}
+
+            {/* Saisie */}
+            <div style={{ padding: '10px 16px', borderTop: '1px solid #e6e8ec', background: '#fff', display: 'flex', gap: 8 }}>
+              <input
+                value={aiInput} onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendToAI()}
+                placeholder="Décris tes séances…"
+                disabled={aiLoading}
+                style={{ flex: 1, border: '1.5px solid #e0e3e8', borderRadius: 8, padding: '8px 10px', fontSize: '0.8rem', fontFamily: 'inherit', outline: 'none' }}
+              />
+              <button onClick={sendToAI} disabled={aiLoading || !aiInput.trim()}
+                style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', opacity: aiLoading || !aiInput.trim() ? 0.5 : 1 }}>
+                Envoyer
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {panel && (
