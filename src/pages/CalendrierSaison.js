@@ -97,6 +97,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   // Panneau : { mode:'edit'|'create', evt, form, blocs }
   const [panel, setPanel] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [recupEditBloc, setRecupEditBloc] = useState(null) // bloc.id en cours d'édition récup
+  const [recupDraft, setRecupDraft]       = useState('')
 
   // Zoom semaine : { startISO, wkNum, days, blocsMap }
   const [weekZoom, setWeekZoom] = useState(null)
@@ -578,6 +580,20 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   async function deleteBloc(id) {
     setPanel(p => ({ ...p, blocs: p.blocs.filter(b => b.id !== id) }))
     await supabase.from('groupe_seance_blocs').delete().eq('id', id)
+  }
+  async function moveBloc(id, direction) {
+    const sorted = [...panel.blocs].sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+    const idx = sorted.findIndex(b => b.id === id)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= sorted.length) return
+    const a = sorted[idx], b = sorted[swapIdx]
+    setPanel(p => ({ ...p, blocs: p.blocs.map(bl =>
+      bl.id === a.id ? { ...bl, ordre: b.ordre } : bl.id === b.id ? { ...bl, ordre: a.ordre } : bl
+    )}))
+    await Promise.all([
+      supabase.from('groupe_seance_blocs').update({ ordre: b.ordre }).eq('id', a.id),
+      supabase.from('groupe_seance_blocs').update({ ordre: a.ordre }).eq('id', b.id),
+    ])
   }
   // ── State helpers séquences ────────────────────────────────────────────────
   function setBlocSeqs(blocId, seqsOrUpdater) {
@@ -2923,8 +2939,11 @@ function SeanceModal({
                   }
                   const gKeys = Object.keys(groups)
                   const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
+                  const isLast = idx === blocsWithPos.length - 1
+                  const editingRecup = recupEditBloc === bloc.id
                   return (
-                    <div key={bloc.id} style={{ marginBottom: 8, border: `1.5px solid ${color}35`, borderRadius: 10, overflow: 'hidden' }}>
+                    <div key={bloc.id}>
+                    <div style={{ marginBottom: 0, border: `1.5px solid ${color}35`, borderRadius: 10, overflow: 'hidden' }}>
                       {/* Tête colorée */}
                       <div style={{ background: color, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
@@ -2936,6 +2955,11 @@ function SeanceModal({
                           style={{ width: 44, border: 'none', background: 'rgba(0,0,0,.2)', color: '#fff', borderRadius: 5, padding: '2px 5px', fontSize: '.75rem', fontWeight: 900, textAlign: 'center', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
                         />
                         <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
+                        {/* Flèches réorganisation */}
+                        <button onClick={() => moveBloc(bloc.id, 'up')} disabled={idx === 0}
+                          style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: idx === 0 ? 'rgba(255,255,255,.3)' : '#fff', borderRadius: 4, width: 18, height: 18, fontSize: '.7rem', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>↑</button>
+                        <button onClick={() => moveBloc(bloc.id, 'down')} disabled={isLast}
+                          style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: isLast ? 'rgba(255,255,255,.3)' : '#fff', borderRadius: 4, width: 18, height: 18, fontSize: '.7rem', cursor: isLast ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>↓</button>
                         <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                       </div>
 
@@ -3226,6 +3250,29 @@ function SeanceModal({
                         )}
                         <button onClick={() => addExo(bloc.id)} style={{ width: '100%', background: 'none', border: `1.5px dashed ${color}50`, borderRadius: 6, color: color, fontSize: '.65rem', fontWeight: 700, padding: '4px', cursor: 'pointer', textAlign: 'center' }}>+ Exercice</button>
                       </div>}
+                    </div>
+                    {!isLast && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: '#f5f6f8' }}>
+                        <div style={{ flex: 1, height: 1, background: '#e0e3e8' }} />
+                        {editingRecup ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <input autoFocus type="number" min={1} max={60} value={recupDraft} onChange={e => setRecupDraft(e.target.value)} style={{ width: 38, border: '1.5px solid #1a1a1a', borderRadius: 5, padding: '2px 5px', fontSize: '.68rem', fontWeight: 700, textAlign: 'center', outline: 'none', fontFamily: 'inherit' }} placeholder="min" />
+                            <span style={{ fontSize: '.62rem', color: '#6b7280', fontWeight: 600 }}>min récup</span>
+                            <button onClick={async () => { const v = parseInt(recupDraft); if (v > 0) { await supabase.from('groupe_seance_blocs').update({ recup_apres: v }).eq('id', bloc.id); setPanel(p => ({ ...p, blocs: p.blocs.map(b => b.id === bloc.id ? { ...b, recup_apres: v } : b) })) } setRecupEditBloc(null); setRecupDraft('') }} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '.65rem', fontWeight: 800, cursor: 'pointer' }}>OK</button>
+                            <button onClick={() => { setRecupEditBloc(null); setRecupDraft('') }} style={{ background: 'none', border: '1px solid #d1d5db', borderRadius: 5, padding: '2px 8px', fontSize: '.65rem', fontWeight: 700, cursor: 'pointer', color: '#6b7280' }}>Annuler</button>
+                          </div>
+                        ) : bloc.recup_apres ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: '.62rem', color: '#374151', fontWeight: 700, background: '#e5e7eb', borderRadius: 5, padding: '2px 8px' }}>⏱ {bloc.recup_apres} min</span>
+                            <button onClick={() => { setRecupEditBloc(bloc.id); setRecupDraft(String(bloc.recup_apres)) }} style={{ background: 'none', border: 'none', fontSize: '.6rem', color: '#6b7280', cursor: 'pointer', padding: 0 }}>Modifier</button>
+                            <button onClick={async () => { await supabase.from('groupe_seance_blocs').update({ recup_apres: null }).eq('id', bloc.id); setPanel(p => ({ ...p, blocs: p.blocs.map(b => b.id === bloc.id ? { ...b, recup_apres: null } : b) })) }} style={{ background: 'none', border: 'none', fontSize: '.65rem', color: '#ef4444', cursor: 'pointer', padding: 0 }}>✕</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setRecupEditBloc(bloc.id); setRecupDraft('') }} style={{ background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 6, padding: '2px 10px', fontSize: '.62rem', fontWeight: 700, color: '#9aa1ac', cursor: 'pointer' }}>+ Récup</button>
+                        )}
+                        <div style={{ flex: 1, height: 1, background: '#e0e3e8' }} />
+                      </div>
+                    )}
                     </div>
                   )
                 })}
