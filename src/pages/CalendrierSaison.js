@@ -97,8 +97,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   // Panneau : { mode:'edit'|'create', evt, form, blocs }
   const [panel, setPanel] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [recupEditBloc, setRecupEditBloc] = useState(null) // bloc.id en cours d'édition récup
-  const [recupDraft, setRecupDraft]       = useState('')
 
   // Zoom semaine : { startISO, wkNum, days, blocsMap }
   const [weekZoom, setWeekZoom] = useState(null)
@@ -2635,6 +2633,10 @@ function SeanceModal({
   const hasBlocs = HAS_BLOCS.includes(form.type) || form.type === 'collectif'
   const totalMin = Number(form.duree_min) || 0
 
+  // ── Récupération inter-blocs ──
+  const [recupEditBloc, setRecupEditBloc] = useState(null)
+  const [recupDraft, setRecupDraft]       = useState('')
+
   // ── Timeline ──
   const blocksAreaRef = useRef(null)
   const [pxMin, setPxMin] = useState(3)
@@ -3284,14 +3286,14 @@ function SeanceModal({
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <input autoFocus type="number" min={1} max={60} value={recupDraft} onChange={e => setRecupDraft(e.target.value)} style={{ width: 38, border: '1.5px solid #1a1a1a', borderRadius: 5, padding: '2px 5px', fontSize: '.68rem', fontWeight: 700, textAlign: 'center', outline: 'none', fontFamily: 'inherit' }} placeholder="min" />
                             <span style={{ fontSize: '.62rem', color: '#6b7280', fontWeight: 600 }}>min récup</span>
-                            <button onClick={async () => { const v = parseInt(recupDraft); if (v > 0) { await supabase.from('groupe_seance_blocs').update({ recup_apres: v }).eq('id', bloc.id); setPanel(p => ({ ...p, blocs: p.blocs.map(b => b.id === bloc.id ? { ...b, recup_apres: v } : b) })) } setRecupEditBloc(null); setRecupDraft('') }} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '.65rem', fontWeight: 800, cursor: 'pointer' }}>OK</button>
+                            <button onClick={async () => { const v = parseInt(recupDraft); if (v > 0) { await updateBloc(bloc.id, { recup_apres: v }) } setRecupEditBloc(null); setRecupDraft('') }} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '.65rem', fontWeight: 800, cursor: 'pointer' }}>OK</button>
                             <button onClick={() => { setRecupEditBloc(null); setRecupDraft('') }} style={{ background: 'none', border: '1px solid #d1d5db', borderRadius: 5, padding: '2px 8px', fontSize: '.65rem', fontWeight: 700, cursor: 'pointer', color: '#6b7280' }}>Annuler</button>
                           </div>
                         ) : bloc.recup_apres ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span style={{ fontSize: '.62rem', color: '#374151', fontWeight: 700, background: '#e5e7eb', borderRadius: 5, padding: '2px 8px' }}>⏱ {bloc.recup_apres} min</span>
                             <button onClick={() => { setRecupEditBloc(bloc.id); setRecupDraft(String(bloc.recup_apres)) }} style={{ background: 'none', border: 'none', fontSize: '.6rem', color: '#6b7280', cursor: 'pointer', padding: 0 }}>Modifier</button>
-                            <button onClick={async () => { await supabase.from('groupe_seance_blocs').update({ recup_apres: null }).eq('id', bloc.id); setPanel(p => ({ ...p, blocs: p.blocs.map(b => b.id === bloc.id ? { ...b, recup_apres: null } : b) })) }} style={{ background: 'none', border: 'none', fontSize: '.65rem', color: '#ef4444', cursor: 'pointer', padding: 0 }}>✕</button>
+                            <button onClick={async () => { await updateBloc(bloc.id, { recup_apres: null }) }} style={{ background: 'none', border: 'none', fontSize: '.65rem', color: '#ef4444', cursor: 'pointer', padding: 0 }}>✕</button>
                           </div>
                         ) : (
                           <button onClick={() => { setRecupEditBloc(bloc.id); setRecupDraft('') }} style={{ background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 6, padding: '2px 10px', fontSize: '.62rem', fontWeight: 700, color: '#9aa1ac', cursor: 'pointer' }}>+ Récup</button>
