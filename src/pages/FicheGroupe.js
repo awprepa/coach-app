@@ -333,8 +333,18 @@ export default function FicheGroupe() {
       .eq('programme_id', prog.id)
       .order('ordre', { ascending: true })
 
+    // Anti-doublon : membres qui ont déjà une copie de ce programme
+    const { data: existingCopies } = await supabase
+      .from('programmes')
+      .select('client_id')
+      .eq('template_id', prog.id)
+      .in('client_id', membres.map(m => m.id))
+    const alreadyHasIds = new Set((existingCopies || []).map(r => r.client_id))
+
     let count = 0
     for (const m of membres) {
+      if (alreadyHasIds.has(m.id)) continue
+
       // Créer la copie individuelle
       const { data: progCopy, error: pe } = await supabase.from('programmes').insert({
         nom: prog.nom,
