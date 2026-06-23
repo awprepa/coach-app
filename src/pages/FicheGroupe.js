@@ -55,7 +55,8 @@ export default function FicheGroupe() {
   const [selectedProgsForNew, setSelectedProgsForNew] = useState(new Set())
   const [pushingToNew, setPushingToNew]     = useState(false)
 
-  const [pushLoading, setPushLoading]     = useState(null) // programme id en cours
+  const [pushLoading, setPushLoading]     = useState(null)
+  const [dedupLoading, setDedupLoading]   = useState(null)
 
   // ── Chargement ────────────────────────────────────────────────────────────
   useEffect(() => { load() }, [id]) // eslint-disable-line
@@ -386,6 +387,36 @@ export default function FicheGroupe() {
     alert(`✅ Programme envoyé à ${count} membre(s) !`)
   }
 
+  async function supprimerDoublons(prog) {
+    setDedupLoading(prog.id)
+    const { data: copies } = await supabase
+      .from('programmes')
+      .select('id, client_id, created_at')
+      .eq('template_id', prog.id)
+      .order('created_at', { ascending: true })
+
+    // Garder la première copie par client, supprimer les suivantes
+    const seen = {}
+    const toDelete = []
+    for (const c of copies || []) {
+      if (seen[c.client_id]) {
+        toDelete.push(c.id)
+      } else {
+        seen[c.client_id] = true
+      }
+    }
+
+    if (toDelete.length === 0) {
+      setDedupLoading(null)
+      alert('Aucun doublon trouvé.')
+      return
+    }
+
+    await supabase.from('programmes').delete().in('id', toDelete)
+    setDedupLoading(null)
+    alert(`${toDelete.length} doublon${toDelete.length > 1 ? 's' : ''} supprimé${toDelete.length > 1 ? 's' : ''}.`)
+  }
+
   async function propaguerATous(prog) {
     if (!window.confirm(`Mettre à jour TOUTES les copies existantes de "${prog.nom}" ?\nCela écrasera le contenu de chaque copie individuelle.`)) return
     setPushLoading(prog.id)
@@ -622,6 +653,14 @@ export default function FicheGroupe() {
                       title="Mettre à jour toutes les copies existantes"
                     >
                       🔄 Propager les modifs
+                    </button>
+                    <button
+                      onClick={() => supprimerDoublons(prog)}
+                      disabled={dedupLoading === prog.id}
+                      style={{ ...S.btnAction, background: '#fee2e2', color: '#b91c1c' }}
+                      title="Supprimer les copies en double pour chaque membre"
+                    >
+                      {dedupLoading === prog.id ? '⏳' : '🗑 Doublons'}
                     </button>
                   </div>
                 </div>
