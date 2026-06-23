@@ -46,6 +46,8 @@ export default function FicheGroupe() {
   const [showAddMembre, setShowAddMembre] = useState(false)
   const [searchMembre, setSearchMembre]   = useState('')
   const [candidats, setCandidats]         = useState([])   // clients individuels disponibles
+  const [selectedCandidats, setSelectedCandidats] = useState(new Set())
+  const [addingMembres, setAddingMembres] = useState(false)
 
   const [pushLoading, setPushLoading]     = useState(null) // programme id en cours
 
@@ -186,11 +188,32 @@ export default function FicheGroupe() {
     const dispo = (allClients || []).filter(c => !membresIds.has(c.id))
     setCandidats(dispo)
     setSearchMembre('')
+    setSelectedCandidats(new Set())
     setShowAddMembre(true)
   }
 
-  async function ajouterMembre(clientId) {
-    const { error } = await supabase.from('groupe_membres').insert([{ groupe_id: id, client_id: clientId }])
+  function toggleCandidat(clientId) {
+    setSelectedCandidats(prev => {
+      const next = new Set(prev)
+      next.has(clientId) ? next.delete(clientId) : next.add(clientId)
+      return next
+    })
+  }
+
+  function toggleTous() {
+    setSelectedCandidats(prev =>
+      prev.size === candidatsFiltres.length
+        ? new Set()
+        : new Set(candidatsFiltres.map(c => c.id))
+    )
+  }
+
+  async function ajouterMembresSelectionnes() {
+    if (!selectedCandidats.size) return
+    setAddingMembres(true)
+    const rows = [...selectedCandidats].map(clientId => ({ groupe_id: id, client_id: clientId }))
+    const { error } = await supabase.from('groupe_membres').insert(rows)
+    setAddingMembres(false)
     if (error) { alert(error.message); return }
     await load()
     setShowAddMembre(false)
@@ -643,32 +666,50 @@ export default function FicheGroupe() {
 
       {/* ── Modal ajout membre ── */}
       {showAddMembre && (
-        <Modal title="Ajouter un membre" onClose={() => setShowAddMembre(false)}>
+        <Modal title="Ajouter des membres" onClose={() => setShowAddMembre(false)}>
           <input
             autoFocus value={searchMembre} onChange={e => setSearchMembre(e.target.value)}
-            placeholder="Rechercher un client..." style={{ ...S.input, width: '100%', boxSizing: 'border-box', marginBottom: '0.75rem' }}
+            placeholder="Rechercher un client..." style={{ ...S.input, width: '100%', boxSizing: 'border-box', marginBottom: '0.5rem' }}
           />
+          {candidatsFiltres.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                {selectedCandidats.size > 0 ? `${selectedCandidats.size} sélectionné${selectedCandidats.size > 1 ? 's' : ''}` : `${candidatsFiltres.length} disponible${candidatsFiltres.length > 1 ? 's' : ''}`}
+              </span>
+              <button onClick={toggleTous} style={{ background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: accent, cursor: 'pointer', padding: 0 }}>
+                {selectedCandidats.size === candidatsFiltres.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+            </div>
+          )}
           {candidatsFiltres.length === 0 ? (
             <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1rem 0' }}>
               {searchMembre ? 'Aucun client trouvé.' : 'Tous les clients sont déjà dans un groupe.'}
             </p>
           ) : (
-            <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1rem' }}>
               {candidatsFiltres.map(c => {
                 const offre = OFFRES[c.offre]
+                const checked = selectedCandidats.has(c.id)
                 return (
                   <div key={c.id}
-                    onClick={() => ajouterMembre(c.id)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: '#f9fafb', borderRadius: 10, cursor: 'pointer', border: '1.5px solid transparent' }}
-                    onMouseOver={e => e.currentTarget.style.borderColor = accent}
-                    onMouseOut={e => e.currentTarget.style.borderColor = 'transparent'}
+                    onClick={() => toggleCandidat(c.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', background: checked ? accent + '15' : '#f9fafb', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${checked ? accent : 'transparent'}`, transition: 'all .1s' }}
                   >
-                    <span style={{ fontWeight: '700', color: '#333' }}>{c.prenom} {c.nom}</span>
-                    {offre && <span style={{ background: offre.bg, color: offre.color, padding: '0.1rem 0.5rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '600' }}>{offre.label}</span>}
+                    <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked ? accent : '#d1d5db'}`, background: checked ? accent : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {checked && <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                    </div>
+                    <span style={{ fontWeight: 700, color: '#333', flex: 1 }}>{c.prenom} {c.nom}</span>
+                    {offre && <span style={{ background: offre.bg, color: offre.color, padding: '0.1rem 0.5rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600 }}>{offre.label}</span>}
                   </div>
                 )
               })}
             </div>
+          )}
+          {selectedCandidats.size > 0 && (
+            <button onClick={ajouterMembresSelectionnes} disabled={addingMembres}
+              style={{ width: '100%', background: accent, color: '#fff', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {addingMembres ? 'Ajout en cours…' : `Ajouter ${selectedCandidats.size} membre${selectedCandidats.size > 1 ? 's' : ''}`}
+            </button>
           )}
         </Modal>
       )}
