@@ -47,11 +47,11 @@ function matchCatColor(categorie, groupColor) {
 // Planification entraînement
 const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
 const CONTACT_LEVELS = [
-  { label: 'Aucun contact',      desc: 'Échauffement, technique sans opposition' },
-  { label: 'Contact technique',  desc: 'Placages au ralenti, initiation' },
-  { label: 'Contact contrôlé',   desc: 'Opposition maîtrisée, intensité partielle' },
-  { label: 'Contact intense',    desc: 'Opposition pleine, simulation match' },
-  { label: 'Match',              desc: 'Conditions de match réelles' },
+  { label: 'Aucun contact',    desc: '' },
+  { label: 'Ceinturé / bloqué', desc: 'Saisie sans plaquage complet' },
+  { label: 'Contact contrôlé', desc: 'Plaquages maîtrisés, intensité partielle' },
+  { label: 'Plein contact',    desc: 'Plaquages réels, exercice structuré' },
+  { label: 'Opposition libre', desc: 'Jeu libre, intensité match' },
 ]
 const COURSE_VOLUMES    = ['Faible', 'Modéré', 'Élevé', 'Très élevé']
 const COURSE_INTENSITES = ['Légère', 'Haute intensité', 'Très haute intensité', 'Vitesse maximale']
