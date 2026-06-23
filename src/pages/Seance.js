@@ -310,7 +310,17 @@ export default function Seance() {
     }]).select().single()
     if (error) alert(error.message)
     else {
-      setExercices([...exercices, { ...data, charges: [] }])
+      const allExos = [...exercices, { ...data, charges: [] }]
+      const sorted = [...allExos].sort((a, b) => {
+        const [al, an] = sortCodeKey(a.code)
+        const [bl, bn] = sortCodeKey(b.code)
+        if (al !== bl) return al < bl ? -1 : 1
+        return an - bn
+      })
+      sorted.forEach(async (ex, i) => {
+        if (ex.ordre !== i + 1) await supabase.from('exercices').update({ ordre: i + 1 }).eq('id', ex.id)
+      })
+      setExercices(sorted.map((ex, i) => ({ ...ex, ordre: i + 1 })))
       setCharges({ ...charges, [data.id]: {} })
       // Flash feedback si auto-linked
       if (bibliotheque_id && !form.bibliotheque_id && !saveToLibrary) {
@@ -347,7 +357,17 @@ export default function Seance() {
       }]).select().single()
       if (!error && data) { inserted.push({ ...data, charges: [] }); ordre++ }
     }
-    setExercices(prev => [...prev, ...inserted])
+    const allExos = [...exercices, ...inserted]
+    const sorted = [...allExos].sort((a, b) => {
+      const [al, an] = sortCodeKey(a.code)
+      const [bl, bn] = sortCodeKey(b.code)
+      if (al !== bl) return al < bl ? -1 : 1
+      return an - bn
+    })
+    sorted.forEach(async (ex, i) => {
+      if (ex.ordre !== i + 1) await supabase.from('exercices').update({ ordre: i + 1 }).eq('id', ex.id)
+    })
+    setExercices(sorted.map((ex, i) => ({ ...ex, ordre: i + 1 })))
     const newCharges = { ...charges }
     inserted.forEach(ex => { newCharges[ex.id] = {} })
     setCharges(newCharges)
