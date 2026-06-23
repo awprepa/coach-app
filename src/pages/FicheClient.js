@@ -620,9 +620,16 @@ export default function FicheClient() {
           </div>
         </div>
         {(() => {
+          const todayD = new Date()
           const vraisActifs = programmes
             .filter(p => p.date_debut && !isCycleTermine(p))
-            .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut))
+            .sort((a, b) => {
+              const aStarted = new Date(a.date_debut + 'T00:00:00') <= todayD
+              const bStarted = new Date(b.date_debut + 'T00:00:00') <= todayD
+              if (aStarted && !bStarted) return -1
+              if (!aStarted && bStarted) return 1
+              return new Date(b.date_debut) - new Date(a.date_debut)
+            })
           const sansDates = programmes
             .filter(p => !p.date_debut)
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
