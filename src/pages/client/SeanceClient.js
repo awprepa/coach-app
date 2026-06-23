@@ -124,8 +124,8 @@ export default function SeanceClient() {
   const [mediaModal, setMediaModal] = useState(null) // { nom, url }
   const [rpeOpen, setRpeOpen] = useState(false)
   const [echauffement, setEchauffement] = useState([])
-  const [cardioDebut, setCardioDebut]   = useState(null)
-  const [cardioFin, setCardioFin]       = useState(null)
+  const [cardioDebutAll, setCardioDebutAll] = useState({})
+  const [cardioFinAll,   setCardioFinAll]   = useState({})
   const [expandedDone, setExpandedDone] = useState(new Set())
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
@@ -284,8 +284,8 @@ export default function SeanceClient() {
     }
     setSeance(data)
     setEchauffement(data.echauffement || [])
-    setCardioDebut(data.cardio_debut || null)
-    setCardioFin(data.cardio_fin || null)
+    setCardioDebutAll(data.cardio_debut || {})
+    setCardioFinAll(data.cardio_fin || {})
     const total = data.programmes.semaines
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.created_at
@@ -304,8 +304,8 @@ export default function SeanceClient() {
       await saveSeanceLocally(id, {
         seance:          data,
         echauffement:    data.echauffement || [],
-        cardio_debut:    data.cardio_debut || null,
-        cardio_fin:      data.cardio_fin || null,
+        cardio_debut:    data.cardio_debut || {},
+        cardio_fin:      data.cardio_fin || {},
         semaines:        total,
         semaineActuelle: semAct,
         exercices:       exData.exercices,
@@ -324,8 +324,8 @@ export default function SeanceClient() {
   function restoreFromLocal(local) {
     setSeance(local.seance)
     setEchauffement(local.echauffement || [])
-    setCardioDebut(local.cardio_debut || null)
-    setCardioFin(local.cardio_fin || null)
+    setCardioDebutAll(local.cardio_debut || {})
+    setCardioFinAll(local.cardio_fin || {})
     setSemaines(local.semaines)
     setSemaineActuelle(local.semaineActuelle)
     setExercices(local.exercices || [])
@@ -1361,7 +1361,7 @@ export default function SeanceClient() {
         )}
 
         {/* Cardio avant séance */}
-        {cardioDebut?.type && <CardioCard cardio={cardioDebut} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
+        {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
 
         {/* Échauffement */}
         {echauffement.length > 0 && (() => {
@@ -1647,7 +1647,7 @@ export default function SeanceClient() {
         })()}
 
         {/* Cardio après séance */}
-        {cardioFin?.type && <CardioCard cardio={cardioFin} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
+        {cardioFinAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioFinAll[semaineActuelle]} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
 
         {/* Intensité RPE — section repliable */}
         <div style={{ marginTop: '1.25rem' }}>

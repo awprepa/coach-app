@@ -121,9 +121,11 @@ export default function Seance() {
   const [biblioFull, setBiblioFull] = useState([])  // toute la bibliothèque pour auto-matching
   const [autoLinked, setAutoLinked] = useState({})  // { [exId]: nomBiblio } flash feedback
   const [showAIModal, setShowAIModal] = useState(false)
-  // Cardio
-  const [cardioDebut, setCardioDebut]   = useState(null)
-  const [cardioFin, setCardioFin]       = useState(null)
+  // Cardio — objet { [semaine]: { type, duree_min, intensite, note, media_url } | null }
+  const [cardioDebut, setCardioDebut]       = useState({})
+  const [cardioFin, setCardioFin]           = useState({})
+  const [cardioDebutSem, setCardioDebutSem] = useState(1)
+  const [cardioFinSem,   setCardioFinSem]   = useState(1)
   const [uploadingCardio, setUploadingCardio] = useState(false)
   const cardioImgDebutRef = useRef(null)
   const cardioImgFinRef   = useRef(null)
@@ -162,7 +164,7 @@ export default function Seance() {
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
     if (error) console.log(error)
-    else { setSeance(data); setSemaines(data.programmes.semaines); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || null); setCardioFin(data.cardio_fin || null); await fetchExercices(); await fetchRpeSeances() }
+    else { setSeance(data); setSemaines(data.programmes.semaines); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); await fetchExercices(); await fetchRpeSeances() }
     setLoading(false)
   }
 
@@ -918,7 +920,7 @@ export default function Seance() {
     else alert('Template sauvegardé !')
   }
 
-  async function uploadCardioImage(position, set, file) {
+  async function uploadCardioImage(position, sem, file) {
     if (!file) return
     const ext  = file.name.split('.').pop().toLowerCase()
     const path = `cardio/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
@@ -927,16 +929,22 @@ export default function Seance() {
     setUploadingCardio(false)
     if (error) { alert('Erreur upload : ' + error.message); return }
     const { data: { publicUrl } } = supabase.storage.from('exercices').getPublicUrl(path)
-    set(c => ({ ...c, media_url: publicUrl }))
+    const setFn = position === 'debut' ? setCardioDebut : setCardioFin
+    setFn(prev => ({ ...prev, [sem]: { ...(prev[sem] || {}), media_url: publicUrl } }))
     const ref = position === 'debut' ? cardioImgDebutRef : cardioImgFinRef
     if (ref.current) ref.current.value = ''
   }
 
-  async function saveCardio(position, val) {
+  async function saveCardio(position, newObj) {
     const col = position === 'debut' ? 'cardio_debut' : 'cardio_fin'
-    if (position === 'debut') setCardioDebut(val)
-    else setCardioFin(val)
-    await supabase.from('seances').update({ [col]: val }).eq('id', id)
+    if (position === 'debut') setCardioDebut(newObj)
+    else setCardioFin(newObj)
+    await supabase.from('seances').update({ [col]: newObj }).eq('id', id)
+  }
+
+  function updateCardioSem(position, sem, patch) {
+    const setFn = position === 'debut' ? setCardioDebut : setCardioFin
+    setFn(prev => ({ ...prev, [sem]: { ...(prev[sem] || {}), ...patch } }))
   }
 
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
@@ -1216,84 +1224,114 @@ export default function Seance() {
       <div style={{ ...styles.card, marginBottom: '1rem' }}>
         <p style={styles.sectionTitle}>Cardio</p>
         {[
-          { position: 'debut', label: 'Avant séance', cardio: cardioDebut, set: setCardioDebut },
-          { position: 'fin',   label: 'Après séance', cardio: cardioFin,   set: setCardioFin   },
-        ].map(({ position, label, cardio, set }) => (
-          <div key={position} style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: position === 'debut' ? '1px solid #f3f4f6' : 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: cardio ? '0.5rem' : 0 }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', minWidth: 90 }}>{label}</span>
-              {!cardio && (
-                <button onClick={() => set({ type: '', duree_min: '', intensite: '', note: '' })}
-                  style={{ ...styles.btnSecondary, fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
-                  + Ajouter
-                </button>
-              )}
+          { position: 'debut', label: 'Avant séance', cardioAll: cardioDebut, sem: cardioDebutSem, setSem: setCardioDebutSem },
+          { position: 'fin',   label: 'Après séance', cardioAll: cardioFin,   sem: cardioFinSem,   setSem: setCardioFinSem   },
+        ].map(({ position, label, cardioAll, sem, setSem }) => {
+          const cardio = cardioAll[sem] || null
+          return (
+            <div key={position} style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: position === 'debut' ? '1px solid #f3f4f6' : 'none' }}>
+              {/* Header : label + chips semaines */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', minWidth: 90 }}>{label}</span>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {colSemaines.map(s => {
+                    const hasDef = !!cardioAll[s]?.type
+                    return (
+                      <button key={s} onClick={() => setSem(s)} style={{
+                        padding: '2px 7px', borderRadius: 6, border: '1.5px solid',
+                        fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer',
+                        background: sem === s ? '#1a1a1a' : hasDef ? '#f0fdf4' : 'white',
+                        borderColor: sem === s ? '#1a1a1a' : hasDef ? '#86efac' : '#e5e7eb',
+                        color: sem === s ? '#e4f816' : hasDef ? '#16a34a' : '#9ca3af',
+                      }}>S{s}</button>
+                    )
+                  })}
+                </div>
+                {cardio && (
+                  <>
+                    <button onClick={() => {
+                      const newObj = { ...cardioAll }
+                      colSemaines.forEach(s => { newObj[s] = cardio })
+                      saveCardio(position, newObj)
+                    }} style={{ ...styles.btnSecondary, fontSize: '0.68rem', padding: '2px 8px' }}>
+                      Copier toutes semaines
+                    </button>
+                    <button onClick={() => {
+                      const newObj = { ...cardioAll, [sem]: null }
+                      saveCardio(position, newObj)
+                    }} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '700' }}>
+                      ✕ Supprimer S{sem}
+                    </button>
+                  </>
+                )}
+                {!cardio && (
+                  <button onClick={() => updateCardioSem(position, sem, { type: '', duree_min: '', intensite: '', note: '' })}
+                    style={{ ...styles.btnSecondary, fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
+                    + Ajouter S{sem}
+                  </button>
+                )}
+              </div>
+              {/* Formulaire semaine sélectionnée */}
               {cardio && (
-                <button onClick={() => saveCardio(position, null)}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '700' }}>
-                  ✕ Supprimer
-                </button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f9fafb', borderRadius: 10, padding: '0.75rem' }}>
+                  <div style={styles.editField}>
+                    <label style={styles.editLabel}>Type</label>
+                    <input placeholder="ex : Footing, Vélo…" value={cardio.type || ''}
+                      onChange={e => updateCardioSem(position, sem, { type: e.target.value })}
+                      style={styles.editInput} />
+                  </div>
+                  <div style={styles.editField}>
+                    <label style={styles.editLabel}>Durée (min)</label>
+                    <input type="number" placeholder="—" value={cardio.duree_min || ''}
+                      onChange={e => updateCardioSem(position, sem, { duree_min: e.target.value })}
+                      style={styles.editInput} min="1" max="120" />
+                  </div>
+                  <div style={styles.editField}>
+                    <label style={styles.editLabel}>Intensité</label>
+                    <select value={cardio.intensite || ''} onChange={e => updateCardioSem(position, sem, { intensite: e.target.value })} style={styles.editInput}>
+                      <option value="">—</option>
+                      {['Légère', 'Modérée', 'Intense'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ ...styles.editField, flex: 2, minWidth: 160 }}>
+                    <label style={styles.editLabel}>Note</label>
+                    <input placeholder="ex : 3×500m récup 1min" value={cardio.note || ''}
+                      onChange={e => updateCardioSem(position, sem, { note: e.target.value })}
+                      style={styles.editInput} />
+                  </div>
+                  <button onClick={() => saveCardio(position, { ...cardioAll, [sem]: cardio })} style={styles.btnPrimary}>
+                    Enregistrer S{sem}
+                  </button>
+                  {/* Media */}
+                  <div style={{ width: '100%', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    {cardio.media_url && (() => {
+                      const ytId = youtubeId(cardio.media_url)
+                      return ytId
+                        ? <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                        : <img src={cardio.media_url} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                    })()}
+                    <input value={cardio.media_url || ''}
+                      onChange={e => updateCardioSem(position, sem, { media_url: e.target.value })}
+                      placeholder="URL image / GIF / YouTube (optionnel)"
+                      style={{ ...styles.editInput, flex: 1, minWidth: 180, fontSize: '0.78rem' }} />
+                    <button type="button" onClick={() => { const ref = position === 'debut' ? cardioImgDebutRef : cardioImgFinRef; ref.current?.click() }}
+                      disabled={uploadingCardio}
+                      style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}>
+                      {uploadingCardio ? '…' : '↑ Upload'}
+                    </button>
+                    {cardio.media_url && (
+                      <button type="button" onClick={() => updateCardioSem(position, sem, { media_url: '' })}
+                        style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
+                    )}
+                    <input ref={position === 'debut' ? cardioImgDebutRef : cardioImgFinRef}
+                      type="file" accept="image/*,video/gif" style={{ display: 'none' }}
+                      onChange={e => uploadCardioImage(position, sem, e.target.files[0])} />
+                  </div>
+                </div>
               )}
             </div>
-            {cardio && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f9fafb', borderRadius: 10, padding: '0.75rem' }}>
-                <div style={styles.editField}>
-                  <label style={styles.editLabel}>Type</label>
-                  <input placeholder="ex : Footing, Vélo…" value={cardio.type}
-                    onChange={e => set(c => ({ ...c, type: e.target.value }))}
-                    style={styles.editInput} />
-                </div>
-                <div style={styles.editField}>
-                  <label style={styles.editLabel}>Durée (min)</label>
-                  <input type="number" placeholder="—" value={cardio.duree_min}
-                    onChange={e => set(c => ({ ...c, duree_min: e.target.value }))}
-                    style={styles.editInput} min="1" max="120" />
-                </div>
-                <div style={styles.editField}>
-                  <label style={styles.editLabel}>Intensité</label>
-                  <select value={cardio.intensite} onChange={e => set(c => ({ ...c, intensite: e.target.value }))} style={styles.editInput}>
-                    <option value="">—</option>
-                    {['Légère', 'Modérée', 'Intense'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div style={{ ...styles.editField, flex: 2, minWidth: 160 }}>
-                  <label style={styles.editLabel}>Note</label>
-                  <input placeholder="ex : 3×500m récup 1min" value={cardio.note}
-                    onChange={e => set(c => ({ ...c, note: e.target.value }))}
-                    style={styles.editInput} />
-                </div>
-                <button onClick={() => saveCardio(position, cardio)} style={styles.btnPrimary}>
-                  Enregistrer
-                </button>
-                {/* Media */}
-                <div style={{ width: '100%', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                  {cardio.media_url && (() => {
-                    const ytId = youtubeId(cardio.media_url)
-                    return ytId
-                      ? <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
-                      : <img src={cardio.media_url} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
-                  })()}
-                  <input value={cardio.media_url || ''}
-                    onChange={e => set(c => ({ ...c, media_url: e.target.value }))}
-                    placeholder="URL image / GIF / YouTube (optionnel)"
-                    style={{ ...styles.editInput, flex: 1, minWidth: 180, fontSize: '0.78rem' }} />
-                  <button type="button" onClick={() => { const ref = position === 'debut' ? cardioImgDebutRef : cardioImgFinRef; ref.current?.click() }}
-                    disabled={uploadingCardio}
-                    style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}>
-                    {uploadingCardio ? '…' : '↑ Upload'}
-                  </button>
-                  {cardio.media_url && (
-                    <button type="button" onClick={() => set(c => ({ ...c, media_url: '' }))}
-                      style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
-                  )}
-                  <input ref={position === 'debut' ? cardioImgDebutRef : cardioImgFinRef}
-                    type="file" accept="image/*,video/gif" style={{ display: 'none' }}
-                    onChange={e => uploadCardioImage(position, set, e.target.files[0])} />
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* RPE + graphique */}
