@@ -136,7 +136,7 @@ function levenshteinSimilarity(a, b) {
  * @param {number}   threshold    Score minimum pour accepter (défaut 0.72)
  * @returns {{ match: object, score: number } | null}
  */
-export function findBiblioMatch(nom, bibliotheque, threshold = 0.72) {
+export function findBiblioMatch(nom, bibliotheque, threshold = 0.82) {
   if (!nom?.trim() || !bibliotheque?.length) return null
 
   // Correspondance exacte en priorité (insensible à la casse + espaces)
@@ -163,10 +163,14 @@ export function findBiblioMatch(nom, bibliotheque, threshold = 0.72) {
       // Correspondance exacte après normalisation
       score = 1.0
     } else if (normNom.includes(normEx) || normEx.includes(normNom)) {
-      // L'un contient l'autre (ex: "squat" ↔ "squat barre")
+      // L'un contient l'autre — seulement si les longueurs sont proches
+      // (évite "Squat" → "Goblet squat" ou "Curl" → "Hammer curl")
       const shorter = Math.min(normNom.length, normEx.length)
       const longer  = Math.max(normNom.length, normEx.length)
-      score = 0.75 + 0.15 * (shorter / longer)
+      const ratio = shorter / longer
+      if (ratio >= 0.60) {
+        score = 0.72 + 0.22 * ratio  // 0.85 pour ratio=0.60, jusqu'à 0.94 pour ratio=1.0
+      }
     } else {
       // Combinaison similarité mots + Levenshtein
       const wScore = wordSimilarity(normNom, normEx)

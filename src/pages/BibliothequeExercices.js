@@ -634,6 +634,12 @@ export default function BibliothequeExercices() {
                         <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 6, padding: '2px 7px' }}>
                           {Math.round(m.score * 100)}%
                         </span>
+                        <button
+                          onClick={() => setBackfillResult(r => ({ ...r, matched: r.matched.filter(x => x.exercice_id !== m.exercice_id), skipped: r.skipped + 1 }))}
+                          title="Ignorer cette liaison"
+                          style={{ flexShrink: 0, background: 'none', border: '1px solid #e5e7eb', borderRadius: 5, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', lineHeight: 1 }}>
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
