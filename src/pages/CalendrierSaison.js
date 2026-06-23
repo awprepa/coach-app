@@ -1193,7 +1193,17 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
       {aiOpen && (
         <>
           <div style={S.scrim} onClick={() => setAiOpen(false)} />
-          <div style={{ ...S.panel, display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 61, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+          <div style={{
+            pointerEvents: 'all',
+            width: 'min(680px, 94vw)', height: 'min(600px, 90vh)',
+            background: '#f5f6f8', borderRadius: 16,
+            boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
             <div style={S.phead}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#15181d' }}>Planification IA</span>
@@ -1268,6 +1278,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
                 Envoyer
               </button>
             </div>
+          </div>
           </div>
         </>
       )}
