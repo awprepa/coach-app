@@ -244,24 +244,30 @@ export default function FicheClient() {
       const m = String(repsStr).match(/\d+/)
       return m ? parseInt(m[0]) : null
     }
+    // Poids texte ("102,5") → nombre
+    const poidsNum = (p) => parseFloat(String(p).replace(',', '.'))
 
     // Grouper par nom d'exercice → max poids par semaine + groupe musculaire.
     // On ne retient une charge que si le client a réellement fait le nombre de
-    // reps prescrit (sinon un test 1RM raté gonflerait la valeur affichée).
+    // reps prescrit (sinon un test 1RM raté, ou une série validée sans reps
+    // renseignées, gonflerait la valeur affichée).
     const byExo = {}
     const byExoGroupe = {}
     tracking.forEach(t => {
       const exo = exosAll.find(e => e.id === t.exercice_id)
       if (!exo || !t.poids) return
+      const poids = poidsNum(t.poids)
+      if (!poids || isNaN(poids)) return
       const cible = repsCible(exo.repetitions)
-      if (cible != null && t.reps_reelles != null && t.reps_reelles < cible) return
+      // Si un nombre de reps est prescrit, il faut l'avoir réellement atteint
+      if (cible != null && (t.reps_reelles == null || t.reps_reelles < cible)) return
       const key = exo.nom
       if (!byExo[key]) {
         byExo[key] = {}
         byExoGroupe[key] = exo.muscles_primaires?.[0] || ''
       }
       const sem = `S${t.semaine}`
-      if (!byExo[key][sem] || parseFloat(t.poids) > parseFloat(byExo[key][sem])) byExo[key][sem] = t.poids
+      if (byExo[key][sem] == null || poids > byExo[key][sem]) byExo[key][sem] = poids
     })
 
     // Convertir en tableau pour Recharts, trier par groupe puis par nom

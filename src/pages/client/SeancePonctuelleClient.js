@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 
@@ -11,31 +11,19 @@ function formatDate(str) {
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 
 // ── Formulaire d'ajout d'exercice (nom autocomplété + séries + reps) ─────────
-function AddExerciceForm({ onAdd, adding }) {
+function AddExerciceForm({ onAdd, adding, biblio }) {
   const [nom,    setNom]    = useState('')
   const [series, setSeries] = useState('3')
   const [reps,   setReps]   = useState('10')
-  const [sugg,   setSugg]   = useState([])
-  const timer = useRef(null)
+  const [open,   setOpen]   = useState(false)
 
-  const search = useCallback((q) => {
-    clearTimeout(timer.current)
-    if (!q.trim()) { setSugg([]); return }
-    timer.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('bibliotheque_exercices')
-        .select('id, nom')
-        .ilike('nom', `%${q}%`)
-        .order('nom')
-        .limit(8)
-      setSugg(data || [])
-    }, 200)
-  }, [])
-
-  function handleNom(e) {
-    setNom(e.target.value)
-    search(e.target.value)
-  }
+  // Filtrage local sur la bibliothèque déjà chargée (instantané, sans requête)
+  const q = nom.trim().toLowerCase()
+  const sugg = q
+    ? biblio.filter(b => b.nom.toLowerCase().includes(q)).slice(0, 8)
+    : []
+  // On masque la liste si le nom tapé correspond déjà exactement à un exo choisi
+  const showSugg = open && sugg.length > 0 && !(sugg.length === 1 && sugg[0].nom.toLowerCase() === q)
 
   function submit() {
     if (!nom.trim()) return
@@ -44,7 +32,7 @@ function AddExerciceForm({ onAdd, adding }) {
       series: Math.max(1, parseInt(series) || 1),
       reps: reps !== '' ? (parseInt(reps) || null) : null,
     })
-    setNom(''); setSeries('3'); setReps('10'); setSugg([])
+    setNom(''); setSeries('3'); setReps('10'); setOpen(false)
   }
 
   return (
@@ -53,19 +41,19 @@ function AddExerciceForm({ onAdd, adding }) {
       <div style={{ position: 'relative' }}>
         <input
           type="text"
-          placeholder="Tape un nom — la bibliothèque apparaît"
+          placeholder="Nom de l'exercice"
           value={nom}
-          onChange={handleNom}
-          onBlur={() => setTimeout(() => setSugg([]), 150)}
+          onChange={e => { setNom(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
           style={S.input}
-          autoFocus
         />
-        {sugg.length > 0 && (
+        {showSugg && (
           <div style={S.bibDropdown}>
             {sugg.map(r => (
               <div
                 key={r.id}
-                onMouseDown={() => { setNom(r.nom); setSugg([]) }}
+                onMouseDown={e => { e.preventDefault(); setNom(r.nom); setOpen(false) }}
                 style={S.bibItem}
               >
                 {r.nom}
@@ -122,6 +110,13 @@ export default function SeancePonctuelleClient() {
   const [addingEx,  setAddingEx]  = useState(false)
   const saveTimer = useRef(null)
 
+  // Bibliothèque chargée une seule fois (filtrage local dans AddExerciceForm)
+  const [biblio, setBiblio] = useState([])
+  useEffect(() => {
+    supabase.from('bibliotheque_exercices').select('id, nom').order('nom')
+      .then(({ data }) => setBiblio(data || []))
+  }, [])
+
   useEffect(() => { if (!isNew) fetchData() }, [id]) // eslint-disable-line
 
   // Résout le client courant si l'état de navigation a été perdu (refresh, etc.)
@@ -171,25 +166,42 @@ export default function SeancePonctuelleClient() {
     setNewExs(prev => prev.filter(e => e.tmpId !== tmpId))
   }
 
+  // Résout le client courant (état de nav ou session)
+  async function resolveClientId() {
+    if (clientId) return clientId
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+    let { data: cl } = await supabase.from('clients').select('id').eq('user_id', session.user.id).maybeSingle()
+    if (!cl) {
+      const r = await supabase.from('clients').select('id').eq('email', session.user.email).maybeSingle()
+      cl = r.data
+    }
+    if (cl) { setClientId(cl.id); return cl.id }
+    return null
+  }
+
   async function creerSeance() {
-    if (!newTitre.trim() || !clientId) return
+    if (!newTitre.trim() || saving) return
     setSaving(true)
 
-    const { data: ev } = await supabase.from('evenements').insert([{
-      client_id: clientId,
+    const cid = await resolveClientId()
+    if (!cid) { setSaving(false); alert("Impossible de t'identifier. Reconnecte-toi puis réessaie."); return }
+
+    const { data: ev, error: evErr } = await supabase.from('evenements').insert([{
+      client_id: cid,
       date: newDate,
       type: 'seance',
       titre: newTitre.trim(),
       source: 'client_ponctuelle',
     }]).select().single()
 
-    if (!ev) { setSaving(false); return }
+    if (evErr || !ev) { setSaving(false); alert('Erreur lors de la création : ' + (evErr?.message || 'inconnue')); return }
 
     let ordre = 1
     for (const ex of newExs) {
       const { data: dbEx } = await supabase
         .from('seances_libres_exercices')
-        .insert([{ evenement_id: ev.id, client_id: clientId, nom: ex.nom, ordre: ordre++ }])
+        .insert([{ evenement_id: ev.id, client_id: cid, nom: ex.nom, ordre: ordre++ }])
         .select().single()
       if (dbEx) {
         const rows = []
@@ -322,13 +334,13 @@ export default function SeancePonctuelleClient() {
         )}
 
         {/* Formulaire ajout */}
-        <AddExerciceForm onAdd={newAjouter} adding={false} />
+        <AddExerciceForm onAdd={newAjouter} adding={false} biblio={biblio} />
 
         {/* Créer */}
         <button
           onClick={creerSeance}
-          disabled={!newTitre.trim() || newExs.length === 0 || !clientId || saving}
-          style={{ ...S.createBtn, opacity: (!newTitre.trim() || newExs.length === 0 || !clientId || saving) ? 0.5 : 1 }}
+          disabled={!newTitre.trim() || newExs.length === 0 || saving}
+          style={{ ...S.createBtn, opacity: (!newTitre.trim() || newExs.length === 0 || saving) ? 0.5 : 1 }}
         >
           {saving ? '…' : 'Créer la séance'}
         </button>
@@ -404,7 +416,7 @@ export default function SeancePonctuelleClient() {
 
         {/* Ajouter un exercice après coup */}
         <div style={{ marginTop: '1.25rem' }}>
-          <AddExerciceForm onAdd={ajouterExercice} adding={addingEx} />
+          <AddExerciceForm onAdd={ajouterExercice} adding={addingEx} biblio={biblio} />
         </div>
 
         <div style={{ height: 100 }} />

@@ -7,6 +7,15 @@ import CalendrierSaison from './CalendrierSaison'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
+// Couleur du wellness (moyenne /4) — mêmes seuils que la page client
+function wellnessColor(v) {
+  if (!v) return '#9ca3af'
+  if (v <= 1) return '#ef4444'  // rouge
+  if (v <= 2) return '#f97316'  // orange
+  if (v <= 3) return '#eab308'  // jaune
+  return '#22c55e'              // vert
+}
+
 const OFFRES = {
   essai:                { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
   preparation_physique: { label: 'Prépa physique', bg: '#eff6ff', color: '#1d4ed8' },
@@ -615,25 +624,22 @@ export default function FicheGroupe() {
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8rem', color: accent, flexShrink: 0 }}>
                       {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <span style={{ fontWeight: '700', color: '#333', display: 'block' }}>{m.prenom} {m.nom}</span>
-                      {(() => {
-                        const w = wellnessMap[m.id]
-                        if (!w) return <span style={{ fontSize: '0.7rem', color: '#d1d5db' }}>Pas de wellness</span>
-                        const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
-                        const alerte = avg <= 2
-                        const jour = new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-                        return (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginTop: 2 }}>
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: alerte ? '#dc2626' : '#16a34a', flexShrink: 0 }} />
-                            <span style={{ fontSize: '0.7rem', color: alerte ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{avg.toFixed(1)}/4</span>
-                            <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>· {jour}</span>
-                          </span>
-                        )
-                      })()}
-                    </div>
+                    <span style={{ fontWeight: '700', color: '#333' }}>{m.prenom} {m.nom}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {(() => {
+                      const w = wellnessMap[m.id]
+                      if (!w) return null
+                      const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                      const col = wellnessColor(avg)
+                      const jour = new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                      return (
+                        <span title={`Dernier wellness · ${jour}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: col + '1a', padding: '0.15rem 0.5rem', borderRadius: 999 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: col, flexShrink: 0 }} />
+                          <span style={{ fontSize: '0.72rem', color: col, fontWeight: 700 }}>{avg.toFixed(1)}</span>
+                        </span>
+                      )
+                    })()}
                     {sub && <span style={{ background: sub.bg, color: sub.color, padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '700' }}>{sub.label}</span>}
                     {offre && <span style={{ background: offre.bg, color: offre.color, padding: '0.15rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '600' }}>{offre.label}</span>}
                     <button onClick={e => { e.stopPropagation(); retirerMembre(m.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }} title="Retirer du groupe">✕</button>
