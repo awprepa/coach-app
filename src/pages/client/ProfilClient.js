@@ -8,7 +8,17 @@ const OFFRES = {
   essai:               'Essai',
   preparation_physique:'Prépa physique',
   coaching:            'Coaching',
+  club:                'Club',
 }
+
+const POSTES_RUGBY = [
+  '1 - Pilier gauche', '2 - Talonneur', '3 - Pilier droit',
+  '4 - 2ème ligne', '5 - 2ème ligne',
+  '6 - 3ème ligne aile', '7 - 3ème ligne aile', '8 - 3ème ligne centre',
+  '9 - Demi de mêlée', '10 - Demi d\'ouverture',
+  '11 - Ailier gauche', '12 - Centre', '13 - Centre',
+  '14 - Ailier droit', '15 - Arrière',
+]
 
 const OBJECTIFS_NUTRI = [
   { value: 'perte_poids',    label: 'Perte de poids' },
@@ -245,10 +255,23 @@ export default function ProfilClient() {
   const [uploading,    setUploading]    = useState(false)
   const [savingNutri,  setSavingNutri]  = useState(false)
   const [savedMsg,     setSavedMsg]     = useState(false)
+  const [savingInfo,   setSavingInfo]   = useState(false)
+  const [savedInfoMsg, setSavedInfoMsg] = useState(false)
 
   // Recadrage photo
   const [cropSrc,  setCropSrc]  = useState(null)
   const [cropping, setCropping] = useState(false)
+
+  // Infos personnelles éditables
+  const [prenom,        setPrenom]        = useState('')
+  const [nom,           setNom]           = useState('')
+  const [telephone,     setTelephone]     = useState('')
+  const [dateNaissance, setDateNaissance] = useState('')
+
+  // Groupes et postes
+  const [groupes, setGroupes] = useState([]) // [{ groupe_id, nom, poste }]
+  const [postes,  setPostes]  = useState({}) // { groupe_id: poste }
+  const [savingPoste, setSavingPoste] = useState(null)
 
   // Champs nutrition
   const [sexe,     setSexe]     = useState('')
@@ -274,6 +297,22 @@ export default function ProfilClient() {
       if (!c) { setLoading(false); return }
       setClient(c)
       if (c.avatar_url) setAvatarUrl(c.avatar_url)
+      setPrenom(c.prenom || '')
+      setNom(c.nom || '')
+      setTelephone(c.telephone || '')
+      setDateNaissance(c.date_naissance || '')
+
+      // Groupes dont le client est membre
+      const { data: membres } = await supabase
+        .from('groupe_membres')
+        .select('groupe_id, poste, groupes(nom)')
+        .eq('client_id', c.id)
+      if (membres?.length) {
+        setGroupes(membres.map(m => ({ groupe_id: m.groupe_id, nom: m.groupes?.nom || '', poste: m.poste || '' })))
+        const p = {}
+        membres.forEach(m => { p[m.groupe_id] = m.poste || '' })
+        setPostes(p)
+      }
 
       const { data: nutri } = await supabase.from('nutrition_profile').select('*').eq('client_id', c.id).maybeSingle()
       if (nutri) {
@@ -318,6 +357,29 @@ export default function ProfilClient() {
     } finally {
       setCropping(false)
     }
+  }
+
+  async function saveInfoPerso() {
+    if (!client) return
+    setSavingInfo(true)
+    await supabase.from('clients').update({
+      prenom: prenom.trim() || client.prenom,
+      nom: nom.trim() || client.nom,
+      telephone: telephone.trim() || null,
+      date_naissance: dateNaissance || null,
+    }).eq('id', client.id)
+    setSavingInfo(false)
+    setSavedInfoMsg(true)
+    setTimeout(() => setSavedInfoMsg(false), 2000)
+  }
+
+  async function savePoste(groupeId) {
+    if (!client) return
+    setSavingPoste(groupeId)
+    await supabase.from('groupe_membres')
+      .update({ poste: postes[groupeId] || null })
+      .eq('groupe_id', groupeId).eq('client_id', client.id)
+    setSavingPoste(null)
   }
 
   async function saveNutriProfil() {
@@ -383,28 +445,68 @@ export default function ProfilClient() {
         </p>
       </div>
 
-      {/* Infos */}
+      {/* Infos éditables */}
       <div style={S.card}>
-        <h2 style={S.cardTitle}>Informations</h2>
-        <div style={S.infoRow}>
-          <span style={S.infoLabel}>Nom</span>
-          <span style={S.infoVal}>{client?.prenom} {client?.nom}</span>
+        <h2 style={S.cardTitle}>Mes informations</h2>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={S.fieldLabel}>Prénom</label>
+            <input value={prenom} onChange={e => setPrenom(e.target.value)} style={S.input} placeholder="Prénom" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={S.fieldLabel}>Nom</label>
+            <input value={nom} onChange={e => setNom(e.target.value)} style={S.input} placeholder="Nom" />
+          </div>
+        </div>
+        <div style={S.fieldGroup}>
+          <label style={S.fieldLabel}>Téléphone</label>
+          <input value={telephone} onChange={e => setTelephone(e.target.value)} style={S.input} placeholder="06 00 00 00 00" type="tel" />
+        </div>
+        <div style={S.fieldGroup}>
+          <label style={S.fieldLabel}>Date de naissance</label>
+          <input value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} style={S.input} type="date" />
         </div>
         <div style={S.infoRow}>
           <span style={S.infoLabel}>Email</span>
           <span style={S.infoVal}>{client?.email || '—'}</span>
         </div>
-        <div style={S.infoRow}>
+        <div style={{ ...S.infoRow, borderBottom: 'none' }}>
           <span style={S.infoLabel}>Offre</span>
           <span style={S.infoVal}>{OFFRES[client?.offre] || client?.offre || '—'}</span>
         </div>
-        {client?.objectif && (
-          <div style={{ ...S.infoRow, borderBottom: 'none' }}>
-            <span style={S.infoLabel}>Objectif</span>
-            <span style={{ ...S.infoVal, fontStyle: 'italic', color: '#6b7280' }}>"{client.objectif}"</span>
-          </div>
-        )}
+        <button onClick={saveInfoPerso} disabled={savingInfo} style={{ ...S.saveBtn, marginTop: 14 }}>
+          {savedInfoMsg ? '✓ Sauvegardé !' : savingInfo ? 'Sauvegarde…' : 'Sauvegarder'}
+        </button>
       </div>
+
+      {/* Poste dans les groupes */}
+      {groupes.length > 0 && (
+        <div style={S.card}>
+          <h2 style={S.cardTitle}>Mon poste</h2>
+          {groupes.map(g => (
+            <div key={g.groupe_id} style={{ marginBottom: 14 }}>
+              <label style={S.fieldLabel}>{g.nom}</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  value={postes[g.groupe_id] || ''}
+                  onChange={e => setPostes(p => ({ ...p, [g.groupe_id]: e.target.value }))}
+                  style={{ ...S.select, flex: 1 }}
+                >
+                  <option value="">— Choisir un poste —</option>
+                  {POSTES_RUGBY.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <button
+                  onClick={() => savePoste(g.groupe_id)}
+                  disabled={savingPoste === g.groupe_id}
+                  style={{ background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  {savingPoste === g.groupe_id ? '…' : 'OK'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Profil nutritionnel */}
       <div style={S.card}>
