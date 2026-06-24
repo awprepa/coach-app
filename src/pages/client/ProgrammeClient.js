@@ -69,10 +69,12 @@ export default function ProgrammeClient() {
       .limit(30)
     setSeancesLibres(libres || [])
 
-    // Vérif accès : groupe ou case cochée par le coach
+    // Vérif accès : membre d'un groupe ou case cochée par le coach.
+    // On laisse la RLS restreindre groupe_membres au client courant
+    // (policy: client_id = current_client_id()) → pas de dépendance à un ID.
     const [{ data: gm }, { data: cl }] = await Promise.all([
-      supabase.from('groupe_membres').select('id').eq('client_id', prog.client_id).limit(1),
-      supabase.from('clients').select('peut_creer_seances').eq('id', prog.client_id).single(),
+      supabase.from('groupe_membres').select('id').limit(1),
+      supabase.from('clients').select('peut_creer_seances').eq('id', prog.client_id).maybeSingle(),
     ])
     setCanCreate((gm || []).length > 0 || (cl?.peut_creer_seances === true))
 

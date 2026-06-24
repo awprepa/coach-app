@@ -38,7 +38,6 @@ const ProgressionClient    = lazy(() => import('./pages/client/ProgressionClient
 const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales'))
 const ProfilClient         = lazy(() => import('./pages/client/ProfilClient'))
 const CompetitionClient    = lazy(() => import('./pages/client/CompetitionClient'))
-const MesSeancesClient     = lazy(() => import('./pages/client/MesSeancesClient'))
 const CGV                  = lazy(() => import('./pages/CGV'))
 
 // ── Pages coach — lazy (jamais vues par le client) ───────────────────────────
@@ -462,7 +461,6 @@ function App() {
               <Route path="/client/gps"                  element={<WithNotifs><GPSClient /></WithNotifs>} />
               <Route path="/client/mon-programme"           element={<WithNotifs><MonProgrammeClient /></WithNotifs>} />
               <Route path="/client/seance-ponctuelle/:id" element={<WithNotifs><SeancePonctuelleClient /></WithNotifs>} />
-              <Route path="/client/mes-seances"          element={<WithNotifs><MesSeancesClient /></WithNotifs>} />
               <Route path="/client/accueil"              element={<WithNotifs><Home /></WithNotifs>} />
               <Route path="/client/notifications"        element={<WithNotifs><NotificationsClient /></WithNotifs>} />
               <Route path="/client/messages"             element={<WithNotifs><MessagesClient /></WithNotifs>} />
