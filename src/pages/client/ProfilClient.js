@@ -300,18 +300,25 @@ export default function ProfilClient() {
       setPrenom(c.prenom || '')
       setNom(c.nom || '')
       setTelephone(c.telephone || '')
-      setDateNaissance(c.date_naissance || '')
+      setDateNaissance(c.date_naissance ? new Date(c.date_naissance).toLocaleDateString('fr-FR') : '')
 
-      // Groupes dont le client est membre
+      // Groupes dont le client est membre — on évite `poste` au cas où la migration n'est pas encore appliquée
       const { data: membres } = await supabase
         .from('groupe_membres')
-        .select('groupe_id, poste, groupes(nom)')
+        .select('groupe_id, groupes(nom)')
         .eq('client_id', c.id)
       if (membres?.length) {
-        setGroupes(membres.map(m => ({ groupe_id: m.groupe_id, nom: m.groupes?.nom || '', poste: m.poste || '' })))
-        const p = {}
-        membres.forEach(m => { p[m.groupe_id] = m.poste || '' })
-        setPostes(p)
+        setGroupes(membres.map(m => ({ groupe_id: m.groupe_id, nom: m.groupes?.nom || '' })))
+        // Charger les postes séparément (colonne optionnelle)
+        const { data: membresFull } = await supabase
+          .from('groupe_membres')
+          .select('groupe_id, poste')
+          .eq('client_id', c.id)
+        if (membresFull) {
+          const p = {}
+          membresFull.forEach(m => { p[m.groupe_id] = m.poste || '' })
+          setPostes(p)
+        }
       }
 
       const { data: nutri } = await supabase.from('nutrition_profile').select('*').eq('client_id', c.id).maybeSingle()
@@ -362,12 +369,19 @@ export default function ProfilClient() {
   async function saveInfoPerso() {
     if (!client) return
     setSavingInfo(true)
+    // Sauvegarder les champs qui existent toujours
     await supabase.from('clients').update({
       prenom: prenom.trim() || client.prenom,
       nom: nom.trim() || client.nom,
       telephone: telephone.trim() || null,
-      date_naissance: dateNaissance || null,
     }).eq('id', client.id)
+    // Tenter date_naissance (colonne optionnelle selon migration)
+    if (dateNaissance) {
+      const parts = dateNaissance.split('/')
+      let iso = null
+      if (parts.length === 3) iso = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
+      if (iso) await supabase.from('clients').update({ date_naissance: iso }).eq('id', client.id)
+    }
     setSavingInfo(false)
     setSavedInfoMsg(true)
     setTimeout(() => setSavedInfoMsg(false), 2000)
@@ -464,7 +478,9 @@ export default function ProfilClient() {
         </div>
         <div style={S.fieldGroup}>
           <label style={S.fieldLabel}>Date de naissance</label>
-          <input value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} style={S.input} type="date" />
+          <input value={dateNaissance} onChange={e => setDateNaissance(e.target.value)}
+            style={{ ...S.input, maxWidth: '100%', boxSizing: 'border-box' }}
+            type="text" inputMode="numeric" placeholder="JJ/MM/AAAA" maxLength={10} />
         </div>
         <div style={S.infoRow}>
           <span style={S.infoLabel}>Email</span>
