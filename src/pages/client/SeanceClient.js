@@ -133,6 +133,7 @@ export default function SeanceClient() {
   const [validatingSet, setValidatingSet] = useState(new Set()) // anti double-tap : clés "exId-si"
   const blocRefs = useRef({})
   const prNotifiedRef = useRef({}) // { [exId]: maxPoidsNotifié } — évite les doublons dans la même séance
+  const finNotifSentRef = useRef(false) // verrou anti-doublon de la notif "séance terminée"
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
@@ -230,13 +231,19 @@ export default function SeanceClient() {
     const totalBlocs = groups.length
     const doneBlocs = groups.filter(g => g.letter && (blocsTermines.has(g.letter) || blocsSkippes.has(g.letter))).length
     if (totalBlocs === 0 || doneBlocs < totalBlocs) return
+    // Verrou : on ne notifie qu'une seule fois la fin de séance, même si
+    // blocsTermines/blocsSkippes change encore après coup (re-renders, etc.)
+    if (finNotifSentRef.current) return
+    finNotifSentRef.current = true
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
     const ydate = yesterday.toISOString().slice(0, 10)
-    supabase.from('evenements').select('id')
+    supabase.from('evenements').select('id, terminee')
       .eq('seance_id', id).gte('date', ydate)
       .order('date', { ascending: true }).limit(1).maybeSingle()
       .then(({ data: ev }) => {
         if (!ev?.id) return
+        // Déjà marquée terminée (séance rouverte) → pas de nouvelle notif
+        if (ev.terminee) return
         supabase.from('evenements').update({ terminee: true }).eq('id', ev.id)
         // Notifier le coach que la séance est terminée
         ;(async () => {
