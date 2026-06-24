@@ -9,6 +9,10 @@ function formatDate(str) {
   return `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 }
 function todayISO() { return new Date().toISOString().slice(0, 10) }
+// Normalise pour une recherche insensible aux accents et à la casse
+function normalize(str) {
+  return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
 
 // ── Formulaire d'ajout d'exercice (nom autocomplété + séries + reps) ─────────
 function AddExerciceForm({ onAdd, adding, biblio }) {
@@ -17,13 +21,14 @@ function AddExerciceForm({ onAdd, adding, biblio }) {
   const [reps,   setReps]   = useState('10')
   const [open,   setOpen]   = useState(false)
 
-  // Filtrage local sur la bibliothèque déjà chargée (instantané, sans requête)
-  const q = nom.trim().toLowerCase()
+  // Filtrage local sur la bibliothèque déjà chargée (instantané, sans requête,
+  // insensible aux accents : "de" trouve "Développé couché")
+  const q = normalize(nom.trim())
   const sugg = q
-    ? biblio.filter(b => b.nom.toLowerCase().includes(q)).slice(0, 8)
+    ? biblio.filter(b => normalize(b.nom).includes(q)).slice(0, 8)
     : []
   // On masque la liste si le nom tapé correspond déjà exactement à un exo choisi
-  const showSugg = open && sugg.length > 0 && !(sugg.length === 1 && sugg[0].nom.toLowerCase() === q)
+  const showSugg = open && sugg.length > 0 && !(sugg.length === 1 && normalize(sugg[0].nom) === q)
 
   function submit() {
     if (!nom.trim()) return
@@ -192,7 +197,7 @@ export default function SeancePonctuelleClient() {
       date: newDate,
       type: 'seance',
       titre: newTitre.trim(),
-      source: 'client_ponctuelle',
+      source: 'client',  // contrainte evenements_source_check : 'coach' | 'client'
     }]).select().single()
 
     if (evErr || !ev) { setSaving(false); alert('Erreur lors de la création : ' + (evErr?.message || 'inconnue')); return }

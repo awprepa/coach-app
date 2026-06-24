@@ -60,14 +60,24 @@ export default function ProgrammeClient() {
     })
     setSeancesRenseignees(renseignees)
 
+    // Séances ponctuelles = événements 'client' qui ont des exercices liés
+    // (le join !inner ne renvoie que ceux ayant au moins un exercice).
     const { data: libres } = await supabase
       .from('evenements')
-      .select('*')
+      .select('*, seances_libres_exercices!inner(id)')
       .eq('client_id', prog.client_id)
-      .eq('source', 'client_ponctuelle')
+      .eq('source', 'client')
       .order('date', { ascending: false })
       .limit(30)
-    setSeancesLibres(libres || [])
+    // Dédoublonnage (le join peut renvoyer une ligne par exercice)
+    const uniqLibres = []
+    const seen = new Set()
+    for (const ev of (libres || [])) {
+      if (seen.has(ev.id)) continue
+      seen.add(ev.id)
+      uniqLibres.push(ev)
+    }
+    setSeancesLibres(uniqLibres)
 
     // Vérif accès : membre d'un groupe ou case cochée par le coach.
     // On laisse la RLS restreindre groupe_membres au client courant

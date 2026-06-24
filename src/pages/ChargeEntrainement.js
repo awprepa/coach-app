@@ -825,7 +825,7 @@ async function loadExerciseWeights(cid) {
   // Exercices avec ordre
   const { data: exos } = await supabase
     .from('exercices')
-    .select('id, nom, seance_id, ordre')
+    .select('id, nom, seance_id, ordre, repetitions')
     .in('seance_id', seanceIds)
     .order('ordre', { ascending: true })
   if (!exos?.length) return null
@@ -858,15 +858,32 @@ async function loadExerciseWeights(cid) {
     .lt('serie', 1000)
   if (seriesError) { console.error('[loadExerciseWeights] serie_tracking error:', seriesError); return null }
 
-  // trackingMax[exId][sem] = { poids, reps } — max parmi les séries validées
-  const trackingMax = {}
+  // Nombre de reps prescrit (borne basse si plage type "8-10")
+  const repsCible = (repsStr) => {
+    if (repsStr == null) return null
+    const m = String(repsStr).match(/\d+/)
+    return m ? parseInt(m[0]) : null
+  }
+  const num = (p) => parseFloat(String(p).replace(',', '.'))
+
+  // trackingValidMax[exId][sem] = { poids, reps } — max poids où le nombre de
+  //   reps prescrit a réellement été atteint.
+  // trackingAny[exId][sem] = true dès qu'une série a été loguée cette semaine
+  //   (= l'exercice a été tenté), même si les reps prescrites n'ont pas été faites.
+  const trackingValidMax = {}
+  const trackingAny = {}
   ;(series || []).forEach(s => {
-    const poids = parseFloat(s.poids)
-    if (!poids || !s.semaine) return
-    if (!trackingMax[s.exercice_id]) trackingMax[s.exercice_id] = {}
-    const sem = s.semaine
-    if (!trackingMax[s.exercice_id][sem] || poids > trackingMax[s.exercice_id][sem].poids) {
-      trackingMax[s.exercice_id][sem] = { poids, reps: s.reps_reelles }
+    const poids = num(s.poids)
+    if (!poids || isNaN(poids) || !s.semaine) return
+    const exId = s.exercice_id, sem = s.semaine
+    if (!trackingAny[exId]) trackingAny[exId] = {}
+    trackingAny[exId][sem] = true
+    const cible = repsCible(exoMap[exId]?.repetitions)
+    // On ne retient la série que si les reps prescrites ont été atteintes
+    if (cible != null && (s.reps_reelles == null || s.reps_reelles < cible)) return
+    if (!trackingValidMax[exId]) trackingValidMax[exId] = {}
+    if (!trackingValidMax[exId][sem] || poids > trackingValidMax[exId][sem].poids) {
+      trackingValidMax[exId][sem] = { poids, reps: s.reps_reelles }
     }
   })
 
@@ -891,7 +908,7 @@ async function loadExerciseWeights(cid) {
   // Les clés sont des UUIDs (strings) — surtout pas .map(Number) !
   const allExIds = new Set([
     ...Object.keys(chargesMap),
-    ...Object.keys(trackingMax),
+    ...Object.keys(trackingAny),
   ])
 
   allExIds.forEach(exId => {
@@ -900,7 +917,7 @@ async function loadExerciseWeights(cid) {
     // Les semaines sont des entiers — .map(Number) est correct ici
     const allSems = new Set([
       ...Object.keys(chargesMap[exId] || {}).map(Number),
-      ...Object.keys(trackingMax[exId] || {}).map(Number),
+      ...Object.keys(trackingAny[exId] || {}).map(Number),
     ])
     if (!allSems.size) return
 
@@ -911,16 +928,23 @@ async function loadExerciseWeights(cid) {
     }
 
     allSems.forEach(sem => {
+      const valid   = trackingValidMax[exId]?.[sem]
+      const logged  = trackingAny[exId]?.[sem]
       const fromCharges = chargesMap[exId]?.[sem]
-      const fromTracking = trackingMax[exId]?.[sem]
 
       let poids, reps
-      if (fromCharges) {
+      if (valid) {
+        // Reps prescrites atteintes → on affiche le poids réel
+        poids = valid.poids
+        reps  = valid.reps
+      } else if (logged) {
+        // Exercice tenté mais reps prescrites non atteintes (ex : test 1RM raté)
+        // → on n'affiche rien, même si une valeur existe dans `charges`
+        return
+      } else if (fromCharges) {
+        // Aucune série loguée cette semaine → on fait confiance au tableau manuel
         poids = fromCharges.poids
-        reps = fromTracking?.reps // reps depuis le tracking si dispo
-      } else if (fromTracking) {
-        poids = fromTracking.poids
-        reps = fromTracking.reps
+        reps  = null
       }
       if (!poids) return
 
