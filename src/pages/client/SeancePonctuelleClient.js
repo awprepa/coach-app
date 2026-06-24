@@ -113,6 +113,7 @@ export default function SeancePonctuelleClient() {
   const [loading,   setLoading]   = useState(!isNew)
   const [saved,     setSaved]     = useState(false)
   const [addingEx,  setAddingEx]  = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
   const saveTimer = useRef(null)
 
   // Bibliothèque chargée une seule fois (filtrage local dans AddExerciceForm)
@@ -240,6 +241,7 @@ export default function SeancePonctuelleClient() {
       }])
     }
     setAddingEx(false)
+    setShowAddForm(false)
   }
 
   async function supprimerExercice(exId) {
@@ -374,54 +376,96 @@ export default function SeancePonctuelleClient() {
       <div style={S.content}>
         {exercices.length === 0 && (
           <div style={{ textAlign: 'center', padding: '1.5rem 0 0.5rem', color: '#9ca3af', fontSize: '0.85rem' }}>
-            Aucun exercice — ajoute le premier ci-dessous.
+            Aucun exercice pour l'instant.
           </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          {exercices.map((ex, idx) => (
-            <div key={ex.id} style={S.exCard}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={S.exNum}>{idx + 1}</span>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{ex.nom}</span>
+          {exercices.map((ex, idx) => {
+            const targetReps = ex.series[0]?.reps || null
+            const seriesCount = ex.series.length
+            return (
+              <div key={ex.id} style={S.exCard}>
+                {/* En-tête exercice */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={S.exNum}>{idx + 1}</span>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{ex.nom}</span>
+                  </div>
+                  <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
                 </div>
-                <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                  </svg>
-                </button>
-              </div>
 
-              <div style={S.serieHeader}>
-                <span style={{ width: 26 }}>#</span>
-                <span style={{ flex: 1 }}>Poids (kg)</span>
-                <span style={{ flex: 1 }}>Reps</span>
-                <span style={{ width: 28 }} />
-              </div>
-
-              {ex.series.map(serie => (
-                <div key={serie.id} style={S.serieRow}>
-                  <span style={{ width: 26, fontSize: '0.78rem', color: '#9ca3af', fontWeight: 700 }}>{serie.num_serie}</span>
-                  <input type="number" inputMode="decimal" placeholder="—" value={serie.poids}
-                    onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
-                    onBlur={() => saveSerie(ex.id, serie.id)} style={S.serieInput} />
-                  <input type="number" inputMode="numeric" placeholder="—" value={serie.reps}
-                    onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
-                    onBlur={() => saveSerie(ex.id, serie.id)} style={S.serieInput} />
-                  <button onClick={() => supprimerSerie(ex.id, serie.id)}
-                    style={{ width: 28, background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: 0, textAlign: 'center' }}>✕</button>
+                {/* Params bar : séries × reps cible */}
+                <div style={S.paramsBar}>
+                  <div style={S.paramItem}>
+                    <span style={S.paramLabel}>SÉRIES</span>
+                    <span style={S.paramValue}>{seriesCount}</span>
+                  </div>
+                  {targetReps != null && (
+                    <>
+                      <div style={S.paramDivider} />
+                      <div style={S.paramItem}>
+                        <span style={S.paramLabel}>REPS CIBLE</span>
+                        <span style={S.paramValue}>{targetReps}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
-              ))}
 
-              <button onClick={() => ajouterSerie(ex.id)} style={S.addSerieBtn}>+ Série</button>
-            </div>
-          ))}
+                {/* Label colonnes */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.65rem 0 0.3rem', paddingLeft: 28 }}>
+                  <span style={{ flex: 2, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
+                  <span style={{ width: 22 }} />
+                  <span style={{ flex: 1, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
+                  <span style={{ width: 28 }} />
+                </div>
+
+                {/* Lignes séries */}
+                {ex.series.map(serie => {
+                  const filled = serie.poids !== '' && serie.poids != null
+                  return (
+                    <div key={serie.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', padding: '0.45rem 0.5rem', borderRadius: 10, border: `1.5px solid ${filled ? '#bbf7d0' : '#e5e7eb'}`, background: filled ? '#f0fdf4' : '#fafafa', transition: 'background 0.2s, border-color 0.2s' }}>
+                      <span style={{ width: 22, textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#9ca3af', flexShrink: 0 }}>{serie.num_serie}</span>
+                      <input type="number" inputMode="decimal" placeholder="—" value={serie.poids}
+                        onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
+                        onBlur={() => saveSerie(ex.id, serie.id)}
+                        style={{ flex: 2, padding: '0.35rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '0.92rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'center', background: 'white', minWidth: 0 }} />
+                      <span style={{ fontSize: '0.7rem', color: '#9ca3af', width: 22, textAlign: 'center', flexShrink: 0 }}>kg</span>
+                      <input type="number" inputMode="numeric" placeholder="—" value={serie.reps}
+                        onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
+                        onBlur={() => saveSerie(ex.id, serie.id)}
+                        style={{ flex: 1, padding: '0.35rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '0.88rem', fontWeight: 600, color: '#374151', outline: 'none', textAlign: 'center', background: 'white', minWidth: 0 }} />
+                      <button onClick={() => supprimerSerie(ex.id, serie.id)}
+                        style={{ width: 28, background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: 0, textAlign: 'center', flexShrink: 0 }}>✕</button>
+                    </div>
+                  )
+                })}
+
+                <button onClick={() => ajouterSerie(ex.id)} style={S.addSerieBtn}>+ Série</button>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Ajouter un exercice après coup */}
+        {/* Ajouter un exercice — collapsible */}
         <div style={{ marginTop: '1.25rem' }}>
-          <AddExerciceForm onAdd={ajouterExercice} adding={addingEx} biblio={biblio} />
+          {!showAddForm ? (
+            <button onClick={() => setShowAddForm(true)} style={S.addExerciceToggle}>
+              + Ajouter un exercice
+            </button>
+          ) : (
+            <>
+              <AddExerciceForm onAdd={ajouterExercice} adding={addingEx} biblio={biblio} />
+              <button onClick={() => setShowAddForm(false)}
+                style={{ width: '100%', marginTop: '0.5rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.8rem', cursor: 'pointer', padding: '0.4rem 0' }}>
+                Annuler
+              </button>
+            </>
+          )}
         </div>
 
         <div style={{ height: 100 }} />
@@ -452,4 +496,10 @@ const S = {
   bibDropdown: { position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 50 },
   bibItem:     { padding: '0.6rem 0.875rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.85rem', color: '#374151', cursor: 'pointer' },
   createBtn:   { display: 'block', width: '100%', boxSizing: 'border-box', background: '#1a1a1a', color: 'var(--accent-fg)', border: 'none', borderRadius: 12, padding: '0.95rem', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', marginTop: '1.5rem', textAlign: 'center' },
+  paramsBar:   { display: 'flex', alignItems: 'center', background: '#f8f9fb', borderRadius: 9, padding: '0.45rem 0.75rem', gap: 0 },
+  paramItem:   { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 },
+  paramLabel:  { fontSize: '0.58rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  paramValue:  { fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.2 },
+  paramDivider:{ width: 1, height: 28, background: '#e5e7eb', flexShrink: 0, margin: '0 0.3rem' },
+  addExerciceToggle: { width: '100%', background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.75rem 1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box' },
 }

@@ -1,2 +1,2 @@
-const APP_VERSION = '0.9.48'
+const APP_VERSION = '0.9.49'
 export default APP_VERSION

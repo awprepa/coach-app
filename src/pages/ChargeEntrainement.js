@@ -880,7 +880,7 @@ async function loadExerciseWeights(cid) {
     trackingAny[exId][sem] = true
     const cible = repsCible(exoMap[exId]?.repetitions)
     // On ne retient la série que si les reps prescrites ont été atteintes
-    if (cible != null && (s.reps_reelles == null || s.reps_reelles < cible)) return
+    if (cible != null && s.reps_reelles != null && s.reps_reelles < cible) return
     if (!trackingValidMax[exId]) trackingValidMax[exId] = {}
     if (!trackingValidMax[exId][sem] || poids > trackingValidMax[exId][sem].poids) {
       trackingValidMax[exId][sem] = { poids, reps: s.reps_reelles }
@@ -989,6 +989,32 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [gpsZLoading, setGpsZLoading] = useState(false)
   const [exWeightData, setExWeightData] = useState(null)
   const [exWeightLoading, setExWeightLoading] = useState(false)
+  const [histoOpen, setHistoOpen] = useState({})
+  const [histoData, setHistoData] = useState({})
+  const [histoLoading, setHistoLoading] = useState({})
+
+  async function toggleExoHistory(exoId) {
+    const isOpen = histoOpen[exoId]
+    setHistoOpen(prev => ({ ...prev, [exoId]: !isOpen }))
+    if (!isOpen && !histoData[exoId]) {
+      setHistoLoading(prev => ({ ...prev, [exoId]: true }))
+      const { data } = await supabase
+        .from('serie_tracking')
+        .select('serie, semaine, poids, reps_reelles, valide')
+        .eq('exercice_id', exoId)
+        .eq('is_done', true)
+        .lt('serie', 1000)
+        .order('semaine')
+        .order('serie')
+      const grouped = {}
+      ;(data || []).forEach(r => {
+        if (!grouped[r.semaine]) grouped[r.semaine] = []
+        grouped[r.semaine].push(r)
+      })
+      setHistoData(prev => ({ ...prev, [exoId]: grouped }))
+      setHistoLoading(prev => ({ ...prev, [exoId]: false }))
+    }
+  }
 
   const loadCharge = useCallback(async (cid) => {
     setLoading(true)
@@ -1282,10 +1308,17 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
           if (currentW && firstW && parseFloat(firstW.poids) > 0) {
             progPct = (((parseFloat(currentW.poids) - parseFloat(firstW.poids)) / parseFloat(firstW.poids)) * 100).toFixed(1)
           }
-          return (
-            <tr key={exo.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '0.55rem 0.75rem', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: 'white', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {exo.nom}
+          const isHistoOpen = histoOpen[exo.id]
+          return [
+            <tr key={exo.id} style={{ borderBottom: isHistoOpen ? 'none' : '1px solid #f3f4f6' }}>
+              <td style={{ padding: '0.55rem 0.75rem', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: 'white', maxWidth: 180, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', maxWidth: 160 }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{exo.nom}</span>
+                  <button onClick={() => toggleExoHistory(exo.id)}
+                    style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                    {isHistoOpen ? 'Masquer' : 'Historique'}
+                  </button>
+                </div>
               </td>
               {allWeeks.map(w => {
                 const wd = exo.weeks[w]
@@ -1323,8 +1356,48 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     : <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>PR</span>
                   : <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>}
               </td>
-            </tr>
-          )
+            </tr>,
+            isHistoOpen && (
+              <tr key={`histo-${exo.id}`} style={{ background: '#f9fafb', borderBottom: '2px solid #f3f4f6' }}>
+                <td colSpan={1 + allWeeks.length + nbExtraCols} style={{ padding: '0.75rem 1rem' }}>
+                  {histoLoading[exo.id] ? (
+                    <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>Chargement…</span>
+                  ) : (() => {
+                    const grouped = histoData[exo.id] || {}
+                    const sems = Object.keys(grouped).map(Number).sort((a, b) => b - a)
+                    if (!sems.length) return <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>Aucune série enregistrée.</span>
+                    return (
+                      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        {sems.map(sem => {
+                          const rows = grouped[sem] || []
+                          const poidsVals = rows.map(r => parseFloat(r.poids)).filter(Boolean)
+                          const poidsLabel = !poidsVals.length ? '—'
+                            : poidsVals.every(p => p === poidsVals[0]) ? `${poidsVals[0]} kg`
+                            : `${Math.min(...poidsVals)}–${Math.max(...poidsVals)} kg`
+                          return (
+                            <div key={sem} style={{ minWidth: 90 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                                <span style={{ background: '#e5e7eb', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 800, color: '#374151' }}>S{sem}</span>
+                                <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{poidsLabel}</span>
+                              </div>
+                              {rows.map((r, ri) => (
+                                <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.18rem' }}>
+                                  <span style={{ fontSize: '0.6rem', color: '#d1d5db', width: 14, flexShrink: 0 }}>{r.serie}</span>
+                                  <span style={{ fontWeight: 700, color: '#1a1a1a', fontSize: '0.78rem' }}>{r.poids ? `${r.poids} kg` : '—'}</span>
+                                  <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>{r.reps_reelles ? `×${r.reps_reelles}` : ''}</span>
+                                  <span style={{ marginLeft: 'auto', color: r.valide ? '#22c55e' : '#d1d5db', fontSize: '0.65rem', flexShrink: 0 }}>{r.valide ? '✓' : ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+                </td>
+              </tr>
+            ),
+          ]
         }
 
         return (
