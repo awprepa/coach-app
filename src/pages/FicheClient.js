@@ -157,6 +157,7 @@ export default function FicheClient() {
       offre: form.offre, engagement_mois: form.engagement_mois || null,
       date_debut: form.date_debut, date_fin: form.date_fin,
       notes: form.notes, categorie_id: form.categorie_id || null,
+      peut_creer_seances: form.peut_creer_seances || false,
       ...(offreChangee ? { offre_confirmee_at: null } : {}),
     }).eq('id', id)
     if (error) alert(error.message)
@@ -420,6 +421,34 @@ export default function FicheClient() {
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={styles.label}>Notes</label>
             <textarea value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} style={styles.textarea} />
+          </div>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={styles.label}>Options</label>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, peut_creer_seances: !form.peut_creer_seances })}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+            >
+              <div style={{
+                width: 42, height: 24, borderRadius: 12, position: 'relative', flexShrink: 0,
+                background: form.peut_creer_seances ? '#333' : '#e5e7eb',
+                transition: 'background 0.2s',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 3, left: form.peut_creer_seances ? 21 : 3,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: form.peut_creer_seances ? 'var(--accent-fg)' : 'white',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  transition: 'left 0.2s',
+                }} />
+              </div>
+              <span style={{ fontSize: '0.88rem', color: '#374151', fontWeight: 600 }}>
+                Peut créer des séances
+              </span>
+            </button>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.75rem', color: '#9ca3af', paddingLeft: 54 }}>
+              Accès au créateur de séances (hors groupe)
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={() => setEditMode(false)} style={styles.btnSecondary}>Annuler</button>

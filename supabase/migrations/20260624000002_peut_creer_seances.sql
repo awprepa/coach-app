@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS peut_creer_seances BOOLEAN NOT NULL DEFAULT FALSE;

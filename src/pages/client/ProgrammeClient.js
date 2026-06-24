@@ -24,11 +24,7 @@ export default function ProgrammeClient() {
 
   // Séances ponctuelles
   const [seancesLibres, setSeancesLibres] = useState([])
-  const [showForm, setShowForm] = useState(false)
-  const [formTitre, setFormTitre] = useState('')
-  const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [formNotes, setFormNotes] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [canCreate, setCanCreate] = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData() }, [])
@@ -64,8 +60,6 @@ export default function ProgrammeClient() {
     })
     setSeancesRenseignees(renseignees)
 
-    // Séances libres ajoutées par le client (source='client_ponctuelle' uniquement,
-    // pour ne pas afficher les simples événements calendrier)
     const { data: libres } = await supabase
       .from('evenements')
       .select('*')
@@ -75,29 +69,14 @@ export default function ProgrammeClient() {
       .limit(30)
     setSeancesLibres(libres || [])
 
-    setLoading(false)
-  }
+    // Vérif accès : groupe ou case cochée par le coach
+    const [{ data: gm }, { data: cl }] = await Promise.all([
+      supabase.from('groupe_membres').select('id').eq('client_id', prog.client_id).limit(1),
+      supabase.from('clients').select('peut_creer_seances').eq('id', prog.client_id).single(),
+    ])
+    setCanCreate((gm || []).length > 0 || (cl?.peut_creer_seances === true))
 
-  async function ajouterSeanceLibre() {
-    if (!formTitre.trim()) return
-    setSaving(true)
-    const { data, error } = await supabase.from('evenements').insert([{
-      client_id: programme.client_id,
-      date: formDate,
-      type: 'seance',
-      titre: formTitre.trim(),
-      description: formNotes.trim() || null,
-      source: 'client_ponctuelle',
-    }]).select().single()
-    if (!error && data) {
-      setSeancesLibres(prev => [data, ...prev])
-      setFormTitre('')
-      setFormNotes('')
-      setFormDate(new Date().toISOString().slice(0, 10))
-      setShowForm(false)
-      navigate(`/client/seance-ponctuelle/${data.id}`)
-    }
-    setSaving(false)
+    setLoading(false)
   }
 
   async function supprimerSeanceLibre(evId) {
@@ -194,24 +173,6 @@ export default function ProgrammeClient() {
 
         {/* ── Séances ponctuelles ───────────────────────────────────────────── */}
         <div style={{ marginTop: '2rem' }}>
-          {/* Lien vers les modèles de séances */}
-          <button
-            onClick={() => navigate('/client/mes-seances')}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', boxSizing: 'border-box', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', cursor: 'pointer' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-fg)" strokeWidth="2.5">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/>
-                </svg>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <p style={{ margin: 0, fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>Mes modèles de séances</p>
-                <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>Créer et réutiliser tes séances personnalisées</p>
-              </div>
-            </div>
-            <span style={{ color: '#d1d5db', fontSize: '1.2rem' }}>›</span>
-          </button>
 
 
           {/* Séances libres déjà ajoutées */}
@@ -242,49 +203,13 @@ export default function ProgrammeClient() {
             </div>
           )}
 
-          {/* Bouton discret + formulaire inline */}
-          {!showForm ? (
-            <button onClick={() => setShowForm(true)} style={styles.addBtn}>
-              + Ajouter une séance ponctuelle
+          {canCreate && (
+            <button
+              onClick={() => navigate('/client/seance-ponctuelle/nouveau', { state: { clientId: programme.client_id } })}
+              style={styles.addBtn}
+            >
+              + Créer une séance
             </button>
-          ) : (
-            <div style={styles.formCard}>
-              <p style={{ margin: '0 0 0.875rem', fontWeight: '700', fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nouvelle séance</p>
-              <input
-                type="text"
-                placeholder="Nom de la séance *"
-                value={formTitre}
-                onChange={e => setFormTitre(e.target.value)}
-                style={styles.input}
-                autoFocus
-              />
-              <div style={{ marginTop: '0.5rem', overflow: 'hidden', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fafafa' }}>
-                <input
-                  type="date"
-                  value={formDate}
-                  onChange={e => setFormDate(e.target.value)}
-                  style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: 'none', outline: 'none', fontSize: '0.88rem', color: '#333', background: 'transparent', WebkitAppearance: 'none', appearance: 'none', minWidth: 0 }}
-                />
-              </div>
-              <textarea
-                placeholder="Notes (optionnel)"
-                value={formNotes}
-                onChange={e => setFormNotes(e.target.value)}
-                rows={2}
-                style={{ ...styles.input, marginTop: '0.5rem', resize: 'none', fontFamily: 'inherit', lineHeight: 1.4 }}
-              />
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                <button
-                  onClick={ajouterSeanceLibre}
-                  disabled={!formTitre.trim() || saving}
-                  style={{ ...styles.submitBtn, opacity: (!formTitre.trim() || saving) ? 0.5 : 1 }}
-                >{saving ? '…' : 'Enregistrer'}</button>
-                <button
-                  onClick={() => { setShowForm(false); setFormTitre(''); setFormNotes('') }}
-                  style={styles.cancelBtn}
-                >Annuler</button>
-              </div>
-            </div>
           )}
         </div>
 
@@ -475,46 +400,6 @@ const styles = {
     color: '#9ca3af',
     fontSize: '0.82rem',
     fontWeight: '600',
-    cursor: 'pointer',
-  },
-  formCard: {
-    background: 'white',
-    borderRadius: 14,
-    padding: '1rem 1.25rem',
-    border: '1.5px solid #e5e7eb',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-    overflow: 'hidden',
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '0.6rem 0.75rem',
-    border: '1.5px solid #e5e7eb',
-    borderRadius: 9,
-    fontSize: '0.88rem',
-    color: '#333',
-    outline: 'none',
-    background: '#fafafa',
-  },
-  submitBtn: {
-    flex: 1,
-    background: 'var(--chip-bg)',
-    color: 'var(--chip-text)',
-    border: 'none',
-    borderRadius: 9,
-    padding: '0.65rem',
-    fontWeight: '800',
-    fontSize: '0.88rem',
-    cursor: 'pointer',
-  },
-  cancelBtn: {
-    background: 'none',
-    border: '1.5px solid #e5e7eb',
-    borderRadius: 9,
-    padding: '0.65rem 1rem',
-    fontWeight: '600',
-    fontSize: '0.85rem',
-    color: '#9ca3af',
     cursor: 'pointer',
   },
 }
