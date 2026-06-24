@@ -194,6 +194,25 @@ export default function ProgrammeClient() {
 
         {/* ── Séances ponctuelles ───────────────────────────────────────────── */}
         <div style={{ marginTop: '2rem' }}>
+          {/* Lien vers les modèles de séances */}
+          <button
+            onClick={() => navigate('/client/mes-seances')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', boxSizing: 'border-box', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-fg)" strokeWidth="2.5">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/>
+                </svg>
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ margin: 0, fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>Mes modèles de séances</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>Créer et réutiliser tes séances personnalisées</p>
+              </div>
+            </div>
+            <span style={{ color: '#d1d5db', fontSize: '1.2rem' }}>›</span>
+          </button>
+
 
           {/* Séances libres déjà ajoutées */}
           {seancesLibres.length > 0 && (

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 
@@ -10,28 +10,28 @@ function formatDate(str) {
 }
 
 export default function SeancePonctuelleClient() {
-  const { id } = useParams()      // id = evenement.id
+  const { id } = useParams()
   const navigate = useNavigate()
 
-  const [evenement,   setEvenement]   = useState(null)
-  const [exercices,   setExercices]   = useState([])   // [{id, nom, ordre, series:[{id,num_serie,poids,reps}]}]
-  const [loading,     setLoading]     = useState(true)
-  const [newExNom,    setNewExNom]    = useState('')
-  const [showAddEx,   setShowAddEx]   = useState(false)
-  const [addingEx,    setAddingEx]    = useState(false)
-  const [saved,       setSaved]       = useState(false)
-  const saveTimer = useRef(null)
+  const [evenement,  setEvenement]  = useState(null)
+  const [exercices,  setExercices]  = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [showAddEx,  setShowAddEx]  = useState(false)
+  const [searchEx,   setSearchEx]   = useState('')
+  const [bibResults, setBibResults] = useState([])
+  const [addingEx,   setAddingEx]   = useState(false)
+  const [saved,      setSaved]      = useState(false)
+  const saveTimer  = useRef(null)
+  const searchTimer = useRef(null)
 
   useEffect(() => { fetchData() }, []) // eslint-disable-line
 
   async function fetchData() {
-    // Charge l'événement
     const { data: ev } = await supabase
       .from('evenements').select('*').eq('id', id).single()
     if (!ev) { navigate(-1); return }
     setEvenement(ev)
 
-    // Charge les exercices + séries
     const { data: exs } = await supabase
       .from('seances_libres_exercices')
       .select('*, seances_libres_series(*)')
@@ -47,28 +47,45 @@ export default function SeancePonctuelleClient() {
     setLoading(false)
   }
 
-  // ── Flash "enregistré" ────────────────────────────────────────────────────
   function flashSaved() {
     setSaved(true)
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => setSaved(false), 1800)
   }
 
+  // ── Recherche bibliothèque ────────────────────────────────────────────────
+  const searchBiblio = useCallback((q) => {
+    clearTimeout(searchTimer.current)
+    if (!q.trim()) { setBibResults([]); return }
+    searchTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('bibliotheque_exercices')
+        .select('id, nom')
+        .ilike('nom', `%${q}%`)
+        .order('nom')
+        .limit(8)
+      setBibResults(data || [])
+    }, 250)
+  }, [])
+
+  function handleSearchChange(e) {
+    setSearchEx(e.target.value)
+    searchBiblio(e.target.value)
+  }
+
   // ── Exercices ─────────────────────────────────────────────────────────────
-  async function ajouterExercice() {
-    const nom = newExNom.trim()
+  async function ajouterExercice(nomEx) {
+    const nom = nomEx.trim()
     if (!nom) return
     setAddingEx(true)
     const ordre = exercices.length + 1
 
-    // Récupère client_id depuis l'evenement
     const { data: ex, error } = await supabase
       .from('seances_libres_exercices')
       .insert([{ evenement_id: id, client_id: evenement.client_id, nom, ordre }])
       .select().single()
 
     if (!error && ex) {
-      // Crée une première série vide
       const { data: s1 } = await supabase
         .from('seances_libres_series')
         .insert([{ exercice_id: ex.id, num_serie: 1, poids: null, reps: null }])
@@ -78,7 +95,8 @@ export default function SeancePonctuelleClient() {
         ...ex,
         series: s1 ? [{ ...s1, poids: '', reps: '' }] : [],
       }])
-      setNewExNom('')
+      setSearchEx('')
+      setBibResults([])
       setShowAddEx(false)
     }
     setAddingEx(false)
@@ -128,9 +146,7 @@ export default function SeancePonctuelleClient() {
     if (!serie) return
     const poids = serie.poids !== '' ? parseFloat(serie.poids) || null : null
     const reps  = serie.reps  !== '' ? parseInt(serie.reps)  || null : null
-    await supabase.from('seances_libres_series')
-      .update({ poids, reps })
-      .eq('id', serieId)
+    await supabase.from('seances_libres_series').update({ poids, reps }).eq('id', serieId)
     flashSaved()
   }
 
@@ -143,6 +159,8 @@ export default function SeancePonctuelleClient() {
 
   return (
     <div style={S.page}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
       {/* Header */}
       <div style={S.header}>
         <button onClick={() => navigate(-1)} style={S.backBtn}>‹</button>
@@ -160,14 +178,12 @@ export default function SeancePonctuelleClient() {
       </div>
 
       <div style={S.content}>
-        {/* Notes générales */}
         {evenement?.description && (
           <div style={{ background: '#f3f4f6', borderRadius: 10, padding: '0.6rem 0.875rem', marginBottom: '1.25rem', fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5 }}>
             {evenement.description}
           </div>
         )}
 
-        {/* Exercices */}
         {exercices.length === 0 && !showAddEx && (
           <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af', fontSize: '0.85rem' }}>
             Aucun exercice — ajoute le premier ci-dessous.
@@ -177,16 +193,19 @@ export default function SeancePonctuelleClient() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
           {exercices.map((ex, idx) => (
             <div key={ex.id} style={S.exCard}>
-              {/* Titre exercice */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={S.exNum}>{idx + 1}</span>
                   <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{ex.nom}</span>
                 </div>
-                <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">🗑</button>
+                <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
               </div>
 
-              {/* En-têtes colonnes */}
               <div style={S.serieHeader}>
                 <span style={{ width: 26 }}>#</span>
                 <span style={{ flex: 1 }}>Poids (kg)</span>
@@ -194,23 +213,18 @@ export default function SeancePonctuelleClient() {
                 <span style={{ width: 28 }} />
               </div>
 
-              {/* Séries */}
               {ex.series.map((serie) => (
                 <div key={serie.id} style={S.serieRow}>
                   <span style={{ width: 26, fontSize: '0.78rem', color: '#9ca3af', fontWeight: 700 }}>{serie.num_serie}</span>
                   <input
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="—"
+                    type="number" inputMode="decimal" placeholder="—"
                     value={serie.poids}
                     onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
                     onBlur={() => saveSerie(ex.id, serie.id)}
                     style={S.serieInput}
                   />
                   <input
-                    type="number"
-                    inputMode="numeric"
-                    placeholder="—"
+                    type="number" inputMode="numeric" placeholder="—"
                     value={serie.reps}
                     onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
                     onBlur={() => saveSerie(ex.id, serie.id)}
@@ -223,7 +237,6 @@ export default function SeancePonctuelleClient() {
                 </div>
               ))}
 
-              {/* Bouton + Série */}
               <button onClick={() => ajouterSerie(ex.id)} style={S.addSerieBtn}>
                 + Série
               </button>
@@ -238,23 +251,41 @@ export default function SeancePonctuelleClient() {
               + Ajouter un exercice
             </button>
           ) : (
-            <div style={S.addExForm}>
+            <div style={{ background: 'white', borderRadius: 14, padding: '1rem 1.25rem', border: '1.5px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                Bibliothèque ou nom personnalisé
+              </label>
               <input
                 type="text"
-                placeholder="Nom de l'exercice (ex: Squat, Bench press…)"
-                value={newExNom}
-                onChange={e => setNewExNom(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && ajouterExercice()}
+                placeholder="Squat, Développé couché…"
+                value={searchEx}
+                onChange={handleSearchChange}
+                onKeyDown={e => e.key === 'Enter' && bibResults.length === 0 && searchEx.trim() && ajouterExercice(searchEx)}
                 style={S.input}
                 autoFocus
               />
+              {/* Suggestions bibliothèque */}
+              {bibResults.length > 0 && (
+                <div style={S.bibDropdown}>
+                  {bibResults.map(r => (
+                    <button key={r.id} onClick={() => ajouterExercice(r.nom)} style={S.bibItem}>
+                      {r.nom}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem' }}>
                 <button
-                  onClick={ajouterExercice}
-                  disabled={!newExNom.trim() || addingEx}
-                  style={{ ...S.submitBtn, opacity: (!newExNom.trim() || addingEx) ? 0.5 : 1 }}
-                >{addingEx ? '…' : 'Ajouter'}</button>
-                <button onClick={() => { setShowAddEx(false); setNewExNom('') }} style={S.cancelBtn}>
+                  onClick={() => ajouterExercice(searchEx)}
+                  disabled={!searchEx.trim() || addingEx}
+                  style={{ flex: 1, background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 9, padding: '0.65rem', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', opacity: (!searchEx.trim() || addingEx) ? 0.5 : 1 }}
+                >
+                  {addingEx ? '…' : bibResults.length > 0 ? 'Ajouter (personnalisé)' : 'Ajouter'}
+                </button>
+                <button
+                  onClick={() => { setShowAddEx(false); setSearchEx(''); setBibResults([]) }}
+                  style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.65rem 1rem', fontWeight: 600, fontSize: '0.85rem', color: '#9ca3af', cursor: 'pointer' }}
+                >
                   Annuler
                 </button>
               </div>
@@ -262,7 +293,6 @@ export default function SeancePonctuelleClient() {
           )}
         </div>
 
-        {/* Padding bas nav */}
         <div style={{ height: 100 }} />
       </div>
     </div>
@@ -276,14 +306,13 @@ const S = {
   content: { padding: '1.25rem', maxWidth: 480, margin: '0 auto' },
   exCard:  { background: 'white', borderRadius: 16, padding: '1rem 1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   exNum:   { width: 24, height: 24, borderRadius: 6, background: '#333', color: 'var(--accent-fg)', fontSize: '0.72rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: '#d1d5db', padding: '2px 4px' },
+  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   serieHeader: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
   serieRow:  { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' },
   serieInput: { flex: 1, padding: '0.5rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.9rem', color: '#333', outline: 'none', textAlign: 'center', background: '#fafafa', minWidth: 0 },
   addSerieBtn: { marginTop: '0.5rem', background: 'none', border: '1.5px dashed #e5e7eb', borderRadius: 8, padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', cursor: 'pointer', width: '100%' },
   addExBtn: { background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.875rem 1rem', width: '100%', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box' },
-  addExForm: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', border: '1.5px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  input: { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.88rem', color: '#333', outline: 'none', background: '#fafafa' },
-  submitBtn: { flex: 1, background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 9, padding: '0.65rem', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' },
-  cancelBtn: { background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '0.65rem 1rem', fontWeight: 600, fontSize: '0.85rem', color: '#9ca3af', cursor: 'pointer' },
+  input:    { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.88rem', color: '#333', outline: 'none', background: '#fafafa' },
+  bibDropdown: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', marginTop: '0.4rem', overflow: 'hidden' },
+  bibItem:     { display: 'block', width: '100%', textAlign: 'left', padding: '0.65rem 0.875rem', border: 'none', borderBottom: '1px solid #f3f4f6', background: 'white', fontSize: '0.85rem', color: '#374151', cursor: 'pointer' },
 }
