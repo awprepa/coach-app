@@ -149,8 +149,20 @@ export default function SeancePonctuelleClient() {
       .select('*, seances_libres_series(*)')
       .eq('evenement_id', id)
       .order('ordre', { ascending: true })
-    setExercices((exs || []).map(ex => ({
+    const exsList = exs || []
+    // Charger les images depuis la bibliothèque (lookup par nom)
+    const noms = exsList.map(e => e.nom).filter(Boolean)
+    let imageMap = {}
+    if (noms.length > 0) {
+      const { data: bibItems } = await supabase
+        .from('bibliotheque_exercices')
+        .select('nom, image_url')
+        .in('nom', noms)
+      bibItems?.forEach(b => { if (b.image_url) imageMap[b.nom] = b.image_url })
+    }
+    setExercices(exsList.map(ex => ({
       ...ex,
+      image_url: imageMap[ex.nom] || null,
       series: (ex.seances_libres_series || [])
         .sort((a, b) => a.num_serie - b.num_serie)
         .map(s => ({ ...s, poids: s.poids ?? '', reps: s.reps ?? '' })),
@@ -387,16 +399,23 @@ export default function SeancePonctuelleClient() {
             return (
               <div key={ex.id} style={S.exCard}>
                 {/* En-tête exercice */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.6rem', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
                     <span style={S.exNum}>{idx + 1}</span>
-                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{ex.nom}</span>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.nom}</span>
                   </div>
-                  <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                    </svg>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                    {ex.image_url && (
+                      <div style={{ width: 52, height: 52, borderRadius: 10, overflow: 'hidden', border: '1.5px solid #e5e7eb', flexShrink: 0 }}>
+                        <img src={ex.image_url} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
+                    )}
+                    <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Params bar : séries × reps cible */}

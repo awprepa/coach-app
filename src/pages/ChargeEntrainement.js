@@ -852,7 +852,7 @@ async function loadExerciseWeights(cid) {
   // ── Source 2 : series validées (fallback) ──
   const { data: series, error: seriesError } = await supabase
     .from('serie_tracking')
-    .select('exercice_id, semaine, poids, reps_reelles')
+    .select('exercice_id, semaine, poids, reps_reelles, valide')
     .in('exercice_id', exIds)
     .not('poids', 'is', null)
     .lt('serie', 1000)
@@ -866,10 +866,14 @@ async function loadExerciseWeights(cid) {
   }
   const num = (p) => parseFloat(String(p).replace(',', '.'))
 
-  // trackingValidMax[exId][sem] = { poids, reps } — max poids où le nombre de
-  //   reps prescrit a réellement été atteint.
-  // trackingAny[exId][sem] = true dès qu'une série a été loguée cette semaine
-  //   (= l'exercice a été tenté), même si les reps prescrites n'ont pas été faites.
+  // trackingValidMax[exId][sem] = { poids, reps } — max poids d'une série valide.
+  // trackingAny[exId][sem] = true dès qu'une série a été loguée (exercice tenté).
+  //
+  // Règle de validité :
+  //   valide=true  → série réussie dans l'UI (✓ vert) → compter
+  //   valide=false → série échouée dans l'UI (⚠ jaune, ex : test 1RM raté) → ne pas compter
+  //   valide=null  → non renseigné → fallback sur reps_reelles vs cible
+  //                  (null reps_reelles = charge entrée mais reps non saisies → compter)
   const trackingValidMax = {}
   const trackingAny = {}
   ;(series || []).forEach(s => {
@@ -879,8 +883,11 @@ async function loadExerciseWeights(cid) {
     if (!trackingAny[exId]) trackingAny[exId] = {}
     trackingAny[exId][sem] = true
     const cible = repsCible(exoMap[exId]?.repetitions)
-    // On ne retient la série que si les reps prescrites ont été atteintes
-    if (cible != null && s.reps_reelles != null && s.reps_reelles < cible) return
+    let isValid
+    if (s.valide === true) isValid = true
+    else if (s.valide === false) isValid = false
+    else isValid = (cible == null || s.reps_reelles == null || s.reps_reelles >= cible)
+    if (!isValid) return
     if (!trackingValidMax[exId]) trackingValidMax[exId] = {}
     if (!trackingValidMax[exId][sem] || poids > trackingValidMax[exId][sem].poids) {
       trackingValidMax[exId][sem] = { poids, reps: s.reps_reelles }
@@ -1364,7 +1371,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>Chargement…</span>
                   ) : (() => {
                     const grouped = histoData[exo.id] || {}
-                    const sems = Object.keys(grouped).map(Number).sort((a, b) => b - a)
+                    const sems = Object.keys(grouped).map(Number).sort((a, b) => a - b)
                     if (!sems.length) return <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>Aucune série enregistrée.</span>
                     return (
                       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>

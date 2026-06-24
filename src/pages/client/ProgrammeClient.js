@@ -185,34 +185,42 @@ export default function ProgrammeClient() {
 
         {/* ── Séances ponctuelles ───────────────────────────────────────────── */}
         <div style={{ marginTop: '2rem' }}>
-
-
-          {/* Séances libres déjà ajoutées */}
           {seancesLibres.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              {seancesLibres.map(ev => {
-                const dateLabel = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-                return (
-                  <div key={ev.id} style={{ ...styles.libreCard, cursor: 'pointer' }}
-                    onClick={() => navigate(`/client/seance-ponctuelle/${ev.id}`)}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#374151' }}>{ev.titre}</p>
-                      <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{dateLabel}</p>
-                      {ev.description && (
-                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
-                      )}
+            <>
+              <div style={styles.sectionHeader}>
+                <span style={styles.sectionTitle}>Séances libres</span>
+                <span style={styles.sectionCount}>{seancesLibres.length} séance{seancesLibres.length > 1 ? 's' : ''}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                {seancesLibres.map(ev => {
+                  const d = new Date(ev.date + 'T12:00:00')
+                  const monthLabel = d.toLocaleString('fr-FR', { month: 'short' }).replace('.', '').toUpperCase()
+                  const dayNum = d.getDate()
+                  return (
+                    <div key={ev.id} style={styles.card}
+                      onClick={() => navigate(`/client/seance-ponctuelle/${ev.id}`)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={styles.jourBadge}>
+                          <span style={styles.jourLabel}>{monthLabel}</span>
+                          <span style={styles.jourNum}>{dayNum}</span>
+                        </div>
+                        <div>
+                          <p style={styles.cardTitle}>{ev.titre}</p>
+                          <p style={{ ...styles.cardSub, color: '#9ca3af' }}>Séance libre</p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={styles.chevron}>›</span>
+                        <button
+                          onClick={e => { e.stopPropagation(); supprimerSeanceLibre(ev.id) }}
+                          style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 4px', lineHeight: 1 }}
+                        >✕</button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                      <span style={{ color: '#d1d5db', fontSize: '1.2rem' }}>›</span>
-                      <button
-                        onClick={e => { e.stopPropagation(); supprimerSeanceLibre(ev.id) }}
-                        style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 0' }}
-                      >✕</button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            </>
           )}
 
           {canCreate && (
