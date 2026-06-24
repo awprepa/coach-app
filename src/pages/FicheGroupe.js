@@ -25,6 +25,7 @@ export default function FicheGroupe() {
   const [parent, setParent]               = useState(null)
   const [sousGroupes, setSousGroupes]     = useState([])
   const [membres, setMembres]             = useState([])
+  const [wellnessMap, setWellnessMap]     = useState({})  // { client_id: dernier wellness }
   const [programmes, setProgrammes]       = useState([])
   const [loading, setLoading]             = useState(true)
 
@@ -82,8 +83,23 @@ export default function FicheGroupe() {
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
-    setMembres((gm || []).map(r => r.clients).filter(Boolean))
+    const membresList = (gm || []).map(r => r.clients).filter(Boolean)
+    setMembres(membresList)
     setProgrammes(progs || [])
+
+    // Dernier wellness de chaque membre
+    const memberIds = membresList.map(m => m.id)
+    if (memberIds.length > 0) {
+      const { data: wRows } = await supabase
+        .from('wellness').select('*')
+        .in('client_id', memberIds)
+        .order('date', { ascending: false })
+      const wMap = {}
+      for (const w of (wRows || [])) { if (!wMap[w.client_id]) wMap[w.client_id] = w }
+      setWellnessMap(wMap)
+    } else {
+      setWellnessMap({})
+    }
 
     if (g?.parent_id) {
       const { data: p } = await supabase.from('groupes').select('id, nom').eq('id', g.parent_id).single()
@@ -595,11 +611,27 @@ export default function FicheGroupe() {
               return (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1.25rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', cursor: 'pointer' }}
                   onClick={() => navigate(`/client/${m.id}`)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8rem', color: accent, flexShrink: 0 }}>
                       {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
                     </div>
-                    <span style={{ fontWeight: '700', color: '#333' }}>{m.prenom} {m.nom}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ fontWeight: '700', color: '#333', display: 'block' }}>{m.prenom} {m.nom}</span>
+                      {(() => {
+                        const w = wellnessMap[m.id]
+                        if (!w) return <span style={{ fontSize: '0.7rem', color: '#d1d5db' }}>Pas de wellness</span>
+                        const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                        const alerte = avg <= 2
+                        const jour = new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                        return (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginTop: 2 }}>
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: alerte ? '#dc2626' : '#16a34a', flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.7rem', color: alerte ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{avg.toFixed(1)}/4</span>
+                            <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>· {jour}</span>
+                          </span>
+                        )
+                      })()}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {sub && <span style={{ background: sub.bg, color: sub.color, padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '700' }}>{sub.label}</span>}

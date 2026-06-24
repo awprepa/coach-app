@@ -233,17 +233,28 @@ export default function FicheClient() {
     if (!progs?.length) return
     const { data: seancesAll } = await supabase.from('seances').select('id, nom').in('programme_id', progs.map(p => p.id))
     if (!seancesAll?.length) return
-    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id, muscles_primaires').in('seance_id', seancesAll.map(s => s.id))
+    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id, muscles_primaires, repetitions').in('seance_id', seancesAll.map(s => s.id))
     if (!exosAll?.length) return
-    const { data: tracking } = await supabase.from('serie_tracking').select('exercice_id, semaine, poids, valide').in('exercice_id', exosAll.map(e => e.id)).eq('valide', true)
+    const { data: tracking } = await supabase.from('serie_tracking').select('exercice_id, semaine, poids, reps_reelles, valide').in('exercice_id', exosAll.map(e => e.id)).eq('valide', true)
     if (!tracking?.length) return
 
-    // Grouper par nom d'exercice → max poids par semaine + groupe musculaire
+    // Nombre de reps prescrit (borne basse si plage type "8-10")
+    const repsCible = (repsStr) => {
+      if (repsStr == null) return null
+      const m = String(repsStr).match(/\d+/)
+      return m ? parseInt(m[0]) : null
+    }
+
+    // Grouper par nom d'exercice → max poids par semaine + groupe musculaire.
+    // On ne retient une charge que si le client a réellement fait le nombre de
+    // reps prescrit (sinon un test 1RM raté gonflerait la valeur affichée).
     const byExo = {}
     const byExoGroupe = {}
     tracking.forEach(t => {
       const exo = exosAll.find(e => e.id === t.exercice_id)
       if (!exo || !t.poids) return
+      const cible = repsCible(exo.repetitions)
+      if (cible != null && t.reps_reelles != null && t.reps_reelles < cible) return
       const key = exo.nom
       if (!byExo[key]) {
         byExo[key] = {}

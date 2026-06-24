@@ -105,7 +105,8 @@ export default function SeancePonctuelleClient() {
   const location = useLocation()
   const isNew = id === 'nouveau'
 
-  const clientId = location.state?.clientId || null
+  // clientId : depuis l'état de navigation, sinon résolu via la session
+  const [clientId, setClientId] = useState(location.state?.clientId || null)
 
   // Création
   const [newTitre, setNewTitre] = useState('')
@@ -122,6 +123,21 @@ export default function SeancePonctuelleClient() {
   const saveTimer = useRef(null)
 
   useEffect(() => { if (!isNew) fetchData() }, [id]) // eslint-disable-line
+
+  // Résout le client courant si l'état de navigation a été perdu (refresh, etc.)
+  useEffect(() => {
+    if (!isNew || clientId) return
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      let { data: cl } = await supabase.from('clients').select('id').eq('user_id', session.user.id).maybeSingle()
+      if (!cl) {
+        const r = await supabase.from('clients').select('id').eq('email', session.user.email).maybeSingle()
+        cl = r.data
+      }
+      if (cl) setClientId(cl.id)
+    })()
+  }, [isNew]) // eslint-disable-line
 
   async function fetchData() {
     const { data: ev } = await supabase.from('evenements').select('*').eq('id', id).single()
@@ -311,8 +327,8 @@ export default function SeancePonctuelleClient() {
         {/* Créer */}
         <button
           onClick={creerSeance}
-          disabled={!newTitre.trim() || newExs.length === 0 || saving}
-          style={{ ...S.createBtn, opacity: (!newTitre.trim() || newExs.length === 0 || saving) ? 0.5 : 1 }}
+          disabled={!newTitre.trim() || newExs.length === 0 || !clientId || saving}
+          style={{ ...S.createBtn, opacity: (!newTitre.trim() || newExs.length === 0 || !clientId || saving) ? 0.5 : 1 }}
         >
           {saving ? '…' : 'Créer la séance'}
         </button>
