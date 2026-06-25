@@ -177,7 +177,7 @@ export default function Seance() {
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
     if (error) console.log(error)
-    else { setSeance(data); setSemaines(data.programmes.semaines); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); await fetchExercices(); await fetchRpeSeances() }
+    else { setSeance(data); setSemaines(data.programmes?.semaines || 4); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); await fetchExercices(); await fetchRpeSeances() }
     setLoading(false)
   }
 
@@ -705,7 +705,16 @@ export default function Seance() {
       rpe_cibles: rpeCibles,
     }])
     if (error) alert(error.message)
-    else { setTemplateSaved(true); setTimeout(() => setTemplateSaved(false), 2500) }
+    else {
+      setTemplateSaved(true)
+      if (!seance.programme_id) {
+        // Mode bibliothèque : nettoyer la séance temporaire et retourner
+        await supabase.from('seances').delete().eq('id', id)
+        setTimeout(() => navigate('/bibliotheque?tab=modeles'), 800)
+      } else {
+        setTimeout(() => setTemplateSaved(false), 2500)
+      }
+    }
   }
 
   async function updateRpeSeance(semaine, field, valeur) {
@@ -1030,12 +1039,12 @@ export default function Seance() {
         </div>
       )}
 
-      <button onClick={() => navigate(`/programme/${seance.programmes.id}`)} style={styles.backBtn}>← Retour</button>
+      <button onClick={() => seance.programme_id ? navigate(`/programme/${seance.programmes.id}`) : navigate('/bibliotheque?tab=modeles')} style={styles.backBtn}>← Retour</button>
 
       {/* En-tête */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <p style={styles.progLabel}>{seance.programmes.nom}</p>
+          <p style={styles.progLabel}>{seance.programmes?.nom || 'Bibliothèque'}</p>
           <h1 style={styles.title}>{seance.nom}</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
