@@ -244,10 +244,12 @@ export default function SeanceClient() {
           .eq('seance_id', id).gte('date', ydate)
           .order('date', { ascending: true }).limit(1).maybeSingle()
         if (!ev?.id) return
-        // Déjà marquée terminée (séance rouverte) → pas de nouvelle notif
-        if (ev.terminee) return
-        // Await l'update avant d'envoyer la notif pour éviter la race condition
-        await supabase.from('evenements').update({ terminee: true }).eq('id', ev.id)
+        // Update atomique : réussit uniquement si terminee est encore false
+        // Si deux effets se déclenchent simultanément, un seul obtiendra la ligne en retour
+        const { data: updated } = await supabase.from('evenements')
+          .update({ terminee: true }).eq('id', ev.id).eq('terminee', false)
+          .select('id').maybeSingle()
+        if (!updated) return // déjà marqué terminé par un autre déclenchement
         const clientId = seance?.programmes?.client_id
         const [coachId, clientRes] = await Promise.all([
           getCoachId(),

@@ -794,7 +794,7 @@ function weightLevel(poids, maxPoids) {
 const LEVEL_COLORS = ['', '#ef4444', '#f97316', '#eab308', '#84cc16', '#16a34a']
 const PR_COLOR = '#15803d'
 
-async function loadExerciseWeights(cid) {
+async function loadExerciseWeights(cid, progId = null) {
   const { data: progs } = await supabase
     .from('programmes')
     .select('id, nom, semaines, date_debut')
@@ -802,16 +802,21 @@ async function loadExerciseWeights(cid) {
     .order('created_at', { ascending: false })
   if (!progs?.length) return null
 
-  // Prefer active programme (started, not yet terminated), skip future ones, fall back to most recent
-  const now = new Date()
-  const today = now.toISOString().slice(0, 10)
-  const prog = progs.find(p => {
-    if (!p.date_debut) return false
-    if (p.date_debut > today) return false // skip programmes not yet started
-    const fin = new Date(p.date_debut + 'T00:00:00')
-    fin.setDate(fin.getDate() + p.semaines * 7)
-    return fin >= now
-  }) || progs[0]
+  // If progId specified by coach, use it; otherwise auto-select active programme
+  let prog
+  if (progId) {
+    prog = progs.find(p => p.id === progId) || progs[0]
+  } else {
+    const now = new Date()
+    const today = now.toISOString().slice(0, 10)
+    prog = progs.find(p => {
+      if (!p.date_debut) return false
+      if (p.date_debut > today) return false // skip programmes not yet started
+      const fin = new Date(p.date_debut + 'T00:00:00')
+      fin.setDate(fin.getDate() + p.semaines * 7)
+      return fin >= now
+    }) || progs[0]
+  }
 
   // Séances avec nom et ordre
   const { data: seances } = await supabase
@@ -922,19 +927,13 @@ async function loadExerciseWeights(cid) {
 
   // Parcourir tous les exercices ayant au moins une donnée
   // Les clés sont des UUIDs (strings) — surtout pas .map(Number) !
-  const allExIds = new Set([
-    ...Object.keys(chargesMap),
-    ...Object.keys(trackingAny),
-  ])
+  const allExIds = new Set(Object.keys(trackingAny))
 
   allExIds.forEach(exId => {
     const exo = exoMap[exId]
     if (!exo) return
     // Les semaines sont des entiers — .map(Number) est correct ici
-    const allSems = new Set([
-      ...Object.keys(chargesMap[exId] || {}).map(Number),
-      ...Object.keys(trackingAny[exId] || {}).map(Number),
-    ])
+    const allSems = new Set(Object.keys(trackingAny[exId] || {}).map(Number))
     if (!allSems.size) return
 
     const entry = {
@@ -944,9 +943,8 @@ async function loadExerciseWeights(cid) {
     }
 
     allSems.forEach(sem => {
-      const valid   = trackingValidMax[exId]?.[sem]
-      const logged  = trackingAny[exId]?.[sem]
-      const fromCharges = chargesMap[exId]?.[sem]
+      const valid  = trackingValidMax[exId]?.[sem]
+      const logged = trackingAny[exId]?.[sem]
 
       let poids, reps
       if (valid) {
@@ -955,27 +953,20 @@ async function loadExerciseWeights(cid) {
         reps  = valid.reps
       } else if (logged) {
         // Exercice tenté mais reps prescrites non atteintes (ex : test 1RM raté)
-        // → on n'affiche rien, même si une valeur existe dans `charges`
+        // → on n'affiche rien
         return
-      } else if (fromCharges) {
-        // Aucune série loguée cette semaine → on fait confiance au tableau manuel
-        poids = fromCharges.poids
-        reps  = null
       }
       if (!poids) return
 
-      entry.weeks[sem] = { poids, reps, fromCharges: !logged && !valid }
+      entry.weeks[sem] = { poids, reps }
       if (poids > entry.allTimeMax) entry.allTimeMax = poids
     })
 
     if (Object.keys(entry.weeks).length > 0) byId[exId] = entry
   })
 
-  // Semaines présentes (toutes sources confondues)
-  const allWeeks = [...new Set([
-    ...Object.values(chargesMap).flatMap(m => Object.keys(m).map(Number)),
-    ...(series || []).map(s => s.semaine),
-  ])].sort((a, b) => a - b)
+  // Semaines présentes dans le tracking validé
+  const allWeeks = [...new Set((series || []).map(s => s.semaine))].sort((a, b) => a - b)
 
   if (!allWeeks.length) return null
 
@@ -995,7 +986,7 @@ async function loadExerciseWeights(cid) {
     .filter(s => result.some(e => e.seance_id === s.id))
     .map(s => ({ ...s, exercises: result.filter(e => e.seance_id === s.id) }))
 
-  return { exercises: result, seancesWithExos, allWeeks, lastWeek, totalSemaines, rpeMoyen, progNom: prog.nom }
+  return { exercises: result, seancesWithExos, allWeeks, lastWeek, totalSemaines, rpeMoyen, progNom: prog.nom, progId: prog.id, allProgs: progs }
 }
 
 export function ChargePanel({ clientId, clientPrenom, clientNom }) {
@@ -1008,15 +999,20 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [histoOpen, setHistoOpen] = useState({})
   const [histoData, setHistoData] = useState({})
   const [histoLoading, setHistoLoading] = useState({})
+  const [selectedProgId, setSelectedProgId] = useState(null)
 
-  async function deleteCharge(exoId, semaine) {
-    if (!window.confirm(`Supprimer la charge S${semaine} ?`)) return
-    await supabase.from('charges').delete().eq('exercice_id', exoId).eq('semaine', semaine)
+  function reloadExWeights(cid, progId) {
     setExWeightLoading(true)
-    loadExerciseWeights(clientId).then(result => {
+    loadExerciseWeights(cid, progId || null).then(result => {
       setExWeightData(result)
       setExWeightLoading(false)
     }).catch(() => setExWeightLoading(false))
+  }
+
+  function handleProgChange(e) {
+    const pid = e.target.value || null
+    setSelectedProgId(pid)
+    reloadExWeights(clientId, pid)
   }
 
   async function toggleExoHistory(exoId) {
@@ -1136,17 +1132,11 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       setData([])
       setGpsZData(null)
       setExWeightData(null)
+      setSelectedProgId(null)
       loadCharge(clientId)
-      setExWeightLoading(true)
-      loadExerciseWeights(clientId).then(result => {
-        setExWeightData(result)
-        setExWeightLoading(false)
-      }).catch(err => {
-        console.error('[ChargePanel] loadExerciseWeights error:', err)
-        setExWeightData(null)
-        setExWeightLoading(false)
-      })
+      reloadExWeights(clientId, null)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, loadCharge])
 
   useEffect(() => {
@@ -1296,7 +1286,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       )}
 
       {!exWeightLoading && exWeightData && exWeightData.exercises && exWeightData.exercises.length > 0 && (() => {
-        const { exercises, seancesWithExos, allWeeks, lastWeek, totalSemaines, rpeMoyen, progNom } = exWeightData
+        const { exercises, seancesWithExos, allWeeks, lastWeek, totalSemaines, rpeMoyen, progNom, allProgs } = exWeightData
         const nbExtraCols = 5 // Max | Sér./Reps | Évolution | Prog. % | PR
 
         // KPIs
@@ -1355,13 +1345,9 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 const bg = isCellPR ? PR_COLOR : (LEVEL_COLORS[level] || '#e5e7eb')
                 return (
                   <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
-                    <div
-                      onClick={() => wd.fromCharges && deleteCharge(exo.id, w)}
-                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative', cursor: wd.fromCharges ? 'pointer' : 'default' }}
-                    >
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative' }}>
                       {wd.poids}
                       {isCellPRFirst && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 8, color: '#fff' }}>★</span>}
-                      {wd.fromCharges && <span style={{ position: 'absolute', top: 1, left: 3, fontSize: 9, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>×</span>}
                     </div>
                   </td>
                 )
@@ -1438,8 +1424,24 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>🏋️ Suivi des charges par exercice</div>
                 <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>{progNom}</div>
               </div>
-              <div style={{ padding: '3px 10px', borderRadius: 999, background: '#eff6ff', color: '#3b82f6', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
-                Semaine {lastWeek} / {totalSemaines}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {allProgs?.length > 1 && (
+                  <select
+                    value={selectedProgId || exWeightData?.progId || ''}
+                    onChange={handleProgChange}
+                    style={{ fontSize: '0.72rem', fontWeight: 600, color: '#374151', background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
+                  >
+                    {allProgs.map(p => {
+                      const label = p.date_debut
+                        ? `${p.nom} (${new Date(p.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })})`
+                        : p.nom
+                      return <option key={p.id} value={p.id}>{label}</option>
+                    })}
+                  </select>
+                )}
+                <div style={{ padding: '3px 10px', borderRadius: 999, background: '#eff6ff', color: '#3b82f6', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
+                  Semaine {lastWeek} / {totalSemaines}
+                </div>
               </div>
             </div>
 
