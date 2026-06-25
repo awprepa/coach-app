@@ -231,11 +231,11 @@ export default function SeanceClient() {
     const totalBlocs = groups.length
     const doneBlocs = groups.filter(g => g.letter && (blocsTermines.has(g.letter) || blocsSkippes.has(g.letter))).length
     if (totalBlocs === 0 || doneBlocs < totalBlocs) return
-    // Double verrou : ref (même montage) + sessionStorage (remontages dans le même onglet)
+    // Double verrou : ref (même montage) + localStorage (persiste même si la PWA est relancée)
     const storageKey = `fin_notif_${id}_${semaineActuelle}`
-    if (finNotifSentRef.current || sessionStorage.getItem(storageKey)) return
+    if (finNotifSentRef.current || localStorage.getItem(storageKey)) return
     finNotifSentRef.current = true
-    sessionStorage.setItem(storageKey, '1')
+    localStorage.setItem(storageKey, '1')
     ;(async () => {
       try {
         const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)

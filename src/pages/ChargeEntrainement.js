@@ -802,10 +802,12 @@ async function loadExerciseWeights(cid) {
     .order('created_at', { ascending: false })
   if (!progs?.length) return null
 
-  // Prefer active programme (has date_debut, not yet terminated), fall back to most recent
+  // Prefer active programme (started, not yet terminated), skip future ones, fall back to most recent
   const now = new Date()
+  const today = now.toISOString().slice(0, 10)
   const prog = progs.find(p => {
     if (!p.date_debut) return false
+    if (p.date_debut > today) return false // skip programmes not yet started
     const fin = new Date(p.date_debut + 'T00:00:00')
     fin.setDate(fin.getDate() + p.semaines * 7)
     return fin >= now
@@ -962,7 +964,7 @@ async function loadExerciseWeights(cid) {
       }
       if (!poids) return
 
-      entry.weeks[sem] = { poids, reps }
+      entry.weeks[sem] = { poids, reps, fromCharges: !logged && !valid }
       if (poids > entry.allTimeMax) entry.allTimeMax = poids
     })
 
@@ -1006,6 +1008,16 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [histoOpen, setHistoOpen] = useState({})
   const [histoData, setHistoData] = useState({})
   const [histoLoading, setHistoLoading] = useState({})
+
+  async function deleteCharge(exoId, semaine) {
+    if (!window.confirm(`Supprimer la charge S${semaine} ?`)) return
+    await supabase.from('charges').delete().eq('exercice_id', exoId).eq('semaine', semaine)
+    setExWeightLoading(true)
+    loadExerciseWeights(clientId).then(result => {
+      setExWeightData(result)
+      setExWeightLoading(false)
+    }).catch(() => setExWeightLoading(false))
+  }
 
   async function toggleExoHistory(exoId) {
     const isOpen = histoOpen[exoId]
@@ -1343,9 +1355,13 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 const bg = isCellPR ? PR_COLOR : (LEVEL_COLORS[level] || '#e5e7eb')
                 return (
                   <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative' }}>
+                    <div
+                      onClick={() => wd.fromCharges && deleteCharge(exo.id, w)}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative', cursor: wd.fromCharges ? 'pointer' : 'default' }}
+                    >
                       {wd.poids}
                       {isCellPRFirst && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 8, color: '#fff' }}>★</span>}
+                      {wd.fromCharges && <span style={{ position: 'absolute', top: 1, left: 3, fontSize: 9, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>×</span>}
                     </div>
                   </td>
                 )
