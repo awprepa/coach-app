@@ -82,14 +82,20 @@ function generateICS(events) {
 
 function EventChip({ ev, tiny = false }) {
   const ts = getTypeStyle(ev.type)
-  const prefix = ev._isGroupe && !ev._isFFR ? '👥 ' : ''
+  const logoSize = tiny ? 10 : 12
   return (
     <span style={{
       background: ts.bg, color: ts.text,
       fontSize: tiny ? '0.6rem' : '0.7rem', fontWeight: '700',
       padding: tiny ? '1px 4px' : '2px 6px', borderRadius: '4px',
-      overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block',
-    }}>{prefix}{ev.titre}</span>
+      overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+      display: 'flex', alignItems: 'center', gap: 3,
+    }}>
+      {ev._isGroupe && !ev._isFFR && ev._groupeLogoUrl && (
+        <img src={ev._groupeLogoUrl} alt="" style={{ width: logoSize, height: logoSize, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
+      )}
+      {ev.titre}
+    </span>
   )
 }
 
@@ -278,15 +284,20 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
       .eq('client_id', clientId)
     if (!memberships || memberships.length === 0) { setGroupEvts([]); return }
     const groupIds = memberships.map(m => m.groupe_id)
-    // 2. Récupérer les événements de ces groupes (type + titre uniquement)
+    // Récupérer les logos des groupes
+    const { data: groupesData } = await supabase
+      .from('groupes').select('id, logo_url').in('id', groupIds)
+    const groupeLogoMap = Object.fromEntries((groupesData || []).map(g => [g.id, g.logo_url]))
+    // 2. Récupérer les événements de ces groupes
     const { data: gevts } = await supabase
       .from('groupe_evenements')
-      .select('id, date, type, titre, style, heure')
+      .select('id, date, type, titre, style, heure, groupe_id')
       .in('groupe_id', groupIds)
       .order('date', { ascending: true })
     setGroupEvts((gevts || []).map(e => ({
       ...e,
       _isGroupe: true,
+      _groupeLogoUrl: groupeLogoMap[e.groupe_id] || null,
       // Titre affiché : titre libre > "Type Style" > "Type"
       titre: e.titre || (e.style ? `${getTypeLabel(e.type)} ${e.style}` : getTypeLabel(e.type)),
     })))
@@ -588,7 +599,12 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                     <div key={`g-${ev.id}`} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                         <div style={{ minWidth: 0 }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>👥 {ev.titre}</span>
+                          <span style={{ fontWeight: '700', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            {ev._groupeLogoUrl && (
+                              <img src={ev._groupeLogoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 3, objectFit: 'cover', flexShrink: 0 }} />
+                            )}
+                            {ev.titre}
+                          </span>
                           {ev.heure && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>· {ev.heure.slice(0,5)}</span>}
                         </div>
                       </div>
