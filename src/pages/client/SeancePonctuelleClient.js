@@ -435,36 +435,39 @@ export default function SeancePonctuelleClient() {
                   )}
                 </div>
 
-                {/* Label colonnes */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.65rem 0 0.3rem', paddingLeft: 28 }}>
-                  <span style={{ flex: 2, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
-                  <span style={{ width: 22 }} />
-                  <span style={{ flex: 1, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
-                  <span style={{ width: 28 }} />
+                {/* Lignes séries — wrapper gris comme SeanceClient */}
+                <div style={S.seriesTracker}>
+                  {/* Label colonnes */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', paddingLeft: 24 }}>
+                    <span style={{ width: 52, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
+                    <span style={{ fontSize: '0.62rem', color: '#9ca3af', width: 22, textAlign: 'center' }}>kg</span>
+                    <span style={{ width: 48, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
+                    <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>reps</span>
+                  </div>
+
+                  {ex.series.map(serie => {
+                    const filled = serie.poids !== '' && serie.poids != null
+                    return (
+                      <div key={serie.id} style={{ ...S.serieRow, ...(filled ? S.serieRowDone : {}) }}>
+                        <span style={S.serieNum}>{serie.num_serie}</span>
+                        <input type="number" inputMode="decimal" placeholder="kg" value={serie.poids}
+                          onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
+                          onBlur={() => saveSerie(ex.id, serie.id)}
+                          style={{ ...S.serieInput, width: 52 }} />
+                        <span style={S.serieUnit}>kg</span>
+                        <input type="number" inputMode="numeric" placeholder="reps" value={serie.reps}
+                          onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
+                          onBlur={() => saveSerie(ex.id, serie.id)}
+                          style={{ ...S.serieInput, width: 48 }} />
+                        <span style={S.serieUnit}>reps</span>
+                        <button onClick={() => supprimerSerie(ex.id, serie.id)}
+                          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0 2px', flexShrink: 0 }}>×</button>
+                      </div>
+                    )
+                  })}
+
+                  <button onClick={() => ajouterSerie(ex.id)} style={S.addSerieBtn}>+ Série</button>
                 </div>
-
-                {/* Lignes séries */}
-                {ex.series.map(serie => {
-                  const filled = serie.poids !== '' && serie.poids != null
-                  return (
-                    <div key={serie.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', padding: '0.45rem 0.5rem', borderRadius: 10, border: `1.5px solid ${filled ? '#bbf7d0' : '#e5e7eb'}`, background: filled ? '#f0fdf4' : '#fafafa', transition: 'background 0.2s, border-color 0.2s' }}>
-                      <span style={{ width: 22, textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#9ca3af', flexShrink: 0 }}>{serie.num_serie}</span>
-                      <input type="number" inputMode="decimal" placeholder="—" value={serie.poids}
-                        onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
-                        onBlur={() => saveSerie(ex.id, serie.id)}
-                        style={{ flex: 2, padding: '0.35rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '0.92rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'center', background: 'white', minWidth: 0 }} />
-                      <span style={{ fontSize: '0.7rem', color: '#9ca3af', width: 22, textAlign: 'center', flexShrink: 0 }}>kg</span>
-                      <input type="number" inputMode="numeric" placeholder="—" value={serie.reps}
-                        onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
-                        onBlur={() => saveSerie(ex.id, serie.id)}
-                        style={{ flex: 1, padding: '0.35rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '0.88rem', fontWeight: 600, color: '#374151', outline: 'none', textAlign: 'center', background: 'white', minWidth: 0 }} />
-                      <button onClick={() => supprimerSerie(ex.id, serie.id)}
-                        style={{ width: 28, background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: 0, textAlign: 'center', flexShrink: 0 }}>✕</button>
-                    </div>
-                  )
-                })}
-
-                <button onClick={() => ajouterSerie(ex.id)} style={S.addSerieBtn}>+ Série</button>
               </div>
             )
           })}
@@ -503,11 +506,14 @@ const S = {
   exCard:  { background: 'white', borderRadius: 16, padding: '1rem 1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   addCard: { background: 'white', borderRadius: 16, padding: '1rem 1.25rem', border: '1.5px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   summaryCard: { background: 'white', borderRadius: 14, padding: '0.75rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '0.6rem' },
-  exNum:   { width: 24, height: 24, borderRadius: 6, background: '#333', color: 'var(--accent-fg)', fontSize: '0.72rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  serieHeader: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
-  serieRow:    { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' },
-  serieInput:  { flex: 1, padding: '0.5rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.9rem', color: '#333', outline: 'none', textAlign: 'center', background: '#fafafa', minWidth: 0 },
+  exNum:      { width: 24, height: 24, borderRadius: '50%', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontSize: '0.72rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  deleteBtn:  { background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  seriesTracker: { background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginTop: '0.65rem' },
+  serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
+  serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
+  serieNum:   { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  serieInput:  { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
+  serieUnit:  { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
   addSerieBtn: { marginTop: '0.5rem', background: 'none', border: '1.5px dashed #e5e7eb', borderRadius: 8, padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', cursor: 'pointer', width: '100%' },
   addExBtn:    { background: '#333', color: 'var(--accent-fg)', border: 'none', borderRadius: 10, padding: '0.7rem 1rem', width: '100%', textAlign: 'center', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', boxSizing: 'border-box' },
   input:       { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.88rem', color: '#333', outline: 'none', background: '#fafafa' },

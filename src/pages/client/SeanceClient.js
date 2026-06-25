@@ -231,42 +231,41 @@ export default function SeanceClient() {
     const totalBlocs = groups.length
     const doneBlocs = groups.filter(g => g.letter && (blocsTermines.has(g.letter) || blocsSkippes.has(g.letter))).length
     if (totalBlocs === 0 || doneBlocs < totalBlocs) return
-    // Verrou : on ne notifie qu'une seule fois la fin de séance, même si
-    // blocsTermines/blocsSkippes change encore après coup (re-renders, etc.)
-    if (finNotifSentRef.current) return
+    // Double verrou : ref (même montage) + sessionStorage (remontages dans le même onglet)
+    const storageKey = `fin_notif_${id}_${semaineActuelle}`
+    if (finNotifSentRef.current || sessionStorage.getItem(storageKey)) return
     finNotifSentRef.current = true
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
-    const ydate = yesterday.toISOString().slice(0, 10)
-    supabase.from('evenements').select('id, terminee')
-      .eq('seance_id', id).gte('date', ydate)
-      .order('date', { ascending: true }).limit(1).maybeSingle()
-      .then(({ data: ev }) => {
+    sessionStorage.setItem(storageKey, '1')
+    ;(async () => {
+      try {
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+        const ydate = yesterday.toISOString().slice(0, 10)
+        const { data: ev } = await supabase.from('evenements').select('id, terminee')
+          .eq('seance_id', id).gte('date', ydate)
+          .order('date', { ascending: true }).limit(1).maybeSingle()
         if (!ev?.id) return
         // Déjà marquée terminée (séance rouverte) → pas de nouvelle notif
         if (ev.terminee) return
-        supabase.from('evenements').update({ terminee: true }).eq('id', ev.id)
-        // Notifier le coach que la séance est terminée
-        ;(async () => {
-          try {
-            const clientId = seance?.programmes?.client_id
-            const [coachId, clientRes] = await Promise.all([
-              getCoachId(),
-              clientId
-                ? supabase.from('clients').select('prenom').eq('id', clientId).maybeSingle()
-                : Promise.resolve({ data: null }),
-            ])
-            const prenom = clientRes?.data?.prenom || 'Un client'
-            if (coachId) {
-              sendNotif(coachId, {
-                titre: '✅ Séance terminée',
-                corps: `${prenom} a terminé "${seance?.nom || 'sa séance'}"`,
-                type: 'seance',
-                lien: clientId ? `/client/${clientId}` : '/',
-              })
-            }
-          } catch (e) { console.warn('[notif-seance] échec:', e) }
-        })()
-      })
+        // Await l'update avant d'envoyer la notif pour éviter la race condition
+        await supabase.from('evenements').update({ terminee: true }).eq('id', ev.id)
+        const clientId = seance?.programmes?.client_id
+        const [coachId, clientRes] = await Promise.all([
+          getCoachId(),
+          clientId
+            ? supabase.from('clients').select('prenom').eq('id', clientId).maybeSingle()
+            : Promise.resolve({ data: null }),
+        ])
+        const prenom = clientRes?.data?.prenom || 'Un client'
+        if (coachId) {
+          sendNotif(coachId, {
+            titre: '✅ Séance terminée',
+            corps: `${prenom} a terminé "${seance?.nom || 'sa séance'}"`,
+            type: 'seance',
+            lien: clientId ? `/client/${clientId}` : '/',
+          })
+        }
+      } catch (e) { console.warn('[notif-seance] échec:', e) }
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocsTermines, blocsSkippes, exercices])
 

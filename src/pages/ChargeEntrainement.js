@@ -852,7 +852,7 @@ async function loadExerciseWeights(cid) {
   // ── Source 2 : series validées (fallback) ──
   const { data: series, error: seriesError } = await supabase
     .from('serie_tracking')
-    .select('exercice_id, semaine, poids, reps_reelles, valide')
+    .select('exercice_id, semaine, poids, reps_reelles, valide, is_done')
     .in('exercice_id', exIds)
     .not('poids', 'is', null)
     .lt('serie', 1000)
@@ -867,26 +867,33 @@ async function loadExerciseWeights(cid) {
   const num = (p) => parseFloat(String(p).replace(',', '.'))
 
   // trackingValidMax[exId][sem] = { poids, reps } — max poids d'une série valide.
-  // trackingAny[exId][sem] = true dès qu'une série a été loguée (exercice tenté).
+  // trackingAny[exId][sem] = true si l'exercice a été réellement tenté (is_done !== false).
+  //   is_done=false = brouillon auto-sauvegardé, pas encore validé → ne bloque pas charges table.
   //
   // Règle de validité :
-  //   valide=true  → série réussie dans l'UI (✓ vert) → compter
-  //   valide=false → série échouée dans l'UI (⚠ jaune, ex : test 1RM raté) → ne pas compter
-  //   valide=null  → non renseigné → fallback sur reps_reelles vs cible
-  //                  (null reps_reelles = charge entrée mais reps non saisies → compter)
+  //   valide=true  → série réussie (✓ vert) → compter
+  //   valide=false → série échouée (⚠ jaune) → ne pas compter
+  //   valide=null  → données legacy : valide uniquement si reps_reelles saisies et ≥ cible
+  //                  (reps_reelles=null sur entrée legacy = non confirmé → ne pas compter)
   const trackingValidMax = {}
   const trackingAny = {}
   ;(series || []).forEach(s => {
     const poids = num(s.poids)
     if (!poids || isNaN(poids) || !s.semaine) return
     const exId = s.exercice_id, sem = s.semaine
-    if (!trackingAny[exId]) trackingAny[exId] = {}
-    trackingAny[exId][sem] = true
+    // is_done=false = brouillon auto-save (saveSerieField) sans validation → ne compte pas
+    if (s.is_done !== false) {
+      if (!trackingAny[exId]) trackingAny[exId] = {}
+      trackingAny[exId][sem] = true
+    }
     const cible = repsCible(exoMap[exId]?.repetitions)
     let isValid
     if (s.valide === true) isValid = true
     else if (s.valide === false) isValid = false
-    else isValid = (cible == null || s.reps_reelles == null || s.reps_reelles >= cible)
+    else {
+      // Legacy (valide=null) : exige que les reps soient renseignées et atteintes
+      isValid = s.reps_reelles != null && (cible == null || s.reps_reelles >= cible)
+    }
     if (!isValid) return
     if (!trackingValidMax[exId]) trackingValidMax[exId] = {}
     if (!trackingValidMax[exId][sem] || poids > trackingValidMax[exId][sem].poids) {
