@@ -48,7 +48,8 @@ const RapportClient        = lazy(() => import('./pages/RapportClient'))
 const NouveauProgramme     = lazy(() => import('./pages/NouveauProgramme'))
 const Programme            = lazy(() => import('./pages/Programme'))
 const Seance               = lazy(() => import('./pages/Seance'))
-const Bibliotheque         = lazy(() => import('./pages/Bibliotheque'))
+const Bibliotheque              = lazy(() => import('./pages/Bibliotheque'))
+const NouvelleSeanceTemplate    = lazy(() => import('./pages/NouvelleSeanceTemplate'))
 const GPS                  = lazy(() => import('./pages/GPS'))
 const Tests                = lazy(() => import('./pages/Tests'))
 const ResetPassword        = lazy(() => import('./pages/ResetPassword'))
@@ -496,6 +497,7 @@ function App() {
               <Route path="/seance/:id"                  element={<WithNav><Seance /></WithNav>} />
               <Route path="/seance/:id/projection"       element={<SeanceProjection />} />
               <Route path="/bibliotheque"                element={<WithNav><Bibliotheque /></WithNav>} />
+              <Route path="/bibliotheque/nouvelle-seance" element={<WithNav><NouvelleSeanceTemplate /></WithNav>} />
               <Route path="/gps"                         element={<WithNav><GPS /></WithNav>} />
               <Route path="/tests"                       element={<WithNav><Tests /></WithNav>} />
               <Route path="/messages"                    element={<WithNav><CoachMessages /></WithNav>} />

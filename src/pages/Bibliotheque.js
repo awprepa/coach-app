@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import BibliothequeExercices from './BibliothequeExercices'
 import EchauffementsTemplates from './EchauffementsTemplates'
 import SeanceTemplates from './SeanceTemplates'
@@ -14,7 +15,16 @@ const TABS = [
 ]
 
 export default function Bibliotheque() {
-  const [tab, setTab] = useState('exercices')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => {
+    const t = searchParams.get('tab')
+    return TABS.some(x => x.key === t) ? t : 'exercices'
+  })
+
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (t && TABS.some(x => x.key === t)) setTab(t)
+  }, [searchParams])
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
