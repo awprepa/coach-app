@@ -20,6 +20,13 @@ export default function SeanceTemplates() {
   const [editExercices, setEditExercices] = useState([])
   const [savingEdit, setSavingEdit]       = useState(false)
 
+  // Création d'un nouveau modèle
+  const [creating, setCreating]               = useState(false)
+  const [createNom, setCreateNom]             = useState('')
+  const [createDossier, setCreateDossier]     = useState('')
+  const [createExercices, setCreateExercices] = useState([])
+  const [saving, setSaving]                   = useState(false)
+
   // Assignation à un client
   const [sendingTemplate, setSendingTemplate] = useState(null)
   const [clients, setClients]             = useState([])
@@ -43,6 +50,52 @@ export default function SeanceTemplates() {
   async function reloadTemplates() {
     const { data } = await supabase.from('seance_templates').select('*').order('created_at', { ascending: false })
     setTemplates(data || [])
+  }
+
+  // ── Création ──────────────────────────────────────────────────────────────
+
+  function startCreate() {
+    setCreating(true)
+    setCreateNom('')
+    setCreateDossier('')
+    setCreateExercices([{ code: '', nom: '', series: '', repetitions: '', recuperation: '', ordre: 1 }])
+  }
+
+  function cancelCreate() {
+    setCreating(false)
+    setCreateNom('')
+    setCreateExercices([])
+  }
+
+  async function saveCreate() {
+    if (!createNom.trim()) return
+    setSaving(true)
+    const exos = createExercices
+      .filter(ex => ex.nom.trim())
+      .map((ex, i) => ({ ...ex, ordre: i + 1 }))
+    const { data: newTemplate } = await supabase.from('seance_templates')
+      .insert([{ nom: createNom.trim(), exercices: exos, dossier: createDossier.trim() || null }])
+      .select().single()
+    if (newTemplate) {
+      setTemplates(prev => [newTemplate, ...prev])
+      if (createDossier.trim()) setOpenFolders(prev => new Set([...prev, createDossier.trim()]))
+    }
+    setSaving(false)
+    setCreating(false)
+    setCreateNom('')
+    setCreateExercices([])
+  }
+
+  function addCreateEx() {
+    setCreateExercices(prev => [...prev, { code: '', nom: '', series: '', repetitions: '', recuperation: '', ordre: prev.length + 1 }])
+  }
+
+  function updateCreateEx(idx, field, value) {
+    setCreateExercices(prev => prev.map((ex, i) => i === idx ? { ...ex, [field]: value } : ex))
+  }
+
+  function deleteCreateEx(idx) {
+    setCreateExercices(prev => prev.filter((_, i) => i !== idx))
   }
 
   async function supprimer(id) {
@@ -423,11 +476,87 @@ export default function SeanceTemplates() {
           <h1 style={S.title}>Modèles de séances</h1>
           <p style={S.subtitle}>{templates.length} modèle{templates.length > 1 ? 's' : ''}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={() => setShowNewFolder(true)} style={S.secondaryBtn}>+ Dossier</button>
-          <button onClick={() => setShowImport(true)} style={S.importBtn}>⬆ Importer Excel</button>
+          <button onClick={() => setShowImport(true)} style={S.secondaryBtn}>⬆ Excel</button>
+          <button onClick={startCreate} style={S.importBtn}>+ Nouvelle séance</button>
         </div>
       </div>
+
+      {/* Formulaire de création */}
+      {creating && (
+        <div style={{ background: 'white', borderRadius: 14, border: '2px solid #333', padding: '1.25rem', marginBottom: '1.25rem', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#333' }}>Nouvelle séance</span>
+            <button onClick={cancelCreate} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}>✕</button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.875rem', flexWrap: 'wrap' }}>
+            <input
+              autoFocus
+              value={createNom}
+              onChange={e => setCreateNom(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && document.getElementById('createFirstEx')?.focus()}
+              placeholder="Nom de la séance..."
+              style={{ ...S.editInput, flex: 1, minWidth: 160, fontSize: '0.92rem', fontWeight: '700' }}
+            />
+            {folderOptions.length > 0 ? (
+              <select
+                value={createDossier}
+                onChange={e => setCreateDossier(e.target.value)}
+                style={{ ...S.editInput, color: createDossier ? '#333' : '#9ca3af' }}
+              >
+                <option value="">Sans dossier</option>
+                {folderOptions.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            ) : (
+              <input
+                value={createDossier}
+                onChange={e => setCreateDossier(e.target.value)}
+                placeholder="Dossier (optionnel)"
+                style={{ ...S.editInput, width: 150 }}
+              />
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.6rem' }}>
+            {createExercices.map((ex, i) => (
+              <div key={i} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', background: '#f9fafb', borderRadius: 8, padding: '0.4rem 0.5rem', border: '1px solid #e5e7eb' }}>
+                <input
+                  id={i === 0 ? 'createFirstEx' : undefined}
+                  value={ex.code || ''}
+                  onChange={e => updateCreateEx(i, 'code', e.target.value)}
+                  placeholder="Code"
+                  style={{ ...S.editInput, width: 52, fontFamily: 'monospace', fontWeight: '700', fontSize: '0.75rem', textAlign: 'center' }}
+                />
+                <input value={ex.nom || ''} onChange={e => updateCreateEx(i, 'nom', e.target.value)}
+                  placeholder="Nom de l'exercice" style={{ ...S.editInput, flex: 1 }} />
+                <input value={ex.series || ''} onChange={e => updateCreateEx(i, 'series', e.target.value)}
+                  placeholder="Sér." style={{ ...S.editInput, width: 44, textAlign: 'center' }} />
+                <input value={ex.repetitions || ''} onChange={e => updateCreateEx(i, 'repetitions', e.target.value)}
+                  placeholder="Reps" style={{ ...S.editInput, width: 44, textAlign: 'center' }} />
+                <input value={ex.recuperation || ''} onChange={e => updateCreateEx(i, 'recuperation', e.target.value)}
+                  placeholder="Récup" style={{ ...S.editInput, width: 56, textAlign: 'center' }} />
+                <button onClick={() => deleteCreateEx(i)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem', padding: '0.2rem', flexShrink: 0 }}>✕</button>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={addCreateEx}
+            style={{ background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#6b7280', cursor: 'pointer', width: '100%', marginBottom: '0.875rem' }}>
+            + Ajouter un exercice
+          </button>
+
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <button onClick={cancelCreate} style={S.secondaryBtn}>Annuler</button>
+            <button onClick={saveCreate} disabled={!createNom.trim() || saving}
+              style={{ ...S.importBtn, opacity: !createNom.trim() ? 0.4 : 1 }}>
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Créer dossier */}
       {showNewFolder && (
@@ -440,11 +569,12 @@ export default function SeanceTemplates() {
         </div>
       )}
 
-      {templates.length === 0 && allFolders.length === 0 ? (
+      {!creating && templates.length === 0 && allFolders.length === 0 ? (
         <div style={S.empty}>
           <p style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>📋</p>
           <p style={{ fontWeight: '700', color: '#374151', marginBottom: '0.35rem' }}>Aucun modèle</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Ouvre une séance et clique sur "Sauvegarder comme modèle".</p>
+          <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée ta première séance ou importe depuis Excel.</p>
+          <button onClick={startCreate} style={S.importBtn}>+ Nouvelle séance</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
