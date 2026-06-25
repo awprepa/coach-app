@@ -428,10 +428,9 @@ export default function SeanceTemplates() {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={() => setShowNewFolder(true)} style={S.secondaryBtn}>+ Dossier</button>
           <button onClick={() => setShowImport(true)} style={S.secondaryBtn}>⬆ Excel</button>
-          <button onClick={() => navigate('/bibliotheque/nouvelle-seance')} style={S.importBtn}>+ Nouvelle séance</button>
+          <button onClick={() => navigate('/clients')} style={S.importBtn}>+ Nouvelle séance</button>
         </div>
       </div>
-      )}
 
       {/* Créer dossier */}
       {showNewFolder && (
@@ -448,8 +447,8 @@ export default function SeanceTemplates() {
         <div style={S.empty}>
           <p style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>📋</p>
           <p style={{ fontWeight: '700', color: '#374151', marginBottom: '0.35rem' }}>Aucun modèle</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée ta première séance ou importe depuis Excel.</p>
-          <button onClick={() => navigate('/bibliotheque/nouvelle-seance')} style={S.importBtn}>+ Nouvelle séance</button>
+          <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée une séance depuis le cycle d'un client, puis sauvegarde-la comme modèle.</p>
+          <button onClick={() => navigate('/clients')} style={S.importBtn}>Aller vers les clients</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
