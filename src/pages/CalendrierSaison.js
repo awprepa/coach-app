@@ -2643,6 +2643,11 @@ function SeanceModal({
   reloadBlocs,
 }) {
   const BLOC_COLORS = generateBlocPalette(groupColor, couleurSecondaire)
+  function blocColor(idx, intervenant) {
+    if (intervenant === 'prepa')  return '#b45309'
+    if (intervenant === 'coachs') return '#1d4ed8'
+    return BLOC_COLORS[idx % BLOC_COLORS.length]
+  }
   const { form } = panel
   const hasBlocs = HAS_BLOCS.includes(form.type) || form.type === 'collectif'
   const totalMin = Number(form.duree_min) || 0
