@@ -1897,6 +1897,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   function blocColor(idx, intervenant) {
     if (intervenant === 'prepa')  return '#b45309'
     if (intervenant === 'coachs') return '#1d4ed8'
+    if (intervenant === 'both')   return '#1a1a1a'
     return BLOC_COLORS[idx % BLOC_COLORS.length]
   }
 
@@ -2154,7 +2155,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
                     {bloc.intervenant && (
                       <span style={{ fontSize: '.58rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : 'Coachs'}
+                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
                       </span>
                     )}
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
@@ -2400,7 +2401,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
                     {bloc.intervenant && (
                       <span style={{ fontSize:'.6rem', fontWeight:900, color:'#fff', background:bc2, borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
-                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : 'Coachs'}
+                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
                       </span>
                     )}
                     {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
@@ -2646,6 +2647,7 @@ function SeanceModal({
   function blocColor(idx, intervenant) {
     if (intervenant === 'prepa')  return '#b45309'
     if (intervenant === 'coachs') return '#1d4ed8'
+    if (intervenant === 'both')   return '#1a1a1a'
     return BLOC_COLORS[idx % BLOC_COLORS.length]
   }
   const { form } = panel
@@ -2997,7 +2999,7 @@ function SeanceModal({
                         <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.78rem', fontWeight: 800, fontFamily: 'inherit', minWidth: 0 }} placeholder="Nom du bloc…" />
                         {bloc.intervenant && (
                           <span style={{ background: 'rgba(255,255,255,.28)', color: '#fff', fontSize: '.58rem', fontWeight: 900, borderRadius: 5, padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                            {bloc.intervenant === 'prepa' ? 'Prépa physique' : 'Coachs'}
+                            {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
                           </span>
                         )}
                         <input
@@ -3022,10 +3024,20 @@ function SeanceModal({
                           { key: 'prepa', label: 'Prépa physique', color: '#b45309' },
                           { key: 'coachs', label: 'Coachs', color: '#1d4ed8' },
                         ].map(opt => {
-                          const active = bloc.intervenant === opt.key
+                          const cur = bloc.intervenant
+                          const active = cur === opt.key || cur === 'both'
+                          const toggle = () => {
+                            const other = opt.key === 'prepa' ? 'coachs' : 'prepa'
+                            let next
+                            if (cur === opt.key)  next = null
+                            else if (cur === other) next = 'both'
+                            else if (cur === 'both') next = other
+                            else next = opt.key
+                            updateBloc(bloc.id, { intervenant: next })
+                          }
                           return (
                             <button key={opt.key}
-                              onClick={() => updateBloc(bloc.id, { intervenant: active ? null : opt.key })}
+                              onClick={toggle}
                               style={{ background: active ? opt.color : 'white', color: active ? '#fff' : '#6b7280', border: `1.5px solid ${active ? opt.color : '#e5e7eb'}`, borderRadius: 6, padding: '2px 9px', fontSize: '.63rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .1s' }}>
                               {opt.label}
                             </button>
