@@ -235,6 +235,7 @@ export default function BibliothequeExercices() {
   const [gifQuery, setGifQuery] = useState('')
   const [gifTranslated, setGifTranslated] = useState('')
   const [modeEchauff, setModeEchauff]     = useState(false) // false = exercices, true = échauffements
+  const [muscleFilter, setMuscleFilter]   = useState([])
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -535,7 +536,11 @@ export default function BibliothequeExercices() {
     const matchMode   = !!ex.is_echauffement === modeEchauff
     const matchCat    = modeEchauff || catFilter === 'Tous' || ex.categorie === catFilter
     const matchSearch = ex.nom.toLowerCase().includes(search.toLowerCase())
-    return matchMode && matchCat && matchSearch
+    const matchMuscle = muscleFilter.length === 0 || (() => {
+      const { primary, secondary } = parseMuscles(ex)
+      return muscleFilter.some(k => primary.includes(k) || secondary.includes(k))
+    })()
+    return matchMode && matchCat && matchSearch && matchMuscle
   })
 
   return (
@@ -788,7 +793,7 @@ export default function BibliothequeExercices() {
         {[{ label: 'Exercices de travail', val: false }, { label: 'Échauffements', val: true }].map(tab => (
           <button
             key={String(tab.val)}
-            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch('') }}
+            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
             style={{
               border: 'none', borderRadius: 9, padding: '0.45rem 1.1rem', fontSize: '0.82rem', fontWeight: 700,
               cursor: 'pointer', transition: 'all 0.15s',
@@ -864,7 +869,9 @@ export default function BibliothequeExercices() {
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Rechercher un exercice..."
           style={{ ...S.input, marginBottom: '0.75rem' }} />
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+
+        {/* Filtre par catégorie */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
           {allCats.map(c => (
             <button key={c} onClick={() => setCatFilter(c)} style={{
               ...S.catPill,
@@ -873,6 +880,36 @@ export default function BibliothequeExercices() {
               border:     `1.5px solid ${catFilter === c ? '#333333' : '#e5e7eb'}`,
             }}>{c}</button>
           ))}
+        </div>
+
+        {/* Filtre par muscle */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Muscles
+            </span>
+            {muscleFilter.length > 0 && (
+              <button onClick={() => setMuscleFilter([])} style={{ background: 'none', border: 'none', fontSize: '0.7rem', color: '#6366f1', fontWeight: '700', cursor: 'pointer', padding: 0 }}>
+                Tout effacer
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {MUSCLE_KEYS.map(k => {
+              const active = muscleFilter.includes(k)
+              return (
+                <button key={k} onClick={() => setMuscleFilter(prev => active ? prev.filter(x => x !== k) : [...prev, k])} style={{
+                  padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700',
+                  cursor: 'pointer', transition: 'all 0.12s',
+                  background: active ? '#dc2626' : 'white',
+                  color:      active ? 'white'    : '#6b7280',
+                  border:     `1.5px solid ${active ? '#dc2626' : '#e5e7eb'}`,
+                }}>
+                  {MUSCLES[k].label}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
