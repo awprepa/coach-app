@@ -1,14 +1,14 @@
 // Définition des 14 groupes musculaires
 export const MUSCLES = {
   pectoraux:       { label: 'Pectoraux',        view: 'front' },
-  epaules:         { label: 'Épaules',           view: 'both'  },
+  dorsaux:         { label: 'Dorsaux',           view: 'back'  },
   biceps:          { label: 'Biceps',            view: 'front' },
   triceps:         { label: 'Triceps',           view: 'back'  },
+  epaules:         { label: 'Épaules',           view: 'both'  },
+  trapezes:        { label: 'Trapèzes',          view: 'back'  },
   avant_bras:      { label: 'Avant-bras',        view: 'front' },
   abdominaux:      { label: 'Abdominaux',        view: 'front' },
   obliques:        { label: 'Obliques',          view: 'front' },
-  trapezes:        { label: 'Trapèzes',          view: 'back'  },
-  dorsaux:         { label: 'Dorsaux',           view: 'back'  },
   lombaires:       { label: 'Lombaires',         view: 'back'  },
   fessiers:        { label: 'Fessiers',          view: 'back'  },
   quadriceps:      { label: 'Quadriceps',        view: 'front' },
