@@ -33,6 +33,10 @@ export default function CycleTemplates() {
   const [renameVal, setRenameVal]         = useState('')
   const [movingId, setMovingId]           = useState(null)
 
+  // ── Aperçu cycle ─────────────────────────────────────────────────────────────
+  const [previewCycleId, setPreviewCycleId]       = useState(null)
+  const [openPreviewSeances, setOpenPreviewSeances] = useState(new Set())
+
   const load = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
@@ -41,13 +45,21 @@ export default function CycleTemplates() {
       .order('created_at', { ascending: false })
     const list = data || []
     setTemplates(list)
-    const folders = [...new Set(list.map(t => t.dossier).filter(Boolean))]
-    setOpenFolders(new Set(folders))
+    setOpenFolders(new Set())
     setLoading(false)
   }, [])
 
   function toggleFolder(name) {
     setOpenFolders(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
+  }
+
+  function togglePreview(id) {
+    setPreviewCycleId(prev => prev === id ? null : id)
+    setOpenPreviewSeances(new Set())
+  }
+
+  function togglePreviewSeance(key) {
+    setOpenPreviewSeances(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n })
   }
 
   function creerDossier() {
@@ -337,14 +349,16 @@ export default function CycleTemplates() {
     const folderOptions = [...new Set(templates.map(t => t.dossier).filter(Boolean))].sort()
 
     function renderCard(t) {
+      const isPreviewed = previewCycleId === t.id
       return (
         <div key={t.id} style={S.card}>
-          <div style={S.cardHeader}>
+          <div style={{ ...S.cardHeader, cursor: 'pointer' }} onClick={() => togglePreview(t.id)}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={S.cardTitle}>{t.nom}</div>
               {t.description && <div style={S.cardDesc}>{t.description}</div>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+              <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isPreviewed ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
               <div style={S.badge}>{t.semaines} sem.</div>
               {/* Bouton déplacer */}
               <div style={{ position: 'relative' }}>
@@ -388,6 +402,51 @@ export default function CycleTemplates() {
             </span>
             <span style={S.stat}>{t.semaines} sem.</span>
           </div>
+
+          {/* ── Panel aperçu séances ── */}
+          {isPreviewed && (() => {
+            const seances = [...(t.programme_template_seances || [])].sort((a, b) => (a.jour - b.jour) || (a.ordre - b.ordre))
+            return (
+              <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa' }}>
+                {seances.length === 0 ? (
+                  <p style={{ color: '#9ca3af', fontSize: '0.78rem', textAlign: 'center', padding: '0.75rem' }}>Aucune séance dans ce cycle</p>
+                ) : seances.map((s, idx) => {
+                  const key = s.id || idx
+                  const seanceOpen = openPreviewSeances.has(key)
+                  const exs = s.exercices || []
+                  return (
+                    <div key={key} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <div
+                        onClick={e => { e.stopPropagation(); togglePreviewSeance(key) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', cursor: 'pointer' }}
+                      >
+                        <span style={{ background: '#e5e7eb', color: '#374151', fontSize: '0.63rem', fontWeight: 700, borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>J{s.jour}</span>
+                        <span style={{ flex: 1, fontWeight: 600, fontSize: '0.8rem', color: '#374151' }}>{s.nom || `Séance ${idx + 1}`}</span>
+                        <span style={{ color: '#9ca3af', fontSize: '0.7rem', flexShrink: 0 }}>{exs.length} ex.</span>
+                        <span style={{ color: '#d1d5db', fontSize: '1rem', transform: seanceOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>›</span>
+                      </div>
+                      {seanceOpen && (
+                        <div style={{ padding: '0 0.875rem 0.5rem 0.875rem' }}>
+                          {exs.length === 0 ? (
+                            <p style={{ color: '#9ca3af', fontSize: '0.72rem', padding: '0.25rem 0' }}>Séance vide</p>
+                          ) : exs.map((ex, ei) => (
+                            <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0', borderBottom: ei < exs.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                              {ex.code && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '0.62rem', fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>{ex.code}</span>}
+                              <span style={{ flex: 1, fontSize: '0.78rem', color: '#374151' }}>{ex.nom || '—'}</span>
+                              <span style={{ fontSize: '0.7rem', color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                {[ex.series && `${ex.series}×`, ex.repetitions, ex.tempo && `@${ex.tempo}`].filter(Boolean).join(' ')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+
           <div style={S.cardActions}>
             <button style={S.btnPrimary} onClick={() => openSendModal(t)}>📤 Envoyer</button>
             <button style={S.btnSecondary} onClick={() => editTemplate(t)}>Modifier</button>

@@ -236,6 +236,7 @@ export default function BibliothequeExercices() {
   const [gifTranslated, setGifTranslated] = useState('')
   const [modeEchauff, setModeEchauff]     = useState(false) // false = exercices, true = échauffements
   const [muscleFilter, setMuscleFilter]   = useState([])
+  const [openCategs, setOpenCategs]       = useState(new Set())
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -543,6 +544,158 @@ export default function BibliothequeExercices() {
     return matchMode && matchCat && matchSearch && matchMuscle
   })
 
+  const showGrouped = catFilter === 'Tous' && !search.trim() && muscleFilter.length === 0
+  const groupedByCateg = {}
+  if (showGrouped) {
+    for (const ex of filtered) {
+      const cat = ex.categorie || 'Sans catégorie'
+      if (!groupedByCateg[cat]) groupedByCateg[cat] = []
+      groupedByCateg[cat].push(ex)
+    }
+  }
+  const orderedCats = showGrouped
+    ? [...CATEGORIES.filter(c => groupedByCateg[c]), ...(groupedByCateg['Sans catégorie'] ? ['Sans catégorie'] : [])]
+    : []
+
+  function toggleCateg(cat) {
+    setOpenCategs(prev => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n })
+  }
+
+  function renderExCard(ex) {
+    const { primary, secondary } = parseMuscles(ex)
+    return (
+      <div key={ex.id} style={{ ...S.card, ...(enEdition === ex.id ? { overflow: 'visible', gridColumn: 'span 2' } : {}) }}>
+        {enEdition === ex.id ? (
+          // ── Mode édition ──
+          <div style={{ padding: '1rem' }}>
+            <p style={{ ...S.formTitle, marginBottom: '0.875rem' }}>Modifier — {ex.nom}</p>
+            <label style={S.label}>Nom</label>
+            <input value={formEdit.nom} onChange={e => applyAutoMuscles(e.target.value, true)} style={{ ...S.input, marginBottom: '0.75rem' }} />
+            <label style={S.label}>Catégorie</label>
+            <select value={formEdit.categorie || ''} onChange={e => setFormEdit({ ...formEdit, categorie: e.target.value })} style={{ ...S.select, marginBottom: '0.75rem' }}>
+              <option value="">— Choisir —</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <label style={{ ...S.label, marginBottom: '0.5rem' }}>Muscles</label>
+            <div style={{ marginBottom: '1rem' }}>
+              <MusclePicker
+                primary={formEdit.primary || []}
+                secondary={formEdit.secondary || []}
+                onChange={({ primary: p, secondary: s }) => setFormEdit(prev => ({ ...prev, primary: p, secondary: s }))}
+              />
+            </div>
+            {/* Média */}
+            <MediaField
+              value={formEdit.image_url || ''}
+              onChange={url => setFormEdit(prev => ({ ...prev, image_url: url }))}
+              onFile={e => handleFileChange(e, ex.id)}
+              uploading={uploadingFor === ex.id}
+            />
+            <button
+              type="button"
+              onClick={() => ouvrirGifSearch(formEdit.nom || ex.nom, ex.id)}
+              style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              🎬 Trouver GIF automatiquement
+            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
+                {saving ? '...' : '✓ Sauvegarder'}
+              </button>
+              <button onClick={() => setEnEdition(null)} style={S.btnSecondary}>Annuler</button>
+            </div>
+          </div>
+        ) : (
+          // ── Mode lecture ──
+          <>
+            {/* Miniature média */}
+            {ex.image_url && (() => {
+              const thumb = mediaThumbnail(ex.image_url)
+              const isYt  = !!youtubeId(ex.image_url)
+              return (
+                <div
+                  onClick={() => setMediaModal({ nom: ex.nom, url: ex.image_url })}
+                  style={{ position: 'relative', cursor: 'pointer', background: '#111', height: 130, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
+                >
+                  {thumb
+                    ? <img src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
+                        <span style={{ fontSize: '2rem' }}>🔗</span>
+                      </div>
+                  }
+                  {isYt && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.65)', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#e4f816" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+            <div style={{ padding: '0.875rem 0.875rem 0.5rem' }}>
+              <p style={S.cardName}>{ex.nom}</p>
+              {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
+              <MuscleChips primary={primary} secondary={secondary} />
+            </div>
+            <div style={{ padding: '0 0.875rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <button
+                onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
+                style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#333333' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
+              >
+                {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
+              </button>
+
+              {addingToSeance === ex.id && (
+                <div style={S.addPanel}>
+                  <select value={addForm.seance_id} onChange={e => setAddForm({ ...addForm, seance_id: e.target.value })} style={S.addInput}>
+                    <option value="">— Choisir une séance —</option>
+                    {seances.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.programmes?.clients?.prenom} {s.programmes?.clients?.nom} · {s.programmes?.nom} · {s.nom}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {[
+                      { key: 'code', ph: 'Code (A1)' }, { key: 'series', ph: 'Séries' },
+                      { key: 'repetitions', ph: 'Reps' }, { key: 'tempo', ph: 'Tempo' }, { key: 'recuperation', ph: 'Récup' },
+                    ].map(f => (
+                      <input key={f.key} value={addForm[f.key]}
+                        onChange={e => setAddForm({ ...addForm, [f.key]: e.target.value })}
+                        placeholder={f.ph} style={{ ...S.addInput, flex: 1, minWidth: 60 }} />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <select value={addForm.type_intensite} onChange={e => setAddForm({ ...addForm, type_intensite: e.target.value })} style={{ ...S.addInput, flex: 1 }}>
+                      <option value="">Type intensité</option>
+                      {['RPE', 'RIR', '% 1RM', 'Vitesse', 'Libre'].map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                    <input value={addForm.valeur_intensite}
+                      onChange={e => setAddForm({ ...addForm, valeur_intensite: e.target.value })}
+                      placeholder="Valeur" style={{ ...S.addInput, flex: 1 }} />
+                  </div>
+                  <button onClick={() => ajouterASeance(ex)} disabled={addSaving || !addForm.seance_id || !addForm.code}
+                    style={{ ...S.btnPrimary, width: '100%', opacity: (!addForm.seance_id || !addForm.code) ? 0.5 : 1 }}>
+                    {addSaving ? 'Ajout...' : '✓ Ajouter à la séance'}
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <button onClick={() => {
+                  setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
+                  setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary, image_url: ex.image_url || '' })
+                }} style={S.iconBtn}>✏️ Modifier</button>
+                <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={S.page}>
 
@@ -793,7 +946,7 @@ export default function BibliothequeExercices() {
         {[{ label: 'Exercices de travail', val: false }, { label: 'Échauffements', val: true }].map(tab => (
           <button
             key={String(tab.val)}
-            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
+            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]); setOpenCategs(new Set()) }}
             style={{
               border: 'none', borderRadius: 9, padding: '0.45rem 1.1rem', fontSize: '0.82rem', fontWeight: 700,
               cursor: 'pointer', transition: 'all 0.15s',
@@ -921,142 +1074,36 @@ export default function BibliothequeExercices() {
           <p style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Aucun exercice trouvé.</p>
           <p style={{ fontSize: '0.85rem' }}>Ajoutez votre premier exercice avec le bouton ci-dessus.</p>
         </div>
-      ) : (
-        <div style={S.grid}>
-          {filtered.map(ex => {
-            const { primary, secondary } = parseMuscles(ex)
+      ) : showGrouped ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {orderedCats.map(cat => {
+            const isOpen = openCategs.has(cat)
+            const catExs = groupedByCateg[cat]
             return (
-              <div key={ex.id} style={{ ...S.card, ...(enEdition === ex.id ? { overflow: 'visible', gridColumn: 'span 2' } : {}) }}>
-                {enEdition === ex.id ? (
-                  // ── Mode édition ──
-                  <div style={{ padding: '1rem' }}>
-                    <p style={{ ...S.formTitle, marginBottom: '0.875rem' }}>Modifier — {ex.nom}</p>
-                    <label style={S.label}>Nom</label>
-                    <input value={formEdit.nom} onChange={e => applyAutoMuscles(e.target.value, true)} style={{ ...S.input, marginBottom: '0.75rem' }} />
-                    <label style={S.label}>Catégorie</label>
-                    <select value={formEdit.categorie || ''} onChange={e => setFormEdit({ ...formEdit, categorie: e.target.value })} style={{ ...S.select, marginBottom: '0.75rem' }}>
-                      <option value="">— Choisir —</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <label style={{ ...S.label, marginBottom: '0.5rem' }}>Muscles</label>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <MusclePicker
-                        primary={formEdit.primary || []}
-                        secondary={formEdit.secondary || []}
-                        onChange={({ primary: p, secondary: s }) => setFormEdit(prev => ({ ...prev, primary: p, secondary: s }))}
-                      />
-                    </div>
-                    {/* Média */}
-                    <MediaField
-                      value={formEdit.image_url || ''}
-                      onChange={url => setFormEdit(prev => ({ ...prev, image_url: url }))}
-                      onFile={e => handleFileChange(e, ex.id)}
-                      uploading={uploadingFor === ex.id}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => ouvrirGifSearch(formEdit.nom || ex.nom, ex.id)}
-                      style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                    >
-                      🎬 Trouver GIF automatiquement
-                    </button>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
-                        {saving ? '...' : '✓ Sauvegarder'}
-                      </button>
-                      <button onClick={() => setEnEdition(null)} style={S.btnSecondary}>Annuler</button>
+              <div key={cat} style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                <div onClick={() => toggleCateg(cat)}
+                  style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill={isOpen ? '#e4f816' : 'none'} stroke={isOpen ? '#333' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', flex: 1 }}>{cat}</span>
+                  <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{catExs.length} exercice{catExs.length > 1 ? 's' : ''}</span>
+                  <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+                </div>
+                {isOpen && (
+                  <div style={{ padding: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
+                    <div style={S.grid}>
+                      {catExs.map(renderExCard)}
                     </div>
                   </div>
-                ) : (
-                  // ── Mode lecture ──
-                  <>
-                    {/* Miniature média */}
-                    {ex.image_url && (() => {
-                      const thumb = mediaThumbnail(ex.image_url)
-                      const isYt  = !!youtubeId(ex.image_url)
-                      return (
-                        <div
-                          onClick={() => setMediaModal({ nom: ex.nom, url: ex.image_url })}
-                          style={{ position: 'relative', cursor: 'pointer', background: '#111', height: 130, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
-                        >
-                          {thumb
-                            ? <img src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
-                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
-                                <span style={{ fontSize: '2rem' }}>🔗</span>
-                              </div>
-                          }
-                          {isYt && (
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <div style={{ background: 'rgba(0,0,0,0.65)', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="#e4f816" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
-                    <div style={{ padding: '0.875rem 0.875rem 0.5rem' }}>
-                      <p style={S.cardName}>{ex.nom}</p>
-                      {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
-                      <MuscleChips primary={primary} secondary={secondary} />
-                    </div>
-                    <div style={{ padding: '0 0.875rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
-                        style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#333333' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
-                      >
-                        {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
-                      </button>
-
-                      {addingToSeance === ex.id && (
-                        <div style={S.addPanel}>
-                          <select value={addForm.seance_id} onChange={e => setAddForm({ ...addForm, seance_id: e.target.value })} style={S.addInput}>
-                            <option value="">— Choisir une séance —</option>
-                            {seances.map(s => (
-                              <option key={s.id} value={s.id}>
-                                {s.programmes?.clients?.prenom} {s.programmes?.clients?.nom} · {s.programmes?.nom} · {s.nom}
-                              </option>
-                            ))}
-                          </select>
-                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            {[
-                              { key: 'code', ph: 'Code (A1)' }, { key: 'series', ph: 'Séries' },
-                              { key: 'repetitions', ph: 'Reps' }, { key: 'tempo', ph: 'Tempo' }, { key: 'recuperation', ph: 'Récup' },
-                            ].map(f => (
-                              <input key={f.key} value={addForm[f.key]}
-                                onChange={e => setAddForm({ ...addForm, [f.key]: e.target.value })}
-                                placeholder={f.ph} style={{ ...S.addInput, flex: 1, minWidth: 60 }} />
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.4rem' }}>
-                            <select value={addForm.type_intensite} onChange={e => setAddForm({ ...addForm, type_intensite: e.target.value })} style={{ ...S.addInput, flex: 1 }}>
-                              <option value="">Type intensité</option>
-                              {['RPE', 'RIR', '% 1RM', 'Vitesse', 'Libre'].map(v => <option key={v} value={v}>{v}</option>)}
-                            </select>
-                            <input value={addForm.valeur_intensite}
-                              onChange={e => setAddForm({ ...addForm, valeur_intensite: e.target.value })}
-                              placeholder="Valeur" style={{ ...S.addInput, flex: 1 }} />
-                          </div>
-                          <button onClick={() => ajouterASeance(ex)} disabled={addSaving || !addForm.seance_id || !addForm.code}
-                            style={{ ...S.btnPrimary, width: '100%', opacity: (!addForm.seance_id || !addForm.code) ? 0.5 : 1 }}>
-                            {addSaving ? 'Ajout...' : '✓ Ajouter à la séance'}
-                          </button>
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
-                        <button onClick={() => {
-                          setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
-                          setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary, image_url: ex.image_url || '' })
-                        }} style={S.iconBtn}>✏️ Modifier</button>
-                        <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
-                      </div>
-                    </div>
-                  </>
                 )}
               </div>
             )
           })}
+        </div>
+      ) : (
+        <div style={S.grid}>
+          {filtered.map(renderExCard)}
         </div>
       )}
     </div>
