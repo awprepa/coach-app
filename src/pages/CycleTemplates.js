@@ -25,15 +25,58 @@ export default function CycleTemplates() {
   const [programmeToOverwrite, setProgrammeToOverwrite] = useState(null)
   const [loadingProgrammes, setLoadingProgrammes] = useState(false)
 
+  // ── Dossiers ─────────────────────────────────────────────────────────────────
+  const [openFolders, setOpenFolders]     = useState(new Set())
+  const [showNewFolder, setShowNewFolder] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [renamingFolder, setRenamingFolder] = useState(null)
+  const [renameVal, setRenameVal]         = useState('')
+  const [movingId, setMovingId]           = useState(null)
+
   const load = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
       .from('programme_templates')
       .select('*, programme_template_seances(*)')
       .order('created_at', { ascending: false })
-    setTemplates(data || [])
+    const list = data || []
+    setTemplates(list)
+    const folders = [...new Set(list.map(t => t.dossier).filter(Boolean))]
+    setOpenFolders(new Set(folders))
     setLoading(false)
   }, [])
+
+  function toggleFolder(name) {
+    setOpenFolders(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
+  }
+
+  function creerDossier() {
+    if (!newFolderName.trim()) return
+    setOpenFolders(prev => new Set([...prev, newFolderName.trim()]))
+    setShowNewFolder(false)
+    setNewFolderName('')
+  }
+
+  async function renommerDossier(oldName, newName) {
+    if (!newName.trim() || newName === oldName) { setRenamingFolder(null); return }
+    await supabase.from('programme_templates').update({ dossier: newName.trim() }).eq('dossier', oldName)
+    setTemplates(prev => prev.map(t => t.dossier === oldName ? { ...t, dossier: newName.trim() } : t))
+    setOpenFolders(prev => { const n = new Set(prev); n.delete(oldName); n.add(newName.trim()); return n })
+    setRenamingFolder(null)
+  }
+
+  async function supprimerDossier(name) {
+    if (!window.confirm(`Supprimer le dossier "${name}" ? Les templates seront déplacés dans "Sans dossier".`)) return
+    await supabase.from('programme_templates').update({ dossier: null }).eq('dossier', name)
+    setTemplates(prev => prev.map(t => t.dossier === name ? { ...t, dossier: null } : t))
+    setOpenFolders(prev => { const n = new Set(prev); n.delete(name); return n })
+  }
+
+  async function deplacerDansFolder(templateId, dossier) {
+    await supabase.from('programme_templates').update({ dossier: dossier || null }).eq('id', templateId)
+    setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, dossier: dossier || null } : t))
+    setMovingId(null)
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -289,15 +332,88 @@ export default function CycleTemplates() {
 
   // ─── LISTE ───────────────────────────────────────────────────────────────────
   if (view === 'list') {
+    const allFolders = [...new Set([...openFolders, ...templates.map(t => t.dossier).filter(Boolean)])].sort()
+    const sansDossier = templates.filter(t => !t.dossier)
+    const folderOptions = [...new Set(templates.map(t => t.dossier).filter(Boolean))].sort()
+
+    function renderCard(t) {
+      return (
+        <div key={t.id} style={S.card}>
+          <div style={S.cardHeader}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={S.cardTitle}>{t.nom}</div>
+              {t.description && <div style={S.cardDesc}>{t.description}</div>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+              <div style={S.badge}>{t.semaines} sem.</div>
+              {/* Bouton déplacer */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setMovingId(movingId === t.id ? null : t.id) }}
+                  style={{ ...S.btnIcon, color: movingId === t.id ? '#6366f1' : '#9ca3af' }}
+                  title="Déplacer dans un dossier"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                {movingId === t.id && (
+                  <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
+                    <div style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
+                      <span style={{ opacity: 0.5 }}>— Sans dossier</span>
+                    </div>
+                    {folderOptions.map(f => (
+                      <div key={f} style={{ ...S.moveItem, fontWeight: t.dossier === f ? '700' : '500' }} onClick={() => deplacerDansFolder(t.id, f)}>
+                        {t.dossier === f ? '✓ ' : ''}{f}
+                      </div>
+                    ))}
+                    <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
+                      <input autoFocus placeholder="Nouveau dossier…"
+                        style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.3rem 0.5rem', fontSize: '0.78rem', outline: 'none', boxSizing: 'border-box' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            const name = e.target.value.trim()
+                            setOpenFolders(prev => new Set([...prev, name]))
+                            deplacerDansFolder(t.id, name)
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={S.cardStats}>
+            <span style={S.stat}>
+              {(t.programme_template_seances || []).length} séance{(t.programme_template_seances || []).length > 1 ? 's' : ''}
+            </span>
+            <span style={S.stat}>{t.semaines} sem.</span>
+          </div>
+          <div style={S.cardActions}>
+            <button style={S.btnPrimary} onClick={() => openSendModal(t)}>📤 Envoyer</button>
+            <button style={S.btnSecondary} onClick={() => editTemplate(t)}>Modifier</button>
+            {deleteConfirm === t.id ? (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button style={S.btnDanger} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
+                <button style={S.btnSecondary} onClick={() => setDeleteConfirm(null)}>Annuler</button>
+              </div>
+            ) : (
+              <button style={S.btnGhost} onClick={() => setDeleteConfirm(t.id)}>Supprimer</button>
+            )}
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div style={S.page}>
+      <div style={S.page} onClick={() => setMovingId(null)}>
         <div style={S.header}>
           <div>
             <div style={S.title}>Templates de cycles</div>
             <div style={S.subtitle}>{templates.length} template{templates.length > 1 ? 's' : ''}</div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button style={S.btnAI} onClick={() => setShowAI(true)}>✨ Générer avec l'IA</button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button style={S.btnSecondary} onClick={() => setShowNewFolder(true)}>+ Dossier</button>
+            <button style={S.btnAI} onClick={() => setShowAI(true)}>✨ IA</button>
             <button style={S.btnPrimary} onClick={newTemplate}>+ Nouveau template</button>
           </div>
         </div>
@@ -311,9 +427,21 @@ export default function CycleTemplates() {
           />
         )}
 
+        {/* Créer dossier */}
+        {showNewFolder && (
+          <div style={{ background: 'white', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
+            <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && creerDossier()}
+              placeholder="Nom du dossier…"
+              style={{ flex: 1, padding: '0.45rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.875rem', outline: 'none' }} />
+            <button onClick={creerDossier} style={S.btnPrimary}>Créer</button>
+            <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.btnSecondary}>✕</button>
+          </div>
+        )}
+
         {loading ? (
           <div style={S.empty}>Chargement…</div>
-        ) : templates.length === 0 ? (
+        ) : templates.length === 0 && allFolders.length === 0 ? (
           <div style={S.emptyState}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
             <div style={{ fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Aucun template</div>
@@ -321,38 +449,60 @@ export default function CycleTemplates() {
             <button style={{ ...S.btnPrimary, marginTop: '1.25rem' }} onClick={newTemplate}>Créer un template</button>
           </div>
         ) : (
-          <div style={S.grid}>
-            {templates.map(t => (
-              <div key={t.id} style={S.card}>
-                <div style={S.cardHeader}>
-                  <div>
-                    <div style={S.cardTitle}>{t.nom}</div>
-                    {t.description && <div style={S.cardDesc}>{t.description}</div>}
-                  </div>
-                  <div style={S.badge}>{t.semaines} sem.</div>
-                </div>
-                <div style={S.cardStats}>
-                  <span style={S.stat}>
-                    🏋️ {(t.programme_template_seances || []).length} séance{(t.programme_template_seances || []).length > 1 ? 's' : ''}
-                  </span>
-                  <span style={S.stat}>
-                    📅 {Math.ceil((t.programme_template_seances || []).length / (t.semaines || 1) * 7)} j/sem
-                  </span>
-                </div>
-                <div style={S.cardActions}>
-                  <button style={S.btnPrimary} onClick={() => openSendModal(t)}>📤 Envoyer</button>
-                  <button style={S.btnSecondary} onClick={() => editTemplate(t)}>Modifier</button>
-                  {deleteConfirm === t.id ? (
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button style={S.btnDanger} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
-                      <button style={S.btnSecondary} onClick={() => setDeleteConfirm(null)}>Annuler</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+            {/* Dossiers */}
+            {allFolders.map(folderName => {
+              const items = templates.filter(t => t.dossier === folderName)
+              const isOpen = openFolders.has(folderName)
+              return (
+                <div key={folderName} style={S.folderBlock}>
+                  <div style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={isOpen ? '#e4f816' : 'none'} stroke={isOpen ? '#333' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      {renamingFolder === folderName ? (
+                        <input autoFocus value={renameVal}
+                          onChange={e => setRenameVal(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') renommerDossier(folderName, renameVal); if (e.key === 'Escape') setRenamingFolder(null) }}
+                          onBlur={() => renommerDossier(folderName, renameVal)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ flex: 1, padding: '0.25rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.875rem', outline: 'none' }} />
+                      ) : (
+                        <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#111827' }}>{folderName}</span>
+                      )}
+                      <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{items.length} template{items.length > 1 ? 's' : ''}</span>
                     </div>
-                  ) : (
-                    <button style={S.btnGhost} onClick={() => setDeleteConfirm(t.id)}>Supprimer</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.btnIcon} title="Renommer">✏️</button>
+                      <button onClick={() => supprimerDossier(folderName)} style={S.btnIcon} title="Supprimer le dossier">🗑️</button>
+                      <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
+                        onClick={() => toggleFolder(folderName)}>›</span>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div style={{ padding: '0.75rem', background: 'white' }}>
+                      {items.length === 0 ? (
+                        <p style={{ color: '#9ca3af', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un template ici via l'icône dossier</p>
+                      ) : (
+                        <div style={S.grid}>{items.map(t => renderCard(t))}</div>
+                      )}
+                    </div>
                   )}
                 </div>
+              )
+            })}
+
+            {/* Sans dossier */}
+            {sansDossier.length > 0 && (
+              <div>
+                {allFolders.length > 0 && (
+                  <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
+                )}
+                <div style={S.grid}>{sansDossier.map(t => renderCard(t))}</div>
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -681,6 +831,11 @@ const S = {
   btnDanger: { background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
   btnRemove: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' },
   btnBack: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem 0' },
+  btnIcon: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.3rem', color: '#9ca3af' },
+  folderBlock: { background: '#f9fafb', borderRadius: 14, overflow: 'visible', border: '1px solid #e5e7eb' },
+  folderHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.1rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: '14px 14px 0 0', borderBottom: '1px solid #e5e7eb' },
+  moveDropdown: { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },
+  moveItem: { padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: '#374151', fontWeight: '500', cursor: 'pointer', borderBottom: '1px solid #f9fafb' },
   overlay: {
     position: 'fixed', inset: 0, zIndex: 1000,
     background: 'rgba(0,0,0,0.5)', display: 'flex',
