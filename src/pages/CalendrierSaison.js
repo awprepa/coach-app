@@ -552,7 +552,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     // dupliquer blocs + exercices
     for (const b of clip.blocs) {
       const { data: nb } = await supabase.from('groupe_seance_blocs')
-        .insert([{ evenement_id: data.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre, contact_intensite: b.contact_intensite ?? null, course_volume: b.course_volume || null, course_intensite: b.course_intensite || null }]).select('id').single()
+        .insert([{ evenement_id: data.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre, contact_intensite: b.contact_intensite ?? null, course_volume: b.course_volume || null, course_intensite: b.course_intensite || null, intervenant: b.intervenant || null }]).select('id').single()
       if (nb && b.exos?.length) {
         await supabase.from('groupe_seance_exercices').insert(
           b.exos.map(x => ({ bloc_id: nb.id, nom: x.nom, prescription: x.prescription || '', detail: x.detail || '', ordre: x.ordre }))
@@ -2148,6 +2148,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                   <div style={{ padding: '7px 12px', background: bc + '18', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 22, height: 22, borderRadius: '50%', background: bc, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${bc}55` }}>{idx + 1}</span>
                     <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
+                    {bloc.intervenant && (
+                      <span style={{ fontSize: '.58rem', fontWeight: 900, color: bc, background: bc+'18', borderRadius: 5, padding: '1px 6px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                        {bloc.intervenant === 'prepa' ? 'PP' : 'Coachs'}
+                      </span>
+                    )}
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
                   {/* Séquences — aperçu lisible */}
@@ -2389,6 +2394,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 return (
                   <div key={bloc.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder }}>
                     <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
+                    {bloc.intervenant && (
+                      <span style={{ fontSize:'.6rem', fontWeight:900, color:bc2, background:bc2+'20', borderRadius:5, padding:'1px 6px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                        {bloc.intervenant === 'prepa' ? 'PP' : 'Coachs'}
+                      </span>
+                    )}
                     {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
                     {(bloc.exos||[]).length > 0 && (
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'4px 0' }}>
@@ -2976,6 +2986,11 @@ function SeanceModal({
                       <div style={{ background: color, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
                         <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.78rem', fontWeight: 800, fontFamily: 'inherit', minWidth: 0 }} placeholder="Nom du bloc…" />
+                        {bloc.intervenant && (
+                          <span style={{ background: 'rgba(255,255,255,.28)', color: '#fff', fontSize: '.58rem', fontWeight: 900, borderRadius: 5, padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                            {bloc.intervenant === 'prepa' ? 'PP' : 'Coachs'}
+                          </span>
+                        )}
                         <input
                           type="number" min={5}
                           value={bloc.durationMin || ''}
@@ -2989,6 +3004,24 @@ function SeanceModal({
                         <button onClick={() => moveBloc(bloc.id, 'down')} disabled={isLast}
                           style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: isLast ? 'rgba(255,255,255,.3)' : '#fff', borderRadius: 4, width: 18, height: 18, fontSize: '.7rem', cursor: isLast ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>↓</button>
                         <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                      </div>
+
+                      {/* Intervenant du bloc */}
+                      <div style={{ padding: '5px 10px', background: '#f5f6f8', borderBottom: '1px solid #edf0f3', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', flexShrink: 0 }}>Géré par</span>
+                        {[
+                          { key: 'prepa', label: 'Prépa physique' },
+                          { key: 'coachs', label: 'Coachs' },
+                        ].map(opt => {
+                          const active = bloc.intervenant === opt.key
+                          return (
+                            <button key={opt.key}
+                              onClick={() => updateBloc(bloc.id, { intervenant: active ? null : opt.key })}
+                              style={{ background: active ? '#1a1a1a' : 'white', color: active ? '#e4f816' : '#6b7280', border: `1.5px solid ${active ? '#1a1a1a' : '#e5e7eb'}`, borderRadius: 6, padding: '2px 9px', fontSize: '.63rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .1s' }}>
+                              {opt.label}
+                            </button>
+                          )
+                        })}
                       </div>
 
                       {/* Planification intensité (entrainement uniquement) */}
