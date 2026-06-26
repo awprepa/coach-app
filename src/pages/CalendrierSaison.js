@@ -1894,7 +1894,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   // Palette dérivée des couleurs du club
   const BLOC_COLORS = generateBlocPalette(groupColor, groupe?.couleur_secondaire)
-  function blocColor(idx) { return BLOC_COLORS[idx % BLOC_COLORS.length] }
+  function blocColor(idx, intervenant) {
+    if (intervenant === 'prepa')  return '#b45309'
+    if (intervenant === 'coachs') return '#1d4ed8'
+    return BLOC_COLORS[idx % BLOC_COLORS.length]
+  }
 
   function chargeLevel(charge) {
     if (!charge) return null
@@ -2130,7 +2134,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               const rawH = totalMins * PX_PER_MIN
               const scale = rawH > MAX_TOTAL ? MAX_TOTAL / rawH : 1
               return blocs.map((bloc, idx) => {
-              const bc = blocColor(idx)
+              const bc = blocColor(idx, bloc.intervenant)
               const mins = parseDurMin(bloc.duree)
               const h = mins ? Math.max(20, Math.round(mins * PX_PER_MIN * scale)) : 40
 
@@ -2149,8 +2153,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     <span style={{ width: 22, height: 22, borderRadius: '50%', background: bc, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${bc}55` }}>{idx + 1}</span>
                     <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
                     {bloc.intervenant && (
-                      <span style={{ fontSize: '.58rem', fontWeight: 900, color: bc, background: bc+'18', borderRadius: 5, padding: '1px 6px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                        {bloc.intervenant === 'prepa' ? 'PP' : 'Coachs'}
+                      <span style={{ fontSize: '.58rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : 'Coachs'}
                       </span>
                     )}
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
@@ -2349,7 +2353,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     // Pré-calcul : numérotation des blocs (séries) et totaux
     let serieCounter = 0
     const processedBlocs = blocs.map((bloc, bidx) => {
-      const bc2 = blocColor(bidx)
+      const bc2 = blocColor(bidx, bloc.intervenant)
       if (bloc.bloc_type !== 'sequences') return { kind: 'std', bloc, bc2 }
       const series = splitSeries(bloc.sequences || []).map(s => ({ ...s, num: ++serieCounter }))
       return { kind: 'seq', bloc, bc2, series }
@@ -2395,8 +2399,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                   <div key={bloc.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder }}>
                     <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
                     {bloc.intervenant && (
-                      <span style={{ fontSize:'.6rem', fontWeight:900, color:bc2, background:bc2+'20', borderRadius:5, padding:'1px 6px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
-                        {bloc.intervenant === 'prepa' ? 'PP' : 'Coachs'}
+                      <span style={{ fontSize:'.6rem', fontWeight:900, color:'#fff', background:bc2, borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : 'Coachs'}
                       </span>
                     )}
                     {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
@@ -2969,7 +2973,7 @@ function SeanceModal({
                 )}
 
                 {blocsWithPos.map((bloc, idx) => {
-                  const color = BLOC_COLORS[idx % BLOC_COLORS.length]
+                  const color = blocColor(idx, bloc.intervenant)
                   const groups = {}
                   for (const exo of (bloc.exos || [])) {
                     const g = exo.groupe_label?.trim() || ''
@@ -2988,7 +2992,7 @@ function SeanceModal({
                         <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.78rem', fontWeight: 800, fontFamily: 'inherit', minWidth: 0 }} placeholder="Nom du bloc…" />
                         {bloc.intervenant && (
                           <span style={{ background: 'rgba(255,255,255,.28)', color: '#fff', fontSize: '.58rem', fontWeight: 900, borderRadius: 5, padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                            {bloc.intervenant === 'prepa' ? 'PP' : 'Coachs'}
+                            {bloc.intervenant === 'prepa' ? 'Prépa physique' : 'Coachs'}
                           </span>
                         )}
                         <input
@@ -3010,14 +3014,14 @@ function SeanceModal({
                       <div style={{ padding: '5px 10px', background: '#f5f6f8', borderBottom: '1px solid #edf0f3', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: '.57rem', fontWeight: 900, color: '#9aa1ac', textTransform: 'uppercase', letterSpacing: '.06em', flexShrink: 0 }}>Géré par</span>
                         {[
-                          { key: 'prepa', label: 'Prépa physique' },
-                          { key: 'coachs', label: 'Coachs' },
+                          { key: 'prepa', label: 'Prépa physique', color: '#b45309' },
+                          { key: 'coachs', label: 'Coachs', color: '#1d4ed8' },
                         ].map(opt => {
                           const active = bloc.intervenant === opt.key
                           return (
                             <button key={opt.key}
                               onClick={() => updateBloc(bloc.id, { intervenant: active ? null : opt.key })}
-                              style={{ background: active ? '#1a1a1a' : 'white', color: active ? '#e4f816' : '#6b7280', border: `1.5px solid ${active ? '#1a1a1a' : '#e5e7eb'}`, borderRadius: 6, padding: '2px 9px', fontSize: '.63rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .1s' }}>
+                              style={{ background: active ? opt.color : 'white', color: active ? '#fff' : '#6b7280', border: `1.5px solid ${active ? opt.color : '#e5e7eb'}`, borderRadius: 6, padding: '2px 9px', fontSize: '.63rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .1s' }}>
                               {opt.label}
                             </button>
                           )
@@ -3391,7 +3395,7 @@ function SeanceModal({
                   )}
 
                   {blocsWithPos.map((bloc, idx) => {
-                    const color = BLOC_COLORS[idx % BLOC_COLORS.length]
+                    const color = blocColor(idx, bloc.intervenant)
                     const top = bloc.startMin * pxMin
                     const height = bloc.durationMin * pxMin
                     const groups = {}
