@@ -45,6 +45,7 @@ function matchCatColor(categorie, groupColor) {
   return (c === undefined || c === null) ? groupColor : c
 }
 // Planification entraînement
+const STYLE_COLORS = { 'Modéré': '#059669', 'Vitesse': '#d97706', 'Volume': '#2563eb' }
 const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
 const CONTACT_LEVELS = [
   { label: 'Aucun contact',    desc: '' },
@@ -1885,7 +1886,6 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
 
-  const STYLE_COLORS = { 'Modéré': '#059669', 'Vitesse': '#d97706', 'Volume': '#2563eb' }
   function evtColor(evt) {
     const type = typeof evt === 'string' ? evt : evt?.type
     if (type === 'match' || type === 'ffr_match') return groupColor
