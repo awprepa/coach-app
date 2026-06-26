@@ -871,14 +871,15 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           }
           const neutral = T.neutral
           const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
+          const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
           return (
             <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={T.label}
               style={{
                 fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'grab',
                 overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
-                color: neutral ? '#5b626c' : '#3a4049',
-                background: neutral ? '#f0f2f5' : `color-mix(in srgb, ${groupColor} 12%, #fff)`,
-                borderLeft: `3px solid ${neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`}`,
+                color: styleColor ? '#fff' : neutral ? '#5b626c' : '#3a4049',
+                background: styleColor || (neutral ? '#f0f2f5' : `color-mix(in srgb, ${groupColor} 12%, #fff)`),
+                borderLeft: `3px solid ${styleColor || (neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`)}`,
               }}>
               {txt}
             </div>
