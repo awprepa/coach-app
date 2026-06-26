@@ -1885,10 +1885,15 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
 
-  function evtColor(type) {
+  const STYLE_COLORS = { 'Modéré': '#059669', 'Vitesse': '#d97706', 'Volume': '#2563eb' }
+  function evtColor(evt) {
+    const type = typeof evt === 'string' ? evt : evt?.type
     if (type === 'match' || type === 'ffr_match') return groupColor
-    if (type === 'entrainement') return '#6b94a3'
     if (type === 'muscu') return '#b08769'
+    if (type === 'entrainement') {
+      const s = typeof evt === 'object' ? evt?.style : null
+      return STYLE_COLORS[s] || '#6b94a3'
+    }
     return '#9aa1ac'
   }
 
@@ -1944,7 +1949,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   }
 
   function EventContent({ evt }) {
-    const color = evtColor(evt.type)
+    const color = evtColor(evt)
     const blocs = blocsMap[evt.id] || []
 
     // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
@@ -2335,7 +2340,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   /* ── DayPreviewModal — fiche séance style tableau ── */
   function DayPreviewModal({ evt, blocs }) {
-    const color = evtColor(evt.type)
+    const color = evtColor(evt)
     const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
@@ -2925,8 +2930,18 @@ function SeanceModal({
                     </div>
                   </div>
                   <div style={{ marginBottom: 10 }}>
-                    <div style={Sm.fLabel}>Style</div>
-                    <input value={form.style} onChange={e => setForm({ style: e.target.value })} placeholder="ex. Vitesse, Collectif, Prévention…" style={Sm.input} />
+                    <div style={Sm.fLabel}>Type d'entraînement</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {Object.entries(STYLE_COLORS).map(([label, color]) => {
+                        const active = form.style === label
+                        return (
+                          <button key={label} onClick={() => setForm({ style: active ? '' : label })}
+                            style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `2px solid ${active ? color : '#e5e7eb'}`, background: active ? color : 'white', color: active ? '#fff' : '#6b7280', fontSize: '.7rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .15s' }}>
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                   <div style={{ marginBottom: 10 }}>
                     <div style={Sm.fLabel}>Titre (optionnel)</div>
