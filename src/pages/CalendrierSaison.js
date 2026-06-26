@@ -46,18 +46,6 @@ function matchCatColor(categorie, groupColor) {
 }
 // Planification entraînement
 const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
-const THEME_COLORS = {
-  'Mêlée':               '#dc2626',
-  'Touche':              '#7c3aed',
-  'Attaque collective':  '#2563eb',
-  'Défense collective':  '#0f766e',
-  'Jeu au sol':          '#b45309',
-  'Jeu groupé':          '#166534',
-  'Vitesse / Vivacité':  '#d97706',
-  'Skills individuels':  '#0284c7',
-  'Prévention / Récup':  '#15803d',
-  'Analyse vidéo':       '#4b5563',
-}
 const CONTACT_LEVELS = [
   { label: 'Aucun contact',    desc: '' },
   { label: 'Ceinturé / bloqué', desc: 'Saisie sans plaquage complet' },
@@ -1897,15 +1885,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
 
-  function evtColor(evt) {
-    const type = typeof evt === 'string' ? evt : evt?.type
+  function evtColor(type) {
     if (type === 'match' || type === 'ffr_match') return groupColor
+    if (type === 'entrainement') return '#6b94a3'
     if (type === 'muscu') return '#b08769'
-    if (type === 'entrainement') {
-      const themes = (typeof evt === 'object' ? evt?.themes_seance : null)
-      const first = (themes || '').split(',').map(s => s.trim()).find(t => THEME_COLORS[t])
-      return first ? THEME_COLORS[first] : '#6b94a3'
-    }
     return '#9aa1ac'
   }
 
@@ -1961,7 +1944,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   }
 
   function EventContent({ evt }) {
-    const color = evtColor(evt)
+    const color = evtColor(evt.type)
     const blocs = blocsMap[evt.id] || []
 
     // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
@@ -2352,7 +2335,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
   /* ── DayPreviewModal — fiche séance style tableau ── */
   function DayPreviewModal({ evt, blocs }) {
-    const color = evtColor(evt)
+    const color = evtColor(evt.type)
     const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
