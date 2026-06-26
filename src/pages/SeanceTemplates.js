@@ -47,8 +47,7 @@ export default function SeanceTemplates() {
     const { data } = await supabase.from('seance_templates').select('*').order('created_at', { ascending: false })
     const list = data || []
     setTemplates(list)
-    const folders = [...new Set(list.map(t => t.dossier).filter(Boolean))]
-    setOpenFolders(new Set(folders))
+    setOpenFolders(new Set())
     setLoading(false)
   }
 
@@ -215,6 +214,47 @@ export default function SeanceTemplates() {
 
   if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
 
+  const BLOC_COLORS = ['#6366f1','#16a34a','#ea580c','#2563eb','#dc2626','#ca8a04','#0891b2','#9333ea']
+  function blocColor(letter) {
+    if (!letter) return '#9ca3af'
+    return BLOC_COLORS[(letter.toUpperCase().charCodeAt(0) - 65 + BLOC_COLORS.length) % BLOC_COLORS.length]
+  }
+  function blocLetter(code) {
+    if (!code) return null
+    const m = code.match(/^[A-Za-z]+/)
+    return m ? m[0].toUpperCase() : null
+  }
+  function renderExercicesBlocs(exs) {
+    const items = []
+    let prevBloc = null
+    exs.forEach((ex, i) => {
+      const bloc = blocLetter(ex.code)
+      if (bloc && bloc !== prevBloc) {
+        const color = blocColor(bloc)
+        items.push(
+          <div key={`hdr-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: i > 0 ? '0.6rem' : 0, marginBottom: '0.1rem' }}>
+            <span style={{ background: color, color: 'white', fontSize: '0.58rem', fontWeight: '800', borderRadius: 3, padding: '1px 6px', letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>Bloc {bloc}</span>
+            <div style={{ flex: 1, height: 1, background: color, opacity: 0.25 }} />
+          </div>
+        )
+        prevBloc = bloc
+      }
+      const color = bloc ? blocColor(bloc) : null
+      items.push(
+        <div key={i} style={{ ...S.exRow, borderLeft: `3px solid ${color || '#e5e7eb'}`, paddingLeft: '0.5rem', borderRadius: '0 4px 4px 0' }}>
+          {ex.code && <span style={S.codeTag}>{ex.code}</span>}
+          <span style={S.exNom}>{ex.nom}</span>
+          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
+            {ex.series && <span style={S.chip}>{ex.series} séries</span>}
+            {ex.repetitions && <span style={S.chip}>{ex.repetitions} reps</span>}
+            {ex.recuperation && <span style={S.chip}>{ex.recuperation}</span>}
+          </div>
+        </div>
+      )
+    })
+    return items
+  }
+
   const allFolders = [...new Set([...openFolders, ...templates.map(t => t.dossier).filter(Boolean)])].sort()
   const sansDossier = templates.filter(t => !t.dossier)
   const folderOptions = [...new Set(templates.map(t => t.dossier).filter(Boolean))].sort()
@@ -269,9 +309,9 @@ export default function SeanceTemplates() {
                       <div style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
                         <span style={{ opacity: 0.5 }}>— Sans dossier</span>
                       </div>
-                      {folderOptions.map(f => (
+                      {allFolders.map(f => (
                         <div key={f} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, f)}>
-                          📁 {f}
+                          {f}
                         </div>
                       ))}
                       <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
@@ -329,18 +369,8 @@ export default function SeanceTemplates() {
               </div>
             ) : (
               /* ── Mode lecture ────────────────────────────── */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {(t.exercices || []).map((ex, i) => (
-                  <div key={i} style={S.exRow}>
-                    {ex.code && <span style={S.codeTag}>{ex.code}</span>}
-                    <span style={S.exNom}>{ex.nom}</span>
-                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
-                      {ex.series && <span style={S.chip}>{ex.series} séries</span>}
-                      {ex.repetitions && <span style={S.chip}>{ex.repetitions} reps</span>}
-                      {ex.recuperation && <span style={S.chip}>{ex.recuperation}</span>}
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                {renderExercicesBlocs(t.exercices || [])}
               </div>
             )}
           </div>

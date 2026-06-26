@@ -53,6 +53,17 @@ export default function CycleTemplates() {
     setOpenFolders(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
   }
 
+  const BLOC_COLORS = ['#6366f1','#16a34a','#ea580c','#2563eb','#dc2626','#ca8a04','#0891b2','#9333ea']
+  function blocColor(letter) {
+    if (!letter) return '#9ca3af'
+    return BLOC_COLORS[(letter.toUpperCase().charCodeAt(0) - 65 + BLOC_COLORS.length) % BLOC_COLORS.length]
+  }
+  function blocLetter(code) {
+    if (!code) return null
+    const m = code.match(/^[A-Za-z]+/)
+    return m ? m[0].toUpperCase() : null
+  }
+
   function togglePreview(id) {
     setPreviewCycleId(prev => prev === id ? null : id)
     setOpenPreviewSeances(new Set())
@@ -426,18 +437,37 @@ export default function CycleTemplates() {
                         <span style={{ color: '#d1d5db', fontSize: '1rem', transform: seanceOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>›</span>
                       </div>
                       {seanceOpen && (
-                        <div style={{ padding: '0 0.875rem 0.5rem 0.875rem' }}>
+                        <div style={{ padding: '0.25rem 0.875rem 0.6rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                           {exs.length === 0 ? (
                             <p style={{ color: '#9ca3af', fontSize: '0.72rem', padding: '0.25rem 0' }}>Séance vide</p>
-                          ) : exs.map((ex, ei) => (
-                            <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0', borderBottom: ei < exs.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                              {ex.code && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '0.62rem', fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>{ex.code}</span>}
-                              <span style={{ flex: 1, fontSize: '0.78rem', color: '#374151' }}>{ex.nom || '—'}</span>
-                              <span style={{ fontSize: '0.7rem', color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                {[ex.series && `${ex.series}×`, ex.repetitions, ex.tempo && `@${ex.tempo}`].filter(Boolean).join(' ')}
-                              </span>
-                            </div>
-                          ))}
+                          ) : (() => {
+                            const items = []
+                            let prevBloc = null
+                            exs.forEach((ex, ei) => {
+                              const bloc = blocLetter(ex.code)
+                              if (bloc && bloc !== prevBloc) {
+                                const color = blocColor(bloc)
+                                items.push(
+                                  <div key={`hdr-${ei}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: ei > 0 ? '0.5rem' : 0, marginBottom: '0.05rem' }}>
+                                    <span style={{ background: color, color: 'white', fontSize: '0.55rem', fontWeight: '800', borderRadius: 3, padding: '1px 5px', letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>Bloc {bloc}</span>
+                                    <div style={{ flex: 1, height: 1, background: color, opacity: 0.25 }} />
+                                  </div>
+                                )
+                                prevBloc = bloc
+                              }
+                              const color = bloc ? blocColor(bloc) : null
+                              items.push(
+                                <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.4rem', borderLeft: `3px solid ${color || '#e5e7eb'}`, borderRadius: '0 3px 3px 0' }}>
+                                  {ex.code && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '0.62rem', fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>{ex.code}</span>}
+                                  <span style={{ flex: 1, fontSize: '0.78rem', color: '#374151' }}>{ex.nom || '—'}</span>
+                                  <span style={{ fontSize: '0.68rem', color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                    {[ex.series && `${ex.series}×`, ex.repetitions, ex.tempo && `@${ex.tempo}`].filter(Boolean).join(' ')}
+                                  </span>
+                                </div>
+                              )
+                            })
+                            return items
+                          })()}
                         </div>
                       )}
                     </div>

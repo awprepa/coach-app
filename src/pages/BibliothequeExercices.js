@@ -236,7 +236,6 @@ export default function BibliothequeExercices() {
   const [gifTranslated, setGifTranslated] = useState('')
   const [modeEchauff, setModeEchauff]     = useState(false) // false = exercices, true = échauffements
   const [muscleFilter, setMuscleFilter]   = useState([])
-  const [openCategs, setOpenCategs]       = useState(new Set())
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -543,23 +542,6 @@ export default function BibliothequeExercices() {
     })()
     return matchMode && matchCat && matchSearch && matchMuscle
   })
-
-  const showGrouped = catFilter === 'Tous' && !search.trim() && muscleFilter.length === 0
-  const groupedByCateg = {}
-  if (showGrouped) {
-    for (const ex of filtered) {
-      const cat = ex.categorie || 'Sans catégorie'
-      if (!groupedByCateg[cat]) groupedByCateg[cat] = []
-      groupedByCateg[cat].push(ex)
-    }
-  }
-  const orderedCats = showGrouped
-    ? [...CATEGORIES.filter(c => groupedByCateg[c]), ...(groupedByCateg['Sans catégorie'] ? ['Sans catégorie'] : [])]
-    : []
-
-  function toggleCateg(cat) {
-    setOpenCategs(prev => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n })
-  }
 
   function renderExCard(ex) {
     const { primary, secondary } = parseMuscles(ex)
@@ -946,7 +928,7 @@ export default function BibliothequeExercices() {
         {[{ label: 'Exercices de travail', val: false }, { label: 'Échauffements', val: true }].map(tab => (
           <button
             key={String(tab.val)}
-            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]); setOpenCategs(new Set()) }}
+            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
             style={{
               border: 'none', borderRadius: 9, padding: '0.45rem 1.1rem', fontSize: '0.82rem', fontWeight: 700,
               cursor: 'pointer', transition: 'all 0.15s',
@@ -1073,33 +1055,6 @@ export default function BibliothequeExercices() {
         <div style={S.empty}>
           <p style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Aucun exercice trouvé.</p>
           <p style={{ fontSize: '0.85rem' }}>Ajoutez votre premier exercice avec le bouton ci-dessus.</p>
-        </div>
-      ) : showGrouped ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {orderedCats.map(cat => {
-            const isOpen = openCategs.has(cat)
-            const catExs = groupedByCateg[cat]
-            return (
-              <div key={cat} style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-                <div onClick={() => toggleCateg(cat)}
-                  style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill={isOpen ? '#e4f816' : 'none'} stroke={isOpen ? '#333' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                  </svg>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', flex: 1 }}>{cat}</span>
-                  <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{catExs.length} exercice{catExs.length > 1 ? 's' : ''}</span>
-                  <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-                </div>
-                {isOpen && (
-                  <div style={{ padding: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
-                    <div style={S.grid}>
-                      {catExs.map(renderExCard)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
         </div>
       ) : (
         <div style={S.grid}>
