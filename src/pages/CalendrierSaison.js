@@ -1952,6 +1952,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   function EventContent({ evt }) {
     const color = evtColor(evt)
     const blocs = blocsMap[evt.id] || []
+    const [openSeqs, setOpenSeqs] = useState(new Set())
+    const toggleSeqs = id => setOpenSeqs(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
 
     // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
     if (evt.type === 'ffr_match') {
@@ -2166,68 +2168,50 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     )}
                     {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
                   </div>
-                  {/* Séquences — aperçu lisible */}
+                  {/* Séquences — aperçu repliable */}
                   {bloc.bloc_type === 'sequences' && (() => {
                     const seqs = bloc.sequences || []
-                    // Numérotation séquences de jeu uniquement
                     let jeuCount = 0
                     const jeuNum = {}
                     seqs.forEach(s => { if (s.type === 'jeu') { jeuCount++; jeuNum[s.id] = jeuCount } })
+                    const expanded = openSeqs.has(bloc.id)
                     return (
-                      <div style={{ background: '#eef3fb', padding: '6px 8px 8px' }}>
-                        {/* Stats + conditions */}
-                        <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:6, flexWrap:'wrap' }}>
-                          <span style={{ fontSize:'.6rem', fontWeight:800, color:'#2c5faa' }}>
-                            Jeu {calcJeuEffectif(seqs)}
-                          </span>
-                          <span style={{ fontSize:'.6rem', color:'#9db8d8' }}>·</span>
-                          <span style={{ fontSize:'.58rem', fontWeight:600, color:'#6a8aaa' }}>
-                            {calcDureeBloc(seqs)} total
-                          </span>
-                          {bloc.conditions_jeu && (
-                            <>
-                              <span style={{ fontSize:'.6rem', color:'#9db8d8' }}>·</span>
-                              <span style={{ fontSize:'.58rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:4, padding:'1px 5px' }}>
-                                {bloc.conditions_jeu}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        {/* Cards séquences */}
-                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                          {seqs.map(seq => seq.type === 'jeu' ? (
-                            <div key={seq.id} style={{ background:'#fff', border:'1px solid #c4d8f0', borderRadius:7, padding:'5px 8px', display:'flex', alignItems:'center', gap:7 }}>
-                              <div style={{ width:16, height:16, borderRadius:'50%', background:'#2c5faa', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.5rem', fontWeight:900, color:'#fff', flexShrink:0 }}>
-                                {jeuNum[seq.id]}
+                      <div style={{ background: '#eef3fb' }}>
+                        {/* Ligne résumé cliquable */}
+                        <button onClick={() => toggleSeqs(bloc.id)} style={{ width:'100%', background:'none', border:'none', cursor:'pointer', padding:'4px 8px', display:'flex', gap:5, alignItems:'center', textAlign:'left' }}>
+                          <span style={{ fontSize:'.58rem', fontWeight:800, color:'#2c5faa', flexShrink:0 }}>Jeu {calcJeuEffectif(seqs)}</span>
+                          <span style={{ fontSize:'.55rem', color:'#9db8d8' }}>·</span>
+                          <span style={{ fontSize:'.55rem', fontWeight:600, color:'#6a8aaa', flexShrink:0 }}>{calcDureeBloc(seqs)}</span>
+                          {bloc.conditions_jeu && <>
+                            <span style={{ fontSize:'.55rem', color:'#9db8d8' }}>·</span>
+                            <span style={{ fontSize:'.55rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:3, padding:'0 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{bloc.conditions_jeu}</span>
+                          </>}
+                          <span style={{ marginLeft:'auto', fontSize:'.65rem', color:'#6a8aaa', transform: expanded ? 'rotate(90deg)' : 'none', transition:'transform .15s', flexShrink:0 }}>›</span>
+                        </button>
+                        {/* Détail séquences */}
+                        {expanded && (
+                          <div style={{ padding:'0 8px 6px', display:'flex', flexDirection:'column', gap:3 }}>
+                            {seqs.map(seq => seq.type === 'jeu' ? (
+                              <div key={seq.id} style={{ background:'#fff', border:'1px solid #c4d8f0', borderRadius:6, padding:'3px 7px', display:'flex', alignItems:'center', gap:6 }}>
+                                <div style={{ width:14, height:14, borderRadius:'50%', background:'#2c5faa', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.48rem', fontWeight:900, color:'#fff', flexShrink:0 }}>{jeuNum[seq.id]}</div>
+                                <div style={{ flex:1, fontSize:'.6rem', fontWeight:700, color:'#1e2d3d', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{seq.theme || '—'}</div>
+                                <div style={{ fontSize:'.6rem', fontWeight:900, color:'#b03030', flexShrink:0 }}>{formatSeqDur(seq.duree_sec)}</div>
                               </div>
-                              <div style={{ flex:1, fontSize:'.63rem', fontWeight:700, color:'#1e2d3d', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                                {seq.theme || '—'}
+                            ) : seq.type === 'inter_bloc' ? (
+                              <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:4, padding:'2px 0' }}>
+                                <div style={{ flex:1, height:1, background:'#a3c4e8' }} />
+                                <span style={{ fontSize:'.52rem', fontWeight:800, color:'#2c5faa', background:'#dce8f8', borderRadius:10, padding:'1px 7px', whiteSpace:'nowrap' }}>Récup · {formatSeqDur(seq.duree_sec)}</span>
+                                <div style={{ flex:1, height:1, background:'#a3c4e8' }} />
                               </div>
-                              <div style={{ fontSize:'.65rem', fontWeight:900, color:'#b03030', flexShrink:0 }}>
-                                {formatSeqDur(seq.duree_sec)}
+                            ) : (
+                              <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:4, padding:'1px 0' }}>
+                                <div style={{ flex:1, height:1, background:'#b8d8c8' }} />
+                                <span style={{ fontSize:'.5rem', fontWeight:700, color:'#2e7d4f', fontStyle:'italic', whiteSpace:'nowrap' }}>récup {formatSeqDur(seq.duree_sec)}</span>
+                                <div style={{ flex:1, height:1, background:'#b8d8c8' }} />
                               </div>
-                            </div>
-                          ) : seq.type === 'inter_bloc' ? (
-                            /* Récup inter-série — séparateur plus marqué */
-                            <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 0' }}>
-                              <div style={{ flex:1, height:2, background:'#a3c4e8', borderRadius:1 }}></div>
-                              <span style={{ fontSize:'.6rem', fontWeight:800, color:'#2c5faa', background:'#dce8f8', border:'1px solid #a3c4e8', borderRadius:20, padding:'2px 10px', whiteSpace:'nowrap' }}>
-                                Récup série · {formatSeqDur(seq.duree_sec)}
-                              </span>
-                              <div style={{ flex:1, height:2, background:'#a3c4e8', borderRadius:1 }}></div>
-                            </div>
-                          ) : (
-                            <div key={seq.id} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'1px 0' }}>
-                              <div style={{ flex:1, height:1, background:'#b8d8c8' }}></div>
-                              <span style={{ fontSize:'.52rem', fontWeight:700, color:'#2e7d4f', fontStyle:'italic', whiteSpace:'nowrap' }}>
-                                récup {formatSeqDur(seq.duree_sec)}
-                              </span>
-                              <div style={{ flex:1, height:1, background:'#b8d8c8' }}></div>
-                            </div>
-                          ))}
-                        </div>
-                        {bloc.effectif_desc && (
-                          <span style={{ fontSize:'.6rem', color:'#9ca3af', fontStyle:'italic', marginTop:4, display:'block' }}>{bloc.effectif_desc}</span>
+                            ))}
+                            {bloc.effectif_desc && <span style={{ fontSize:'.55rem', color:'#9ca3af', fontStyle:'italic' }}>{bloc.effectif_desc}</span>}
+                          </div>
                         )}
                       </div>
                     )
