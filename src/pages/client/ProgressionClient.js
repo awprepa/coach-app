@@ -104,8 +104,10 @@ function getFormulaConfig(nom) {
  *  Retourne null si les valeurs sont invalides ou hors plage. */
 function calculate1RM(w, r, formula, correction = 0) {
   if (!w || !r || w <= 0 || r <= 0) return null
-  // Reps > 15 exclues (trop incertaines)
-  if (r > 15) return null
+  // Lombardi (bench) : fiable jusqu'à 5 reps seulement
+  if (formula === 'lombardi' && r > 5) return null
+  // Autres formules : on exclut au-delà de 10 reps (trop incertaines sans RPE)
+  if (formula !== 'lombardi' && r > 10) return null
   if (r === 1) return w * (1 + (correction || 0))
 
   let rm
@@ -509,22 +511,36 @@ export default function ProgressionClient() {
     if (config) {
       // Mode 1RM
       const rmPoints = points.filter(p => p.rm !== null)
-      const currentRm  = rmPoints.length ? rmPoints[rmPoints.length - 1].rm : null
-      const firstRm    = rmPoints.length ? rmPoints[0].rm : null
-      const progression = currentRm !== null && firstRm !== null
-        ? Math.round((currentRm - firstRm) * 2) / 2
-        : null
-      const maxRm = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
+      const currentRm = rmPoints.length ? rmPoints[rmPoints.length - 1].rm : null
+      const maxRm     = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
 
-      // Warning si majorité > 8 reps
-      const repsGt8 = rawSets.filter(s => s.reps > 8).length
-      const showWarning = repsGt8 > rawSets.length * 0.5
+      // Progression : on préfère les tests 1RM directs (1 rep = valeur exacte, pas estimée)
+      const directTests = rawSets.filter(s => s.reps === 1 && s.rm !== null)
+        .sort((a, b) => a.date.localeCompare(b.date))
+      let progression = null
+      let progressionSource = 'estimée'
+      if (directTests.length >= 2) {
+        // Au moins 2 tests directs : comparer premier et dernier
+        progression = Math.round((directTests[directTests.length - 1].rm - directTests[0].rm) * 2) / 2
+        progressionSource = 'tests directs'
+      } else if (rmPoints.length >= 2) {
+        // Pas de tests directs : utiliser les estimations, mais en ignorant le premier point
+        // (susceptible d'être surestimé si la série n'était pas à l'échec)
+        const ref = rmPoints.length >= 3 ? rmPoints[1] : rmPoints[0]
+        progression = Math.round((currentRm - ref.rm) * 2) / 2
+        progressionSource = 'estimée'
+      }
+
+      // Warning si majorité > 5 reps (Lombardi non fiable au-delà)
+      const repsGt5 = rawSets.filter(s => s.reps > 5).length
+      const showWarning = repsGt5 > rawSets.length * 0.5
 
       return {
         mode: '1rm',
         currentRm,
         progression,
-        nbSeances: points.length,
+        progressionSource,
+        nbSeances: rawSets.length,
         maxRm,
         showWarning,
       }
@@ -620,7 +636,7 @@ export default function ProgressionClient() {
                 accent
               />
               <MetricCard
-                label="Progression"
+                label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Tendance'}
                 value={
                   metrics.progression !== null
                     ? `${metrics.progression > 0 ? '+' : ''}${metrics.progression} kg`
@@ -629,7 +645,10 @@ export default function ProgressionClient() {
                 positive={metrics.progression > 0}
                 negative={metrics.progression < 0}
               />
-              <MetricCard label="Séances" value={metrics.nbSeances} />
+              <MetricCard
+                label="Record"
+                value={metrics.maxRm ? `${metrics.maxRm} kg` : '—'}
+              />
             </>
           ) : (
             <>
@@ -651,7 +670,7 @@ export default function ProgressionClient() {
       {/* ── Warning reps > 8 ────────────────────────────────────────────────── */}
       {metrics?.showWarning && (
         <div style={S.warningBanner}>
-          ⚠️ La plupart de tes séries dépassent 8 reps — l'estimation 1RM est moins précise au-delà de 8 reps.
+          ⚠️ La plupart de tes séries dépassent 5 reps — l'estimation 1RM suppose un effort maximal (RPE 10). Si les séries n'étaient pas à l'échec, le 1RM réel peut être inférieur.
         </div>
       )}
 
@@ -721,7 +740,7 @@ export default function ProgressionClient() {
           {/* Note scientifique */}
           <p style={S.sciNote}>
             {cfg
-              ? `Formule ${cfg.label} · Fiable 3–8 reps`
+              ? `Formule ${cfg.label} · ${cfg.formula === 'lombardi' ? 'Fiable 1–5 reps à effort maximal' : 'Fiable 1–8 reps à effort maximal'}`
               : 'Progression du poids utilisé (1RM non estimé pour cet exercice)'
             }
           </p>
