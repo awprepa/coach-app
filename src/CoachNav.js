@@ -48,11 +48,14 @@ export default function CoachNav() {
 
     async function refreshUnread() {
       if (!coachId || !alive) return
-      const { count } = await supabase.from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('to_id', coachId)
-        .eq('lu', false)
-      if (alive) setUnreadMsgs(count || 0)
+      // Même logique éprouvée que la page CoachMessages (évite tout souci
+      // RLS lié au count/head) : on lit les messages du coach et on compte
+      // ceux reçus non lus, côté client.
+      const { data } = await supabase.from('messages')
+        .select('from_id, to_id, lu')
+        .or(`from_id.eq.${coachId},to_id.eq.${coachId}`)
+      const n = (data || []).filter(m => m.to_id === coachId && !m.lu).length
+      if (alive) setUnreadMsgs(n)
     }
 
     function onFocus() { refreshUnread() }

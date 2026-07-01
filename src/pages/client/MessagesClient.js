@@ -30,7 +30,7 @@ function useVisualViewport() {
   return vp
 }
 
-function ChatInner({ clientId, coachId }) {
+function ChatInner({ clientId, coachId, inputInset }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
   const [texte,     setTexte]     = useState('')
   const [sending,   setSending]   = useState(false)
@@ -178,7 +178,7 @@ function ChatInner({ clientId, coachId }) {
         display: 'flex',
         alignItems: 'flex-end',
         gap: '0.55rem',
-        padding: '0.55rem 0.9rem calc(0.55rem + env(safe-area-inset-bottom))',
+        padding: `0.55rem 0.9rem calc(0.55rem + ${inputInset}px)`,
         boxSizing: 'border-box',
       }}>
         <textarea
@@ -249,6 +249,12 @@ export default function MessagesClient() {
   const [clientId, setClientId] = useState(null)
   const [coachId,  setCoachId]  = useState(null)
   const [loadError, setLoadError] = useState(false)
+
+  // Décalage bas pour passer au-dessus du home indicator iPhone (comme Insta/Snap),
+  // uniquement dans l'app installée sur iOS et clavier fermé — sinon aucun espace ajouté.
+  const keyboardOpen   = (window.innerHeight - vp.height) > 100
+  const iosStandalone  = typeof navigator !== 'undefined' && navigator.standalone === true
+  const inputInset     = iosStandalone && !keyboardOpen ? 34 : 0
 
   useEffect(() => {
     async function load() {
@@ -342,7 +348,7 @@ export default function MessagesClient() {
           <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
         </div>
       ) : (
-        <ChatInner clientId={clientId} coachId={coachId} />
+        <ChatInner clientId={clientId} coachId={coachId} inputInset={inputInset} />
       )}
     </div>
   )
