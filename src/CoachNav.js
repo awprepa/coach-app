@@ -74,7 +74,7 @@ export default function CoachNav() {
 
       window.addEventListener('focus', onFocus)
       document.addEventListener('visibilitychange', onVisible)
-      poll = setInterval(refreshUnread, 45000)
+      poll = setInterval(refreshUnread, 20000)
     }
 
     init()
