@@ -15,6 +15,7 @@ export default function SeanceTemplates() {
   const [renamingFolder, setRenamingFolder] = useState(null)
   const [renameVal, setRenameVal]         = useState('')
   const [movingId, setMovingId]           = useState(null)
+  const [drafts, setDrafts]               = useState([])
 
   // Édition inline
   const [editingId, setEditingId]         = useState(null)
@@ -31,7 +32,23 @@ export default function SeanceTemplates() {
   const [assigning, setAssigning]         = useState(false)
   const [assignDone, setAssignDone]       = useState(false)
 
-  useEffect(() => { fetchTemplates() }, [])
+  useEffect(() => { fetchTemplates(); fetchDrafts() }, [])
+
+  async function fetchDrafts() {
+    const { data } = await supabase
+      .from('seances')
+      .select('id, nom, created_at')
+      .is('programme_id', null)
+      .order('created_at', { ascending: false })
+    setDrafts(data || [])
+  }
+
+  async function supprimerBrouillon(id) {
+    if (!window.confirm('Supprimer ce brouillon ?')) return
+    await supabase.from('exercices').delete().eq('seance_id', id)
+    await supabase.from('seances').delete().eq('id', id)
+    setDrafts(prev => prev.filter(d => d.id !== id))
+  }
 
   async function nouvelleSeance() {
     const { data, error } = await supabase
@@ -480,6 +497,35 @@ export default function SeanceTemplates() {
             placeholder="Nom du dossier..." style={S.folderInput} />
           <button onClick={creerDossier} style={S.importBtn}>Créer</button>
           <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.secondaryBtn}>✕</button>
+        </div>
+      )}
+
+      {/* ── Brouillons ── */}
+      {drafts.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>
+            Brouillons ({drafts.length})
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {drafts.map(d => (
+              <div key={d.id} style={{ background: '#fffbeb', border: '1.5px dashed #fcd34d', borderRadius: 10, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#92400e' }}>{d.nom}</p>
+                  <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#b45309' }}>
+                    Modifié le {new Date(d.created_at).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+                <button onClick={() => navigate(`/seance/${d.id}`)}
+                  style={{ background: '#b45309', color: 'white', border: 'none', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Continuer
+                </button>
+                <button onClick={() => supprimerBrouillon(d.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontSize: '0.85rem', padding: '0.2rem' }}>
+                  🗑️
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -1,14 +1,34 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
-import ClientBottomNav from '../../components/ClientBottomNav'
 import { useMessages } from '../../hooks/useMessages'
 import { sendPushOnly } from '../../notifs'
 
-const HEADER_H = 58
-const NAV_H    = 88
-const INPUT_H  = 62
+const HEADER_H = 56
 
+// ── Hook viewport : suit le clavier via l'API visualViewport ───────────────────
+// Sur mobile, le clavier ne redimensionne pas correctement `100dvh`. On lit la
+// hauteur réelle visible et le décalage haut pour garder le chat au-dessus du
+// clavier, au pixel près.
+function useVisualViewport() {
+  const [vp, setVp] = useState({
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+    offsetTop: 0,
+  })
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setVp({ height: vv.height, offsetTop: vv.offsetTop })
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+  return vp
+}
 
 function ChatInner({ clientId, coachId }) {
   const { messages, loading, sendMessage, markRead } = useMessages(clientId, coachId)
@@ -18,16 +38,25 @@ function ChatInner({ clientId, coachId }) {
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
 
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    bottomRef.current?.scrollIntoView({ behavior, block: 'end' })
+  }, [])
+
   // Scroll vers le bas à chaque nouveau message
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
 
   // Marquer les messages comme lus
   useEffect(() => {
     if (clientId && coachId) markRead()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length])
+
+  // Auto-resize du textarea
+  function autosize(el) {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }
 
   const envoyer = useCallback(async () => {
     const corps = texte.trim()
@@ -36,15 +65,17 @@ function ChatInner({ clientId, coachId }) {
     setSending(true)
     setSendError(false)
     setTexte('')
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      inputRef.current.focus()   // garder le clavier ouvert
+    }
 
     try {
       const ok = await sendMessage(corps)
       if (ok) {
-        // Push silencieux vers le coach (non bloquant)
         sendPushOnly(coachId, { titre: "Message d'un client", corps, lien: '/messages' })
-          .catch(() => {}) // ne pas bloquer si ça échoue
+          .catch(() => {})
       } else {
-        // Restaurer le texte si l'envoi a échoué
         setTexte(corps)
         setSendError(true)
         setTimeout(() => setSendError(false), 3000)
@@ -77,14 +108,18 @@ function ChatInner({ clientId, coachId }) {
             Chargement…
           </p>
         ) : messages.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#d1d5db', fontSize: '0.82rem', padding: '2rem', lineHeight: 1.6 }}>
-            Aucun message pour l'instant.{'\n'}Commence la conversation ! 👋
-          </p>
+          <div style={{ margin: 'auto', textAlign: 'center', color: '#c0c4cc', padding: '2rem' }}>
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '0.6rem' }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6 }}>
+              Aucun message pour l'instant.<br />Commence la conversation.
+            </p>
+          </div>
         ) : messages.map(m => {
           const isMe = m.from_id === clientId
           return (
             <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.45rem' }}>
-              {/* Avatar coach à gauche des messages du coach */}
               {!isMe && (
                 <img src="/coach-avatar.png" alt="Coach" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #e5e7eb' }} />
               )}
@@ -122,8 +157,8 @@ function ChatInner({ clientId, coachId }) {
       {/* ── Toast erreur d'envoi ────────────────────────────────────── */}
       {sendError && (
         <div style={{
-          position: 'fixed',
-          bottom: NAV_H + INPUT_H + 8,
+          position: 'absolute',
+          bottom: 72,
           left: '50%', transform: 'translateX(-50%)',
           background: '#dc2626', color: 'white',
           padding: '0.4rem 0.9rem', borderRadius: 20,
@@ -140,18 +175,16 @@ function ChatInner({ clientId, coachId }) {
         flexShrink: 0,
         background: 'white',
         borderTop: '1px solid #efefef',
-        boxShadow: 'none',    // pas d'ombre — la bottom nav en a déjà une vers le haut
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         gap: '0.55rem',
-        padding: '0.55rem 0.9rem',
-        minHeight: INPUT_H,
+        padding: '0.55rem 0.9rem calc(0.55rem + env(safe-area-inset-bottom))',
         boxSizing: 'border-box',
       }}>
-        <input
+        <textarea
           ref={inputRef}
           value={texte}
-          onChange={e => setTexte(e.target.value)}
+          onChange={e => { setTexte(e.target.value); autosize(e.target) }}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
@@ -160,18 +193,21 @@ function ChatInner({ clientId, coachId }) {
           }}
           placeholder="Écris un message…"
           maxLength={500}
+          rows={1}
           autoComplete="off"
           style={{
             flex: 1,
-            padding: '0.65rem 1rem',
+            padding: '0.6rem 1rem',
             border: 'none',
-            borderRadius: 22,
+            borderRadius: 20,
             fontSize: '0.92rem',
             outline: 'none',
             background: '#f0f0f0',
             color: '#1a1a1a',
             lineHeight: 1.4,
-            boxShadow: 'none',
+            resize: 'none',
+            maxHeight: 120,
+            fontFamily: 'inherit',
             WebkitAppearance: 'none',
           }}
         />
@@ -182,15 +218,13 @@ function ChatInner({ clientId, coachId }) {
           style={{
             width: 42, height: 42,
             borderRadius: '50%',
-            background: texte.trim() && !sending
-              ? 'var(--header-bg)'
-              : '#e5e7eb',
+            background: texte.trim() && !sending ? 'var(--header-bg)' : '#e5e7eb',
             color: texte.trim() && !sending ? 'var(--accent)' : '#b0b7c3',
             border: 'none',
             cursor: texte.trim() && !sending ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-            transition: 'background 0.18s, color 0.18s, transform 0.1s',
+            transition: 'background 0.18s, color 0.18s',
             WebkitTapHighlightColor: 'transparent',
             boxShadow: texte.trim() && !sending ? '0 3px 10px rgba(0,0,0,0.22)' : 'none',
           }}
@@ -211,6 +245,7 @@ function ChatInner({ clientId, coachId }) {
 
 export default function MessagesClient() {
   const navigate   = useNavigate()
+  const vp         = useVisualViewport()
   const [clientId, setClientId] = useState(null)
   const [coachId,  setCoachId]  = useState(null)
   const [loadError, setLoadError] = useState(false)
@@ -247,11 +282,16 @@ export default function MessagesClient() {
 
   return (
     <div style={{
+      position: 'fixed',
+      top: vp.offsetTop,
+      left: 0, right: 0,
+      height: vp.height,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      height: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      background: '#f5f5f5',
+      zIndex: 200,
     }}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
@@ -279,36 +319,31 @@ export default function MessagesClient() {
       </div>
 
       {/* ── Contenu ────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-        {loadError ? (
-          <div style={{
-            flex: 1,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: '#f5f5f5', gap: '0.5rem',
-          }}>
-            <p style={{ fontSize: '2rem', margin: 0 }}>💬</p>
-            <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0, textAlign: 'center', padding: '0 2rem' }}>
-              Contacte ton coach pour activer la messagerie.
-            </p>
-          </div>
-        ) : !clientId || !coachId ? (
-          <div style={{
-            flex: 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#f5f5f5',
-          }}>
-            <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
-          </div>
-        ) : (
-          <ChatInner clientId={clientId} coachId={coachId} />
-        )}
-      </div>
-
-      {/* ── Spacer pour la ClientBottomNav fixe ────────────────────── */}
-      <div style={{ height: NAV_H, flexShrink: 0 }} />
-
-      <ClientBottomNav />
+      {loadError ? (
+        <div style={{
+          flex: 1,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: '#f5f5f5', gap: '0.5rem',
+        }}>
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
+          <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0, textAlign: 'center', padding: '0 2rem' }}>
+            Contacte ton coach pour activer la messagerie.
+          </p>
+        </div>
+      ) : !clientId || !coachId ? (
+        <div style={{
+          flex: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#f5f5f5',
+        }}>
+          <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
+        </div>
+      ) : (
+        <ChatInner clientId={clientId} coachId={coachId} />
+      )}
     </div>
   )
 }

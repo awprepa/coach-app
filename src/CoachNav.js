@@ -29,11 +29,43 @@ const NAV = [
 export default function CoachNav() {
   const navigate = useNavigate()
   const [newClients, setNewClients] = useState(0)
+  const [unreadMsgs, setUnreadMsgs] = useState(0)
 
   useEffect(() => {
     supabase.from('clients').select('id', { count: 'exact', head: true })
       .eq('coach_notifie', false)
       .then(({ count }) => setNewClients(count || 0))
+  }, [])
+
+  // Messages non lus reçus par le coach + abonnement realtime
+  useEffect(() => {
+    let coachId = null
+    let channel = null
+
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      coachId = user.id
+      await refreshUnread()
+
+      channel = supabase.channel('coachnav-messages')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
+          const row = payload.new || payload.old
+          if (row?.to_id === coachId) refreshUnread()
+        })
+        .subscribe()
+    }
+
+    async function refreshUnread() {
+      const { count } = await supabase.from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('to_id', coachId)
+        .eq('lu', false)
+      setUnreadMsgs(count || 0)
+    }
+
+    init()
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
   async function handleLogout() {
@@ -53,6 +85,7 @@ export default function CoachNav() {
             <span className="coachnav-ico">{ICONS[item.icon]}</span>
             {item.label}
             {item.to === '/' && <span className="coachnav-badge" style={{visibility: newClients > 0 ? 'visible' : 'hidden'}}>{newClients}</span>}
+            {item.to === '/messages' && unreadMsgs > 0 && <span className="coachnav-badge coachnav-badge-msg">{unreadMsgs}</span>}
           </NavLink>
         ))}
       </div>
@@ -87,6 +120,8 @@ const CSS = `
   font-size:0.62rem;font-weight:800;padding:1px 6px;margin-left:2px;
 }
 .coachnav-link.active .coachnav-badge{background:#e4f816;color:#333333;}
+.coachnav-badge-msg{background:#dc2626;color:#fff;}
+.coachnav-link.active .coachnav-badge-msg{background:#dc2626;color:#fff;}
 .coachnav-logout{
   flex-shrink:0;background:#fff;color:#5b626c;
   border:1px solid #e6e8ec;border-radius:8px;

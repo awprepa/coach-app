@@ -917,7 +917,7 @@ export default function BibliothequeExercices() {
               🔗 Lier les anciens exercices
             </button>
           )}
-          <button onClick={() => { setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
+          <button onClick={() => { if (!showForm) setForm({ nom: '', categorie: '', primary: [], secondary: [], image_url: '' }); setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
             {showForm ? '✕ Annuler' : modeEchauff ? '+ Ajouter un échauffement' : '+ Ajouter un exercice'}
           </button>
         </div>

@@ -1000,17 +1000,18 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [histoData, setHistoData] = useState({})
   const [histoLoading, setHistoLoading] = useState({})
   const [selectedProgId, setSelectedProgId] = useState(null)
+  const [allProgs, setAllProgs] = useState([])
 
   function reloadExWeights(cid, progId) {
     setExWeightLoading(true)
     loadExerciseWeights(cid, progId || null).then(result => {
       setExWeightData(result)
+      if (result?.allProgs) setAllProgs(result.allProgs)
       setExWeightLoading(false)
     }).catch(() => setExWeightLoading(false))
   }
 
-  function handleProgChange(e) {
-    const pid = e.target.value || null
+  function handleProgChange(pid) {
     setSelectedProgId(pid)
     reloadExWeights(clientId, pid)
   }
@@ -1278,6 +1279,28 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   return (
     <div style={{ padding: '0.5rem 0' }}>
 
+      {/* ── Sélecteur de cycle ── */}
+      {allProgs.length > 1 && (
+        <div style={{ marginBottom: '1rem' }}>
+          <p style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.45rem' }}>Cycle</p>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {allProgs.map(p => {
+              const activePid = selectedProgId || exWeightData?.progId
+              const isActive = activePid === p.id
+              const label = p.date_debut
+                ? `${p.nom} · ${new Date(p.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}`
+                : p.nom
+              return (
+                <button key={p.id} onClick={() => handleProgChange(p.id)}
+                  style={{ padding: '0.35rem 0.75rem', borderRadius: 20, border: `1.5px solid ${isActive ? '#333' : '#e5e7eb'}`, background: isActive ? '#333' : 'white', color: isActive ? '#e4f816' : '#6b7280', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Suivi des charges par exercice ── */}
       {exWeightLoading && (
         <div style={{ ...S.indicateursSection, color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>
@@ -1424,24 +1447,8 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>🏋️ Suivi des charges par exercice</div>
                 <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>{progNom}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {allProgs?.length > 1 && (
-                  <select
-                    value={selectedProgId || exWeightData?.progId || ''}
-                    onChange={handleProgChange}
-                    style={{ fontSize: '0.72rem', fontWeight: 600, color: '#374151', background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
-                  >
-                    {allProgs.map(p => {
-                      const label = p.date_debut
-                        ? `${p.nom} (${new Date(p.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })})`
-                        : p.nom
-                      return <option key={p.id} value={p.id}>{label}</option>
-                    })}
-                  </select>
-                )}
-                <div style={{ padding: '3px 10px', borderRadius: 999, background: '#eff6ff', color: '#3b82f6', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
-                  Semaine {lastWeek} / {totalSemaines}
-                </div>
+              <div style={{ padding: '3px 10px', borderRadius: 999, background: '#eff6ff', color: '#3b82f6', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
+                Semaine {lastWeek} / {totalSemaines}
               </div>
             </div>
 

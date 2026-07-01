@@ -424,6 +424,7 @@ export default function ProgressionClient() {
               config: getFormulaConfig(nom),
               pointsByDate: {},
               rawSets: [],
+              direct1RepByDate: {},  // meilleur poids × 1 rep par date (1RM réel)
             }
           }
 
@@ -446,7 +447,7 @@ export default function ProgressionClient() {
             poids: betterPds ? s.poids : (prev?.poids || 0),
           }
 
-          // Conserver uniquement le set avec le poids max par date pour "Dernières séances"
+          // Conserver le set avec le poids max par date pour "Dernières séances"
           const prevRaw = byName[nom].rawSets.find(r => r.date === dateStr)
           if (!prevRaw) {
             byName[nom].rawSets.push({ date: dateStr, poids: s.poids, reps: s.reps_reelles, rm })
@@ -454,6 +455,12 @@ export default function ProgressionClient() {
             prevRaw.poids = s.poids
             prevRaw.reps  = s.reps_reelles
             prevRaw.rm    = rm
+          }
+
+          // Tracker séparément le meilleur 1RM direct (reps == 1)
+          if (reps === 1) {
+            const prev1 = byName[nom].direct1RepByDate[dateStr]
+            if (!prev1 || poids > prev1) byName[nom].direct1RepByDate[dateStr] = poids
           }
         })
 
@@ -463,10 +470,15 @@ export default function ProgressionClient() {
           const points = Object.values(d.pointsByDate)
             .sort((a, b) => a.date.localeCompare(b.date))
           if (points.length < 1) return  // Aucune donnée
+          // Construire la liste chronologique des 1RM directs (r=1, triée par date)
+          const direct1RepPoints = Object.entries(d.direct1RepByDate)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, poids]) => ({ date, poids }))
           result[nom] = {
             config: d.config,
             points,
             rawSets: d.rawSets.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30),
+            direct1RepPoints,
           }
         })
 
@@ -503,7 +515,7 @@ export default function ProgressionClient() {
   // Métriques calculées
   const metrics = useMemo(() => {
     if (!currentData) return null
-    const { config, points, rawSets } = currentData
+    const { config, points, rawSets, direct1RepPoints = [] } = currentData
 
     const lastPoint  = points[points.length - 1]
     const firstPoint = points[0]
@@ -514,18 +526,20 @@ export default function ProgressionClient() {
       const currentRm = rmPoints.length ? rmPoints[rmPoints.length - 1].rm : null
       const maxRm     = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
 
-      // Progression : on préfère les tests 1RM directs (1 rep = valeur exacte, pas estimée)
-      const directTests = rawSets.filter(s => s.reps === 1 && s.rm !== null)
-        .sort((a, b) => a.date.localeCompare(b.date))
+      // 1RM réel = meilleur poids soulevé pour 1 rep (test direct)
+      const best1RepRM = direct1RepPoints.length
+        ? Math.max(...direct1RepPoints.map(p => p.poids))
+        : null
+
+      // Progression : comparer premier et dernier 1RM direct si ≥2 points
       let progression = null
       let progressionSource = 'estimée'
-      if (directTests.length >= 2) {
-        // Au moins 2 tests directs : comparer premier et dernier
-        progression = Math.round((directTests[directTests.length - 1].rm - directTests[0].rm) * 2) / 2
+      if (direct1RepPoints.length >= 2) {
+        progression = Math.round(
+          (direct1RepPoints[direct1RepPoints.length - 1].poids - direct1RepPoints[0].poids) * 2
+        ) / 2
         progressionSource = 'tests directs'
       } else if (rmPoints.length >= 2) {
-        // Pas de tests directs : utiliser les estimations, mais en ignorant le premier point
-        // (susceptible d'être surestimé si la série n'était pas à l'échec)
         const ref = rmPoints.length >= 3 ? rmPoints[1] : rmPoints[0]
         progression = Math.round((currentRm - ref.rm) * 2) / 2
         progressionSource = 'estimée'
@@ -538,6 +552,7 @@ export default function ProgressionClient() {
       return {
         mode: '1rm',
         currentRm,
+        best1RepRM,
         progression,
         progressionSource,
         nbSeances: rawSets.length,
@@ -631,23 +646,40 @@ export default function ProgressionClient() {
           {metrics.mode === '1rm' ? (
             <>
               <MetricCard
-                label="1RM estimé"
-                value={metrics.currentRm !== null ? `${metrics.currentRm} kg` : '—'}
+                label={metrics.best1RepRM !== null ? '1RM réel' : '1RM estimé'}
+                value={
+                  metrics.best1RepRM !== null
+                    ? `${metrics.best1RepRM} kg`
+                    : metrics.currentRm !== null ? `${metrics.currentRm} kg` : '—'
+                }
                 accent
               />
+              {metrics.best1RepRM !== null ? (
+                <MetricCard
+                  label="1RM estimé"
+                  value={metrics.currentRm !== null ? `${metrics.currentRm} kg` : '—'}
+                />
+              ) : (
+                <MetricCard
+                  label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Tendance'}
+                  value={
+                    metrics.progression !== null
+                      ? `${metrics.progression > 0 ? '+' : ''}${metrics.progression} kg`
+                      : '—'
+                  }
+                  positive={metrics.progression > 0}
+                  negative={metrics.progression < 0}
+                />
+              )}
               <MetricCard
-                label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Tendance'}
+                label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Record'}
                 value={
-                  metrics.progression !== null
+                  metrics.progressionSource === 'tests directs' && metrics.progression !== null
                     ? `${metrics.progression > 0 ? '+' : ''}${metrics.progression} kg`
-                    : '—'
+                    : metrics.maxRm ? `${metrics.maxRm} kg` : '—'
                 }
-                positive={metrics.progression > 0}
-                negative={metrics.progression < 0}
-              />
-              <MetricCard
-                label="Record"
-                value={metrics.maxRm ? `${metrics.maxRm} kg` : '—'}
+                positive={metrics.progressionSource === 'tests directs' && metrics.progression > 0}
+                negative={metrics.progressionSource === 'tests directs' && metrics.progression < 0}
               />
             </>
           ) : (
