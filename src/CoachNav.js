@@ -37,35 +37,54 @@ export default function CoachNav() {
       .then(({ count }) => setNewClients(count || 0))
   }, [])
 
-  // Messages non lus reçus par le coach + abonnement realtime
+  // Messages non lus reçus par le coach.
+  // Realtime en priorité, complété par un rafraîchissement au focus/visibilité
+  // et un poll léger (filet de sécurité si le realtime rate un événement).
   useEffect(() => {
     let coachId = null
     let channel = null
+    let poll = null
+    let alive = true
+
+    async function refreshUnread() {
+      if (!coachId || !alive) return
+      const { count } = await supabase.from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('to_id', coachId)
+        .eq('lu', false)
+      if (alive) setUnreadMsgs(count || 0)
+    }
+
+    function onFocus() { refreshUnread() }
+    function onVisible() { if (document.visibilityState === 'visible') refreshUnread() }
 
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user || !alive) return
       coachId = user.id
       await refreshUnread()
 
       channel = supabase.channel('coachnav-messages')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
           const row = payload.new || payload.old
+          // Tout changement touchant le coach (nouveau message reçu, ou lu=true) → recompter
           if (row?.to_id === coachId) refreshUnread()
         })
         .subscribe()
-    }
 
-    async function refreshUnread() {
-      const { count } = await supabase.from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('to_id', coachId)
-        .eq('lu', false)
-      setUnreadMsgs(count || 0)
+      window.addEventListener('focus', onFocus)
+      document.addEventListener('visibilitychange', onVisible)
+      poll = setInterval(refreshUnread, 45000)
     }
 
     init()
-    return () => { if (channel) supabase.removeChannel(channel) }
+    return () => {
+      alive = false
+      if (channel) supabase.removeChannel(channel)
+      if (poll) clearInterval(poll)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   async function handleLogout() {
