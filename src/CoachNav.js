@@ -142,8 +142,8 @@ const CSS = `
   font-size:0.62rem;font-weight:800;padding:1px 6px;margin-left:2px;
 }
 .coachnav-link.active .coachnav-badge{background:#e4f816;color:#333333;}
-.coachnav-badge-msg{background:#dc2626;color:#fff;}
-.coachnav-link.active .coachnav-badge-msg{background:#dc2626;color:#fff;}
+.coachnav-badge-msg{background:#e4f816;color:#333333;}
+.coachnav-link.active .coachnav-badge-msg{background:#e4f816;color:#333333;}
 .coachnav-logout{
   flex-shrink:0;background:#fff;color:#5b626c;
   border:1px solid #e6e8ec;border-radius:8px;

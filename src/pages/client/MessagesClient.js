@@ -14,11 +14,19 @@ function useVisualViewport() {
   const [vp, setVp] = useState({
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     offsetTop: 0,
+    keyboardOpen: false,
   })
+  const maxH = useRef(typeof window !== 'undefined' ? window.innerHeight : 0)
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const update = () => setVp({ height: vv.height, offsetTop: vv.offsetTop })
+    const update = () => {
+      // La plus grande hauteur observée = état clavier fermé (référence fiable,
+      // contrairement à window.innerHeight qui bouge selon les appareils).
+      if (vv.height > maxH.current) maxH.current = vv.height
+      const keyboardOpen = vv.height < maxH.current - 120
+      setVp({ height: vv.height, offsetTop: vv.offsetTop, keyboardOpen })
+    }
     update()
     vv.addEventListener('resize', update)
     vv.addEventListener('scroll', update)
@@ -51,11 +59,12 @@ function ChatInner({ clientId, coachId, inputInset }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length])
 
-  // Auto-resize du textarea
-  function autosize(el) {
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  // Vide/renseigne le champ éditable (contenteditable, pas un textarea)
+  function setChamp(val) {
+    setTexte(val)
+    if (inputRef.current && inputRef.current.textContent !== val) {
+      inputRef.current.textContent = val
+    }
   }
 
   const envoyer = useCallback(async () => {
@@ -66,7 +75,7 @@ function ChatInner({ clientId, coachId, inputInset }) {
     setSendError(false)
     setTexte('')
     if (inputRef.current) {
-      inputRef.current.style.height = 'auto'
+      inputRef.current.textContent = ''
       inputRef.current.focus()   // garder le clavier ouvert
     }
 
@@ -76,21 +85,23 @@ function ChatInner({ clientId, coachId, inputInset }) {
         sendPushOnly(coachId, { titre: "Message d'un client", corps, lien: '/messages' })
           .catch(() => {})
       } else {
-        setTexte(corps)
+        setChamp(corps)
         setSendError(true)
         setTimeout(() => setSendError(false), 3000)
       }
     } catch {
-      setTexte(corps)
+      setChamp(corps)
       setSendError(true)
       setTimeout(() => setSendError(false), 3000)
     } finally {
       setSending(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texte, sending, sendMessage, coachId])
 
   return (
     <>
+      <style>{`.chat-champ:empty:before{content:attr(data-placeholder);color:#9aa1ac;pointer-events:none;}`}</style>
       {/* ── Zone des messages ──────────────────────────────────────── */}
       <div style={{
         flex: 1,
@@ -181,20 +192,28 @@ function ChatInner({ clientId, coachId, inputInset }) {
         padding: `0.55rem 0.9rem calc(0.55rem + ${inputInset}px)`,
         boxSizing: 'border-box',
       }}>
-        <textarea
+        <div
           ref={inputRef}
-          value={texte}
-          onChange={e => { setTexte(e.target.value); autosize(e.target) }}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          data-placeholder="Écris un message…"
+          onInput={e => {
+            let t = e.currentTarget.textContent || ''
+            if (t.length > 500) t = t.slice(0, 500)
+            // Un contenteditable vidé peut garder un <br> résiduel → on nettoie
+            // pour que le placeholder (:empty) réapparaisse.
+            if (t.trim() === '' && e.currentTarget.innerHTML !== '') e.currentTarget.innerHTML = ''
+            setTexte(t)
+          }}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
               envoyer()
             }
           }}
-          placeholder="Écris un message…"
-          maxLength={500}
-          rows={1}
-          autoComplete="off"
+          className="chat-champ"
           style={{
             flex: 1,
             padding: '0.6rem 1rem',
@@ -205,9 +224,12 @@ function ChatInner({ clientId, coachId, inputInset }) {
             background: '#f0f0f0',
             color: '#1a1a1a',
             lineHeight: 1.4,
-            resize: 'none',
             maxHeight: 120,
+            overflowY: 'auto',
             fontFamily: 'inherit',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            WebkitUserSelect: 'text',
             WebkitAppearance: 'none',
           }}
         />
@@ -252,9 +274,8 @@ export default function MessagesClient() {
 
   // Décalage bas pour passer au-dessus du home indicator iPhone (comme Insta/Snap),
   // uniquement dans l'app installée sur iOS et clavier fermé — sinon aucun espace ajouté.
-  const keyboardOpen   = (window.innerHeight - vp.height) > 100
   const iosStandalone  = typeof navigator !== 'undefined' && navigator.standalone === true
-  const inputInset     = iosStandalone && !keyboardOpen ? 34 : 0
+  const inputInset     = iosStandalone && !vp.keyboardOpen ? 34 : 0
 
   useEffect(() => {
     async function load() {
