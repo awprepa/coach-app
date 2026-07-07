@@ -103,7 +103,16 @@ class OfflineBuilder {
             _applyLocal(this._table, this._op, res.data, this._filters).catch(() => {})
           }
           // Vide la queue de sync si on était en retard
-          if (isMut) _flushQueue().catch(() => {})
+          if (isMut) {
+            _flushQueue().catch(() => {})
+            // Purge le cache API (SW) de cette table → prochaine lecture fraîche,
+            // pour ne pas voir sa propre modif en retard avec le stale-while-revalidate
+            try {
+              navigator.serviceWorker?.controller?.postMessage({
+                type: 'INVALIDATE_API_CACHE', table: this._table,
+              })
+            } catch {}
+          }
         }
         return res
       } catch {

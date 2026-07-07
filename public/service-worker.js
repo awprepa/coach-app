@@ -1,13 +1,16 @@
-// ── AWprepa Service Worker v14 ────────────────────────────────────────────────
+// ── AWprepa Service Worker v15 ────────────────────────────────────────────────
 // Stratégies :
 //   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
 //   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
-//   • API Supabase GET     → network-first (données fraîches), fallback cache si hors-ligne
-// v14 : pre-cache TOUS les chunks via asset-manifest.json pour navigation offline complète
+//   • API Supabase GET     → stale-while-revalidate : renvoie le cache
+//     IMMÉDIATEMENT (navigation instantanée même en mauvaise connexion) puis
+//     rafraîchit en arrière-plan. Les écritures (non-GET) restent réseau direct.
+// v15 : lectures local-first (stale-while-revalidate) + invalidation ciblée du
+//       cache API après une écriture réussie (message INVALIDATE_API_CACHE).
 
-const CACHE_SHELL   = 'aw-shell-v14'
-const CACHE_API     = 'aw-api-v14'
-const CACHE_PAGES   = 'aw-pages-v14'
+const CACHE_SHELL   = 'aw-shell-v15'
+const CACHE_API     = 'aw-api-v15'
+const CACHE_PAGES   = 'aw-pages-v15'
 
 // ── Install : précache l'intégralité du bundle via asset-manifest.json ────────
 self.addEventListener('install', event => {
@@ -37,7 +40,7 @@ self.addEventListener('install', event => {
 
 // ── Activate : purge les anciens caches + force rechargement des pages ouvertes ─
 self.addEventListener('activate', event => {
-  const KEEP = ['aw-shell-v14', 'aw-api-v14', 'aw-pages-v14']
+  const KEEP = ['aw-shell-v15', 'aw-api-v15', 'aw-pages-v15']
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k))))
@@ -59,9 +62,9 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url)
 
-  // 1. API Supabase → network-first (toujours fraîches), fallback cache si hors-ligne
+  // 1. API Supabase → stale-while-revalidate (cache immédiat + refresh en fond)
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(networkFirst(request, CACHE_API))
+    event.respondWith(staleWhileRevalidate(event, CACHE_API))
     return
   }
 
@@ -113,6 +116,36 @@ async function networkFirst(request, cacheName) {
   }
 }
 
+/** Stale-while-revalidate : renvoie le cache IMMÉDIATEMENT s'il existe, puis
+ *  rafraîchit en arrière-plan pour la prochaine fois. Si pas de cache, on
+ *  attend le réseau (premier chargement), avec fallback offline. */
+async function staleWhileRevalidate(event, cacheName) {
+  const request  = event.request
+  const cache    = await caches.open(cacheName)
+  const cacheKey = request.url
+
+  const cached = await cache.match(cacheKey)
+
+  const fetchAndUpdate = fetch(request)
+    .then(res => {
+      if (res && res.ok) cache.put(cacheKey, res.clone())
+      return res
+    })
+    .catch(() => null)
+
+  if (cached) {
+    // Révalidation en fond, maintenue en vie même si la page a déjà sa réponse
+    event.waitUntil(fetchAndUpdate)
+    return cached
+  }
+
+  // Pas encore de cache pour cette requête → on attend le réseau
+  const net = await fetchAndUpdate
+  return net || new Response(JSON.stringify({ error: 'offline' }), {
+    status: 503, headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 /** Renvoie depuis le cache ; en fond met à jour pour la prochaine fois */
 async function cacheFirst(request, cacheName) {
   const cache  = await caches.open(cacheName)
@@ -123,6 +156,24 @@ async function cacheFirst(request, cacheName) {
   if (res.ok) cache.put(request, res.clone())
   return res
 }
+
+// ── Invalidation ciblée du cache API après une écriture ──────────────────────
+// Après une mutation réussie, le client demande de purger les lectures en
+// cache de la table concernée pour que la prochaine lecture soit fraîche
+// (évite de voir sa propre modif « disparaître » une seconde avec le SWR).
+self.addEventListener('message', event => {
+  const data = event.data || {}
+  if (data.type === 'INVALIDATE_API_CACHE' && data.table) {
+    event.waitUntil(
+      caches.open(CACHE_API).then(async cache => {
+        const keys = await cache.keys()
+        await Promise.all(keys.map(req =>
+          req.url.includes('/rest/v1/' + data.table) ? cache.delete(req) : null
+        ))
+      })
+    )
+  }
+})
 
 // ── Background Sync — charges offline ────────────────────────────────────────
 // Quand la connexion revient (même app fermée sur Android/Chrome),
