@@ -285,6 +285,18 @@ export async function syncDown() {
   console.log('[sync] ↓ terminé')
 }
 
+// ── Warm sync : remplit la base locale au démarrage (Phase 3) ──────────────
+// Ne relance pas si une synchro a eu lieu récemment (évite de tout retélécharger
+// à chaque ouverture). Garantit des données locales pour une vraie coupure.
+export async function maybeSyncDown(maxAgeMs = 10 * 60 * 1000) {
+  if (!navigator.onLine) return
+  try {
+    const meta = await localDB._sync_meta.get('__all__')
+    if (meta?.lastSync && Date.now() - meta.lastSync < maxAgeMs) return
+  } catch {}
+  await syncDown()
+}
+
 // ── Reconnexion → flush + resync ──────────────────────────────────────────
 if (typeof window !== 'undefined') {
   window.addEventListener('online', async () => {

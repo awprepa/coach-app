@@ -440,6 +440,19 @@ function OfflineBanner() {
 }
 
 function App() {
+  // Phase 3 hors-ligne : le SW signale qu'une donnée a changé en fond →
+  // on le rediffuse en événement window que les pages écoutent (useAutoRefresh).
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMsg = e => {
+      if (e.data?.type === 'AW_DATA_REFRESHED') {
+        window.dispatchEvent(new CustomEvent('aw:data-refreshed', { detail: e.data.url }))
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMsg)
+    return () => navigator.serviceWorker.removeEventListener('message', onMsg)
+  }, [])
+
   return (
     <BrowserRouter>
       <ScrollToTop />

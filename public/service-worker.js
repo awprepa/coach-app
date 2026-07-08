@@ -124,11 +124,22 @@ async function staleWhileRevalidate(event, cacheName) {
   const cache    = await caches.open(cacheName)
   const cacheKey = request.url
 
-  const cached = await cache.match(cacheKey)
+  const cached      = await cache.match(cacheKey)
+  const cachedClone = cached ? cached.clone() : null
 
   const fetchAndUpdate = fetch(request)
-    .then(res => {
-      if (res && res.ok) cache.put(cacheKey, res.clone())
+    .then(async res => {
+      if (res && res.ok) {
+        // Si les données ont changé depuis le cache → prévient la page ouverte
+        // pour qu'elle se rafraîchisse d'elle-même (Phase 3).
+        if (cachedClone) {
+          try {
+            const [fresh, old] = await Promise.all([res.clone().text(), cachedClone.text()])
+            if (fresh !== old) notifyDataRefreshed(cacheKey)
+          } catch (_) {}
+        }
+        cache.put(cacheKey, res.clone())
+      }
       return res
     })
     .catch(() => null)
@@ -144,6 +155,12 @@ async function staleWhileRevalidate(event, cacheName) {
   return net || new Response(JSON.stringify({ error: 'offline' }), {
     status: 503, headers: { 'Content-Type': 'application/json' },
   })
+}
+
+/** Prévient toutes les fenêtres ouvertes qu'une donnée a été rafraîchie */
+async function notifyDataRefreshed(url) {
+  const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  list.forEach(c => c.postMessage({ type: 'AW_DATA_REFRESHED', url }))
 }
 
 /** Renvoie depuis le cache ; en fond met à jour pour la prochaine fois */

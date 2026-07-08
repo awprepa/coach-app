@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { supabase } from './supabase'
+import { supabase, maybeSyncDown } from './supabase'
 
 const ICONS = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
@@ -35,6 +35,8 @@ export default function CoachNav() {
     supabase.from('clients').select('id', { count: 'exact', head: true })
       .eq('coach_notifie', false)
       .then(({ count }) => setNewClients(count || 0))
+    // Warm sync : remplit la base locale pour le hors-ligne (Phase 3)
+    maybeSyncDown().catch(() => {})
   }, [])
 
   // Messages non lus reçus par le coach.

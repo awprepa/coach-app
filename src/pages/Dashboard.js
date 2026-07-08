@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
 import { useNotifications } from '../hooks/useNotifications'
+import { useAutoRefresh } from '../hooks/useAutoRefresh'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -107,6 +108,9 @@ export default function Dashboard() {
   const logoPickRef = useRef(null)
   const [cropSrc, setCropSrc]               = useState(null) // URL brute avant recadrage
   const [pendingFile, setPendingFile]       = useState(null) // fichier original avant recadrage
+
+  // Phase 3 : rafraîchit le tableau de bord si le SW détecte des données à jour
+  useAutoRefresh(() => fetchAll())
 
   useEffect(() => {
     fetchAll()

@@ -23,6 +23,18 @@ const OFFRES = {
   club:                 { label: 'Club',           bg: '#f0fdf4', color: '#15803d' },
 }
 
+// Bornes de la semaine courante (lundi → dimanche), format YYYY-MM-DD
+function getWeekBounds() {
+  const today = new Date()
+  const day = today.getDay()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1))
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) }
+}
+
 export default function FicheGroupe() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -35,6 +47,7 @@ export default function FicheGroupe() {
   const [sousGroupes, setSousGroupes]     = useState([])
   const [membres, setMembres]             = useState([])
   const [wellnessMap, setWellnessMap]     = useState({})  // { client_id: dernier wellness }
+  const [eventsCountMap, setEventsCountMap] = useState({}) // { client_id: nb événements cette semaine }
   const [programmes, setProgrammes]       = useState([])
   const [loading, setLoading]             = useState(true)
 
@@ -106,8 +119,21 @@ export default function FicheGroupe() {
       const wMap = {}
       for (const w of (wRows || [])) { if (!wMap[w.client_id]) wMap[w.client_id] = w }
       setWellnessMap(wMap)
+
+      // Nombre d'événements ajoutés au calendrier cette semaine, par membre
+      const { start, end } = getWeekBounds()
+      const { data: evRows } = await supabase
+        .from('evenements').select('client_id')
+        .in('client_id', memberIds)
+        .gte('date', start).lte('date', end)
+      const evMap = {}
+      for (const e of (evRows || [])) {
+        if (e.client_id) evMap[e.client_id] = (evMap[e.client_id] || 0) + 1
+      }
+      setEventsCountMap(evMap)
     } else {
       setWellnessMap({})
+      setEventsCountMap({})
     }
 
     if (g?.parent_id) {
@@ -627,6 +653,15 @@ export default function FicheGroupe() {
                     <span style={{ fontWeight: '700', color: '#333' }}>{m.prenom} {m.nom}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {eventsCountMap[m.id] > 0 && (
+                      <span title={`${eventsCountMap[m.id]} événement${eventsCountMap[m.id] > 1 ? 's' : ''} au calendrier cette semaine`}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#eef2ff', padding: '0.15rem 0.5rem', borderRadius: 999 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+                        </svg>
+                        <span style={{ fontSize: '0.72rem', color: '#4f46e5', fontWeight: 800 }}>{eventsCountMap[m.id]}</span>
+                      </span>
+                    )}
                     {(() => {
                       const w = wellnessMap[m.id]
                       if (!w) return null
