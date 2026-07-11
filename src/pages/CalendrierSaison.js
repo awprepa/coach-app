@@ -801,7 +801,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     setSaving(false)
     if (error) { alert('Erreur : ' + error.message); return }
     setPop(null)
-    await loadSeason(true)
+    // Affichage immédiat (optimiste), puis resync en fond sans bloquer l'écran
+    if (data) setEvenements(prev => [...prev, data])
+    loadSeason(true)
     if (openDetails && data) openEdit(data)
   }
 

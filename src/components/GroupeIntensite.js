@@ -129,7 +129,7 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
       </ResponsiveContainer>
 
       <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0.4rem 0 0', textAlign: 'center' }}>
-        Touche une séance pour voir le détail des joueurs
+        Touche un entraînement pour voir le détail des joueurs
       </p>
 
       {/* Détail d'une séance sélectionnée */}

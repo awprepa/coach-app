@@ -689,8 +689,8 @@ export default function FicheGroupe() {
         <button onClick={ouvrirAddMembre} style={S.btnAdd}>+ Ajouter un membre</button>
       </Section>
 
-      {/* ── Intensité des séances terrain ── */}
-      <Section title="Intensité des séances" accent={accent}>
+      {/* ── Intensité des entraînements terrain ── */}
+      <Section title="Intensité des entraînements" accent={accent}>
         <GroupeIntensite groupeId={id} accent={accent} />
       </Section>
 

@@ -25,18 +25,18 @@ function noteColor(n) {
 function Echelle({ value, onChange }) {
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+      <div style={{ display: 'flex', gap: 3 }}>
         {Array.from({ length: 11 }, (_, n) => {
           const active = value === n
           const col = noteColor(n)
           return (
             <button key={n} onClick={() => onChange(n)}
               style={{
-                width: 30, height: 34, borderRadius: 8, cursor: 'pointer',
-                border: `2px solid ${active ? col : '#e5e7eb'}`,
+                flex: 1, minWidth: 0, height: 38, borderRadius: 7, cursor: 'pointer', padding: 0,
+                border: `1.5px solid ${active ? col : '#e5e7eb'}`,
                 background: active ? col : 'white',
                 color: active ? 'white' : '#6b7280',
-                fontWeight: 900, fontSize: '0.85rem',
+                fontWeight: 800, fontSize: '0.8rem',
               }}>
               {n}
             </button>
@@ -77,7 +77,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
     <div style={W.overlay}>
       <div style={W.card}>
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-          <p style={W.subtitle}>Intensité de la séance</p>
+          <p style={W.subtitle}>Intensité de l'entraînement</p>
           <h2 style={W.title}>{evenement.titre || 'Entraînement'}</h2>
           <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0.25rem 0 0', textTransform: 'capitalize' }}>{dateLabel}</p>
         </div>
