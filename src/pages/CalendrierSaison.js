@@ -581,18 +581,20 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     await supabase.from('groupe_seance_blocs').delete().eq('id', id)
   }
   async function moveBloc(id, direction) {
+    // Renumérotation 1..n — robuste même si les ordres sont nuls ou dupliqués
     const sorted = [...panel.blocs].sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
     const idx = sorted.findIndex(b => b.id === id)
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-    if (swapIdx < 0 || swapIdx >= sorted.length) return
-    const a = sorted[idx], b = sorted[swapIdx]
-    setPanel(p => ({ ...p, blocs: p.blocs.map(bl =>
-      bl.id === a.id ? { ...bl, ordre: b.ordre } : bl.id === b.id ? { ...bl, ordre: a.ordre } : bl
-    )}))
-    await Promise.all([
-      supabase.from('groupe_seance_blocs').update({ ordre: b.ordre }).eq('id', a.id),
-      supabase.from('groupe_seance_blocs').update({ ordre: a.ordre }).eq('id', b.id),
-    ])
+    if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return
+    ;[sorted[idx], sorted[swapIdx]] = [sorted[swapIdx], sorted[idx]]
+    const renum = sorted.map((b, i) => ({ ...b, ordre: i + 1 }))
+    setPanel(p => ({ ...p, blocs: p.blocs.map(bl => {
+      const r = renum.find(x => x.id === bl.id)
+      return r ? { ...bl, ordre: r.ordre } : bl
+    })}))
+    await Promise.all(renum.map(b =>
+      supabase.from('groupe_seance_blocs').update({ ordre: b.ordre }).eq('id', b.id)
+    ))
   }
   // ── State helpers séquences ────────────────────────────────────────────────
   function setBlocSeqs(blocId, seqsOrUpdater) {
@@ -1311,6 +1313,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
           addBloc={addBloc}
           updateBloc={updateBloc}
           deleteBloc={deleteBloc}
+          moveBloc={moveBloc}
           addExo={addExo}
           updateExo={updateExo}
           deleteExo={deleteExo}
@@ -2629,7 +2632,7 @@ function calcDureeBloc(seqs) {
 /* ── SeanceModal — plein écran, remplace l'ancien panneau latéral ── */
 function SeanceModal({
   panel, groupColor, couleurSecondaire, closePanel, setForm,
-  addBloc, updateBloc, deleteBloc,
+  addBloc, updateBloc, deleteBloc, moveBloc,
   addExo, updateExo, deleteExo,
   saveEvent, deleteEvent, saving,
   removeSeq, addSeqToState, patchSeqInState, setBlocSeqs, addSeqBeforeInterBloc,
@@ -2763,13 +2766,10 @@ function SeanceModal({
     const { data: d2 } = await supabase.from('groupe_seance_sequences').insert(jeuPayload).select().single()
     // Remplace IDs temporaires
     if (d1 || d2) {
-      setPanel(p => p ? { ...p, blocs: p.blocs.map(b => b.id !== blocId ? b : {
-        ...b,
-        sequences: (b.sequences || []).map(s =>
-          s.id === tmpInter && d1 ? d1 :
-          s.id === tmpJeu   && d2 ? d2 : s
-        )
-      }) } : p)
+      setBlocSeqs(blocId, seqs => seqs.map(s =>
+        s.id === tmpInter && d1 ? d1 :
+        s.id === tmpJeu   && d2 ? d2 : s
+      ))
     }
   }
 

@@ -140,6 +140,14 @@ export default function RpeGate({ children }) {
         if (!session?.user) return
         const userId = session.user.id
 
+        // Throttle : le gate est monté à chaque navigation — on ne refait la
+        // vérification (4-5 requêtes) qu'au plus toutes les 5 min par session
+        // d'app. Une ouverture fraîche de l'app vérifie toujours (sessionStorage).
+        const throttleKey = `rpe_check_${userId}`
+        const last = parseInt(sessionStorage.getItem(throttleKey) || '0')
+        if (Date.now() - last < 5 * 60 * 1000) return
+        sessionStorage.setItem(throttleKey, String(Date.now()))
+
         // Lookup client (le coach n'est pas dans clients → pas de gate)
         let { data: client } = await supabase.from('clients').select('id').eq('user_id', userId).maybeSingle()
         if (!client && session.user.email) {

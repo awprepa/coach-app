@@ -302,7 +302,9 @@ if (typeof window !== 'undefined') {
   window.addEventListener('online', async () => {
     console.log('[offline] connexion rétablie')
     await _flushQueue()
-    await syncDown()
+    // Resync throttlé (10 min) : le réseau mobile bascule souvent online/offline,
+    // retélécharger toutes les tables à chaque fois serait très lourd.
+    await maybeSyncDown()
     window.dispatchEvent(new CustomEvent('aw:synced'))
   })
 }
