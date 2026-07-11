@@ -444,24 +444,25 @@ export default function NutritionPlanClient() {
           </p>
         </div>
 
-        {/* Scanner un aliment — dispo même sans plan */}
-        <div style={{ background: 'white', borderRadius: 18, padding: '1rem 1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <button onClick={() => navigate('/client/nutrition/scanner')}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 12, padding: '0.8rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
-            </svg>
-            Scanner un aliment
-          </button>
-          <button onClick={() => navigate('/client/nutrition/scans')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.82rem', fontWeight: 700, padding: '0.2rem' }}>
-            Historique des scans
-          </button>
-        </div>
+        {/* Lien historique des scans (le scan est dans la barre fixe en bas) */}
+        <button onClick={() => navigate('/client/nutrition/scans')}
+          style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, padding: '0.3rem' }}>
+          Historique des scans
+        </button>
 
         {/* Hydratation même sans plan */}
         <HydratationCard water={water} onUpdate={updateWater} />
+        <div style={{ height: 80 }} />
+      </div>
+      {/* Barre scanner fixe */}
+      <div style={S.scanCta}>
+        <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })} style={S.scanCtaBtn}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
+          </svg>
+          Scanner un article
+        </button>
       </div>
       <ClientBottomNav />
     </div>
@@ -641,21 +642,11 @@ export default function NutritionPlanClient() {
               Ajouter un repas à la journée
             </button>
 
-            {/* Accès scan + historique */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 12, padding: '0.7rem', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                  <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
-                </svg>
-                Scanner
-              </button>
-              <button onClick={() => navigate('/client/nutrition/scans')}
-                style={{ flex: 1, background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.7rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                Historique des scans
-              </button>
-            </div>
+            {/* Lien historique des scans */}
+            <button onClick={() => navigate('/client/nutrition/scans')}
+              style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, padding: '0.3rem' }}>
+              Historique des scans
+            </button>
 
             {/* Hydratation */}
             <HydratationCard water={water} onUpdate={updateWater} />
@@ -794,6 +785,17 @@ export default function NutritionPlanClient() {
         </div>
       )}
 
+      {/* Barre scanner fixe */}
+      <div style={S.scanCta}>
+        <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })} style={S.scanCtaBtn}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
+          </svg>
+          Scanner un article
+        </button>
+      </div>
+
       <ClientBottomNav />
     </div>
   )
@@ -862,7 +864,7 @@ const S = {
   header:  { background: 'var(--header-bg)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 60 },
   iconBtn: { width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   tabBar:  { background: 'var(--header-bg)', display: 'flex', borderTop: '1px solid rgba(255,255,255,0.1)', position: 'sticky', top: 56, zIndex: 59 },
-  content: { padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  content: { padding: '14px 14px 150px', display: 'flex', flexDirection: 'column', gap: '10px' },
   dateNav: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', borderRadius: 14, padding: '10px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   dateArrow: { background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.3rem', cursor: 'pointer', padding: '0 4px' },
   kcalCard: { background: 'var(--header-bg)', borderRadius: 18, padding: '16px 18px' },
@@ -875,6 +877,20 @@ const S = {
   waterCard: { background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', borderRadius: 18, padding: '16px 16px 18px', boxShadow: '0 4px 16px rgba(29,78,216,0.25)' },
   waterBtnMinus: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, width: 72, height: 60, borderRadius: 16, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', color: 'white', cursor: 'pointer', flexShrink: 0 },
   waterBtnPlus: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, width: 72, height: 60, borderRadius: 16, background: 'rgba(255,255,255,0.9)', border: 'none', color: '#1d4ed8', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' },
+  scanCta: {
+    position: 'fixed',
+    bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))',
+    left: 0, right: 0,
+    padding: '0 14px 12px',
+    background: 'transparent',
+    zIndex: 70, pointerEvents: 'none',
+  },
+  scanCtaBtn: {
+    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: '#e4f816',
+    border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',
+  },
   overlay: { position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end' },
   sheet: { background: 'white', borderRadius: '22px 22px 0 0', padding: '1rem 1.25rem 2.5rem', width: '100%', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' },
   fieldLabel: { display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '0.3rem' },
