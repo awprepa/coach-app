@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
 import CalendrierSaison from './CalendrierSaison'
+import GroupeIntensite from '../components/GroupeIntensite'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -686,6 +687,11 @@ export default function FicheGroupe() {
           </div>
         )}
         <button onClick={ouvrirAddMembre} style={S.btnAdd}>+ Ajouter un membre</button>
+      </Section>
+
+      {/* ── Intensité des séances terrain ── */}
+      <Section title="Intensité des séances" accent={accent}>
+        <GroupeIntensite groupeId={id} accent={accent} />
       </Section>
 
       {/* ── Programmes du groupe ── */}
