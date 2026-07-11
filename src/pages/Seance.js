@@ -142,6 +142,8 @@ export default function Seance() {
   const [uploadingCardio, setUploadingCardio] = useState(false)
   const cardioImgDebutRef = useRef(null)
   const cardioImgFinRef   = useRef(null)
+  // Blocs cardio (texte libre) — [{ titre, texte }]
+  const [cardioBlocs, setCardioBlocs]             = useState([])
   // Échauffement
   const [echauffement, setEchauffement]           = useState([])
   const [echauffForm, setEchauffForm]             = useState({ nom: '', reps: '', groupe: '', tours: '' })
@@ -177,7 +179,7 @@ export default function Seance() {
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
     if (error) console.log(error)
-    else { setSeance(data); setSemaines(data.programmes?.semaines || 4); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); await fetchExercices(); await fetchRpeSeances() }
+    else { setSeance(data); setSemaines(data.programmes?.semaines || 4); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); setCardioBlocs(Array.isArray(data.cardio_blocs) ? data.cardio_blocs : []); await fetchExercices(); await fetchRpeSeances() }
     setLoading(false)
   }
 
@@ -702,6 +704,7 @@ export default function Seance() {
       nom: seance.nom,
       exercices: exData,
       echauffement: echauffement?.length > 0 ? echauffement : [],
+      cardio_blocs: cardioBlocs?.length > 0 ? cardioBlocs : [],
       rpe_cibles: rpeCibles,
     }])
     if (error) alert(error.message)
@@ -993,6 +996,25 @@ export default function Seance() {
   function updateCardioSem(position, sem, patch) {
     const setFn = position === 'debut' ? setCardioDebut : setCardioFin
     setFn(prev => ({ ...prev, [sem]: { ...(prev[sem] || {}), ...patch } }))
+  }
+
+  // ── Blocs cardio (texte libre) ──────────────────────────────────────────────
+  async function persistCardioBlocs(blocs) {
+    setCardioBlocs(blocs)
+    await supabase.from('seances').update({ cardio_blocs: blocs }).eq('id', id)
+  }
+  function addCardioBloc() {
+    persistCardioBlocs([...cardioBlocs, { titre: '', texte: '' }])
+  }
+  function updateCardioBloc(idx, field, val) {
+    const next = cardioBlocs.map((b, i) => i === idx ? { ...b, [field]: val } : b)
+    setCardioBlocs(next)  // maj immédiate à l'écran ; persistance au blur
+  }
+  function saveCardioBlocs() {
+    persistCardioBlocs(cardioBlocs)
+  }
+  function removeCardioBloc(idx) {
+    persistCardioBlocs(cardioBlocs.filter((_, i) => i !== idx))
   }
 
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
@@ -1289,6 +1311,46 @@ export default function Seance() {
             + Ajouter
           </button>
         </div>
+      </div>
+
+      {/* ── Blocs cardio (texte libre) ── */}
+      <div style={{ ...styles.card, marginBottom: '1rem' }}>
+        <p style={styles.sectionTitle}>Blocs cardio</p>
+        <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0 0 0.75rem' }}>
+          Pour une séance 100 % cardio : ajoute un ou plusieurs blocs en texte libre.
+        </p>
+        {cardioBlocs.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
+            {cardioBlocs.map((b, i) => (
+              <div key={i} style={{ background: '#f9fafb', border: '1px solid #eef0f3', borderRadius: 10, padding: '0.6rem 0.7rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <input
+                    value={b.titre || ''}
+                    onChange={e => updateCardioBloc(i, 'titre', e.target.value)}
+                    onBlur={saveCardioBlocs}
+                    placeholder={`Titre du bloc ${i + 1} (optionnel)`}
+                    style={{ ...styles.formInput, flex: 1, fontWeight: '700' }}
+                  />
+                  <button onClick={() => removeCardioBloc(i)} title="Supprimer ce bloc"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.9rem', padding: '0.2rem 0.4rem' }}>
+                    ✕
+                  </button>
+                </div>
+                <textarea
+                  value={b.texte || ''}
+                  onChange={e => updateCardioBloc(i, 'texte', e.target.value)}
+                  onBlur={saveCardioBlocs}
+                  placeholder="Ex : 3 × 8 min à 70 % FCM, récup 2 min entre les blocs"
+                  rows={3}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '0.55rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', fontFamily: 'inherit', lineHeight: 1.45, resize: 'vertical', outline: 'none', background: 'white', color: '#1a1a1a' }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <button onClick={addCardioBloc} style={{ ...styles.btnSecondary, width: '100%' }}>
+          + Ajouter un bloc cardio
+        </button>
       </div>
 
       {/* ── Cardio ── */}

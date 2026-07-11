@@ -126,6 +126,7 @@ export default function SeanceClient() {
   const [echauffement, setEchauffement] = useState([])
   const [cardioDebutAll, setCardioDebutAll] = useState({})
   const [cardioFinAll,   setCardioFinAll]   = useState({})
+  const [cardioBlocs,    setCardioBlocs]    = useState([])  // blocs cardio texte libre
   const [expandedDone, setExpandedDone] = useState(new Set())
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
@@ -294,6 +295,7 @@ export default function SeanceClient() {
     setEchauffement(data.echauffement || [])
     setCardioDebutAll(data.cardio_debut || {})
     setCardioFinAll(data.cardio_fin || {})
+    setCardioBlocs(Array.isArray(data.cardio_blocs) ? data.cardio_blocs : [])
     const total = data.programmes.semaines
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.created_at
@@ -314,6 +316,7 @@ export default function SeanceClient() {
         echauffement:    data.echauffement || [],
         cardio_debut:    data.cardio_debut || {},
         cardio_fin:      data.cardio_fin || {},
+        cardio_blocs:    Array.isArray(data.cardio_blocs) ? data.cardio_blocs : [],
         semaines:        total,
         semaineActuelle: semAct,
         exercices:       exData.exercices,
@@ -334,6 +337,7 @@ export default function SeanceClient() {
     setEchauffement(local.echauffement || [])
     setCardioDebutAll(local.cardio_debut || {})
     setCardioFinAll(local.cardio_fin || {})
+    setCardioBlocs(Array.isArray(local.cardio_blocs) ? local.cardio_blocs : [])
     setSemaines(local.semaines)
     setSemaineActuelle(local.semaineActuelle)
     setExercices(local.exercices || [])
@@ -1370,6 +1374,23 @@ export default function SeanceClient() {
 
         {/* Cardio avant séance */}
         {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
+
+        {/* Blocs cardio (texte libre) */}
+        {cardioBlocs.length > 0 && (
+          <div style={{ ...S.card, marginBottom: '0.75rem' }}>
+            <p style={S.sectionLabel}>Cardio</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {cardioBlocs.map((b, i) => (
+                (b.titre || b.texte) ? (
+                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', borderLeft: '3px solid #0ea5e9' }}>
+                    {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 800, fontSize: '0.9rem', color: '#0c4a6e' }}>{b.titre}</p>}
+                    {b.texte && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
+                  </div>
+                ) : null
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Échauffement */}
         {echauffement.length > 0 && (() => {

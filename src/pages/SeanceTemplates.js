@@ -205,7 +205,10 @@ export default function SeanceTemplates() {
       const { count } = await supabase.from('seances')
         .select('id', { count: 'exact', head: true }).eq('programme_id', progId)
       const { data: newSeance } = await supabase.from('seances')
-        .insert([{ programme_id: progId, nom: sendingTemplate.nom, ordre: (count || 0) + 1 }])
+        .insert([{
+          programme_id: progId, nom: sendingTemplate.nom, ordre: (count || 0) + 1,
+          cardio_blocs: Array.isArray(sendingTemplate.cardio_blocs) ? sendingTemplate.cardio_blocs : [],
+        }])
         .select().single()
       if (newSeance && sendingTemplate.exercices?.length > 0) {
         const exInserts = sendingTemplate.exercices.map(ex => ({
