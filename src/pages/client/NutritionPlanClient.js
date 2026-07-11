@@ -641,6 +641,22 @@ export default function NutritionPlanClient() {
               Ajouter un repas à la journée
             </button>
 
+            {/* Accès scan + historique */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 12, padding: '0.7rem', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
+                </svg>
+                Scanner
+              </button>
+              <button onClick={() => navigate('/client/nutrition/scans')}
+                style={{ flex: 1, background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.7rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                Historique des scans
+              </button>
+            </div>
+
             {/* Hydratation */}
             <HydratationCard water={water} onUpdate={updateWater} />
           </>
