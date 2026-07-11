@@ -88,19 +88,22 @@ export default function Programme() {
   }
 
   async function deplacerSeance(index, direction) {
-    const newSeances = [...seances]
     const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= newSeances.length) return
-    const a = newSeances[index]
-    const b = newSeances[targetIndex]
-    // Échanger les ordres
-    const [ordreA, ordreB] = [a.ordre, b.ordre]
-    await supabase.from('seances').update({ ordre: ordreB }).eq('id', a.id)
-    await supabase.from('seances').update({ ordre: ordreA }).eq('id', b.id)
-    newSeances[index] = { ...a, ordre: ordreB }
-    newSeances[targetIndex] = { ...b, ordre: ordreA }
-    newSeances.sort((x, y) => x.ordre - y.ordre)
-    setSeances(newSeances)
+    if (targetIndex < 0 || targetIndex >= seances.length) return
+    // Déplace l'élément dans le tableau
+    const arr = [...seances]
+    const [moved] = arr.splice(index, 1)
+    arr.splice(targetIndex, 0, moved)
+    // Renumérote proprement 1..n — robuste même si les ordres étaient nuls ou
+    // dupliqués (ex. séances créées par assignation/import).
+    const renum = arr.map((s, i) => ({ ...s, ordre: i + 1 }))
+    setSeances(renum)  // mise à jour immédiate de l'écran
+    // Persiste en base (seulement les séances dont l'ordre a changé)
+    for (let i = 0; i < renum.length; i++) {
+      if (seances[i]?.id !== renum[i].id || seances[i]?.ordre !== renum[i].ordre) {
+        await supabase.from('seances').update({ ordre: renum[i].ordre }).eq('id', renum[i].id)
+      }
+    }
   }
 
   async function supprimerSeance(seanceId) {
