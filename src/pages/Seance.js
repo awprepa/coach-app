@@ -688,7 +688,8 @@ export default function Seance() {
   }
 
   async function sauvegarderTemplate() {
-    if (exercices.length === 0) { alert('Ajoutez des exercices avant de sauvegarder comme modèle.'); return }
+    const aDuContenu = exercices.length > 0 || cardioBlocs.length > 0 || echauffement.length > 0
+    if (!aDuContenu) { alert('Ajoutez des exercices ou un bloc cardio avant de sauvegarder comme modèle.'); return }
     const exData = exercices.map(ex => ({
       code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions,
       tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite,
