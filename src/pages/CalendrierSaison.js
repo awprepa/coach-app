@@ -335,7 +335,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     }
   }
   function openCreate(dateISO) {
-    setPanel({ mode: 'create', evt: null, form: emptyForm(dateISO), blocs: [] })
+    // Priorité : date explicite > jour sélectionné dans le calendrier >
+    // dernier jour survolé > aujourd'hui (si dans la saison) > début de saison
+    const d = dateISO
+      || sel?.start
+      || lastDateRef.current
+      || (todayISO >= seasonStart && todayISO <= seasonEnd ? todayISO : null)
+    setPanel({ mode: 'create', evt: null, form: emptyForm(d), blocs: [] })
   }
   async function loadBlocs(evtId) {
     const { data } = await supabase.from('groupe_seance_blocs')
@@ -506,28 +512,37 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
     const payload = buildPayload(panel.form)
     let evtId = panel.evt?.id
     if (panel.mode === 'create') {
-      const { data, error } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
+      const { data, error } = await supabase.from('groupe_evenements').insert([payload]).select('*').single()
       if (error) { alert('Erreur : ' + error.message); setSaving(false); return }
       evtId = data.id
+      // Affichage immédiat (optimiste)
+      setEvenements(prev => [...prev, data])
     } else {
       const { error } = await supabase.from('groupe_evenements').update(payload).eq('id', evtId)
       if (error) { alert('Erreur : ' + error.message); setSaving(false); return }
+      setEvenements(prev => prev.map(e => e.id === evtId ? { ...e, ...payload } : e))
     }
     setSaving(false)
-    await loadSeason(true)
     closePanel()
+    // Resync en fond, sans bloquer la fermeture
+    loadSeason(true)
   }
   async function deleteEvent() {
     if (!panel?.evt) return
+    const delId = panel.evt.id
     setSaving(true)
-    await supabase.from('groupe_evenements').delete().eq('id', panel.evt.id)
+    const { error } = await supabase.from('groupe_evenements').delete().eq('id', delId)
     setSaving(false)
-    await loadSeason(true)
+    if (error) { alert('Erreur : ' + error.message); return }
+    setEvenements(prev => prev.filter(e => e.id !== delId))
     closePanel()
+    loadSeason(true)
   }
   async function deleteEventDirect(e) {
-    await supabase.from('groupe_evenements').delete().eq('id', e.id)
-    await loadSeason(true)
+    const { error } = await supabase.from('groupe_evenements').delete().eq('id', e.id)
+    if (error) { alert('Erreur : ' + error.message); return }
+    setEvenements(prev => prev.filter(x => x.id !== e.id))
+    loadSeason(true)
   }
 
   // ── Copier / coller ─────────────────────────────────────────────────────────
