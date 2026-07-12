@@ -898,13 +898,21 @@ export default function BibliothequeExercices() {
         </div>
       )}
 
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .bx-header{flex-direction:column !important;align-items:stretch !important;gap:0.75rem;}
+          .bx-actions{justify-content:stretch !important;}
+          .bx-actions button{flex:1;min-width:0;}
+        }
+      `}</style>
       {/* ── Header ── */}
-      <div style={S.header}>
+      <div style={S.header} className="bx-header">
         <div>
           <h1 style={S.title}>Bibliothèque d'exercices</h1>
           <p style={S.subtitle}>{filtered.length} exercice{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="bx-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button
             onClick={() => setShowKeyInput(v => !v)}
             style={{ ...S.btnSecondary, fontSize: '0.82rem', color: workoutxKey ? '#16a34a' : '#92400e', borderColor: workoutxKey ? '#bbf7d0' : '#fde68a', background: workoutxKey ? '#f0fdf4' : '#fffbeb' }}

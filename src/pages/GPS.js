@@ -361,10 +361,18 @@ export default function GPS() {
 
   // ── RENDU ──────────────────────────────────────────────────────────────
   return (
-    <div style={S.page}>
+    <div style={S.page} className="gps-page">
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .gps-page{flex-direction:column !important;min-height:auto !important;padding:0 !important;}
+          .gps-sidebar{width:100% !important;min-width:0 !important;max-height:45vh;overflow-y:auto;border-right:none !important;}
+          .gps-main{overflow:visible !important;}
+        }
+      `}</style>
 
       {/* ── SIDEBAR ── */}
-      <div style={S.sidebar}>
+      <div style={S.sidebar} className="gps-sidebar">
         <div style={S.sideHeader}>
           <span style={S.sideTitle}>Rapports GPS</span>
           <label style={S.uploadBtn}>
@@ -484,7 +492,7 @@ export default function GPS() {
       </div>
 
       {/* ── MAIN ── */}
-      <div style={S.main}>
+      <div style={S.main} className="gps-main">
         {!selected ? (
           <div style={S.empty}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📡</div>

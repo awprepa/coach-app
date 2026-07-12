@@ -202,8 +202,15 @@ export default function Clients() {
 
   return (
     <div style={S.page}>
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .cl-header{flex-direction:column !important;align-items:stretch !important;gap:0.75rem;}
+          .cl-header button{width:100%;}
+        }
+      `}</style>
       {/* En-tête */}
-      <div style={S.pageHeader}>
+      <div style={S.pageHeader} className="cl-header">
         <div>
           <h1 style={S.pageTitle}>Mes clients</h1>
           <p style={S.pageSubtitle}>{actifs.length} actif{actifs.length > 1 ? 's' : ''}{inactifs.length > 0 ? ` · ${inactifs.length} inactif${inactifs.length > 1 ? 's' : ''}` : ''}</p>

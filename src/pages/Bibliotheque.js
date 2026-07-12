@@ -28,8 +28,15 @@ export default function Bibliotheque() {
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .bib-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding:0.6rem 0.9rem;}
+          .bib-tabs button{white-space:nowrap;flex-shrink:0;}
+        }
+      `}</style>
       {/* Barre d'onglets */}
-      <div style={S.tabBar}>
+      <div style={S.tabBar} className="bib-tabs">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{ ...S.tabBtn, ...(tab === t.key ? S.tabBtnActive : {}) }}>
