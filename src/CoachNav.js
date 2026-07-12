@@ -29,6 +29,7 @@ const NAV = [
 export default function CoachNav() {
   const navigate = useNavigate()
   const [newClients, setNewClients] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)   // menu mobile (hamburger)
   const [unreadMsgs, setUnreadMsgs] = useState(0)
 
   useEffect(() => {
@@ -103,17 +104,30 @@ export default function CoachNav() {
       <NavLink to="/" end className="coachnav-brand">
         <img src="/logo-noir.png" alt="AWprepa" className="coachnav-logo" />
       </NavLink>
-      <div className="coachnav-items">
+      <div className={`coachnav-items${menuOpen ? ' open' : ''}`}>
         {NAV.map(item => (
-          <NavLink key={item.to} to={item.to} end={item.end} className="coachnav-link">
+          <NavLink key={item.to} to={item.to} end={item.end} className="coachnav-link" onClick={() => setMenuOpen(false)}>
             <span className="coachnav-ico">{ICONS[item.icon]}</span>
             {item.label}
             {item.to === '/' && <span className="coachnav-badge" style={{visibility: newClients > 0 ? 'visible' : 'hidden'}}>{newClients}</span>}
             {item.to === '/messages' && unreadMsgs > 0 && <span className="coachnav-badge coachnav-badge-msg">{unreadMsgs}</span>}
           </NavLink>
         ))}
+        <button onClick={handleLogout} className="coachnav-logout coachnav-logout-m">Déconnexion</button>
       </div>
-      <button onClick={handleLogout} className="coachnav-logout">Déconnexion</button>
+      <button
+        className="coachnav-burger"
+        onClick={() => setMenuOpen(o => !o)}
+        aria-label="Menu"
+      >
+        {(newClients > 0 || unreadMsgs > 0) && !menuOpen && <span className="coachnav-burger-dot" />}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          {menuOpen
+            ? <><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></>
+            : <><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></>}
+        </svg>
+      </button>
+      <button onClick={handleLogout} className="coachnav-logout coachnav-logout-d">Déconnexion</button>
     </nav>
   )
 }
@@ -153,4 +167,33 @@ const CSS = `
   transition:background .15s;
 }
 .coachnav-logout:hover{background:#f3f4f6;}
+/* Hamburger + déconnexion mobile : inexistants sur desktop */
+.coachnav-burger{display:none;}
+.coachnav-logout-m{display:none;}
+
+/* ── Mobile uniquement (≤820px) — le desktop au-dessus est strictement inchangé ── */
+@media (max-width: 820px){
+  .coachnav{padding:0 14px;gap:12px;justify-content:space-between;}
+  .coachnav-items{display:none;}
+  .coachnav-items.open{
+    display:flex;flex-direction:column;gap:2px;
+    position:absolute;top:62px;left:0;right:0;
+    background:#fff;border-bottom:1px solid #e6e8ec;
+    padding:10px 12px 14px;box-shadow:0 14px 30px rgba(0,0,0,0.12);
+    max-height:calc(100dvh - 62px);overflow-y:auto;
+  }
+  .coachnav-items.open .coachnav-link{padding:12px 14px;font-size:0.95rem;}
+  .coachnav-logout-d{display:none;}
+  .coachnav-logout-m{display:block;margin-top:10px;width:100%;padding:11px;}
+  .coachnav-burger{
+    display:flex;align-items:center;justify-content:center;position:relative;
+    width:42px;height:42px;flex-shrink:0;background:#fff;
+    border:1px solid #e6e8ec;border-radius:10px;color:#333;cursor:pointer;
+  }
+  .coachnav-burger svg{width:20px;height:20px;}
+  .coachnav-burger-dot{
+    position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;
+    background:#e4f816;border:1.5px solid #333;
+  }
+}
 `

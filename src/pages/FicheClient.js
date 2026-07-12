@@ -355,6 +355,13 @@ export default function FicheClient() {
 
   return (
     <div style={styles.page}>
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .fc-hscroll{overflow-x:auto !important;-webkit-overflow-scrolling:touch;}
+          .fc-hscroll > div{min-width:520px;}
+        }
+      `}</style>
       <button onClick={() => navigate('/')} style={styles.backBtn}>← Retour</button>
 
       {editMode ? (
@@ -888,7 +895,7 @@ export default function FicheClient() {
 
               {/* Historique */}
               {wellness.length > 1 && (
-                <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div className="fc-hscroll" style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                   <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
                     <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
                   </div>

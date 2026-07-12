@@ -387,7 +387,15 @@ export default function Dashboard() {
 
   return (
     <div style={S.page}>
-      <div style={S.hero}>
+      {/* Adaptations mobile — aucune règle au-dessus de 820px, desktop inchangé */}
+      <style>{`
+        @media (max-width: 820px){
+          .dash-hero{grid-template-columns:1fr !important;}
+          .dash-bento{grid-template-columns:1fr !important;}
+          .dash-bilan-row{grid-template-columns:1fr 64px 44px 52px !important;gap:0.35rem !important;padding-left:0.6rem !important;padding-right:0.6rem !important;}
+        }
+      `}</style>
+      <div style={S.hero} className="dash-hero">
 
         {/* ── Colonne gauche — résumé + menu d'onglets ── */}
         <div style={S.side}>
@@ -461,7 +469,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div style={S.bentoGrid}>
+              <div style={S.bentoGrid} className="dash-bento">
                 {/* Alertes — à traiter en priorité */}
                 <div style={S.card}>
                   <div style={S.cardHead}>
@@ -550,7 +558,7 @@ export default function Dashboard() {
                     {new Date(wStart + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {new Date(wEnd + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+                <div className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
                   {['Client', 'Wellness moy.', 'Séances', 'Statut'].map(h => (
                     <span key={h} style={{ fontSize: '0.6rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                   ))}
@@ -563,7 +571,7 @@ export default function Dashboard() {
                   const av = getAvatar(c.prenom, c.nom)
                   return (
                     <div key={c.id} onClick={() => navigate(`/client/${c.id}`)}
-                      style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 1rem', borderTop: '1px solid #f6f7f8', cursor: 'pointer' }}>
+                      className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 1rem', borderTop: '1px solid #f6f7f8', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
                         {c.avatar_url
                           ? <img src={c.avatar_url} alt={c.prenom} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />

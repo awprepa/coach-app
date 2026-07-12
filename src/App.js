@@ -314,7 +314,18 @@ function WithNav({ children }) {
     <>
       <CoachNav />
       <OfflineBanner />
-      {children}
+      {/* Adaptations mobile du côté coach — aucune règle ne s'applique au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .coach-shell{overflow-x:hidden;}
+          .coach-shell > div{padding:1rem !important;}
+          .coach-shell table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+          .coach-shell input, .coach-shell select, .coach-shell textarea{font-size:16px !important;}
+        }
+      `}</style>
+      <div className="coach-shell">
+        {children}
+      </div>
       <div style={{ textAlign: 'center', padding: '18px 0 10px', color: '#c0c4cc', fontSize: '0.68rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', letterSpacing: '.03em' }}>
         AWprepa v{APP_VERSION}
       </div>
