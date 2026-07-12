@@ -391,6 +391,7 @@ export default function Dashboard() {
       <style>{`
         @media (max-width: 820px){
           .dash-hero{grid-template-columns:1fr !important;}
+          .dash-side{position:static !important;}
           .dash-bento{grid-template-columns:1fr !important;}
           .dash-bilan-row{grid-template-columns:1fr 64px 44px 52px !important;gap:0.35rem !important;padding-left:0.6rem !important;padding-right:0.6rem !important;}
         }
@@ -398,7 +399,7 @@ export default function Dashboard() {
       <div style={S.hero} className="dash-hero">
 
         {/* ── Colonne gauche — résumé + menu d'onglets ── */}
-        <div style={S.side}>
+        <div style={S.side} className="dash-side">
           <div style={S.sumCard}>
             <p style={S.sumDate}>{dateLabel}</p>
             <h1 style={S.sumTitle}>Tableau de bord</h1>

@@ -105,9 +105,17 @@ export default function CoachMessages() {
 
   return (
     <div style={S.page}>
-      <div style={S.layout}>
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .cm-layout{flex-direction:column !important;height:auto !important;}
+          .cm-sidebar{width:100% !important;max-height:38vh;}
+          .cm-main{min-height:55vh;}
+        }
+      `}</style>
+      <div style={S.layout} className="cm-layout">
         {/* Colonne gauche — liste des conversations */}
-        <div style={S.sidebar}>
+        <div style={S.sidebar} className="cm-sidebar">
           <div style={S.sideHeader}>
             <span style={S.sideTitle}>💬 Messagerie</span>
             <button onClick={openNewConv} style={S.newBtn} title="Nouvelle conversation">＋</button>
@@ -157,7 +165,7 @@ export default function CoachMessages() {
         </div>
 
         {/* Zone principale — ChatBox */}
-        <div style={S.main}>
+        <div style={S.main} className="cm-main">
           {!selected ? (
             <div style={S.emptyState}>
               <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>💬</p>
