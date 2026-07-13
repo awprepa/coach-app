@@ -2,12 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "mockups",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "7654", "--directory", "/tmp"],
-      "port": 7654
-    },
-    {
       "name": "coach-app",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],

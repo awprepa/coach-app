@@ -207,6 +207,7 @@ export default function Clients() {
         @media (max-width: 820px){
           .cl-header{flex-direction:column !important;align-items:stretch !important;gap:0.75rem;}
           .cl-header button{width:100%;}
+          .cl-row{flex-wrap:wrap;row-gap:0.4rem;}
         }
       `}</style>
       {/* En-tête */}
@@ -431,7 +432,7 @@ function ClientRow({ client, i, navigate, onToggleActif, actif }) {
   const sub = getSubInfo(client.date_fin)
   const cat = client.categories
   return (
-    <div key={client.id} style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+    <div key={client.id} className="cl-row" style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
       {/* Cliquable → fiche */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, cursor: 'pointer' }}
         onClick={() => navigate(`/client/${client.id}`)}>

@@ -366,7 +366,7 @@ export default function GPS() {
       <style>{`
         @media (max-width: 820px){
           .gps-page{flex-direction:column !important;min-height:auto !important;padding:0 !important;}
-          .gps-sidebar{width:100% !important;min-width:0 !important;max-height:45vh;overflow-y:auto;border-right:none !important;}
+          .gps-sidebar{width:100% !important;min-width:0 !important;border-right:none !important;}
           .gps-main{overflow:visible !important;}
         }
       `}</style>

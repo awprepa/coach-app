@@ -902,8 +902,8 @@ export default function BibliothequeExercices() {
       <style>{`
         @media (max-width: 820px){
           .bx-header{flex-direction:column !important;align-items:stretch !important;gap:0.75rem;}
-          .bx-actions{justify-content:stretch !important;}
-          .bx-actions button{flex:1;min-width:0;}
+          .bx-actions{flex-direction:column !important;}
+          .bx-actions button{width:100%;}
         }
       `}</style>
       {/* ── Header ── */}

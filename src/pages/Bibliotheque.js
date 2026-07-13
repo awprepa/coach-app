@@ -33,6 +33,8 @@ export default function Bibliotheque() {
         @media (max-width: 820px){
           .bib-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding:0.6rem 0.9rem;}
           .bib-tabs button{white-space:nowrap;flex-shrink:0;}
+          .bib-tabs{scrollbar-width:none;}
+          .bib-tabs::-webkit-scrollbar{display:none;}
         }
       `}</style>
       {/* Barre d'onglets */}

@@ -546,8 +546,16 @@ export default function FicheGroupe() {
         ← {parent ? parent.nom : 'Clients'}
       </button>
 
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+      <style>{`
+        @media (max-width: 820px){
+          .fg-header{flex-wrap:wrap;gap:0.75rem;}
+          .fg-actions{width:100%;}
+          .fg-actions button{flex:1;}
+        }
+      `}</style>
       {/* ── Header groupe ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem' }}>
+      <div className="fg-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {groupe.logo_url
             ? <img src={groupe.logo_url} alt={groupe.nom} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 12 }} />
@@ -566,7 +574,7 @@ export default function FicheGroupe() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => setEditOpen(true)} style={S.btnSecondary}>✏️ Modifier</button>
           <button onClick={supprimerGroupe} style={{ ...S.btnSecondary, color: '#dc2626', borderColor: '#fee2e2' }}>🗑 Supprimer</button>
         </div>
