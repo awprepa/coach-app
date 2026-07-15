@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { supabase, maybeSyncDown } from './supabase'
+import { canSwitch, switchAccount } from './accountSwitch'
 
 const ICONS = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
@@ -30,6 +31,7 @@ export default function CoachNav() {
   const navigate = useNavigate()
   const [newClients, setNewClients] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)   // menu mobile (hamburger)
+  const [switchEmail, setSwitchEmail] = useState(null) // email si bascule possible (comptes d'Arthur)
   const [unreadMsgs, setUnreadMsgs] = useState(0)
 
   useEffect(() => {
@@ -38,6 +40,11 @@ export default function CoachNav() {
       .then(({ count }) => setNewClients(count || 0))
     // Warm sync : remplit la base locale pour le hors-ligne (Phase 3)
     maybeSyncDown().catch(() => {})
+    // Bascule de compte : proposée uniquement sur les comptes d'Arthur
+    supabase.auth.getSession().then(({ data }) => {
+      const email = data?.session?.user?.email
+      if (email && canSwitch(email)) setSwitchEmail(email)
+    })
   }, [])
 
   // Messages non lus reçus par le coach.
@@ -113,6 +120,11 @@ export default function CoachNav() {
             {item.to === '/messages' && unreadMsgs > 0 && <span className="coachnav-badge coachnav-badge-msg">{unreadMsgs}</span>}
           </NavLink>
         ))}
+        {switchEmail && (
+          <button onClick={() => switchAccount(switchEmail)} className="coachnav-logout coachnav-logout-m" style={{ marginTop: 10, background: '#333', color: '#e4f816', borderColor: '#333' }}>
+            ⇄ Passer sur mon compte client
+          </button>
+        )}
         <button onClick={handleLogout} className="coachnav-logout coachnav-logout-m">Déconnexion</button>
       </div>
       <button
@@ -127,6 +139,9 @@ export default function CoachNav() {
             : <><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></>}
         </svg>
       </button>
+      {switchEmail && (
+        <button onClick={() => switchAccount(switchEmail)} className="coachnav-logout coachnav-logout-d" title="Passer sur mon compte client">⇄ Client</button>
+      )}
       <button onClick={handleLogout} className="coachnav-logout coachnav-logout-d">Déconnexion</button>
     </nav>
   )

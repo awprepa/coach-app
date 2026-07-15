@@ -12,6 +12,7 @@ import GlobalTimerBubble from './components/GlobalTimerBubble'
 import InstallGuide, { shouldShowInstall, markInstalled } from './components/InstallGuide'
 import WellnessGate from './components/WellnessGate'
 import RpeGate from './components/RpeGate'
+import { initAccountSwitch } from './accountSwitch'
 
 // ── Pages chargées immédiatement (Auth critique) ──────────────────────────────
 import Login from './pages/Login'
@@ -455,6 +456,9 @@ function App() {
   // Phase 3 hors-ligne : le SW signale qu'une donnée a changé en fond →
   // on le rediffuse en événement window que les pages écoutent (useAutoRefresh).
   useEffect(() => {
+    // Bascule coach ↔ client (comptes d'Arthur uniquement) : maintient les
+    // jetons des 2 comptes à jour sur l'appareil.
+    initAccountSwitch()
     if (!('serviceWorker' in navigator)) return
     const onMsg = e => {
       if (e.data?.type === 'AW_DATA_REFRESHED') {
