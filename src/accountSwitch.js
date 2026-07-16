@@ -49,23 +49,44 @@ export function otherAccount(currentEmail) {
  *  et laisse la session actuelle valable pour la bascule retour. */
 export async function switchAccount(currentEmail) {
   const target = otherAccount(currentEmail)
-  const stored = load()[target]
+  const all = load()
+
+  // 1. Sauvegarder les jetons À JOUR du compte courant (depuis la session live)
+  //    — ils ont pu tourner depuis le dernier enregistrement.
+  try {
+    const { data: { session: cur } } = await supabase.auth.getSession()
+    if (cur?.user?.email === currentEmail && cur.refresh_token) {
+      all[currentEmail] = { access_token: cur.access_token, refresh_token: cur.refresh_token }
+      save(all)
+    }
+  } catch {}
+
+  const stored = all[target]
   if (!stored) {
     alert("Première bascule : connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter). Ensuite, la bascule sera instantanée dans les deux sens.")
     sessionStorage.setItem('aw_switch_pending', '1')   // laisse /login s'afficher malgré la session active
     window.location.href = '/login'
     return false
   }
+
   const { data, error } = await supabase.auth.setSession(stored)
   if (error || !data?.session) {
-    const all = load(); delete all[target]; save(all)
+    const a = load(); delete a[target]; save(a)
     alert("La session de l'autre compte a expiré. Connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter) pour réactiver la bascule.")
     sessionStorage.setItem('aw_switch_pending', '1')
     window.location.href = '/login'
     return false
   }
-  // Les nouveaux jetons (rotation) sont ré-enregistrés au rechargement
-  // via l'événement INITIAL_SESSION.
+
+  // 2. CRUCIAL : persister les jetons (éventuellement renouvelés) du compte
+  //    cible AVANT de recharger — sinon le reload court-circuite l'enregistrement
+  //    asynchrone et on garde un refresh token déjà consommé (« marche une
+  //    fois puis plus »).
+  const s = data.session
+  const a2 = load()
+  a2[target] = { access_token: s.access_token, refresh_token: s.refresh_token }
+  save(a2)
+
   window.location.href = '/'
   return true
 }
