@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
+import { compressImage } from '../../lib/compressImage'
 
 const DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
@@ -47,10 +48,10 @@ export default function PhotosClient() {
     let ok = 0
     for (const file of files) {
       try {
-        const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-        const path = `${client.id}/${date}_${crypto.randomUUID()}.${ext}`
+        const blob = await compressImage(file)
+        const path = `${client.id}/${date}_${crypto.randomUUID()}.jpg`
         const { error: upErr } = await supabase.storage.from('evolution-photos')
-          .upload(path, file, { contentType: file.type || 'image/jpeg' })
+          .upload(path, blob, { contentType: 'image/jpeg' })
         if (upErr) throw upErr
         // Insert SANS .select() : le client n'a pas le droit de relire ses photos
         const { error: insErr } = await supabase.from('evolution_photos')

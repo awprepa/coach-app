@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
+import { compressImage } from '../lib/compressImage'
 
 const DOW = [
   { v: '', l: 'Aucun rappel' },
@@ -55,9 +56,9 @@ export default function EvolutionPhotosCoach({ clientId }) {
     setUploading(true)
     for (const file of files) {
       try {
-        const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-        const path = `${clientId}/${addDate}_${crypto.randomUUID()}.${ext}`
-        const { error: upErr } = await supabase.storage.from('evolution-photos').upload(path, file, { contentType: file.type || 'image/jpeg' })
+        const blob = await compressImage(file)
+        const path = `${clientId}/${addDate}_${crypto.randomUUID()}.jpg`
+        const { error: upErr } = await supabase.storage.from('evolution-photos').upload(path, blob, { contentType: 'image/jpeg' })
         if (upErr) throw upErr
         await supabase.from('evolution_photos').insert({ client_id: clientId, date: addDate, storage_path: path, uploaded_by: 'coach' })
       } catch (err) { console.error('[coach add photo]', err?.message) }

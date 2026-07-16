@@ -1,35 +1,21 @@
 // ── Bascule rapide entre les 2 comptes d'Arthur (coach ↔ client) ─────────────
 // Réservé à ses deux emails : le bouton n'apparaît pour personne d'autre.
-// Les jetons des deux comptes sont conservés sur l'appareil (localStorage,
-// même niveau de sécurité que « rester connecté ») et réactualisés en continu
-// via onAuthStateChange — y compris après rotation du refresh token.
+//
+// Approche fiable (v2) : plus aucun jeton stocké/rejoué sur l'appareil (fragile —
+// Supabase invalide un refresh token dès qu'il est réutilisé). À chaque bascule on
+// demande une session NEUVE à la fonction Edge `switch-account`, qui vérifie côté
+// serveur que l'appelant est bien connecté à l'un des 2 comptes d'Arthur avant de
+// délivrer une session pour l'autre. Marche à tous les coups, dans les deux sens,
+// dès la première fois.
 import { supabase } from './supabase'
 
 export const COACH_EMAIL  = 'wehrey.arthur@gmail.com'
 export const CLIENT_EMAIL = 'a.r.t.h.u.r@outlook.fr'
 
-const KEY = 'aw_switch_sessions'
-
-function load() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || {} } catch { return {} }
-}
-function save(o) {
-  try { localStorage.setItem(KEY, JSON.stringify(o)) } catch {}
-}
-
-/** À appeler une fois au démarrage de l'app : enregistre et réactualise
- *  silencieusement les jetons quand l'un des 2 comptes est connecté. */
+/** Compat : plus rien à initialiser (l'ancienne v1 conservait des jetons ici).
+ *  On purge d'éventuels restes de l'ancienne approche. */
 export function initAccountSwitch() {
-  supabase.auth.onAuthStateChange((_event, session) => {
-    const email = session?.user?.email
-    if (!email || (email !== COACH_EMAIL && email !== CLIENT_EMAIL)) return
-    const all = load()
-    all[email] = {
-      access_token:  session.access_token,
-      refresh_token: session.refresh_token,
-    }
-    save(all)
-  })
+  try { localStorage.removeItem('aw_switch_sessions') } catch {}
 }
 
 /** La bascule n'est proposée qu'à Arthur (l'un de ses 2 emails). */
@@ -41,52 +27,45 @@ export function otherAccount(currentEmail) {
   return currentEmail === COACH_EMAIL ? CLIENT_EMAIL : COACH_EMAIL
 }
 
-/** Bascule vers l'autre compte.
- *  IMPORTANT : ne jamais passer par une déconnexion — signOut révoque les
- *  jetons côté serveur et casserait la bascule retour. Première fois (ou
- *  jeton expiré) : on amène directement à l'écran de connexion SANS se
- *  déconnecter ; la connexion à l'autre compte remplace la session locale
- *  et laisse la session actuelle valable pour la bascule retour. */
-export async function switchAccount(currentEmail) {
-  const target = otherAccount(currentEmail)
-  const all = load()
-
-  // 1. Sauvegarder les jetons À JOUR du compte courant (depuis la session live)
-  //    — ils ont pu tourner depuis le dernier enregistrement.
+/** Clé de stockage de session utilisée par supabase-js : sb-<ref>-auth-token. */
+function storageKey() {
   try {
-    const { data: { session: cur } } = await supabase.auth.getSession()
-    if (cur?.user?.email === currentEmail && cur.refresh_token) {
-      all[currentEmail] = { access_token: cur.access_token, refresh_token: cur.refresh_token }
-      save(all)
+    const ref = new URL(process.env.REACT_APP_SUPABASE_URL).hostname.split('.')[0]
+    return `sb-${ref}-auth-token`
+  } catch {
+    return 'sb-ytdqyhajqxnmkwxehwmg-auth-token'
+  }
+}
+
+/** Bascule vers l'autre compte : session neuve générée côté serveur.
+ *  On écrit la session DIRECTEMENT dans le stockage puis on recharge : c'est la
+ *  seule méthode fiable ici (setSession seul ne persistait pas la session avant
+ *  le rechargement — la bascule « réussissait » sans jamais changer de compte). */
+export async function switchAccount() {
+  try {
+    const { data, error } = await supabase.functions.invoke('switch-account')
+    const s = data?.session
+    if (error || !s?.access_token || !s?.refresh_token) {
+      alert("Bascule impossible pour le moment. Réessaie dans un instant.")
+      return false
     }
-  } catch {}
 
-  const stored = all[target]
-  if (!stored) {
-    alert("Première bascule : connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter). Ensuite, la bascule sera instantanée dans les deux sens.")
-    sessionStorage.setItem('aw_switch_pending', '1')   // laisse /login s'afficher malgré la session active
-    window.location.href = '/login'
+    // Persistance garantie : on remplace la session stockée par la nouvelle.
+    localStorage.setItem(storageKey(), JSON.stringify({
+      access_token:  s.access_token,
+      refresh_token: s.refresh_token,
+      expires_at:    s.expires_at,
+      expires_in:    s.expires_in,
+      token_type:    s.token_type || 'bearer',
+      user:          s.user,
+    }))
+
+    // Rechargement complet : la nouvelle session est lue au démarrage et AuthGate
+    // route vers le bon espace (coach ou client) selon le compte.
+    window.location.href = '/'
+    return true
+  } catch (e) {
+    alert("Bascule impossible pour le moment. Réessaie dans un instant.")
     return false
   }
-
-  const { data, error } = await supabase.auth.setSession(stored)
-  if (error || !data?.session) {
-    const a = load(); delete a[target]; save(a)
-    alert("La session de l'autre compte a expiré. Connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter) pour réactiver la bascule.")
-    sessionStorage.setItem('aw_switch_pending', '1')
-    window.location.href = '/login'
-    return false
-  }
-
-  // 2. CRUCIAL : persister les jetons (éventuellement renouvelés) du compte
-  //    cible AVANT de recharger — sinon le reload court-circuite l'enregistrement
-  //    asynchrone et on garde un refresh token déjà consommé (« marche une
-  //    fois puis plus »).
-  const s = data.session
-  const a2 = load()
-  a2[target] = { access_token: s.access_token, refresh_token: s.refresh_token }
-  save(a2)
-
-  window.location.href = '/'
-  return true
 }

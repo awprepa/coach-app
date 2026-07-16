@@ -576,6 +576,11 @@ export default function FicheClient() {
               <path d="M9 7 Q10 5 9 3"/><path d="M12 7 Q13 5 12 3"/><path d="M15 7 Q16 5 15 3"/>
             </svg>
           )},
+          { k: 'photos', l: 'Photos', icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+            </svg>
+          )},
         ].map(t => (
           <button key={t.k} onClick={() => {
             setActiveTab(t.k)
@@ -651,12 +656,13 @@ export default function FicheClient() {
               })()}
             </div>
           )}
+        </div>
+      )}
 
-          {/* Photos d'évolution (privé — coach uniquement) */}
-          <div style={{ marginTop: '1.5rem' }}>
-            <p style={{ ...styles.sectionTitle, margin: '0 0 0.75rem' }}>Photos d'évolution</p>
-            <EvolutionPhotosCoach clientId={id} />
-          </div>
+      {/* Onglet Photos d'évolution (privé — coach uniquement) */}
+      {activeTab === 'photos' && client && (
+        <div style={{ marginTop: '1rem' }}>
+          <EvolutionPhotosCoach clientId={id} />
         </div>
       )}
 
