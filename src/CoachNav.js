@@ -19,6 +19,7 @@ const ICONS = {
 const NAV = [
   { to: '/',            icon: 'dashboard', label: 'Tableau de bord', end: true },
   { to: '/clients',     icon: 'clients',   label: 'Clients' },
+  { to: '/agenda',      icon: 'calendar',  label: 'Agenda' },
   { to: '/bibliotheque',icon: 'book',      label: 'Bibliothèque' },
   { to: '/nutrition',   icon: 'nutrition', label: 'Nutrition' },
   { to: '/gps',         icon: 'gps',       label: 'GPS' },

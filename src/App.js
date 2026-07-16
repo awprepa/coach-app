@@ -54,6 +54,7 @@ const Seance               = lazy(() => import('./pages/Seance'))
 const Bibliotheque              = lazy(() => import('./pages/Bibliotheque'))
 const GPS                  = lazy(() => import('./pages/GPS'))
 const Tests                = lazy(() => import('./pages/Tests'))
+const AgendaGlobal         = lazy(() => import('./pages/AgendaGlobal'))
 const ResetPassword        = lazy(() => import('./pages/ResetPassword'))
 const SeanceProjection     = lazy(() => import('./pages/SeanceProjection'))
 const ImportClientExcel    = lazy(() => import('./pages/ImportClientExcel'))
@@ -517,6 +518,7 @@ function App() {
               <Route path="/" element={<WithNotifs><Home /></WithNotifs>} />
 
               {/* ── Coach ── */}
+              <Route path="/agenda"                      element={<WithNav><AgendaGlobal /></WithNav>} />
               <Route path="/clients"                     element={<WithNav><Clients /></WithNav>} />
               <Route path="/nouveau-client"              element={<WithNav><NouveauClient /></WithNav>} />
               <Route path="/client/:id"                  element={<WithNav><FicheClient /></WithNav>} />
