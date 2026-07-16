@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { ChargePanel } from './ChargeEntrainement'
+import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
 import { CGV_CONTENU } from './CGV'
 import { MUSCLES } from '../data/muscleData'
 
@@ -650,6 +651,12 @@ export default function FicheClient() {
               })()}
             </div>
           )}
+
+          {/* Photos d'évolution (privé — coach uniquement) */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <p style={{ ...styles.sectionTitle, margin: '0 0 0.75rem' }}>Photos d'évolution</p>
+            <EvolutionPhotosCoach clientId={id} />
+          </div>
         </div>
       )}
 

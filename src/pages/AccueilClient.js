@@ -386,6 +386,21 @@ export default function AccueilClient() {
           </div>
         )}
 
+        {/* Rappel photos d'évolution (jour choisi par le coach) */}
+        {client?.photo_reminder_dow != null && new Date().getDay() === client.photo_reminder_dow && (
+          <div onClick={() => navigate('/client/photos')}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', color: 'white', borderRadius: 16, padding: '0.9rem 1rem', marginBottom: '0.85rem', cursor: 'pointer', boxShadow: '0 3px 12px rgba(29,78,216,0.3)' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+            </svg>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem' }}>Photos d'évolution</p>
+              <p style={{ margin: '0.1rem 0 0', fontSize: '0.78rem', opacity: 0.9 }}>C'est le jour d'envoyer tes photos à ton coach.</p>
+            </div>
+            <span style={{ fontSize: '1.3rem', opacity: 0.8 }}>›</span>
+          </div>
+        )}
+
         {/* Widget nutrition aujourd'hui */}
         {nutritionToday && (
           <div onClick={() => navigate('/client/nutrition/plan')} style={styles.nutritionWidget}>

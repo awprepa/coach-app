@@ -85,6 +85,7 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
           <MenuItem icon={<IconProfil />} label="Mon profil" onClick={() => go('/client/profil')} />
           <MenuItem icon={<IconWellness />} label="Mon wellness" onClick={() => go('/client/wellness')} />
           <MenuItem icon={<IconTests />} label="Mes tests" onClick={() => go('/client/tests')} />
+          <MenuItem icon={<IconPhotos />} label="Photos d'évolution" onClick={() => go('/client/photos')} />
           <MenuItem icon={<IconSciences />} label="Base scientifique" onClick={() => go('/client/sciences')} />
         </div>
 
@@ -145,6 +146,13 @@ function IconSciences() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  )
+}
+function IconPhotos() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
     </svg>
   )
 }

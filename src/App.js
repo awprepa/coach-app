@@ -35,6 +35,7 @@ const HistoriqueNutrition  = lazy(() => import('./pages/client/HistoriqueNutriti
 const ProfilNutrition      = lazy(() => import('./pages/client/ProfilNutrition'))
 const ScannerArticle       = lazy(() => import('./pages/client/ScannerArticle'))
 const HistoriqueScans      = lazy(() => import('./pages/client/HistoriqueScans'))
+const PhotosClient         = lazy(() => import('./pages/client/PhotosClient'))
 const SciencesClient       = lazy(() => import('./pages/client/SciencesClient'))
 const ProgressionClient    = lazy(() => import('./pages/client/ProgressionClient'))
 const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales'))
@@ -500,6 +501,7 @@ function App() {
               <Route path="/client/nutrition/profil"     element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
               <Route path="/client/nutrition/scanner"    element={<WithNotifs><ScannerArticle /></WithNotifs>} />
               <Route path="/client/nutrition/scans"      element={<WithNotifs><HistoriqueScans /></WithNotifs>} />
+              <Route path="/client/photos"               element={<WithNotifs><PhotosClient /></WithNotifs>} />
               <Route path="/client/sciences"             element={<WithNotifs><SciencesClient /></WithNotifs>} />
               <Route path="/client/progression"          element={<WithNotifs><ProgressionClient /></WithNotifs>} />
               <Route path="/client/competition"          element={<WithNotifs><CompetitionClient /></WithNotifs>} />
