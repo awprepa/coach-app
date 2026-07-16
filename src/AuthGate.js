@@ -12,7 +12,9 @@ function redirect(navigate, user, path) {
   if (PUBLIC_PATHS.includes(path)) {
     // Si connecté normalement et pas en train de réinitialiser → rediriger vers l'app
     // (mais seulement sur /login, pas /reset-password qui doit rester accessible)
-    if (user && path === '/login') {
+    // Bascule de compte en cours : on laisse /login s'afficher même si une
+    // session est encore active, pour pouvoir se connecter à l'autre compte.
+    if (user && path === '/login' && !sessionStorage.getItem('aw_switch_pending')) {
       if (user.email === COACH_EMAIL) navigate('/')
       else navigate('/client/accueil')
     }
@@ -59,6 +61,8 @@ export default function AuthGate({ children }) {
       if (_event === 'INITIAL_SESSION') return
       // Flux de récupération → la page /reset-password gère elle-même
       if (_event === 'PASSWORD_RECOVERY') return
+      // Connexion réussie à l'autre compte → fin de la bascule
+      if (_event === 'SIGNED_IN') sessionStorage.removeItem('aw_switch_pending')
       redirect(navigate, session?.user, window.location.pathname)
     })
 

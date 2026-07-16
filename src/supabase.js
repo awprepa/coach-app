@@ -53,7 +53,7 @@ class OfflineBuilder {
   insert(p, opts)   { this._op = 'insert'; this._payload = p; this._real = this._real.insert(p, opts); return this }
   update(p)         { this._op = 'update'; this._payload = p; this._real = this._real.update(p); return this }
   delete()          { this._op = 'delete';                     this._real = this._real.delete();   return this }
-  upsert(p, opts)   { this._op = 'upsert'; this._payload = p; this._real = this._real.upsert(p, opts); return this }
+  upsert(p, opts)   { this._op = 'upsert'; this._payload = p; this._onConflict = opts?.onConflict || null; this._real = this._real.upsert(p, opts); return this }
 
   // ── Application locale des filtres ─────────────────────────────────────
   _filter(rows) {
@@ -182,9 +182,10 @@ class OfflineBuilder {
     // Ajoute à la queue de sync
     await localDB._sync_queue.add({
       table, operation: op,
-      payload:   JSON.stringify(payload),
-      filters:   JSON.stringify(filters),
-      timestamp: Date.now(),
+      payload:    JSON.stringify(payload),
+      filters:    JSON.stringify(filters),
+      onConflict: this._onConflict || null,   // préserve l'upsert onConflict pour le replay
+      timestamp:  Date.now(),
     })
 
     // Notifie l'UI
@@ -234,7 +235,7 @@ export async function _flushQueue() {
       let b = _client.from(item.table)
 
       if (item.operation === 'insert') b = b.insert(payload).select()
-      else if (item.operation === 'upsert') b = b.upsert(payload).select()
+      else if (item.operation === 'upsert') b = b.upsert(payload, item.onConflict ? { onConflict: item.onConflict } : undefined).select()
       else if (item.operation === 'update') {
         b = b.update(payload)
         for (const f of filters) if (f.t === 'eq') b = b.eq(f.c, f.v)

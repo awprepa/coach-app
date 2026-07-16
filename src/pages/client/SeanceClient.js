@@ -105,6 +105,7 @@ export default function SeanceClient() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [tracking, setTracking] = useState({})
+  const trackingRef = useRef({})       // miroir de `tracking` toujours à jour (pour l'auto-save)
   const [warmupTracking, setWarmupTracking] = useState({}) // { exId: [{ serie, poids, reps_reelles }] }
   const [blocsTermines, setBlocsTermines] = useState(new Set())
   const [blocsSkippes, setBlocsSkippes] = useState(new Set()) // blocs marqués "non effectués"
@@ -132,6 +133,7 @@ export default function SeanceClient() {
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
   const [localSavedAt, setLocalSavedAt] = useState(null)
   const [validatingSet, setValidatingSet] = useState(new Set()) // anti double-tap : clés "exId-si"
+  trackingRef.current = tracking       // synchronisé à chaque rendu
   const blocRefs = useRef({})
   const prNotifiedRef = useRef({}) // { [exId]: maxPoidsNotifié } — évite les doublons dans la même séance
   const finNotifSentRef = useRef(false) // verrou anti-doublon de la notif "séance terminée"
@@ -533,7 +535,36 @@ export default function SeanceClient() {
       series[serieIdx] = { ...(series[serieIdx] || {}), [field]: value }
       return { ...prev, [exId]: series }
     })
+    // Auto-sauvegarde débouncée : la valeur est persistée ~800 ms après la
+    // dernière frappe, même si le champ ne perd jamais le focus (app fermée
+    // ou basculée en plein milieu de la saisie).
+    scheduleSerieSave(exId, serieIdx)
   }
+
+  const saveTimersRef = useRef({})
+  function scheduleSerieSave(exId, serieIdx) {
+    const key = `${exId}-${serieIdx}`
+    clearTimeout(saveTimersRef.current[key])
+    saveTimersRef.current[key] = setTimeout(() => { saveSerieField(exId, serieIdx) }, 800)
+  }
+  // Flush toutes les sauvegardes en attente si l'app passe en arrière-plan
+  useEffect(() => {
+    const flushAll = () => {
+      Object.keys(saveTimersRef.current).forEach(key => {
+        clearTimeout(saveTimersRef.current[key])
+        const [exId, si] = [key.slice(0, key.lastIndexOf('-')), key.slice(key.lastIndexOf('-') + 1)]
+        saveSerieField(exId, parseInt(si))
+      })
+    }
+    const onHide = () => { if (document.visibilityState === 'hidden') flushAll() }
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', flushAll)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', flushAll)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function devaliderSerie(exId, serieIdx, groupLetter) {
     if (!exId) return
@@ -580,16 +611,18 @@ export default function SeanceClient() {
 
   async function saveSerieField(exId, serieIdx) {
     if (!exId) return
-    const serie = tracking[exId]?.[serieIdx] || {}
+    // Lecture depuis la ref → toujours la dernière valeur saisie (évite closure périmée)
+    const serie = trackingRef.current[exId]?.[serieIdx] || {}
     // Sauvegarder dès la saisie, même avant validation — évite la perte si on quitte l'app
     if (!serie.poids && !serie.reps_reelles) return // rien à sauvegarder
-    await supabase.from('serie_tracking').upsert({
+    const { error } = await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
       reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
       valide: serie.valide || false,
       is_done: serie.is_done || false,
     }, { onConflict: 'exercice_id,semaine,serie' })
+    if (error) { console.error('[saveSerieField]', error.message); return }  // pas de flash « sauvegardé » si échec réel
     flashSaved()
   }
 

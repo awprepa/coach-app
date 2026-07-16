@@ -52,6 +52,7 @@ export async function switchAccount(currentEmail) {
   const stored = load()[target]
   if (!stored) {
     alert("Première bascule : connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter). Ensuite, la bascule sera instantanée dans les deux sens.")
+    sessionStorage.setItem('aw_switch_pending', '1')   // laisse /login s'afficher malgré la session active
     window.location.href = '/login'
     return false
   }
@@ -59,6 +60,7 @@ export async function switchAccount(currentEmail) {
   if (error || !data?.session) {
     const all = load(); delete all[target]; save(all)
     alert("La session de l'autre compte a expiré. Connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter) pour réactiver la bascule.")
+    sessionStorage.setItem('aw_switch_pending', '1')
     window.location.href = '/login'
     return false
   }
