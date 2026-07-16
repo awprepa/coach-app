@@ -41,23 +41,29 @@ export function otherAccount(currentEmail) {
   return currentEmail === COACH_EMAIL ? CLIENT_EMAIL : COACH_EMAIL
 }
 
-/** Bascule vers l'autre compte. Retourne false si une (re)connexion manuelle
- *  est nécessaire (première fois, ou jeton expiré). */
+/** Bascule vers l'autre compte.
+ *  IMPORTANT : ne jamais passer par une déconnexion — signOut révoque les
+ *  jetons côté serveur et casserait la bascule retour. Première fois (ou
+ *  jeton expiré) : on amène directement à l'écran de connexion SANS se
+ *  déconnecter ; la connexion à l'autre compte remplace la session locale
+ *  et laisse la session actuelle valable pour la bascule retour. */
 export async function switchAccount(currentEmail) {
   const target = otherAccount(currentEmail)
   const stored = load()[target]
   if (!stored) {
-    alert("Première utilisation : déconnecte-toi puis connecte-toi une fois à l'autre compte. La bascule sera ensuite instantanée.")
+    alert("Première bascule : connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter). Ensuite, la bascule sera instantanée dans les deux sens.")
+    window.location.href = '/login'
     return false
   }
-  const { error } = await supabase.auth.setSession(stored)
-  if (error) {
+  const { data, error } = await supabase.auth.setSession(stored)
+  if (error || !data?.session) {
     const all = load(); delete all[target]; save(all)
-    alert("La session enregistrée a expiré — reconnecte-toi une fois à l'autre compte pour réactiver la bascule.")
+    alert("La session de l'autre compte a expiré. Connecte-toi à l'autre compte sur l'écran qui suit (sans te déconnecter) pour réactiver la bascule.")
+    window.location.href = '/login'
     return false
   }
-  // setSession déclenche onAuthStateChange → les nouveaux jetons (rotation)
-  // sont ré-enregistrés automatiquement avant le rechargement.
+  // Les nouveaux jetons (rotation) sont ré-enregistrés au rechargement
+  // via l'événement INITIAL_SESSION.
   window.location.href = '/'
   return true
 }

@@ -80,7 +80,7 @@ export default function Login() {
       setError(error.message)
     } else {
       setSuccess('Mot de passe mis à jour ! Tu peux maintenant te connecter.')
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'local' })
       setNewPassword(''); setConfirmPassword('')
       setTimeout(() => switchMode('connexion'), 2000)
     }

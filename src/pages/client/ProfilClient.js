@@ -419,7 +419,7 @@ export default function ProfilClient() {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     navigate('/login')
   }
 

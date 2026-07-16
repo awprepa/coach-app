@@ -101,7 +101,7 @@ export default function CoachNav() {
   }, [])
 
   async function handleLogout() {
-    try { await supabase.auth.signOut() } catch (e) { console.error(e) }
+    try { await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
     navigate('/login')
   }
 

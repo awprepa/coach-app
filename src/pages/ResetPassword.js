@@ -48,7 +48,7 @@ export default function ResetPassword() {
       setError(err.message)
     } else {
       setStatus('success')
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'local' })
       setTimeout(() => navigate('/login'), 2500)
     }
     setSaving(false)

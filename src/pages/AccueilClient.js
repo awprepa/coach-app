@@ -247,7 +247,7 @@ export default function AccueilClient() {
   }
 
   async function handleLogout() {
-    try { await supabase.auth.signOut() } catch (e) { console.error(e) }
+    try { await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
     navigate('/login')
   }
 
@@ -259,7 +259,7 @@ export default function AccueilClient() {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       })
       if (error) throw error
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'local' })
       navigate('/login')
     } catch (e) {
       console.error('delete-account error:', e)

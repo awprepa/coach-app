@@ -22,7 +22,7 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
 
   async function handleLogout() {
     onClose()
-    try { await supabase.auth.signOut() } catch (e) { console.error(e) }
+    try { await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
     navigate('/login')
   }
 
