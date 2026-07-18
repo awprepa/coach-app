@@ -114,9 +114,26 @@ export default function Programme() {
   }
 
   async function sauvegarderProgramme() {
-    const { error } = await supabase.from('programmes').update({ nom: formProgramme.nom, semaines: formProgramme.semaines, date_debut: formProgramme.date_debut || null }).eq('id', id)
-    if (error) alert(error.message)
-    else { setProgramme({ ...programme, ...formProgramme }); setEditProgramme(false) }
+    const semaines   = formProgramme.semaines
+    const dateDebut  = formProgramme.date_debut || null
+    const { error } = await supabase.from('programmes').update({ nom: formProgramme.nom, semaines, date_debut: dateDebut }).eq('id', id)
+    if (error) { alert(error.message); return }
+
+    // Programme de groupe (le « modèle ») → aligner toutes les copies des membres
+    // sur la même durée et la même date de début, pour que tout le monde commence
+    // et finisse en même temps.
+    const estModeleDeGroupe = programme?.groupe_id && !programme?.template_id
+    if (estModeleDeGroupe) {
+      const { data: copies, error: ce } = await supabase.from('programmes')
+        .update({ semaines, date_debut: dateDebut })
+        .eq('template_id', id)
+        .select('id')
+      if (ce) alert("Le programme est enregistré, mais les copies des membres n'ont pas pu être mises à jour : " + ce.message)
+      else if (copies?.length) alert(`Programme enregistré. ${copies.length} membre${copies.length > 1 ? 's' : ''} réaligné${copies.length > 1 ? 's' : ''} sur la même période.`)
+    }
+
+    setProgramme({ ...programme, ...formProgramme })
+    setEditProgramme(false)
   }
 
   async function ouvrirTemplates() {

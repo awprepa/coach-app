@@ -1,4 +1,4 @@
-// ── AWprepa Service Worker v18 ────────────────────────────────────────────────
+// ── AWprepa Service Worker v19 ────────────────────────────────────────────────
 // Stratégies :
 //   • Shell JS/CSS/images  → cache-first (servi instantanément hors-ligne)
 //   • Pages HTML (SPA)     → network-first + fallback vers /  (navigation offline)
@@ -8,9 +8,9 @@
 // v15 : lectures local-first (stale-while-revalidate) + invalidation ciblée du
 //       cache API après une écriture réussie (message INVALIDATE_API_CACHE).
 
-const CACHE_SHELL   = 'aw-shell-v18'
-const CACHE_API     = 'aw-api-v18'
-const CACHE_PAGES   = 'aw-pages-v18'
+const CACHE_SHELL   = 'aw-shell-v19'
+const CACHE_API     = 'aw-api-v19'
+const CACHE_PAGES   = 'aw-pages-v19'
 
 // ── Install : précache l'intégralité du bundle via asset-manifest.json ────────
 self.addEventListener('install', event => {
@@ -40,7 +40,7 @@ self.addEventListener('install', event => {
 
 // ── Activate : purge les anciens caches + force rechargement des pages ouvertes ─
 self.addEventListener('activate', event => {
-  const KEEP = ['aw-shell-v18', 'aw-api-v18', 'aw-pages-v18']
+  const KEEP = ['aw-shell-v19', 'aw-api-v19', 'aw-pages-v19']
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k))))

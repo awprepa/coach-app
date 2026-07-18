@@ -288,7 +288,7 @@ export default function FicheGroupe() {
     // Proposer de pousser les programmes existants aux nouveaux membres
     const { data: progs } = await supabase
       .from('programmes')
-      .select('id, nom, semaines')
+      .select('id, nom, semaines, date_debut')
       .eq('groupe_id', id)
       .is('template_id', null)
       .order('created_at', { ascending: false })
@@ -305,6 +305,20 @@ export default function FicheGroupe() {
     setPushingToNew(true)
 
     const progsToPush = progsDispos.filter(p => selectedProgsForNew.has(p.id))
+
+    // Garde-fou : sans date de début sur le programme du groupe, la copie ne peut
+    // être alignée sur personne (elle ne commencerait ni ne finirait avec le groupe).
+    const sansDate = progsToPush.filter(p => !p.date_debut)
+    if (sansDate.length > 0) {
+      const noms = sansDate.map(p => `« ${p.nom} »`).join(', ')
+      const ok = window.confirm(
+        `${noms} n'a pas de date de début : la copie du nouveau membre ne sera alignée sur aucune période ` +
+        `(il ne commencera ni ne finira en même temps que le groupe).\n\n` +
+        `Conseil : annule, ouvre le programme et fixe sa date de début, puis recommence.\n\n` +
+        `Continuer quand même ?`
+      )
+      if (!ok) { setPushingToNew(false); return }
+    }
 
     // Récupérer les copies déjà existantes pour éviter les doublons
     const templateIds = progsToPush.map(p => p.id)
@@ -325,9 +339,13 @@ export default function FicheGroupe() {
       for (const clientId of newMembresIds) {
         if (alreadyHas.has(`${clientId}:${prog.id}`)) continue
 
+        // date_debut reprise du programme du groupe : le nouveau membre est aligné
+        // sur la même période que tout le monde. S'il arrive en cours de cycle, les
+        // semaines déjà écoulées le sont aussi pour lui, et il finit avec le groupe.
         const { data: progCopy, error: pe } = await supabase.from('programmes').insert({
           nom: prog.nom,
           semaines: prog.semaines,
+          date_debut: prog.date_debut,
           client_id: clientId,
           groupe_id: id,
           template_id: prog.id,
@@ -469,6 +487,92 @@ export default function FicheGroupe() {
     alert(`${toDelete.length} doublon${toDelete.length > 1 ? 's' : ''} supprimé${toDelete.length > 1 ? 's' : ''}.`)
   }
 
+  // ── Durée du programme de groupe ───────────────────────────────────────────
+  // Change la durée du « modèle » ET de toutes les copies des membres, pour que
+  // le cycle continue de commencer et finir en même temps pour tout le monde.
+  async function etendreDuree(prog) {
+    const actuelle = parseInt(prog.semaines) || 0
+    const saisie = window.prompt(
+      `Durée de « ${prog.nom} » en semaines.\n\n` +
+      `Actuellement : ${actuelle} semaine${actuelle > 1 ? 's' : ''}.\n` +
+      `La nouvelle durée s'appliquera aussi à toutes les copies des membres.`,
+      String(actuelle)
+    )
+    if (saisie === null) return
+    const nouvelle = parseInt(saisie, 10)
+    if (!Number.isInteger(nouvelle) || nouvelle < 1 || nouvelle > 52) {
+      alert('Indique un nombre de semaines entre 1 et 52.')
+      return
+    }
+    if (nouvelle === actuelle) return
+
+    // Extension → que faire des RPE cibles des semaines ajoutées ?
+    let recopierRpe = false
+    if (nouvelle > actuelle && actuelle > 0) {
+      recopierRpe = window.confirm(
+        `Semaines ${actuelle + 1} à ${nouvelle} ajoutées.\n\n` +
+        `OK  → recopier les RPE cibles de la semaine ${actuelle} sur les nouvelles semaines.\n` +
+        `Annuler → les laisser vides (tu les rempliras toi-même).`
+      )
+    }
+
+    setPushLoading(prog.id)
+    try {
+      // 1. Le modèle
+      const { error: te } = await supabase.from('programmes')
+        .update({ semaines: nouvelle }).eq('id', prog.id)
+      if (te) throw te
+
+      // 2. Toutes les copies : même durée + même date de début (réalignement)
+      const { data: copies, error: ce } = await supabase.from('programmes')
+        .update({ semaines: nouvelle, date_debut: prog.date_debut })
+        .eq('template_id', prog.id)
+        .select('id')
+      if (ce) throw ce
+
+      // 3. RPE cibles des nouvelles semaines (sur le modèle)
+      let nbRpe = 0
+      if (recopierRpe) {
+        const { data: seancesTpl } = await supabase.from('seances')
+          .select('id').eq('programme_id', prog.id)
+        const ids = (seancesTpl || []).map(s => s.id)
+        if (ids.length) {
+          const { data: derniere } = await supabase.from('rpe_seances')
+            .select('seance_id, rpe_cible')
+            .in('seance_id', ids)
+            .eq('semaine', actuelle)
+            .not('rpe_cible', 'is', null)
+          // Repartir d'une base propre sur la plage ajoutée (évite les doublons)
+          await supabase.from('rpe_seances')
+            .delete().in('seance_id', ids).gt('semaine', actuelle).lte('semaine', nouvelle)
+          const rows = []
+          for (const r of derniere || []) {
+            for (let w = actuelle + 1; w <= nouvelle; w++) {
+              rows.push({ seance_id: r.seance_id, semaine: w, rpe_cible: r.rpe_cible })
+            }
+          }
+          if (rows.length) {
+            const { error: re } = await supabase.from('rpe_seances').insert(rows)
+            if (re) throw re
+            nbRpe = rows.length
+          }
+        }
+      }
+
+      const n = copies?.length || 0
+      alert(
+        `Durée passée à ${nouvelle} semaine${nouvelle > 1 ? 's' : ''}.\n` +
+        `${n} copie${n > 1 ? 's' : ''} de membre mise${n > 1 ? 's' : ''} à jour.` +
+        (nbRpe ? `\n${nbRpe} RPE cible${nbRpe > 1 ? 's' : ''} recopié${nbRpe > 1 ? 's' : ''}.` : '')
+      )
+      await load(true)
+    } catch (e) {
+      alert('Échec : ' + (e?.message || e))
+    } finally {
+      setPushLoading(null)
+    }
+  }
+
   async function propaguerATous(prog) {
     if (!window.confirm(`Mettre à jour TOUTES les copies existantes de "${prog.nom}" ?\nCela écrasera le contenu de chaque copie individuelle.`)) return
     setPushLoading(prog.id)
@@ -480,6 +584,13 @@ export default function FicheGroupe() {
     // Trouver toutes les copies
     const { data: copies } = await supabase.from('programmes').select('id').eq('template_id', prog.id)
     let count = 0
+
+    // Réaligner la période : même durée et même date de début pour tout le monde,
+    // y compris les membres ajoutés en cours de cycle (dont la copie pouvait être
+    // créée sans date de début avant le correctif).
+    await supabase.from('programmes')
+      .update({ semaines: prog.semaines, date_debut: prog.date_debut })
+      .eq('template_id', prog.id)
 
     for (const copy of copies || []) {
       // Supprimer les anciennes séances (les exercices se suppriment en cascade si FK est set)
@@ -740,6 +851,14 @@ export default function FicheGroupe() {
                       title="Mettre à jour toutes les copies existantes"
                     >
                       🔄 Propager les modifs
+                    </button>
+                    <button
+                      onClick={() => etendreDuree(prog)}
+                      disabled={isPushing}
+                      style={{ ...S.btnAction, background: '#f3f4f6', color: '#374151' }}
+                      title="Changer la durée du programme pour le groupe et toutes les copies"
+                    >
+                      📅 Durée ({prog.semaines} sem)
                     </button>
                     <button
                       onClick={() => supprimerDoublons(prog)}
