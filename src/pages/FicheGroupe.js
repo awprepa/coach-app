@@ -756,6 +756,13 @@ export default function FicheGroupe() {
         )}
       </Section>
 
+      {/* ── Intensité des entraînements terrain ──
+           Placée avant les membres : sous une liste de 30+ joueurs, la section
+           était invisible sans scroller longuement. */}
+      <Section title="Intensité des entraînements" accent={accent}>
+        <GroupeIntensite groupeId={id} accent={accent} />
+      </Section>
+
       {/* ── Membres ── */}
       <Section title="Membres" accent={accent}>
         {membres.length > 0 && (
@@ -806,11 +813,6 @@ export default function FicheGroupe() {
           </div>
         )}
         <button onClick={ouvrirAddMembre} style={S.btnAdd}>+ Ajouter un membre</button>
-      </Section>
-
-      {/* ── Intensité des entraînements terrain ── */}
-      <Section title="Intensité des entraînements" accent={accent}>
-        <GroupeIntensite groupeId={id} accent={accent} />
       </Section>
 
       {/* ── Programmes du groupe ── */}
