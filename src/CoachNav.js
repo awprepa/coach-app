@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { supabase, maybeSyncDown } from './supabase'
 import { canSwitch, switchAccount } from './accountSwitch'
 
@@ -7,6 +8,7 @@ const ICONS = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
   clients:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>,
   groupes:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+  plus:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>,
   calendar:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
   book:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
   gps:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
@@ -17,6 +19,7 @@ const ICONS = {
   nutrition: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
 }
 
+// Entrées principales, toujours visibles dans la barre.
 const NAV = [
   { to: '/',            icon: 'dashboard', label: 'Tableau de bord', end: true },
   { to: '/clients',     icon: 'clients',   label: 'Clients' },
@@ -24,16 +27,35 @@ const NAV = [
   { to: '/agenda',      icon: 'calendar',  label: 'Agenda' },
   { to: '/bibliotheque',icon: 'book',      label: 'Bibliothèque' },
   { to: '/nutrition',   icon: 'nutrition', label: 'Nutrition' },
-  { to: '/gps',         icon: 'gps',       label: 'GPS' },
-  { to: '/tests',       icon: 'tests',     label: 'Tests' },
   { to: '/messages',    icon: 'messages',  label: 'Messagerie' },
-  { to: '/factures',    icon: 'factures',  label: 'Facturation' },
+]
+
+// Entrées secondaires : regroupées sous « Plus » sur desktop (la barre tenait
+// sur 2 lignes et débordait de sa hauteur fixe avec 10 entrées). Sur mobile
+// elles restent à plat dans le menu hamburger, qui a la place.
+const NAV_PLUS = [
+  { to: '/gps',      icon: 'gps',      label: 'GPS' },
+  { to: '/tests',    icon: 'tests',    label: 'Tests' },
+  { to: '/factures', icon: 'factures', label: 'Facturation' },
 ]
 
 export default function CoachNav() {
   const navigate = useNavigate()
   const [newClients, setNewClients] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)   // menu mobile (hamburger)
+  // Menu « Plus » (desktop). Rendu dans un portail : la barre défile en
+  // horizontal (overflow-x), ce qui rognerait un menu positionné à l'intérieur.
+  const [plusOpen, setPlusOpen] = useState(false)
+  const [plusPos, setPlusPos]   = useState({ top: 0, left: 0 })
+  const plusBtnRef = useRef(null)
+  const location = useLocation()
+  const plusActif = NAV_PLUS.some(i => location.pathname.startsWith(i.to))
+
+  function ouvrirPlus() {
+    const r = plusBtnRef.current?.getBoundingClientRect()
+    if (r) setPlusPos({ top: r.bottom + 6, left: r.left })
+    setPlusOpen(o => !o)
+  }
   const [switchEmail, setSwitchEmail] = useState(null) // email si bascule possible (comptes d'Arthur)
   const [unreadMsgs, setUnreadMsgs] = useState(0)
 
@@ -123,6 +145,27 @@ export default function CoachNav() {
             {item.to === '/messages' && unreadMsgs > 0 && <span className="coachnav-badge coachnav-badge-msg">{unreadMsgs}</span>}
           </NavLink>
         ))}
+        {/* Secondaires : menu « Plus » sur desktop… */}
+        <div className="coachnav-plus">
+          <button
+            ref={plusBtnRef}
+            className={`coachnav-link coachnav-plus-btn${plusActif ? ' active' : ''}`}
+            onClick={ouvrirPlus}
+            aria-expanded={plusOpen}
+          >
+            <span className="coachnav-ico">{ICONS.plus}</span>
+            Plus
+          </button>
+        </div>
+
+        {/* …et à plat dans le menu mobile, qui a la place. */}
+        {NAV_PLUS.map(item => (
+          <NavLink key={item.to} to={item.to} className="coachnav-link coachnav-link-plus" onClick={() => setMenuOpen(false)}>
+            <span className="coachnav-ico">{ICONS[item.icon]}</span>
+            {item.label}
+          </NavLink>
+        ))}
+
         {switchEmail && (
           <button onClick={() => switchAccount(switchEmail)} className="coachnav-logout coachnav-logout-m" style={{ marginTop: 10, background: '#333', color: '#e4f816', borderColor: '#333' }}>
             ⇄ Passer sur mon compte client
@@ -146,6 +189,21 @@ export default function CoachNav() {
         <button onClick={() => switchAccount(switchEmail)} className="coachnav-logout coachnav-logout-d" title="Passer sur mon compte client">⇄ Client</button>
       )}
       <button onClick={handleLogout} className="coachnav-logout coachnav-logout-d">Déconnexion</button>
+
+      {plusOpen && createPortal(
+        <>
+          <div className="coachnav-plus-backdrop" onClick={() => setPlusOpen(false)} />
+          <div className="coachnav-plus-menu" style={{ top: plusPos.top, left: plusPos.left }}>
+            {NAV_PLUS.map(item => (
+              <NavLink key={item.to} to={item.to} className="coachnav-plus-item" onClick={() => setPlusOpen(false)}>
+                <span className="coachnav-ico">{ICONS[item.icon]}</span>
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
     </nav>
   )
 }
@@ -160,11 +218,15 @@ const CSS = `
 }
 .coachnav-brand{flex-shrink:0;display:flex;align-items:center;text-decoration:none;}
 .coachnav-logo{height:38px;width:auto;display:block;}
-.coachnav-items{display:flex;gap:2px;flex:1;flex-wrap:wrap;}
+/* nowrap + défilement : la barre a une hauteur fixe, un retour à la ligne la
+   ferait déborder (bug observé à 1280px avec 10 entrées). */
+.coachnav-items{display:flex;gap:2px;flex:1;flex-wrap:nowrap;min-width:0;
+  overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.coachnav-items::-webkit-scrollbar{display:none;}
 .coachnav-link{
-  display:flex;align-items:center;gap:6px;
-  color:#5b626c;text-decoration:none;font-size:0.85rem;font-weight:600;
-  padding:8px 13px;border-radius:8px;transition:background .15s,color .15s;
+  display:flex;align-items:center;gap:5px;flex-shrink:0;
+  color:#5b626c;text-decoration:none;font-size:0.82rem;font-weight:600;
+  padding:8px 10px;border-radius:8px;transition:background .15s,color .15s;
   white-space:nowrap;
 }
 .coachnav-ico svg{width:16px;height:16px;display:block;}
@@ -185,6 +247,31 @@ const CSS = `
   transition:background .15s;
 }
 .coachnav-logout:hover{background:#f3f4f6;}
+/* ── Menu « Plus » (desktop) ────────────────────────────────────────────── */
+.coachnav-plus{position:relative;display:flex;align-items:center;}
+.coachnav-plus-btn{
+  border:none;background:transparent;cursor:pointer;font-family:inherit;
+}
+.coachnav-plus-btn.active{background:#333333;color:#fff;}
+.coachnav-plus-btn.active .coachnav-ico svg{stroke:#e4f816;}
+.coachnav-plus-backdrop{position:fixed;inset:0;z-index:110;}
+.coachnav-plus-menu{
+  position:fixed;z-index:120;
+  background:#fff;border:1px solid #e6e8ec;border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.14);padding:5px;min-width:178px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.coachnav-plus-item{
+  display:flex;align-items:center;gap:8px;
+  color:#5b626c;text-decoration:none;font-size:0.85rem;font-weight:600;
+  padding:9px 12px;border-radius:8px;white-space:nowrap;
+}
+.coachnav-plus-item:hover{background:#f3f4f6;color:#333333;}
+.coachnav-plus-item.active{background:#333333;color:#fff;}
+.coachnav-plus-item.active .coachnav-ico svg{stroke:#e4f816;}
+/* Les secondaires à plat n'existent que dans le menu mobile */
+.coachnav-link-plus{display:none;}
+
 /* Hamburger + déconnexion mobile : inexistants sur desktop */
 .coachnav-burger{display:none;}
 .coachnav-logout-m{display:none;}
@@ -201,6 +288,9 @@ const CSS = `
     max-height:calc(100dvh - 62px);overflow-y:auto;
   }
   .coachnav-items.open .coachnav-link{padding:12px 14px;font-size:0.95rem;}
+  /* Sur mobile : tout à plat dans le hamburger, pas de sous-menu « Plus » */
+  .coachnav-plus{display:none;}
+  .coachnav-link-plus{display:flex;}
   .coachnav-logout-d{display:none;}
   .coachnav-logout-m{display:block;margin-top:10px;width:100%;padding:11px;}
   .coachnav-burger{
