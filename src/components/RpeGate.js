@@ -22,32 +22,70 @@ function noteColor(n) {
   return '#ef4444'
 }
 
-function Echelle({ value, onChange }) {
+// Jauge glissante 0-10 — bien plus confortable au doigt que 11 boutons collés.
+// Tant que le joueur n'y a pas touché, la valeur reste nulle (rien n'est
+// pré-rempli à sa place) : le curseur est gris et la note affiche « – ».
+const RANGE_CSS = `
+.rpe-range{
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:12px; border-radius:999px; outline:none;
+  margin:0; padding:0; cursor:pointer;
+}
+.rpe-range::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:28px; height:28px; border-radius:50%;
+  background:#fff; border:3.5px solid var(--rpe-c);
+  box-shadow:0 1px 5px rgba(0,0,0,0.28); cursor:grab;
+}
+.rpe-range:active::-webkit-slider-thumb{ cursor:grabbing; }
+.rpe-range::-moz-range-thumb{
+  width:28px; height:28px; border-radius:50%;
+  background:#fff; border:3.5px solid var(--rpe-c);
+  box-shadow:0 1px 5px rgba(0,0,0,0.28); cursor:grab;
+}
+.rpe-range::-moz-range-track{ background:transparent; height:12px; }
+.rpe-range:focus-visible{ outline:2px solid #333; outline-offset:4px; }
+`
+
+function Jauge({ value, onChange }) {
+  const touched = value != null
+  const pos = touched ? value : 5                    // position neutre au repos
+  const col = touched ? noteColor(value) : '#cbd5e1'
+  const pct = (pos / 10) * 100
+
+  // Toute interaction valide une note — y compris un appui pile sur la position
+  // actuelle du curseur, qui ne déclencherait aucun onChange.
+  function commitOnTouch() { if (!touched) onChange(pos) }
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: 3 }}>
-        {Array.from({ length: 11 }, (_, n) => {
-          const active = value === n
-          const col = noteColor(n)
-          return (
-            <button key={n} onClick={() => onChange(n)}
-              style={{
-                flex: 1, minWidth: 0, height: 38, borderRadius: 7, cursor: 'pointer', padding: 0,
-                border: `1.5px solid ${active ? col : '#e5e7eb'}`,
-                background: active ? col : 'white',
-                color: active ? 'white' : '#6b7280',
-                fontWeight: 800, fontSize: '0.8rem',
-              }}>
-              {n}
-            </button>
-          )
-        })}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 7 }}>
+        <span style={{ fontSize: '1.9rem', fontWeight: 900, color: touched ? col : '#9ca3af', lineHeight: 1, minWidth: 40 }}>
+          {touched ? value : '–'}
+        </span>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: touched ? col : '#9ca3af' }}>
+          {touched ? DESC[value] : 'Fais glisser pour noter'}
+        </span>
       </div>
-      {value != null && (
-        <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', fontWeight: 700, color: noteColor(value) }}>
-          {value} — {DESC[value]}
-        </p>
-      )}
+
+      <input
+        type="range" min="0" max="10" step="1" value={pos}
+        onChange={e => onChange(parseInt(e.target.value, 10))}
+        onPointerDown={commitOnTouch}
+        onKeyDown={commitOnTouch}
+        className="rpe-range"
+        aria-label="Note de 0 à 10"
+        style={{
+          '--rpe-c': col,
+          background: `linear-gradient(90deg, ${col} 0%, ${col} ${pct}%, #e9ecef ${pct}%, #e9ecef 100%)`,
+        }}
+      />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+        {[0, 5, 10].map(n => (
+          <span key={n} style={{ fontSize: '0.63rem', fontWeight: 700, color: '#b8bfc7' }}>{n}</span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -75,6 +113,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
 
   return (
     <div style={W.overlay}>
+      <style>{RANGE_CSS}</style>
       <div style={W.card}>
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
           <p style={W.subtitle}>Intensité de l'entraînement</p>
@@ -87,9 +126,9 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         </p>
 
         {DIMS.map(d => (
-          <div key={d.key} style={{ marginBottom: '1.2rem' }}>
+          <div key={d.key} style={{ marginBottom: '1.5rem' }}>
             <p style={W.qLabel}>{d.label}</p>
-            <Echelle value={vals[d.key]} onChange={n => setVals(v => ({ ...v, [d.key]: n }))} />
+            <Jauge value={vals[d.key]} onChange={n => setVals(v => ({ ...v, [d.key]: n }))} />
           </div>
         ))}
 
