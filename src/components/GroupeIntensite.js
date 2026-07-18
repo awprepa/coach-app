@@ -15,15 +15,18 @@ function noteColor(n) {
 }
 
 const DIM_META = [
-  { key: 'cardio',  label: 'Cardio',  col: '#0ea5e9' },
-  { key: 'jambes',  label: 'Jambes',  col: '#8b5cf6' },
-  { key: 'contact', label: 'Contact', col: '#ef4444' },
+  // `court` sert aux badges : « Cardio » et « Contact » commencent tous deux par
+  // un C, une initiale seule était ambiguë.
+  { key: 'cardio',  label: 'Cardio',  court: 'Car', col: '#0ea5e9' },
+  { key: 'jambes',  label: 'Jambes',  court: 'Jam', col: '#8b5cf6' },
+  { key: 'contact', label: 'Contact', court: 'Con', col: '#ef4444' },
 ]
 
 export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
   const [sessions, setSessions] = useState([])   // [{ evId, date, titre, moyenne, cardio, jambes, contact, notes:[] }]
   const [mode, setMode]         = useState('moyenne') // 'moyenne' | 'separe'
   const [selected, setSelected] = useState(null) // evId
+  const [membres, setMembres]   = useState([])   // pour savoir qui n'a pas répondu
   const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
@@ -38,11 +41,18 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         .order('date', { ascending: true })
       if (!evs?.length) { setSessions([]); setLoading(false); return }
 
-      // Notes RPE + noms des joueurs
-      const { data: notes } = await supabase
-        .from('groupe_seance_rpe')
-        .select('evenement_id, rpe_cardio, rpe_jambes, rpe_contact, commentaire, clients(prenom, nom)')
-        .in('evenement_id', evs.map(e => e.id))
+      // Notes RPE + noms des joueurs. client_id sert à repérer qui n'a pas répondu.
+      const [{ data: notes }, { data: mbs }] = await Promise.all([
+        supabase
+          .from('groupe_seance_rpe')
+          .select('evenement_id, client_id, rpe_cardio, rpe_jambes, rpe_contact, commentaire, clients(prenom, nom)')
+          .in('evenement_id', evs.map(e => e.id)),
+        supabase
+          .from('groupe_membres')
+          .select('client_id, clients(prenom, nom)')
+          .eq('groupe_id', groupeId),
+      ])
+      setMembres((mbs || []).map(m => ({ id: m.client_id, ...(m.clients || {}) })))
 
       const byEv = {}
       for (const n of (notes || [])) {
@@ -70,6 +80,9 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         .filter(Boolean)
 
       setSessions(rows)
+      // Le détail le plus récent est ouvert d'emblée : sinon il fallait deviner
+      // qu'il faut toucher un point du graphique pour voir qui a répondu quoi.
+      if (rows.length) setSelected(rows[rows.length - 1].evId)
       setLoading(false)
     }
     load()
@@ -128,9 +141,24 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         </LineChart>
       </ResponsiveContainer>
 
-      <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0.4rem 0 0', textAlign: 'center' }}>
-        Touche un entraînement pour voir le détail des joueurs
-      </p>
+      {/* Sélecteur d'entraînement — plus simple que viser un point du graphique */}
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '0.7rem 0 0.2rem', scrollbarWidth: 'none' }}>
+        {[...sessions].reverse().map(s => {
+          const on = s.evId === selected
+          return (
+            <button key={s.evId} onClick={() => setSelected(s.evId)}
+              style={{
+                flexShrink: 0, cursor: 'pointer', borderRadius: 9, padding: '5px 10px',
+                border: `1.5px solid ${on ? '#1a1a1a' : '#e5e7eb'}`,
+                background: on ? '#1a1a1a' : 'white', color: on ? 'white' : '#374151',
+                fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', fontFamily: 'inherit',
+              }}>
+              {fmtDate(s.date)}
+              <span style={{ opacity: 0.65, fontWeight: 600 }}> · {s.nbNotes}{membres.length ? `/${membres.length}` : ''}</span>
+            </button>
+          )
+        })}
+      </div>
 
       {/* Détail d'une séance sélectionnée */}
       {selectedSession && (
@@ -157,7 +185,7 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
                         const val = n[`rpe_${d.key}`]
                         return (
                           <span key={d.key} title={d.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: noteColor(val) + '1a', color: noteColor(val), borderRadius: 6, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 800 }}>
-                            {d.label[0]} {val ?? '—'}
+                            {d.court} {val ?? '—'}
                           </span>
                         )
                       })}
@@ -172,6 +200,23 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
               )
             })}
           </div>
+
+          {/* Qui n'a pas répondu — utile pour relancer */}
+          {(() => {
+            const repondus = new Set(selectedSession.notes.map(n => n.client_id))
+            const manquants = membres.filter(m => !repondus.has(m.id))
+            if (!membres.length || !manquants.length) return null
+            return (
+              <div style={{ marginTop: '0.7rem', borderTop: '1px dashed #e5e7eb', paddingTop: '0.6rem' }}>
+                <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Pas encore répondu ({manquants.length})
+                </p>
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+                  {manquants.map(m => `${m.prenom || ''} ${m.nom || ''}`.trim()).filter(Boolean).join(' · ')}
+                </p>
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>
