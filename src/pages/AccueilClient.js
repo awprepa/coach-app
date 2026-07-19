@@ -403,7 +403,7 @@ export default function AccueilClient() {
 
         {/* Widget nutrition aujourd'hui */}
         {nutritionToday && (
-          <div onClick={() => navigate('/client/nutrition/plan')} style={styles.nutritionWidget}>
+          <div onClick={() => navigate('/client/nutrition')} style={styles.nutritionWidget}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={styles.sectionTitle}>Nutrition aujourd'hui</span>
               <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>

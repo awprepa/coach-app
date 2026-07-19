@@ -138,7 +138,7 @@ export default function ClientBottomNav() {
   const tabs = [
     { label: 'Accueil',   Icon: IconHome,      active: isHome,        to: '/' },
     { label: 'Programme', Icon: IconProgramme, active: isProgramme,   to: '/client/mon-programme' },
-    { label: 'Nutrition', Icon: IconNutrition, active: isNutrition,   to: '/client/nutrition/plan' },
+    { label: 'Nutrition', Icon: IconNutrition, active: isNutrition,   to: '/client/nutrition' },
     { label: 'Messages',  Icon: IconChat,      active: isMessages,    to: '/client/messages' },
     ...(isPrepaPhysique ? [
       { label: 'Compét.', Icon: IconTrophy, active: isCompetition, to: '/client/competition' },
