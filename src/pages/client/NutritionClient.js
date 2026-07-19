@@ -145,7 +145,7 @@ export default function NutritionClient() {
               <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
                 <circle cx="48" cy="48" r={R} fill="none" stroke="#eef1f4" strokeWidth="9" />
                 {cible && (
-                  <circle cx="48" cy="48" r={R} fill="none" stroke="#1a1a1a" strokeWidth="9" strokeLinecap="round"
+                  <circle cx="48" cy="48" r={R} fill="none" stroke="var(--accent)" strokeWidth="9" strokeLinecap="round"
                     strokeDasharray={CIRC} strokeDashoffset={CIRC - CIRC * pct} />
                 )}
               </svg>
@@ -204,7 +204,9 @@ export default function NutritionClient() {
                   </div>
                 )) : <p style={S.empty}>Rien pour l'instant</p>}
                 <button onClick={() => navigate(`/client/nutrition/aliment?repas=${r.v}&date=${iso}`)} style={S.add}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  <span style={S.addIco}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  </span>
                   Ajouter un aliment
                 </button>
               </div>
@@ -234,14 +236,18 @@ export default function NutritionClient() {
           </div>
         </div>
 
-        <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanBtn}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+        <div style={{ height: 96 }} />
+      </div>
+
+      {/* Barre scanner fixe — identique à celle de la page du plan */}
+      <div style={S.scanCta}>
+        <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanCtaBtn}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" /><path d="M14 14v7M14 17.5h7M21 14v7" />
+            <rect x="3" y="14" width="7" height="7" /><line x1="14" y1="14" x2="14" y2="21" /><line x1="14" y1="14" x2="21" y2="14" />
           </svg>
           Scanner un article
         </button>
-        <div style={{ height: 80 }} />
       </div>
 
       <ClientBottomNav />
@@ -251,7 +257,9 @@ export default function NutritionClient() {
 
 const S = {
   page:       { minHeight: '100dvh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 90 },
-  header:     { background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '14px 16px 15px', position: 'sticky', top: 0, zIndex: 40 },
+  // Même variable de thème que la page du plan : les deux écrans doivent se
+  // ressembler quand on passe de l'un à l'autre.
+  header:     { background: 'var(--header-bg)', padding: '14px 16px 15px', position: 'sticky', top: 0, zIndex: 40 },
   headerRow:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle:{ color: 'white', fontWeight: 800, fontSize: '1.02rem' },
   icoBtn:     { width: 34, height: 34, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.12)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 },
@@ -268,7 +276,7 @@ const S = {
   macVal:     { fontWeight: 700, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' },
   bar:        { height: 6, background: '#eef1f4', borderRadius: 99, overflow: 'hidden', marginTop: 4 },
   hintGoal:   { margin: '12px 0 0', fontSize: '0.72rem', color: '#9ca3af', fontWeight: 600, lineHeight: 1.45 },
-  planBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 14, padding: '12px 14px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', marginBottom: 12, fontFamily: 'inherit' },
+  planBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px 14px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', marginBottom: 12, fontFamily: 'inherit' },
   secHead:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 2px 7px' },
   secTitle:   { fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', letterSpacing: '0.09em', textTransform: 'uppercase', margin: 0 },
   secKcal:    { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
@@ -280,8 +288,10 @@ const S = {
   del:        { width: 26, height: 26, borderRadius: 8, border: 'none', background: '#f3f4f6', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 },
   empty:      { padding: '15px 14px', color: '#9ca3af', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
   add:        { width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', borderTop: '1px dashed #e2e6ea', padding: 11, fontSize: '0.8rem', fontWeight: 800, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
+  addIco:     { width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   waterIco:   { width: 36, height: 36, borderRadius: 11, background: '#e8f4fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   step:       { width: 32, height: 32, borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
-  scanBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '13px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  scanCta:    { position: 'fixed', bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
+  scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
   loading:    { color: '#9ca3af', fontSize: '0.85rem', fontWeight: 600 },
 }

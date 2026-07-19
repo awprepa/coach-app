@@ -426,8 +426,10 @@ export default function NutritionPlanClient() {
   if (!plan) return (
     <div style={S.page}>
       <div style={S.header}>
-        <div style={{ width: 32 }} />
-        <span style={{ color: 'white', fontWeight: 800, fontSize: '1rem' }}>Nutrition</span>
+        <button onClick={() => navigate('/client/nutrition')} style={S.iconBtn} aria-label="Retour au journal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span style={{ color: 'white', fontWeight: 800, fontSize: '1rem' }}>Plan de mon coach</span>
         <div style={{ width: 32 }} />
       </div>
       <div style={S.content}>
@@ -510,7 +512,9 @@ export default function NutritionPlanClient() {
 
       {/* Header */}
       <div style={S.header}>
-        <div style={{ width: 32 }} />
+        <button onClick={() => navigate('/client/nutrition')} style={S.iconBtn} aria-label="Retour au journal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>{plan.nom}</div>
           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.62rem' }}>Plan prescrit</div>
