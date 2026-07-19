@@ -9,12 +9,21 @@ import usePageFade from '../../hooks/usePageFade'
 // client peut toujours noter ce qu'il mange. Les calories viennent de la table
 // CIQUAL (ANSES), jamais d'une estimation.
 
-const REPAS = [
-  { v: 'petit_dej', l: 'Petit-déjeuner' },
-  { v: 'dejeuner',  l: 'Déjeuner' },
-  { v: 'collation', l: 'Collation' },
-  { v: 'diner',     l: 'Dîner' },
-]
+// Les 4 repas de base sont toujours affichés ; les autres types (collation 2,
+// autre) n'apparaissent que si le plan du coach en contient.
+const REPAS_BASE = ['petit_dej', 'dejeuner', 'collation', 'diner']
+const REPAS_LABEL = {
+  petit_dej: 'Petit-déjeuner', dejeuner: 'Déjeuner', collation: 'Collation',
+  diner: 'Dîner', collation_2: 'Collation 2', autre: 'Autre',
+}
+const REPAS_ORDRE = ['petit_dej', 'dejeuner', 'collation', 'collation_2', 'diner', 'autre']
+
+// Jour du plan (cycle de 7 jours depuis sa date de début)
+function numeroJourPlan(dateISO, plan) {
+  if (!plan?.date_debut) return 1
+  const diff = Math.floor((new Date(dateISO + 'T00:00:00') - new Date(plan.date_debut + 'T00:00:00')) / 86400000)
+  return diff < 0 ? null : (diff % 7) + 1
+}
 const MACROS = [
   { k: 'prot_g',  l: 'Protéines', c: '#0ea5e9' },
   { k: 'carbs_g', l: 'Glucides',  c: '#f59e0b' },
@@ -31,8 +40,13 @@ export default function NutritionClient() {
   const [repas, setRepas]     = useState([])
   const [goals, setGoals]     = useState(null)
   const [water, setWater]     = useState(0)
-  const [aPlan, setAPlan]     = useState(false)
   const [loading, setLoading] = useState(true)
+  // Plan du coach : ses repas prescrits s'affichent dans les mêmes sections que
+  // les aliments ajoutés librement, au lieu d'une page séparée.
+  const [plan, setPlan]       = useState(null)
+  const [joursPlan, setJoursPlan] = useState([])
+  const [logs, setLogs]       = useState([])
+  const [coche, setCoche]     = useState(null)   // id du repas en cours d'envoi
 
   const iso = toISO(jour)
 
@@ -46,13 +60,27 @@ export default function NutritionClient() {
         data = r.data
       }
       setClient(data)
+      if (!data) return
+      // Plan actif éventuel (chargé une fois, il ne change pas d'un jour à l'autre)
+      const today = new Date().toISOString().slice(0, 10)
+      const { data: p } = await supabase.from('nutrition_plans')
+        .select('id, nom, date_debut').eq('client_id', data.id).eq('statut', 'actif')
+        .or(`date_fin.is.null,date_fin.gte.${today}`)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (p) {
+        setPlan(p)
+        const { data: jrs } = await supabase.from('nutrition_plan_days')
+          .select('jour_numero, nutrition_plan_meals(id, meal_type, nom, kcal, prot_g, carbs_g, fat_g)')
+          .eq('plan_id', p.id).order('jour_numero')
+        setJoursPlan(jrs || [])
+      }
     })()
   }, [])
 
   const charger = useCallback(async () => {
     if (!client) return
     setLoading(true)
-    const [{ data: ms }, { data: g }, { data: w }, { data: plans }] = await Promise.all([
+    const [{ data: ms }, { data: g }, { data: w }, { data: lg }] = await Promise.all([
       supabase.from('nutrition_meals')
         .select('id, meal_type, kcal, prot_g, carbs_g, fat_g, nutrition_meal_items(id, name, quantity, unit, kcal, prot_g, carbs_g, fat_g, ordre)')
         .eq('client_id', client.id).eq('date', iso),
@@ -61,17 +89,27 @@ export default function NutritionClient() {
         .eq('client_id', client.id).lte('active_from', iso)
         .order('active_from', { ascending: false }).limit(1),
       supabase.from('nutrition_water').select('ml').eq('client_id', client.id).eq('date', iso).maybeSingle(),
-      supabase.from('nutrition_plans').select('id').eq('client_id', client.id).limit(1),
+      plan
+        ? supabase.from('nutrition_plan_logs').select('id, meal_id, statut')
+            .eq('client_id', client.id).eq('plan_id', plan.id).eq('date', iso)
+        : Promise.resolve({ data: [] }),
     ])
     setRepas(ms || [])
     setGoals(g?.[0] || null)
     setWater(w?.ml || 0)
-    setAPlan(!!plans?.length)
+    setLogs(lg || [])
     setLoading(false)
-  }, [client, iso])
+  }, [client, iso, plan])
 
   useEffect(() => { charger() }, [charger])
 
+  // Repas prescrits du jour + statut de chacun
+  const jourNum   = plan ? numeroJourPlan(iso, plan) : null
+  const planMeals = jourNum ? (joursPlan.find(j => j.jour_numero === jourNum)?.nutrition_plan_meals || []) : []
+  const statutDe  = id => logs.find(l => l.meal_id === id)?.statut || null
+
+  // Le total du jour additionne les repas du plan cochés « mangé » ET les
+  // aliments ajoutés librement : un seul chiffre, quelle que soit la source.
   const total = { kcal: 0, prot_g: 0, carbs_g: 0, fat_g: 0 }
   repas.forEach(m => {
     total.kcal    += m.kcal || 0
@@ -79,6 +117,39 @@ export default function NutritionClient() {
     total.carbs_g += Number(m.carbs_g) || 0
     total.fat_g   += Number(m.fat_g)   || 0
   })
+  planMeals.forEach(pm => {
+    if (statutDe(pm.id) !== 'fait') return
+    total.kcal    += pm.kcal || 0
+    total.prot_g  += Number(pm.prot_g)  || 0
+    total.carbs_g += Number(pm.carbs_g) || 0
+    total.fat_g   += Number(pm.fat_g)   || 0
+  })
+
+  // Sections à afficher : les 4 de base + celles que le plan ajoute.
+  const typesAffiches = REPAS_ORDRE.filter(t =>
+    REPAS_BASE.includes(t) || planMeals.some(m => m.meal_type === t) || repas.some(m => m.meal_type === t))
+
+  async function cocherRepas(pm) {
+    if (!plan || coche) return
+    setCoche(pm.id)
+    const existant = logs.find(l => l.meal_id === pm.id)
+    if (existant?.statut === 'fait') {
+      await supabase.from('nutrition_plan_logs').delete().eq('id', existant.id)
+      setLogs(prev => prev.filter(l => l.id !== existant.id))
+    } else if (existant) {
+      await supabase.from('nutrition_plan_logs').update({ statut: 'fait' }).eq('id', existant.id)
+      setLogs(prev => prev.map(l => l.id === existant.id ? { ...l, statut: 'fait' } : l))
+    } else {
+      // On conserve l'écriture dans nutrition_plan_logs : c'est elle qui
+      // alimente le suivi d'adhérence côté coach.
+      const { data } = await supabase.from('nutrition_plan_logs').insert({
+        plan_id: plan.id, client_id: client.id, date: iso,
+        jour_numero: jourNum, meal_id: pm.id, statut: 'fait',
+      }).select('id, meal_id, statut').single()
+      if (data) setLogs(prev => [...prev, data])
+    }
+    setCoche(null)
+  }
   const cible = goals?.kcal_target || null
   const pct = cible ? Math.min(1, total.kcal / cible) : 0
   const R = 41, CIRC = 2 * Math.PI * R
@@ -174,23 +245,44 @@ export default function NutritionClient() {
           {!cible && <p style={S.hintGoal}>Pas d'objectif défini — tu vois ce que tu as mangé. Ton coach peut en fixer un.</p>}
         </div>
 
-        {aPlan && (
+        {plan && (
           <button onClick={() => navigate('/client/nutrition/plan')} style={S.planBtn}>
-            <span>Voir le plan de mon coach</span>
+            <span>Ma semaine et mes courses</span>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M9 5l7 7-7 7" /></svg>
           </button>
         )}
 
-        {loading ? <p style={S.loading}>Chargement…</p> : REPAS.map(r => {
-          const m = repas.find(x => x.meal_type === r.v)
+        {loading ? <p style={S.loading}>Chargement…</p> : typesAffiches.map(type => {
+          const m = repas.find(x => x.meal_type === type)
           const items = (m?.nutrition_meal_items || []).slice().sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+          const prescrits = planMeals.filter(pm => pm.meal_type === type)
+          const kcalSection = (m?.kcal || 0) +
+            prescrits.reduce((s, pm) => s + (statutDe(pm.id) === 'fait' ? (pm.kcal || 0) : 0), 0)
           return (
-            <div key={r.v} style={{ marginBottom: 12 }}>
+            <div key={type} style={{ marginBottom: 12 }}>
               <div style={S.secHead}>
-                <p style={S.secTitle}>{r.l}</p>
-                {m?.kcal ? <span style={S.secKcal}>{fmt(m.kcal)} kcal</span> : null}
+                <p style={S.secTitle}>{REPAS_LABEL[type] || type}</p>
+                {kcalSection ? <span style={S.secKcal}>{fmt(kcalSection)} kcal</span> : null}
               </div>
               <div style={S.meal}>
+                {/* Repas prévus par le coach — à cocher quand ils sont mangés */}
+                {prescrits.map(pm => {
+                  const fait = statutDe(pm.id) === 'fait'
+                  return (
+                    <button key={pm.id} onClick={() => cocherRepas(pm)} disabled={!!coche} style={S.prescrit}>
+                      <span style={{ ...S.check, ...(fait ? S.checkOn : {}) }}>
+                        {fait && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                        )}
+                      </span>
+                      <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+                        <p style={{ ...S.itemName, opacity: fait ? 1 : 0.75 }}>{pm.nom}</p>
+                        <p style={S.itemQty}>Prévu par ton coach</p>
+                      </div>
+                      <span style={{ ...S.itemKcal, opacity: fait ? 1 : 0.45 }}>{fmt(pm.kcal)} kcal</span>
+                    </button>
+                  )
+                })}
                 {items.length ? items.map(it => (
                   <div key={it.id} style={S.item}>
                     <div style={{ minWidth: 0, flex: 1 }}>
@@ -202,8 +294,8 @@ export default function NutritionClient() {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                   </div>
-                )) : <p style={S.empty}>Rien pour l'instant</p>}
-                <button onClick={() => navigate(`/client/nutrition/aliment?repas=${r.v}&date=${iso}`)} style={S.add}>
+                )) : (!prescrits.length && <p style={S.empty}>Rien pour l'instant</p>)}
+                <button onClick={() => navigate(`/client/nutrition/aliment?repas=${type}&date=${iso}`)} style={S.add}>
                   <span style={S.addIco}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                   </span>
@@ -289,6 +381,9 @@ const S = {
   empty:      { padding: '15px 14px', color: '#9ca3af', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
   add:        { width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', borderTop: '1px dashed #e2e6ea', padding: 11, fontSize: '0.8rem', fontWeight: 800, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   addIco:     { width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  prescrit:   { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: '1px solid #eef0f3', cursor: 'pointer', fontFamily: 'inherit' },
+  check:      { width: 22, height: 22, borderRadius: 7, border: '2px solid #d1d5db', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'white' },
+  checkOn:    { background: 'var(--accent)', borderColor: 'var(--accent)' },
   waterIco:   { width: 36, height: 36, borderRadius: 11, background: '#e8f4fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   step:       { width: 32, height: 32, borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   scanCta:    { position: 'fixed', bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },

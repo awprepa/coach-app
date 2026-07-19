@@ -229,7 +229,7 @@ export default function NutritionPlanClient() {
   const [logs, setLogs]     = useState([])
   const [water, setWater]   = useState({ ml: 0 })
   const [loading, setLoading] = useState(true)
-  const [tab, setTab]       = useState('aujourd_hui')
+  const [tab, setTab]       = useState('semaine')
   const [viewDate, setViewDate] = useState(new Date())
   const [savingLog, setSavingLog] = useState(null)
   const [horsplanModal, setHorsplanModal] = useState(null)
@@ -442,29 +442,15 @@ export default function NutritionPlanClient() {
           </div>
           <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem', fontSize: '1rem' }}>Aucun plan actif</p>
           <p style={{ color: '#6b7280', fontSize: '0.83rem', lineHeight: 1.5, margin: 0 }}>
-            Ton coach n'a pas encore activé de plan nutritionnel pour toi. Il sera visible ici dès qu'il l'aura configuré.
+            Ton coach n'a pas encore activé de plan nutritionnel pour toi. En attendant, tu peux noter tes repas
+            dans ton journal.
           </p>
+          <button onClick={() => navigate('/client/nutrition')}
+            style={{ marginTop: '1.1rem', width: '100%', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '0.85rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Aller à mon journal
+          </button>
         </div>
-
-        {/* Lien historique des scans (le scan est dans la barre fixe en bas) */}
-        <button onClick={() => navigate('/client/nutrition/scans')}
-          style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, padding: '0.3rem' }}>
-          Historique des scans
-        </button>
-
-        {/* Hydratation même sans plan */}
-        <HydratationCard water={water} onUpdate={updateWater} />
         <div style={{ height: 80 }} />
-      </div>
-      {/* Barre scanner fixe */}
-      <div style={S.scanCta}>
-        <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })} style={S.scanCtaBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
-          </svg>
-          Scanner un article
-        </button>
       </div>
       <ClientBottomNav />
     </div>
@@ -527,7 +513,6 @@ export default function NutritionPlanClient() {
       {/* Onglets */}
       <div style={S.tabBar}>
         {[
-          { key: 'aujourd_hui', label: "Aujourd'hui" },
           { key: 'semaine',     label: '7 jours' },
           { key: 'courses',     label: 'Courses' },
         ].map(t => (
@@ -543,119 +528,6 @@ export default function NutritionPlanClient() {
       </div>
 
       <div style={S.content}>
-
-        {/* ══ AUJOURD'HUI ══════════════════════════════════════════════════ */}
-        {tab === 'aujourd_hui' && (
-          <>
-            {/* Navigation date */}
-            <div style={S.dateNav}>
-              <button onClick={() => changeDay(-1)} style={S.dateArrow}>‹</button>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>
-                  {isToday ? "Aujourd'hui" : viewDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                </div>
-                {currentDay && (
-                  <div style={{ fontSize: '0.67rem', color: '#9ca3af', marginTop: 1 }}>
-                    J{dayNum} — {currentDay.label}
-                  </div>
-                )}
-              </div>
-              <button onClick={() => changeDay(+1)} style={{ ...S.dateArrow, opacity: isToday ? 0.3 : 1 }} disabled={isToday}>›</button>
-            </div>
-
-            {/* Résumé kcal */}
-            {(totalKcalPlan > 0 || totalKcalMange > 0) && (
-              <div style={S.kcalCard}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: isOver ? '#fca5a5' : 'var(--accent-fg-dark)', lineHeight: 1 }}>{Math.round(totalKcalMange)}</div>
-                    <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase' }}>kcal mangés</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, color: 'white', fontSize: '1rem' }}>{totalKcalPlan}</div>
-                    <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>kcal prescrites</div>
-                  </div>
-                </div>
-                <div style={{ height: 5, background: 'rgba(255,255,255,0.18)', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 999, width: `${Math.min(adherence, 100)}%`, transition: 'width 0.4s', background: isOver ? '#f87171' : '#e4f816' }} />
-                </div>
-                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)', marginTop: 4, textAlign: 'right' }}>
-                  {isOver ? `+${Math.round(totalKcalMange - totalKcalPlan)} kcal au-dessus` : `${Math.min(adherence, 100)}% du plan`}
-                </div>
-              </div>
-            )}
-
-            {/* Macros du jour */}
-            {currentDay && (() => {
-              const macros = [
-                { label: 'P', val: currentDay.objectif_prot  || plan.objectif_prot,  color: '#60a5fa' },
-                { label: 'G', val: currentDay.objectif_carbs || plan.objectif_carbs, color: '#fbbf24' },
-                { label: 'L', val: currentDay.objectif_fat   || plan.objectif_fat,   color: '#f87171' },
-              ].filter(m => m.val)
-              if (!macros.length) return null
-              return (
-                <div style={S.macrosCard}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 8 }}>
-                    {TYPE_JOUR_LABELS[currentDay.type_jour] || 'Jour standard'}
-                    {(currentDay.objectif_kcal || plan.objectif_kcal) && ` · ${currentDay.objectif_kcal || plan.objectif_kcal} kcal`}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {macros.map(m => (
-                      <div key={m.label} style={{ flex: 1, textAlign: 'center', padding: '6px 0', background: '#f9fafb', borderRadius: 8 }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: m.color }}>{m.val}g</div>
-                        <div style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700 }}>{m.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Repas prescrits */}
-            {meals.length === 0 && extraLogs.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0', fontSize: '0.85rem' }}>
-                Aucun repas prescrit pour ce jour.
-              </div>
-            ) : (
-              meals.map(meal => (
-                <MealCard
-                  key={meal.id}
-                  meal={meal}
-                  log={planLogs.find(l => l.meal_id === meal.id)}
-                  dayNum={dayNum}
-                  saving={savingLog === meal.id}
-                  onLog={logMeal}
-                  onHorsPlan={(m, d) => { setHorsplanModal({ meal: m, dayNum: d }); setHorsplanForm({ nom: '', kcal: '', prot_g: '', carbs_g: '', fat_g: '' }) }}
-                />
-              ))
-            )}
-
-            {/* Repas libres ajoutés */}
-            {extraLogs.map(log => (
-              <ExtraCard key={log.id} log={log} onDelete={deleteExtraLog} />
-            ))}
-
-            {/* Compensation kcal */}
-            <CompensationCard meals={meals} logs={logs} tomorrowDay={tomorrowDay} />
-
-            {/* Bouton ajouter un repas */}
-            <button onClick={() => setShowAddModal(true)} style={S.addMealBtn}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Ajouter un repas à la journée
-            </button>
-
-            {/* Lien historique des scans */}
-            <button onClick={() => navigate('/client/nutrition/scans')}
-              style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, padding: '0.3rem' }}>
-              Historique des scans
-            </button>
-
-            {/* Hydratation */}
-            <HydratationCard water={water} onUpdate={updateWater} />
-          </>
-        )}
 
         {/* ══ 7 JOURS ══════════════════════════════════════════════════════ */}
         {tab === 'semaine' && (
@@ -788,17 +660,6 @@ export default function NutritionPlanClient() {
           </div>
         </div>
       )}
-
-      {/* Barre scanner fixe */}
-      <div style={S.scanCta}>
-        <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition/plan' } })} style={S.scanCtaBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/>
-          </svg>
-          Scanner un article
-        </button>
-      </div>
 
       <ClientBottomNav />
     </div>
