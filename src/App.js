@@ -30,6 +30,7 @@ const NotificationsClient  = lazy(() => import('./pages/client/NotificationsClie
 const MessagesClient       = lazy(() => import('./pages/client/MessagesClient'))
 const NutritionClient      = lazy(() => import('./pages/client/NutritionClient'))
 const NutritionPlanClient  = lazy(() => import('./pages/client/NutritionPlanClient'))
+const AjouterAliment      = lazy(() => import('./pages/client/AjouterAliment'))
 const AjouterRepas         = lazy(() => import('./pages/client/AjouterRepas'))
 const HistoriqueNutrition  = lazy(() => import('./pages/client/HistoriqueNutrition'))
 const ProfilNutrition      = lazy(() => import('./pages/client/ProfilNutrition'))
@@ -498,6 +499,7 @@ function App() {
               <Route path="/client/messages"             element={<WithNotifs><MessagesClient /></WithNotifs>} />
               <Route path="/client/nutrition"            element={<WithNotifs><NutritionClient /></WithNotifs>} />
               <Route path="/client/nutrition/plan"       element={<WithNotifs><NutritionPlanClient /></WithNotifs>} />
+              <Route path="/client/nutrition/aliment"    element={<WithNotifs><AjouterAliment /></WithNotifs>} />
               <Route path="/client/nutrition/ajouter"    element={<WithNotifs><AjouterRepas /></WithNotifs>} />
               <Route path="/client/nutrition/historique" element={<WithNotifs><HistoriqueNutrition /></WithNotifs>} />
               <Route path="/client/nutrition/profil"     element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
