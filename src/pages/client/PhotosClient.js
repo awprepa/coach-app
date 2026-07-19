@@ -7,6 +7,27 @@ import { compressImage } from '../../lib/compressImage'
 
 const DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
+// Poses attendues. Le coach compare une face avec une face : sans cette
+// information, les photos ne sont pas comparables entre elles.
+const POSES = [
+  { v: 'face',   l: 'De face' },
+  { v: 'profil', l: 'De profil' },
+  { v: 'dos',    l: 'De dos' },
+]
+
+function IconPose({ pose }) {
+  const commun = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  if (pose === 'face') return (
+    <svg {...commun}><circle cx="12" cy="6.5" r="3.2" /><path d="M5.5 21v-2.5A4.5 4.5 0 0 1 10 14h4a4.5 4.5 0 0 1 4.5 4.5V21" /><path d="M12 14v7" /></svg>
+  )
+  if (pose === 'profil') return (
+    <svg {...commun}><circle cx="13.5" cy="6.5" r="3.2" /><path d="M9 21v-2.6A4.4 4.4 0 0 1 13.4 14h.6a4.4 4.4 0 0 1 4.4 4.4V21" /><path d="M9 14.5c-1.6.7-2.5 2-2.5 3.6V21" /></svg>
+  )
+  return (
+    <svg {...commun}><circle cx="12" cy="6.5" r="3.2" /><path d="M5.5 21v-2.5A4.5 4.5 0 0 1 10 14h4a4.5 4.5 0 0 1 4.5 4.5V21" /><path d="M8.5 14.5h7" /></svg>
+  )
+}
+
 export default function PhotosClient() {
   const navigate  = useNavigate()
   const fadeStyle = usePageFade()
@@ -33,29 +54,38 @@ export default function PhotosClient() {
   }, [])
 
   function onPick(e) {
-    const picked = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'))
+    const picked = Array.from(e.target.files || [])
+      .filter(f => f.type.startsWith('image/'))
+      .map(f => ({ file: f, pose: 'face', url: URL.createObjectURL(f) }))
     setFiles(prev => [...prev, ...picked])
     setDone(0); setError('')
     e.target.value = ''
   }
   function removeFile(idx) {
-    setFiles(prev => prev.filter((_, i) => i !== idx))
+    setFiles(prev => {
+      const cible = prev[idx]
+      if (cible?.url) URL.revokeObjectURL(cible.url)   // libère la mémoire
+      return prev.filter((_, i) => i !== idx)
+    })
+  }
+  function setPose(idx, pose) {
+    setFiles(prev => prev.map((it, i) => i === idx ? { ...it, pose } : it))
   }
 
   async function envoyer() {
     if (!client || !files.length || uploading) return
     setUploading(true); setError('')
     let ok = 0
-    for (const file of files) {
+    for (const item of files) {
       try {
-        const blob = await compressImage(file)
+        const blob = await compressImage(item.file)
         const path = `${client.id}/${date}_${crypto.randomUUID()}.jpg`
         const { error: upErr } = await supabase.storage.from('evolution-photos')
           .upload(path, blob, { contentType: 'image/jpeg' })
         if (upErr) throw upErr
         // Insert SANS .select() : le client n'a pas le droit de relire ses photos
         const { error: insErr } = await supabase.from('evolution_photos')
-          .insert({ client_id: client.id, date, storage_path: path, uploaded_by: 'client' })
+          .insert({ client_id: client.id, date, storage_path: path, uploaded_by: 'client', pose: item.pose })
         if (insErr) throw insErr
         ok++
       } catch (e) {
@@ -110,11 +140,32 @@ export default function PhotosClient() {
             <p style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 700, margin: '0 0 0.5rem' }}>
               {files.length} photo{files.length > 1 ? 's' : ''} prête{files.length > 1 ? 's' : ''} à envoyer
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
-              {files.map((f, i) => (
-                <div key={i} style={S.thumb}>
-                  <img src={URL.createObjectURL(f)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button onClick={() => removeFile(i)} style={S.thumbX}>✕</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {files.map((item, i) => (
+                <div key={i} style={S.row}>
+                  <div style={S.thumb}>
+                    <img src={item.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button onClick={() => removeFile(i)} style={S.thumbX} aria-label="Retirer">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={S.poseLabel}>Cette photo est prise…</p>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {POSES.map(p => {
+                        const on = item.pose === p.v
+                        return (
+                          <button key={p.v} onClick={() => setPose(i, p.v)}
+                            style={{ ...S.poseBtn, ...(on ? S.poseBtnOn : {}) }}>
+                            <IconPose pose={p.v} />
+                            <span>{p.l}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -147,8 +198,12 @@ const S = {
   fieldLabel:  { display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.35rem' },
   dateInput:   { width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.85rem', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.95rem', outline: 'none', background: 'white', marginBottom: '1rem', fontFamily: 'inherit' },
   pickBtn:     { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'white', color: '#374151', border: '2px dashed #c7d2fe', borderRadius: 14, padding: '0.95rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' },
-  thumb:       { position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', background: '#e5e7eb' },
-  thumbX:      { position: 'absolute', top: 3, right: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  row:         { display: 'flex', gap: 11, alignItems: 'center', background: 'white', borderRadius: 14, padding: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  thumb:       { position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 10, overflow: 'hidden', background: '#e5e7eb' },
+  thumbX:      { position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  poseLabel:   { margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af' },
+  poseBtn:     { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', cursor: 'pointer', fontSize: '0.66rem', fontWeight: 700, fontFamily: 'inherit' },
+  poseBtnOn:   { borderColor: '#1a1a1a', background: '#1a1a1a', color: 'white' },
   sendBtn:     { width: '100%', marginTop: '1rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '0.95rem', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer' },
   successCard: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '0.9rem 1rem', color: '#15803d', fontSize: '0.88rem', fontWeight: 700, marginTop: '1rem' },
 }

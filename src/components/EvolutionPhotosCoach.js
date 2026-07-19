@@ -2,6 +2,15 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { compressImage } from '../lib/compressImage'
 
+// Poses : comparer une face avec une face. « Toutes » reste possible pour
+// balayer une date, mais le filtre par pose est ce qui rend la comparaison juste.
+const POSES = [
+  { v: 'face',   l: 'De face' },
+  { v: 'profil', l: 'De profil' },
+  { v: 'dos',    l: 'De dos' },
+]
+const POSE_LABEL = { face: 'Face', profil: 'Profil', dos: 'Dos' }
+
 const DOW = [
   { v: '', l: 'Aucun rappel' },
   { v: '1', l: 'Chaque lundi' },
@@ -22,11 +31,13 @@ export default function EvolutionPhotosCoach({ clientId }) {
   const [uploading, setUploading] = useState(false)
   const [compare, setCompare]   = useState([])     // ids sélectionnés pour comparaison (max 2)
   const [viewer, setViewer]     = useState(null)   // url plein écran
+  const [filtre, setFiltre]     = useState('')     // '' = toutes | face | profil | dos
+  const [addPose, setAddPose]   = useState('face') // pose des photos ajoutées par le coach
 
   const load = useCallback(async () => {
     setLoading(true)
     const { data: rows } = await supabase.from('evolution_photos')
-      .select('id, date, storage_path, uploaded_by')
+      .select('id, date, storage_path, uploaded_by, pose')
       .eq('client_id', clientId)
       .order('date', { ascending: false })
     // URLs signées (bucket privé)
@@ -60,7 +71,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
         const path = `${clientId}/${addDate}_${crypto.randomUUID()}.jpg`
         const { error: upErr } = await supabase.storage.from('evolution-photos').upload(path, blob, { contentType: 'image/jpeg' })
         if (upErr) throw upErr
-        await supabase.from('evolution_photos').insert({ client_id: clientId, date: addDate, storage_path: path, uploaded_by: 'coach' })
+        await supabase.from('evolution_photos').insert({ client_id: clientId, date: addDate, storage_path: path, uploaded_by: 'coach', pose: addPose })
       } catch (err) { console.error('[coach add photo]', err?.message) }
     }
     setUploading(false)
@@ -82,9 +93,12 @@ export default function EvolutionPhotosCoach({ clientId }) {
 
   const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  // Grouper par date
+  // Filtre par pose, puis groupement par date
+  const visibles = filtre ? photos.filter(p => p.pose === filtre) : photos
+  const compte = { face: 0, profil: 0, dos: 0 }
+  photos.forEach(p => { if (compte[p.pose] != null) compte[p.pose]++ })
   const byDate = {}
-  for (const p of photos) { (byDate[p.date] ||= []).push(p) }
+  for (const p of visibles) { (byDate[p.date] ||= []).push(p) }
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a))
   const cmpPhotos = compare.map(id => photos.find(p => p.id === id)).filter(Boolean)
 
@@ -98,6 +112,11 @@ export default function EvolutionPhotosCoach({ clientId }) {
         </select>
         <input type="date" value={addDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setAddDate(e.target.value)}
           style={{ padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', background: 'white' }} />
+        <select value={addPose} onChange={e => setAddPose(e.target.value)}
+          style={{ padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}
+          title="Pose des photos que tu ajoutes">
+          {POSES.map(p => <option key={p.v} value={p.v}>{p.l}</option>)}
+        </select>
         <input ref={fileRef} type="file" accept="image/*" multiple onChange={onAdd} style={{ display: 'none' }} />
         <button onClick={() => fileRef.current?.click()} disabled={uploading}
           style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 9, padding: '0.5rem 0.85rem', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -105,15 +124,44 @@ export default function EvolutionPhotosCoach({ clientId }) {
         </button>
       </div>
 
+      {/* Filtre par pose */}
+      {photos.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+          {[{ v: '', l: 'Toutes', n: photos.length },
+            ...POSES.map(p => ({ v: p.v, l: POSE_LABEL[p.v], n: compte[p.v] }))].map(f => {
+            const on = filtre === f.v
+            return (
+              <button key={f.v || 'all'} onClick={() => { setFiltre(f.v); setCompare([]) }}
+                style={{
+                  borderRadius: 999, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1.5px solid ${on ? '#1a1a1a' : '#e5e7eb'}`,
+                  background: on ? '#1a1a1a' : 'white', color: on ? 'white' : '#374151',
+                  fontSize: '0.74rem', fontWeight: 700,
+                }}>
+                {f.l}<span style={{ opacity: 0.6, fontWeight: 600 }}> · {f.n}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Bandeau comparaison */}
       {cmpPhotos.length === 2 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: '0.9rem' }}>
-          {cmpPhotos.map(p => (
-            <div key={p.id} style={{ flex: 1, textAlign: 'center' }}>
-              <img src={p.url} alt="" onClick={() => setViewer(p.url)} style={{ width: '100%', borderRadius: 10, cursor: 'zoom-in', maxHeight: 340, objectFit: 'cover' }} />
-              <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0.3rem 0 0', fontWeight: 700 }}>{fmtDate(p.date)}</p>
-            </div>
-          ))}
+        <div style={{ marginBottom: '0.9rem' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {cmpPhotos.map(p => (
+              <div key={p.id} style={{ flex: 1, textAlign: 'center' }}>
+                <img src={p.url} alt="" onClick={() => setViewer(p.url)} style={{ width: '100%', borderRadius: 10, cursor: 'zoom-in', maxHeight: 340, objectFit: 'cover' }} />
+                <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0.3rem 0 0', fontWeight: 700 }}>{fmtDate(p.date)}</p>
+                <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: 0, fontWeight: 700 }}>{POSE_LABEL[p.pose] || 'Pose non précisée'}</p>
+              </div>
+            ))}
+          </div>
+          {cmpPhotos[0].pose !== cmpPhotos[1].pose && (
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', background: '#fff8f0', border: '1px solid #f0c98a', borderRadius: 8, padding: '6px 9px' }}>
+              Ces deux photos ne sont pas prises sous le même angle — la comparaison peut induire en erreur.
+            </p>
+          )}
         </div>
       )}
 
@@ -139,7 +187,10 @@ export default function EvolutionPhotosCoach({ clientId }) {
                       {p.url
                         ? <img src={p.url} alt="" onClick={() => toggleCompare(p.id)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
                         : <div style={{ width: '100%', height: '100%', background: '#f3f4f6' }} />}
-                      {p.uploaded_by === 'coach' && <span style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,0.6)', color: '#e4f816', fontSize: '0.55rem', fontWeight: 800, padding: '1px 5px', borderRadius: 4 }}>COACH</span>}
+                      <span style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,0.62)', color: p.pose ? 'white' : '#fca5a5', fontSize: '0.55rem', fontWeight: 800, padding: '1px 5px', borderRadius: 4, letterSpacing: '.02em' }}>
+                        {p.pose ? POSE_LABEL[p.pose].toUpperCase() : 'POSE ?'}
+                      </span>
+                      {p.uploaded_by === 'coach' && <span style={{ position: 'absolute', bottom: 3, right: 3, background: 'rgba(0,0,0,0.62)', color: '#e4f816', fontSize: '0.55rem', fontWeight: 800, padding: '1px 5px', borderRadius: 4 }}>COACH</span>}
                       <button onClick={() => supprimer(p)} style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', fontSize: '0.65rem', cursor: 'pointer' }}>✕</button>
                     </div>
                   )
