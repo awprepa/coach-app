@@ -19,6 +19,26 @@ const MACROS = [
 ]
 const fmt = n => Math.round(n || 0).toLocaleString('fr-FR')
 
+// Appel direct de la fonction Edge plutôt que functions.invoke() : ce dernier
+// ne transmettait pas le corps de la requête ici (la fonction recevait un terme
+// vide et renvoyait donc toujours une liste vide).
+async function chercherMarques(terme) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return []
+  const res = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/nutrition-food-search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: process.env.REACT_APP_SUPABASE_KEY,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ terme }),
+  })
+  if (!res.ok) return []
+  const data = await res.json().catch(() => null)
+  return data?.produits || []
+}
+
 export default function AjouterAliment() {
   const navigate  = useNavigate()
   const fadeStyle = usePageFade()
@@ -29,6 +49,8 @@ export default function AjouterAliment() {
   const [client, setClient]   = useState(null)
   const [terme, setTerme]     = useState('')
   const [resultats, setResultats] = useState([])
+  const [marques, setMarques] = useState([])           // produits Open Food Facts
+  const [chercheMarques, setChercheMarques] = useState(false)
   const [recents, setRecents] = useState([])
   const [onglet, setOnglet]   = useState('recherche')  // recherche | recents
   const [cherche, setCherche] = useState(false)
@@ -69,12 +91,24 @@ export default function AjouterAliment() {
     })()
   }, [client])
 
+  // Deux sources complémentaires : CIQUAL pour les aliments génériques, Open
+  // Food Facts pour les marques et les variantes précises (skyr, chocolat 90 %,
+  // whey…) que CIQUAL ne contient pas.
   const chercher = useCallback(async (t) => {
-    if (!t.trim()) { setResultats([]); return }
-    setCherche(true)
-    const { data } = await supabase.rpc('rechercher_aliment', { terme: t.trim(), nb: 25 })
-    setResultats(data || [])
-    setCherche(false)
+    const terme = t.trim()
+    if (!terme) { setResultats([]); setMarques([]); return }
+    setCherche(true); setChercheMarques(true)
+
+    supabase.rpc('rechercher_aliment', { terme, nb: 25 })
+      .then(({ data }) => setResultats(data || []))
+      .finally(() => setCherche(false))
+
+    // Les marques arrivent plus tard (appel réseau externe) : on n'attend pas
+    // pour afficher les résultats CIQUAL.
+    chercherMarques(terme)
+      .then(setMarques)
+      .catch(() => setMarques([]))
+      .finally(() => setChercheMarques(false))
   }, [])
 
   useEffect(() => {
@@ -246,18 +280,44 @@ export default function AjouterAliment() {
           <p style={S.vide}>Recherche…</p>
         ) : !terme.trim() ? (
           <p style={S.vide}>Tape le nom d'un aliment pour le chercher dans la table CIQUAL.</p>
-        ) : liste.length ? (
+        ) : (liste.length || marques.length || chercheMarques) ? (
           <>
-            <p style={S.source}>{liste.length} résultat{liste.length > 1 ? 's' : ''} — table CIQUAL (ANSES)</p>
-            {liste.map(a => (
-              <button key={a.code} onClick={() => ouvrirQuantite(a)} style={S.row}>
+            {liste.length > 0 && (
+              <>
+                <p style={S.source}>Aliments génériques — table CIQUAL (ANSES)</p>
+                {liste.map(a => (
+                  <button key={a.code} onClick={() => ouvrirQuantite(a)} style={S.row}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={S.rowNom}>{a.nom}</p>
+                      <p style={S.rowSub}>{a.groupe}</p>
+                    </div>
+                    <div style={S.rowK}><b>{fmt(a.kcal)}</b><i>kcal / 100 g</i></div>
+                  </button>
+                ))}
+              </>
+            )}
+
+            <p style={{ ...S.source, marginTop: liste.length ? 14 : 0 }}>
+              Produits de marque — Open Food Facts
+            </p>
+            {chercheMarques ? (
+              <p style={{ ...S.vide, padding: '0.8rem' }}>Recherche des marques…</p>
+            ) : marques.length ? marques.map(p => (
+              <button key={p.code || p.nom} onClick={() => ouvrirQuantite({
+                nom: p.marque ? `${p.nom} — ${p.marque}` : p.nom,
+                groupe: p.marque || 'Produit de marque',
+                kcal: p.kcal, proteines: p.proteines || 0,
+                glucides: p.glucides || 0, lipides: p.lipides || 0,
+              })} style={S.row}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={S.rowNom}>{a.nom}</p>
-                  <p style={S.rowSub}>{a.groupe}</p>
+                  <p style={S.rowNom}>{p.nom}</p>
+                  <p style={{ ...S.rowSub, color: '#b45309' }}>{p.marque || 'Sans marque'}</p>
                 </div>
-                <div style={S.rowK}><b>{fmt(a.kcal)}</b><i>kcal / 100 g</i></div>
+                <div style={S.rowK}><b>{fmt(p.kcal)}</b><i>kcal / 100 g</i></div>
               </button>
-            ))}
+            )) : (
+              <p style={{ ...S.vide, padding: '0.8rem' }}>Aucun produit de marque trouvé.</p>
+            )}
           </>
         ) : (
           <p style={S.vide}>Aucun aliment trouvé. Essaie un autre mot.</p>
