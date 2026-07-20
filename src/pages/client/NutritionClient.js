@@ -328,10 +328,12 @@ export default function NutritionClient() {
           </div>
         </div>
 
-        <div style={{ height: 96 }} />
+        {/* Dégagement pour que le dernier repas reste atteignable sous la barre
+            scanner fixe (hauteur du bouton + son décalage). */}
+        <div style={{ height: 150 }} />
       </div>
 
-      {/* Barre scanner fixe — identique à celle de la page du plan */}
+      {/* Barre scanner fixe */}
       <div style={S.scanCta}>
         <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanCtaBtn}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -386,7 +388,9 @@ const S = {
   checkOn:    { background: 'var(--accent)', borderColor: 'var(--accent)' },
   waterIco:   { width: 36, height: 36, borderRadius: 11, background: '#e8f4fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   step:       { width: 32, height: 32, borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
-  scanCta:    { position: 'fixed', bottom: 'calc(82px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
+  // 96px = hauteur de la barre de navigation + une respiration : à 82px le
+  // bouton la touchait presque (2px d'écart mesurés).
+  scanCta:    { position: 'fixed', bottom: 'calc(96px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
   scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
   loading:    { color: '#9ca3af', fontSize: '0.85rem', fontWeight: 600 },
 }
