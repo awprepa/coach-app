@@ -203,14 +203,27 @@ export default function RpeGate({ children }) {
         // Séances terrain récentes (3 derniers jours), passées ou du jour
         const today = new Date().toISOString().slice(0, 10)
         const from3 = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
-        const { data: evs } = await supabase
+        const { data: evsBruts } = await supabase
           .from('groupe_evenements')
-          .select('id, titre, date, type')
+          .select('id, titre, date, type, heure, duree_min')
           .in('groupe_id', groupeIds)
           .eq('type', 'entrainement')
           .gte('date', from3).lte('date', today)
           .order('date', { ascending: false })
-        if (!evs?.length) return
+        if (!evsBruts?.length) return
+
+        // On ne demande sa note qu'une fois la séance TERMINÉE : sinon le joueur
+        // pouvait noter le matin un entraînement prévu le soir.
+        const evs = evsBruts.filter(ev => {
+          if (ev.date < today) return true          // jour passé : terminée
+          if (!ev.heure) return false               // aujourd'hui sans horaire : on attend demain
+          const [h, m] = ev.heure.split(':').map(Number)
+          const fin = new Date()
+          fin.setHours(h, m || 0, 0, 0)
+          fin.setMinutes(fin.getMinutes() + (ev.duree_min || 0))
+          return Date.now() >= fin.getTime()
+        })
+        if (!evs.length) return
 
         // Déjà notées par ce joueur ?
         const { data: notes } = await supabase
