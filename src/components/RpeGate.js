@@ -103,6 +103,23 @@ function RpeOverlay({ clientId, evenement, onDone }) {
       evenement_id: evenement.id,
       client_id:    clientId,
       ...vals,
+      absent:       false,
+      commentaire:  commentaire.trim() || null,
+    }, { onConflict: 'evenement_id,client_id' })
+    setSaving(false)
+    onDone()
+  }
+
+  // Le joueur n'était pas là : on l'enregistre comme absent (RPE nuls) pour que
+  // le coach le sache, plutôt que de laisser la séance « non répondue ».
+  async function marquerAbsent() {
+    if (saving) return
+    setSaving(true)
+    await supabase.from('groupe_seance_rpe').upsert({
+      evenement_id: evenement.id,
+      client_id:    clientId,
+      rpe_cardio: null, rpe_jambes: null, rpe_contact: null,
+      absent:       true,
       commentaire:  commentaire.trim() || null,
     }, { onConflict: 'evenement_id,client_id' })
     setSaving(false)
@@ -148,9 +165,9 @@ function RpeOverlay({ clientId, evenement, onDone }) {
           style={{ ...W.submitBtn, background: allFilled ? '#333333' : '#e5e7eb', color: allFilled ? 'var(--accent-fg-dark)' : '#9ca3af', cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider ma note'}
         </button>
-        <button onClick={onDone} disabled={saving}
-          style={{ width: '100%', marginTop: '0.5rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: '0.4rem' }}>
-          Plus tard
+        <button onClick={marquerAbsent} disabled={saving}
+          style={{ width: '100%', marginTop: '0.6rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, color: '#6b7280', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', padding: '0.8rem' }}>
+          Je n'étais pas à cet entraînement
         </button>
       </div>
     </div>
@@ -212,16 +229,15 @@ export default function RpeGate({ children }) {
           .order('date', { ascending: false })
         if (!evsBruts?.length) return
 
-        // On ne demande sa note qu'une fois la séance TERMINÉE : sinon le joueur
-        // pouvait noter le matin un entraînement prévu le soir.
+        // On ne demande sa note qu'à partir de l'HEURE DE DÉBUT de la séance :
+        // sinon le joueur pouvait noter le matin un entraînement prévu le soir.
         const evs = evsBruts.filter(ev => {
-          if (ev.date < today) return true          // jour passé : terminée
-          if (!ev.heure) return false               // aujourd'hui sans horaire : on attend demain
+          if (ev.date < today) return true          // jour passé : déjà commencée
+          if (!ev.heure) return false               // aujourd'hui sans horaire : on attend le lendemain
           const [h, m] = ev.heure.split(':').map(Number)
-          const fin = new Date()
-          fin.setHours(h, m || 0, 0, 0)
-          fin.setMinutes(fin.getMinutes() + (ev.duree_min || 0))
-          return Date.now() >= fin.getTime()
+          const debut = new Date()
+          debut.setHours(h, m || 0, 0, 0)
+          return Date.now() >= debut.getTime()
         })
         if (!evs.length) return
 

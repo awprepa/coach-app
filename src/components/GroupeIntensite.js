@@ -45,7 +45,7 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
       const [{ data: notes }, { data: mbs }] = await Promise.all([
         supabase
           .from('groupe_seance_rpe')
-          .select('evenement_id, client_id, rpe_cardio, rpe_jambes, rpe_contact, commentaire, clients(prenom, nom)')
+          .select('evenement_id, client_id, rpe_cardio, rpe_jambes, rpe_contact, absent, commentaire, clients(prenom, nom)')
           .in('evenement_id', evs.map(e => e.id)),
         supabase
           .from('groupe_membres')
@@ -64,17 +64,19 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         .map(ev => {
           const ns = byEv[ev.id] || []
           if (!ns.length) return null // pas encore de note → pas de point
+          // Les absents ne comptent pas dans les moyennes d'intensité.
+          const presents = ns.filter(n => !n.absent)
           const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null
-          const cardio  = avg(ns.map(n => n.rpe_cardio).filter(v => v != null))
-          const jambes  = avg(ns.map(n => n.rpe_jambes).filter(v => v != null))
-          const contact = avg(ns.map(n => n.rpe_contact).filter(v => v != null))
-          const perPlayer = ns.map(n => avg([n.rpe_cardio, n.rpe_jambes, n.rpe_contact].filter(v => v != null)))
+          const cardio  = avg(presents.map(n => n.rpe_cardio).filter(v => v != null))
+          const jambes  = avg(presents.map(n => n.rpe_jambes).filter(v => v != null))
+          const contact = avg(presents.map(n => n.rpe_contact).filter(v => v != null))
+          const perPlayer = presents.map(n => avg([n.rpe_cardio, n.rpe_jambes, n.rpe_contact].filter(v => v != null)))
           const moyenne = avg(perPlayer.filter(v => v != null))
           const r1 = x => x == null ? null : Math.round(x * 10) / 10
           return {
             evId: ev.id, date: ev.date, titre: ev.titre || 'Entraînement',
             moyenne: r1(moyenne), cardio: r1(cardio), jambes: r1(jambes), contact: r1(contact),
-            nbNotes: ns.length, notes: ns,
+            nbNotes: presents.length, nbAbsents: ns.length - presents.length, notes: ns,
           }
         })
         .filter(Boolean)
@@ -167,7 +169,9 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
             <div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1a1a1a' }}>{selectedSession.titre}</p>
               <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>
-                {fmtDate(selectedSession.date)} · {selectedSession.nbNotes} joueur{selectedSession.nbNotes > 1 ? 's' : ''} · moyenne {selectedSession.moyenne}/10
+                {fmtDate(selectedSession.date)} · {selectedSession.nbNotes} noté{selectedSession.nbNotes > 1 ? 's' : ''}
+                {selectedSession.moyenne != null && ` · moyenne ${selectedSession.moyenne}/10`}
+                {selectedSession.nbAbsents > 0 && ` · ${selectedSession.nbAbsents} absent${selectedSession.nbAbsents > 1 ? 's' : ''}`}
               </p>
             </div>
             <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1rem', cursor: 'pointer' }}>✕</button>
@@ -177,19 +181,23 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
             {selectedSession.notes.map((n, i) => {
               const nom = `${n.clients?.prenom || ''} ${n.clients?.nom || ''}`.trim() || 'Joueur'
               return (
-                <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.7rem' }}>
+                <div key={i} style={{ background: n.absent ? '#fef2f2' : '#f9fafb', borderRadius: 10, padding: '0.6rem 0.7rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.83rem', color: '#374151' }}>{nom}</span>
-                    <div style={{ display: 'flex', gap: 5 }}>
-                      {DIM_META.map(d => {
-                        const val = n[`rpe_${d.key}`]
-                        return (
-                          <span key={d.key} title={d.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: noteColor(val) + '1a', color: noteColor(val), borderRadius: 6, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 800 }}>
-                            {d.court} {val ?? '—'}
-                          </span>
-                        )
-                      })}
-                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '0.83rem', color: n.absent ? '#b91c1c' : '#374151' }}>{nom}</span>
+                    {n.absent ? (
+                      <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: 6, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 800 }}>Absent</span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        {DIM_META.map(d => {
+                          const val = n[`rpe_${d.key}`]
+                          return (
+                            <span key={d.key} title={d.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: noteColor(val) + '1a', color: noteColor(val), borderRadius: 6, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 800 }}>
+                              {d.court} {val ?? '—'}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                   {n.commentaire && (
                     <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: '#4b5563', lineHeight: 1.45, fontStyle: 'italic' }}>
