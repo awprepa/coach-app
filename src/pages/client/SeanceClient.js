@@ -102,6 +102,7 @@ export default function SeanceClient() {
   const [rpeSeances, setRpeSeances] = useState({})
   const [semaines, setSemaines] = useState(4)
   const [semaineActuelle, setSemaineActuelle] = useState(1)
+  const [rattrapageDeSemaine, setRattrapageDeSemaine] = useState(null) // semaine naturelle si différente de semaineActuelle
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [tracking, setTracking] = useState({})
@@ -302,10 +303,10 @@ export default function SeanceClient() {
     setSemaines(total)
     const dateDebut = data.programmes.date_debut || data.programmes.created_at
     const paramSemaine = parseInt(searchParams.get('semaine'))
-    let semAct = (paramSemaine >= 1)
-      ? paramSemaine
-      : (dateDebut ? getSemaineActuelle(dateDebut) : 1)
+    const semaineNaturelle = dateDebut ? getSemaineActuelle(dateDebut) : 1
+    let semAct = (paramSemaine >= 1) ? paramSemaine : semaineNaturelle
     if (dateDebut) setSemaineActuelle(semAct)
+    setRattrapageDeSemaine((paramSemaine >= 1 && paramSemaine !== semaineNaturelle) ? semaineNaturelle : null)
 
     const exData   = await fetchExercices(data.programmes.semaines, dateDebut, semAct)
     const rpeData  = await fetchRpeSeances(semAct)
@@ -1366,6 +1367,11 @@ export default function SeanceClient() {
           <div style={{ marginTop: '0.4rem' }}>
             <span style={S.curBadge}>S{semaineActuelle} en cours</span>
           </div>
+          {rattrapageDeSemaine != null && (
+            <div style={S.rattrapageBanner}>
+              🔁 Séance de rattrapage — comptée pour la semaine {semaineActuelle}, pas la semaine {rattrapageDeSemaine} en cours
+            </div>
+          )}
         </div>
 
         {/* Bouton séance non effectuée */}
@@ -1857,6 +1863,7 @@ const S = {
   programmeNom:{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' },
   title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   curBadge:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+  rattrapageBanner: { marginTop: '0.6rem', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: 10, padding: '0.55rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', lineHeight: 1.4 },
   // Progress bar
   progressCard:{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   progressTrack:{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' },

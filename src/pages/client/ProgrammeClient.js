@@ -20,6 +20,7 @@ export default function ProgrammeClient() {
   const [seances, setSeances] = useState([])
   const [semaineActuelle, setSemaineActuelle] = useState(null)
   const [seancesRenseignees, setSeancesRenseignees] = useState({})
+  const [seancesARattraper, setSeancesARattraper] = useState([]) // [{ id, nom, semaine }]
   const [loading, setLoading] = useState(true)
 
   // Séances ponctuelles
@@ -59,6 +60,26 @@ export default function ProgrammeClient() {
       renseignees[s.id] = aCharge || aRpe
     })
     setSeancesRenseignees(renseignees)
+
+    // Séances manquées la semaine précédente, proposées en rattrapage cette semaine-ci.
+    // Une séance explicitement marquée « non effectuée » par le client n'est pas relancée.
+    const semainePrecedente = semaine - 1
+    if (semainePrecedente >= 1) {
+      const { data: commsPrec } = await supabase
+        .from('seance_commentaires')
+        .select('seance_id, non_effectuee')
+        .in('seance_id', seancesData.map(s => s.id))
+        .eq('semaine', semainePrecedente)
+      const nonEffectueeIds = new Set((commsPrec || []).filter(c => c.non_effectuee).map(c => c.seance_id))
+
+      const aRattraper = seancesData.filter(s => {
+        if (nonEffectueeIds.has(s.id)) return false
+        const aCharge = s.exercices.some(ex => ex.charges.some(c => c.semaine === semainePrecedente))
+        const aRpe = s.rpe_seances.some(r => r.semaine === semainePrecedente && r.rpe_reel != null)
+        return !aCharge && !aRpe
+      }).map(s => ({ id: s.id, nom: s.nom, semaine: semainePrecedente }))
+      setSeancesARattraper(aRattraper)
+    }
 
     // Séances ponctuelles = événements 'client' qui ont des exercices liés
     // (le join !inner ne renvoie que ceux ayant au moins un exercice).
@@ -141,6 +162,26 @@ export default function ProgrammeClient() {
             <div style={styles.progressBar}>
               <div style={{ ...styles.progressFill, width: `${progression}%` }} />
             </div>
+          </div>
+        )}
+
+        {/* Séances manquées la semaine dernière, à rattraper cette semaine */}
+        {seancesARattraper.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
+            {seancesARattraper.map(s => (
+              <div key={s.id} style={styles.rattrapageCard}>
+                <div>
+                  <p style={styles.rattrapageTitle}>Séance manquée : {s.nom}</p>
+                  <p style={styles.rattrapageSub}>Semaine {s.semaine} non complétée</p>
+                </div>
+                <button
+                  onClick={() => navigate(`/client/seance/${s.id}?semaine=${s.semaine}`)}
+                  style={styles.rattrapageBtn}
+                >
+                  Rattraper
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -341,6 +382,39 @@ const styles = {
   sectionCount: {
     color: '#9ca3af',
     fontSize: '0.8rem',
+  },
+  rattrapageCard: {
+    background: '#fef3c7',
+    border: '1px solid #fde68a',
+    borderRadius: '14px',
+    padding: '0.85rem 1rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '0.75rem',
+  },
+  rattrapageTitle: {
+    fontWeight: '700',
+    fontSize: '0.88rem',
+    color: '#92400e',
+    margin: '0 0 0.15rem',
+  },
+  rattrapageSub: {
+    fontSize: '0.72rem',
+    fontWeight: '600',
+    color: '#b45309',
+    margin: 0,
+  },
+  rattrapageBtn: {
+    background: '#92400e',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '0.5rem 0.9rem',
+    fontSize: '0.78rem',
+    fontWeight: '700',
+    cursor: 'pointer',
+    flexShrink: 0,
   },
   emptyCard: {
     background: 'white',
