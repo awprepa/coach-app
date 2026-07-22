@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
+import { getCoachId, sendNotif } from '../notifs'
 
 // ── Session-RPE différencié (échelle CR-10, 0-10) — 3 dimensions rugby ────────
 const DIMS = [
@@ -106,6 +107,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
       absent:       false,
       commentaire:  commentaire.trim() || null,
     }, { onConflict: 'evenement_id,client_id' })
+    notifierCoachRpe(false)
     setSaving(false)
     onDone()
   }
@@ -122,8 +124,29 @@ function RpeOverlay({ clientId, evenement, onDone }) {
       absent:       true,
       commentaire:  commentaire.trim() || null,
     }, { onConflict: 'evenement_id,client_id' })
+    notifierCoachRpe(true)
     setSaving(false)
     onDone()
+  }
+
+  async function notifierCoachRpe(absent) {
+    try {
+      const [{ data: client }, coachId] = await Promise.all([
+        supabase.from('clients').select('prenom, nom').eq('id', clientId).single(),
+        getCoachId(),
+      ])
+      const nomClient = client ? `${client.prenom} ${client.nom}` : 'Un joueur'
+      await sendNotif(coachId, {
+        titre: absent ? `${nomClient} était absent` : `${nomClient} a noté un entraînement`,
+        corps: absent
+          ? `${evenement.titre || 'Entraînement'} — signalé absent`
+          : `${evenement.titre || 'Entraînement'} — RPE renseigné`,
+        type: 'rpe',
+        lien: evenement.groupe_id ? `/groupe/${evenement.groupe_id}` : '/',
+      })
+    } catch (e) {
+      console.warn('[notifierCoachRpe] échec :', e?.message)
+    }
   }
 
   const dateLabel = new Date(evenement.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -222,7 +245,7 @@ export default function RpeGate({ children }) {
         const from3 = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
         const { data: evsBruts } = await supabase
           .from('groupe_evenements')
-          .select('id, titre, date, type, heure, duree_min')
+          .select('id, titre, date, type, heure, duree_min, groupe_id')
           .in('groupe_id', groupeIds)
           .eq('type', 'entrainement')
           .gte('date', from3).lte('date', today)
