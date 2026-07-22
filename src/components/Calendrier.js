@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
+import { getCoachId, sendNotif } from '../notifs'
 
 const EVENT_TYPES = [
   { value: 'seance',       label: 'Séance',        bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
@@ -349,8 +350,31 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     }
     const { data, error } = await supabase.from('evenements').insert([payload]).select().single()
     if (error) alert(error.message)
-    else { setEvenements(prev => [...prev, data]); setForm({ type: 'seance', titre: '', seanceId: '', description: '' }) }
+    else {
+      setEvenements(prev => [...prev, data])
+      setForm({ type: 'seance', titre: '', seanceId: '', description: '' })
+      if (eventSource === 'client') notifierCoachNouvelEvenement(data)
+    }
     setSaving(false)
+  }
+
+  async function notifierCoachNouvelEvenement(ev) {
+    try {
+      const [{ data: client }, coachId] = await Promise.all([
+        supabase.from('clients').select('prenom, nom').eq('id', clientId).single(),
+        getCoachId(),
+      ])
+      const nomClient = client ? `${client.prenom} ${client.nom}` : 'Un client'
+      const dateAffichee = new Date(ev.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+      await sendNotif(coachId, {
+        titre: `${nomClient} a ajouté un événement`,
+        corps: `${getTypeLabel(ev.type)} — ${ev.titre} (${dateAffichee})`,
+        type: 'calendrier',
+        lien: `/client/${clientId}`,
+      })
+    } catch (e) {
+      console.warn('[notifierCoachNouvelEvenement] échec :', e?.message)
+    }
   }
 
   async function supprimerEvenement(evId) {
