@@ -103,6 +103,7 @@ export default function SeanceClient() {
   const [semaines, setSemaines] = useState(4)
   const [semaineActuelle, setSemaineActuelle] = useState(1)
   const [rattrapageDeSemaine, setRattrapageDeSemaine] = useState(null) // semaine naturelle si différente de semaineActuelle
+  const [showWeekPicker, setShowWeekPicker] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [tracking, setTracking] = useState({})
@@ -616,12 +617,14 @@ export default function SeanceClient() {
     const serie = trackingRef.current[exId]?.[serieIdx] || {}
     // Sauvegarder dès la saisie, même avant validation — évite la perte si on quitte l'app
     if (!serie.poids && !serie.reps_reelles) return // rien à sauvegarder
+    // Ne touche jamais à valide/is_done ici : ces colonnes appartiennent à
+    // validerSerie/devaliderSerie. Sinon un blur déclenché en même temps qu'un
+    // tap sur « Valider » peut écraser la validation en course (race condition
+    // réseau) et forcer le joueur à valider une deuxième fois.
     const { error } = await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
       reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
-      valide: serie.valide || false,
-      is_done: serie.is_done || false,
     }, { onConflict: 'exercice_id,semaine,serie' })
     if (error) { console.error('[saveSerieField]', error.message); return }  // pas de flash « sauvegardé » si échec réel
     flashSaved()
@@ -1364,12 +1367,33 @@ export default function SeanceClient() {
         <div style={{ marginBottom: '1rem' }}>
           <p style={S.programmeNom}>{seance.programmes.nom}</p>
           <h1 style={S.title}>{seance.nom}</h1>
-          <div style={{ marginTop: '0.4rem' }}>
-            <span style={S.curBadge}>S{semaineActuelle} en cours</span>
+          <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span
+              style={{ ...S.curBadge, cursor: 'pointer' }}
+              onClick={() => setShowWeekPicker(v => !v)}
+            >
+              S{semaineActuelle} {rattrapageDeSemaine != null ? '(rattrapage)' : 'en cours'} ✎
+            </span>
+            {rattrapageDeSemaine != null && (
+              <span style={S.rattrapageHint}>compte pour S{semaineActuelle}, pas S{rattrapageDeSemaine}</span>
+            )}
           </div>
-          {rattrapageDeSemaine != null && (
-            <div style={S.rattrapageBanner}>
-              🔁 Séance de rattrapage — comptée pour la semaine {semaineActuelle}, pas la semaine {rattrapageDeSemaine} en cours
+          {showWeekPicker && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <select
+                value={semaineActuelle}
+                onChange={e => {
+                  const n = parseInt(e.target.value, 10)
+                  setShowWeekPicker(false)
+                  window.location.href = `/client/seance/${id}?semaine=${n}`
+                }}
+                style={S.weekSelect}
+              >
+                {Array.from({ length: semaines }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>Semaine {n}</option>
+                ))}
+              </select>
+              <p style={S.weekSelectHint}>Change la semaine à laquelle les charges de cette séance seront comptabilisées.</p>
             </div>
           )}
         </div>
@@ -1863,7 +1887,9 @@ const S = {
   programmeNom:{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' },
   title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   curBadge:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
-  rattrapageBanner: { marginTop: '0.6rem', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: 10, padding: '0.55rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', lineHeight: 1.4 },
+  rattrapageHint: { fontSize: '0.72rem', fontWeight: '700', color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 999, padding: '0.2rem 0.6rem' },
+  weekSelect: { fontSize: '0.85rem', fontWeight: '700', color: '#333333', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.45rem 0.6rem', background: 'white' },
+  weekSelectHint: { fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0', lineHeight: 1.4 },
   // Progress bar
   progressCard:{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   progressTrack:{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' },
