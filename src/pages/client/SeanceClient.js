@@ -910,6 +910,62 @@ export default function SeanceClient() {
     }
   }
 
+  // Change la semaine à laquelle cette séance est rattachée. Si des données
+  // ont déjà été saisies sur la semaine actuelle (ex : joueur qui a fait sa
+  // séance la semaine 4 mais veut qu'elle compte comme le rattrapage de la
+  // semaine 3), propose de les déplacer plutôt que de juste changer de vue —
+  // sinon les poids/reps déjà remplis restent orphelins sur l'ancienne semaine.
+  async function changerSemaine(nouvelleSemaine) {
+    if (!nouvelleSemaine || nouvelleSemaine === semaineActuelle) return
+    const exIds = exercices.map(e => e.id)
+
+    const hasCurrentData =
+      Object.values(tracking).some(list => (list || []).some(s => s.poids || s.reps_reelles)) ||
+      Object.values(charges).some(c => c[semaineActuelle]?.charge) ||
+      !!rpeSeances[semaineActuelle]?.rpe_reel ||
+      !!commentaires.find(c => c.semaine === semaineActuelle && (c.texte || c.non_effectuee))
+
+    if (!hasCurrentData) {
+      window.location.href = `/client/seance/${id}?semaine=${nouvelleSemaine}`
+      return
+    }
+
+    const deplacer = window.confirm(
+      `Tu as déjà rempli des données pour la semaine ${semaineActuelle}.\n\n` +
+      `Veux-tu les déplacer vers la semaine ${nouvelleSemaine} ?\n\n` +
+      `OK = déplacer les poids/reps/notes déjà saisis vers S${nouvelleSemaine}.\n` +
+      `Annuler = juste changer de semaine sans rien déplacer.`
+    )
+    if (!deplacer) {
+      window.location.href = `/client/seance/${id}?semaine=${nouvelleSemaine}`
+      return
+    }
+
+    // On ne déplace jamais si la semaine cible contient déjà des données pour
+    // cette séance (on ne veut pas risquer d'écraser un vrai historique).
+    const [{ data: exTracking }, { data: exCharges }, { data: exRpe }, { data: exComm }, { data: exSkips }] = await Promise.all([
+      supabase.from('serie_tracking').select('id').in('exercice_id', exIds).eq('semaine', nouvelleSemaine).limit(1),
+      supabase.from('charges').select('id').in('exercice_id', exIds).eq('semaine', nouvelleSemaine).limit(1),
+      supabase.from('rpe_seances').select('id').eq('seance_id', id).eq('semaine', nouvelleSemaine).limit(1),
+      supabase.from('seance_commentaires').select('id').eq('seance_id', id).eq('semaine', nouvelleSemaine).limit(1),
+      supabase.from('bloc_skips').select('id').eq('seance_id', id).eq('semaine', nouvelleSemaine).limit(1),
+    ])
+    if (exTracking?.length || exCharges?.length || exRpe?.length || exComm?.length || exSkips?.length) {
+      alert(`La semaine ${nouvelleSemaine} contient déjà des données pour cette séance : le déplacement a été annulé pour ne rien écraser.`)
+      return
+    }
+
+    await Promise.all([
+      supabase.from('serie_tracking').update({ semaine: nouvelleSemaine }).in('exercice_id', exIds).eq('semaine', semaineActuelle),
+      supabase.from('charges').update({ semaine: nouvelleSemaine }).in('exercice_id', exIds).eq('semaine', semaineActuelle),
+      supabase.from('rpe_seances').update({ semaine: nouvelleSemaine }).eq('seance_id', id).eq('semaine', semaineActuelle),
+      supabase.from('seance_commentaires').update({ semaine: nouvelleSemaine }).eq('seance_id', id).eq('semaine', semaineActuelle),
+      supabase.from('bloc_skips').update({ semaine: nouvelleSemaine }).eq('seance_id', id).eq('semaine', semaineActuelle),
+    ])
+
+    window.location.href = `/client/seance/${id}?semaine=${nouvelleSemaine}`
+  }
+
   // ── Helpers média ──────────────────────────────────────────────────────────
   function youtubeId(url) {
     const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
@@ -1385,7 +1441,7 @@ export default function SeanceClient() {
                 onChange={e => {
                   const n = parseInt(e.target.value, 10)
                   setShowWeekPicker(false)
-                  window.location.href = `/client/seance/${id}?semaine=${n}`
+                  changerSemaine(n)
                 }}
                 style={S.weekSelect}
               >
