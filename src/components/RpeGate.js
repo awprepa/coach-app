@@ -252,15 +252,13 @@ export default function RpeGate({ children }) {
           .order('date', { ascending: false })
         if (!evsBruts?.length) return
 
-        // On ne demande sa note qu'à partir de l'HEURE DE DÉBUT de la séance :
-        // sinon le joueur pouvait noter le matin un entraînement prévu le soir.
+        // On ne demande sa note qu'à partir de 20h le jour même de l'entraînement
+        // (peu importe l'heure réelle de la séance) : sinon le joueur pouvait
+        // noter le matin un entraînement prévu le soir.
         const evs = evsBruts.filter(ev => {
-          if (ev.date < today) return true          // jour passé : déjà commencée
-          if (!ev.heure) return false               // aujourd'hui sans horaire : on attend le lendemain
-          const [h, m] = ev.heure.split(':').map(Number)
-          const debut = new Date()
-          debut.setHours(h, m || 0, 0, 0)
-          return Date.now() >= debut.getTime()
+          if (ev.date < today) return true          // jour passé : déjà ouverte
+          const seuil = new Date(); seuil.setHours(20, 0, 0, 0)
+          return Date.now() >= seuil.getTime()       // jour même : ouverte à partir de 20h
         })
         if (!evs.length) return
 

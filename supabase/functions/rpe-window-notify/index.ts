@@ -1,10 +1,21 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Heure et date du jour en Europe/Paris (le runtime Deno tourne en UTC).
+function parisNow() {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(new Date()).map(p => [p.type, p.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: parseInt(parts.hour, 10) };
+}
+
 // Appelée toutes les 15 min par pg_cron. Repère les entraînements de groupe
 // pour lesquels la fenêtre de notation RPE vient de s'ouvrir (même règle que
-// RpeGate côté client : dès l'heure de début si elle est connue, sinon dès le
-// lendemain) et notifie le coach une seule fois par entraînement, pour qu'il
-// puisse vérifier que la notation est bien accessible aux joueurs.
+// RpeGate côté client : ouverte à partir de 20h le jour même de
+// l'entraînement, ou déjà ouverte si le jour est passé) et notifie le coach
+// une seule fois par entraînement, pour qu'il puisse vérifier que la
+// notation est bien accessible aux joueurs.
 Deno.serve(async (_req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   try {
@@ -18,13 +29,12 @@ Deno.serve(async (_req) => {
     const coachId = coachSetting?.value;
     if (!coachId) return new Response("no coach", { status: 200 });
 
-    const now = new Date();
-    const from2 = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
-    const today = now.toISOString().slice(0, 10);
+    const { date: today, hour: parisHour } = parisNow();
+    const from2 = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
 
     const { data: evs, error } = await supabase
       .from("groupe_evenements")
-      .select("id, groupe_id, titre, date, heure")
+      .select("id, groupe_id, titre, date")
       .eq("type", "entrainement")
       .eq("rpe_ouverture_notifiee", false)
       .gte("date", from2)
@@ -36,12 +46,8 @@ Deno.serve(async (_req) => {
     if (!evs?.length) return new Response("rien à notifier", { status: 200 });
 
     const ouverte = evs.filter((ev: any) => {
-      if (ev.date < today) return true; // jour passé : forcément ouverte
-      if (!ev.heure) return false;      // aujourd'hui sans horaire : ouvre demain
-      const [h, m] = ev.heure.split(":").map(Number);
-      const debut = new Date(`${ev.date}T00:00:00`);
-      debut.setHours(h, m || 0, 0, 0);
-      return now.getTime() >= debut.getTime();
+      if (ev.date < today) return true;   // jour passé : forcément ouverte
+      return parisHour >= 20;             // jour même : ouverte à partir de 20h
     });
     if (!ouverte.length) return new Response("aucune fenêtre ouverte", { status: 200 });
 
