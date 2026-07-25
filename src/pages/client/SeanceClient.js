@@ -17,6 +17,22 @@ function getSemaineActuelle(dateDebut) {
   return Math.max(1, Math.ceil((diffJours + 1) / 7))
 }
 
+// Semaine du cycle correspondant à une date de calendrier donnée — même
+// logique que getCycleWeek dans Calendrier.js (dupliquée ici volontairement,
+// comme ailleurs dans ce fichier, plutôt que de partager un util pour un
+// calcul aussi court).
+function getCycleWeekForDate(date, programmeDebut, programmeSemaines) {
+  if (!programmeDebut) return null
+  const debut = new Date(programmeDebut + 'T00:00:00')
+  const debutDay = debut.getDay()
+  debut.setDate(debut.getDate() + (debutDay === 0 ? -6 : 1 - debutDay))
+  const d = new Date(date); d.setHours(0, 0, 0, 0)
+  const diff = Math.floor((d - debut) / (1000 * 60 * 60 * 24))
+  if (diff < 0) return null
+  const w = Math.floor(diff / 7) + 1
+  return w > programmeSemaines ? null : w
+}
+
 function parseRecup(str) {
   if (!str) return 0
   const s = String(str).trim()
@@ -962,6 +978,27 @@ export default function SeanceClient() {
       supabase.from('seance_commentaires').update({ semaine: nouvelleSemaine }).eq('seance_id', id).eq('semaine', semaineActuelle),
       supabase.from('bloc_skips').update({ semaine: nouvelleSemaine }).eq('seance_id', id).eq('semaine', semaineActuelle),
     ])
+
+    // Si cette séance a été ouverte depuis le calendrier (un événement lié
+    // existe pour ce jour-là), on marque aussi cet événement avec la nouvelle
+    // semaine — sinon recliquer sur ce même jour du calendrier rouvrirait la
+    // séance sur l'ancienne semaine (recalculée depuis la date) au lieu de
+    // suivre les données qu'on vient de déplacer.
+    const clientId = seance?.programmes?.client_id
+    const dateDebut = seance?.programmes?.date_debut || seance?.programmes?.created_at
+    const totalSem = seance?.programmes?.semaines
+    if (clientId && dateDebut) {
+      try {
+        const { data: evsLies } = await supabase
+          .from('evenements').select('id, date, semaine_override')
+          .eq('client_id', clientId).eq('seance_id', id)
+        const match = (evsLies || []).find(ev => {
+          const w = ev.semaine_override ?? getCycleWeekForDate(ev.date + 'T00:00:00', dateDebut, totalSem)
+          return w === semaineActuelle
+        })
+        if (match) await supabase.from('evenements').update({ semaine_override: nouvelleSemaine }).eq('id', match.id)
+      } catch (e) { console.warn('[changerSemaine] maj événement calendrier échouée:', e) }
+    }
 
     window.location.href = `/client/seance/${id}?semaine=${nouvelleSemaine}`
   }
