@@ -114,6 +114,7 @@ export default function SeanceClient() {
   const [searchParams] = useSearchParams()
   const [seance, setSeance] = useState(null)
   const [exercices, setExercices] = useState([])
+  const [videoDemandes, setVideoDemandes] = useState({}) // { exercice_id: demande en_attente }
   const [charges, setCharges] = useState({})
   const [rpeSeances, setRpeSeances] = useState({})
   const [semaines, setSemaines] = useState(4)
@@ -394,6 +395,13 @@ export default function SeanceClient() {
 
     let sem = semAct ?? (dateDebut ? getSemaineActuelle(dateDebut) : 1)
     const exIds = data.map(e => e.id)
+    if (exIds.length) {
+      const { data: demandes } = await supabase
+        .from('demandes_video').select('*').in('exercice_id', exIds).eq('statut', 'en_attente')
+      const vMap = {}
+      ;(demandes || []).forEach(d => { vMap[d.exercice_id] = d })
+      setVideoDemandes(vMap)
+    }
     const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
     const rows = allRows || []
 
@@ -499,6 +507,28 @@ export default function SeanceClient() {
     const cur = data.find(c => c.semaine === sem)
     if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
     return data
+  }
+
+  async function marquerVideoEnvoyee(exerciceId) {
+    const demande = videoDemandes[exerciceId]
+    if (!demande) return
+    await supabase.from('demandes_video')
+      .update({ statut: 'faite', fait_le: new Date().toISOString() })
+      .eq('id', demande.id)
+    setVideoDemandes(prev => { const n = { ...prev }; delete n[exerciceId]; return n })
+    try {
+      const coachId = await getCoachId()
+      const exo = exercices.find(e => e.id === exerciceId)
+      const clientId = seance?.programmes?.client_id
+      if (coachId) {
+        sendNotif(coachId, {
+          titre: 'Vidéo envoyée sur WhatsApp',
+          corps: `${exo?.nom || 'Un exercice'} — à corriger`,
+          type: 'video',
+          lien: clientId ? `/client/${clientId}` : '/',
+        })
+      }
+    } catch (e) { console.warn('[marquerVideoEnvoyee] notif échouée:', e) }
   }
 
   async function toggleNonEffectuee() {
@@ -1147,6 +1177,14 @@ export default function SeanceClient() {
             </div>
           )
         })()}
+
+        {/* Demande de vidéo de correction par le coach */}
+        {videoDemandes[ex.id] && (
+          <div style={S.videoBanner}>
+            <span>🎥 Ton coach veut une vidéo de ce mouvement — filme-toi et envoie-la lui sur WhatsApp.</span>
+            <button onClick={() => marquerVideoEnvoyee(ex.id)} style={S.videoBannerBtn}>J'ai envoyé la vidéo</button>
+          </div>
+        )}
 
         {/* Détail libre de la progression (ex: variante, charge max…) */}
         {progActif?.detail && (
@@ -1981,6 +2019,8 @@ const S = {
   title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   curBadge:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
   rattrapageHint: { fontSize: '0.72rem', fontWeight: '700', color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 999, padding: '0.2rem 0.6rem' },
+  videoBanner: { display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 10, padding: '0.6rem 0.75rem', marginBottom: '0.6rem', fontSize: '0.78rem', color: '#5b21b6', fontWeight: 600, lineHeight: 1.4 },
+  videoBannerBtn: { alignSelf: 'flex-start', background: '#5b21b6', color: 'white', border: 'none', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
   weekSelect: { fontSize: '0.85rem', fontWeight: '700', color: '#333333', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.45rem 0.6rem', background: 'white' },
   weekSelectHint: { fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0', lineHeight: 1.4 },
   // Progress bar

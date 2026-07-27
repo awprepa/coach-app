@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
+import { sendNotif } from '../notifs'
 
 // Références scientifiques :
 // - ACWR (Acute:Chronic Workload Ratio) — Gabbett TJ (2016) : zone optimale 0.8–1.3
@@ -1001,6 +1002,41 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [histoLoading, setHistoLoading] = useState({})
   const [selectedProgId, setSelectedProgId] = useState(null)
   const [allProgs, setAllProgs] = useState([])
+  const [videoDemandes, setVideoDemandes] = useState({}) // { exercice_id: demande en_attente }
+
+  function reloadVideoDemandes(cid) {
+    supabase.from('demandes_video').select('*').eq('client_id', cid).eq('statut', 'en_attente')
+      .then(({ data }) => {
+        const map = {}
+        ;(data || []).forEach(d => { map[d.exercice_id] = d })
+        setVideoDemandes(map)
+      })
+  }
+
+  async function demanderVideo(exerciceId) {
+    const { data, error } = await supabase.from('demandes_video')
+      .insert({ exercice_id: exerciceId, client_id: clientId })
+      .select().single()
+    if (error) { alert(error.message); return }
+    setVideoDemandes(prev => ({ ...prev, [exerciceId]: data }))
+    const { data: exo } = await supabase.from('exercices').select('nom').eq('id', exerciceId).maybeSingle()
+    const { data: client } = await supabase.from('clients').select('user_id').eq('id', clientId).maybeSingle()
+    if (client?.user_id) {
+      sendNotif(client.user_id, {
+        titre: 'Vidéo demandée par ton coach',
+        corps: `Filme-toi sur "${exo?.nom || 'cet exercice'}" et envoie-la sur WhatsApp.`,
+        type: 'video',
+        lien: '/client/programme',
+      })
+    }
+  }
+
+  async function annulerDemandeVideo(exerciceId) {
+    const demande = videoDemandes[exerciceId]
+    if (!demande) return
+    await supabase.from('demandes_video').delete().eq('id', demande.id)
+    setVideoDemandes(prev => { const n = { ...prev }; delete n[exerciceId]; return n })
+  }
 
   function reloadExWeights(cid, progId) {
     setExWeightLoading(true)
@@ -1136,6 +1172,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       setSelectedProgId(null)
       loadCharge(clientId)
       reloadExWeights(clientId, null)
+      reloadVideoDemandes(clientId)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, loadCharge])
@@ -1357,6 +1394,17 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
                     {isHistoOpen ? 'Masquer' : 'Historique'}
                   </button>
+                  {videoDemandes[exo.id] ? (
+                    <button onClick={() => annulerDemandeVideo(exo.id)}
+                      style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                      🎥 En attente · Annuler
+                    </button>
+                  ) : (
+                    <button onClick={() => demanderVideo(exo.id)}
+                      style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                      🎥 Demander une vidéo
+                    </button>
+                  )}
                 </div>
               </td>
               {allWeeks.map(w => {
