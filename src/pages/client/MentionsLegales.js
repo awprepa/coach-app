@@ -37,7 +37,7 @@ export default function MentionsLegales() {
           <Para><strong>Arthur Wehrey</strong> — Préparateur physique indépendant</Para>
           <Para>41 rue Fénelon, 31200 Toulouse</Para>
           <Para>Contact : <strong>wehrey.arthur@gmail.com</strong></Para>
-          <Para>SIRET : en cours d'immatriculation</Para>
+          <Para>SIRET : 10602688300012</Para>
         </Section>
 
         <Section title="Hébergement">

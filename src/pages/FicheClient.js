@@ -5,8 +5,8 @@ import Calendrier from '../components/Calendrier'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { ChargePanel } from './ChargeEntrainement'
 import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
-import { CGV_CONTENU } from './CGV'
 import { MUSCLES } from '../data/muscleData'
+import EnvoyerContratModal from '../components/EnvoyerContratModal'
 
 
 const OFFRES = {
@@ -76,8 +76,9 @@ export default function FicheClient() {
   const [wellness, setWellness] = useState([])
   const [showAllWellness, setShowAllWellness] = useState(false)
   const [activeTab, setActiveTab] = useState('suivi') // 'suivi' | 'perf' | 'nutrition'
-  const [contratData, setContratData] = useState(null)
-  const [showContratModal, setShowContratModal] = useState(false)
+  const [conditionsData, setConditionsData] = useState(null)
+  const [contrats, setContrats] = useState([])
+  const [showContratModal, setShowContratModal] = useState(null) // null|'envoyer'|contrat sélectionné
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
   const [selectedExo, setSelectedExo] = useState(null)
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
@@ -95,10 +96,21 @@ export default function FicheClient() {
   useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchContrat() {
-    const { data } = await supabase.from('acceptations_contrat')
-      .select('created_at, version_contrat, formule')
-      .eq('client_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle()
-    setContratData(data || null)
+    const [{ data: conditions }, { data: contratsData }] = await Promise.all([
+      supabase.from('contrat_conditions_acceptees')
+        .select('version, date_acceptation')
+        .eq('client_id', id).order('date_acceptation', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('contrats')
+        .select('*').eq('client_id', id).order('date_envoi', { ascending: false }),
+    ])
+    setConditionsData(conditions || null)
+    setContrats(contratsData || [])
+  }
+
+  async function telechargerContratPdf(pdfPath) {
+    const { data, error } = await supabase.storage.from('contrats-pdf').createSignedUrl(pdfPath, 60)
+    if (error || !data?.signedUrl) { alert('Impossible de générer le lien du PDF.'); return }
+    window.open(data.signedUrl, '_blank')
   }
 
   async function fetchCategories() {
@@ -511,18 +523,53 @@ export default function FicheClient() {
               {client.date_debut && <InfoItem label="Début" value={client.date_debut} />}
               {client.date_fin && <InfoItem label="Fin" value={client.date_fin} />}
               <div style={{ gridColumn: 'auto' }}>
-                <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Contrat</p>
-                {contratData ? (
-                  <button onClick={() => setShowContratModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.9rem', color: '#16a34a', fontWeight: 700, textAlign: 'left', textDecoration: 'underline dotted' }}>
-                    Signé le {new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </button>
+                <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Conditions générales</p>
+                {conditionsData ? (
+                  <p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: 700, margin: 0 }}>
+                    Signées le {new Date(conditionsData.date_acceptation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
                 ) : (
-                  <p style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 700, margin: 0 }}>Non signé</p>
+                  <p style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 700, margin: 0 }}>Non signées</p>
                 )}
               </div>
               {client.objectif && <InfoItem label="Objectif" value={client.objectif} full />}
               {client.notes && <InfoItem label="Notes" value={client.notes} full />}
             </div>
+
+            {/* ── Contrat commercial ── */}
+            {['coaching', 'preparation_physique', 'essai'].includes(client.offre) && (
+              <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1rem', marginBottom: '1.25rem' }}>
+                <div style={styles.sectionHeader}>
+                  <p style={styles.sectionTitle}>Contrat</p>
+                  <button onClick={() => setShowContratModal('envoyer')} style={styles.btnSecondary}>+ Envoyer un contrat</button>
+                </div>
+                {contrats.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: 0 }}>Aucun contrat envoyé.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {contrats.map(c => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.9rem' }}>
+                        <div>
+                          <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#333333' }}>
+                            {c.formule_label} · {c.prix_mensuel}€/mois
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: c.statut === 'signe' ? '#16a34a' : '#f59e0b', fontWeight: 700 }}>
+                            {c.statut === 'signe'
+                              ? `Signé le ${new Date(c.date_signature).toLocaleDateString('fr-FR')}`
+                              : `Envoyé le ${new Date(c.date_envoi).toLocaleDateString('fr-FR')} · en attente`}
+                          </p>
+                        </div>
+                        {c.pdf_url && (
+                          <button onClick={() => telechargerContratPdf(c.pdf_url)} style={{ ...styles.btnSecondary, padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}>
+                            PDF
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button onClick={() => setEditMode(true)} style={styles.btnSecondary}>Modifier</button>
@@ -1086,32 +1133,13 @@ export default function FicheClient() {
         </div>
       )}
 
-      {/* ── Modal contrat ── */}
-      {showContratModal && contratData && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto' }} onClick={() => setShowContratModal(false)}>
-          <div style={{ background: 'white', borderRadius: 18, padding: '1.75rem', maxWidth: 620, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-              <div>
-                <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#166534', margin: '0 0 4px' }}>Contrat signé électroniquement</p>
-                <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: 0 }}>
-                  {new Date(contratData.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  {contratData.formule ? ` · ${contratData.formule}` : ''}
-                  {` · v${contratData.version_contrat || '1.0'}`}
-                </p>
-              </div>
-              <button onClick={() => setShowContratModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
-            </div>
-            <div style={{ maxHeight: '60vh', overflowY: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
-              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 1rem' }}>Conditions générales acceptées</p>
-              {CGV_CONTENU.map((section, i) => (
-                <div key={i} style={{ marginBottom: '1rem' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#333', margin: '0 0 0.25rem' }}>{section.titre}</p>
-                  <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{section.texte}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* ── Modal envoyer un contrat ── */}
+      {showContratModal === 'envoyer' && (
+        <EnvoyerContratModal
+          client={client}
+          onClose={() => setShowContratModal(null)}
+          onEnvoye={() => { setShowContratModal(null); fetchContrat() }}
+        />
       )}
 
     </div>

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import ConsentSante from '../../components/ConsentSante'
 
 const INDICATORS = [
   { key: 'sommeil',  label: 'Sommeil',  emoji: '🌙' },
@@ -36,7 +35,6 @@ export default function WellnessClient() {
   const [weightInput, setWeightInput] = useState('')
   const [savingWeight, setSavingWeight] = useState(false)
   const [weightSaved, setWeightSaved] = useState(false)
-  const [consentOk, setConsentOk] = useState(null) // null=chargement, true=ok, false=manquant
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -48,12 +46,6 @@ export default function WellnessClient() {
       const { data: client } = await supabase.from('clients').select('id').eq('user_id', userId).maybeSingle()
       if (!client) return
       setClientId(client.id)
-
-      // Vérifier le consentement données de santé (RGPD Art. 9)
-      const { data: consent } = await supabase.from('consents')
-        .select('id').eq('client_id', client.id).eq('type', 'sante').maybeSingle()
-      if (!consent) { setConsentOk(false); setLoading(false); return }
-      setConsentOk(true)
 
       const { data } = await supabase.from('wellness')
         .select('*').eq('client_id', client.id)
@@ -91,8 +83,6 @@ export default function WellnessClient() {
 
   // Bilan : entrées avec au moins un indicateur renseigné
   const bilanEntries = entries.filter(e => e.sommeil || e.fatigue || e.douleurs || e.stress)
-  // ─── Consentement RGPD (données de santé) ────────────────────────────────
-  if (consentOk === false) return <ConsentSante clientId={clientId} onConsent={() => setConsentOk(true)} />
 
   const latest = bilanEntries[0]
   const poidsEntries = entries.filter(e => e.poids != null).reverse()

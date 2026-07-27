@@ -5,7 +5,6 @@ import { supabase } from '../../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
-import ConsentSante from '../../components/ConsentSante'
 
 export default function TestsClient() {
   const navigate = useNavigate()
@@ -19,7 +18,6 @@ export default function TestsClient() {
   const [newNotes, setNewNotes]     = useState('')
   const [saving, setSaving]         = useState(false)
   const [loading, setLoading]       = useState(true)
-  const [consentOk, setConsentOk]   = useState(null) // null=chargement, true=ok, false=manquant
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { init() }, [])
@@ -33,12 +31,6 @@ export default function TestsClient() {
       .from('clients').select('id, prenom, nom').eq('user_id', user.id).maybeSingle()
     if (!clientData) { setLoading(false); return }
     setClient(clientData)
-
-    // Vérifier le consentement données de santé (RGPD Art. 9)
-    const { data: consent } = await supabase.from('consents')
-      .select('id').eq('client_id', clientData.id).eq('type', 'sante').maybeSingle()
-    if (!consent) { setConsentOk(false); setLoading(false); return }
-    setConsentOk(true)
 
     const { data: t } = await supabase.from('tests_types').select('*').order('created_at')
     if (!t || t.length === 0) { setLoading(false); return }
@@ -88,7 +80,6 @@ export default function TestsClient() {
     }))
   }
 
-  if (consentOk === false) return <ConsentSante clientId={client?.id} onConsent={() => setConsentOk(true)} />
   if (loading) return <PageLoading />
 
   const currentResults = selectedType ? (resultats[selectedType.id] || []) : []

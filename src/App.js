@@ -43,6 +43,7 @@ const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales')
 const ProfilClient         = lazy(() => import('./pages/client/ProfilClient'))
 const CompetitionClient    = lazy(() => import('./pages/client/CompetitionClient'))
 const CGV                  = lazy(() => import('./pages/CGV'))
+const Conditions            = lazy(() => import('./pages/Conditions'))
 
 // ── Pages coach — lazy (jamais vues par le client) ───────────────────────────
 const Clients              = lazy(() => import('./pages/Clients'))
@@ -516,6 +517,7 @@ function App() {
               <Route path="/login"          element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/cgv"            element={<CGV />} />
+              <Route path="/conditions"     element={<Conditions />} />
 
               {/* ── Home (coach → Dashboard, client → AccueilClient) ── */}
               <Route path="/" element={<WithNotifs><Home /></WithNotifs>} />

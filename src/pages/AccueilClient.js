@@ -13,9 +13,9 @@ import { AccueilSkeleton } from '../components/Skeleton'
 
 import { usePush } from '../hooks/usePush'
 import { useNotifCtx } from '../context/NotifContext'
-import ModaleContrat from '../components/ModaleContrat'
-import ConfirmationOffre from '../components/ConfirmationOffre'
-import { CURRENT_CGV_VERSION } from './CGV'
+import ModaleConditions from '../components/ModaleConditions'
+import ModaleContratASigner from '../components/ModaleContratASigner'
+import { CURRENT_CONDITIONS_VERSION } from './Conditions'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -56,8 +56,8 @@ export default function AccueilClient() {
   const [loading, setLoading]             = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
-  const [contratAccepte, setContratAccepte] = useState(null) // null=vérif, true=ok, false=à signer
-  const [offreConfirmee, setOffreConfirmee] = useState(null) // null=vérif, true=ok, false=à confirmer
+  const [conditionsAcceptees, setConditionsAcceptees] = useState(null) // null=vérif, true=ok, false=à signer
+  const [contratASigner, setContratASigner] = useState(null) // null=vérif, false=aucun en attente, {…}=contrat à signer
   const [userId, setUserId] = useState(null)
   const { unread } = useNotifCtx()
 
@@ -166,25 +166,28 @@ export default function AccueilClient() {
       if (clientData.avatar_url) setAvatarUrl(clientData.avatar_url)
       setUserId(user.id)
 
-      // Contrat + confirmation offre : seulement pour les clients payants
-      const offrePayante = ['coaching', 'preparation_physique', 'essai', 'club'].includes(clientData.offre)
+      // Signature A — conditions générales : requises pour tous les clients,
+      // y compris "club" (données/aptitude physique, pas d'argent en jeu).
+      const { data: conditions } = await supabase
+        .from('contrat_conditions_acceptees')
+        .select('id')
+        .eq('client_id', clientData.id)
+        .eq('version', CURRENT_CONDITIONS_VERSION)
+        .limit(1)
+        .maybeSingle()
+      setConditionsAcceptees(!!conditions)
 
-      if (!offrePayante) {
-        // Essai ou offre non définie → aucun contrat requis
-        setContratAccepte(true)
-        setOffreConfirmee(true)
-      } else {
-        // Client payant → vérifier signature contrat
-        const { data: contrat } = await supabase
-          .from('acceptations_contrat')
-          .select('id')
-          .eq('client_id', clientData.id)
-          .eq('version_contrat', CURRENT_CGV_VERSION)
-          .limit(1)
-          .maybeSingle()
-        setContratAccepte(!!contrat)
-        setOffreConfirmee(!!clientData.offre_confirmee_at)
-      }
+      // Signature B — contrat commercial : uniquement s'il y a un contrat
+      // explicitement envoyé par le coach et pas encore signé.
+      const { data: contratEnAttente } = await supabase
+        .from('contrats')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .eq('statut', 'envoye')
+        .order('date_envoi', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setContratASigner(contratEnAttente || false)
 
       const { data: progs } = await supabase
         .from('programmes').select('*').eq('client_id', clientData.id).order('created_at', { ascending: false })
@@ -269,7 +272,7 @@ export default function AccueilClient() {
     }
   }
 
-  if (loading || contratAccepte === null || offreConfirmee === null) return <AccueilSkeleton />
+  if (loading || conditionsAcceptees === null || contratASigner === null) return <AccueilSkeleton />
   if (!client)  return <div style={styles.centered}><p style={{ color: '#888' }}>Aucun profil trouvé.</p></div>
 
   const initiales = `${client.prenom?.[0] || ''}${client.nom?.[0] || ''}`.toUpperCase()
@@ -277,21 +280,20 @@ export default function AccueilClient() {
 
   return (
     <div style={{ ...styles.page, ...fadeStyle }}>
-      {/* Modale contrat — bloque l'accès tant que non signé */}
-      {contratAccepte === false && (
-        <ModaleContrat
+      {/* Signature A — conditions générales, bloque l'accès tant que non signées */}
+      {conditionsAcceptees === false && (
+        <ModaleConditions
           clientId={client.id}
-          userId={userId}
-          offre={client.offre}
-          onAccepte={() => setContratAccepte(true)}
+          onAccepte={() => setConditionsAcceptees(true)}
         />
       )}
 
-      {/* Confirmation offre — après CGV, seulement pour les clients payants */}
-      {contratAccepte === true && offreConfirmee === false && (
-        <ConfirmationOffre
-          client={client}
-          onConfirme={() => setOffreConfirmee(true)}
+      {/* Signature B — contrat commercial envoyé par le coach, en attente de signature */}
+      {conditionsAcceptees === true && contratASigner && (
+        <ModaleContratASigner
+          contrat={contratASigner}
+          clientId={client.id}
+          onSigne={() => setContratASigner(false)}
         />
       )}
 
