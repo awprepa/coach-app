@@ -1418,6 +1418,9 @@ function EffectifView({ groupeId, groupColor }) {
   const [editRang, setEditRang] = useState(1)
   const [editSecondaires, setEditSecondaires] = useState('')
   const [saving, setSaving] = useState(false)
+  const [newVmi, setNewVmi] = useState('')
+  const [newVma, setNewVma] = useState('')
+  const [savingTest, setSavingTest] = useState(null) // 'vmi' | 'vma' | null
 
   const RESTRICTIONS = [
     'Sans contact','Sans changement de direction',
@@ -1445,7 +1448,7 @@ function EffectifView({ groupeId, groupColor }) {
     // Joueurs + leurs postes
     const { data: jData } = await supabase
       .from('groupe_joueurs')
-      .select('*, joueur_postes(*), joueur_blessures(*)')
+      .select('*, joueur_postes(*), joueur_blessures(*), joueur_tests_physiques(*)')
       .eq('groupe_id', groupeId)
     setJoueurs(jData || [])
     // Wellness — chercher les dernières entrées pour les clients liés
@@ -1478,6 +1481,12 @@ function EffectifView({ groupeId, groupColor }) {
   }
 
   function getStatut(j) { return j.blessure?.statut || 'ok' }
+  function testsTries(j, type) {
+    return (j?.joueur_tests_physiques || [])
+      .filter(t => t.type === type)
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }
+  function dernierTest(j, type) { return testsTries(j, type)[0] || null }
   function getWellness(j) {
     if (!j.client_id) return null
     return wellness[j.client_id] ?? null
@@ -1519,7 +1528,26 @@ function EffectifView({ groupeId, groupColor }) {
       .map(p => p.poste)
       .join(', ')
     setEditSecondaires(secondaires)
+    setNewVmi('')
+    setNewVma('')
     setPanelPos(null)
+  }
+
+  async function ajouterTestPhysique(type) {
+    const valeurStr = type === 'vmi' ? newVmi : newVma
+    const valeur = parseFloat(valeurStr)
+    if (!panelJoueur || !valeur) return
+    setSavingTest(type)
+    const { data, error } = await supabase.from('joueur_tests_physiques')
+      .insert({ joueur_id: panelJoueur.id, type, valeur })
+      .select().single()
+    setSavingTest(null)
+    if (error) { alert(error.message); return }
+    if (type === 'vmi') setNewVmi(''); else setNewVma('')
+    setPanelJoueur(prev => ({ ...prev, joueur_tests_physiques: [...(prev.joueur_tests_physiques || []), data] }))
+    setJoueurs(prev => prev.map(j => j.id === panelJoueur.id
+      ? { ...j, joueur_tests_physiques: [...(j.joueur_tests_physiques || []), data] }
+      : j))
   }
 
   async function saveJoueur() {
@@ -1863,6 +1891,42 @@ function EffectifView({ groupeId, groupColor }) {
             {/* Postes secondaires */}
             <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Postes secondaires (numéros)</div>
             <input style={inputStyle} placeholder="Ex : 6, 8" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
+
+            {/* VMI / VMA */}
+            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7, marginTop:4 }}>VMI / VMA</div>
+            {[['vmi', 'VMI (30-15 IFT)', newVmi, setNewVmi], ['vma', 'VMA (test continu)', newVma, setNewVma]].map(([type, label, val, setVal]) => {
+              const dernier = dernierTest(panelJoueur, type)
+              const historique = testsTries(panelJoueur, type).slice(0, 4)
+              return (
+                <div key={type} style={{ marginBottom: 10, background:'#f9fafb', borderRadius:10, padding:'8px 10px', border:'1px solid #e5e7eb' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                    <span style={{ fontSize:'0.75rem', fontWeight:700, color:'#374151' }}>{label}</span>
+                    <span style={{ fontSize:'0.8rem', fontWeight:900, color: dernier ? '#1f2937' : '#d1d5db' }}>
+                      {dernier ? `${dernier.valeur} km/h` : '—'}
+                    </span>
+                  </div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <input type="number" step="0.1" placeholder="Nouvelle valeur"
+                      value={val} onChange={e => setVal(e.target.value)}
+                      style={{ ...inputStyle, marginBottom:0, flex:1 }} />
+                    <button onClick={() => ajouterTestPhysique(type)} disabled={!val || savingTest === type}
+                      style={{ padding:'0 14px', borderRadius:8, border:'none', background:'#1f2937', color:'#fff',
+                        fontSize:'0.78rem', fontWeight:800, cursor: val ? 'pointer' : 'not-allowed', opacity: val ? 1 : 0.5, fontFamily:'inherit' }}>
+                      {savingTest === type ? '...' : '+'}
+                    </button>
+                  </div>
+                  {historique.length > 0 && (
+                    <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
+                      {historique.map(t => (
+                        <span key={t.id} style={{ fontSize:'0.65rem', color:'#9ca3af', background:'#fff', border:'1px solid #e5e7eb', borderRadius:6, padding:'2px 6px' }}>
+                          {t.valeur} · {new Date(t.date + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
 
             <button onClick={saveJoueur} disabled={saving}
               style={{ width:'100%', padding:'11px', background:groupColor,
