@@ -2957,6 +2957,20 @@ function SeanceModal({
   const hasBlocs = HAS_BLOCS.includes(form.type) || form.type === 'collectif'
   const totalMin = Number(form.duree_min) || 0
 
+  // ── Durée des blocs "séquences" (jeu/récup) : toujours dérivée de leurs
+  // séquences, jamais saisie à la main — élimine la désynchronisation entre
+  // le chrono affiché dans le bloc et le détail jeu/récup à l'intérieur.
+  function sumSeqMin(seqs) { return Math.round((seqs || []).reduce((a, s) => a + (s.duree_sec || 0), 0) / 60) }
+  useEffect(() => {
+    (panel.blocs || []).forEach(b => {
+      if (b.bloc_type === 'sequences') {
+        const computed = String(sumSeqMin(b.sequences))
+        if (b.duree !== computed) updateBloc(b.id, { duree: computed })
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panel.blocs])
+
   // ── Récupération inter-blocs ──
   const [recupEditBloc, setRecupEditBloc] = useState(null)
   const [recupDraft, setRecupDraft]       = useState('')
@@ -3312,12 +3326,19 @@ function SeanceModal({
                             {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
                           </span>
                         )}
-                        <input
-                          type="number" min={5}
-                          value={bloc.durationMin || ''}
-                          onChange={e => { const v = parseInt(e.target.value); if (v >= 1) updateBloc(bloc.id, { duree: String(v) }) }}
-                          style={{ width: 44, border: 'none', background: 'rgba(0,0,0,.2)', color: '#fff', borderRadius: 5, padding: '2px 5px', fontSize: '.75rem', fontWeight: 900, textAlign: 'center', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
-                        />
+                        {bloc.bloc_type === 'sequences' ? (
+                          <span title="Calculée automatiquement à partir des séquences jeu/récup"
+                            style={{ width: 44, background: 'rgba(0,0,0,.2)', color: '#fff', borderRadius: 5, padding: '2px 5px', fontSize: '.75rem', fontWeight: 900, textAlign: 'center', flexShrink: 0 }}>
+                            {bloc.durationMin || 0}
+                          </span>
+                        ) : (
+                          <input
+                            type="number" min={5}
+                            value={bloc.durationMin || ''}
+                            onChange={e => { const v = parseInt(e.target.value); if (v >= 1) updateBloc(bloc.id, { duree: String(v) }) }}
+                            style={{ width: 44, border: 'none', background: 'rgba(0,0,0,.2)', color: '#fff', borderRadius: 5, padding: '2px 5px', fontSize: '.75rem', fontWeight: 900, textAlign: 'center', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
+                          />
+                        )}
                         <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
                         {/* Flèches réorganisation */}
                         <button onClick={() => moveBloc(bloc.id, 'up')} disabled={idx === 0}
@@ -3824,10 +3845,12 @@ function SeanceModal({
                             </div>
                           ))}
                         </div>
-                        {/* Handle drag */}
-                        <div onMouseDown={e => startDrag(e, bloc)} style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 36, height: 9, background: 'rgba(255,255,255,.45)', border: '1.5px solid rgba(255,255,255,.75)', borderRadius: 5, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, userSelect: 'none' }}>
-                          <div style={{ width: 16, height: 2, background: 'rgba(80,80,80,.45)', borderRadius: 2 }} />
-                        </div>
+                        {/* Handle drag — désactivé pour les blocs séquences (durée calculée) */}
+                        {bloc.bloc_type !== 'sequences' && (
+                          <div onMouseDown={e => startDrag(e, bloc)} style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 36, height: 9, background: 'rgba(255,255,255,.45)', border: '1.5px solid rgba(255,255,255,.75)', borderRadius: 5, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, userSelect: 'none' }}>
+                            <div style={{ width: 16, height: 2, background: 'rgba(80,80,80,.45)', borderRadius: 2 }} />
+                          </div>
+                        )}
                       </div>
                     )
                   })}
