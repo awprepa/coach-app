@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 
-const COULEURS = ['#2563eb', '#dc2626', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2']
-const TYPES = [
-  { key: 'intermittent_long', label: 'Intermittent long' },
-  { key: 'intermittent_court', label: 'Intermittent court' },
-  { key: 'agilite', label: 'Agilité' },
-  { key: 'autre', label: 'Autre' },
-]
 const SNAP_TOL = 1.8
 const GRID = 1
+const DEFAULT_COLOR = '#2563eb'
 
 function nextLabel(plots) {
   const nums = plots.map(p => parseInt((p.label || '').replace(/\D/g, ''), 10)).filter(n => !isNaN(n))
@@ -35,7 +29,6 @@ function snapPlot(x, y, plots, excludeId) {
 export default function SchemaEditor({ schema, onClose, onSaved }) {
   const isNew = !schema?.id
   const [nom, setNom] = useState(schema?.nom || '')
-  const [typeExercice, setTypeExercice] = useState(schema?.type_exercice || 'autre')
   const [description, setDescription] = useState(schema?.description || '')
   const [plots, setPlots] = useState(schema?.donnees?.plots || [])
   const [segments, setSegments] = useState(schema?.donnees?.segments || [])
@@ -45,7 +38,7 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
   const [selectedPlotId, setSelectedPlotId] = useState(null)
   const [selectedSegId, setSelectedSegId] = useState(null)
   const [selectedRectId, setSelectedRectId] = useState(null)
-  const [nextColor, setNextColor] = useState(COULEURS[0])
+  const [nextColor, setNextColor] = useState(DEFAULT_COLOR)
   const [nextStyle, setNextStyle] = useState('plein')
   const [nextRempli, setNextRempli] = useState(false)
   const [rectDraft, setRectDraft] = useState(null)
@@ -180,7 +173,8 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
         if (corner.includes('s')) { h = p.y - y }
         w = Math.max(3, w); h = Math.max(3, h)
         x = Math.max(0, Math.min(100 - w, x)); y = Math.max(0, Math.min(100 - h, y))
-        return { ...r, x, y, w, h }
+        // le redimensionnement manuel décorrèle la taille affichée des cotes réelles saisies
+        return { ...r, x, y, w, h, largeur_m: null, hauteur_m: null }
       }))
     }
   }
@@ -194,7 +188,7 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
       const h = Math.abs(y2 - y1)
       setRectDraft(null)
       if (w > 2 && h > 2) {
-        const rect = { id: uid('r'), x, y, w, h, couleur: nextColor, style: nextStyle, rempli: nextRempli }
+        const rect = { id: uid('r'), x, y, w, h, couleur: nextColor, style: nextStyle, rempli: nextRempli, largeur_m: null, hauteur_m: null }
         setRects(prev => [...prev, rect])
         setSelectedRectId(rect.id)
       }
@@ -220,22 +214,24 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
   }
   function updateSegment(id, patch) { setSegments(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s)) }
   function deleteSegment(id) { setSegments(prev => prev.filter(s => s.id !== id)); setSelectedSegId(null) }
+
   function updateRect(id, patch) { setRects(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r)) }
   function deleteRect(id) { setRects(prev => prev.filter(r => r.id !== id)); setSelectedRectId(null) }
 
-  async function save() {
-    if (!nom.trim()) { alert('Donne un nom au schéma.'); return }
-    setSaving(true)
-    const payload = {
-      nom: nom.trim(), type_exercice: typeExercice, description: description.trim() || null,
-      donnees: { plots, segments, rects }, updated_at: new Date().toISOString(),
-    }
-    const { error } = isNew
-      ? await supabase.from('schemas_entrainement').insert(payload)
-      : await supabase.from('schemas_entrainement').update(payload).eq('id', schema.id)
-    setSaving(false)
-    if (error) { alert(error.message); return }
-    onSaved()
+  // Applique les cotes réelles (largeur_m/hauteur_m) : la largeur affichée est
+  // gardée telle quelle, la hauteur affichée est recalculée pour respecter le
+  // ratio largeur/hauteur saisi (un carré tracé devient un vrai rectangle).
+  function updateRectDims(id, patch) {
+    setRects(prev => prev.map(r => {
+      if (r.id !== id) return r
+      const next = { ...r, ...patch }
+      const lm = next.largeur_m, hm = next.hauteur_m
+      if (lm > 0 && hm > 0) {
+        const h = clamp(r.w * (hm / lm), 2, 98)
+        return { ...next, h }
+      }
+      return next
+    }))
   }
 
   const selectedPlot = plots.find(p => p.id === selectedPlotId)
@@ -250,6 +246,21 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
     ['nw', r.x, r.y], ['ne', r.x + r.w, r.y], ['sw', r.x, r.y + r.h], ['se', r.x + r.w, r.y + r.h],
   ])
 
+  async function save() {
+    if (!nom.trim()) { alert('Donne un nom au schéma.'); return }
+    setSaving(true)
+    const payload = {
+      nom: nom.trim(), description: description.trim() || null,
+      donnees: { plots, segments, rects }, updated_at: new Date().toISOString(),
+    }
+    const { error } = isNew
+      ? await supabase.from('schemas_entrainement').insert(payload)
+      : await supabase.from('schemas_entrainement').update(payload).eq('id', schema.id)
+    setSaving(false)
+    if (error) { alert(error.message); return }
+    onSaved()
+  }
+
   return (
     <div style={S.overlay}>
       <div style={S.modal}>
@@ -257,15 +268,6 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
           <input value={nom} onChange={e => setNom(e.target.value)} placeholder="Nom du schéma"
             style={S.nomInput} />
           <button onClick={onClose} style={S.closeBtn}>×</button>
-        </div>
-
-        <div style={S.typeRow}>
-          {TYPES.map(t => (
-            <button key={t.key} onClick={() => setTypeExercice(t.key)}
-              style={{ ...S.typeBtn, ...(typeExercice === t.key ? S.typeBtnActive : {}) }}>
-              {t.label}
-            </button>
-          ))}
         </div>
 
         <div style={S.toolbar}>
@@ -280,10 +282,7 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
             </button>
           </div>
           <div style={S.toolGroup}>
-            {COULEURS.map(c => (
-              <button key={c} onClick={() => setNextColor(c)}
-                style={{ ...S.colorSwatch, background: c, border: nextColor === c ? '2.5px solid #1f2937' : '2px solid #fff' }} />
-            ))}
+            <input type="color" value={nextColor} onChange={e => setNextColor(e.target.value)} style={S.colorInput} />
           </div>
           <div style={S.toolGroup}>
             <button onClick={() => setNextStyle('plein')} style={{ ...S.styleBtn, ...(nextStyle === 'plein' ? S.styleBtnActive : {}) }}>― plein</button>
@@ -315,6 +314,12 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
                     strokeDasharray={r.style === 'pointille' ? '2.4,1.6' : undefined}
                     onPointerDown={e => handleRectPointerDown(e, r.id)}
                     style={{ cursor: mode === 'rect' || mode === 'point' ? 'move' : 'default' }} />
+                  {r.largeur_m > 0 && r.hauteur_m > 0 && (
+                    <text x={r.x + r.w / 2} y={r.y + r.h / 2} fontSize="3" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                      style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1.2, pointerEvents: 'none' }}>
+                      {r.largeur_m}m × {r.hauteur_m}m
+                    </text>
+                  )}
                   {isSel && corners(r).map(([c, cx, cy]) => (
                     <rect key={c} x={cx - 1.4} y={cy - 1.4} width="2.8" height="2.8" fill="#fff" stroke="#6366f1" strokeWidth="0.6"
                       onPointerDown={e => handleResizePointerDown(e, r.id, c)}
@@ -350,31 +355,23 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
             })}
             {plots.map(p => (
               <g key={p.id} onPointerDown={e => handlePlotPointerDown(e, p.id)} style={{ cursor: mode === 'lien' ? 'pointer' : 'grab' }}>
-                <circle cx={p.x} cy={p.y} r="2.2" fill={p.couleur}
+                {/* cible tactile invisible, plus large que le point visible pour rester facile à saisir au doigt */}
+                <circle cx={p.x} cy={p.y} r="5" fill="transparent" />
+                <circle cx={p.x} cy={p.y} r="1.6" fill={p.couleur}
                   stroke={selectedPlotId === p.id || linkFirstId === p.id ? '#1f2937' : '#fff'}
-                  strokeWidth={selectedPlotId === p.id || linkFirstId === p.id ? 1 : 0.5} />
-                <text x={p.x} y={p.y - 3.4} fontSize="2.6" fill="#1f2937" textAnchor="middle" fontWeight="800"
+                  strokeWidth={selectedPlotId === p.id || linkFirstId === p.id ? 0.9 : 0.4} />
+                <text x={p.x} y={p.y - 2.8} fontSize="2.4" fill="#1f2937" textAnchor="middle" fontWeight="800"
                   style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1, pointerEvents: 'none' }}>{p.label}</text>
               </g>
             ))}
           </svg>
-          <p style={S.hint}>
-            {mode === 'point' && 'Tape sur le terrain pour poser un plot · glisse un plot pour le déplacer (aligne-toi sur un autre plot pour accrocher)'}
-            {mode === 'rect' && 'Glisse pour tracer une zone · glisse une zone pour la déplacer · tire un coin pour la redimensionner'}
-            {mode === 'lien' && 'Tape 2 plots pour les relier'}
-          </p>
         </div>
 
         {selectedPlot && (
           <div style={S.editPanel}>
             <input value={selectedPlot.label} onChange={e => renamePlot(selectedPlot.id, e.target.value)} style={S.editLabelInput} />
-            <div style={S.toolGroup}>
-              {COULEURS.map(c => (
-                <button key={c} onClick={() => recolorPlot(selectedPlot.id, c)}
-                  style={{ ...S.colorSwatch, background: c, border: selectedPlot.couleur === c ? '2.5px solid #1f2937' : '2px solid #fff' }} />
-              ))}
-            </div>
-            <button onClick={() => deletePlot(selectedPlot.id)} style={S.deleteBtn}>🗑 Supprimer</button>
+            <input type="color" value={selectedPlot.couleur} onChange={e => recolorPlot(selectedPlot.id, e.target.value)} style={S.colorInput} />
+            <button onClick={() => deletePlot(selectedPlot.id)} style={S.deleteBtn}>Supprimer</button>
           </div>
         )}
 
@@ -387,34 +384,35 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
               <button onClick={() => updateSegment(selectedSeg.id, { style: 'plein' })} style={{ ...S.styleBtn, ...(selectedSeg.style === 'plein' ? S.styleBtnActive : {}) }}>― plein</button>
               <button onClick={() => updateSegment(selectedSeg.id, { style: 'pointille' })} style={{ ...S.styleBtn, ...(selectedSeg.style === 'pointille' ? S.styleBtnActive : {}) }}>┄ pointillé</button>
             </div>
-            <button onClick={() => deleteSegment(selectedSeg.id)} style={S.deleteBtn}>🗑 Supprimer</button>
+            <button onClick={() => deleteSegment(selectedSeg.id)} style={S.deleteBtn}>Supprimer</button>
           </div>
         )}
 
         {selectedRect && (
           <div style={S.editPanel}>
-            <div style={S.toolGroup}>
-              {COULEURS.map(c => (
-                <button key={c} onClick={() => updateRect(selectedRect.id, { couleur: c })}
-                  style={{ ...S.colorSwatch, background: c, border: selectedRect.couleur === c ? '2.5px solid #1f2937' : '2px solid #fff' }} />
-              ))}
-            </div>
+            <input type="number" min="0" placeholder="Largeur (m)" value={selectedRect.largeur_m ?? ''}
+              onChange={e => updateRectDims(selectedRect.id, { largeur_m: e.target.value ? Number(e.target.value) : null })}
+              style={{ ...S.editLabelInput, minWidth: 70 }} />
+            <input type="number" min="0" placeholder="Hauteur (m)" value={selectedRect.hauteur_m ?? ''}
+              onChange={e => updateRectDims(selectedRect.id, { hauteur_m: e.target.value ? Number(e.target.value) : null })}
+              style={{ ...S.editLabelInput, minWidth: 70 }} />
+            <input type="color" value={selectedRect.couleur} onChange={e => updateRect(selectedRect.id, { couleur: e.target.value })} style={S.colorInput} />
             <div style={S.toolGroup}>
               <button onClick={() => updateRect(selectedRect.id, { style: 'plein' })} style={{ ...S.styleBtn, ...(selectedRect.style === 'plein' ? S.styleBtnActive : {}) }}>― plein</button>
               <button onClick={() => updateRect(selectedRect.id, { style: 'pointille' })} style={{ ...S.styleBtn, ...(selectedRect.style === 'pointille' ? S.styleBtnActive : {}) }}>┄ pointillé</button>
               <button onClick={() => updateRect(selectedRect.id, { rempli: !selectedRect.rempli })} style={{ ...S.styleBtn, ...(selectedRect.rempli ? S.styleBtnActive : {}) }}>▨ rempli</button>
             </div>
-            <button onClick={() => deleteRect(selectedRect.id)} style={S.deleteBtn}>🗑 Supprimer</button>
+            <button onClick={() => deleteRect(selectedRect.id)} style={S.deleteBtn}>Supprimer</button>
           </div>
         )}
 
         <textarea value={description} onChange={e => setDescription(e.target.value)}
-          placeholder="Description (ex : 30-30, aller-retour, récup passive)" rows={2} style={S.descInput} />
+          placeholder="Description" rows={2} style={S.descInput} />
 
         <div style={S.footer}>
           <button onClick={onClose} style={S.btnSecondary}>Annuler</button>
           <button onClick={save} disabled={saving} style={{ ...S.btnPrimary, opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Enregistrement…' : '💾 Enregistrer dans la bibliothèque'}
+            {saving ? 'Enregistrement…' : 'Enregistrer dans la bibliothèque'}
           </button>
         </div>
       </div>
@@ -428,19 +426,15 @@ const S = {
   header: { display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 },
   nomInput: { flex: 1, fontSize: '1.05rem', fontWeight: 800, border: 'none', borderBottom: '2px solid #e5e7eb', padding: '4px 2px', outline: 'none', fontFamily: 'inherit' },
   closeBtn: { background: 'none', border: 'none', fontSize: '1.5rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
-  typeRow: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 },
-  typeBtn: { padding: '5px 11px', borderRadius: 999, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' },
-  typeBtnActive: { background: '#1f2937', color: '#fff', borderColor: '#1f2937' },
   toolbar: { display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 8, padding: '8px 10px', background: '#f9fafb', borderRadius: 10 },
   toolGroup: { display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' },
   modeBtn: { padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
   modeBtnActive: { background: '#4338ca', color: '#fff', borderColor: '#4338ca' },
-  colorSwatch: { width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', padding: 0 },
+  colorInput: { width: 32, height: 28, padding: 0, border: '1.5px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', background: 'none' },
   styleBtn: { padding: '5px 9px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' },
   styleBtnActive: { background: '#1f2937', color: '#fff', borderColor: '#1f2937' },
   canvasWrap: { border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
   canvas: { width: '100%', height: 360, display: 'block', touchAction: 'none' },
-  hint: { fontSize: '0.7rem', color: '#9ca3af', textAlign: 'center', margin: '4px 0 0', padding: '4px 0' },
   editPanel: { display: 'flex', gap: 8, alignItems: 'center', background: '#eef2ff', borderRadius: 10, padding: '8px 10px', marginBottom: 8, flexWrap: 'wrap' },
   editLabelInput: { flex: 1, minWidth: 90, border: '1.5px solid #c7d2fe', borderRadius: 8, padding: '5px 8px', fontSize: '0.8rem', outline: 'none', fontFamily: 'inherit' },
   deleteBtn: { background: 'none', border: 'none', color: '#dc2626', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' },
