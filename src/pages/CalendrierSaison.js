@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
+import CalculateurIntensite from '../components/CalculateurIntensite'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Calendrier saison (préparateur physique) — vue mois × jours d'un groupe.
@@ -1955,6 +1956,7 @@ function GroupesNiveauView({ groupeId, groupColor }) {
   const [pickerNiveau, setPickerNiveau] = useState(null) // niveau en édition d'effectif
   const [editingRef, setEditingRef] = useState(null)     // niveau_id en cours d'édition manuelle
   const [refInput, setRefInput] = useState('')
+  const [showCalculateur, setShowCalculateur] = useState(false)
 
   const COULEURS = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2']
   const inputStyle = { width:'100%', border:'1.5px solid #e5e7eb', borderRadius:9, padding:'8px 11px', fontSize:'0.8rem', color:'#1f2937', outline:'none', marginBottom:7, fontFamily:'inherit' }
@@ -2043,6 +2045,14 @@ function GroupesNiveauView({ groupeId, groupColor }) {
 
   return (
     <div>
+      {niveaux.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <button onClick={() => setShowCalculateur(true)}
+            style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: groupColor, color: isLight(groupColor) ? '#1a1a1a' : '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}>
+            Calculateur d'intensité
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
         {niveaux.map(niveau => {
           const membres = membresDe(niveau)
@@ -2166,6 +2176,10 @@ function GroupesNiveauView({ groupeId, groupColor }) {
         <div style={{ fontSize: '0.82rem', color: '#9ca3af', padding: '1.5rem 0' }}>
           Aucun groupe de niveau. Crée-en un pour regrouper des joueurs par VMI/VMA sur un exercice.
         </div>
+      )}
+
+      {showCalculateur && (
+        <CalculateurIntensite niveaux={niveaux} groupColor={groupColor} onClose={() => setShowCalculateur(false)} />
       )}
     </div>
   )
