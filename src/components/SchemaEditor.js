@@ -4,7 +4,7 @@ import { supabase } from '../supabase'
 const SNAP_TOL = 1.8
 const GRID = 1
 const DEFAULT_COLOR = '#2563eb'
-const FIELD_COLOR = '#e1efe2'
+const FIELD_COLOR = '#bfe3c6'
 
 function nextLabel(plots) {
   const nums = plots.map(p => parseInt((p.label || '').replace(/\D/g, ''), 10)).filter(n => !isNaN(n))
@@ -48,6 +48,9 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
   const svgRef = useRef(null)
   const dragRef = useRef(null)
   const justDraggedRef = useRef(false)
+  // échelle commune (unités de viewBox par mètre) : la première distance
+  // saisie (segment ou zone) fixe l'échelle, toutes les suivantes s'y alignent
+  const scaleRef = useRef(schema?.donnees?.scale || null)
 
   function svgPointRaw(e) {
     const svg = svgRef.current
@@ -216,20 +219,53 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
   function updateSegment(id, patch) { setSegments(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s)) }
   function deleteSegment(id) { setSegments(prev => prev.filter(s => s.id !== id)); setSelectedSegId(null) }
 
+  // Applique une distance réelle à un segment : la première distance saisie
+  // dans tout le schéma fixe l'échelle commune, les suivantes s'y alignent en
+  // déplaçant le plot d'arrivée le long de l'axe du segment.
+  function updateSegmentDistance(id, value) {
+    const distance_m = value ? Number(value) : null
+    if (!distance_m || distance_m <= 0) {
+      setSegments(prev => prev.map(s => s.id === id ? { ...s, distance_m: null } : s))
+      return
+    }
+    const seg = segments.find(s => s.id === id)
+    const from = seg && plots.find(p => p.id === seg.from)
+    const to = seg && plots.find(p => p.id === seg.to)
+    if (from && to) {
+      const dx = to.x - from.x, dy = to.y - from.y
+      const curLen = Math.hypot(dx, dy) || 1
+      let s = scaleRef.current
+      if (!s) { s = curLen / distance_m; scaleRef.current = s }
+      const targetLen = distance_m * s
+      const ux = dx / curLen, uy = dy / curLen
+      const newX = clamp(from.x + ux * targetLen)
+      const newY = clamp(from.y + uy * targetLen)
+      setPlots(prev => prev.map(p => p.id === to.id ? { ...p, x: newX, y: newY } : p))
+    }
+    setSegments(prev => prev.map(s => s.id === id ? { ...s, distance_m } : s))
+  }
+
   function updateRect(id, patch) { setRects(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r)) }
   function deleteRect(id) { setRects(prev => prev.filter(r => r.id !== id)); setSelectedRectId(null) }
 
-  // Applique les cotes réelles (largeur_m/hauteur_m) : la largeur affichée est
-  // gardée telle quelle, la hauteur affichée est recalculée pour respecter le
-  // ratio largeur/hauteur saisi (un carré tracé devient un vrai rectangle).
+  // Applique les cotes réelles (largeur_m/hauteur_m) à l'échelle commune du
+  // schéma : la première distance saisie où qu'elle soit (segment ou zone)
+  // fixe l'échelle, toutes les zones et segments suivants s'y alignent.
   function updateRectDims(id, patch) {
     setRects(prev => prev.map(r => {
       if (r.id !== id) return r
       const next = { ...r, ...patch }
       const lm = next.largeur_m, hm = next.hauteur_m
-      if (lm > 0 && hm > 0) {
-        const h = clamp(r.w * (hm / lm), 2, 98)
-        return { ...next, h }
+      let s = scaleRef.current
+      if (!s) {
+        if (patch.largeur_m > 0) s = r.w / patch.largeur_m
+        else if (patch.hauteur_m > 0) s = r.h / patch.hauteur_m
+        if (s) scaleRef.current = s
+      }
+      if (s) {
+        const w = lm > 0 ? clamp(lm * s, 2, 98) : next.w
+        const h = hm > 0 ? clamp(hm * s, 2, 98) : next.h
+        return { ...next, w, h }
       }
       return next
     }))
@@ -252,7 +288,7 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
     setSaving(true)
     const payload = {
       nom: nom.trim(), description: description.trim() || null,
-      donnees: { plots, segments, rects }, updated_at: new Date().toISOString(),
+      donnees: { plots, segments, rects, scale: scaleRef.current }, updated_at: new Date().toISOString(),
     }
     const { error } = isNew
       ? await supabase.from('schemas_entrainement').insert(payload)
@@ -316,15 +352,15 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
                     onPointerDown={e => handleRectPointerDown(e, r.id)}
                     style={{ cursor: mode === 'rect' || mode === 'point' ? 'move' : 'default' }} />
                   {r.largeur_m > 0 && (
-                    <text x={r.x + r.w / 2} y={r.y - 1.6} fontSize="2.8" fill="#1f2937" textAnchor="middle" fontWeight="700"
-                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2, pointerEvents: 'none' }}>
+                    <text x={r.x + r.w / 2} y={r.y - 0.5} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1, pointerEvents: 'none' }}>
                       {r.largeur_m}m
                     </text>
                   )}
                   {r.hauteur_m > 0 && (
-                    <text x={r.x - 1.6} y={r.y + r.h / 2} fontSize="2.8" fill="#1f2937" textAnchor="middle" fontWeight="700"
-                      transform={`rotate(-90 ${r.x - 1.6} ${r.y + r.h / 2})`}
-                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2, pointerEvents: 'none' }}>
+                    <text x={r.x - 0.5} y={r.y + r.h / 2} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                      transform={`rotate(-90 ${r.x - 0.5} ${r.y + r.h / 2})`}
+                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1, pointerEvents: 'none' }}>
                       {r.hauteur_m}m
                     </text>
                   )}
@@ -355,8 +391,8 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
                     stroke={isSel ? '#333333' : '#374151'} strokeWidth={isSel ? 1.1 : 0.8}
                     strokeDasharray={seg.style === 'pointille' ? '3,2' : undefined} />
                   {seg.distance_m != null && (
-                    <text x={midX} y={midY - 2} fontSize="3" fill="#1f2937" textAnchor="middle" fontWeight="700"
-                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2 }}>{seg.distance_m}m</text>
+                    <text x={midX} y={midY - 0.7} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>{seg.distance_m}m</text>
                   )}
                 </g>
               )
@@ -386,7 +422,7 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
         {selectedSeg && (
           <div style={S.editPanel}>
             <input type="number" min="0" placeholder="Distance (m)" value={selectedSeg.distance_m ?? ''}
-              onChange={e => updateSegment(selectedSeg.id, { distance_m: e.target.value ? Number(e.target.value) : null })}
+              onChange={e => updateSegmentDistance(selectedSeg.id, e.target.value)}
               style={S.editLabelInput} />
             <div style={S.toolGroup}>
               <button onClick={() => updateSegment(selectedSeg.id, { style: 'plein' })} style={{ ...S.styleBtn, ...(selectedSeg.style === 'plein' ? S.styleBtnActive : {}) }}>― plein</button>

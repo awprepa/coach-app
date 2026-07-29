@@ -1,7 +1,7 @@
 // Rendu SVG statique d'un schéma d'exercice (plots + segments) — utilisé pour
 // les vignettes de bibliothèque et comme couche de base de l'éditeur.
 // Coordonnées des plots normalisées en 0-100 (viewBox carré, s'adapte à tout conteneur).
-const FIELD_COLOR = '#e1efe2'
+const FIELD_COLOR = '#bfe3c6'
 
 export default function SchemaSVG({ donnees, showDistances = true, style }) {
   const plots = donnees?.plots || []
@@ -18,13 +18,13 @@ export default function SchemaSVG({ donnees, showDistances = true, style }) {
             stroke={r.couleur} strokeWidth="0.7"
             strokeDasharray={r.style === 'pointille' ? '2.4,1.6' : undefined} />
           {showDistances && r.largeur_m > 0 && (
-            <text x={r.x + r.w / 2} y={r.y - 1.6} fontSize="2.8" fill="#1f2937" textAnchor="middle" fontWeight="700"
-              style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2 }}>{r.largeur_m}m</text>
+            <text x={r.x + r.w / 2} y={r.y - 0.5} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+              style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>{r.largeur_m}m</text>
           )}
           {showDistances && r.hauteur_m > 0 && (
-            <text x={r.x - 1.6} y={r.y + r.h / 2} fontSize="2.8" fill="#1f2937" textAnchor="middle" fontWeight="700"
-              transform={`rotate(-90 ${r.x - 1.6} ${r.y + r.h / 2})`}
-              style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2 }}>{r.hauteur_m}m</text>
+            <text x={r.x - 0.5} y={r.y + r.h / 2} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+              transform={`rotate(-90 ${r.x - 0.5} ${r.y + r.h / 2})`}
+              style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>{r.hauteur_m}m</text>
           )}
         </g>
       ))}
@@ -40,8 +40,8 @@ export default function SchemaSVG({ donnees, showDistances = true, style }) {
               stroke="#374151" strokeWidth="0.9"
               strokeDasharray={seg.style === 'pointille' ? '3,2' : undefined} />
             {showDistances && seg.distance_m != null && (
-              <text x={midX} y={midY - 2.2} fontSize="3.4" fill="#1f2937" textAnchor="middle" fontWeight="700"
-                style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2 }}>
+              <text x={midX} y={midY - 0.7} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>
                 {seg.distance_m}m
               </text>
             )}
