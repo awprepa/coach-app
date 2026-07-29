@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 const SNAP_TOL = 1.8
 const GRID = 1
 const DEFAULT_COLOR = '#2563eb'
+const FIELD_COLOR = '#e1efe2'
 
 function nextLabel(plots) {
   const nums = plots.map(p => parseInt((p.label || '').replace(/\D/g, ''), 10)).filter(n => !isNaN(n))
@@ -299,10 +300,10 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
             onPointerDown={handleSvgPointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}>
-            <rect data-bg="1" x="0" y="0" width="100" height="100" fill="#f3f4e8" />
+            <rect data-bg="1" x="0" y="0" width="100" height="100" fill={FIELD_COLOR} />
 
-            {snapGuides.x !== null && <line x1={snapGuides.x} y1="0" x2={snapGuides.x} y2="100" stroke="#6366f1" strokeWidth="0.35" strokeDasharray="1.5,1.2" />}
-            {snapGuides.y !== null && <line x1="0" y1={snapGuides.y} x2="100" y2={snapGuides.y} stroke="#6366f1" strokeWidth="0.35" strokeDasharray="1.5,1.2" />}
+            {snapGuides.x !== null && <line x1={snapGuides.x} y1="0" x2={snapGuides.x} y2="100" stroke="#333333" strokeWidth="0.35" strokeDasharray="1.5,1.2" />}
+            {snapGuides.y !== null && <line x1="0" y1={snapGuides.y} x2="100" y2={snapGuides.y} stroke="#333333" strokeWidth="0.35" strokeDasharray="1.5,1.2" />}
 
             {rects.map(r => {
               const isSel = selectedRectId === r.id
@@ -310,18 +311,25 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
                 <g key={r.id}>
                   <rect x={r.x} y={r.y} width={r.w} height={r.h}
                     fill={r.rempli ? r.couleur : 'transparent'} fillOpacity={r.rempli ? 0.18 : 0}
-                    stroke={isSel ? '#6366f1' : r.couleur} strokeWidth={isSel ? 1 : 0.7}
+                    stroke={isSel ? '#333333' : r.couleur} strokeWidth={isSel ? 1 : 0.7}
                     strokeDasharray={r.style === 'pointille' ? '2.4,1.6' : undefined}
                     onPointerDown={e => handleRectPointerDown(e, r.id)}
                     style={{ cursor: mode === 'rect' || mode === 'point' ? 'move' : 'default' }} />
-                  {r.largeur_m > 0 && r.hauteur_m > 0 && (
-                    <text x={r.x + r.w / 2} y={r.y + r.h / 2} fontSize="3" fill="#1f2937" textAnchor="middle" fontWeight="700"
-                      style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1.2, pointerEvents: 'none' }}>
-                      {r.largeur_m}m × {r.hauteur_m}m
+                  {r.largeur_m > 0 && (
+                    <text x={r.x + r.w / 2} y={r.y - 1.6} fontSize="2.8" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2, pointerEvents: 'none' }}>
+                      {r.largeur_m}m
+                    </text>
+                  )}
+                  {r.hauteur_m > 0 && (
+                    <text x={r.x - 1.6} y={r.y + r.h / 2} fontSize="2.8" fill="#1f2937" textAnchor="middle" fontWeight="700"
+                      transform={`rotate(-90 ${r.x - 1.6} ${r.y + r.h / 2})`}
+                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2, pointerEvents: 'none' }}>
+                      {r.hauteur_m}m
                     </text>
                   )}
                   {isSel && corners(r).map(([c, cx, cy]) => (
-                    <rect key={c} x={cx - 1.4} y={cy - 1.4} width="2.8" height="2.8" fill="#fff" stroke="#6366f1" strokeWidth="0.6"
+                    <rect key={c} x={cx - 1.4} y={cy - 1.4} width="2.8" height="2.8" fill="#fff" stroke="#333333" strokeWidth="0.6"
                       onPointerDown={e => handleResizePointerDown(e, r.id, c)}
                       style={{ cursor: (c === 'nw' || c === 'se') ? 'nwse-resize' : 'nesw-resize' }} />
                   ))}
@@ -344,11 +352,11 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
                 <g key={seg.id} onClick={e => { e.stopPropagation(); setSelectedSegId(seg.id); setSelectedPlotId(null); setSelectedRectId(null) }}>
                   <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="transparent" strokeWidth="4" />
                   <line x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                    stroke={isSel ? '#6366f1' : '#374151'} strokeWidth={isSel ? 1.1 : 0.8}
+                    stroke={isSel ? '#333333' : '#374151'} strokeWidth={isSel ? 1.1 : 0.8}
                     strokeDasharray={seg.style === 'pointille' ? '3,2' : undefined} />
                   {seg.distance_m != null && (
                     <text x={midX} y={midY - 2} fontSize="3" fill="#1f2937" textAnchor="middle" fontWeight="700"
-                      style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1.2 }}>{seg.distance_m}m</text>
+                      style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1.2 }}>{seg.distance_m}m</text>
                   )}
                 </g>
               )
@@ -358,10 +366,10 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
                 {/* cible tactile invisible, plus large que le point visible pour rester facile à saisir au doigt */}
                 <circle cx={p.x} cy={p.y} r="5" fill="transparent" />
                 <circle cx={p.x} cy={p.y} r="1.6" fill={p.couleur}
-                  stroke={selectedPlotId === p.id || linkFirstId === p.id ? '#1f2937' : '#fff'}
+                  stroke={selectedPlotId === p.id || linkFirstId === p.id ? '#333333' : '#fff'}
                   strokeWidth={selectedPlotId === p.id || linkFirstId === p.id ? 0.9 : 0.4} />
                 <text x={p.x} y={p.y - 2.8} fontSize="2.4" fill="#1f2937" textAnchor="middle" fontWeight="800"
-                  style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1, pointerEvents: 'none' }}>{p.label}</text>
+                  style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1, pointerEvents: 'none' }}>{p.label}</text>
               </g>
             ))}
           </svg>
@@ -422,24 +430,24 @@ export default function SchemaEditor({ schema, onClose, onSaved }) {
 
 const S = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
-  modal: { background: '#fff', borderRadius: 18, padding: '1.25rem', width: '100%', maxWidth: 620, maxHeight: '94vh', overflowY: 'auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
+  modal: { background: '#fff', borderRadius: 18, padding: '1.5rem', width: '100%', maxWidth: 900, maxHeight: '96vh', overflowY: 'auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
   header: { display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 },
-  nomInput: { flex: 1, fontSize: '1.05rem', fontWeight: 800, border: 'none', borderBottom: '2px solid #e5e7eb', padding: '4px 2px', outline: 'none', fontFamily: 'inherit' },
+  nomInput: { flex: 1, fontSize: '1.15rem', fontWeight: 800, border: 'none', borderBottom: '2px solid #e5e7eb', padding: '4px 2px', outline: 'none', fontFamily: 'inherit' },
   closeBtn: { background: 'none', border: 'none', fontSize: '1.5rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
   toolbar: { display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 8, padding: '8px 10px', background: '#f9fafb', borderRadius: 10 },
   toolGroup: { display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' },
   modeBtn: { padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
-  modeBtnActive: { background: '#4338ca', color: '#fff', borderColor: '#4338ca' },
+  modeBtnActive: { background: '#333333', color: '#e4f816', borderColor: '#333333' },
   colorInput: { width: 32, height: 28, padding: 0, border: '1.5px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', background: 'none' },
   styleBtn: { padding: '5px 9px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' },
-  styleBtnActive: { background: '#1f2937', color: '#fff', borderColor: '#1f2937' },
+  styleBtnActive: { background: '#333333', color: '#e4f816', borderColor: '#333333' },
   canvasWrap: { border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
-  canvas: { width: '100%', height: 360, display: 'block', touchAction: 'none' },
-  editPanel: { display: 'flex', gap: 8, alignItems: 'center', background: '#eef2ff', borderRadius: 10, padding: '8px 10px', marginBottom: 8, flexWrap: 'wrap' },
-  editLabelInput: { flex: 1, minWidth: 90, border: '1.5px solid #c7d2fe', borderRadius: 8, padding: '5px 8px', fontSize: '0.8rem', outline: 'none', fontFamily: 'inherit' },
+  canvas: { width: '100%', height: 500, display: 'block', touchAction: 'none' },
+  editPanel: { display: 'flex', gap: 8, alignItems: 'center', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '8px 10px', marginBottom: 8, flexWrap: 'wrap' },
+  editLabelInput: { flex: 1, minWidth: 90, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '5px 8px', fontSize: '0.8rem', outline: 'none', fontFamily: 'inherit' },
   deleteBtn: { background: 'none', border: 'none', color: '#dc2626', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' },
   descInput: { width: '100%', boxSizing: 'border-box', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '8px 10px', fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', marginBottom: 12 },
   footer: { display: 'flex', gap: 8 },
-  btnPrimary: { flex: 1, background: '#1f2937', color: '#fff', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' },
+  btnPrimary: { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' },
   btnSecondary: { flex: 1, background: '#fff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.75rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' },
 }
