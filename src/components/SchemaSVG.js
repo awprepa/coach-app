@@ -36,11 +36,11 @@ export default function SchemaSVG({ donnees, showDistances = true, style }) {
         const len = Math.hypot(dx, dy) || 1
         const nx = -dy / len, ny = dx / len
         const midX = (from.x + to.x) / 2, midY = (from.y + to.y) / 2
-        const labelX = midX + nx * 2.6, labelY = midY + ny * 2.6
+        const labelX = midX + nx * 4.5, labelY = midY + ny * 4.5
         return (
           <g key={seg.id}>
             <line x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-              stroke="#374151" strokeWidth="0.9"
+              stroke="#374151" strokeWidth="0.5"
               strokeDasharray={seg.style === 'pointille' ? '3,2' : undefined} />
             {showDistances && seg.distance_m != null && (
               <text x={labelX} y={labelY} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"

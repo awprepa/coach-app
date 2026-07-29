@@ -248,9 +248,27 @@ function SchemaEditorForm({ schema, isNew, onClose, onSaved }) {
   function updateSegment(id, patch) { setSegments(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s)) }
   function deleteSegment(id) { setSegments(prev => prev.filter(s => s.id !== id)); setSelectedSegId(null) }
 
-  // Applique une distance réelle à un segment, selon l'échelle fixe du schéma :
-  // le plot d'arrivée est déplacé le long de l'axe existant (même en diagonale)
-  // pour que la distance visuelle corresponde exactement au nombre saisi.
+  // Déplace le plot `toId` pour que sa distance à `fromId` corresponde à
+  // distance_m selon l'échelle fixe, en conservant la direction actuelle
+  // (fonctionne aussi en diagonale).
+  function placeAtDistance(plotsById, fromId, toId, distance_m) {
+    const from = plotsById[fromId], to = plotsById[toId]
+    if (!from || !to) return
+    const dx = to.x - from.x, dy = to.y - from.y
+    const curLen = Math.hypot(dx, dy) || 1
+    const targetLen = distance_m * SCALE
+    const ux = dx / curLen, uy = dy / curLen
+    plotsById[toId] = { ...to, x: clamp(from.x + ux * targetLen), y: clamp(from.y + uy * targetLen) }
+  }
+
+  // Applique une distance réelle à un segment, selon l'échelle fixe du schéma,
+  // puis propage aux autres segments déjà chiffrés qui partagent un plot avec
+  // celui-ci (utile pour un triangle ou un carré tracé point à point) : chaque
+  // côté déjà mesuré garde sa longueur en répercutant le déplacement de proche
+  // en proche. Sur une forme fermée (ex. le 3e côté d'un triangle), il est
+  // géométriquement impossible de garder les trois longueurs ET les positions
+  // déjà fixées : la cote de ce dernier côté est alors effacée plutôt que de
+  // rester affichée alors qu'elle ne correspond plus au dessin.
   function updateSegmentDistance(id, value) {
     const distance_m = value ? Number(value) : null
     if (!distance_m || distance_m <= 0) {
@@ -258,18 +276,42 @@ function SchemaEditorForm({ schema, isNew, onClose, onSaved }) {
       return
     }
     const seg = segments.find(s => s.id === id)
-    const from = seg && plots.find(p => p.id === seg.from)
-    const to = seg && plots.find(p => p.id === seg.to)
-    if (from && to) {
-      const dx = to.x - from.x, dy = to.y - from.y
-      const curLen = Math.hypot(dx, dy) || 1
-      const targetLen = distance_m * SCALE
-      const ux = dx / curLen, uy = dy / curLen
-      const newX = clamp(from.x + ux * targetLen)
-      const newY = clamp(from.y + uy * targetLen)
-      setPlots(prev => prev.map(p => p.id === to.id ? { ...p, x: newX, y: newY } : p))
+    if (!seg) return
+    const nextSegments = segments.map(s => s.id === id ? { ...s, distance_m } : s)
+    const plotsById = Object.fromEntries(plots.map(p => [p.id, p]))
+
+    placeAtDistance(plotsById, seg.from, seg.to, distance_m)
+
+    // propagation en largeur à partir du plot qu'on vient de fixer
+    const fixed = new Set([seg.from, seg.to])
+    let frontier = [seg.to]
+    while (frontier.length) {
+      const nextFrontier = []
+      for (const anchorId of frontier) {
+        for (const s2 of nextSegments) {
+          if (s2.id === seg.id || s2.distance_m == null) continue
+          const otherId = s2.from === anchorId ? s2.to : s2.to === anchorId ? s2.from : null
+          if (!otherId || fixed.has(otherId)) continue
+          placeAtDistance(plotsById, anchorId, otherId, s2.distance_m)
+          fixed.add(otherId)
+          nextFrontier.push(otherId)
+        }
+      }
+      frontier = nextFrontier
     }
-    setSegments(prev => prev.map(s => s.id === id ? { ...s, distance_m } : s))
+
+    // efface les distances devenues incohérentes (les deux extrémités ont été
+    // fixées par la propagation sans que ce côté ait pu être satisfait)
+    const finalSegments = nextSegments.map(s => {
+      if (s.id === seg.id || s.distance_m == null) return s
+      const from = plotsById[s.from], to = plotsById[s.to]
+      if (!from || !to) return s
+      const actualM = Math.hypot(to.x - from.x, to.y - from.y) / SCALE
+      return Math.abs(actualM - s.distance_m) > 0.05 ? { ...s, distance_m: null } : s
+    })
+
+    setPlots(prev => prev.map(p => plotsById[p.id] || p))
+    setSegments(finalSegments)
   }
 
   function updateRect(id, patch) { setRects(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r)) }
@@ -402,13 +444,13 @@ function SchemaEditorForm({ schema, isNew, onClose, onSaved }) {
               const len = Math.hypot(dx, dy) || 1
               const nx = -dy / len, ny = dx / len
               const midX = (from.x + to.x) / 2, midY = (from.y + to.y) / 2
-              const labelX = midX + nx * 2.6, labelY = midY + ny * 2.6
+              const labelX = midX + nx * 4.5, labelY = midY + ny * 4.5
               const isSel = selectedSegId === seg.id
               return (
                 <g key={seg.id} onClick={e => { e.stopPropagation(); setSelectedSegId(seg.id); setSelectedPlotId(null); setSelectedRectId(null) }}>
                   <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="transparent" strokeWidth="4" />
                   <line x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                    stroke={isSel ? '#1f2937' : '#374151'} strokeWidth={isSel ? 1.1 : 0.8}
+                    stroke={isSel ? '#1f2937' : '#374151'} strokeWidth={isSel ? 0.8 : 0.5}
                     strokeDasharray={seg.style === 'pointille' ? '3,2' : undefined} />
                   {seg.distance_m != null && (
                     <text x={labelX} y={labelY} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
