@@ -4,10 +4,17 @@
 export default function SchemaSVG({ donnees, showDistances = true, style }) {
   const plots = donnees?.plots || []
   const segments = donnees?.segments || []
+  const rects = donnees?.rects || []
 
   return (
     <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block', ...style }}>
       <rect x="0" y="0" width="100" height="100" fill="#f3f4e8" />
+      {rects.map(r => (
+        <rect key={r.id} x={r.x} y={r.y} width={r.w} height={r.h}
+          fill={r.rempli ? r.couleur : 'transparent'} fillOpacity={r.rempli ? 0.18 : 0}
+          stroke={r.couleur} strokeWidth="0.7"
+          strokeDasharray={r.style === 'pointille' ? '2.4,1.6' : undefined} />
+      ))}
       {segments.map(seg => {
         const from = plots.find(p => p.id === seg.from)
         const to = plots.find(p => p.id === seg.to)
@@ -30,9 +37,9 @@ export default function SchemaSVG({ donnees, showDistances = true, style }) {
       })}
       {plots.map(p => (
         <g key={p.id}>
-          <circle cx={p.x} cy={p.y} r="2.8" fill={p.couleur || '#2563eb'} stroke="#fff" strokeWidth="0.6" />
-          <text x={p.x} y={p.y - 4.2} fontSize="3.2" fill="#1f2937" textAnchor="middle" fontWeight="800"
-            style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1.2 }}>
+          <circle cx={p.x} cy={p.y} r="2.2" fill={p.couleur || '#2563eb'} stroke="#fff" strokeWidth="0.5" />
+          <text x={p.x} y={p.y - 3.4} fontSize="2.6" fill="#1f2937" textAnchor="middle" fontWeight="800"
+            style={{ paintOrder: 'stroke', stroke: '#f3f4e8', strokeWidth: 1 }}>
             {p.label}
           </text>
         </g>
