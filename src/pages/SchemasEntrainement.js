@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SchemaSVG from '../components/SchemaSVG'
-import SchemaEditor from '../components/SchemaEditor'
 
 export default function SchemasEntrainement() {
+  const navigate = useNavigate()
   const [schemas, setSchemas] = useState([])
   const [dossiers, setDossiers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [dossierActif, setDossierActif] = useState('tous') // 'tous' | 'sans' | <id>
-  const [editing, setEditing] = useState(null) // null=fermé, {}=nouveau, {...}=édition
   const [dupliquant, setDupliquant] = useState(null)
   const [nouveauDossier, setNouveauDossier] = useState(null) // null=fermé, ''=formulaire ouvert
 
@@ -77,7 +77,7 @@ export default function SchemasEntrainement() {
     <div style={S.page}>
       <div style={S.topRow}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher un schéma…" style={S.search} />
-        <button onClick={() => setEditing({})} style={S.newBtn}>+ Nouveau schéma</button>
+        <button onClick={() => navigate('/bibliotheque/schemas/nouveau')} style={S.newBtn}>+ Nouveau schéma</button>
       </div>
 
       <div style={S.filterRow}>
@@ -111,7 +111,7 @@ export default function SchemasEntrainement() {
         <div style={S.grid}>
           {filtres.map(s => (
             <div key={s.id} style={S.card}>
-              <div style={S.thumb} onClick={() => setEditing(s)}>
+              <div style={S.thumb} onClick={() => navigate(`/bibliotheque/schemas/${s.id}`)}>
                 <SchemaSVG donnees={s.donnees} />
               </div>
               <div style={S.cardBody}>
@@ -125,7 +125,7 @@ export default function SchemasEntrainement() {
                 </div>
                 {s.description && <p style={S.cardDesc}>{s.description}</p>}
                 <div style={S.cardActions}>
-                  <button onClick={() => setEditing(s)} style={S.actionBtn}>✎ Modifier</button>
+                  <button onClick={() => navigate(`/bibliotheque/schemas/${s.id}`)} style={S.actionBtn}>✎ Modifier</button>
                   <button onClick={() => dupliquer(s)} disabled={dupliquant === s.id} style={S.actionBtn}>
                     {dupliquant === s.id ? '…' : '⧉ Dupliquer'}
                   </button>
@@ -135,14 +135,6 @@ export default function SchemasEntrainement() {
             </div>
           ))}
         </div>
-      )}
-
-      {editing && (
-        <SchemaEditor
-          schema={editing.id ? editing : null}
-          onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); fetchAll() }}
-        />
       )}
     </div>
   )

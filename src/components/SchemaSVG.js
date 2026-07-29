@@ -1,7 +1,7 @@
 // Rendu SVG statique d'un schéma d'exercice (plots + segments) — utilisé pour
 // les vignettes de bibliothèque et comme couche de base de l'éditeur.
 // Coordonnées des plots normalisées en 0-100 (viewBox carré, s'adapte à tout conteneur).
-const FIELD_COLOR = '#bfe3c6'
+const FIELD_COLOR = '#86cf99'
 
 export default function SchemaSVG({ donnees, showDistances = true, style }) {
   const plots = donnees?.plots || []
@@ -32,15 +32,18 @@ export default function SchemaSVG({ donnees, showDistances = true, style }) {
         const from = plots.find(p => p.id === seg.from)
         const to = plots.find(p => p.id === seg.to)
         if (!from || !to) return null
-        const midX = (from.x + to.x) / 2
-        const midY = (from.y + to.y) / 2
+        const dx = to.x - from.x, dy = to.y - from.y
+        const len = Math.hypot(dx, dy) || 1
+        const nx = -dy / len, ny = dx / len
+        const midX = (from.x + to.x) / 2, midY = (from.y + to.y) / 2
+        const labelX = midX + nx * 2.6, labelY = midY + ny * 2.6
         return (
           <g key={seg.id}>
             <line x1={from.x} y1={from.y} x2={to.x} y2={to.y}
               stroke="#374151" strokeWidth="0.9"
               strokeDasharray={seg.style === 'pointille' ? '3,2' : undefined} />
             {showDistances && seg.distance_m != null && (
-              <text x={midX} y={midY - 0.7} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
+              <text x={labelX} y={labelY} fontSize="2.1" fill="#1f2937" textAnchor="middle" fontWeight="700"
                 style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>
                 {seg.distance_m}m
               </text>
