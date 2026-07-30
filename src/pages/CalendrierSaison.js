@@ -2962,7 +2962,7 @@ function SeanceModal({
   removeSeq, addSeqToState, patchSeqInState, setBlocSeqs, addSeqBeforeInterBloc,
   reloadBlocs,
 }) {
-  const [schemaPanelExo, setSchemaPanelExo] = useState(null) // exercice en édition schéma/intensité
+  const [schemaPanelBloc, setSchemaPanelBloc] = useState(null) // bloc séquences en édition schéma/intensité
   const BLOC_COLORS = generateBlocPalette(groupColor, couleurSecondaire)
   function blocColor(idx, intervenant) {
     if (intervenant === 'prepa')  return '#b45309'
@@ -3357,6 +3357,10 @@ function SeanceModal({
                           />
                         )}
                         <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
+                        {bloc.bloc_type === 'sequences' && (
+                          <button onClick={() => setSchemaPanelBloc(bloc)} title="Schéma & intensité"
+                            style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 4, width: 20, height: 18, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>▦</button>
+                        )}
                         {/* Flèches réorganisation */}
                         <button onClick={() => moveBloc(bloc.id, 'up')} disabled={idx === 0}
                           style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: idx === 0 ? 'rgba(255,255,255,.3)' : '#fff', borderRadius: 4, width: 18, height: 18, fontSize: '.7rem', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>↑</button>
@@ -3659,7 +3663,6 @@ function SeanceModal({
                                       <input key={`nom-${exo.id}`} defaultValue={exo.nom} onBlur={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
                                       <input key={`pres-${exo.id}`} defaultValue={exo.prescription || ''} onBlur={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.63rem', color: '#1a1a1a', padding: '1px 4px', outline: 'none', fontFamily: 'inherit' }} />
                                       <input key={`grp-${exo.id}`} defaultValue={exo.groupe_label || ''} onBlur={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Grp…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 44, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.6rem', color: '#6b7280', padding: '1px 3px', outline: 'none', fontFamily: 'inherit' }} />
-                                      <button onClick={() => setSchemaPanelExo(exo)} title="Schéma & intensité" style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '.75rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>▦</button>
                                       <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
                                     </div>
                                   ))}
@@ -3674,7 +3677,6 @@ function SeanceModal({
                                 <input key={`nom-${exo.id}`} defaultValue={exo.nom} onBlur={e => updateExo(bloc.id, exo.id, { nom: e.target.value })} placeholder="Exercice…" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '.7rem', fontWeight: 600, color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
                                 <input key={`pres-${exo.id}`} defaultValue={exo.prescription || ''} onBlur={e => updateExo(bloc.id, exo.id, { prescription: e.target.value })} placeholder="Charge…" style={{ width: 66, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.65rem', color: '#1a1a1a', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
                                 <input key={`grp-${exo.id}`} defaultValue={exo.groupe_label || ''} onBlur={e => updateExo(bloc.id, exo.id, { groupe_label: e.target.value })} placeholder="Groupe…" title="Groupe (ex: Avants, Arrières…)" style={{ width: 58, border: '1px solid #e4e7ec', borderRadius: 4, fontSize: '.62rem', color: '#6b7280', padding: '2px 5px', outline: 'none', fontFamily: 'inherit' }} />
-                                <button onClick={() => setSchemaPanelExo(exo)} title="Schéma & intensité" style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '.8rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>▦</button>
                                 <button onClick={() => deleteExo(bloc.id, exo.id)} style={{ background: 'none', border: 'none', color: '#c4c8d0', fontSize: '.85rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
                               </div>
                             ))}
@@ -3897,13 +3899,13 @@ function SeanceModal({
         </div>
       </div>
 
-      {schemaPanelExo && (
+      {schemaPanelBloc && (
         <ExerciceSchemaPanel
-          exerciceId={schemaPanelExo.id}
-          exerciceNom={schemaPanelExo.nom}
+          blocId={schemaPanelBloc.id}
+          exerciceNom={schemaPanelBloc.nom}
           groupeId={groupeId}
           groupColor={groupColor}
-          onClose={() => setSchemaPanelExo(null)}
+          onClose={() => setSchemaPanelBloc(null)}
         />
       )}
     </>

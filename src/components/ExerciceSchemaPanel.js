@@ -7,7 +7,9 @@ import CalculateurIntensite from './CalculateurIntensite'
 // calcul d'intensité, par groupe de niveau. Une ligne "Tous les niveaux"
 // (niveau_id=null) permet d'attacher juste un schéma commun sans chiffrage
 // (le chiffrage dépend forcément de la VMA/VMI propre à chaque niveau).
-export default function ExerciceSchemaPanel({ exerciceId, exerciceNom, groupeId, groupColor, onClose }) {
+export default function ExerciceSchemaPanel({ exerciceId, blocId, exerciceNom, groupeId, groupColor, onClose }) {
+  const anchorField = exerciceId ? 'exercice_id' : 'bloc_id'
+  const anchorValue = exerciceId || blocId
   const [niveaux, setNiveaux] = useState([])
   const [schemas, setSchemas] = useState([])
   const [attachments, setAttachments] = useState([]) // exercice_groupe_schemas rows
@@ -21,7 +23,7 @@ export default function ExerciceSchemaPanel({ exerciceId, exerciceNom, groupeId,
     const [{ data: n }, { data: s }, { data: a }] = await Promise.all([
       groupeId ? supabase.from('groupes_niveau').select('*').eq('groupe_id', groupeId).order('ordre') : Promise.resolve({ data: [] }),
       supabase.from('schemas_entrainement').select('id, nom, donnees').order('nom'),
-      supabase.from('exercice_groupe_schemas').select('*').eq('exercice_id', exerciceId),
+      supabase.from('exercice_groupe_schemas').select('*').eq(anchorField, anchorValue),
     ])
     setNiveaux(n || [])
     setSchemas(s || [])
@@ -45,7 +47,7 @@ export default function ExerciceSchemaPanel({ exerciceId, exerciceNom, groupeId,
       }
     } else if (schemaId) {
       const { data, error } = await supabase.from('exercice_groupe_schemas')
-        .insert({ exercice_id: exerciceId, niveau_id: niveauId, schema_id: schemaId }).select().single()
+        .insert({ [anchorField]: anchorValue, niveau_id: niveauId, schema_id: schemaId }).select().single()
       if (!error) setAttachments(prev => [...prev, data])
     }
   }
@@ -64,7 +66,7 @@ export default function ExerciceSchemaPanel({ exerciceId, exerciceNom, groupeId,
       setAttachments(prev => prev.map(a => a.id === existing.id ? { ...a, parametres_calcul: parametres, resultat } : a))
     } else {
       const { data, error } = await supabase.from('exercice_groupe_schemas')
-        .insert({ exercice_id: exerciceId, niveau_id: niveau.id, parametres_calcul: parametres, resultat }).select().single()
+        .insert({ [anchorField]: anchorValue, niveau_id: niveau.id, parametres_calcul: parametres, resultat }).select().single()
       if (!error) setAttachments(prev => [...prev, data])
     }
     setCalcNiveau(null)

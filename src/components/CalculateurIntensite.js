@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
 // Calculateur d'intensité par groupe de niveau (VMI/VMA) — cf. cahier des
-// charges "Schémas d'entraînement" section 4. Ne persiste rien pour l'instant
-// (Phase 5) : le résultat est affiché à l'écran, la liaison à une séance
-// (sauvegarde par exercice/groupe de niveau) est prévue en Phase 6.
+// charges "Schémas d'entraînement" section 4. Ne persiste rien par
+// lui-même : le résultat est affiché à l'écran, et enregistré via `onApply`
+// si fourni (rattachement à un bloc/exercice de séance, Phase 6).
 
 function roundTo(v, step) {
   if (!step || step <= 0) return v
@@ -11,41 +11,49 @@ function roundTo(v, step) {
 }
 
 // Baromètre de difficulté — indicatif seulement, basé sur des seuils simples
-// (ratio récup/jeu, volume de répétitions, durée totale), pas sur une étude
-// spécifique. Sert de garde-fou visuel, pas de vérité absolue.
+// (volume de répétitions, durée totale, récupération), pas sur une étude
+// spécifique. Le volume et la durée dominent toujours le score : même avec
+// une récup généreuse, un très gros volume ou une séance longue font monter
+// la difficulté (contrairement à une ancienne version qui plafonnait à tort
+// sur "Modérée" quand la récup était réglée haut).
 function evaluerDifficulte({ recupIntraPct, repsTotal, dureeTotaleMin }) {
-  let score = 0
   const notes = []
+  let score = 0
+
+  if (repsTotal >= 30) { score += 3; notes.push(`${repsTotal} répétitions au total — volume très élevé`) }
+  else if (repsTotal >= 15) { score += 2; notes.push(`${repsTotal} répétitions au total — volume élevé`) }
+  else if (repsTotal >= 8) { score += 1; notes.push(`${repsTotal} répétitions au total — volume modéré`) }
+  else notes.push(`${repsTotal} répétitions au total — volume contenu`)
 
   if (recupIntraPct < 50) { score += 2; notes.push('Récupération courte (< 50 % du temps de jeu)') }
   else if (recupIntraPct < 100) { score += 1; notes.push('Récupération modérée (50–100 % du temps de jeu)') }
   else notes.push('Récupération généreuse (≥ 100 % du temps de jeu)')
 
-  if (repsTotal >= 24) { score += 2; notes.push(`${repsTotal} répétitions au total — volume élevé`) }
-  else if (repsTotal >= 12) { score += 1; notes.push(`${repsTotal} répétitions au total — volume modéré`) }
-  else notes.push(`${repsTotal} répétitions au total — volume contenu`)
+  if (dureeTotaleMin >= 30) { score += 2; notes.push(`≈ ${dureeTotaleMin} min de travail effectif — séance longue`) }
+  else if (dureeTotaleMin >= 15) { score += 1; notes.push(`≈ ${dureeTotaleMin} min de travail effectif`) }
 
-  if (dureeTotaleMin >= 20) { score += 1; notes.push(`≈ ${dureeTotaleMin} min de travail effectif`) }
-
-  const niveau = score >= 4 ? 'Élevée' : score >= 2 ? 'Modérée' : 'Légère'
-  const couleur = score >= 4 ? '#dc2626' : score >= 2 ? '#f59e0b' : '#16a34a'
-  return { score, max: 5, niveau, couleur, notes }
+  const max = 7
+  const niveau = score >= 5 ? 'Élevée' : score >= 3 ? 'Modérée' : 'Légère'
+  const couleur = score >= 5 ? '#dc2626' : score >= 3 ? '#f59e0b' : '#16a34a'
+  return { score, max, niveau, couleur, notes }
 }
 
 export default function CalculateurIntensite({ niveaux, groupColor, onClose, onApply }) {
   const criteresDisponibles = [...new Set(niveaux.map(n => n.critere))]
   const [critere, setCritere] = useState(criteresDisponibles[0] || 'vmi')
-  const [format, setFormat] = useState('')
   const [intensitePct, setIntensitePct] = useState(90)
   const [fixedVar, setFixedVar] = useState('temps') // 'temps' | 'distance'
   const [tempsSec, setTempsSec] = useState(30)
   const [distanceM, setDistanceM] = useState(100)
-  const [nbCdd, setNbCdd] = useState(0)
-  const [reductionPct, setReductionPct] = useState(0)
   const [recupIntraPct, setRecupIntraPct] = useState(100)
   const [repsParSerie, setRepsParSerie] = useState(6)
   const [nbSeries, setNbSeries] = useState(1)
   const [recupInterSec, setRecupInterSec] = useState(90)
+
+  const [avance, setAvance] = useState(false)
+  const [format, setFormat] = useState('')
+  const [nbCdd, setNbCdd] = useState(0)
+  const [reductionPct, setReductionPct] = useState(0)
   const [arrondiDistance, setArrondiDistance] = useState(5)
   const [arrondiTemps, setArrondiTemps] = useState(5)
   const [dureeCibleMin, setDureeCibleMin] = useState('')
@@ -57,7 +65,6 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
   function suggererSeries() {
     const cibleSec = Number(dureeCibleMin) > 0 ? Number(dureeCibleMin) * 60 : null
     if (!cibleSec) return
-    // utilise le premier niveau disponible comme référence de cycle temps/récup
     const ref = niveauxFiltres.find(n => n.valeur_ref != null)
     if (!ref) return
     const { temps, recupIntraSec } = calculerBrut(ref)
@@ -114,11 +121,6 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
 
         <div style={S.paramsGrid}>
           <label style={S.field}>
-            <span style={S.label}>Format (libre)</span>
-            <input value={format} onChange={e => setFormat(e.target.value)} placeholder="ex : 30-30, navette 15m" style={S.input} />
-          </label>
-
-          <label style={S.field}>
             <span style={S.label}>Référence</span>
             <div style={S.toggleRow}>
               {criteresDisponibles.length ? criteresDisponibles.map(c => (
@@ -156,21 +158,6 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
           )}
 
           <label style={S.field}>
-            <span style={S.label}>Nb changements de direction</span>
-            <input type="number" min="0" value={nbCdd} onChange={e => setNbCdd(e.target.value)} style={S.input} />
-          </label>
-
-          <label style={S.field}>
-            <span style={S.label}>% réduction / CDD</span>
-            <input type="number" min="0" value={reductionPct} onChange={e => setReductionPct(e.target.value)} style={S.input} />
-          </label>
-
-          <label style={S.field}>
-            <span style={S.label}>Récup intra (% temps de jeu)</span>
-            <input type="number" min="0" value={recupIntraPct} onChange={e => setRecupIntraPct(e.target.value)} style={S.input} />
-          </label>
-
-          <label style={S.field}>
             <span style={S.label}>Répétitions / série</span>
             <input type="number" min="1" value={repsParSerie} onChange={e => setRepsParSerie(e.target.value)} style={S.input} />
           </label>
@@ -181,28 +168,56 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
           </label>
 
           <label style={S.field}>
+            <span style={S.label}>Récup intra (%)</span>
+            <input type="number" min="0" value={recupIntraPct} onChange={e => setRecupIntraPct(e.target.value)} style={S.input} />
+          </label>
+
+          <label style={S.field}>
             <span style={S.label}>Récup inter-séries (s)</span>
             <input type="number" min="0" value={recupInterSec} onChange={e => setRecupInterSec(e.target.value)} style={S.input} />
           </label>
-
-          <label style={S.field}>
-            <span style={S.label}>Arrondi distance (m)</span>
-            <input type="number" min="0" value={arrondiDistance} onChange={e => setArrondiDistance(e.target.value)} style={S.input} />
-          </label>
-
-          <label style={S.field}>
-            <span style={S.label}>Arrondi temps (s)</span>
-            <input type="number" min="0" value={arrondiTemps} onChange={e => setArrondiTemps(e.target.value)} style={S.input} />
-          </label>
-
-          <label style={S.field}>
-            <span style={S.label}>Durée de séance cible (min)</span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input type="number" min="0" value={dureeCibleMin} onChange={e => setDureeCibleMin(e.target.value)} style={{ ...S.input, flex: 1 }} />
-              <button onClick={suggererSeries} disabled={!dureeCibleMin} style={{ ...S.toggleBtn, opacity: dureeCibleMin ? 1 : 0.5, whiteSpace: 'nowrap' }}>Suggérer</button>
-            </div>
-          </label>
         </div>
+
+        <button onClick={() => setAvance(v => !v)} style={S.avanceToggle}>
+          {avance ? '− Options avancées' : '+ Options avancées'}
+        </button>
+
+        {avance && (
+          <div style={S.paramsGrid}>
+            <label style={S.field}>
+              <span style={S.label}>Format (libre)</span>
+              <input value={format} onChange={e => setFormat(e.target.value)} placeholder="ex : 30-30, navette 15m" style={S.input} />
+            </label>
+
+            <label style={S.field}>
+              <span style={S.label}>Changements de direction</span>
+              <input type="number" min="0" value={nbCdd} onChange={e => setNbCdd(e.target.value)} style={S.input} />
+            </label>
+
+            <label style={S.field}>
+              <span style={S.label}>% réduction / CDD</span>
+              <input type="number" min="0" value={reductionPct} onChange={e => setReductionPct(e.target.value)} style={S.input} />
+            </label>
+
+            <label style={S.field}>
+              <span style={S.label}>Arrondi distance (m)</span>
+              <input type="number" min="0" value={arrondiDistance} onChange={e => setArrondiDistance(e.target.value)} style={S.input} />
+            </label>
+
+            <label style={S.field}>
+              <span style={S.label}>Arrondi temps (s)</span>
+              <input type="number" min="0" value={arrondiTemps} onChange={e => setArrondiTemps(e.target.value)} style={S.input} />
+            </label>
+
+            <label style={S.field}>
+              <span style={S.label}>Durée de séance cible (min)</span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input type="number" min="0" value={dureeCibleMin} onChange={e => setDureeCibleMin(e.target.value)} style={{ ...S.input, flex: 1, minWidth: 0 }} />
+                <button onClick={suggererSeries} disabled={!dureeCibleMin} style={{ ...S.toggleBtn, opacity: dureeCibleMin ? 1 : 0.5, whiteSpace: 'nowrap' }}>Suggérer</button>
+              </div>
+            </label>
+          </div>
+        )}
 
         {reductionActive && (
           <div style={S.cddNote}>
@@ -293,16 +308,17 @@ function isLight(hex) {
 
 const S = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
-  modal: { background: '#fff', borderRadius: 18, width: '100%', maxWidth: 980, maxHeight: '92vh', overflowY: 'auto', padding: '1.25rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
+  modal: { background: '#fff', borderRadius: 18, width: '100%', maxWidth: 900, maxHeight: '92vh', overflowY: 'auto', padding: '1.25rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   closeBtn: { background: 'none', border: 'none', fontSize: '1.5rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1 },
-  paramsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 12, background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: 12 },
-  field: { display: 'flex', flexDirection: 'column', gap: 4 },
-  label: { fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em' },
-  input: { border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 9px', fontSize: '0.82rem', outline: 'none', fontFamily: 'inherit' },
+  paramsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px 12px', marginBottom: 10, background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: 12 },
+  field: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
+  label: { fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '2.1em', display: 'flex', alignItems: 'flex-end' },
+  input: { border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 9px', fontSize: '0.82rem', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
   toggleRow: { display: 'flex', gap: 6 },
   toggleBtn: { flex: 1, padding: '7px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
   toggleBtnActive: { background: '#333333', color: '#e4f816', borderColor: '#333333' },
+  avanceToggle: { background: 'none', border: 'none', color: '#4338ca', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: '4px 0 12px', textAlign: 'left' },
   cddNote: { fontSize: '0.75rem', color: '#92400e', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 10, padding: '8px 12px', marginBottom: 12 },
   baroWrap: { background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: 12, marginBottom: 14 },
   baroBarBg: { height: 8, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', marginBottom: 8 },
