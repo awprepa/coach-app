@@ -12,15 +12,16 @@ function roundTo(v, step) {
 
 // Baromètre de difficulté — indicatif seulement, basé sur des seuils simples
 // (volume de répétitions, durée totale, récupération), pas sur une étude
-// spécifique. Le volume et la durée dominent toujours le score : même avec
-// une récup généreuse, un très gros volume ou une séance longue font monter
-// la difficulté (contrairement à une ancienne version qui plafonnait à tort
-// sur "Modérée" quand la récup était réglée haut).
+// spécifique. Chaque facteur a un palier "extrême" au-delà des seuils
+// habituels, pour que des valeurs absurdes (ex : 1 000 000 de séries)
+// continuent de faire monter le score au lieu de plafonner silencieusement
+// sur "Élevée" comme avant.
 function evaluerDifficulte({ recupIntraPct, repsTotal, dureeTotaleMin }) {
   const notes = []
   let score = 0
 
-  if (repsTotal >= 30) { score += 3; notes.push(`${repsTotal} répétitions au total — volume très élevé`) }
+  if (repsTotal >= 60) { score += 4; notes.push(`${repsTotal} répétitions au total — volume extrême`) }
+  else if (repsTotal >= 30) { score += 3; notes.push(`${repsTotal} répétitions au total — volume très élevé`) }
   else if (repsTotal >= 15) { score += 2; notes.push(`${repsTotal} répétitions au total — volume élevé`) }
   else if (repsTotal >= 8) { score += 1; notes.push(`${repsTotal} répétitions au total — volume modéré`) }
   else notes.push(`${repsTotal} répétitions au total — volume contenu`)
@@ -29,14 +30,35 @@ function evaluerDifficulte({ recupIntraPct, repsTotal, dureeTotaleMin }) {
   else if (recupIntraPct < 100) { score += 1; notes.push('Récupération modérée (50–100 % du temps de jeu)') }
   else notes.push('Récupération généreuse (≥ 100 % du temps de jeu)')
 
-  if (dureeTotaleMin >= 30) { score += 2; notes.push(`≈ ${dureeTotaleMin} min de travail effectif — séance longue`) }
+  if (dureeTotaleMin >= 60) { score += 3; notes.push(`≈ ${dureeTotaleMin} min de travail effectif — séance extrêmement longue`) }
+  else if (dureeTotaleMin >= 30) { score += 2; notes.push(`≈ ${dureeTotaleMin} min de travail effectif — séance longue`) }
   else if (dureeTotaleMin >= 15) { score += 1; notes.push(`≈ ${dureeTotaleMin} min de travail effectif`) }
 
-  const max = 7
-  const niveau = score >= 5 ? 'Élevée' : score >= 3 ? 'Modérée' : 'Légère'
-  const couleur = score >= 5 ? '#dc2626' : score >= 3 ? '#f59e0b' : '#16a34a'
+  const max = 9
+  const niveau = score >= 7 ? 'Extrême' : score >= 5 ? 'Élevée' : score >= 3 ? 'Modérée' : 'Légère'
+  const couleur = score >= 7 ? '#7f1d1d' : score >= 5 ? '#dc2626' : score >= 3 ? '#f59e0b' : '#16a34a'
   return { score, max, niveau, couleur, notes }
 }
+
+function InfoTooltip({ text }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}
+      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
+      onClick={() => setOpen(v => !v)}>
+      <span style={S.infoBtn}>i</span>
+      {open && (
+        <div style={S.infoTooltip}>{text}</div>
+      )}
+    </span>
+  )
+}
+
+const EXPLICATION_CALCUL = `Distance/temps : à partir de la vitesse de référence du niveau (VMI ou VMA), distance (m) = (vitesse ÷ 3,6) × % intensité × temps (s) — ou l'inverse si la distance est fixée.
+
+Changements de direction (CDD) : la distance/vitesse théorique est réduite de "% réduction" par CDD, de façon cumulée (ex : 3 CDD × 5 % = 15 % de réduction totale).
+
+Baromètre de difficulté : indicatif, basé sur 3 facteurs cumulés — le volume total de répétitions, la récupération intra-série (%), et la durée totale de travail effectif. Plus ces valeurs sont élevées, plus le score et le niveau (Légère / Modérée / Élevée / Extrême) montent.`
 
 export default function CalculateurIntensite({ niveaux, groupColor, onClose, onApply }) {
   const criteresDisponibles = [...new Set(niveaux.map(n => n.critere))]
@@ -115,7 +137,10 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
     <div style={S.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={S.modal}>
         <div style={S.header}>
-          <span style={{ fontWeight: 900, fontSize: '1rem', color: '#1f2937' }}>Calculateur d'intensité</span>
+          <span style={{ fontWeight: 900, fontSize: '1rem', color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
+            Calculateur d'intensité
+            <InfoTooltip text={EXPLICATION_CALCUL} />
+          </span>
           <button onClick={onClose} style={S.closeBtn}>×</button>
         </div>
 
@@ -330,4 +355,6 @@ const S = {
   applyBtn: { width: '100%', marginTop: 10, padding: '7px', borderRadius: 8, border: 'none', background: '#333333', color: '#e4f816', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' },
   resultSub: { fontSize: '0.72rem', color: '#9ca3af', marginBottom: 8 },
   resultList: { display: 'flex', flexDirection: 'column' },
+  infoBtn: { width: 16, height: 16, borderRadius: '50%', background: '#e5e7eb', color: '#4b5563', fontSize: '0.65rem', fontWeight: 800, fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 },
+  infoTooltip: { position: 'absolute', top: '130%', left: 0, zIndex: 20, width: 300, maxWidth: '80vw', background: '#1f2937', color: '#f3f4f6', fontSize: '0.72rem', fontWeight: 400, lineHeight: 1.5, borderRadius: 10, padding: '10px 12px', whiteSpace: 'pre-line', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' },
 }
