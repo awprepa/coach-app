@@ -13,7 +13,7 @@ const TABS = [
   { key: 'modeles',        label: 'Modèles de séances' },
   { key: 'cycles',         label: 'Templates de cycles' },
   { key: 'schemas',        label: 'Schémas' },
-  { key: 'sciences',       label: '📚 Sciences' },
+  { key: 'sciences',       label: 'Sciences' },
 ]
 
 export default function Bibliotheque() {

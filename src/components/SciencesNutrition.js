@@ -219,6 +219,22 @@ const ETUDES = [
     detail_coach: 'Enquête sur 37 clubs de football haut niveau (29 pays). Métriques les plus utilisées en pratique : distance totale (97 %), Player Load (78 %), distance haute intensité (73 %), accélérations (62 %). Player Load (somme des accélérations tridimensionnelles) est un proxy validé de la charge biomécanique. Les accélérations/décélérations >2,5 m/s² sont identifiées comme les métriques les plus corrélées au risque de blessure musculaire (Dalen 2019 ; Bowen 2017). La distance >20 km/h est le seuil standard pour la haute intensité dans les sports collectifs (Buchheit 2014).',
     formule: 'Player Load = Σ √(ΔAx² + ΔAy² + ΔAz²) / 100\n(somme des vecteurs d\'accélération triaxiaux)',
   },
+  {
+    id: 14,
+    cat: 'charge',
+    emoji: '📐',
+    titre_fr: 'VMA/VMI — Calcul de distance et de temps pour l\'intermittent',
+    titre_en: 'Interval training for performance: a scientific and empirical practice',
+    auteurs: 'Billat VL',
+    journal: 'Sports Medicine',
+    annee: 2001,
+    doi: '10.2165/00007256-200131010-00002',
+    chiffre_cle: 'Distance = (VMA ou VMI ÷ 3,6) × %intensité × temps',
+    usage_app: 'Formule utilisée par le Calculateur d\'intensité (onglet Groupes de niveau) pour proposer une distance ou un temps par groupe de niveau, à partir de sa VMA/VMI de référence.',
+    explication_client: 'La VMA (vitesse maximale aérobie) ou la VMI (son équivalent en intermittent) sert de référence pour calibrer l\'intensité d\'un exercice : courir à 90 % de sa VMA n\'a pas le même sens pour un joueur à 21 km/h que pour un joueur à 15 km/h. Ce calcul convertit un pourcentage d\'intensité et une durée (ou une distance) en objectif concret et personnalisé pour chaque groupe de niveau.',
+    detail_coach: 'Principe standard de prescription d\'intervalles en %VMA : la vitesse cible est un pourcentage de la VMA (ou VMI) de référence du joueur, convertie en distance parcourue sur un temps donné (ou inversement). Le calculateur de l\'app applique cette logique par groupe de niveau (moyenne ou valeur manuelle du groupe), avec en plus une réduction linéaire configurable pour les changements de direction (chaque CDD retire un % fixe de la distance théorique, pour approcher une VMA/VMI "utile" en exercice non linéaire). Limites : cette réduction est une approximation empirique réglable par le coach, pas une valeur validée par une étude spécifique — à calibrer avec l\'observation terrain.',
+    formule: 'distance (m) = (VMA/VMI ÷ 3,6) × %intensité × temps (s)\ntemps (s) = distance (m) ÷ ((VMA/VMI ÷ 3,6) × %intensité)\ndistance effective = distance théorique × (1 − %réduction × nb de changements de direction)',
+  },
   // ── BIEN-ÊTRE ──────────────────────────────────────────────────────────────
   {
     id: 10,
@@ -271,7 +287,7 @@ export default function SciencesNutrition({ coachMode = false }) {
         padding: coachMode ? '20px 24px 18px' : '18px 16px 16px',
       }}>
         <p style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '0.95rem', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
-          📚 Base scientifique de l'app
+          Base scientifique de l'app
         </p>
         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.76rem', margin: '0 0 12px', lineHeight: 1.6 }}>
           {coachMode

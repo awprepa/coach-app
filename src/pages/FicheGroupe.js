@@ -1018,9 +1018,10 @@ export default function FicheGroupe() {
       {/* ── Modal ajout membre ── */}
       {showAddMembre && (
         <Modal title="Ajouter des membres" onClose={() => setShowAddMembre(false)}>
+          <label style={S.label}>Rechercher un client</label>
           <input
             autoFocus value={searchMembre} onChange={e => setSearchMembre(e.target.value)}
-            placeholder="Rechercher un client..." style={{ ...S.input, width: '100%', boxSizing: 'border-box', marginBottom: '0.5rem' }}
+            placeholder="Nom du client..." style={{ ...S.input, width: '100%', boxSizing: 'border-box', marginBottom: '0.75rem' }}
           />
           {candidatsFiltres.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -1135,7 +1136,7 @@ function Modal({ title, onClose, children }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <h3 style={{ margin: 0, fontWeight: '800', color: '#1a1a1a', fontSize: '1.1rem' }}>{title}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
