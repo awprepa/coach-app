@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
 import ExerciceSchemaPanel from '../components/ExerciceSchemaPanel'
+import SchemaSVG from '../components/SchemaSVG'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Calendrier saison (préparateur physique) — vue mois × jours d'un groupe.
@@ -2974,6 +2975,46 @@ function SeanceModal({
   const hasBlocs = HAS_BLOCS.includes(form.type) || form.type === 'collectif'
   const totalMin = Number(form.duree_min) || 0
 
+  // ── Vue d'ensemble : miniature de schéma + volume par groupe de niveau,
+  // affichés directement dans la carte du bloc sans ouvrir le panneau
+  // "Schéma & intensité" (cahier des charges section 5).
+  const [schemaOverview, setSchemaOverview] = useState({}) // blocId -> [{niveauId, niveauNom, niveauCouleur, schemaId, schemaDonnees, volumeM}]
+  const [schemaOverviewRefresh, setSchemaOverviewRefresh] = useState(0)
+  const seqBlocIds = (panel.blocs || []).filter(b => b.bloc_type === 'sequences').map(b => b.id)
+  const seqBlocIdsKey = seqBlocIds.slice().sort().join(',')
+  useEffect(() => {
+    if (!seqBlocIds.length || !groupeId) { setSchemaOverview({}); return }
+    let cancelled = false
+    ;(async () => {
+      const [{ data: attachments }, { data: niveauxData }] = await Promise.all([
+        supabase.from('exercice_groupe_schemas').select('*').in('bloc_id', seqBlocIds),
+        supabase.from('groupes_niveau').select('id, nom, couleur').eq('groupe_id', groupeId),
+      ])
+      if (cancelled || !attachments?.length) { if (!cancelled) setSchemaOverview({}); return }
+      const schemaIds = [...new Set(attachments.map(a => a.schema_id).filter(Boolean))]
+      const { data: schemas } = schemaIds.length
+        ? await supabase.from('schemas_entrainement').select('id, donnees').in('id', schemaIds)
+        : { data: [] }
+      if (cancelled) return
+      const niveauById = Object.fromEntries((niveauxData || []).map(n => [n.id, n]))
+      const schemaById = Object.fromEntries((schemas || []).map(s => [s.id, s]))
+      const map = {}
+      attachments.forEach(a => {
+        const niveau = a.niveau_id ? niveauById[a.niveau_id] : null
+        ;(map[a.bloc_id] ||= []).push({
+          niveauId: a.niveau_id,
+          niveauNom: niveau?.nom || 'Tous',
+          niveauCouleur: niveau?.couleur || '#9ca3af',
+          schemaDonnees: a.schema_id ? schemaById[a.schema_id]?.donnees : null,
+          volumeM: a.resultat?.volumeM ?? null,
+        })
+      })
+      setSchemaOverview(map)
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seqBlocIdsKey, groupeId, schemaOverviewRefresh])
+
   // ── Durée des blocs "séquences" (jeu/récup) : toujours dérivée de leurs
   // séquences, jamais saisie à la main — élimine la désynchronisation entre
   // le chrono affiché dans le bloc et le détail jeu/récup à l'intérieur.
@@ -3202,6 +3243,19 @@ function SeanceModal({
                   </div>
                 )}
               </div>
+              {hasBlocs && usedMin > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                  <span style={{ fontSize: '.65rem', fontWeight: 700, color: usedMin === totalMin ? '#9aa1ac' : '#b45309' }}>
+                    Σ blocs : {usedMin} min{usedMin !== totalMin ? ` (écart avec la durée totale)` : ''}
+                  </span>
+                  {usedMin !== totalMin && (
+                    <button onClick={() => setForm({ duree_min: String(usedMin) })}
+                      style={{ background: 'none', border: '1px solid #b45309', color: '#b45309', borderRadius: 6, padding: '1px 7px', fontSize: '.63rem', fontWeight: 700, cursor: 'pointer' }}>
+                      Synchroniser
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={Sm.section}>
@@ -3464,6 +3518,27 @@ function SeanceModal({
                               </span>
                             ))}
                           </div>
+
+                          {/* Vue d'ensemble schémas/volumes — aperçu sans ouvrir le panneau */}
+                          {(schemaOverview[bloc.id] || []).length > 0 && (
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                              {schemaOverview[bloc.id].map((o, i) => (
+                                <div key={o.niveauId ?? `tous-${i}`} style={{ display:'flex', alignItems:'center', gap:5, background:'#f5f6f8', border:`1px solid ${o.niveauCouleur}55`, borderRadius:7, padding:'3px 7px 3px 5px' }}>
+                                  {o.schemaDonnees && (
+                                    <div style={{ width:20, height:20, borderRadius:4, overflow:'hidden', border:'1px solid #e0e3e8', flexShrink:0, background:'#fff' }}>
+                                      <SchemaSVG donnees={o.schemaDonnees} showDistances={false} />
+                                    </div>
+                                  )}
+                                  <span style={{ width:7, height:7, borderRadius:'50%', background:o.niveauCouleur, flexShrink:0 }} />
+                                  <span style={{ fontSize:'.63rem', fontWeight:800, color:'#374151' }}>{o.niveauNom}</span>
+                                  {o.volumeM != null && (
+                                    <span style={{ fontSize:'.6rem', fontWeight:700, color:'#6b7280' }}>· {o.volumeM} m</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           {/* Séries — une ligne par série, séparateur récup entre */}
                           {(() => {
                             function splitSeries(seqs) {
@@ -3905,7 +3980,7 @@ function SeanceModal({
           exerciceNom={schemaPanelBloc.nom}
           groupeId={groupeId}
           groupColor={groupColor}
-          onClose={() => setSchemaPanelBloc(null)}
+          onClose={() => { setSchemaPanelBloc(null); setSchemaOverviewRefresh(k => k + 1) }}
         />
       )}
     </>
