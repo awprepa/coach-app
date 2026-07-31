@@ -1604,17 +1604,17 @@ function EffectifView({ groupeId, groupColor }) {
 
   const RANK_LABELS = ['①','②','③','④','⑤','⑥','⑦','⑧']
 
-  // Rendu d'une carte de poste
+  // Rendu d'une carte de poste — tous les joueurs du poste sont affichés,
+  // sans limite ni "+N autres" à ouvrir (cf. retour Arthur : voir tout le
+  // monde d'un coup d'œil). Cliquer un joueur l'édite directement ;
+  // cliquer ailleurs sur la carte ouvre le panneau (ajout de joueur).
   function PosteCard({ poste }) {
     const joueursPoste = joueursAuPoste(poste.num)
-    // Afficher max 2, "+N autres" si plus
-    const displayed = joueursPoste.slice(0, 2)
-    const extra = joueursPoste.length - 2
 
     return (
       <div
         onClick={() => openPanelPos(poste.num)}
-        style={{ flex:1, maxWidth:240, borderRadius:9, overflow:'hidden',
+        style={{ flex:1, maxWidth:300, borderRadius:11, overflow:'hidden',
           border:'2px solid #e5e7eb', cursor:'pointer',
           boxShadow:'0 1px 3px rgba(0,0,0,0.08)',
           transition:'box-shadow 0.15s, transform 0.12s' }}
@@ -1622,50 +1622,45 @@ function EffectifView({ groupeId, groupColor }) {
         onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,0.08)' }}
       >
         {/* En-tête */}
-        <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 9px', background:'#1f2937' }}>
-          <span style={{ fontSize:'1rem', fontWeight:900, color:'#e4f816', minWidth:22 }}>{poste.num}</span>
-          <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af' }}>{poste.nom}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'#1f2937' }}>
+          <span style={{ fontSize:'1.3rem', fontWeight:900, color:'#e4f816', minWidth:26 }}>{poste.num}</span>
+          <span style={{ fontSize:'0.7rem', fontWeight:700, color:'#9ca3af' }}>{poste.nom}</span>
         </div>
         {/* Corps */}
-        <div style={{ background:'#f9fafb', padding:'4px 5px', display:'flex', flexDirection:'column', gap:3 }}>
-          {displayed.map((j, i) => {
+        <div style={{ background:'#f9fafb', padding:9, display:'flex', flexDirection:'column', gap:6 }}>
+          {joueursPoste.map((j, i) => {
             const s = getStatut(j)
             const w = getWellness(j)
             return (
-              <div key={j.id} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 7px',
-                borderRadius:6, background:'#fff', borderLeft:`3px solid ${statutBorderColor(s)}`, minHeight:26 }}>
-                <span style={{ fontSize:'0.6rem', color:'#c4ccd4', fontWeight:700, minWidth:12 }}>
+              <div key={j.id} onClick={e => { e.stopPropagation(); openPanelJoueur(j, poste.num) }}
+                style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 11px',
+                borderRadius:8, background:'#fff', borderLeft:`4px solid ${statutBorderColor(s)}`, minHeight:38 }}>
+                <span style={{ fontSize:'0.72rem', color:'#c4ccd4', fontWeight:700, minWidth:16 }}>
                   {RANK_LABELS[i]}
                 </span>
-                <span style={{ fontSize:'0.73rem', fontWeight:800, color:'#1f2937', flex:1,
+                <span style={{ fontSize:'0.9rem', fontWeight:800, color:'#1f2937', flex:1,
                   whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                   {j.prenom} {j.nom}
                 </span>
                 {w !== null && (
-                  <span style={{ fontSize:'0.65rem', fontWeight:900, color:wColor(w), minWidth:20, textAlign:'right' }}>
+                  <span style={{ fontSize:'0.78rem', fontWeight:900, color:wColor(w), minWidth:26, textAlign:'right' }}>
                     {w.toFixed(1)}
                   </span>
                 )}
-                <span style={{ width:7, height:7, borderRadius:'50%', background:statutBorderColor(s), flexShrink:0 }} />
+                <span style={{ width:9, height:9, borderRadius:'50%', background:statutBorderColor(s), flexShrink:0 }} />
               </div>
             )
           })}
-          {extra > 0 && (
-            <div style={{ fontSize:'0.62rem', color:'#9ca3af', fontWeight:600, textAlign:'center',
-              padding:'2px 0', cursor:'pointer' }}>
-              +{extra} autre{extra > 1 ? 's' : ''} →
-            </div>
-          )}
           {joueursPoste.length === 0 && (
-            <div style={{ fontSize:'0.65rem', color:'#c4ccd4', fontStyle:'italic', textAlign:'center', padding:'4px 0' }}>
+            <div style={{ fontSize:'0.76rem', color:'#c4ccd4', fontStyle:'italic', textAlign:'center', padding:'9px 0' }}>
               Non assigné
             </div>
           )}
           <button
             onClick={e => { e.stopPropagation(); openPanelPos(poste.num); setAddForm(true) }}
-            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:3,
-              padding:'3px 5px', borderRadius:5, border:'1px dashed #d1d5db',
-              fontSize:'0.62rem', color:'#c4ccd4', cursor:'pointer', background:'transparent', width:'100%',
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4,
+              padding:'7px', borderRadius:6, border:'1px dashed #d1d5db',
+              fontSize:'0.72rem', color:'#c4ccd4', cursor:'pointer', background:'transparent', width:'100%',
               marginTop:2, transition:'all 0.12s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor=groupColor; e.currentTarget.style.color=groupColor }}
             onMouseLeave={e => { e.currentTarget.style.borderColor='#d1d5db'; e.currentTarget.style.color='#c4ccd4' }}

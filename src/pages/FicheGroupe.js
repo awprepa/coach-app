@@ -82,8 +82,18 @@ export default function FicheGroupe() {
   const [pushLoading, setPushLoading]     = useState(null)
   const [dedupLoading, setDedupLoading]   = useState(null)
 
+  // ── Vue d'ensemble — nouveaux widgets ───────────────────────────────────────
+  const [classementFFR, setClassementFFR] = useState([])
+  const [prochain, setProchain]           = useState(null)     // { evenement, blocs: [{ nom, dureeMin, sequences }] }
+  const [monthEvents, setMonthEvents]     = useState({})       // { 'YYYY-MM-DD': [type,...] }
+  const [calMonth, setCalMonth]           = useState(() => new Date())
+  const [membreSort, setMembreSort]       = useState({ key: 'nom', dir: 1 })
+  const [membreSearch, setMembreSearch]   = useState('')
+  const [membreFiltre, setMembreFiltre]   = useState('tous') // 'tous' | 'surveiller'
+
   // ── Chargement ────────────────────────────────────────────────────────────
   useEffect(() => { load() }, [id]) // eslint-disable-line
+  useEffect(() => { if (groupe?.id) loadMonthEvents() }, [groupe?.id, calMonth]) // eslint-disable-line
 
   async function load(silent = false) {
     if (!silent) setLoading(true)
@@ -143,7 +153,54 @@ export default function FicheGroupe() {
     } else {
       setParent(null)
     }
+
+    // Classement FFR — seulement si le groupe est relié à monclubhouse (même source que l'onglet Compétition)
+    if (g?.monclubhouse_url) {
+      const { data: cls } = await supabase.from('classements_ffr').select('*').eq('groupe_id', g.id).order('position')
+      setClassementFFR(cls || [])
+    } else {
+      setClassementFFR([])
+    }
+
+    // Prochain entraînement (le plus proche à venir) + ses blocs/séquences
+    const todayISO = new Date().toISOString().slice(0, 10)
+    const { data: nextEvts } = await supabase.from('groupe_evenements')
+      .select('*').eq('groupe_id', id).eq('type', 'entrainement')
+      .gte('date', todayISO).order('date').order('heure').limit(1)
+    const nextEvt = nextEvts?.[0] || null
+    if (nextEvt) {
+      const { data: blocsData } = await supabase.from('groupe_seance_blocs')
+        .select('*, groupe_seance_sequences(*)').eq('evenement_id', nextEvt.id).order('ordre')
+      const blocs = (blocsData || []).map(b => {
+        const seqs = (b.groupe_seance_sequences || []).sort((a, z) => a.ordre - z.ordre)
+        const dureeSec = seqs.reduce((acc, s) => acc + (s.duree_sec || 0), 0)
+        const jeuSec = seqs.filter(s => s.type === 'jeu').reduce((acc, s) => acc + (s.duree_sec || 0), 0)
+        return {
+          nom: b.nom,
+          dureeMin: seqs.length ? Math.round(dureeSec / 60) : (parseInt(b.duree, 10) || 0),
+          hasSequences: seqs.length > 0,
+          jeuMin: Math.round(jeuSec / 60),
+        }
+      })
+      setProchain({ evenement: nextEvt, blocs })
+    } else {
+      setProchain(null)
+    }
+
     if (!silent) setLoading(false)
+  }
+
+  // ── Mini calendrier — évènements du mois affiché ────────────────────────────
+  async function loadMonthEvents() {
+    const y = calMonth.getFullYear(), m = calMonth.getMonth()
+    const start = `${y}-${String(m + 1).padStart(2, '0')}-01`
+    const endDate = new Date(y, m + 1, 0)
+    const end = `${y}-${String(m + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+    const { data } = await supabase.from('groupe_evenements')
+      .select('date, type').eq('groupe_id', id).gte('date', start).lte('date', end)
+    const map = {}
+    for (const e of (data || [])) { (map[e.date] ||= []).push(e.type) }
+    setMonthEvents(map)
   }
 
   // ── Édition du groupe ──────────────────────────────────────────────────────
@@ -650,8 +707,46 @@ export default function FicheGroupe() {
 
   const accent = groupe.couleur || '#333333'
 
+  // ── Membres — recherche + filtre + tri (nom de famille affiché en premier) ──
+  function membreAvg(m) {
+    const w = wellnessMap[m.id]
+    return w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
+  }
+  const membresAffiches = membres
+    .filter(m => `${m.prenom} ${m.nom}`.toLowerCase().includes(membreSearch.toLowerCase()))
+    .filter(m => {
+      if (membreFiltre !== 'surveiller') return true
+      const avg = membreAvg(m)
+      const sub = subInfo(m.date_fin)
+      return (avg !== null && avg <= 2) || (sub && sub.label !== 'Expiré' && parseInt(sub.label) <= 7)
+    })
+    .sort((a, b) => {
+      let cmp = 0
+      if (membreSort.key === 'nom') cmp = a.nom.localeCompare(b.nom)
+      else if (membreSort.key === 'wellness') cmp = (membreAvg(a) ?? -1) - (membreAvg(b) ?? -1)
+      else if (membreSort.key === 'offre') cmp = (a.offre || '').localeCompare(b.offre || '')
+      return cmp * membreSort.dir
+    })
+  function toggleMembreSort(key) {
+    setMembreSort(prev => ({ key, dir: prev.key === key ? -prev.dir : 1 }))
+  }
+
+  // ── Mini calendrier ──
+  const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+  const calY = calMonth.getFullYear(), calM = calMonth.getMonth()
+  const firstDow = (new Date(calY, calM, 1).getDay() + 6) % 7 // 0 = lundi
+  const nbJours = new Date(calY, calM + 1, 0).getDate()
+  const todayISOCal = new Date().toISOString().slice(0, 10)
+  const calCells = []
+  for (let i = 0; i < firstDow; i++) calCells.push(null)
+  for (let d = 1; d <= nbJours; d++) calCells.push(d)
+  const CAL_EVENT_COLOR = { entrainement: '#dc2626', match: '#2563eb', muscu: '#6366f1' }
+
+  // ── Prochain entraînement — timeline proportionnelle à la durée ──
+  const BLOC_TIMELINE_COLORS = ['#2c5faa', '#b45309', '#1d4ed8', '#7c3aed', '#0f766e', '#be185d']
+
   return (
-    <div style={tab === 'calendrier' ? S.pageWide : S.page}>
+    <div style={S.pageWide}>
       {/* ── Retour ── */}
       <button onClick={() => parent ? navigate(`/groupe/${parent.id}`) : navigate('/clients')} style={S.back}>
         ← {parent ? parent.nom : 'Clients'}
@@ -663,6 +758,8 @@ export default function FicheGroupe() {
           .fg-header{flex-wrap:wrap;gap:0.75rem;}
           .fg-actions{width:100%;}
           .fg-actions button{flex:1;}
+          .fg-row2{grid-template-columns:1fr !important;}
+          .fg-row3{grid-template-columns:1fr !important;}
         }
       `}</style>
       {/* ── Header groupe ── */}
@@ -670,7 +767,9 @@ export default function FicheGroupe() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {groupe.logo_url
             ? <img src={groupe.logo_url} alt={groupe.nom} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 12 }} />
-            : <div style={{ width: 64, height: 64, borderRadius: 12, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem' }}>🏆</div>
+            : <div style={{ width: 64, height: 64, borderRadius: 12, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.3rem', color: accent }}>
+                {groupe.nom.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+              </div>
           }
           <div>
             {parent && <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Sous-groupe de {parent.nom}</p>}
@@ -686,8 +785,12 @@ export default function FicheGroupe() {
           </div>
         </div>
         <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => setEditOpen(true)} style={S.btnSecondary}>✏️ Modifier</button>
-          <button onClick={supprimerGroupe} style={{ ...S.btnSecondary, color: '#dc2626', borderColor: '#fee2e2' }}>🗑 Supprimer</button>
+          <button onClick={() => setEditOpen(true)} style={S.btnSecondary}>
+            <IcoEdit /> Modifier
+          </button>
+          <button onClick={supprimerGroupe} style={{ ...S.btnSecondary, color: '#dc2626', borderColor: '#fee2e2' }}>
+            <IcoTrash /> Supprimer
+          </button>
         </div>
       </div>
 
@@ -702,7 +805,7 @@ export default function FicheGroupe() {
         </button>
         <button onClick={() => setTab('calendrier')}
           style={{ ...S.tab, ...(tab === 'calendrier' ? { background: '#333333', color: '#fff' } : null) }}>
-          📅 Calendrier
+          <IcoCalendar /> Calendrier
         </button>
       </div>
 
@@ -710,176 +813,285 @@ export default function FicheGroupe() {
         <CalendrierSaison groupeId={id} embedded />
       ) : (
       <>
-      {/* ── Sous-groupes ── */}
-      <Section title="Sous-groupes" accent={accent}>
-        {sousGroupes.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            {sousGroupes.map(sg => (
-              <div key={sg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', background: 'white', borderRadius: 14, border: `1.5px solid ${sg.couleur}30`, cursor: 'pointer' }}
-                onClick={() => navigate(`/groupe/${sg.id}`)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: sg.couleur, display: 'inline-block' }} />
-                  <span style={{ fontWeight: '700', color: '#333' }}>{sg.nom}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Sous-groupe</span>
-                  <button onClick={e => { e.stopPropagation(); supprimerSousGroupe(sg.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }}>✕</button>
-                  <span style={{ color: '#d1d5db', fontSize: '1.25rem' }}>›</span>
-                </div>
+      {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1.5fr 1fr' }} className="fg-row2">
+        <div style={S.panel}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Intensité des entraînements</span></div>
+          <div style={{ padding: '0 1.1rem 1.1rem' }}>
+            <GroupeIntensite groupeId={id} accent={accent} />
+          </div>
+        </div>
+
+        <div style={S.panel}>
+          <div style={S.panelHead}>
+            <button onClick={() => setCalMonth(new Date(calY, calM - 1, 1))} style={S.calNavBtn}><IcoChevronL /></button>
+            <span style={{ ...S.panelLabel, textTransform: 'capitalize', fontSize: '0.78rem', color: '#1a1a1a' }}>{MOIS_LABELS[calM]} {calY}</span>
+            <button onClick={() => setCalMonth(new Date(calY, calM + 1, 1))} style={S.calNavBtn}><IcoChevronR /></button>
+          </div>
+          <div style={{ padding: '0 1.1rem 1.1rem' }}>
+            <div style={{ maxWidth: 250, margin: '0 auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 4 }}>
+                {['L','M','M','J','V','S','D'].map((d, i) => (
+                  <div key={i} style={{ fontSize: '0.58rem', fontWeight: 800, color: '#9ca3af', textAlign: 'center', textTransform: 'uppercase' }}>{d}</div>
+                ))}
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
+                {calCells.map((d, i) => {
+                  if (d === null) return <div key={i} />
+                  const iso = `${calY}-${String(calM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                  const evs = monthEvents[iso] || []
+                  const isToday = iso === todayISOCal
+                  return (
+                    <div key={i} style={{ position: 'relative', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.72rem', fontWeight: 700, color: isToday ? accent : '#333', borderRadius: 7,
+                      background: isToday ? '#fff' : '#f9fafb', border: isToday ? `1.5px solid ${accent}` : '1px solid transparent' }}>
+                      {d}
+                      {evs[0] && <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: CAL_EVENT_COLOR[evs[0]] || '#9ca3af' }} />}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.9rem', paddingTop: '0.7rem', marginTop: '0.6rem', borderTop: '1px solid #f3f4f6' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626' }} />Entraînement
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb' }} />Match
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Ligne 2 : Membres (triable, défilant) + Classement + Prochain entraînement ── */}
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1.35fr 0.8fr 0.85fr' }} className="fg-row3">
+        <div style={S.panel}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Membres · {membres.length}</span></div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 9, padding: '0.4rem 0.7rem' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+              <input value={membreSearch} onChange={e => setMembreSearch(e.target.value)} placeholder="Rechercher un membre..."
+                style={{ border: 'none', outline: 'none', background: 'transparent', font: 'inherit', fontSize: '0.8rem', width: '100%' }} />
+            </div>
+            {[['tous', 'Tous'], ['surveiller', 'À surveiller']].map(([k, l]) => (
+              <button key={k} onClick={() => setMembreFiltre(k)}
+                style={{ font: 'inherit', fontSize: '0.74rem', fontWeight: 700, color: membreFiltre === k ? '#fff' : '#6b7280', background: membreFiltre === k ? '#333' : '#f3f4f6', border: 'none', borderRadius: 8, padding: '0.4rem 0.7rem', cursor: 'pointer' }}>
+                {l}
+              </button>
             ))}
           </div>
-        )}
-
-        {showAddSG ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.75rem', background: '#f9fafb', borderRadius: 12 }}>
-            <input
-              autoFocus value={newSGNom} onChange={e => setNewSGNom(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && creerSousGroupe()}
-              placeholder="Nom du sous-groupe..." style={S.input}
-            />
-            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <button onClick={() => setNewSGCouleur('')}
-                style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-              {PALETTE_SG.map(c => (
-                <button key={c} onClick={() => setNewSGCouleur(c)}
-                  style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
-              <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#9ca3af', fontWeight: '600' }}>Annuler</button>
-            </div>
+          <div style={{ maxHeight: 284, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+              <thead>
+                <tr>
+                  {[['nom', 'Nom'], ['offre', 'Abonnement'], ['wellness', 'Wellness']].map(([k, l]) => (
+                    <th key={k} onClick={() => toggleMembreSort(k)}
+                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 1.1rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                      {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {membresAffiches.map(m => {
+                  const offre = OFFRES[m.offre]
+                  const avg = membreAvg(m)
+                  const col = avg !== null ? wellnessColor(avg) : '#9ca3af'
+                  return (
+                    <tr key={m.id} onClick={() => navigate(`/client/${m.id}`)} style={{ cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
+                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.56rem', fontWeight: 800, flexShrink: 0 }}>
+                            {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
+                          </span>
+                          <span style={{ fontWeight: 700, color: '#333' }}>{m.nom} {m.prenom}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
+                        {offre && <span style={{ background: offre.bg, color: offre.color, padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: 700 }}>{offre.label}</span>}
+                      </td>
+                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
+                        {avg !== null
+                          ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: col }} />{avg.toFixed(1)}</span>
+                          : <span style={{ color: '#c4ccd4' }}>—</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {membresAffiches.length === 0 && (
+                  <tr><td colSpan={3} style={{ padding: '1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.78rem' }}>Aucun membre trouvé.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <button onClick={() => setShowAddSG(true)} style={S.btnAdd}>+ Créer un sous-groupe</button>
-        )}
-      </Section>
+          <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>+ Ajouter un membre</button>
+        </div>
 
-      {/* ── Intensité des entraînements terrain ──
-           Placée avant les membres : sous une liste de 30+ joueurs, la section
-           était invisible sans scroller longuement. */}
-      <Section title="Intensité des entraînements" accent={accent}>
-        <GroupeIntensite groupeId={id} accent={accent} />
-      </Section>
-
-      {/* ── Membres ── */}
-      <Section title="Membres" accent={accent}>
-        {membres.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '0.75rem', background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #f3f4f6' }}>
-            {membres.map((m, i) => {
-              const offre = OFFRES[m.offre]
-              const sub = subInfo(m.date_fin)
-              return (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1.25rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', cursor: 'pointer' }}
-                  onClick={() => navigate(`/client/${m.id}`)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8rem', color: accent, flexShrink: 0 }}>
-                      {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
-                    </div>
-                    <span style={{ fontWeight: '700', color: '#333' }}>{m.prenom} {m.nom}</span>
+        <div style={S.panel}>
+          <div style={S.panelHead}>
+            <span style={S.panelLabel}>Classement</span>
+          </div>
+          {!groupe.monclubhouse_url ? (
+            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Relie ce groupe à monclubhouse.ffr.fr (bouton Modifier) pour afficher le classement.</p>
+          ) : classementFFR.length === 0 ? (
+            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
+          ) : (
+            <div style={{ padding: '0.1rem 0 0.6rem' }}>
+              {classementFFR.map(c => {
+                const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase())
+                return (
+                  <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
+                    {c.logo
+                      ? <img src={c.logo} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+                      : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#9ca3af', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
+                    }
+                    <span style={{ flex: 1, fontSize: '0.75rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.equipe}</span>
+                    <span style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, width: 14, textAlign: 'right' }}>{c.joues}</span>
+                    <span style={{ fontSize: '0.75rem', color: isOurs ? accent : '#1a1a1a', fontWeight: 900, width: 20, textAlign: 'right' }}>{c.pts}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {eventsCountMap[m.id] > 0 && (
-                      <span title={`${eventsCountMap[m.id]} événement${eventsCountMap[m.id] > 1 ? 's' : ''} au calendrier cette semaine`}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#eef2ff', padding: '0.15rem 0.5rem', borderRadius: 999 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
-                        </svg>
-                        <span style={{ fontSize: '0.72rem', color: '#4f46e5', fontWeight: 800 }}>{eventsCountMap[m.id]}</span>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={S.panel}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
+          {!prochain ? (
+            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600, padding: '0 1.1rem 0.6rem', margin: 0 }}>
+                {new Date(prochain.evenement.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {prochain.evenement.heure ? ` · ${prochain.evenement.heure}` : ''}
+                {prochain.evenement.duree_min ? ` · ${prochain.evenement.duree_min} min` : ''}
+              </p>
+              <div style={{ padding: '0 1.1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {prochain.blocs.map((b, i) => (
+                  <div key={i} style={{ borderRadius: 6, padding: '5px 8px', position: 'relative', background: BLOC_TIMELINE_COLORS[i % BLOC_TIMELINE_COLORS.length],
+                    height: Math.max(24, Math.round(b.dureeMin * 2.2)), display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: b.hasSequences ? 20 : 0 }}>{b.nom}</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#fff', opacity: 0.85 }}>{b.dureeMin} min</span>
+                    {b.hasSequences && (
+                      <span title={`Aperçu des séquences jeu / récup — jeu effectif ${b.jeuMin} min`}
+                        style={{ position: 'absolute', top: 5, right: 5, width: 17, height: 17, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <IcoEye />
                       </span>
                     )}
-                    {(() => {
-                      const w = wellnessMap[m.id]
-                      if (!w) return null
-                      const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
-                      const col = wellnessColor(avg)
-                      const jour = new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-                      return (
-                        <span title={`Dernier wellness · ${jour}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: col + '1a', padding: '0.15rem 0.5rem', borderRadius: 999 }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: col, flexShrink: 0 }} />
-                          <span style={{ fontSize: '0.72rem', color: col, fontWeight: 700 }}>{avg.toFixed(1)}</span>
-                        </span>
-                      )
-                    })()}
-                    {sub && <span style={{ background: sub.bg, color: sub.color, padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '700' }}>{sub.label}</span>}
-                    {offre && <span style={{ background: offre.bg, color: offre.color, padding: '0.15rem 0.55rem', borderRadius: 999, fontSize: '0.72rem', fontWeight: '600' }}>{offre.label}</span>}
-                    <button onClick={e => { e.stopPropagation(); retirerMembre(m.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }} title="Retirer du groupe">✕</button>
-                    <span style={{ color: '#d1d5db', fontSize: '1.25rem' }}>›</span>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        <button onClick={ouvrirAddMembre} style={S.btnAdd}>+ Ajouter un membre</button>
-      </Section>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
-      {/* ── Programmes du groupe ── */}
-      <Section title="Programmes du groupe" accent={accent}>
-        {programmes.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            {programmes.map(prog => {
-              const nbSeances = prog.seances?.[0]?.count ?? 0
-              const isPushing = pushLoading === prog.id
-              return (
-                <div key={prog.id} style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer' }}
-                    onClick={() => navigate(`/programme/${prog.id}`)}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                        <span style={{ fontWeight: '700', fontSize: '1rem', color: '#1a1a1a' }}>{prog.nom}</span>
-                        <span style={{ background: accent + '18', color: accent, border: `1px solid ${accent}33`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: '800' }}>TEMPLATE</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>
-                        {prog.semaines} sem · {nbSeances} séance{nbSeances > 1 ? 's' : ''}
-                        {prog.date_debut ? ` · début ${new Date(prog.date_debut).toLocaleDateString('fr-FR')}` : ''}
-                      </p>
+      {/* ── Ligne 3 : Sous-groupes + Programmes ── */}
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1fr 1fr', marginBottom: 0 }} className="fg-row3">
+        <div style={S.panel}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Sous-groupes · {sousGroupes.length}</span></div>
+          {sousGroupes.map(sg => (
+            <div key={sg.id} onClick={() => navigate(`/groupe/${sg.id}`)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.1rem', borderTop: '1px solid #f3f4f6', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: sg.couleur }} />
+                <span style={{ fontWeight: 700, color: '#333', fontSize: '0.85rem' }}>{sg.nom}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <button onClick={e => { e.stopPropagation(); supprimerSousGroupe(sg.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }}>✕</button>
+                <span style={{ color: '#d1d5db', fontSize: '1.15rem' }}>›</span>
+              </div>
+            </div>
+          ))}
+          {showAddSG ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.9rem 1.1rem', borderTop: sousGroupes.length ? '1px solid #f3f4f6' : 'none' }}>
+              <input
+                autoFocus value={newSGNom} onChange={e => setNewSGNom(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && creerSousGroupe()}
+                placeholder="Nom du sous-groupe..." style={S.input}
+              />
+              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button onClick={() => setNewSGCouleur('')}
+                  style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                {PALETTE_SG.map(c => (
+                  <button key={c} onClick={() => setNewSGCouleur(c)}
+                    style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
+                <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#9ca3af', fontWeight: '600' }}>Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddSG(true)} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>+ Créer un sous-groupe</button>
+          )}
+        </div>
+
+        <div style={S.panel}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Programmes du groupe · {programmes.length}</span></div>
+          {programmes.map(prog => {
+            const nbSeances = prog.seances?.[0]?.count ?? 0
+            const isPushing = pushLoading === prog.id
+            return (
+              <div key={prog.id} style={{ borderTop: '1px solid #f3f4f6' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.1rem', cursor: 'pointer' }}
+                  onClick={() => navigate(`/programme/${prog.id}`)}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1a1a1a' }}>{prog.nom}</span>
+                      <span style={{ background: accent + '18', color: accent, border: `1px solid ${accent}33`, borderRadius: 999, padding: '0.05rem 0.4rem', fontSize: '0.6rem', fontWeight: 800 }}>TEMPLATE</span>
                     </div>
-                    <span style={{ color: '#d1d5db', fontSize: '1.25rem' }}>›</span>
+                    <p style={{ margin: 0, fontSize: '0.74rem', color: '#9ca3af' }}>
+                      {prog.semaines} sem · {nbSeances} séance{nbSeances > 1 ? 's' : ''}
+                      {prog.date_debut ? ` · début ${new Date(prog.date_debut).toLocaleDateString('fr-FR')}` : ''}
+                    </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', padding: '0.6rem 1.25rem 0.85rem', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => pousserATous(prog)}
-                      disabled={isPushing || membres.length === 0}
-                      style={{ ...S.btnAction, background: accent, color: isLightColor(accent) ? '#1a1a1a' : 'white', opacity: membres.length === 0 ? 0.4 : 1 }}
-                    >
-                      {isPushing ? '⏳ Envoi...' : `📤 Pousser aux ${membres.length} membre${membres.length > 1 ? 's' : ''}`}
-                    </button>
-                    <button
-                      onClick={() => propaguerATous(prog)}
-                      disabled={isPushing}
-                      style={{ ...S.btnAction, background: '#f3f4f6', color: '#374151' }}
-                      title="Mettre à jour toutes les copies existantes"
-                    >
-                      🔄 Propager les modifs
-                    </button>
-                    <button
-                      onClick={() => etendreDuree(prog)}
-                      disabled={isPushing}
-                      style={{ ...S.btnAction, background: '#f3f4f6', color: '#374151' }}
-                      title="Changer la durée du programme pour le groupe et toutes les copies"
-                    >
-                      📅 Durée ({prog.semaines} sem)
-                    </button>
-                    <button
-                      onClick={() => supprimerDoublons(prog)}
-                      disabled={dedupLoading === prog.id}
-                      style={{ ...S.btnAction, background: '#fee2e2', color: '#b91c1c' }}
-                      title="Supprimer les copies en double pour chaque membre"
-                    >
-                      {dedupLoading === prog.id ? '⏳' : '🗑 Doublons'}
-                    </button>
-                  </div>
+                  <span style={{ color: '#d1d5db', fontSize: '1.15rem' }}>›</span>
                 </div>
-              )
-            })}
-          </div>
-        )}
-        <button onClick={() => navigate(`/groupe/${id}/nouveau-programme`)} style={S.btnAdd}>
-          + Nouveau programme de groupe
-        </button>
-      </Section>
+                <div style={{ display: 'flex', gap: '0.4rem', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => pousserATous(prog)}
+                    disabled={isPushing || membres.length === 0}
+                    style={{ ...S.btnAction, padding: '0.35rem 0.7rem', fontSize: '0.72rem', background: accent, color: isLightColor(accent) ? '#1a1a1a' : 'white', opacity: membres.length === 0 ? 0.4 : 1 }}
+                  >
+                    {isPushing ? 'Envoi...' : `Pousser aux ${membres.length}`}
+                  </button>
+                  <button
+                    onClick={() => propaguerATous(prog)}
+                    disabled={isPushing}
+                    style={{ ...S.btnAction, padding: '0.35rem 0.7rem', fontSize: '0.72rem', background: '#f3f4f6', color: '#374151' }}
+                    title="Mettre à jour toutes les copies existantes"
+                  >
+                    Propager
+                  </button>
+                  <button
+                    onClick={() => etendreDuree(prog)}
+                    disabled={isPushing}
+                    style={{ ...S.btnAction, padding: '0.35rem 0.7rem', fontSize: '0.72rem', background: '#f3f4f6', color: '#374151' }}
+                    title="Changer la durée du programme pour le groupe et toutes les copies"
+                  >
+                    Durée ({prog.semaines} sem)
+                  </button>
+                  <button
+                    onClick={() => supprimerDoublons(prog)}
+                    disabled={dedupLoading === prog.id}
+                    style={{ ...S.btnAction, padding: '0.35rem 0.7rem', fontSize: '0.72rem', background: '#fee2e2', color: '#b91c1c' }}
+                    title="Supprimer les copies en double pour chaque membre"
+                  >
+                    {dedupLoading === prog.id ? '...' : 'Doublons'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+          <button onClick={() => navigate(`/groupe/${id}/nouveau-programme`)} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>
+            + Nouveau programme de groupe
+          </button>
+        </div>
+      </div>
       </>
       )}
 
@@ -1119,6 +1331,26 @@ export default function FicheGroupe() {
   )
 }
 
+// ── Icônes SVG (pas d'emojis) ────────────────────────────────────────────────
+function IcoEdit() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z" /></svg>
+}
+function IcoTrash() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
+}
+function IcoCalendar() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+}
+function IcoEye() {
+  return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+}
+function IcoChevronL() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+}
+function IcoChevronR() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+}
+
 // ── Composants utilitaires ─────────────────────────────────────────────────────
 function Section({ title, accent, children }) {
   return (
@@ -1161,10 +1393,15 @@ const S = {
   page: { padding: '2rem', maxWidth: '860px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   pageWide: { padding: '2rem', maxWidth: '1400px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   tabs: { display: 'flex', gap: '0.4rem', marginBottom: '1.75rem' },
-  tab: { background: '#fff', color: '#5b626c', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' },
+  tab: { display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#fff', color: '#5b626c', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' },
   back: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600', padding: '0 0 1.5rem', display: 'block' },
   btnPrimary: { background: '#333', color: '#e4f816', border: 'none', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
-  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },
+  btnSecondary: { display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },
+  dashRow: { display: 'grid', gap: '1.25rem', marginBottom: '1.5rem', alignItems: 'start' },
+  panel: { background: 'white', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' },
+  panelHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.9rem 1.1rem 0.7rem' },
+  panelLabel: { fontSize: '0.65rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  calNavBtn: { background: '#f3f4f6', border: 'none', borderRadius: 7, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', cursor: 'pointer', flexShrink: 0 },
   btnAdd: { background: 'white', color: '#6b7280', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', width: '100%', textAlign: 'center' },
   btnAction: { border: 'none', borderRadius: 10, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
   input: { padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' },
