@@ -24,6 +24,17 @@ const OFFRES = {
   club:                 { label: 'Club',           bg: '#f0fdf4', color: '#15803d' },
 }
 
+// Même mapping poste → nom que EffectifView (CalendrierSaison.js), pour
+// afficher le poste de chaque membre dans le tableau du tableau de bord.
+const POSTE_NOMS = {
+  1: 'Pilier gauche', 2: 'Talonneur', 3: 'Pilier droit',
+  4: '2ème ligne', 5: '2ème ligne',
+  6: 'Flanker', 7: 'Flanker', 8: 'N°8',
+  9: 'Demi de mêlée', 10: 'Ouvreur',
+  12: 'Centre', 13: 'Centre',
+  11: 'Ailier gauche', 15: 'Arrière', 14: 'Ailier droit',
+}
+
 // Bornes de la semaine courante (lundi → dimanche), format YYYY-MM-DD
 function getWeekBounds() {
   const today = new Date()
@@ -92,6 +103,7 @@ export default function FicheGroupe() {
   const [membreSort, setMembreSort]       = useState({ key: 'nom', dir: 1 })
   const [effectifOpen, setEffectifOpen]   = useState(false)
   const [membreSearch, setMembreSearch]   = useState('')
+  const [posteMap, setPosteMap]           = useState({}) // { client_id: nom du poste principal }
   const [membreFiltre, setMembreFiltre]   = useState('tous') // 'tous' | 'surveiller'
 
   // ── Chargement ────────────────────────────────────────────────────────────
@@ -122,6 +134,20 @@ export default function FicheGroupe() {
     const membresList = (gm || []).map(r => r.clients).filter(Boolean)
     setMembres(membresList)
     setProgrammes(progs || [])
+
+    // Poste principal de chaque membre — vient de l'effectif (groupe_joueurs
+    // liés par client_id), pas des clients directement.
+    const { data: joueursData } = await supabase
+      .from('groupe_joueurs').select('client_id, joueur_postes(poste, is_primary)')
+      .eq('groupe_id', id).not('client_id', 'is', null)
+    const pMap = {}
+    for (const j of (joueursData || [])) {
+      if (!j.client_id) continue
+      const postes = j.joueur_postes || []
+      const primary = postes.find(p => p.is_primary) || postes[0]
+      if (primary) pMap[j.client_id] = POSTE_NOMS[primary.poste] || `Poste ${primary.poste}`
+    }
+    setPosteMap(pMap)
 
     // Dernier wellness de chaque membre
     const memberIds = membresList.map(m => m.id)
@@ -727,7 +753,7 @@ export default function FicheGroupe() {
       let cmp = 0
       if (membreSort.key === 'nom') cmp = a.nom.localeCompare(b.nom)
       else if (membreSort.key === 'wellness') cmp = (membreAvg(a) ?? -1) - (membreAvg(b) ?? -1)
-      else if (membreSort.key === 'offre') cmp = (a.offre || '').localeCompare(b.offre || '')
+      else if (membreSort.key === 'poste') cmp = (posteMap[a.id] || '').localeCompare(posteMap[b.id] || '')
       return cmp * membreSort.dir
     })
   function toggleMembreSort(key) {
@@ -890,7 +916,7 @@ export default function FicheGroupe() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
               <thead>
                 <tr>
-                  {[['nom', 'Nom'], ['offre', 'Abonnement'], ['wellness', 'Wellness']].map(([k, l]) => (
+                  {[['nom', 'Nom'], ['poste', 'Poste'], ['wellness', 'Wellness']].map(([k, l]) => (
                     <th key={k} onClick={() => toggleMembreSort(k)}
                       style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 1.1rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
                       {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
@@ -900,7 +926,7 @@ export default function FicheGroupe() {
               </thead>
               <tbody>
                 {membresAffiches.map(m => {
-                  const offre = OFFRES[m.offre]
+                  const poste = posteMap[m.id]
                   const avg = membreAvg(m)
                   const col = avg !== null ? wellnessColor(avg) : '#9ca3af'
                   return (
@@ -914,8 +940,8 @@ export default function FicheGroupe() {
                           <span style={{ fontWeight: 700, color: '#333' }}>{m.nom} {m.prenom}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
-                        {offre && <span style={{ background: offre.bg, color: offre.color, padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: 700 }}>{offre.label}</span>}
+                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6', color: poste ? '#374151' : '#c4ccd4', fontSize: '0.74rem' }}>
+                        {poste || '—'}
                       </td>
                       <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
                         {avg !== null
