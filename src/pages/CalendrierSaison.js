@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
-import ExerciceSchemaPanel from '../components/ExerciceSchemaPanel'
 import SchemaSVG from '../components/SchemaSVG'
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +47,6 @@ function matchCatColor(categorie, groupColor) {
   return (c === undefined || c === null) ? groupColor : c
 }
 // Planification entraînement
-const STYLE_COLORS = { 'Modéré': '#059669', 'Vitesse': '#d97706', 'Volume': '#2563eb' }
 const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
 const CONTACT_LEVELS = [
   { label: 'Aucun contact',    desc: '' },
@@ -345,8 +343,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   function emptyForm(dateISO) {
     return {
       type: 'entrainement', date: dateISO || seasonStart, heure: '', titre: '',
-      style: '', adversaire: '', categorie: 'Championnat', domicile: true, journee: '',
-      lieu: '', duree_min: '', charge: '', note: '', themes_seance: '',
+      adversaire: '', categorie: 'Championnat', domicile: true, journee: '',
+      lieu: '', duree_min: '', note: '', themes_seance: '',
     }
   }
   function openCreate(dateISO) {
@@ -418,9 +416,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       mode: 'edit', evt: e,
       form: {
         type: e.type, date: e.date, heure: e.heure || '', titre: e.titre || '',
-        style: e.style || '', adversaire: e.adversaire || '', categorie: e.categorie || 'Championnat',
+        adversaire: e.adversaire || '', categorie: e.categorie || 'Championnat',
         domicile: e.domicile ?? true, journee: e.journee || '',
-        lieu: e.lieu || '', duree_min: e.duree_min || '', charge: e.charge || '', note: e.note || '',
+        lieu: e.lieu || '', duree_min: e.duree_min || '', note: e.note || '',
         themes_seance: e.themes_seance || '',
       },
       blocs,
@@ -480,7 +478,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
         groupe_id: groupe.id, date: ev.date, type: ev.type || 'entrainement',
         heure: ev.heure || null, titre: ev.titre || null, lieu: ev.lieu || null,
         duree_min: ev.duree_min ? Number(ev.duree_min) : null,
-        charge: ev.charge || null, note: ev.note || null,
+        charge: null, note: ev.note || null,
         style: null, themes_seance: ev.themes_seance || null,
         adversaire: isMatch ? (ev.adversaire || null) : null,
         categorie: isMatch ? (ev.categorie || 'Championnat') : null,
@@ -511,8 +509,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     return {
       groupe_id: groupe.id, date: f.date, heure: f.heure || null, type: f.type,
       titre: f.titre || null, lieu: f.lieu || null,
-      duree_min: f.duree_min ? Number(f.duree_min) : null, charge: f.charge || null, note: f.note || null,
-      style:          f.type === 'entrainement' ? (f.style || null) : null,
+      duree_min: f.duree_min ? Number(f.duree_min) : null, charge: null, note: f.note || null,
+      style: null,
       themes_seance:  f.type === 'entrainement' ? (f.themes_seance || null) : null,
       adversaire: isMatch ? (f.adversaire || null) : null,
       categorie:  isMatch ? (f.categorie || null) : null,
@@ -573,7 +571,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const payload = {
       groupe_id: groupe.id, date: dateISO, heure: s.heure || null, type: s.type,
       titre: s.titre || null, lieu: s.lieu || null, duree_min: s.duree_min || null,
-      charge: s.charge || null, note: s.note || null, style: s.style || null,
+      charge: null, note: s.note || null, style: null,
       themes_seance: s.themes_seance || null,
       adversaire: s.adversaire || null, categorie: s.categorie || null,
       domicile: s.domicile, journee: s.journee || null,
@@ -609,22 +607,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   async function deleteBloc(id) {
     setPanel(p => ({ ...p, blocs: p.blocs.filter(b => b.id !== id) }))
     await supabase.from('groupe_seance_blocs').delete().eq('id', id)
-  }
-  async function moveBloc(id, direction) {
-    // Renumérotation 1..n — robuste même si les ordres sont nuls ou dupliqués
-    const sorted = [...panel.blocs].sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
-    const idx = sorted.findIndex(b => b.id === id)
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-    if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return
-    ;[sorted[idx], sorted[swapIdx]] = [sorted[swapIdx], sorted[idx]]
-    const renum = sorted.map((b, i) => ({ ...b, ordre: i + 1 }))
-    setPanel(p => ({ ...p, blocs: p.blocs.map(bl => {
-      const r = renum.find(x => x.id === bl.id)
-      return r ? { ...bl, ordre: r.ordre } : bl
-    })}))
-    await Promise.all(renum.map(b =>
-      supabase.from('groupe_seance_blocs').update({ ordre: b.ordre }).eq('id', b.id)
-    ))
   }
   // ── State helpers séquences ────────────────────────────────────────────────
   function setBlocSeqs(blocId, seqsOrUpdater) {
@@ -904,8 +886,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
             return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Tests" style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
-          const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
-          const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
+          const txt = e.type === 'entrainement' ? (e.titre || T.label) : (e.titre || T.short || T.label)
+          const styleColor = null
           return (
             <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={T.label}
               style={{
@@ -1199,9 +1181,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
                 </div>
               </>
             )}
-            {pop.form.type === 'entrainement' && (
-              <input value={pop.form.style} onChange={e => setPopForm({ style: e.target.value })} placeholder="Style (ex. Vitesse, Collectif…)" style={S.popInput} />
-            )}
             {pop.form.type === 'muscu' && (
               <input value={pop.form.titre} onChange={e => setPopForm({ titre: e.target.value })} placeholder="Titre (ex. Force max)" style={S.popInput} />
             )}
@@ -1348,7 +1327,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
           addBloc={addBloc}
           updateBloc={updateBloc}
           deleteBloc={deleteBloc}
-          moveBloc={moveBloc}
           addExo={addExo}
           updateExo={updateExo}
           deleteExo={deleteExo}
@@ -2229,10 +2207,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     const type = typeof evt === 'string' ? evt : evt?.type
     if (type === 'match' || type === 'ffr_match') return groupColor
     if (type === 'muscu') return '#b08769'
-    if (type === 'entrainement') {
-      const s = typeof evt === 'object' ? evt?.style : null
-      return STYLE_COLORS[s] || '#6b94a3'
-    }
+    if (type === 'entrainement') return '#6b94a3'
     return '#9aa1ac'
   }
 
@@ -2243,32 +2218,6 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     if (intervenant === 'coachs') return '#1d4ed8'
     if (intervenant === 'both')   return '#1a1a1a'
     return BLOC_COLORS[idx % BLOC_COLORS.length]
-  }
-
-  function chargeLevel(charge) {
-    if (!charge) return null
-    const c = charge.toLowerCase()
-    if (c.includes('lég') || c.includes('faib') || c.includes('bass') || c.includes('repos')) return 'low'
-    if (c.includes('mod') || c.includes('moyen')) return 'medium'
-    if (c.includes('haut') || c.includes('fort') || c.includes('élev') || c.includes('elev')) return 'high'
-    return null
-  }
-  const INT_COLOR = { low: '#16a34a', medium: '#d97706', high: '#dc2626' }
-  const INT_LABEL = { low: 'Légère', medium: 'Modérée', high: 'Haute' }
-
-  function IntensityBar({ charge }) {
-    const lvl = chargeLevel(charge)
-    if (!lvl) return null
-    const c = INT_COLOR[lvl]
-    const filled = lvl === 'low' ? 1 : lvl === 'medium' ? 2 : 3
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px 5px' }}>
-        <span style={{ fontSize: '.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: c }}>{INT_LABEL[lvl]}</span>
-        <div style={{ display: 'flex', gap: 3 }}>
-          {[1,2,3].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: 2, background: i <= filled ? c : '#e5e7eb' }} />)}
-        </div>
-      </div>
-    )
   }
 
   // Parse la durée d'un bloc en minutes (ex: "30 min", "1h30", "45")
@@ -2407,7 +2356,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     }
 
     // Libellé principal de la séance
-    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+    const evtLabel = evt.type === 'entrainement' ? (evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
 
@@ -2653,7 +2602,6 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 </div>
               )}
               <EventContent evt={evt} />
-              {evt.charge && <IntensityBar charge={evt.charge} />}
             </div>
           ))}
         </div>
@@ -2664,7 +2612,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   /* ── DayPreviewModal — fiche séance style tableau ── */
   function DayPreviewModal({ evt, blocs }) {
     const color = evtColor(evt)
-    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+    const evtLabel = evt.type === 'entrainement' ? (evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
 
@@ -2921,7 +2869,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 function clipLabel(e) {
   if (!e) return ''
   if (e.type === 'match') return e.adversaire || 'Match'
-  if (e.type === 'entrainement') return e.style || e.titre || 'Entraînement'
+  if (e.type === 'entrainement') return e.titre || 'Entraînement'
   return e.titre || (TYPES[e.type]?.label) || 'Évènement'
 }
 function formatPopDate(dateISO) {
@@ -2965,13 +2913,12 @@ function calcDureeBloc(seqs) {
 /* ── SeanceModal — plein écran, remplace l'ancien panneau latéral ── */
 function SeanceModal({
   panel, groupColor, groupeId, couleurSecondaire, closePanel, setForm,
-  addBloc, updateBloc, deleteBloc, moveBloc,
+  addBloc, updateBloc, deleteBloc,
   addExo, updateExo, deleteExo,
   saveEvent, deleteEvent, saving,
   removeSeq, addSeqToState, patchSeqInState, setBlocSeqs, addSeqBeforeInterBloc,
   reloadBlocs,
 }) {
-  const [schemaPanelBloc, setSchemaPanelBloc] = useState(null) // bloc séquences en édition schéma/intensité
   const BLOC_COLORS = generateBlocPalette(groupColor, couleurSecondaire)
   function blocColor(idx, intervenant) {
     if (intervenant === 'prepa')  return '#b45309'
@@ -3023,6 +2970,89 @@ function SeanceModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seqBlocIdsKey, groupeId, schemaOverviewRefresh])
 
+  // ── Niveaux & intensité — colonne persistante (remplace le panneau popup) ──
+  const [activeNiveauBlocId, setActiveNiveauBlocId] = useState(null)
+  const activeNiveauBloc = (panel.blocs || []).find(b => b.id === activeNiveauBlocId) || null
+  const [niveauxRail, setNiveauxRail] = useState({ niveaux: [], schemas: [], attachments: [], loading: false })
+  const [calcNiveau, setCalcNiveau] = useState(null)
+  const seqBlocsList = (panel.blocs || []).filter(b => b.bloc_type === 'sequences')
+  const seqBlocsListKey = seqBlocsList.map(b => b.id).join(',')
+  useEffect(() => {
+    if (!seqBlocsList.find(b => b.id === activeNiveauBlocId)) {
+      setActiveNiveauBlocId(seqBlocsList[0]?.id || null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seqBlocsListKey])
+  useEffect(() => {
+    if (!activeNiveauBlocId || !groupeId) { setNiveauxRail({ niveaux: [], schemas: [], attachments: [], loading: false }); return }
+    let cancelled = false
+    setNiveauxRail(r => ({ ...r, loading: true }))
+    ;(async () => {
+      const [{ data: n }, { data: s }, { data: a }] = await Promise.all([
+        supabase.from('groupes_niveau').select('*').eq('groupe_id', groupeId).order('ordre'),
+        supabase.from('schemas_entrainement').select('id, nom, donnees').order('nom'),
+        supabase.from('exercice_groupe_schemas').select('*').eq('bloc_id', activeNiveauBlocId),
+      ])
+      if (cancelled) return
+      setNiveauxRail({ niveaux: n || [], schemas: s || [], attachments: a || [], loading: false })
+    })()
+    return () => { cancelled = true }
+  }, [activeNiveauBlocId, groupeId])
+  function niveauAttachmentFor(niveauId) {
+    return niveauxRail.attachments.find(a => a.niveau_id === niveauId) || null
+  }
+  async function setNiveauSchema(niveauId, schemaId) {
+    const existing = niveauAttachmentFor(niveauId)
+    if (existing) {
+      if (!schemaId && !existing.resultat) {
+        await supabase.from('exercice_groupe_schemas').delete().eq('id', existing.id)
+        setNiveauxRail(r => ({ ...r, attachments: r.attachments.filter(a => a.id !== existing.id) }))
+      } else {
+        await supabase.from('exercice_groupe_schemas').update({ schema_id: schemaId || null, updated_at: new Date().toISOString() }).eq('id', existing.id)
+        setNiveauxRail(r => ({ ...r, attachments: r.attachments.map(a => a.id === existing.id ? { ...a, schema_id: schemaId || null } : a) }))
+      }
+    } else if (schemaId) {
+      const { data, error } = await supabase.from('exercice_groupe_schemas')
+        .insert({ bloc_id: activeNiveauBlocId, niveau_id: niveauId, schema_id: schemaId }).select().single()
+      if (!error) setNiveauxRail(r => ({ ...r, attachments: [...r.attachments, data] }))
+    }
+    setSchemaOverviewRefresh(k => k + 1)
+  }
+  async function retirerNiveauAttachment(niveauId) {
+    const existing = niveauAttachmentFor(niveauId)
+    if (!existing) return
+    await supabase.from('exercice_groupe_schemas').delete().eq('id', existing.id)
+    setNiveauxRail(r => ({ ...r, attachments: r.attachments.filter(a => a.id !== existing.id) }))
+    setSchemaOverviewRefresh(k => k + 1)
+  }
+  async function appliquerCalculNiveau(niveau, { parametres, resultat }) {
+    const existing = niveauAttachmentFor(niveau.id)
+    if (existing) {
+      await supabase.from('exercice_groupe_schemas').update({ parametres_calcul: parametres, resultat, updated_at: new Date().toISOString() }).eq('id', existing.id)
+      setNiveauxRail(r => ({ ...r, attachments: r.attachments.map(a => a.id === existing.id ? { ...a, parametres_calcul: parametres, resultat } : a) }))
+    } else {
+      const { data, error } = await supabase.from('exercice_groupe_schemas')
+        .insert({ bloc_id: activeNiveauBlocId, niveau_id: niveau.id, parametres_calcul: parametres, resultat }).select().single()
+      if (!error) setNiveauxRail(r => ({ ...r, attachments: [...r.attachments, data] }))
+    }
+    setCalcNiveau(null)
+    setSchemaOverviewRefresh(k => k + 1)
+  }
+
+  // ── Réordonnancement des blocs par glisser-déposer ──
+  const dragBlocRef = useRef(null)
+  function reorderBlocs(fromId, targetId) {
+    if (!fromId || fromId === targetId) return
+    const sorted = [...panel.blocs].sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+    const fromIdx = sorted.findIndex(b => b.id === fromId)
+    const toIdx = sorted.findIndex(b => b.id === targetId)
+    if (fromIdx === -1 || toIdx === -1) return
+    const reordered = [...sorted]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    reordered.forEach((b, i) => { if ((b.ordre || 0) !== i + 1) updateBloc(b.id, { ordre: i + 1 }) })
+  }
+
   // ── Durée des blocs "séquences" (jeu/récup) : toujours dérivée de leurs
   // séquences, jamais saisie à la main — élimine la désynchronisation entre
   // le chrono affiché dans le bloc et le détail jeu/récup à l'intérieur.
@@ -3041,81 +3071,16 @@ function SeanceModal({
   const [recupEditBloc, setRecupEditBloc] = useState(null)
   const [recupDraft, setRecupDraft]       = useState('')
 
-  // ── Timeline ──
-  const blocksAreaRef = useRef(null)
-  const [pxMin, setPxMin] = useState(3)
-  const pxMinRef = useRef(3)
-  const dragRef = useRef(null)
-  const updateBlocRef = useRef(updateBloc)
-  updateBlocRef.current = updateBloc
-  const [localDurs, setLocalDurs] = useState({})
-
-  // PX_MIN dynamique basé sur la hauteur de la zone
-  useEffect(() => {
-    const area = blocksAreaRef.current
-    if (!area) return
-    const compute = () => {
-      const h = area.getBoundingClientRect().height
-      if (h > 0 && totalMin > 0) {
-        const v = Math.max(1.5, (h - 16) / totalMin)
-        pxMinRef.current = v
-        setPxMin(v)
-      }
-    }
-    compute()
-    const ro = new ResizeObserver(compute)
-    ro.observe(area)
-    return () => ro.disconnect()
-  }, [totalMin])
-
-  // Drag (listeners sur document, une seule fois)
-  useEffect(() => {
-    const onMove = (e) => {
-      const d = dragRef.current
-      if (!d) return
-      const deltaMin = Math.round((e.clientY - d.startY) / pxMinRef.current)
-      const newDur = Math.max(5, Math.min(d.maxDur, d.startDur + deltaMin))
-      d.currentDur = newDur
-      setLocalDurs(prev => ({ ...prev, [d.id]: newDur }))
-    }
-    const onUp = () => {
-      const d = dragRef.current
-      if (!d) return
-      if (d.currentDur != null && d.currentDur !== d.startDur) {
-        updateBlocRef.current(d.id, { duree: String(d.currentDur) })
-      }
-      dragRef.current = null
-      setLocalDurs({})
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-    return () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-  }, [])
-
   // Blocs triés + startMin cumulatif
   const sortedBlocs = [...panel.blocs].sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
   let cursor = 0
   const blocsWithPos = sortedBlocs.map(b => {
-    const dur = localDurs[b.id] ?? parseDurMin(b.duree) ?? 0
+    const dur = parseDurMin(b.duree) ?? 0
     const start = cursor
     cursor += dur
     return { ...b, startMin: start, durationMin: dur }
   })
   const usedMin = blocsWithPos.reduce((s, b) => s + b.durationMin, 0)
-
-  function startDrag(e, bloc) {
-    e.preventDefault()
-    const sumOthers = blocsWithPos.filter(b => b.id !== bloc.id).reduce((s, b) => s + b.durationMin, 0)
-    const maxDur = Math.max(5, totalMin - sumOthers)
-    dragRef.current = { id: bloc.id, startY: e.clientY, startDur: bloc.durationMin, startMin: bloc.startMin, maxDur, currentDur: bloc.durationMin }
-    document.body.style.cursor = 'ns-resize'
-    document.body.style.userSelect = 'none'
-  }
 
   // ── Séquences ──
   const evtId = panel.evt?.id
@@ -3203,7 +3168,6 @@ function SeanceModal({
     return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   })() : 'Nouvel événement'
 
-  const step = totalMin <= 60 ? 10 : totalMin <= 120 ? 15 : totalMin <= 180 ? 20 : 30
 
   return (
     <>
@@ -3211,7 +3175,7 @@ function SeanceModal({
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 110 }} onClick={closePanel} />
 
       {/* Modal — onKeyDown stopPropagation empêche les raccourcis calendrier (Cmd+C/V) de se déclencher depuis la modale */}
-      <div onKeyDown={e => e.stopPropagation()} style={{ position: 'fixed', top: 70, bottom: '2vh', left: '50%', transform: 'translateX(-50%)', width: 'min(96vw, 1000px)', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onKeyDown={e => e.stopPropagation()} style={{ position: 'fixed', top: 18, bottom: 18, left: '50%', transform: 'translateX(-50%)', width: 'min(97vw, 1500px)', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '13px 20px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
@@ -3232,7 +3196,7 @@ function SeanceModal({
         </div>
 
         {/* Body 2 colonnes */}
-        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: hasBlocs ? '400px 1fr' : '1fr', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: hasBlocs ? '300px 1fr 320px' : '1fr', overflow: 'hidden', minHeight: 0 }}>
 
           {/* ── Colonne formulaire ── */}
           <div style={{ background: '#fff', borderRight: hasBlocs ? '1px solid #e0e3e8' : 'none', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -3302,33 +3266,24 @@ function SeanceModal({
                 <>
                   <div style={{ marginBottom: 10 }}>
                     <div style={Sm.fLabel}>Thèmes</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {THEMES_SEANCE.map(t => {
-                        const active = (form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean).includes(t)
-                        return (
-                          <button key={t} onClick={() => {
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', border: '1.5px solid #e4e7ec', borderRadius: 8, padding: '6px 8px', background: '#f8f9fb' }}>
+                      {(form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean).map(t => (
+                        <span key={t} style={{ background: '#1a1a1a', color: '#e4f816', fontSize: '.66rem', fontWeight: 800, borderRadius: 5, padding: '2px 7px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          {t}
+                          <span onClick={() => {
                             const cur = (form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean)
-                            const next = active ? cur.filter(x => x !== t) : [...cur, t]
-                            setForm({ themes_seance: next.join(', ') })
-                          }} style={{ ...Sm.chip, ...(active ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>
-                            {t}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={Sm.fLabel}>Type d'entraînement</div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {Object.entries(STYLE_COLORS).map(([label, color]) => {
-                        const active = form.style === label
-                        return (
-                          <button key={label} onClick={() => setForm({ style: active ? '' : label })}
-                            style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `2px solid ${active ? color : '#e5e7eb'}`, background: active ? color : 'white', color: active ? '#fff' : '#6b7280', fontSize: '.7rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .15s' }}>
-                            {label}
-                          </button>
-                        )
-                      })}
+                            setForm({ themes_seance: cur.filter(x => x !== t).join(', ') })
+                          }} style={{ cursor: 'pointer', opacity: .7 }}>×</span>
+                        </span>
+                      ))}
+                      <select value="" onChange={e => {
+                        if (!e.target.value) return
+                        const cur = (form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean)
+                        setForm({ themes_seance: [...cur, e.target.value].join(', ') })
+                      }} style={{ border: 'none', background: 'none', outline: 'none', fontSize: '.7rem', color: '#9aa1ac', fontFamily: 'inherit', flex: 1, minWidth: 70 }}>
+                        <option value="">+ ajouter…</option>
+                        {THEMES_SEANCE.filter(t => !(form.themes_seance || '').split(',').map(s => s.trim()).includes(t)).map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
                     </div>
                   </div>
                   <div style={{ marginBottom: 10 }}>
@@ -3346,17 +3301,6 @@ function SeanceModal({
               )}
             </div>
 
-            {form.type !== 'match' && (
-              <div style={Sm.section}>
-                <div style={Sm.sTitle}>Charge</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {['Légère', 'Modérée', 'Haute'].map(c => (
-                    <button key={c} onClick={() => setForm({ charge: c })} style={{ ...Sm.chip, flex: 1, ...(form.charge === c ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>{c}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div style={Sm.section}>
               <div style={Sm.sTitle}>Lieu</div>
               <input value={form.lieu} onChange={e => setForm({ lieu: e.target.value })} placeholder="Terrain, salle…" style={Sm.input} />
@@ -3366,9 +3310,11 @@ function SeanceModal({
               <div style={Sm.sTitle}>Note</div>
               <textarea value={form.note} onChange={e => setForm({ note: e.target.value })} rows={3} style={{ ...Sm.input, resize: 'none', height: 72 }} />
             </div>
+          </div>
 
-            {/* ── Section blocs (gauche) ── */}
-            {hasBlocs && (
+          {/* ── Colonne blocs ── */}
+          {hasBlocs && (
+            <div style={{ background: '#fafbfc', borderRight: '1px solid #e0e3e8', overflowY: 'auto' }}>
               <div style={{ padding: '14px 16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 6 }}>
                   <div style={Sm.sTitle}>Blocs</div>
@@ -3398,6 +3344,13 @@ function SeanceModal({
                     <div style={{ marginBottom: 0, border: `1.5px solid ${color}35`, borderRadius: 10, overflow: 'hidden' }}>
                       {/* Tête colorée */}
                       <div style={{ background: color, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span
+                          draggable
+                          onDragStart={() => { dragBlocRef.current = bloc.id }}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={e => { e.preventDefault(); reorderBlocs(dragBlocRef.current, bloc.id) }}
+                          title="Glisser pour réordonner"
+                          style={{ cursor: 'grab', color: 'rgba(255,255,255,.6)', fontSize: '.8rem', lineHeight: 1, flexShrink: 0, letterSpacing: '-1px' }}>⠿⠿</span>
                         <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
                         <input value={bloc.nom} onChange={e => updateBloc(bloc.id, { nom: e.target.value })} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '.78rem', fontWeight: 800, fontFamily: 'inherit', minWidth: 0 }} placeholder="Nom du bloc…" />
                         {bloc.intervenant && (
@@ -3420,14 +3373,9 @@ function SeanceModal({
                         )}
                         <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
                         {bloc.bloc_type === 'sequences' && (
-                          <button onClick={() => setSchemaPanelBloc(bloc)} title="Schéma & intensité"
-                            style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 4, width: 20, height: 18, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>▦</button>
+                          <button onClick={() => setActiveNiveauBlocId(bloc.id)} title="Voir dans Niveaux & intensité"
+                            style={{ background: activeNiveauBlocId === bloc.id ? '#fff' : 'rgba(255,255,255,.18)', border: 'none', color: activeNiveauBlocId === bloc.id ? color : '#fff', borderRadius: 4, width: 20, height: 18, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1, fontWeight: 900 }}>▦</button>
                         )}
-                        {/* Flèches réorganisation */}
-                        <button onClick={() => moveBloc(bloc.id, 'up')} disabled={idx === 0}
-                          style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: idx === 0 ? 'rgba(255,255,255,.3)' : '#fff', borderRadius: 4, width: 18, height: 18, fontSize: '.7rem', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>↑</button>
-                        <button onClick={() => moveBloc(bloc.id, 'down')} disabled={isLast}
-                          style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: isLast ? 'rgba(255,255,255,.3)' : '#fff', borderRadius: 4, width: 18, height: 18, fontSize: '.7rem', cursor: isLast ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>↓</button>
                         <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                       </div>
 
@@ -3794,182 +3742,84 @@ function SeanceModal({
                   )
                 })}
               </div>
-            )}
-          </div>
-
-          {/* ── Colonne timeline (visuelle) ── */}
-          {hasBlocs && (
-            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f5f6f8', minHeight: 0 }}>
-
-              {/* Stats */}
-              <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #e0e3e8', background: '#fff', flexShrink: 0 }}>
-                <span style={{ fontSize: '.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.07em', color: '#6b7280' }}>Aperçu</span>
-                <span style={{ fontSize: '.98rem', fontWeight: 900, color: '#1a1a1a' }}>{usedMin}</span>
-                <span style={{ color: '#d1d5db' }}>/</span>
-                <span style={{ fontSize: '.98rem', fontWeight: 900, color: '#7c3aed' }}>{totalMin || '—'}</span>
-                <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#9aa1ac' }}>min</span>
-                {totalMin > 0 && (
-                  <div style={{ width: 90, height: 5, background: '#e5e7eb', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 99, width: Math.min(100, usedMin / totalMin * 100) + '%', background: usedMin > totalMin ? 'linear-gradient(90deg,#ef4444,#dc2626)' : 'linear-gradient(90deg,#10b981,#06b6d4)', transition: 'width .3s' }} />
-                  </div>
-                )}
-                <span style={{ fontSize: '.62rem', fontWeight: 700, color: usedMin > totalMin ? '#ef4444' : '#9aa1ac' }}>
-                  {totalMin > 0 ? (usedMin > totalMin ? `⚠️ +${usedMin - totalMin} min` : `· ${totalMin - usedMin} min libres`) : ''}
-                </span>
-                <span style={{ marginLeft: 'auto', fontSize: '.62rem', color: '#b0b7c0', fontStyle: 'italic' }}>← glisser pour ajuster</span>
-              </div>
-
-              {/* Zone timeline sans scroll */}
-              <div style={{ flex: 1, display: 'flex', gap: 10, padding: '12px 14px', minHeight: 0, overflow: 'hidden' }}>
-
-                {/* Ruler */}
-                <div style={{ width: 30, flexShrink: 0, position: 'relative', pointerEvents: 'none' }}>
-                  {totalMin > 0 && Array.from({ length: Math.floor(totalMin / step) + 1 }, (_, i) => i * step).map(m => (
-                    <div key={m} style={{ position: 'absolute', top: m * pxMin - 7, right: 0, left: 0, textAlign: 'right', paddingRight: 4, fontSize: '.55rem', fontWeight: 700, color: '#c4c8d0' }}>
-                      {m === 0 ? '0' : m + '\''}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Blocs area */}
-                <div ref={blocksAreaRef} style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-
-                  {/* Grid lines */}
-                  {totalMin > 0 && Array.from({ length: Math.floor(totalMin / step) + 1 }, (_, i) => i * step).map(m => (
-                    <div key={m} style={{ position: 'absolute', top: m * pxMin, left: 0, right: 0, height: 1, background: m % (step * 2) === 0 ? '#d5d8df' : '#eaecf0', pointerEvents: 'none' }} />
-                  ))}
-
-                  {/* Blocs */}
-                  {panel.mode === 'create' && panel.blocs.length === 0 && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
-                      <span style={{ fontSize: '.8rem', color: '#9aa1ac', fontStyle: 'italic' }}>Enregistre la séance pour ajouter des blocs.</span>
-                    </div>
-                  )}
-
-                  {blocsWithPos.map((bloc, idx) => {
-                    const color = blocColor(idx, bloc.intervenant)
-                    const top = bloc.startMin * pxMin
-                    const height = bloc.durationMin * pxMin
-                    const groups = {}
-                    for (const exo of (bloc.exos || [])) {
-                      const g = exo.groupe_label?.trim() || ''
-                      ;(groups[g] ||= []).push(exo)
-                    }
-                    const gKeys = Object.keys(groups)
-                    const hasGroups = gKeys.length > 1 || (gKeys.length === 1 && gKeys[0] !== '')
-
-                    return (
-                      <div key={bloc.id} style={{ position: 'absolute', left: 0, right: 0, top, height: Math.max(height, 6), borderRadius: 8, overflow: 'visible' }}>
-                        <div style={{ height: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(155deg, ${color}, ${color}cc)`, boxShadow: `0 2px 10px ${color}44` }}>
-                          {/* En-tête */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', flexShrink: 0, overflow: 'hidden', borderBottom: height > 30 ? '1px solid rgba(255,255,255,.15)' : 'none' }}>
-                            <span style={{ width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,.25)', color: '#fff', fontSize: '.5rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                            <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bloc.nom}</span>
-                            <span style={{ fontSize: '.6rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', background: 'rgba(0,0,0,.2)', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>{bloc.durationMin}'</span>
-                          </div>
-                          {/* Contenu (lecture seule, proportionnel) */}
-                          {height > 30 && (
-                            bloc.bloc_type === 'sequences' ? (() => {
-                              /* ── Séquences opposition ── */
-                              const seqs = (bloc.sequences || []).slice().sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
-                              const totalSec = seqs.reduce((s, q) => s + (q.duree_sec || 0), 0)
-                              if (!seqs.length) return (
-                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.08)' }}>
-                                  <span style={{ fontSize: '.58rem', fontWeight: 700, color: 'rgba(255,255,255,.4)', fontStyle: 'italic' }}>Aucune séquence</span>
-                                </div>
-                              )
-                              let jeuIdx = 0
-                              return (
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'rgba(255,255,255,.06)', padding: '2px 4px 3px', gap: 1, minHeight: 0 }}>
-                                  {seqs.map(seq => {
-                                    const pct = totalSec > 0 ? (seq.duree_sec || 0) / totalSec * 100 : 100 / seqs.length
-                                    if (seq.type === 'inter_bloc') {
-                                      return (
-                                        <div key={seq.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, padding: '0 2px', minHeight: 8 }}>
-                                          <div style={{ flex: 1, height: 1, background: 'rgba(253,224,71,.6)' }} />
-                                          <span style={{ fontSize: '.42rem', fontWeight: 800, color: 'rgba(253,224,71,.9)', whiteSpace: 'nowrap' }}>÷ {formatSeqDur(seq.duree_sec)}</span>
-                                          <div style={{ flex: 1, height: 1, background: 'rgba(253,224,71,.6)' }} />
-                                        </div>
-                                      )
-                                    }
-                                    if (seq.type === 'recup') {
-                                      return (
-                                        <div key={seq.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, padding: '0 2px', minHeight: 7 }}>
-                                          <div style={{ flex: 1, height: 1, background: 'rgba(134,239,172,.5)' }} />
-                                          <span style={{ fontSize: '.42rem', fontWeight: 700, color: 'rgba(134,239,172,.9)', whiteSpace: 'nowrap', fontStyle: 'italic' }}>récup {formatSeqDur(seq.duree_sec)}</span>
-                                          <div style={{ flex: 1, height: 1, background: 'rgba(134,239,172,.5)' }} />
-                                        </div>
-                                      )
-                                    }
-                                    /* type === 'jeu' */
-                                    jeuIdx++
-                                    const jNum = jeuIdx
-                                    return (
-                                      <div key={seq.id} style={{ flex: `${pct} 1 0`, background: 'rgba(255,255,255,.18)', borderRadius: 4, padding: '1px 5px', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', minHeight: 12, border: '1px solid rgba(255,255,255,.25)' }}>
-                                        <span style={{ fontSize: '.45rem', fontWeight: 900, color: 'rgba(255,255,255,.6)', flexShrink: 0 }}>{jNum}</span>
-                                        {seq.theme && <span style={{ flex: 1, fontSize: '.5rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '.03em' }}>{seq.theme}</span>}
-                                        <span style={{ fontSize: '.48rem', fontWeight: 900, color: 'rgba(255,255,255,.8)', flexShrink: 0 }}>{formatSeqDur(seq.duree_sec)}</span>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              )
-                            })()
-                          : (
-                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,.08)', minHeight: 0, justifyContent: (bloc.exos || []).length === 0 ? 'center' : 'flex-start', alignItems: (bloc.exos || []).length === 0 ? 'center' : 'stretch' }}>
-                              {(bloc.exos || []).length === 0 && (
-                                <span style={{ fontSize: Math.min(height * 0.4, 36) + 'px', fontWeight: 900, color: 'rgba(255,255,255,.35)', lineHeight: 1 }}>{idx + 1}</span>
-                              )}
-                              {hasGroups ? (
-                                <div style={{ display: 'flex', height: '100%', gap: 2, padding: '2px 5px 3px' }}>
-                                  {gKeys.map(gk => (
-                                    <div key={gk} style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255,255,255,.2)', minWidth: 0 }}>
-                                      {gk && <div style={{ fontSize: '.48rem', fontWeight: 900, textTransform: 'uppercase', color: 'rgba(255,255,255,.9)', background: 'rgba(0,0,0,.2)', padding: '1px 5px', textAlign: 'center', flexShrink: 0 }}>{gk}</div>}
-                                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '2px 3px', gap: 2, minHeight: 0 }}>
-                                        {groups[gk].map(exo => (
-                                          <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.85)', borderRadius: 4, padding: '0 5px', display: 'flex', alignItems: 'center', gap: 4, minHeight: 0, overflow: 'hidden' }}>
-                                            <span style={{ flex: 1, fontSize: '.6rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
-                                            {exo.prescription && <span style={{ fontSize: '.55rem', fontWeight: 800, color: '#fff', background: color, padding: '0 4px', borderRadius: 3, flexShrink: 0 }}>{exo.prescription}</span>}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '2px 5px 3px', gap: 2, minHeight: 0 }}>
-                                  {(bloc.exos || []).map(exo => (
-                                    <div key={exo.id} style={{ flex: 1, background: 'rgba(255,255,255,.85)', borderRadius: 4, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 5, minHeight: 0, overflow: 'hidden' }}>
-                                      <span style={{ flex: 1, fontSize: '.6rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exo.nom}</span>
-                                      {exo.prescription && <span style={{ fontSize: '.55rem', fontWeight: 800, color: '#fff', background: color, padding: '0 4px', borderRadius: 3, flexShrink: 0 }}>{exo.prescription}</span>}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        {/* Handle drag — désactivé pour les blocs séquences (durée calculée) */}
-                        {bloc.bloc_type !== 'sequences' && (
-                          <div onMouseDown={e => startDrag(e, bloc)} style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 36, height: 9, background: 'rgba(255,255,255,.45)', border: '1.5px solid rgba(255,255,255,.75)', borderRadius: 5, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, userSelect: 'none' }}>
-                            <div style={{ width: 16, height: 2, background: 'rgba(80,80,80,.45)', borderRadius: 2 }} />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {/* Zone non planifiée */}
-                  {totalMin > 0 && usedMin < totalMin && (totalMin - usedMin) * pxMin >= 10 && (
-                    <div style={{ position: 'absolute', left: 0, right: 0, top: usedMin * pxMin, height: (totalMin - usedMin) * pxMin, pointerEvents: 'none' }}>
-                      <div style={{ position: 'absolute', inset: 0, borderRadius: 6, background: 'repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(100,80,200,.04) 5px, rgba(100,80,200,.04) 10px)', border: '1.5px dashed #c4b5fd' }} />
-                      {(totalMin - usedMin) * pxMin >= 20 && <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center', fontSize: '.62rem', fontWeight: 700, color: '#7c3aed' }}>{totalMin - usedMin} min non planifiées</div>}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
+
+          {/* ── Colonne Niveaux & intensité ── */}
+          {hasBlocs && (
+            <div style={{ background: '#fff', borderLeft: '1px solid #e0e3e8', overflowY: 'auto', padding: '16px 14px' }}>
+              <div style={Sm.sTitle}>Niveaux & intensité</div>
+
+              {!activeNiveauBloc ? (
+                <p style={{ fontSize: '.72rem', color: '#9aa1ac', fontStyle: 'italic' }}>
+                  Ajoute un bloc « Déroulé jeu » pour rattacher des schémas et un calcul d'intensité par groupe de niveau.
+                </p>
+              ) : (
+                <>
+                  <div style={{ fontSize: '.68rem', color: '#9aa1ac', fontWeight: 700, marginBottom: 12 }}>
+                    Bloc sélectionné : <b style={{ color: '#1a1a1a' }}>{activeNiveauBloc.nom}</b>
+                  </div>
+
+                  {seqBlocsList.length > 1 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
+                      {seqBlocsList.map(b => (
+                        <button key={b.id} onClick={() => setActiveNiveauBlocId(b.id)}
+                          style={{ ...Sm.chip, padding: '3px 9px', fontSize: '.64rem', ...(b.id === activeNiveauBlocId ? { background: '#1a1a1a', color: '#e4f816', borderColor: '#1a1a1a' } : {}) }}>
+                          {b.nom}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {niveauxRail.loading ? (
+                    <p style={{ fontSize: '.72rem', color: '#9aa1ac' }}>Chargement…</p>
+                  ) : (
+                    [{ id: null, nom: 'Tous les niveaux', couleur: '#9ca3af' }, ...niveauxRail.niveaux].map(niveau => {
+                      const a = niveauAttachmentFor(niveau.id)
+                      const schema = a?.schema_id ? niveauxRail.schemas.find(s => s.id === a.schema_id) : null
+                      return (
+                        <div key={niveau.id ?? 'tous'} style={{ border: '1.5px solid #e5e7eb', borderRadius: 11, padding: 11, marginBottom: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: niveau.couleur, flexShrink: 0 }} />
+                            <span style={{ fontWeight: 800, fontSize: '.8rem', color: '#1f2937' }}>{niveau.nom}</span>
+                            {niveau.valeur_ref != null && <span style={{ fontSize: '.66rem', color: '#9aa1ac', marginLeft: 'auto' }}>{niveau.valeur_ref} km/h</span>}
+                          </div>
+                          <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+                            {schema && (
+                              <div style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb', flexShrink: 0 }}>
+                                <SchemaSVG donnees={schema.donnees} showDistances={false} />
+                              </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <select value={a?.schema_id || ''} onChange={e => setNiveauSchema(niveau.id, e.target.value)}
+                                style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 7, padding: '5px 7px', fontSize: '.72rem', outline: 'none', fontFamily: 'inherit', background: '#fff' }}>
+                                <option value="">Aucun schéma</option>
+                                {niveauxRail.schemas.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                              </select>
+                              {niveau.id != null && (
+                                a?.resultat ? (
+                                  <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, fontSize: '.66rem', color: '#374151', background: '#f9fafb', borderRadius: 7, padding: '6px 8px', fontWeight: 700, flexWrap: 'wrap' }}>
+                                    <span>{a.resultat.distance} m · {a.resultat.temps} s · {a.resultat.repsTotal} rép. · {a.resultat.volumeM} m total</span>
+                                    <button onClick={() => setCalcNiveau(niveau)} style={{ background: 'none', border: 'none', color: '#4338ca', fontSize: '.66rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Modifier</button>
+                                  </div>
+                                ) : niveau.valeur_ref != null ? (
+                                  <button onClick={() => setCalcNiveau(niveau)} style={{ marginTop: 6, padding: '5px 9px', borderRadius: 7, border: '1.5px dashed #d1d5db', background: 'none', color: '#374151', fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Calculer l'intensité</button>
+                                ) : (
+                                  <p style={{ fontSize: '.66rem', color: '#9aa1ac', margin: '6px 0 0' }}>Pas de VMI/VMA de référence</p>
+                                )
+                              )}
+                            </div>
+                            {a && <button onClick={() => retirerNiveauAttachment(niveau.id)} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>Retirer</button>}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* Footer */}
@@ -3982,13 +3832,12 @@ function SeanceModal({
         </div>
       </div>
 
-      {schemaPanelBloc && (
-        <ExerciceSchemaPanel
-          blocId={schemaPanelBloc.id}
-          exerciceNom={schemaPanelBloc.nom}
-          groupeId={groupeId}
+      {calcNiveau && (
+        <CalculateurIntensite
+          niveaux={[calcNiveau]}
           groupColor={groupColor}
-          onClose={() => { setSchemaPanelBloc(null); setSchemaOverviewRefresh(k => k + 1) }}
+          onClose={() => setCalcNiveau(null)}
+          onApply={(niveau, payload) => appliquerCalculNiveau(niveau, payload)}
         />
       )}
     </>
