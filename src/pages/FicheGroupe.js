@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
-import CalendrierSaison from './CalendrierSaison'
+import CalendrierSaison, { EffectifView, GroupesNiveauView } from './CalendrierSaison'
 import GroupeIntensite from '../components/GroupeIntensite'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
@@ -945,6 +945,7 @@ export default function FicheGroupe() {
                 const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase())
                 return (
                   <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
+                    <span style={{ fontSize: '0.68rem', color: isOurs ? accent : '#9ca3af', fontWeight: 800, width: 16, flexShrink: 0 }}>{c.position}</span>
                     {c.logo
                       ? <img src={c.logo} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
                       : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#9ca3af', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
@@ -1098,6 +1099,16 @@ export default function FicheGroupe() {
             + Nouveau programme de groupe
           </button>
         </div>
+      </div>
+
+      {/* ── Effectif — anciennement un onglet du calendrier, vit désormais ici ── */}
+      <div style={{ ...S.panel, marginBottom: '1.5rem', padding: '1.1rem' }}>
+        <EffectifView groupeId={id} groupColor={accent} />
+      </div>
+
+      {/* ── Groupes de niveau — idem ── */}
+      <div style={{ ...S.panel, marginBottom: 0, padding: '1.1rem' }}>
+        <GroupesNiveauView groupeId={id} groupColor={accent} />
       </div>
       </>
       )}

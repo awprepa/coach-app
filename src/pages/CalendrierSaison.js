@@ -969,12 +969,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
         </div>
       )}
 
-      {/* ── Onglets Calendrier / Effectif / Compétition ── */}
+      {/* ── Onglets Calendrier / Compétition — Effectif et Groupes de niveau
+           vivent maintenant sur le tableau de bord du groupe (embedded),
+           mais restent ici sur la page calendrier autonome. ── */}
       <div style={{ display:'flex', gap:8, marginBottom:16 }}>
         {[
           ['calendrier','Calendrier'],
-          ['effectif','Effectif'],
-          ['niveau','Groupes de niveau'],
+          ...(embedded ? [] : [['effectif','Effectif'], ['niveau','Groupes de niveau']]),
           ...(groupe?.monclubhouse_url ? [['competition','Compétition']] : []),
         ].map(([v,l]) => (
           <button key={v} onClick={() => setCalTab(v)}
@@ -1409,7 +1410,7 @@ function generateBlocPalette(primary, secondary) {
 }
 
 /* ── Effectif du groupe — organigramme rugby ── */
-function EffectifView({ groupeId, groupColor }) {
+export function EffectifView({ groupeId, groupColor }) {
   const [joueurs, setJoueurs] = useState([])    // groupe_joueurs avec leurs postes et blessure
   const [wellness, setWellness] = useState({})  // client_id → dernière wellness (moyenne /4)
   const [panelPos, setPanelPos] = useState(null)   // poste | null — panneau liste
@@ -1945,7 +1946,7 @@ function EffectifView({ groupeId, groupColor }) {
 }
 
 /* ── Groupes de niveau (VMI/VMA) ── */
-function GroupesNiveauView({ groupeId, groupColor }) {
+export function GroupesNiveauView({ groupeId, groupColor }) {
   const [joueurs, setJoueurs] = useState([])   // groupe_joueurs + joueur_tests_physiques
   const [niveaux, setNiveaux] = useState([])   // groupes_niveau + groupes_niveau_membres
   const [creating, setCreating] = useState(false)
