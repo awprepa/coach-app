@@ -82,9 +82,6 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         .filter(Boolean)
 
       setSessions(rows)
-      // Le détail le plus récent est ouvert d'emblée : sinon il fallait deviner
-      // qu'il faut toucher un point du graphique pour voir qui a répondu quoi.
-      if (rows.length) setSelected(rows[rows.length - 1].evId)
       setLoading(false)
     }
     load()

@@ -745,11 +745,22 @@ export default function FicheGroupe() {
   // ── Prochain entraînement — timeline proportionnelle à la durée ──
   const BLOC_TIMELINE_COLORS = ['#2c5faa', '#b45309', '#1d4ed8', '#7c3aed', '#0f766e', '#be185d']
 
+  // Hauteur totale fixe commune aux 3 panneaux Membres / Classement / Prochain
+  // entraînement, pour qu'ils restent alignés quel que soit leur contenu
+  // (grid align-items:stretch ne suffit pas : les tracks "auto" se calent sur
+  // le contenu max avant tout rétrécissement flex, d'où une hauteur explicite).
+  const DASH_ROW_H = 400
+
+
   return (
     <div style={S.pageWide}>
       {/* ── Retour ── */}
-      <button onClick={() => parent ? navigate(`/groupe/${parent.id}`) : navigate('/clients')} style={S.back}>
-        ← {parent ? parent.nom : 'Clients'}
+      <button onClick={() => {
+        if (tab === 'calendrier') { setTab('groupe'); return }
+        if (parent) { navigate(`/groupe/${parent.id}`); return }
+        navigate('/groupes')
+      }} style={S.back}>
+        ← {tab === 'calendrier' ? groupe.nom : parent ? parent.nom : 'Groupes'}
       </button>
 
       {/* Adaptations mobile — aucune règle au-dessus de 820px */}
@@ -759,6 +770,7 @@ export default function FicheGroupe() {
           .fg-actions{width:100%;}
           .fg-actions button{flex:1;}
           .fg-row2{grid-template-columns:1fr !important;}
+          .fg-row2b{grid-template-columns:1fr !important;}
           .fg-row3{grid-template-columns:1fr !important;}
         }
       `}</style>
@@ -797,18 +809,6 @@ export default function FicheGroupe() {
       {/* ── Barre accent ── */}
       <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}44)`, borderRadius: 999, marginBottom: '1.25rem' }} />
 
-      {/* ── Onglets ── */}
-      <div style={S.tabs}>
-        <button onClick={() => setTab('groupe')}
-          style={{ ...S.tab, ...(tab === 'groupe' ? { background: '#333333', color: '#fff' } : null) }}>
-          Groupe
-        </button>
-        <button onClick={() => setTab('calendrier')}
-          style={{ ...S.tab, ...(tab === 'calendrier' ? { background: '#333333', color: '#fff' } : null) }}>
-          <IcoCalendar /> Calendrier
-        </button>
-      </div>
-
       {tab === 'calendrier' ? (
         <CalendrierSaison groupeId={id} embedded />
       ) : (
@@ -822,11 +822,13 @@ export default function FicheGroupe() {
           </div>
         </div>
 
-        <div style={S.panel}>
+        <div style={{ ...S.panel, cursor: 'pointer' }} onClick={() => setTab('calendrier')} title="Ouvrir le calendrier">
           <div style={S.panelHead}>
-            <button onClick={() => setCalMonth(new Date(calY, calM - 1, 1))} style={S.calNavBtn}><IcoChevronL /></button>
-            <span style={{ ...S.panelLabel, textTransform: 'capitalize', fontSize: '0.78rem', color: '#1a1a1a' }}>{MOIS_LABELS[calM]} {calY}</span>
-            <button onClick={() => setCalMonth(new Date(calY, calM + 1, 1))} style={S.calNavBtn}><IcoChevronR /></button>
+            <button onClick={e => { e.stopPropagation(); setCalMonth(new Date(calY, calM - 1, 1)) }} style={S.calNavBtn}><IcoChevronL /></button>
+            <span style={{ ...S.panelLabel, textTransform: 'capitalize', fontSize: '0.78rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <IcoCalendar />{MOIS_LABELS[calM]} {calY}
+            </span>
+            <button onClick={e => { e.stopPropagation(); setCalMonth(new Date(calY, calM + 1, 1)) }} style={S.calNavBtn}><IcoChevronR /></button>
           </div>
           <div style={{ padding: '0 1.1rem 1.1rem' }}>
             <div style={{ maxWidth: 250, margin: '0 auto' }}>
@@ -865,8 +867,8 @@ export default function FicheGroupe() {
       </div>
 
       {/* ── Ligne 2 : Membres (triable, défilant) + Classement + Prochain entraînement ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1.35fr 0.8fr 0.85fr' }} className="fg-row3">
-        <div style={S.panel}>
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1.35fr 0.8fr 0.85fr' }} className="fg-row2b">
+        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
           <div style={S.panelHead}><span style={S.panelLabel}>Membres · {membres.length}</span></div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 9, padding: '0.4rem 0.7rem' }}>
@@ -881,7 +883,7 @@ export default function FicheGroupe() {
               </button>
             ))}
           </div>
-          <div style={{ maxHeight: 284, overflowY: 'auto' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
               <thead>
                 <tr>
@@ -929,7 +931,7 @@ export default function FicheGroupe() {
           <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>+ Ajouter un membre</button>
         </div>
 
-        <div style={S.panel}>
+        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
           <div style={S.panelHead}>
             <span style={S.panelLabel}>Classement</span>
           </div>
@@ -938,7 +940,7 @@ export default function FicheGroupe() {
           ) : classementFFR.length === 0 ? (
             <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
           ) : (
-            <div style={{ padding: '0.1rem 0 0.6rem' }}>
+            <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {classementFFR.map(c => {
                 const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase())
                 return (
@@ -957,7 +959,7 @@ export default function FicheGroupe() {
           )}
         </div>
 
-        <div style={S.panel}>
+        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => setTab('calendrier')} title="Ouvrir le calendrier">
           <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
           {!prochain ? (
             <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
@@ -968,14 +970,19 @@ export default function FicheGroupe() {
                 {prochain.evenement.heure ? ` · ${prochain.evenement.heure}` : ''}
                 {prochain.evenement.duree_min ? ` · ${prochain.evenement.duree_min} min` : ''}
               </p>
-              <div style={{ padding: '0 1.1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Chaque bloc remplit une part de la hauteur disponible proportionnelle
+                  à sa durée (flex-grow = dureeMin) : la carte s'étire pour occuper
+                  toute la hauteur de la ligne (alignée sur Membres/Classement),
+                  quel que soit le nombre de séquences à l'intérieur. */}
+              <div style={{ padding: '0 1.1rem 1.1rem', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {prochain.blocs.map((b, i) => (
                   <div key={i} style={{ borderRadius: 6, padding: '5px 8px', position: 'relative', background: BLOC_TIMELINE_COLORS[i % BLOC_TIMELINE_COLORS.length],
-                    height: Math.max(24, Math.round(b.dureeMin * 2.2)), display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
+                    flex: `${Math.max(b.dureeMin, 1)} 1 0%`, minHeight: 20, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: b.hasSequences ? 20 : 0 }}>{b.nom}</span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#fff', opacity: 0.85 }}>{b.dureeMin} min</span>
                     {b.hasSequences && (
                       <span title={`Aperçu des séquences jeu / récup — jeu effectif ${b.jeuMin} min`}
+                        onClick={e => e.stopPropagation()}
                         style={{ position: 'absolute', top: 5, right: 5, width: 17, height: 17, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <IcoEye />
                       </span>
