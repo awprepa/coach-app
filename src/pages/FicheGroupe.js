@@ -1001,7 +1001,7 @@ export default function FicheGroupe() {
       </div>
 
       {/* ── Ligne 3 : Sous-groupes + Programmes ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1fr 1fr', marginBottom: 0 }} className="fg-row3">
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1fr 1fr' }} className="fg-row3">
         <div style={S.panel}>
           <div style={S.panelHead}><span style={S.panelLabel}>Sous-groupes · {sousGroupes.length}</span></div>
           {sousGroupes.map(sg => (
