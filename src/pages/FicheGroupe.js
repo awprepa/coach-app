@@ -41,7 +41,9 @@ export default function FicheGroupe() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'calendrier' ? 'calendrier' : 'groupe'
+  const openEventId = searchParams.get('evenement') || null
   const setTab = t => setSearchParams(t === 'calendrier' ? { tab: 'calendrier' } : {})
+  const openCalendrierEvent = evId => setSearchParams({ tab: 'calendrier', evenement: evId })
 
   const [groupe, setGroupe]               = useState(null)
   const [parent, setParent]               = useState(null)
@@ -88,6 +90,7 @@ export default function FicheGroupe() {
   const [monthEvents, setMonthEvents]     = useState({})       // { 'YYYY-MM-DD': [type,...] }
   const [calMonth, setCalMonth]           = useState(() => new Date())
   const [membreSort, setMembreSort]       = useState({ key: 'nom', dir: 1 })
+  const [effectifOpen, setEffectifOpen]   = useState(false)
   const [membreSearch, setMembreSearch]   = useState('')
   const [membreFiltre, setMembreFiltre]   = useState('tous') // 'tous' | 'surveiller'
 
@@ -810,7 +813,7 @@ export default function FicheGroupe() {
       <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}44)`, borderRadius: 999, marginBottom: '1.25rem' }} />
 
       {tab === 'calendrier' ? (
-        <CalendrierSaison groupeId={id} embedded />
+        <CalendrierSaison groupeId={id} embedded openEventId={openEventId} />
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
@@ -960,7 +963,8 @@ export default function FicheGroupe() {
           )}
         </div>
 
-        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => setTab('calendrier')} title="Ouvrir le calendrier">
+        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: prochain ? 'pointer' : 'default' }}
+          onClick={() => prochain && openCalendrierEvent(prochain.evenement.id)} title={prochain ? "Ouvrir cet entraînement" : undefined}>
           <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
           {!prochain ? (
             <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
@@ -1101,9 +1105,21 @@ export default function FicheGroupe() {
         </div>
       </div>
 
-      {/* ── Effectif — anciennement un onglet du calendrier, vit désormais ici ── */}
-      <div style={{ ...S.panel, marginBottom: '1.5rem', padding: '1.1rem' }}>
-        <EffectifView groupeId={id} groupColor={accent} />
+      {/* ── Effectif — sous-menu repliable (fermé par défaut, contenu long) ── */}
+      <div style={{ ...S.panel, marginBottom: '1.5rem' }}>
+        <button onClick={() => setEffectifOpen(o => !o)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.9rem 1.1rem', font: 'inherit' }}>
+          <span style={S.panelLabel}>Effectif</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#9ca3af' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>{effectifOpen ? 'Réduire' : 'Afficher'}</span>
+            <span style={{ transform: effectifOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'flex' }}><IcoChevronDown /></span>
+          </span>
+        </button>
+        {effectifOpen && (
+          <div style={{ padding: '0 1.1rem 1.1rem' }}>
+            <EffectifView groupeId={id} groupColor={accent} />
+          </div>
+        )}
       </div>
 
       {/* ── Groupes de niveau — idem ── */}
@@ -1367,6 +1383,9 @@ function IcoChevronL() {
 }
 function IcoChevronR() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+}
+function IcoChevronDown() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
 }
 
 // ── Composants utilitaires ─────────────────────────────────────────────────────

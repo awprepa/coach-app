@@ -90,7 +90,7 @@ function seasonStartYear(date = new Date()) {
   return date.getMonth() >= 6 ? date.getFullYear() : date.getFullYear() - 1
 }
 
-export default function CalendrierSaison({ groupeId = null, embedded = false }) {
+export default function CalendrierSaison({ groupeId = null, embedded = false, openEventId = null }) {
   const [groupes, setGroupes]   = useState([])
   const [groupe, setGroupe]     = useState(null)
   const [startYear, setStartYear] = useState(seasonStartYear())
@@ -195,6 +195,18 @@ export default function CalendrierSaison({ groupeId = null, embedded = false }) 
   }, [groupe, seasonStart, seasonEnd])
 
   useEffect(() => { loadSeason() }, [loadSeason])
+
+  // Accès direct à un évènement précis (ex: clic sur "Prochain entraînement"
+  // depuis le tableau de bord du groupe) — ouvre son panneau d'édition dès
+  // que la saison est chargée. Le ref évite de rouvrir si l'utilisateur
+  // referme le panneau ensuite.
+  const autoOpenedRef = useRef(null)
+  useEffect(() => {
+    if (!openEventId || autoOpenedRef.current === openEventId || !evenements.length) return
+    const found = evenements.find(e => e.id === openEventId)
+    if (found) { autoOpenedRef.current = openEventId; openEdit(found) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openEventId, evenements])
 
   // fermer le menu contextuel sur clic ailleurs / touche échap
   useEffect(() => {
