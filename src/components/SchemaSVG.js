@@ -51,15 +51,18 @@ export default function SchemaSVG({ donnees, showDistances = true, style }) {
           </g>
         )
       })}
-      {plots.map(p => (
-        <g key={p.id}>
-          <circle cx={p.x} cy={p.y} r="2.2" fill={p.couleur || '#2563eb'} stroke="#fff" strokeWidth="0.5" />
-          <text x={p.x} y={p.y - 3.4} fontSize="2.6" fill="#1f2937" textAnchor="middle" fontWeight="800"
-            style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>
-            {p.label}
-          </text>
-        </g>
-      ))}
+      {plots.map(p => {
+        const r = (p.rayon || 1.6) * 1.375 // même proportion que le rayon par défaut de l'éditeur (1.6 -> 2.2 ici)
+        return (
+          <g key={p.id}>
+            <circle cx={p.x} cy={p.y} r={r} fill={p.couleur || '#2563eb'} stroke="#fff" strokeWidth="0.5" />
+            <text x={p.x} y={p.y - r - 1.2} fontSize="2.6" fill="#1f2937" textAnchor="middle" fontWeight="800"
+              style={{ paintOrder: 'stroke', stroke: FIELD_COLOR, strokeWidth: 1 }}>
+              {p.label}
+            </text>
+          </g>
+        )
+      })}
     </svg>
   )
 }
