@@ -117,13 +117,13 @@ export default function EvolutionPhotosCoach({ clientId }) {
       {/* Réglage rappel + ajout */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.9rem', alignItems: 'center' }}>
         <select value={reminder} onChange={e => saveReminder(e.target.value)}
-          style={{ flex: 1, minWidth: 150, padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}>
+          style={{ flex: '1 1 140px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}>
           {DOW.map(d => <option key={d.v} value={d.v}>{d.l}</option>)}
         </select>
         <input type="date" value={addDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setAddDate(e.target.value)}
-          style={{ padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', background: 'white' }} />
+          style={{ flex: '1 1 130px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', background: 'white' }} />
         <select value={addPose} onChange={e => setAddPose(e.target.value)}
-          style={{ padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}
+          style={{ flex: '1 1 110px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}
           title="Pose des photos que tu ajoutes">
           {POSES.map(p => <option key={p.v} value={p.v}>{p.l}</option>)}
         </select>
