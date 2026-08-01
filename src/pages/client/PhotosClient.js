@@ -196,7 +196,7 @@ const S = {
   body:        { padding: '1rem' },
   infoCard:    { background: 'white', borderRadius: 14, padding: '1rem 1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1.1rem' },
   fieldLabel:  { display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.35rem' },
-  dateInput:   { width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.85rem', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.95rem', outline: 'none', background: 'white', marginBottom: '1rem', fontFamily: 'inherit' },
+  dateInput:   { width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.85rem', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '16px', outline: 'none', background: 'white', marginBottom: '1rem', fontFamily: 'inherit' },
   pickBtn:     { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'white', color: '#374151', border: '2px dashed #c7d2fe', borderRadius: 14, padding: '0.95rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' },
   row:         { display: 'flex', gap: 11, alignItems: 'center', background: 'white', borderRadius: 14, padding: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   thumb:       { position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 10, overflow: 'hidden', background: '#e5e7eb' },
