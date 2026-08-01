@@ -47,6 +47,7 @@ function matchCatColor(categorie, groupColor) {
   return (c === undefined || c === null) ? groupColor : c
 }
 // Planification entraînement
+const STYLE_COLORS = { 'Modéré': '#059669', 'Vitesse': '#d97706', 'Volume': '#2563eb' }
 const THEMES_SEANCE = ['Mêlée', 'Touche', 'Attaque collective', 'Défense collective', 'Jeu au sol', 'Jeu groupé', 'Vitesse / Vivacité', 'Skills individuels', 'Prévention / Récup', 'Analyse vidéo']
 const CONTACT_LEVELS = [
   { label: 'Aucun contact',    desc: '' },
@@ -343,7 +344,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   function emptyForm(dateISO) {
     return {
       type: 'entrainement', date: dateISO || seasonStart, heure: '', titre: '',
-      adversaire: '', categorie: 'Championnat', domicile: true, journee: '',
+      style: '', adversaire: '', categorie: 'Championnat', domicile: true, journee: '',
       lieu: '', duree_min: '', note: '', themes_seance: '',
     }
   }
@@ -416,7 +417,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       mode: 'edit', evt: e,
       form: {
         type: e.type, date: e.date, heure: e.heure || '', titre: e.titre || '',
-        adversaire: e.adversaire || '', categorie: e.categorie || 'Championnat',
+        style: e.style || '', adversaire: e.adversaire || '', categorie: e.categorie || 'Championnat',
         domicile: e.domicile ?? true, journee: e.journee || '',
         lieu: e.lieu || '', duree_min: e.duree_min || '', note: e.note || '',
         themes_seance: e.themes_seance || '',
@@ -510,7 +511,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       groupe_id: groupe.id, date: f.date, heure: f.heure || null, type: f.type,
       titre: f.titre || null, lieu: f.lieu || null,
       duree_min: f.duree_min ? Number(f.duree_min) : null, charge: null, note: f.note || null,
-      style: null,
+      style:          f.type === 'entrainement' ? (f.style || null) : null,
       themes_seance:  f.type === 'entrainement' ? (f.themes_seance || null) : null,
       adversaire: isMatch ? (f.adversaire || null) : null,
       categorie:  isMatch ? (f.categorie || null) : null,
@@ -571,7 +572,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const payload = {
       groupe_id: groupe.id, date: dateISO, heure: s.heure || null, type: s.type,
       titre: s.titre || null, lieu: s.lieu || null, duree_min: s.duree_min || null,
-      charge: null, note: s.note || null, style: null,
+      charge: null, note: s.note || null, style: s.style || null,
       themes_seance: s.themes_seance || null,
       adversaire: s.adversaire || null, categorie: s.categorie || null,
       domicile: s.domicile, journee: s.journee || null,
@@ -886,8 +887,8 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
             return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Tests" style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
-          const txt = e.type === 'entrainement' ? (e.titre || T.label) : (e.titre || T.short || T.label)
-          const styleColor = null
+          const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
+          const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
           return (
             <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={T.label}
               style={{
@@ -1180,6 +1181,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
                   ))}
                 </div>
               </>
+            )}
+            {pop.form.type === 'entrainement' && (
+              <input value={pop.form.style} onChange={e => setPopForm({ style: e.target.value })} placeholder="Style (ex. Vitesse, Collectif…)" style={S.popInput} />
             )}
             {pop.form.type === 'muscu' && (
               <input value={pop.form.titre} onChange={e => setPopForm({ titre: e.target.value })} placeholder="Titre (ex. Force max)" style={S.popInput} />
@@ -2207,7 +2211,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     const type = typeof evt === 'string' ? evt : evt?.type
     if (type === 'match' || type === 'ffr_match') return groupColor
     if (type === 'muscu') return '#b08769'
-    if (type === 'entrainement') return '#6b94a3'
+    if (type === 'entrainement') {
+      const s = typeof evt === 'object' ? evt?.style : null
+      return STYLE_COLORS[s] || '#6b94a3'
+    }
     return '#9aa1ac'
   }
 
@@ -2356,7 +2363,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     }
 
     // Libellé principal de la séance
-    const evtLabel = evt.type === 'entrainement' ? (evt.titre || 'Entraînement')
+    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
 
@@ -2612,7 +2619,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   /* ── DayPreviewModal — fiche séance style tableau ── */
   function DayPreviewModal({ evt, blocs }) {
     const color = evtColor(evt)
-    const evtLabel = evt.type === 'entrainement' ? (evt.titre || 'Entraînement')
+    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
       : evt.type === 'muscu' ? (evt.titre || 'Musculation')
       : (evt.titre || TYPES[evt.type]?.label || 'Séance')
 
@@ -2869,7 +2876,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 function clipLabel(e) {
   if (!e) return ''
   if (e.type === 'match') return e.adversaire || 'Match'
-  if (e.type === 'entrainement') return e.titre || 'Entraînement'
+  if (e.type === 'entrainement') return e.style || e.titre || 'Entraînement'
   return e.titre || (TYPES[e.type]?.label) || 'Évènement'
 }
 function formatPopDate(dateISO) {
@@ -2935,7 +2942,7 @@ function SeanceModal({
   // "Schéma & intensité" (cahier des charges section 5).
   const [schemaOverview, setSchemaOverview] = useState({}) // blocId -> [{niveauId, niveauNom, niveauCouleur, schemaId, schemaDonnees, volumeM}]
   const [schemaOverviewRefresh, setSchemaOverviewRefresh] = useState(0)
-  const seqBlocIds = (panel.blocs || []).filter(b => b.bloc_type === 'sequences').map(b => b.id)
+  const seqBlocIds = (panel.blocs || []).map(b => b.id)
   const seqBlocIdsKey = seqBlocIds.slice().sort().join(',')
   useEffect(() => {
     if (!seqBlocIds.length || !groupeId) { setSchemaOverview({}); return }
@@ -2975,7 +2982,7 @@ function SeanceModal({
   const activeNiveauBloc = (panel.blocs || []).find(b => b.id === activeNiveauBlocId) || null
   const [niveauxRail, setNiveauxRail] = useState({ niveaux: [], schemas: [], attachments: [], loading: false })
   const [calcNiveau, setCalcNiveau] = useState(null)
-  const seqBlocsList = (panel.blocs || []).filter(b => b.bloc_type === 'sequences')
+  const seqBlocsList = (panel.blocs || [])
   const seqBlocsListKey = seqBlocsList.map(b => b.id).join(',')
   useEffect(() => {
     if (!seqBlocsList.find(b => b.id === activeNiveauBlocId)) {
@@ -3287,6 +3294,20 @@ function SeanceModal({
                     </div>
                   </div>
                   <div style={{ marginBottom: 10 }}>
+                    <div style={Sm.fLabel}>Type d'entraînement</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {Object.entries(STYLE_COLORS).map(([label, color]) => {
+                        const active = form.style === label
+                        return (
+                          <button key={label} onClick={() => setForm({ style: active ? '' : label })}
+                            style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `2px solid ${active ? color : '#e5e7eb'}`, background: active ? color : 'white', color: active ? '#fff' : '#6b7280', fontSize: '.7rem', fontWeight: 800, cursor: 'pointer', outline: 'none', transition: 'all .15s' }}>
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
                     <div style={Sm.fLabel}>Titre (optionnel)</div>
                     <input value={form.titre} onChange={e => setForm({ titre: e.target.value })} placeholder="ex. Travail d'appuis" style={Sm.input} />
                   </div>
@@ -3372,10 +3393,8 @@ function SeanceModal({
                           />
                         )}
                         <span style={{ color: 'rgba(255,255,255,.65)', fontSize: '.62rem', fontWeight: 700, flexShrink: 0 }}>min</span>
-                        {bloc.bloc_type === 'sequences' && (
-                          <button onClick={() => setActiveNiveauBlocId(bloc.id)} title="Voir dans Niveaux & intensité"
-                            style={{ background: activeNiveauBlocId === bloc.id ? '#fff' : 'rgba(255,255,255,.18)', border: 'none', color: activeNiveauBlocId === bloc.id ? color : '#fff', borderRadius: 4, width: 20, height: 18, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1, fontWeight: 900 }}>▦</button>
-                        )}
+                        <button onClick={() => setActiveNiveauBlocId(bloc.id)} title="Voir dans Niveaux & intensité"
+                          style={{ background: activeNiveauBlocId === bloc.id ? '#fff' : 'rgba(255,255,255,.18)', border: 'none', color: activeNiveauBlocId === bloc.id ? color : '#fff', borderRadius: 4, width: 20, height: 18, fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1, fontWeight: 900 }}>▦</button>
                         <button onClick={() => deleteBloc(bloc.id)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', borderRadius: 5, width: 20, height: 20, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                       </div>
 
@@ -3681,6 +3700,26 @@ function SeanceModal({
                         </div>
                       )}
 
+                      {/* Aperçu schémas/volumes du bloc — même mécanisme que les blocs séquences */}
+                      {bloc.bloc_type !== 'sequences' && (schemaOverview[bloc.id] || []).length > 0 && (
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:6, padding:'8px 10px 0' }}>
+                          {schemaOverview[bloc.id].map((o, i) => (
+                            <div key={o.niveauId ?? `tous-${i}`} style={{ display:'flex', alignItems:'center', gap:5, background:'#f5f6f8', border:`1px solid ${o.niveauCouleur}55`, borderRadius:7, padding:'3px 7px 3px 5px' }}>
+                              {o.schemaDonnees && (
+                                <div style={{ width:20, height:20, borderRadius:4, overflow:'hidden', border:'1px solid #e0e3e8', flexShrink:0, background:'#fff' }}>
+                                  <SchemaSVG donnees={o.schemaDonnees} showDistances={false} />
+                                </div>
+                              )}
+                              <span style={{ width:7, height:7, borderRadius:'50%', background:o.niveauCouleur, flexShrink:0 }} />
+                              <span style={{ fontSize:'.63rem', fontWeight:800, color:'#374151' }}>{o.niveauNom}</span>
+                              {o.volumeM != null && (
+                                <span style={{ fontSize:'.6rem', fontWeight:700, color:'#6b7280' }}>· {o.volumeM} m</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Exercices */}
                       {bloc.bloc_type !== 'sequences' && <div style={{ background: color + '0a', padding: '6px 8px 7px' }}>
                         {hasGroups ? (
@@ -3752,7 +3791,7 @@ function SeanceModal({
 
               {!activeNiveauBloc ? (
                 <p style={{ fontSize: '.72rem', color: '#9aa1ac', fontStyle: 'italic' }}>
-                  Ajoute un bloc « Déroulé jeu » pour rattacher des schémas et un calcul d'intensité par groupe de niveau.
+                  Ajoute un bloc pour lui rattacher des schémas et un calcul d'intensité par groupe de niveau.
                 </p>
               ) : (
                 <>
