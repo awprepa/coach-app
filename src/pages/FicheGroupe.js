@@ -104,6 +104,8 @@ export default function FicheGroupe() {
   const [effectifOpen, setEffectifOpen]   = useState(false)
   const [membreSearch, setMembreSearch]   = useState('')
   const [posteMap, setPosteMap]           = useState({}) // { client_id: nom du poste principal }
+  const [rosterClientIds, setRosterClientIds] = useState(new Set()) // client_id présents dans l'effectif (groupe_joueurs)
+  const [openJoueurClientId, setOpenJoueurClientId] = useState(null) // déclenche l'ouverture du profil groupe depuis Membres
   const [membreFiltre, setMembreFiltre]   = useState('tous') // 'tous' | 'surveiller'
 
   // ── Chargement ────────────────────────────────────────────────────────────
@@ -148,6 +150,7 @@ export default function FicheGroupe() {
       if (primary) pMap[j.client_id] = POSTE_NOMS[primary.poste] || `Poste ${primary.poste}`
     }
     setPosteMap(pMap)
+    setRosterClientIds(new Set((joueursData || []).map(j => j.client_id)))
 
     // Dernier wellness de chaque membre
     const memberIds = membresList.map(m => m.id)
@@ -930,7 +933,10 @@ export default function FicheGroupe() {
                   const avg = membreAvg(m)
                   const col = avg !== null ? wellnessColor(avg) : '#9ca3af'
                   return (
-                    <tr key={m.id} onClick={() => navigate(`/client/${m.id}`)} style={{ cursor: 'pointer' }}
+                    <tr key={m.id} onClick={() => {
+                      if (rosterClientIds.has(m.id)) { setEffectifOpen(true); setOpenJoueurClientId(m.id) }
+                      else navigate(`/client/${m.id}`)
+                    }} style={{ cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
                       <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1143,7 +1149,7 @@ export default function FicheGroupe() {
         </button>
         {effectifOpen && (
           <div style={{ padding: '0 1.1rem 1.1rem' }}>
-            <EffectifView groupeId={id} groupColor={accent} />
+            <EffectifView groupeId={id} groupColor={accent} openClientId={openJoueurClientId} onOpened={() => setOpenJoueurClientId(null)} />
           </div>
         )}
       </div>

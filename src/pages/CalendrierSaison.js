@@ -1404,7 +1404,7 @@ function generateBlocPalette(primary, secondary) {
 }
 
 /* ── Effectif du groupe — organigramme rugby ── */
-export function EffectifView({ groupeId, groupColor }) {
+export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   const [joueurs, setJoueurs] = useState([])    // groupe_joueurs avec leurs postes et blessure
   const [wellness, setWellness] = useState({})  // client_id → { score, poids, date } (dernière entrée)
   const [clientInfo, setClientInfo] = useState({ dateNaissance: {}, taille: {} }) // client_id → valeur (fallback compte lié)
@@ -1605,6 +1605,21 @@ export function EffectifView({ groupeId, groupColor }) {
     setVitalDraft('')
     setPanelPos(null)
   }
+
+  // Ouverture directe du profil groupe depuis un autre écran (ex. la liste
+  // Membres du tableau de bord) — évite de renvoyer vers la fiche client.
+  const autoOpenedClientRef = useRef(null)
+  useEffect(() => {
+    if (!openClientId || autoOpenedClientRef.current === openClientId || !joueurs.length) return
+    const match = joueurs.find(j => j.client_id === openClientId)
+    if (!match) return
+    autoOpenedClientRef.current = openClientId
+    const postes = match.joueur_postes || []
+    const primary = postes.find(p => p.is_primary) || postes[0]
+    openPanelJoueur({ ...match, rang: primary?.rang || 99, blessure: (match.joueur_blessures || [])[0] || null }, primary?.poste ?? null)
+    onOpened?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openClientId, joueurs])
 
   async function ajouterTestPhysique(type) {
     const valeurStr = type === 'vmi' ? newVmi : type === 'vma' ? newVma : new30m
@@ -1913,9 +1928,11 @@ export function EffectifView({ groupeId, groupColor }) {
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ color:'#fff', fontSize:'1.05rem', fontWeight:900, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{panelJoueur.prenom} {panelJoueur.nom}</div>
                 <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(255,255,255,.14)', color:'#fff' }}>
-                    {panelJoueur._poste} · {POSTES_RUGBY.find(p=>p.num===panelJoueur._poste)?.nom}
-                  </span>
+                  {panelJoueur._poste != null && (
+                    <span style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(255,255,255,.14)', color:'#fff' }}>
+                      {panelJoueur._poste} · {POSTES_RUGBY.find(p=>p.num===panelJoueur._poste)?.nom}
+                    </span>
+                  )}
                   {panelJoueur.client_id && (
                     <span style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(74,222,128,.18)', color:'#86efac', display:'flex', alignItems:'center', gap:4 }}>
                       <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ade80' }} />Compte lié
