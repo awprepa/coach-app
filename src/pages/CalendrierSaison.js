@@ -1436,12 +1436,12 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   ]
 
   const POSTES_RUGBY = [
-    { num:1, nom:'Pilier gauche' }, { num:2, nom:'Talonneur' }, { num:3, nom:'Pilier droit' },
-    { num:4, nom:'2ème ligne' },    { num:5, nom:'2ème ligne' },
-    { num:6, nom:'Flanker' },       { num:7, nom:'Flanker' }, { num:8, nom:'N°8' },
-    { num:9, nom:'Demi de mêlée' }, { num:10, nom:'Ouvreur' },
+    { num:1, nom:'Pilier' },        { num:2, nom:'Talonneur' }, { num:3, nom:'Pilier' },
+    { num:4, nom:'2e ligne' },      { num:5, nom:'2e ligne' },
+    { num:6, nom:'3e ligne' },      { num:7, nom:'3e ligne' }, { num:8, nom:'3e ligne' },
+    { num:9, nom:'Demi de mêlée' }, { num:10, nom:"Demi d'ouverture" },
     { num:12, nom:'Centre' },       { num:13, nom:'Centre' },
-    { num:11, nom:'Ailier gauche' },{ num:15, nom:'Arrière' }, { num:14, nom:'Ailier droit' },
+    { num:11, nom:'Ailier' },       { num:15, nom:'Arrière' }, { num:14, nom:'Ailier' },
   ]
   const FORMATION = [
     [1,2,3],[4,5],[6,7,8],[9,10],[12,13],[11,15,14]

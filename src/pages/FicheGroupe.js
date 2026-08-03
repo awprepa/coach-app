@@ -27,12 +27,12 @@ const OFFRES = {
 // Même mapping poste → nom que EffectifView (CalendrierSaison.js), pour
 // afficher le poste de chaque membre dans le tableau du tableau de bord.
 const POSTE_NOMS = {
-  1: 'Pilier gauche', 2: 'Talonneur', 3: 'Pilier droit',
-  4: '2ème ligne', 5: '2ème ligne',
-  6: 'Flanker', 7: 'Flanker', 8: 'N°8',
-  9: 'Demi de mêlée', 10: 'Ouvreur',
+  1: 'Pilier', 2: 'Talonneur', 3: 'Pilier',
+  4: '2e ligne', 5: '2e ligne',
+  6: '3e ligne', 7: '3e ligne', 8: '3e ligne',
+  9: 'Demi de mêlée', 10: "Demi d'ouverture",
   12: 'Centre', 13: 'Centre',
-  11: 'Ailier gauche', 15: 'Arrière', 14: 'Ailier droit',
+  11: 'Ailier', 15: 'Arrière', 14: 'Ailier',
 }
 
 // Bornes de la semaine courante (lundi → dimanche), format YYYY-MM-DD
