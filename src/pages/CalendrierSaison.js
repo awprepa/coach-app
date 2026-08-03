@@ -1406,7 +1406,11 @@ function generateBlocPalette(primary, secondary) {
 /* ── Effectif du groupe — organigramme rugby ── */
 export function EffectifView({ groupeId, groupColor }) {
   const [joueurs, setJoueurs] = useState([])    // groupe_joueurs avec leurs postes et blessure
-  const [wellness, setWellness] = useState({})  // client_id → dernière wellness (moyenne /4)
+  const [wellness, setWellness] = useState({})  // client_id → { score, poids, date } (dernière entrée)
+  const [clientInfo, setClientInfo] = useState({ dateNaissance: {}, taille: {} }) // client_id → valeur (fallback compte lié)
+  const [recentEvents, setRecentEvents] = useState([]) // derniers événements du groupe (rappel, non personnalisé)
+  const [editingVital, setEditingVital] = useState(null) // 'age' | 'taille' | 'poids' | null — édition manuelle en cours
+  const [vitalDraft, setVitalDraft] = useState('')
   const [panelPos, setPanelPos] = useState(null)   // poste | null — panneau liste
   const [panelJoueur, setPanelJoueur] = useState(null) // joueur en édition
   const [addForm, setAddForm] = useState(false)
@@ -1454,21 +1458,46 @@ export function EffectifView({ groupeId, groupColor }) {
       .select('*, joueur_postes(*), joueur_blessures(*), joueur_tests_physiques(*)')
       .eq('groupe_id', groupeId)
     setJoueurs(jData || [])
-    // Wellness — chercher les dernières entrées pour les clients liés
+    // Wellness — dernière entrée par client lié (score = moyenne des 4 dimensions /4)
     const clientIds = (jData || []).filter(j => j.client_id).map(j => j.client_id)
     if (clientIds.length > 0) {
       const { data: wData } = await supabase
-        .from('wellness_logs')
-        .select('client_id, score, created_at')
+        .from('wellness')
+        .select('client_id, date, sommeil, fatigue, douleurs, stress, poids, created_at')
         .in('client_id', clientIds)
         .order('created_at', { ascending: false })
-      // Prendre le dernier score de chaque client
       const wMap = {}
       for (const w of (wData || [])) {
-        if (!wMap[w.client_id]) wMap[w.client_id] = w.score
+        if (wMap[w.client_id]) continue
+        const dims = [w.sommeil, w.fatigue, w.douleurs, w.stress].filter(v => v != null)
+        const score = dims.length ? dims.reduce((a, b) => a + b, 0) / dims.length : null
+        wMap[w.client_id] = { score, poids: w.poids ?? null, date: w.date }
       }
       setWellness(wMap)
+
+      // Âge / taille — fallback pour les joueurs avec compte lié
+      const [{ data: cData }, { data: npData }] = await Promise.all([
+        supabase.from('clients').select('id, date_naissance').in('id', clientIds),
+        supabase.from('nutrition_profile').select('client_id, taille_cm').in('client_id', clientIds),
+      ])
+      const cMap = {}
+      for (const c of (cData || [])) cMap[c.id] = c.date_naissance
+      const npMap = {}
+      for (const np of (npData || [])) npMap[np.client_id] = np.taille_cm
+      setClientInfo({ dateNaissance: cMap, taille: npMap })
+    } else {
+      setWellness({})
+      setClientInfo({ dateNaissance: {}, taille: {} })
     }
+    // Derniers événements du groupe — simple rappel, pas de pointage individuel
+    const { data: evData } = await supabase
+      .from('groupe_evenements')
+      .select('id, date, type, titre, adversaire')
+      .eq('groupe_id', groupeId)
+      .lte('date', new Date().toISOString().slice(0, 10))
+      .order('date', { ascending: false })
+      .limit(6)
+    setRecentEvents(evData || [])
   }
 
   // Joueurs au poste P triés par rang
@@ -1492,7 +1521,45 @@ export function EffectifView({ groupeId, groupColor }) {
   function dernierTest(j, type) { return testsTries(j, type)[0] || null }
   function getWellness(j) {
     if (!j.client_id) return null
-    return wellness[j.client_id] ?? null
+    return wellness[j.client_id]?.score ?? null
+  }
+  function getWellnessInfo(j) {
+    if (!j.client_id) return null
+    return wellness[j.client_id] || null
+  }
+  function ageFromDate(d) {
+    if (!d) return null
+    const naiss = new Date(d + 'T00:00:00')
+    const diff = Date.now() - naiss.getTime()
+    return Math.floor(diff / (365.25 * 24 * 3600 * 1000))
+  }
+  // Valeurs effectives : priorité au compte client lié (auto-rempli par le
+  // joueur), puis au wellness pour le poids, puis à la saisie manuelle du
+  // coach sur la fiche joueur — jamais de source qui écrase une autre en base,
+  // seulement un ordre d'affichage.
+  function effectiveAge(j) {
+    const dn = (j.client_id && clientInfo.dateNaissance[j.client_id]) || j.date_naissance
+    return dn ? ageFromDate(dn) : null
+  }
+  function effectiveTaille(j) {
+    const t = (j.client_id && clientInfo.taille[j.client_id]) || j.taille_cm
+    return t || null
+  }
+  function effectivePoids(j) {
+    const w = getWellnessInfo(j)
+    if (w?.poids) return { valeur: w.poids, source: 'wellness', date: w.date }
+    if (j.poids_kg) return { valeur: j.poids_kg, source: 'manuel', date: null }
+    return null
+  }
+  async function saveVitalManuel(j, champ, valeur) {
+    const patch = champ === 'age'
+      ? { date_naissance: valeur ? `${new Date().getFullYear() - Number(valeur)}-01-01` : null }
+      : champ === 'taille' ? { taille_cm: valeur ? Number(valeur) : null }
+      : { poids_kg: valeur ? Number(valeur) : null }
+    await supabase.from('groupe_joueurs').update(patch).eq('id', j.id)
+    setJoueurs(prev => prev.map(x => x.id === j.id ? { ...x, ...patch } : x))
+    setPanelJoueur(prev => prev ? { ...prev, ...patch } : prev)
+    setEditingVital(null)
   }
   function wColor(w) {
     if (w === null) return '#c4ccd4'
@@ -1534,6 +1601,8 @@ export function EffectifView({ groupeId, groupColor }) {
     setNewVmi('')
     setNewVma('')
     setNew30m('')
+    setEditingVital(null)
+    setVitalDraft('')
     setPanelPos(null)
   }
 
@@ -1797,146 +1866,201 @@ export function EffectifView({ groupeId, groupColor }) {
       )}
 
       {/* ─── Panneau édition joueur ─── */}
-      {panelJoueur && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)',
-          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:500 }}
-          onClick={e => { if (e.target === e.currentTarget) setPanelJoueur(null) }}>
-          <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:460,
-            padding:'18px 18px 36px', maxHeight:'85vh', overflowY:'auto' }}>
-            <div style={{ width:32, height:4, background:'#e5e7eb', borderRadius:2, margin:'0 auto 16px' }} />
-            <div style={{ fontSize:'0.95rem', fontWeight:900, color:'#1f2937', marginBottom:2 }}>
-              {panelJoueur.prenom} {panelJoueur.nom}
-            </div>
-            <div style={{ fontSize:'0.75rem', color:'#6b7280', marginBottom:16 }}>
-              Poste {panelJoueur._poste} — {POSTES_RUGBY.find(p=>p.num===panelJoueur._poste)?.nom}
-            </div>
+      {panelJoueur && (() => {
+        const age = effectiveAge(panelJoueur)
+        const taille = effectiveTaille(panelJoueur)
+        const poidsInfo = effectivePoids(panelJoueur)
+        const wInfo = getWellnessInfo(panelJoueur)
+        const initiales = `${(panelJoueur.prenom||'')[0]||''}${(panelJoueur.nom||'')[0]||''}`.toUpperCase()
+        const EVT_COLOR = { entrainement:'#dc2626', muscu:'#6366f1', match:'#2563eb', collectif:'#98a2ad' }
+        const EVT_LABEL = { entrainement:'Entraînement', muscu:'Musculation', match:'Match', collectif:'Collectif' }
 
-            {/* Compte lié */}
-            {panelJoueur.client_id ? (
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px',
-                background:'#f0fdf4', borderRadius:10, border:'1.5px solid #86efac', marginBottom:14 }}>
-                <span style={{ width:8, height:8, borderRadius:'50%', background:'#16a34a' }} />
-                <div>
-                  <div style={{ fontSize:'0.78rem', fontWeight:700, color:'#15803d' }}>Compte app lié ✓</div>
-                  {getWellness(panelJoueur) !== null && (
-                    <div style={{ fontSize:'0.7rem', color:'#4ade80', fontWeight:600 }}>
-                      Wellness : {getWellness(panelJoueur).toFixed(1)} / 4
-                    </div>
+        function VitalTile({ champ, label, valeur, unite, sub }) {
+          const editing = editingVital === champ
+          return (
+            <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px', cursor: editing ? 'default' : 'pointer' }}
+              onClick={() => { if (!editing) { setEditingVital(champ); setVitalDraft(valeur ?? '') } }}>
+              <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color:'#9ca3af', textTransform:'uppercase', marginBottom:5 }}>{label}</div>
+              {editing ? (
+                <div style={{ display:'flex', gap:4 }} onClick={e => e.stopPropagation()}>
+                  <input autoFocus type="number" value={vitalDraft} onChange={e=>setVitalDraft(e.target.value)}
+                    style={{ width:0, flex:1, minWidth:0, border:'1.5px solid #1f2937', borderRadius:6, padding:'3px 5px', fontSize:'0.85rem', fontFamily:'inherit', outline:'none' }} />
+                  <button onClick={() => saveVitalManuel(panelJoueur, champ, vitalDraft)}
+                    style={{ background:'#1f2937', color:'#fff', border:'none', borderRadius:6, padding:'0 8px', fontSize:'0.7rem', fontWeight:800, cursor:'pointer' }}>OK</button>
+                </div>
+              ) : valeur != null ? (
+                <>
+                  <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#1a1a1a' }}>{valeur}<span style={{ fontSize:'0.65rem', fontWeight:700, color:'#9ca3af', marginLeft:2 }}>{unite}</span></div>
+                  {sub && <div style={{ fontSize:'0.62rem', color:'#9ca3af', marginTop:2, fontWeight:600 }}>{sub}</div>}
+                </>
+              ) : (
+                <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>
+              )}
+            </div>
+          )
+        }
+
+        return (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)',
+          display:'flex', alignItems:'center', justifyContent:'center', zIndex:500, padding:'3vh 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setPanelJoueur(null) }}>
+          <div style={{ background:'#fff', borderRadius:18, width:'100%', maxWidth:520,
+            maxHeight:'94vh', overflowY:'auto', boxShadow:'0 24px 70px rgba(0,0,0,.35)' }}>
+
+            {/* En-tête */}
+            <div style={{ background:'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding:'18px 20px', display:'flex', alignItems:'center', gap:13 }}>
+              <div style={{ width:46, height:46, borderRadius:11, background:'rgba(228,248,22,.15)', border:'1.5px solid rgba(228,248,22,.3)', display:'flex', alignItems:'center', justifyContent:'center', color:'#e4f816', fontWeight:900, fontSize:'.95rem', flexShrink:0 }}>{initiales}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ color:'#fff', fontSize:'1.05rem', fontWeight:900, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{panelJoueur.prenom} {panelJoueur.nom}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(255,255,255,.14)', color:'#fff' }}>
+                    {panelJoueur._poste} · {POSTES_RUGBY.find(p=>p.num===panelJoueur._poste)?.nom}
+                  </span>
+                  {panelJoueur.client_id && (
+                    <span style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(74,222,128,.18)', color:'#86efac', display:'flex', alignItems:'center', gap:4 }}>
+                      <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ade80' }} />Compte lié
+                    </span>
                   )}
                 </div>
               </div>
-            ) : (
-              <div style={{ padding:'8px 12px', background:'#f9fafb', borderRadius:10, border:'1px solid #e5e7eb', marginBottom:14,
-                fontSize:'0.72rem', color:'#9ca3af' }}>
-                Pas encore de compte app lié
-              </div>
-            )}
-
-            {/* Statut */}
-            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Statut</div>
-            <div style={{ display:'flex', gap:6, marginBottom:14 }}>
-              {[['ok','✅ Disponible'],['cond','⚠️ Conditions'],['out','🚫 Indispo.']].map(([v,l]) => {
-                const selBg = { ok:'#dcfce7', cond:'#fef3c7', out:'#fee2e2' }[v]
-                const selBorder = { ok:'#16a34a', cond:'#f59e0b', out:'#dc2626' }[v]
-                const selColor = { ok:'#15803d', cond:'#b45309', out:'#b91c1c' }[v]
-                const sel = editStatut === v
-                return (
-                  <button key={v} onClick={() => setEditStatut(v)}
-                    style={{ flex:1, padding:'8px 4px', borderRadius:8,
-                      border:`2px solid ${sel ? selBorder : 'transparent'}`,
-                      fontSize:'0.7rem', fontWeight:800, cursor:'pointer', textAlign:'center',
-                      background: sel ? selBg : '#f3f4f6',
-                      color: sel ? selColor : '#6b7280',
-                      fontFamily:'inherit' }}>
-                    {l}
-                  </button>
-                )
-              })}
+              <button onClick={() => setPanelJoueur(null)} style={{ background:'rgba(255,255,255,.12)', border:'none', color:'#fff', width:32, height:32, borderRadius:9, fontSize:'1.1rem', cursor:'pointer', flexShrink:0 }}>×</button>
             </div>
 
-            {/* Restrictions (si cond) */}
-            {editStatut === 'cond' && (
-              <>
-                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Restrictions</div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10 }}>
-                  {RESTRICTIONS.map(r => {
-                    const on = editRestrictions.includes(r)
+            <div style={{ padding:'18px 20px 22px' }}>
+              {/* Chiffres clés — toujours visibles, cliquables pour saisie manuelle */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginBottom:20 }}>
+                <VitalTile champ="age" label="Âge" valeur={age} unite="ans" />
+                <VitalTile champ="taille" label="Taille" valeur={taille} unite="cm" />
+                <VitalTile champ="poids" label="Poids" valeur={poidsInfo?.valeur ?? null} unite="kg"
+                  sub={poidsInfo ? (poidsInfo.source === 'wellness' ? `via wellness · ${new Date(poidsInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}` : 'saisie manuelle') : null} />
+                <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px' }}>
+                  <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color:'#9ca3af', textTransform:'uppercase', marginBottom:5 }}>Dernier wellness</div>
+                  {wInfo?.score != null ? (
+                    <>
+                      <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#16a34a' }}>{wInfo.score.toFixed(1)}<span style={{ fontSize:'0.65rem', fontWeight:700, color:'#9ca3af', marginLeft:2 }}>/4</span></div>
+                      <div style={{ fontSize:'0.62rem', color:'#9ca3af', marginTop:2, fontWeight:600 }}>{new Date(wInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
+                    </>
+                  ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>}
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginBottom:20 }}>
+                {/* Statut + blessure */}
+                <div>
+                  <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Statut</div>
+                  <div style={{ display:'flex', gap:5, marginBottom:10 }}>
+                    {[['ok','Dispo.'],['cond','Cond.'],['out','Indispo.']].map(([v,l]) => {
+                      const selBg = { ok:'#dcfce7', cond:'#fef3c7', out:'#fee2e2' }[v]
+                      const selBorder = { ok:'#16a34a', cond:'#f59e0b', out:'#dc2626' }[v]
+                      const selColor = { ok:'#15803d', cond:'#b45309', out:'#b91c1c' }[v]
+                      const sel = editStatut === v
+                      return (
+                        <button key={v} onClick={() => setEditStatut(v)}
+                          style={{ flex:1, padding:'7px 2px', borderRadius:8,
+                            border:`2px solid ${sel ? selBorder : 'transparent'}`,
+                            fontSize:'0.66rem', fontWeight:800, cursor:'pointer', textAlign:'center',
+                            background: sel ? selBg : '#f3f4f6',
+                            color: sel ? selColor : '#6b7280',
+                            fontFamily:'inherit' }}>
+                          {l}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {editStatut === 'cond' && (
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10 }}>
+                      {RESTRICTIONS.map(r => {
+                        const on = editRestrictions.includes(r)
+                        return (
+                          <div key={r} onClick={() => setEditRestrictions(prev => on ? prev.filter(x=>x!==r) : [...prev,r])}
+                            style={{ padding:'3px 8px', borderRadius:12, fontSize:'0.64rem', fontWeight:700,
+                              cursor:'pointer', border:`1.5px solid ${on?'#f59e0b':'#e5e7eb'}`,
+                              background: on?'#fef3c7':'#f9fafb', color: on?'#b45309':'#374151' }}>
+                            {r}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {editStatut !== 'ok' && (
+                    <>
+                      <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Ex : Entorse LLE genou droit" value={editDesc} onChange={e=>setEditDesc(e.target.value)} />
+                      <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Durée estimée" value={editDuree} onChange={e=>setEditDuree(e.target.value)} />
+                    </>
+                  )}
+                  <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:6, marginTop:10 }}>Postes</div>
+                  <div style={{ display:'flex', gap:6, marginBottom:6 }}>
+                    <input style={{ ...inputStyle, marginBottom:0, width:60, flexShrink:0 }} type="number" min={1} value={editRang} onChange={e=>setEditRang(Number(e.target.value))} placeholder="Rang" title="Rang au poste principal" />
+                    <input style={{ ...inputStyle, marginBottom:0, flex:1 }} placeholder="Postes secondaires (ex : 6, 8)" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
+                  </div>
+                </div>
+
+                {/* Derniers événements du groupe — rappel simple, pas de pointage individuel */}
+                <div>
+                  <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Derniers événements du groupe</div>
+                  {recentEvents.length ? (
+                    <div style={{ border:'1px solid #e5e7eb', borderRadius:10, overflow:'hidden' }}>
+                      {recentEvents.map(ev => (
+                        <div key={ev.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 11px', borderBottom:'1px solid #f3f4f6', background:'#fff' }}>
+                          <span style={{ width:7, height:7, borderRadius:'50%', background:EVT_COLOR[ev.type]||'#9ca3af', flexShrink:0 }} />
+                          <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {ev.type === 'match' ? `Match${ev.adversaire ? ' · ' + ev.adversaire : ''}` : (ev.titre || EVT_LABEL[ev.type] || ev.type)}
+                          </span>
+                          <span style={{ fontSize:'0.64rem', color:'#9ca3af', fontWeight:600, flexShrink:0 }}>
+                            {new Date(ev.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p style={{ fontSize:'0.72rem', color:'#c4ccd4', fontStyle:'italic', margin:0 }}>Aucun événement récent.</p>}
+                </div>
+              </div>
+
+              {/* Tests physiques — tuiles, plus une saisie compacte */}
+              <div style={{ marginBottom:18 }}>
+                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Tests physiques</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(100px,1fr))', gap:8 }}>
+                  {[['vmi','VMI','km/h'], ['vma','VMA','km/h'], ['30m','30m','s']].map(([type,label,unite]) => {
+                    const dernier = dernierTest(panelJoueur, type)
+                    if (!dernier) return null
                     return (
-                      <div key={r} onClick={() => setEditRestrictions(prev => on ? prev.filter(x=>x!==r) : [...prev,r])}
-                        style={{ padding:'4px 9px', borderRadius:12, fontSize:'0.68rem', fontWeight:700,
-                          cursor:'pointer', border:`1.5px solid ${on?'#f59e0b':'#e5e7eb'}`,
-                          background: on?'#fef3c7':'#f9fafb', color: on?'#b45309':'#374151' }}>
-                        {r}
+                      <div key={type} style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:10, padding:'8px 10px' }}>
+                        <div style={{ fontSize:'0.58rem', fontWeight:800, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.03em', marginBottom:3 }}>{label}</div>
+                        <div style={{ fontSize:'0.85rem', fontWeight:900, color:'#1a1a1a' }}>{dernier.valeur}<span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', marginLeft:2 }}>{unite}</span></div>
+                        <div style={{ fontSize:'0.58rem', color:'#9ca3af', marginTop:2 }}>{new Date(dernier.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
                       </div>
                     )
                   })}
                 </div>
-              </>
-            )}
-
-            {/* Détail blessure */}
-            {editStatut !== 'ok' && (
-              <>
-                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Détail blessure</div>
-                <input style={inputStyle} placeholder="Ex : Entorse LLE genou droit" value={editDesc} onChange={e=>setEditDesc(e.target.value)} />
-                <input style={inputStyle} placeholder="Durée estimée (ex : 3 semaines)" value={editDuree} onChange={e=>setEditDuree(e.target.value)} />
-              </>
-            )}
-
-            {/* Rang */}
-            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7, marginTop:4 }}>Rang au poste</div>
-            <input style={inputStyle} type="number" min={1} value={editRang} onChange={e=>setEditRang(Number(e.target.value))} />
-
-            {/* Postes secondaires */}
-            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Postes secondaires (numéros)</div>
-            <input style={inputStyle} placeholder="Ex : 6, 8" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
-
-            {/* VMI / VMA / 30m */}
-            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7, marginTop:4 }}>Tests physiques</div>
-            {[['vmi', 'VMI (30-15 IFT)', newVmi, setNewVmi, 'km/h'], ['vma', 'VMA (test continu)', newVma, setNewVma, 'km/h'], ['30m', '30m (sprint)', new30m, setNew30m, 's']].map(([type, label, val, setVal, unite]) => {
-              const dernier = dernierTest(panelJoueur, type)
-              const historique = testsTries(panelJoueur, type).slice(0, 4)
-              return (
-                <div key={type} style={{ marginBottom: 10, background:'#f9fafb', borderRadius:10, padding:'8px 10px', border:'1px solid #e5e7eb' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                    <span style={{ fontSize:'0.75rem', fontWeight:700, color:'#374151' }}>{label}</span>
-                    <span style={{ fontSize:'0.8rem', fontWeight:900, color: dernier ? '#1f2937' : '#d1d5db' }}>
-                      {dernier ? `${dernier.valeur} ${unite}` : '—'}
-                    </span>
-                  </div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <input type="number" step="0.1" placeholder="Nouvelle valeur"
-                      value={val} onChange={e => setVal(e.target.value)}
-                      style={{ ...inputStyle, marginBottom:0, flex:1 }} />
-                    <button onClick={() => ajouterTestPhysique(type)} disabled={!val || savingTest === type}
-                      style={{ padding:'0 14px', borderRadius:8, border:'none', background:'#1f2937', color:'#fff',
-                        fontSize:'0.78rem', fontWeight:800, cursor: val ? 'pointer' : 'not-allowed', opacity: val ? 1 : 0.5, fontFamily:'inherit' }}>
-                      {savingTest === type ? '...' : '+'}
-                    </button>
-                  </div>
-                  {historique.length > 0 && (
-                    <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
-                      {historique.map(t => (
-                        <span key={t.id} style={{ fontSize:'0.65rem', color:'#9ca3af', background:'#fff', border:'1px solid #e5e7eb', borderRadius:6, padding:'2px 6px' }}>
-                          {t.valeur} · {new Date(t.date + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}
-                        </span>
-                      ))}
+                <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
+                  {[['vmi', 'VMI', newVmi, setNewVmi], ['vma', 'VMA', newVma, setNewVma], ['30m', '30m', new30m, setNew30m]].map(([type, label, val, setVal]) => (
+                    <div key={type} style={{ display:'flex', alignItems:'center', gap:4, background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:8, padding:'3px 4px 3px 9px' }}>
+                      <span style={{ fontSize:'0.66rem', fontWeight:800, color:'#6b7280' }}>{label}</span>
+                      <input type="number" step="0.1" placeholder="+"
+                        value={val} onChange={e => setVal(e.target.value)}
+                        style={{ width:52, border:'none', outline:'none', fontSize:'0.75rem', fontFamily:'inherit', padding:'4px 2px' }} />
+                      <button onClick={() => ajouterTestPhysique(type)} disabled={!val || savingTest === type}
+                        style={{ padding:'4px 9px', borderRadius:6, border:'none', background:'#1f2937', color:'#fff',
+                          fontSize:'0.7rem', fontWeight:800, cursor: val ? 'pointer' : 'not-allowed', opacity: val ? 1 : 0.5, fontFamily:'inherit' }}>
+                        {savingTest === type ? '…' : 'OK'}
+                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
-              )
-            })}
+              </div>
 
-            <button onClick={saveJoueur} disabled={saving}
-              style={{ width:'100%', padding:'11px', background:groupColor,
-                color: isLight(groupColor)?'#1a1a1a':'#fff',
-                border:'none', borderRadius:11, fontSize:'0.86rem', fontWeight:900,
-                cursor:'pointer', marginTop:10, fontFamily:'inherit' }}>
-              {saving ? '...' : '💾 Enregistrer'}
-            </button>
+              <button onClick={saveJoueur} disabled={saving}
+                style={{ width:'100%', padding:'11px', background:groupColor,
+                  color: isLight(groupColor)?'#1a1a1a':'#fff',
+                  border:'none', borderRadius:11, fontSize:'0.86rem', fontWeight:900,
+                  cursor:'pointer', fontFamily:'inherit' }}>
+                {saving ? '…' : 'Enregistrer'}
+              </button>
+            </div>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
