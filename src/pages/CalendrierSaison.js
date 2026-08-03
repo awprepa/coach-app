@@ -1422,7 +1422,8 @@ export function EffectifView({ groupeId, groupColor }) {
   const [saving, setSaving] = useState(false)
   const [newVmi, setNewVmi] = useState('')
   const [newVma, setNewVma] = useState('')
-  const [savingTest, setSavingTest] = useState(null) // 'vmi' | 'vma' | null
+  const [new30m, setNew30m] = useState('')
+  const [savingTest, setSavingTest] = useState(null) // 'vmi' | 'vma' | '30m' | null
 
   const RESTRICTIONS = [
     'Sans contact','Sans changement de direction',
@@ -1532,11 +1533,12 @@ export function EffectifView({ groupeId, groupColor }) {
     setEditSecondaires(secondaires)
     setNewVmi('')
     setNewVma('')
+    setNew30m('')
     setPanelPos(null)
   }
 
   async function ajouterTestPhysique(type) {
-    const valeurStr = type === 'vmi' ? newVmi : newVma
+    const valeurStr = type === 'vmi' ? newVmi : type === 'vma' ? newVma : new30m
     const valeur = parseFloat(valeurStr)
     if (!panelJoueur || !valeur) return
     setSavingTest(type)
@@ -1545,7 +1547,7 @@ export function EffectifView({ groupeId, groupColor }) {
       .select().single()
     setSavingTest(null)
     if (error) { alert(error.message); return }
-    if (type === 'vmi') setNewVmi(''); else setNewVma('')
+    if (type === 'vmi') setNewVmi(''); else if (type === 'vma') setNewVma(''); else setNew30m('')
     setPanelJoueur(prev => ({ ...prev, joueur_tests_physiques: [...(prev.joueur_tests_physiques || []), data] }))
     setJoueurs(prev => prev.map(j => j.id === panelJoueur.id
       ? { ...j, joueur_tests_physiques: [...(j.joueur_tests_physiques || []), data] }
@@ -1889,9 +1891,9 @@ export function EffectifView({ groupeId, groupColor }) {
             <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Postes secondaires (numéros)</div>
             <input style={inputStyle} placeholder="Ex : 6, 8" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
 
-            {/* VMI / VMA */}
-            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7, marginTop:4 }}>VMI / VMA</div>
-            {[['vmi', 'VMI (30-15 IFT)', newVmi, setNewVmi], ['vma', 'VMA (test continu)', newVma, setNewVma]].map(([type, label, val, setVal]) => {
+            {/* VMI / VMA / 30m */}
+            <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7, marginTop:4 }}>Tests physiques</div>
+            {[['vmi', 'VMI (30-15 IFT)', newVmi, setNewVmi, 'km/h'], ['vma', 'VMA (test continu)', newVma, setNewVma, 'km/h'], ['30m', '30m (sprint)', new30m, setNew30m, 's']].map(([type, label, val, setVal, unite]) => {
               const dernier = dernierTest(panelJoueur, type)
               const historique = testsTries(panelJoueur, type).slice(0, 4)
               return (
@@ -1899,7 +1901,7 @@ export function EffectifView({ groupeId, groupColor }) {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
                     <span style={{ fontSize:'0.75rem', fontWeight:700, color:'#374151' }}>{label}</span>
                     <span style={{ fontSize:'0.8rem', fontWeight:900, color: dernier ? '#1f2937' : '#d1d5db' }}>
-                      {dernier ? `${dernier.valeur} km/h` : '—'}
+                      {dernier ? `${dernier.valeur} ${unite}` : '—'}
                     </span>
                   </div>
                   <div style={{ display:'flex', gap:6 }}>
