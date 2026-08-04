@@ -166,7 +166,12 @@ export default function ScannerArticle() {
     }
   }, [])
 
-  // Sauvegarder dans l'historique
+  // Sauvegarde automatique dans l'historique dès qu'un produit est trouvé
+  useEffect(() => {
+    if (phase === 'result' && food && clientId && !saved && !saving) saveToHistory()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, food, clientId])
+
   async function saveToHistory() {
     if (!food || !clientId || saving || saved) return
     setSaving(true)
@@ -341,7 +346,7 @@ export default function ScannerArticle() {
 
       {/* ── Phase : result ────────────────────────────────────── */}
       {phase === 'result' && food && (
-        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: 110 }}>
+        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))' }}>
 
           {/* Fiche produit */}
           <div style={S.card}>
@@ -469,26 +474,18 @@ export default function ScannerArticle() {
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           background: 'white', borderTop: '1px solid #f3f4f6',
-          padding: '0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 0px))',
-          display: 'flex', flexDirection: 'column', gap: '0.6rem',
+          padding: '0.85rem calc(1rem + env(safe-area-inset-right, 0px)) calc(0.85rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px))',
+          display: 'flex', flexDirection: 'column', gap: '0.5rem',
           zIndex: 80,
         }}>
           <button onClick={addToMeal} style={S.btnPrimary}>
             ➕ Ajouter à mes repas
           </button>
-          <div style={{ display: 'flex', gap: '0.6rem' }}>
-            <button
-              onClick={saveToHistory}
-              disabled={saved || saving}
-              style={{
-                ...S.btnSecondary,
-                flex: 1,
-                opacity: saved ? 0.6 : 1,
-              }}
-            >
-              {saving ? '…' : saved ? '✓ Sauvegardé' : '🗂 Sauvegarder'}
-            </button>
-            <button onClick={rescan} style={{ ...S.btnSecondary, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: saved ? '#16a34a' : '#9ca3af' }}>
+              {saved ? '✓ Enregistré dans l\'historique' : 'Enregistrement dans l\'historique…'}
+            </span>
+            <button onClick={rescan} style={{ ...S.btnSecondary, width: 'auto', padding: '0.5rem 1.1rem' }}>
               📷 Rescanner
             </button>
           </div>

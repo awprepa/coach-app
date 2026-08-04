@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
 
@@ -255,6 +255,7 @@ function AIError({ error, onRetry }) {
 // ── Page principale ──────────────────────────────────────────────────────────
 export default function AjouterRepas() {
   const navigate = useNavigate()
+  const location = useLocation()
   const fadeStyle = usePageFade()
   const [searchParams] = useSearchParams()
 
@@ -313,6 +314,18 @@ export default function AjouterRepas() {
   // ── Produit catalogue (scan ou recherche manuelle) ───────────────────────
   const [food,     setFood]     = useState(null)
   const [quantity, setQuantity] = useState('100')
+
+  // Pré-remplissage depuis un scan/historique (page ScannerArticle / HistoriqueScans)
+  useEffect(() => {
+    const prefill = location.state?.prefillFood
+    if (!prefill) return
+    setMode('scan')
+    setScanDone(true)
+    setFood(prefill)
+    setQuantity(String(prefill.serving_g || 100))
+    window.history.replaceState({}, '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   // ── Saisie manuelle libre ────────────────────────────────────────────────
   const [manualForm,    setManualForm]    = useState({ name: '', kcal: '', prot: '', carbs: '', fat: '' })
@@ -907,7 +920,7 @@ export default function AjouterRepas() {
                         </div>}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-fg)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-fg-dark)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
                           {t.kcal || '—'} kcal
                         </div>
                         <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
@@ -1247,7 +1260,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
             Valeurs pour {quantity}{unit}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-fg)' }}>{macros.kcal} kcal</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-fg-dark)' }}>{macros.kcal} kcal</span>
             <MacroPill label="Prot"  value={macros.prot}  color="#60a5fa" />
             <MacroPill label="Gluc"  value={macros.carbs} color="#fbbf24" />
             <MacroPill label="Lip"   value={macros.fat}   color="#f87171" />

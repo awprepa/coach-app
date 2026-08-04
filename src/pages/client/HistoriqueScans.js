@@ -41,6 +41,31 @@ export default function HistoriqueScans() {
     load()
   }, [])
 
+  async function deleteScan(id) {
+    setScans(prev => prev.filter(s => s.id !== id))
+    await supabase.from('nutrition_scan_history').delete().eq('id', id)
+  }
+
+  function reuseScan(scan) {
+    navigate('/client/nutrition/ajouter', {
+      state: {
+        prefillFood: {
+          id: scan.food_id,
+          name: scan.product_name,
+          brand: scan.brand,
+          image_url: scan.image_url,
+          kcal_100: scan.kcal_100g,
+          prot_100: scan.prot_100g,
+          carbs_100: scan.carbs_100g,
+          fat_100: scan.fat_100g,
+          fibre_100: scan.fiber_100g,
+          nutri_score: scan.nutriscore_grade,
+          nova_group: scan.nova_group,
+        },
+      },
+    })
+  }
+
   // Filtrage
   const filtered = scans.filter(s => {
     if (filter === 'good') return ['A', 'B'].includes(s.quality_grade)
@@ -237,6 +262,16 @@ export default function HistoriqueScans() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Actions */}
+                  <div style={S.cardActions}>
+                    <button onClick={() => reuseScan(scan)} style={S.btnReuse}>
+                      ➕ Réutiliser
+                    </button>
+                    <button onClick={() => deleteScan(scan.id)} style={S.btnDelete}>
+                      🗑
+                    </button>
+                  </div>
                 </div>
               )
             })}
@@ -309,7 +344,7 @@ const S = {
     cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
   },
   filterChipActive: {
-    background: '#1a1a1a', borderColor: '#1a1a1a', color: 'var(--accent-fg)',
+    background: '#1a1a1a', borderColor: '#1a1a1a', color: 'var(--accent-fg-dark)',
   },
   scanCard: {
     background: 'white', borderRadius: 16, padding: '0.95rem 1rem',
@@ -317,7 +352,21 @@ const S = {
   },
   btnPrimary: {
     padding: '0.85rem 2rem', borderRadius: 14,
-    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)',
+    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+  },
+  cardActions: {
+    display: 'flex', gap: '0.5rem', marginTop: '0.7rem',
+    paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6',
+  },
+  btnReuse: {
+    flex: 1, padding: '0.55rem', borderRadius: 10,
+    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
+    fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
+  },
+  btnDelete: {
+    padding: '0.55rem 0.8rem', borderRadius: 10,
+    border: '1.5px solid #fee2e2', background: 'white', color: '#dc2626',
+    fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
   },
 }
