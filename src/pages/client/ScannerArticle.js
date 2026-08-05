@@ -346,7 +346,7 @@ export default function ScannerArticle() {
 
       {/* ── Phase : result ────────────────────────────────────── */}
       {phase === 'result' && food && (
-        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))' }}>
+        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }}>
 
           {/* Fiche produit */}
           <div style={S.card}>
@@ -474,7 +474,7 @@ export default function ScannerArticle() {
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           background: 'white', borderTop: '1px solid #f3f4f6',
-          padding: '0.85rem calc(1rem + env(safe-area-inset-right, 0px)) calc(0.85rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px))',
+          padding: '0.85rem calc(1rem + env(safe-area-inset-right, 0px)) calc(1.4rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px))',
           display: 'flex', flexDirection: 'column', gap: '0.5rem',
           zIndex: 80,
         }}>
@@ -548,7 +548,7 @@ const S = {
   },
   btnPrimary: {
     width: '100%', padding: '0.9rem', borderRadius: 14,
-    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)',
+    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
   },
   btnSecondary: {
