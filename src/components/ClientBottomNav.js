@@ -101,8 +101,13 @@ export default function ClientBottomNav() {
   }, [])
 
   // Récupère l'offre du client — cache localStorage 24h pour éviter une requête à chaque navigation
+  const [userId, setUserId] = useState(null)
   useEffect(() => {
     async function fetchOffre() {
+      const { data: sess } = await supabase.auth.getSession()
+      const uid = sess?.session?.user?.id
+      if (uid) setUserId(uid)
+
       const cached = localStorage.getItem('aw_client_offre')
       const cachedAt = parseInt(localStorage.getItem('aw_client_offre_at') || '0', 10)
       const TTL = 24 * 60 * 60 * 1000 // 24h
@@ -110,11 +115,9 @@ export default function ClientBottomNav() {
         setOffre(cached)
         return
       }
-      const { data: sess } = await supabase.auth.getSession()
-      const userId = sess?.session?.user?.id
-      if (!userId) return
+      if (!uid) return
       const { data: client } = await supabase
-        .from('clients').select('offre').eq('user_id', userId).maybeSingle()
+        .from('clients').select('offre').eq('user_id', uid).maybeSingle()
       if (client?.offre) {
         localStorage.setItem('aw_client_offre', client.offre)
         localStorage.setItem('aw_client_offre_at', String(Date.now()))
@@ -123,6 +126,28 @@ export default function ClientBottomNav() {
     }
     fetchOffre()
   }, [])
+
+  // Pastille messages non lus — refetch au changement de page (la page Messages marque comme lu à l'ouverture) + Realtime
+  const [unreadMsg, setUnreadMsg] = useState(0)
+  useEffect(() => {
+    if (!userId) return
+    async function fetchUnread() {
+      const { count } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('to_id', userId)
+        .eq('lu', false)
+      setUnreadMsg(count || 0)
+    }
+    fetchUnread()
+
+    const channel = supabase
+      .channel(`bottomnav-messages-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `to_id=eq.${userId}` }, fetchUnread)
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [userId, location.pathname])
 
   if (kbOpen) return null
 
@@ -139,7 +164,7 @@ export default function ClientBottomNav() {
     { label: 'Accueil',   Icon: IconHome,      active: isHome,        to: '/' },
     { label: 'Programme', Icon: IconProgramme, active: isProgramme,   to: '/client/mon-programme' },
     { label: 'Nutrition', Icon: IconNutrition, active: isNutrition,   to: '/client/nutrition' },
-    { label: 'Messages',  Icon: IconChat,      active: isMessages,    to: '/client/messages' },
+    { label: 'Messages',  Icon: IconChat,      active: isMessages,    to: '/client/messages', badge: unreadMsg },
     ...(isPrepaPhysique ? [
       { label: 'Compét.', Icon: IconTrophy, active: isCompetition, to: '/client/competition' },
     ] : []),
