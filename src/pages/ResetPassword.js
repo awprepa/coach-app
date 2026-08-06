@@ -12,23 +12,33 @@ export default function ResetPassword() {
   const [showPwd, setShowPwd]             = useState(false)
 
   useEffect(() => {
-    // Supabase traite automatiquement le ?code= dans l'URL (PKCE)
-    // On écoute l'événement PASSWORD_RECOVERY pour savoir quand c'est prêt
+    // Lien déjà consommé (email pré-scanné) ou expiré → Supabase renvoie
+    // #error=access_denied&error_code=otp_expired dans le hash, sans jamais
+    // établir de session. On le détecte tout de suite plutôt que d'attendre
+    // le timeout, pour afficher le bon message.
+    if (window.location.hash.includes('error=')) {
+      setStatus('error')
+      return
+    }
+
+    // Supabase traite automatiquement le hash #access_token=... au chargement
+    // (avant même ce useEffect) — on écoute quand même PASSWORD_RECOVERY au cas
+    // où l'événement arrive après le mount, ET on vérifie la session existante
+    // en fallback (cas où l'événement est arrivé avant qu'on s'abonne).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setStatus('ready')
       }
     })
 
-    // Si une session existe déjà (code déjà échangé avant le mount)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setStatus('ready')
     })
 
-    // Timeout de sécurité : si rien en 6s, lien invalide ou expiré
+    // Timeout de sécurité, allongé pour laisser le temps aux connexions lentes
     const t = setTimeout(() => {
       setStatus(s => s === 'loading' ? 'error' : s)
-    }, 6000)
+    }, 12000)
 
     return () => {
       subscription.unsubscribe()
@@ -80,7 +90,7 @@ export default function ResetPassword() {
               Lien invalide ou expiré
             </p>
             <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-              Ce lien de réinitialisation n'est plus valide. Demande-en un nouveau.
+              Ce lien de réinitialisation n'est plus valide (déjà utilisé ou expiré). Demande-en un nouveau depuis l'écran de connexion.
             </p>
             <button onClick={() => navigate('/login')} style={S.btn}>
               Retour à la connexion

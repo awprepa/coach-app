@@ -28,6 +28,7 @@ const MODES = [
   { key: 'photo',   label: 'Photo IA',    emoji: '📷' },
   { key: 'vocal',   label: 'Vocal IA',    emoji: '🎤' },
   { key: 'favoris', label: 'Favoris',     emoji: '⭐' },
+  { key: 'historique', label: 'Historique', emoji: '🕘' },
 ]
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
@@ -341,6 +342,10 @@ export default function AjouterRepas() {
   // ── Favoris ───────────────────────────────────────────────────────────────
   const [templates, setTemplates] = useState([])
 
+  // ── Historique des scans ──────────────────────────────────────────────────
+  const [scanHistory,        setScanHistory]        = useState([])
+  const [loadingScanHistory, setLoadingScanHistory]  = useState(false)
+
   // ── IA partagée (photo + vocal) ───────────────────────────────────────────
   const [aiAnalysis,     setAiAnalysis]     = useState(null)
   const [analyzingAI,    setAnalyzingAI]    = useState(false)
@@ -381,6 +386,33 @@ export default function AjouterRepas() {
       .order('use_count', { ascending: false }).limit(30)
       .then(({ data }) => setTemplates(data || []))
   }, [mode, client])
+
+  // ── Historique des scans : chargement ────────────────────────────────────
+  useEffect(() => {
+    if (mode !== 'historique' || !client) return
+    setLoadingScanHistory(true)
+    supabase.from('nutrition_scan_history')
+      .select('*').eq('client_id', client.id)
+      .order('scanned_at', { ascending: false }).limit(30)
+      .then(({ data }) => { setScanHistory(data || []); setLoadingScanHistory(false) })
+  }, [mode, client])
+
+  function pickFromHistory(scan) {
+    setFood({
+      id: scan.food_id,
+      name: scan.product_name,
+      brand: scan.brand,
+      image_url: scan.image_url,
+      kcal_100: scan.kcal_100g,
+      prot_100: scan.prot_100g,
+      carbs_100: scan.carbs_100g,
+      fat_100: scan.fat_100g,
+      fibre_100: scan.fiber_100g,
+      nutri_score: scan.nutriscore_grade,
+      nova_group: scan.nova_group,
+    })
+    setQuantity('100')
+  }
 
   // ── Caméra barcode ────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
@@ -784,6 +816,7 @@ export default function AjouterRepas() {
               setMode(m.key)
               stopCamera()
               if (m.key === 'scan') { setFood(null); setScanDone(false); setCameraError(false) }
+              if (m.key === 'historique') { setFood(null); setQuantity('100') }
               if (m.key !== 'photo' && m.key !== 'vocal') resetAI()
             }} style={{
               flexShrink: 0,
@@ -931,6 +964,53 @@ export default function AjouterRepas() {
                   ))}
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* ══ MODE HISTORIQUE ═════════════════════════════════════════ */}
+        {mode === 'historique' && (
+          <div style={S.card}>
+            {food && <FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={clearFood} />}
+            {!food && (
+              loadingScanHistory ? (
+                <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', padding: '1.5rem' }}>Chargement…</p>
+              ) : scanHistory.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+                  <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🕘</p>
+                  <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Aucun scan pour l'instant</p>
+                  <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Scanne un article pour le retrouver ici plus tard.</p>
+                </div>
+              ) : (
+                <>
+                  <p style={S.cardLabel}>🕘 Déjà scannés</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {scanHistory.map(scan => (
+                      <button key={scan.id} onClick={() => pickFromHistory(scan)} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '0.7rem 0.85rem', borderRadius: 12,
+                        border: '1px solid #f3f4f6', background: 'white', cursor: 'pointer', textAlign: 'left',
+                        gap: '0.6rem',
+                      }}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                          background: '#f3f4f6', overflow: 'hidden',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
+                        }}>
+                          {scan.image_url ? <img src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🛒'}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scan.product_name}</div>
+                          {scan.brand && <div style={{ fontSize: '0.66rem', color: '#9ca3af', marginTop: 1 }}>{scan.brand}</div>}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-fg-dark)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px', flexShrink: 0 }}>
+                          {scan.kcal_100g != null ? Math.round(scan.kcal_100g) : '—'} kcal
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )
             )}
           </div>
         )}

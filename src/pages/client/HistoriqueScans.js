@@ -191,7 +191,7 @@ export default function HistoriqueScans() {
               const gc = GRADE_COLOR[scan.quality_grade] || '#9ca3af'
               const score = scan.quality_score
               return (
-                <div key={scan.id} style={S.scanCard}>
+                <div key={scan.id} style={{ ...S.scanCard, cursor: 'pointer' }} onClick={() => reuseScan(scan)}>
                   <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
                     {/* Image produit */}
                     <div style={{
@@ -265,10 +265,10 @@ export default function HistoriqueScans() {
 
                   {/* Actions */}
                   <div style={S.cardActions}>
-                    <button onClick={() => reuseScan(scan)} style={S.btnReuse}>
+                    <button onClick={(e) => { e.stopPropagation(); reuseScan(scan) }} style={S.btnReuse}>
                       ➕ Réutiliser
                     </button>
-                    <button onClick={() => deleteScan(scan.id)} style={S.btnDelete}>
+                    <button onClick={(e) => { e.stopPropagation(); deleteScan(scan.id) }} style={S.btnDelete}>
                       🗑
                     </button>
                   </div>

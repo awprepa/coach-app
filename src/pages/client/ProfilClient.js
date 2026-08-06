@@ -273,6 +273,14 @@ export default function ProfilClient() {
   const [postes,  setPostes]  = useState({}) // { groupe_id: poste }
   const [savingPoste, setSavingPoste] = useState(null)
 
+  // Blessure déclarée par le joueur
+  const [joueurId,      setJoueurId]      = useState(null)
+  const [blessureActive, setBlessureActive] = useState(false)
+  const [blessureDesc,  setBlessureDesc]  = useState('')
+  const [blessureDuree, setBlessureDuree] = useState('')
+  const [savingBlessure, setSavingBlessure] = useState(false)
+  const [savedBlessureMsg, setSavedBlessureMsg] = useState(false)
+
   // Champs nutrition
   const [sexe,     setSexe]     = useState('')
   const [age,      setAge]      = useState('')
@@ -318,6 +326,23 @@ export default function ProfilClient() {
           const p = {}
           membresFull.forEach(m => { p[m.groupe_id] = m.poste || '' })
           setPostes(p)
+        }
+      }
+
+      // Fiche joueur (roster) liée à ce client → pour la blessure
+      const { data: joueur } = await supabase
+        .from('groupe_joueurs')
+        .select('id, joueur_blessures(*)')
+        .eq('client_id', c.id)
+        .limit(1)
+        .maybeSingle()
+      if (joueur) {
+        setJoueurId(joueur.id)
+        const b = (joueur.joueur_blessures || [])[0]
+        if (b) {
+          setBlessureActive(b.statut !== 'ok')
+          setBlessureDesc(b.description || '')
+          setBlessureDuree(b.duree_estimee || '')
         }
       }
 
@@ -394,6 +419,21 @@ export default function ProfilClient() {
       .update({ poste: postes[groupeId] || null })
       .eq('groupe_id', groupeId).eq('client_id', client.id)
     setSavingPoste(null)
+  }
+
+  async function saveBlessure() {
+    if (!joueurId) return
+    setSavingBlessure(true)
+    await supabase.from('joueur_blessures').upsert({
+      joueur_id:      joueurId,
+      statut:         blessureActive ? 'out' : 'ok',
+      description:    blessureActive ? (blessureDesc.trim() || null) : null,
+      duree_estimee:  blessureActive ? (blessureDuree.trim() || null) : null,
+      updated_at:     new Date().toISOString(),
+    }, { onConflict: 'joueur_id' })
+    setSavingBlessure(false)
+    setSavedBlessureMsg(true)
+    setTimeout(() => setSavedBlessureMsg(false), 2000)
   }
 
   async function saveNutriProfil() {
@@ -521,6 +561,60 @@ export default function ProfilClient() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Blessure */}
+      {joueurId && (
+        <div style={S.card}>
+          <h2 style={S.cardTitle}>Blessure</h2>
+          <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 14px', lineHeight: 1.5 }}>
+            Préviens ton coach si tu es blessé et indisponible.
+          </p>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: blessureActive ? 12 : 4 }}>
+            {[
+              { v: false, label: 'Je suis apte' },
+              { v: true,  label: 'Je suis blessé' },
+            ].map(o => (
+              <button key={String(o.v)} onClick={() => setBlessureActive(o.v)} style={{
+                flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: blessureActive === o.v ? (o.v ? '#fee2e2' : 'var(--chip-bg)') : '#f3f4f6',
+                color: blessureActive === o.v ? (o.v ? '#dc2626' : 'var(--chip-text)') : '#6b7280',
+                fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
+              }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+
+          {blessureActive && (
+            <>
+              <div style={S.fieldGroup}>
+                <label style={S.fieldLabel}>Description</label>
+                <textarea
+                  value={blessureDesc}
+                  onChange={e => setBlessureDesc(e.target.value)}
+                  placeholder="Ex : entorse cheville droite"
+                  rows={3}
+                  style={{ ...S.input, resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div style={S.fieldGroup}>
+                <label style={S.fieldLabel}>Durée d'indisponibilité estimée</label>
+                <input
+                  value={blessureDuree}
+                  onChange={e => setBlessureDuree(e.target.value)}
+                  placeholder="Ex : 2 à 3 semaines"
+                  style={S.input}
+                />
+              </div>
+            </>
+          )}
+
+          <button onClick={saveBlessure} disabled={savingBlessure} style={S.saveBtn}>
+            {savedBlessureMsg ? '✓ Sauvegardé !' : savingBlessure ? 'Sauvegarde…' : 'Sauvegarder'}
+          </button>
         </div>
       )}
 
