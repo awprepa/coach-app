@@ -188,6 +188,8 @@ export default function ScannerArticle() {
       carbs_100g:      food.carbs_100,
       fat_100g:        food.fat_100,
       fiber_100g:      food.fibre_100,
+      sugar_100g:      food.sugar_100,
+      satfat_100g:     food.satfat_100,
       nutriscore_grade:food.nutri_score,
       nova_group:      food.nova_group,
       quality_grade:   grade,

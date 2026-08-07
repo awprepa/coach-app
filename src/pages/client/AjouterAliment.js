@@ -44,7 +44,7 @@ export default function AjouterAliment() {
   const location  = useLocation()
   const fadeStyle = usePageFade()
   const [params]  = useSearchParams()
-  const repas = params.get('repas') || 'dejeuner'
+  const [repas, setRepas] = useState(params.get('repas') || 'dejeuner')
   const date  = params.get('date')  || new Date().toISOString().slice(0, 10)
 
   const [client, setClient]   = useState(null)
@@ -221,6 +221,14 @@ export default function AjouterAliment() {
       <div style={S.body}>
         <p style={S.qNom}>{choisi.nom}</p>
         <p style={S.qSub}>{choisi.groupe} — {fmt(choisi.kcal)} kcal / 100 g</p>
+
+        <div style={S.repasRow}>
+          {Object.entries(REPAS_LABEL).map(([k, l]) => (
+            <button key={k} onClick={() => setRepas(k)} style={{ ...S.repasChip, ...(repas === k ? S.repasChipOn : {}) }}>
+              {l}
+            </button>
+          ))}
+        </div>
 
         <div style={S.qField}>
           <input type="number" inputMode="decimal" value={grammes} autoFocus
@@ -406,6 +414,9 @@ const S = {
   macName:    { fontWeight: 800, color: '#4b5563' },
   macVal:     { fontWeight: 700, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' },
   bar:        { height: 6, background: '#eef1f4', borderRadius: 99, overflow: 'hidden', marginTop: 4 },
-  cta:        { position: 'sticky', bottom: 0, padding: '12px 14px 16px', background: 'linear-gradient(180deg, rgba(245,245,245,0) 0%, #f5f5f5 26%)' },
+  cta:        { position: 'sticky', bottom: 0, padding: '12px 14px calc(16px + env(safe-area-inset-bottom, 0px))', background: 'linear-gradient(180deg, rgba(245,245,245,0) 0%, #f5f5f5 26%)' },
   ctaBtn:     { width: '100%', border: 'none', borderRadius: 15, padding: 15, fontSize: '0.95rem', fontWeight: 800, background: '#1a1a1a', color: '#e4f816', cursor: 'pointer', fontFamily: 'inherit' },
+  repasRow:   { display: 'flex', gap: 6, marginBottom: 14 },
+  repasChip:  { flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize' },
+  repasChipOn:{ background: '#1a1a1a', borderColor: '#1a1a1a', color: 'var(--accent-fg-dark)' },
 }

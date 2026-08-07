@@ -34,6 +34,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
   const [filtre, setFiltre]     = useState('')     // '' = toutes | face | profil | dos
   const [addPose, setAddPose]   = useState('face') // pose des photos ajoutées par le coach
   const [poseEdit, setPoseEdit] = useState(null)   // photo dont on choisit la pose
+  const [dateEditVal, setDateEditVal] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -96,9 +97,16 @@ export default function EvolutionPhotosCoach({ clientId }) {
   // Attribuer / changer la pose d'une photo (utile pour les anciennes photos
   // envoyées avant que la pose existe).
   async function definirPose(photo, pose) {
-    setPoseEdit(null)
     await supabase.from('evolution_photos').update({ pose }).eq('id', photo.id)
     setPhotos(prev => prev.map(x => x.id === photo.id ? { ...x, pose } : x))
+    setPoseEdit(prev => prev ? { ...prev, pose } : prev)
+  }
+
+  async function definirDate(photo, date) {
+    if (!date) return
+    await supabase.from('evolution_photos').update({ date }).eq('id', photo.id)
+    setPhotos(prev => prev.map(x => x.id === photo.id ? { ...x, date } : x))
+    setPoseEdit(null)
   }
 
   const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -201,7 +209,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
                       {p.url
                         ? <img src={p.url} alt="" onClick={() => toggleCompare(p.id)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
                         : <div style={{ width: '100%', height: '100%', background: '#f3f4f6' }} />}
-                      <button onClick={(e) => { e.stopPropagation(); setPoseEdit(p) }}
+                      <button onClick={(e) => { e.stopPropagation(); setPoseEdit(p); setDateEditVal(p.date) }}
                         title="Définir la pose"
                         style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,0.62)', color: p.pose ? 'white' : '#fca5a5', fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, letterSpacing: '.02em', border: 'none', cursor: 'pointer' }}>
                         {p.pose ? POSE_LABEL[p.pose].toUpperCase() : 'POSE ?'}
@@ -221,9 +229,10 @@ export default function EvolutionPhotosCoach({ clientId }) {
       {poseEdit && (
         <div onClick={() => setPoseEdit(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 16, padding: '1.1rem', width: '100%', maxWidth: 320 }}>
-            <p style={{ margin: '0 0 0.2rem', fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>Pose de la photo</p>
-            <p style={{ margin: '0 0 0.9rem', fontSize: '0.78rem', color: '#9ca3af' }}>{fmtDate(poseEdit.date)}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <p style={{ margin: '0 0 0.9rem', fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>Photo du {fmtDate(poseEdit.date)}</p>
+
+            <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pose</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: '1.1rem' }}>
               {POSES.map(po => {
                 const on = poseEdit.pose === po.v
                 return (
@@ -233,6 +242,17 @@ export default function EvolutionPhotosCoach({ clientId }) {
                   </button>
                 )
               })}
+            </div>
+
+            <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date de la photo</p>
+            <div style={{ display: 'flex', gap: 7 }}>
+              <input type="date" value={dateEditVal} max={new Date().toISOString().slice(0, 10)}
+                onChange={e => setDateEditVal(e.target.value)}
+                style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '10px 11px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: '0.85rem', background: 'white', fontFamily: 'inherit' }} />
+              <button onClick={() => definirDate(poseEdit, dateEditVal)} disabled={dateEditVal === poseEdit.date}
+                style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0 16px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', opacity: dateEditVal === poseEdit.date ? 0.4 : 1, fontFamily: 'inherit' }}>
+                OK
+              </button>
             </div>
           </div>
         </div>

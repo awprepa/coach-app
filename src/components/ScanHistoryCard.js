@@ -44,22 +44,29 @@ function DetailTable({ scan }) {
   const factor = hasPortion ? p / 100 : null
 
   const rows = [
-    ['Calories', scan.kcal_100g, 'kcal', null],
-    ['Protéines', scan.prot_100g, unit, noteProteines(scan.prot_100g)],
-    ['Glucides', scan.carbs_100g, unit, noteGlucides(scan.carbs_100g)],
-    ['Matières grasses', scan.fat_100g, unit, noteMatieresGrasses(scan.fat_100g)],
-    ['Fibres', scan.fiber_100g, unit, noteFibres(scan.fiber_100g)],
+    { label: 'Calories', val: scan.kcal_100g, unit: 'kcal', note: null },
+    { label: 'Glucides', val: scan.carbs_100g, unit, note: noteGlucides(scan.carbs_100g),
+      sub: { label: 'dont sucres', val: scan.sugar_100g } },
+    { label: 'Matières grasses', val: scan.fat_100g, unit, note: noteMatieresGrasses(scan.fat_100g),
+      sub: { label: 'dont graisses saturées', val: scan.satfat_100g } },
+    { label: 'Protéines', val: scan.prot_100g, unit, note: noteProteines(scan.prot_100g) },
+    { label: 'Fibres', val: scan.fiber_100g, unit, note: noteFibres(scan.fiber_100g) },
   ]
+
+  function fmtVal(v, u) {
+    if (v == null) return '—'
+    return `${Math.round(v)} ${u === 'kcal' ? 'kcal' : u}`
+  }
 
   return (
     <div style={{ marginTop: '0.7rem', paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {['g', 'ml'].map(u => (
             <button key={u} onClick={(e) => { e.stopPropagation(); setUnit(u) }} style={{
               padding: '2px 9px', borderRadius: 999, border: 'none', cursor: 'pointer',
-              background: unit === u ? '#1a1a1a' : '#f3f4f6',
-              color: unit === u ? 'var(--accent-fg-dark)' : '#6b7280',
+              background: unit === u ? 'var(--accent)' : '#f3f4f6',
+              color: unit === u ? '#1a1a1a' : '#6b7280',
               fontSize: '0.65rem', fontWeight: 700,
             }}>{u}</button>
           ))}
@@ -69,44 +76,59 @@ function DetailTable({ scan }) {
           <input
             value={portion}
             onChange={e => setPortion(e.target.value)}
-            placeholder={`ex : 200`}
+            placeholder="200"
             inputMode="decimal"
-            style={{ width: 56, padding: '3px 6px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: '0.72rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'right' }}
+            style={{ width: 48, padding: '3px 6px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: '0.72rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'right' }}
           />
           <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 600 }}>{unit}</span>
         </div>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={thStyle('left')}></th>
-            <th style={thStyle()}>Pour 100 {unit}</th>
-            {hasPortion && <th style={thStyle()}>Pour {portion} {unit}</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([label, val100, u, note]) => (
-            <tr key={label}>
-              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 700, color: '#374151' }}>
-                {label}
-                {note && <span style={{ marginLeft: 6, fontSize: '0.6rem', fontWeight: 700, color: note.color }}>{note.label}</span>}
-              </td>
-              <td style={tdStyle}>{val100 != null ? `${Math.round(val100)} ${u === 'kcal' ? '' : u}` : '—'}</td>
+      <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ flex: 1, padding: '5px 10px', fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }} />
+          <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour 100 {unit}</div>
+          {hasPortion && (
+            <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour {portion} {unit}</div>
+          )}
+        </div>
+        {rows.map((row, i) => (
+          <div key={row.label}>
+            <div style={{ display: 'flex', alignItems: 'center', borderTop: i === 0 ? 'none' : '1px solid #f3f4f6', background: i % 2 ? '#fbfbfc' : 'white' }}>
+              <div style={{ flex: 1, padding: '6px 10px', minWidth: 0 }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}>{row.label}</span>
+                {row.note && <span style={{ marginLeft: 6, fontSize: '0.6rem', fontWeight: 700, color: row.note.color }}>{row.note.label}</span>}
+              </div>
+              <div style={{ width: 92, padding: '6px 8px', textAlign: 'right', fontSize: '0.76rem', fontWeight: 700, color: '#1a1a1a' }}>
+                {fmtVal(row.val, row.unit)}
+              </div>
               {hasPortion && (
-                <td style={{ ...tdStyle, fontWeight: 800 }}>
-                  {val100 != null ? `${Math.round(val100 * factor)} ${u === 'kcal' ? '' : u}` : '—'}
-                </td>
+                <div style={{ width: 92, padding: '6px 8px', textAlign: 'right', fontSize: '0.76rem', fontWeight: 800, color: '#1a1a1a' }}>
+                  {row.val != null ? fmtVal(row.val * factor, row.unit) : '—'}
+                </div>
               )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </div>
+            {row.sub && (
+              <div style={{ display: 'flex', alignItems: 'center', background: i % 2 ? '#fbfbfc' : 'white' }}>
+                <div style={{ flex: 1, padding: '2px 10px 6px 18px', minWidth: 0 }}>
+                  <span style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600 }}>{row.sub.label}</span>
+                </div>
+                <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>
+                  {fmtVal(row.sub.val, unit)}
+                </div>
+                {hasPortion && (
+                  <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.68rem', color: '#6b7280', fontWeight: 700 }}>
+                    {row.sub.val != null ? fmtVal(row.sub.val * factor, unit) : '—'}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
-const thStyle = (align) => ({ textAlign: align || 'right', fontSize: '0.62rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', padding: '0 0 5px' })
-const tdStyle = { textAlign: 'right', fontSize: '0.78rem', color: '#1a1a1a', padding: '4px 0', borderTop: '1px solid #f8f9fa' }
 
 export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
   const [expanded, setExpanded] = useState(false)
@@ -159,7 +181,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.7rem', paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6' }}>
         <button onClick={(e) => { e.stopPropagation(); onReuse(scan) }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '0.55rem', borderRadius: 10, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
+          padding: '0.55rem', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#1a1a1a',
           fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
         }}>
           <IconPlus /> Réutiliser

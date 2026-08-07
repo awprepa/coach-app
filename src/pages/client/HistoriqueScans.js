@@ -205,10 +205,10 @@ export default function HistoriqueScans() {
 function StatItem({ val, lbl, color }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
-      <span style={{ fontSize: '1.3rem', fontWeight: 900, color: color || 'var(--accent)', lineHeight: 1 }}>
+      <span style={{ fontSize: '1.3rem', fontWeight: 900, color: color || '#1a1a1a', lineHeight: 1 }}>
         {val}
       </span>
-      <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
+      <span style={{ fontSize: '0.58rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
         {lbl}
       </span>
     </div>
@@ -234,11 +234,11 @@ const S = {
   },
   content: { padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
   statsBanner: {
-    background: '#1a1a1a', borderRadius: 16,
-    padding: '0.9rem 1rem',
+    background: 'white', borderRadius: 16, border: '1px solid #eef0f3',
+    padding: '0.9rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
     display: 'flex', alignItems: 'center', justifyContent: 'space-around',
   },
-  statDiv: { width: 1, background: 'rgba(255,255,255,0.08)', alignSelf: 'stretch' },
+  statDiv: { width: 1, background: '#eef0f3', alignSelf: 'stretch' },
   filterRow: {
     display: 'flex', gap: 8, overflowX: 'auto',
     scrollbarWidth: 'none', padding: '2px 0',
@@ -250,7 +250,7 @@ const S = {
     cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
   },
   filterChipActive: {
-    background: '#1a1a1a', borderColor: '#1a1a1a', color: 'var(--accent-fg-dark)',
+    background: 'var(--accent)', borderColor: 'var(--accent)', color: '#1a1a1a',
   },
   btnPrimary: {
     padding: '0.85rem 2rem', borderRadius: 14,
