@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { getCoachId, sendNotif } from '../notifs'
 
 export const ZONES = [
   { v: 'haut',    label: 'Haut du corps' },
@@ -98,8 +99,28 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'joueur_id' })
     if (statutActif && parsed) setDateRetour(parsed)
+    if (statutActif) notifierCoach(zone, niveau, duree.trim())
     setSaving(false)
     setPopup(false)
+  }
+
+  async function notifierCoach(zoneVal, niveauVal, dureeVal) {
+    try {
+      const [{ data: client }, coachId] = await Promise.all([
+        supabase.from('clients').select('prenom, nom').eq('id', clientId).maybeSingle(),
+        getCoachId(),
+      ])
+      const nomClient = client ? `${client.prenom} ${client.nom}` : 'Un joueur'
+      const zoneLabel = ZONES.find(z => z.v === zoneVal)?.label || ''
+      await sendNotif(coachId, {
+        titre: `${nomClient} a signalé une blessure`,
+        corps: [zoneLabel, dureeVal ? `retour estimé : ${dureeVal}` : null].filter(Boolean).join(' · ') || 'Voir la fiche joueur',
+        type: 'blessure',
+        lien: '/',
+      })
+    } catch (e) {
+      console.warn('[BlessureButton] notif coach échouée :', e?.message)
+    }
   }
 
   if (!clientId) return null

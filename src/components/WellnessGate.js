@@ -25,6 +25,12 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
     const payload = { client_id: clientId, date: today, ...vals }
     if (poids !== '' && !isNaN(parseFloat(poids))) payload.poids = parseFloat(poids)
     await supabase.from('wellness').upsert(payload, { onConflict: 'client_id,date' })
+    // Garde le profil nutritionnel à jour avec le dernier poids déclaré,
+    // pour que la fiche client / groupe affiche toujours le poids le plus récent.
+    if (payload.poids) {
+      await supabase.from('nutrition_profile')
+        .upsert({ client_id: clientId, poids_kg: payload.poids }, { onConflict: 'client_id' })
+    }
     try {
       const coachId = await getCoachId()
       await sendNotif(coachId, {

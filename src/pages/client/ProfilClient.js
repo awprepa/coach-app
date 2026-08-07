@@ -267,7 +267,9 @@ export default function ProfilClient() {
   const [prenom,        setPrenom]        = useState('')
   const [nom,           setNom]           = useState('')
   const [telephone,     setTelephone]     = useState('')
-  const [dateNaissance, setDateNaissance] = useState('')
+  const [dobDay,   setDobDay]   = useState('')
+  const [dobMonth, setDobMonth] = useState('')
+  const [dobYear,  setDobYear]  = useState('')
 
   // Groupes et postes
   const [groupes, setGroupes] = useState([]) // [{ groupe_id, nom, poste }]
@@ -301,7 +303,10 @@ export default function ProfilClient() {
       setPrenom(c.prenom || '')
       setNom(c.nom || '')
       setTelephone(c.telephone || '')
-      setDateNaissance(c.date_naissance ? new Date(c.date_naissance).toLocaleDateString('fr-FR') : '')
+      if (c.date_naissance) {
+        const [y, m, d] = c.date_naissance.split('-')
+        setDobYear(y); setDobMonth(m); setDobDay(d)
+      }
 
       // Groupes dont le client est membre — on évite `poste` au cas où la migration n'est pas encore appliquée
       const { data: membres } = await supabase
@@ -370,19 +375,15 @@ export default function ProfilClient() {
   async function saveInfoPerso() {
     if (!client) return
     setSavingInfo(true)
-    // Sauvegarder les champs qui existent toujours
-    await supabase.from('clients').update({
+    const patch = {
       prenom: prenom.trim() || client.prenom,
       nom: nom.trim() || client.nom,
       telephone: telephone.trim() || null,
-    }).eq('id', client.id)
-    // Tenter date_naissance (colonne optionnelle selon migration)
-    if (dateNaissance) {
-      const parts = dateNaissance.split('/')
-      let iso = null
-      if (parts.length === 3) iso = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
-      if (iso) await supabase.from('clients').update({ date_naissance: iso }).eq('id', client.id)
     }
+    if (dobDay && dobMonth && dobYear) {
+      patch.date_naissance = `${dobYear}-${String(dobMonth).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`
+    }
+    await supabase.from('clients').update(patch).eq('id', client.id)
     setSavingInfo(false)
     setSavedInfoMsg(true)
     setTimeout(() => setSavedInfoMsg(false), 2000)
@@ -479,9 +480,22 @@ export default function ProfilClient() {
         </div>
         <div style={S.fieldGroup}>
           <label style={S.fieldLabel}>Date de naissance</label>
-          <input value={dateNaissance} onChange={e => setDateNaissance(e.target.value)}
-            style={{ ...S.input, maxWidth: '100%', boxSizing: 'border-box' }}
-            type="text" inputMode="numeric" placeholder="JJ/MM/AAAA" maxLength={10} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select value={dobDay} onChange={e => setDobDay(e.target.value)} style={{ ...S.select, flex: 1 }}>
+              <option value="">Jour</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={dobMonth} onChange={e => setDobMonth(e.target.value)} style={{ ...S.select, flex: 1.3 }}>
+              <option value="">Mois</option>
+              {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
+            <select value={dobYear} onChange={e => setDobYear(e.target.value)} style={{ ...S.select, flex: 1 }}>
+              <option value="">Année</option>
+              {Array.from({ length: 90 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
         <div style={S.infoRow}>
           <span style={S.infoLabel}>Email</span>

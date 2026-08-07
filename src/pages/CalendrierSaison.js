@@ -1408,7 +1408,7 @@ function generateBlocPalette(primary, secondary) {
 export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   const [joueurs, setJoueurs] = useState([])    // groupe_joueurs avec leurs postes et blessure
   const [wellness, setWellness] = useState({})  // client_id → { score, poids, date } (dernière entrée)
-  const [clientInfo, setClientInfo] = useState({ dateNaissance: {}, taille: {} }) // client_id → valeur (fallback compte lié)
+  const [clientInfo, setClientInfo] = useState({ dateNaissance: {}, taille: {}, poids: {}, age: {} }) // client_id → valeur (fallback compte lié)
   const [recentEvents, setRecentEvents] = useState([]) // derniers événements du groupe (rappel, non personnalisé)
   const [editingVital, setEditingVital] = useState(null) // 'age' | 'taille' | 'poids' | null — édition manuelle en cours
   const [vitalDraft, setVitalDraft] = useState('')
@@ -1479,19 +1479,24 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
       }
       setWellness(wMap)
 
-      // Âge / taille — fallback pour les joueurs avec compte lié
+      // Âge / taille / poids — fallback pour les joueurs avec compte lié,
+      // depuis le profil nutritionnel qu'ils remplissent eux-mêmes.
       const [{ data: cData }, { data: npData }] = await Promise.all([
         supabase.from('clients').select('id, date_naissance').in('id', clientIds),
-        supabase.from('nutrition_profile').select('client_id, taille_cm').in('client_id', clientIds),
+        supabase.from('nutrition_profile').select('client_id, taille_cm, poids_kg, age_ans').in('client_id', clientIds),
       ])
       const cMap = {}
       for (const c of (cData || [])) cMap[c.id] = c.date_naissance
-      const npMap = {}
-      for (const np of (npData || [])) npMap[np.client_id] = np.taille_cm
-      setClientInfo({ dateNaissance: cMap, taille: npMap })
+      const npTailleMap = {}, npPoidsMap = {}, npAgeMap = {}
+      for (const np of (npData || [])) {
+        npTailleMap[np.client_id] = np.taille_cm
+        npPoidsMap[np.client_id]  = np.poids_kg
+        npAgeMap[np.client_id]    = np.age_ans
+      }
+      setClientInfo({ dateNaissance: cMap, taille: npTailleMap, poids: npPoidsMap, age: npAgeMap })
     } else {
       setWellness({})
-      setClientInfo({ dateNaissance: {}, taille: {} })
+      setClientInfo({ dateNaissance: {}, taille: {}, poids: {}, age: {} })
     }
     // Derniers événements du groupe — simple rappel, pas de pointage individuel
     const { data: evData } = await supabase
@@ -1543,7 +1548,9 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   // seulement un ordre d'affichage.
   function effectiveAge(j) {
     const dn = (j.client_id && clientInfo.dateNaissance[j.client_id]) || j.date_naissance
-    return dn ? ageFromDate(dn) : null
+    if (dn) return ageFromDate(dn)
+    const npAge = j.client_id && clientInfo.age[j.client_id]
+    return npAge || null
   }
   function effectiveTaille(j) {
     const t = (j.client_id && clientInfo.taille[j.client_id]) || j.taille_cm
@@ -1552,6 +1559,8 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   function effectivePoids(j) {
     const w = getWellnessInfo(j)
     if (w?.poids) return { valeur: w.poids, source: 'wellness', date: w.date }
+    const npPoids = j.client_id && clientInfo.poids[j.client_id]
+    if (npPoids) return { valeur: npPoids, source: 'profil nutritionnel', date: null }
     if (j.poids_kg) return { valeur: j.poids_kg, source: 'manuel', date: null }
     return null
   }
@@ -1960,7 +1969,11 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                 <VitalTile champ="age" label="Âge" valeur={age} unite="ans" />
                 <VitalTile champ="taille" label="Taille" valeur={taille} unite="cm" />
                 <VitalTile champ="poids" label="Poids" valeur={poidsInfo?.valeur ?? null} unite="kg"
-                  sub={poidsInfo ? (poidsInfo.source === 'wellness' ? `via wellness · ${new Date(poidsInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}` : 'saisie manuelle') : null} />
+                  sub={poidsInfo ? (
+                    poidsInfo.source === 'wellness' ? `via wellness · ${new Date(poidsInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`
+                    : poidsInfo.source === 'profil nutritionnel' ? 'via profil nutritionnel'
+                    : 'saisie manuelle'
+                  ) : null} />
                 <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px' }}>
                   <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color:'#9ca3af', textTransform:'uppercase', marginBottom:5 }}>Dernier wellness</div>
                   {wInfo?.score != null ? (
