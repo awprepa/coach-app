@@ -10,6 +10,7 @@ const POSES = [
   { v: 'dos',    l: 'De dos' },
 ]
 const POSE_LABEL = { face: 'Face', profil: 'Profil', dos: 'Dos' }
+const POSE_ORDER = { face: 0, profil: 1, dos: 2 }
 
 const DOW = [
   { v: '', l: 'Aucun rappel' },
@@ -202,7 +203,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
             <div key={d} style={{ marginBottom: '0.9rem' }}>
               <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#374151', margin: '0 0 0.4rem', textTransform: 'capitalize' }}>{fmtDate(d)}</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
-                {byDate[d].map(p => {
+                {byDate[d].slice().sort((a, b) => (POSE_ORDER[a.pose] ?? 99) - (POSE_ORDER[b.pose] ?? 99)).map(p => {
                   const sel = compare.includes(p.id)
                   return (
                     <div key={p.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', outline: sel ? '3px solid #1d4ed8' : 'none' }}>
