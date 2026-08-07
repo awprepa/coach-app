@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import ScanHistoryCard from '../../components/ScanHistoryCard'
 import usePageFade from '../../hooks/usePageFade'
 
 const OBJECTIFS = [
@@ -207,6 +208,31 @@ export default function ProfilNutrition() {
     if (tab === 'historique' && scans.length === 0 && client) {
       loadScans(client.id)
     }
+  }
+
+  async function deleteScan(id) {
+    setScans(prev => prev.filter(s => s.id !== id))
+    await supabase.from('nutrition_scan_history').delete().eq('id', id)
+  }
+
+  function reuseScan(scan) {
+    navigate('/client/nutrition/aliment', {
+      state: {
+        prefillFood: {
+          id: scan.food_id,
+          name: scan.product_name,
+          brand: scan.brand,
+          image_url: scan.image_url,
+          kcal_100: scan.kcal_100g,
+          prot_100: scan.prot_100g,
+          carbs_100: scan.carbs_100g,
+          fat_100: scan.fat_100g,
+          fibre_100: scan.fiber_100g,
+          nutri_score: scan.nutriscore_grade,
+          nova_group: scan.nova_group,
+        },
+      },
+    })
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────────
@@ -428,10 +454,10 @@ export default function ProfilNutrition() {
       {/* Tab bar */}
       <div style={S.tabBar}>
         <button onClick={() => handleTabChange('objectifs')} style={activeTab === 'objectifs' ? S.tabActive : S.tab}>
-          🎯 Objectifs
+          Objectifs
         </button>
         <button onClick={() => handleTabChange('historique')} style={activeTab === 'historique' ? S.tabActive : S.tab}>
-          📦 Mes scans
+          Mes scans
         </button>
       </div>
 
@@ -529,7 +555,6 @@ export default function ProfilNutrition() {
               <p style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>Chargement…</p>
             ) : scans.length === 0 ? (
               <div style={S.emptyCard}>
-                <p style={{ fontSize: '3rem', margin: '0 0 12px' }}>📦</p>
                 <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1rem', margin: '0 0 8px' }}>Aucun scan pour l'instant</h3>
                 <p style={{ color: '#6b7280', fontSize: '0.83rem', textAlign: 'center', lineHeight: 1.5 }}>
                   Scanne le code-barres d'un produit depuis l'onglet Nutrition pour l'ajouter ici.
@@ -569,7 +594,7 @@ export default function ProfilNutrition() {
                   if (scanFilter === 'week') { const w = new Date(); w.setDate(w.getDate()-7); return new Date(s.scanned_at) >= w }
                   return true
                 }).map(scan => (
-                  <ScanCard key={scan.id} scan={scan} />
+                  <ScanHistoryCard key={scan.id} scan={scan} onReuse={reuseScan} onDelete={deleteScan} />
                 ))}
               </>
             )}
@@ -601,36 +626,6 @@ function StatCard({ label, val, color }) {
     <div style={{ background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <p style={{ fontSize: '1.6rem', fontWeight: 900, color: color || '#1a1a1a', margin: 0, lineHeight: 1 }}>{val}</p>
       <p style={{ fontSize: '0.62rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
-    </div>
-  )
-}
-
-function ScanCard({ scan }) {
-  const gradeColor = GRADE_COLORS[scan.quality_grade] || '#9ca3af'
-  return (
-    <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-      {scan.image_url
-        ? <img src={scan.image_url} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-        : <div style={{ width: 52, height: 52, borderRadius: 10, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>📦</div>
-      }
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-          <p style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a', margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {scan.product_name || 'Produit inconnu'}
-          </p>
-          {scan.quality_grade && (
-            <span style={{ background: gradeColor, color: 'white', fontWeight: 900, fontSize: '0.75rem', borderRadius: 6, padding: '2px 7px', flexShrink: 0 }}>
-              {scan.quality_grade}
-            </span>
-          )}
-        </div>
-        {scan.brand && <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 4px', fontWeight: 600 }}>{scan.brand}</p>}
-        <div style={{ display: 'flex', gap: 10 }}>
-          {scan.kcal_100g != null && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 700 }}>{scan.kcal_100g} kcal</span>}
-          {scan.prot_100g != null && <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontWeight: 700 }}>P {scan.prot_100g}g</span>}
-        </div>
-        <p style={{ fontSize: '0.65rem', color: '#d1d5db', margin: '4px 0 0', fontWeight: 600 }}>{formatScanDate(scan.scanned_at)}</p>
-      </div>
     </div>
   )
 }

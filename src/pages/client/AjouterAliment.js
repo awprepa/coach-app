@@ -53,7 +53,8 @@ export default function AjouterAliment() {
   const [marques, setMarques] = useState([])           // produits Open Food Facts
   const [chercheMarques, setChercheMarques] = useState(false)
   const [recents, setRecents] = useState([])
-  const [onglet, setOnglet]   = useState('recherche')  // recherche | recents
+  const [scans, setScans]     = useState([])
+  const [onglet, setOnglet]   = useState('recherche')  // recherche | recents | scans
   const [cherche, setCherche] = useState(false)
   const [choisi, setChoisi]   = useState(null)         // aliment sélectionné
   const [grammes, setGrammes] = useState(100)
@@ -108,6 +109,15 @@ export default function AjouterAliment() {
       }
       setRecents(uniques)
     })()
+  }, [client])
+
+  // Produits déjà scannés au code-barres.
+  useEffect(() => {
+    if (!client) return
+    supabase.from('nutrition_scan_history')
+      .select('*').eq('client_id', client.id)
+      .order('scanned_at', { ascending: false }).limit(60)
+      .then(({ data }) => setScans(data || []))
   }, [client])
 
   // Deux sources complémentaires : CIQUAL pour les aliments génériques, Open
@@ -271,7 +281,7 @@ export default function AjouterAliment() {
             placeholder="Rechercher un aliment…" style={S.searchInput} />
         </div>
         <div style={S.tabs}>
-          {[{ v: 'recherche', l: 'Recherche' }, { v: 'recents', l: 'Récents' }].map(o => (
+          {[{ v: 'recherche', l: 'Recherche' }, { v: 'recents', l: 'Récents' }, { v: 'scans', l: 'Mes scans' }].map(o => (
             <button key={o.v} onClick={() => setOnglet(o.v)}
               style={{ ...S.tab, ...(onglet === o.v ? S.tabOn : {}) }}>{o.l}</button>
           ))}
@@ -279,7 +289,26 @@ export default function AjouterAliment() {
       </div>
 
       <div style={S.list}>
-        {onglet === 'recents' && !terme.trim() ? (
+        {onglet === 'scans' ? (
+          (() => {
+            const t = terme.trim().toLowerCase()
+            const filtres = t ? scans.filter(s => (s.product_name || '').toLowerCase().includes(t) || (s.brand || '').toLowerCase().includes(t)) : scans
+            return filtres.length ? filtres.map(s => (
+              <button key={s.id} onClick={() => ouvrirQuantite({
+                nom: s.brand ? `${s.product_name} — ${s.brand}` : s.product_name,
+                groupe: s.brand || 'Scanné',
+                kcal: s.kcal_100g || 0, proteines: s.prot_100g || 0,
+                glucides: s.carbs_100g || 0, lipides: s.fat_100g || 0,
+              })} style={S.row}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={S.rowNom}>{s.product_name}</p>
+                  <p style={S.rowSub}>{s.brand || 'Scanné'}</p>
+                </div>
+                <div style={S.rowK}><b>{fmt(s.kcal_100g)}</b><i>kcal / 100 g</i></div>
+              </button>
+            )) : <p style={S.vide}>{t ? 'Aucun scan ne correspond.' : "Aucun produit scanné pour l'instant."}</p>
+          })()
+        ) : onglet === 'recents' && !terme.trim() ? (
           recents.length ? recents.map((r, i) => (
             <button key={i} onClick={() => ouvrirQuantite({
               nom: r.name, groupe: 'Déjà consommé',

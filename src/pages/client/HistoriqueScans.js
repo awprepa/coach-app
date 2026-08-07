@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
-import { noteMatieresGrasses, noteProteines, noteGlucides, noteFibres } from '../../nutritionQuality'
+import ScanHistoryCard from '../../components/ScanHistoryCard'
 
 const GRADE_COLOR = { A: '#16a34a', B: '#65a30d', C: '#ca8a04', D: '#ea580c', E: '#dc2626' }
 
-function formatDate(iso) {
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = Math.floor((now - d) / 86400000)
-  if (diff === 0) return `Aujourd'hui · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-  if (diff === 1) return `Hier · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-  if (diff < 7)  return `Il y a ${diff} jours · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+function IconBox({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#c4ccd4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /><path d="M12 13v8" />
+    </svg>
+  )
+}
+function IconScan() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+      <line x1="14" y1="14" x2="14" y2="14" strokeWidth="3" /><line x1="17" y1="14" x2="21" y2="14" /><line x1="21" y1="17" x2="21" y2="21" /><line x1="17" y1="21" x2="21" y2="21" /><line x1="14" y1="17" x2="14" y2="21" />
+    </svg>
+  )
 }
 
 export default function HistoriqueScans() {
@@ -21,7 +27,6 @@ export default function HistoriqueScans() {
   const [filter, setFilter]     = useState('all')  // 'all' | 'good' | 'bad' | 'week'
   const [loading, setLoading]   = useState(true)
   const [clientId, setClientId] = useState(null)
-  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -112,16 +117,7 @@ export default function HistoriqueScans() {
           style={{ ...S.iconBtn, background: 'var(--accent)', color: 'var(--accent-text)' }}
           aria-label="Nouveau scan"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <line x1="14" y1="14" x2="14" y2="14" strokeWidth="3" />
-            <line x1="17" y1="14" x2="21" y2="14" />
-            <line x1="21" y1="17" x2="21" y2="21" />
-            <line x1="17" y1="21" x2="21" y2="21" />
-            <line x1="14" y1="17" x2="14" y2="21" />
-          </svg>
+          <IconScan />
         </button>
       </div>
 
@@ -146,8 +142,8 @@ export default function HistoriqueScans() {
               <div style={S.filterRow}>
                 {[
                   { key: 'all',  label: 'Tous' },
-                  { key: 'good', label: '⭐ Note A-B' },
-                  { key: 'bad',  label: '⚠️ Note C-E' },
+                  { key: 'good', label: 'Note A-B' },
+                  { key: 'bad',  label: 'Note C-E' },
                   { key: 'week', label: 'Cette semaine' },
                 ].map(f => (
                   <button
@@ -167,16 +163,16 @@ export default function HistoriqueScans() {
             {/* Liste */}
             {filtered.length > 0 && (
               <p style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, margin: '0 2px' }}>
-                Touche un aliment pour le réajouter à ta journée
+                Touche un aliment pour voir le détail et le réajouter à ta journée
               </p>
             )}
             {filtered.length === 0 && !loading && (
               <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-                <p style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
-                  {total === 0 ? '📦' : '🔍'}
-                </p>
+                <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}>
+                  <IconBox size={44} />
+                </div>
                 <p style={{ fontWeight: 700, color: '#1a1a1a', marginBottom: '0.4rem' }}>
-                  {total === 0 ? 'Aucun scan pour l\'instant' : 'Aucun résultat'}
+                  {total === 0 ? "Aucun scan pour l'instant" : 'Aucun résultat'}
                 </p>
                 <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
                   {total === 0
@@ -188,113 +184,15 @@ export default function HistoriqueScans() {
                     onClick={() => navigate('/client/nutrition/scanner')}
                     style={S.btnPrimary}
                   >
-                    ▦ Scanner un article
+                    Scanner un article
                   </button>
                 )}
               </div>
             )}
 
-            {filtered.map(scan => {
-              const gc = GRADE_COLOR[scan.quality_grade] || '#9ca3af'
-              const score = scan.quality_score
-              const expanded = expandedId === scan.id
-              return (
-                <div key={scan.id} style={{ ...S.scanCard, cursor: 'pointer' }} onClick={() => setExpandedId(expanded ? null : scan.id)}>
-                  <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                    {/* Image produit */}
-                    <div style={{
-                      width: 52, height: 52, borderRadius: 12,
-                      background: '#f3f4f6', flexShrink: 0, overflow: 'hidden',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.5rem',
-                    }}>
-                      {scan.image_url
-                        ? <img src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : '🛒'}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* Nom + grade */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a', margin: '0 0 2px', lineHeight: 1.2 }}>
-                            {scan.product_name}
-                          </p>
-                          {scan.brand && (
-                            <p style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600, margin: 0 }}>
-                              {scan.brand}
-                            </p>
-                          )}
-                        </div>
-                        {scan.quality_grade && (
-                          <div style={{
-                            width: 34, height: 34, borderRadius: 10,
-                            background: gc, flexShrink: 0,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'white', fontWeight: 900, fontSize: '1rem',
-                          }}>
-                            {scan.quality_grade}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Macros */}
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                        {scan.kcal_100g != null && <Chip label={`${Math.round(scan.kcal_100g)} kcal`} bg="#fef9c3" color="#92400e" />}
-                        {scan.prot_100g  != null && <Chip label={`P ${Math.round(scan.prot_100g)}g`}  bg="#dbeafe" color="#1e40af" />}
-                        {scan.carbs_100g != null && <Chip label={`G ${Math.round(scan.carbs_100g)}g`} bg="#fef3c7" color="#92400e" />}
-                        {scan.fat_100g   != null && <Chip label={`L ${Math.round(scan.fat_100g)}g`}   bg="#fee2e2" color="#991b1b" />}
-                      </div>
-
-                      {/* Score bar */}
-                      {score != null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.55rem' }}>
-                          <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, width: 40, flexShrink: 0 }}>
-                            Qualité
-                          </span>
-                          <div style={{ flex: 1, height: 4, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
-                            <div style={{
-                              height: '100%', width: `${score * 10}%`,
-                              background: gc, borderRadius: 999,
-                            }} />
-                          </div>
-                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: gc, width: 22, textAlign: 'right', flexShrink: 0 }}>
-                            {score.toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Date */}
-                      <p style={{ fontSize: '0.62rem', color: '#d1d5db', fontWeight: 600, margin: '0.45rem 0 0' }}>
-                        {formatDate(scan.scanned_at)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Détail macros — s'affiche au clic sur la carte */}
-                  {expanded && (
-                    <div style={{ marginTop: '0.7rem', paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <MacroDetailRow label="Calories" value={scan.kcal_100g != null ? `${Math.round(scan.kcal_100g)} kcal` : '—'} />
-                      <MacroDetailRow label="Protéines" value={scan.prot_100g != null ? `${Math.round(scan.prot_100g)} g` : '—'} note={noteProteines(scan.prot_100g)} />
-                      <MacroDetailRow label="Glucides" value={scan.carbs_100g != null ? `${Math.round(scan.carbs_100g)} g` : '—'} note={noteGlucides(scan.carbs_100g)} />
-                      <MacroDetailRow label="Matières grasses" value={scan.fat_100g != null ? `${Math.round(scan.fat_100g)} g` : '—'} note={noteMatieresGrasses(scan.fat_100g)} />
-                      <MacroDetailRow label="Fibres" value={scan.fiber_100g != null ? `${Math.round(scan.fiber_100g)} g` : '—'} note={noteFibres(scan.fiber_100g)} />
-                      <p style={{ fontSize: '0.6rem', color: '#d1d5db', margin: '2px 0 0' }}>Valeurs pour 100 g</p>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div style={S.cardActions}>
-                    <button onClick={(e) => { e.stopPropagation(); reuseScan(scan) }} style={S.btnReuse}>
-                      ➕ Réutiliser
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteScan(scan.id) }} style={S.btnDelete}>
-                      🗑
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+            {filtered.map(scan => (
+              <ScanHistoryCard key={scan.id} scan={scan} onReuse={reuseScan} onDelete={deleteScan} />
+            ))}
           </>
         )}
 
@@ -314,32 +212,6 @@ function StatItem({ val, lbl, color }) {
         {lbl}
       </span>
     </div>
-  )
-}
-
-function MacroDetailRow({ label, value, note }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {note && (
-          <span style={{ fontSize: '0.62rem', fontWeight: 700, color: note.color }}>{note.label}</span>
-        )}
-        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1a1a1a' }}>{value}</span>
-      </div>
-    </div>
-  )
-}
-
-function Chip({ label, bg, color }) {
-  return (
-    <span style={{
-      padding: '2px 8px', borderRadius: 999,
-      background: bg, color,
-      fontSize: '0.63rem', fontWeight: 700,
-    }}>
-      {label}
-    </span>
   )
 }
 
@@ -380,27 +252,9 @@ const S = {
   filterChipActive: {
     background: '#1a1a1a', borderColor: '#1a1a1a', color: 'var(--accent-fg-dark)',
   },
-  scanCard: {
-    background: 'white', borderRadius: 16, padding: '0.95rem 1rem',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-  },
   btnPrimary: {
     padding: '0.85rem 2rem', borderRadius: 14,
     border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
-  },
-  cardActions: {
-    display: 'flex', gap: '0.5rem', marginTop: '0.7rem',
-    paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6',
-  },
-  btnReuse: {
-    flex: 1, padding: '0.55rem', borderRadius: 10,
-    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
-    fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
-  },
-  btnDelete: {
-    padding: '0.55rem 0.8rem', borderRadius: 10,
-    border: '1.5px solid #fee2e2', background: 'white', color: '#dc2626',
-    fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
   },
 }
