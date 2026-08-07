@@ -197,10 +197,11 @@ export default function ScannerArticle() {
     setSaved(true)
   }
 
-  // Ajouter aux repas du jour
+  // Ajouter aux repas du jour — direction la page réelle de saisie de
+  // quantité (AjouterAliment.js), pas l'écran /nutrition ou /plan d'où
+  // vient le scan : eux ne savent pas quoi faire d'un aliment scanné.
   function addToMeal() {
-    const returnTo = location.state?.returnTo || '/client/nutrition/ajouter'
-    navigate(returnTo, { state: { prefillFood: food } })
+    navigate('/client/nutrition/aliment', { state: { prefillFood: food } })
   }
 
   // Rescanner

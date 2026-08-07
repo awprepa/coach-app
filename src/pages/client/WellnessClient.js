@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
-import BlessureButton from '../../components/BlessureButton'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 const INDICATORS = [
@@ -112,12 +111,6 @@ export default function WellnessClient() {
           }}>{t.l}</button>
         ))}
       </div>
-
-      {clientId && (
-        <div style={{ display: 'flex', justifyContent: 'center', margin: '0 1rem 1rem' }}>
-          <BlessureButton clientId={clientId} compact />
-        </div>
-      )}
 
       <div style={S.content}>
         {loading ? (

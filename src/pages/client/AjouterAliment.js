@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
 
@@ -41,6 +41,7 @@ async function chercherMarques(terme) {
 
 export default function AjouterAliment() {
   const navigate  = useNavigate()
+  const location  = useLocation()
   const fadeStyle = usePageFade()
   const [params]  = useSearchParams()
   const repas = params.get('repas') || 'dejeuner'
@@ -72,6 +73,24 @@ export default function AjouterAliment() {
       setClient(data)
     })()
   }, [])
+
+  // Arrivée depuis le scanner code-barres : le produit trouvé va direct à
+  // l'écran quantité, sans repasser par la recherche.
+  useEffect(() => {
+    const f = location.state?.prefillFood
+    if (!f) return
+    setChoisi({
+      nom: f.brand ? `${f.name} — ${f.brand}` : f.name,
+      groupe: f.brand || 'Scanné',
+      kcal: f.kcal_100 || 0,
+      proteines: f.prot_100 || 0,
+      glucides: f.carbs_100 || 0,
+      lipides: f.fat_100 || 0,
+    })
+    setGrammes(100)
+    window.history.replaceState({}, '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   // Aliments déjà consommés : on mange souvent la même chose.
   useEffect(() => {

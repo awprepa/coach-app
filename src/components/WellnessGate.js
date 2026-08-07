@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { sendNotif, getCoachId } from '../notifs'
+import BlessureButton from './BlessureButton'
 
 const QUESTIONS = [
   { key: 'sommeil',  label: 'Sommeil',  emoji: '🌙', desc: ['Très mauvais', 'Mauvais', 'Bien', 'Excellent'] },
@@ -74,6 +75,10 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
             <span style={{ fontWeight: '700', color: '#9ca3af', fontSize: '0.9rem' }}>kg</span>
           </div>
         </div>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 1rem' }}>
+          <BlessureButton clientId={clientId} compact />
+        </div>
+
         <button onClick={submit} disabled={!allFilled || saving}
           style={{ ...W.submitBtn, background: allFilled ? '#333333' : '#e5e7eb', color: allFilled ? 'var(--accent-fg-dark)' : '#9ca3af', cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider mon bilan'}

@@ -49,7 +49,7 @@ export default function HistoriqueScans() {
   }
 
   function reuseScan(scan) {
-    navigate('/client/nutrition/ajouter', {
+    navigate('/client/nutrition/aliment', {
       state: {
         prefillFood: {
           id: scan.food_id,

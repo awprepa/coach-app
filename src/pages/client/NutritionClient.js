@@ -191,11 +191,18 @@ export default function NutritionClient() {
       <div style={S.header}>
         <div style={S.headerRow}>
           <span style={S.headerTitle}>Nutrition</span>
-          <button onClick={() => navigate('/client/nutrition/profil')} style={S.icoBtn} aria-label="Mon profil">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => navigate('/client/nutrition/scans')} style={S.icoBtn} aria-label="Historique des scans">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
+              </svg>
+            </button>
+            <button onClick={() => navigate('/client/nutrition/profil')} style={S.icoBtn} aria-label="Mon profil">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div style={S.dateBar}>
           <button onClick={() => decale(-1)} style={S.navBtn} aria-label="Jour précédent">
