@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import BlessureButton from '../../components/BlessureButton'
 import usePageFade from '../../hooks/usePageFade'
 
 const OFFRES = {
@@ -273,15 +274,6 @@ export default function ProfilClient() {
   const [postes,  setPostes]  = useState({}) // { groupe_id: poste }
   const [savingPoste, setSavingPoste] = useState(null)
 
-  // Blessure déclarée par le joueur
-  const [joueurId,      setJoueurId]      = useState(null)
-  const [blessureActive, setBlessureActive] = useState(false)
-  const [blessureDesc,  setBlessureDesc]  = useState('')
-  const [blessureDuree, setBlessureDuree] = useState('')
-  const [savingBlessure, setSavingBlessure] = useState(false)
-  const [savedBlessureMsg, setSavedBlessureMsg] = useState(false)
-  const [blessurePopup, setBlessurePopup] = useState(false)
-
   // Champs nutrition
   const [sexe,     setSexe]     = useState('')
   const [age,      setAge]      = useState('')
@@ -327,35 +319,6 @@ export default function ProfilClient() {
           const p = {}
           membresFull.forEach(m => { p[m.groupe_id] = m.poste || '' })
           setPostes(p)
-        }
-      }
-
-      // Fiche joueur (roster) liée à ce client → pour la blessure
-      let { data: joueur } = await supabase
-        .from('groupe_joueurs')
-        .select('id, joueur_blessures(*)')
-        .eq('client_id', c.id)
-        .limit(1)
-        .maybeSingle()
-      // Aucune fiche joueur encore → on s'en crée une automatiquement dans le
-      // premier groupe rejoint, pour que "Déclarer une blessure" marche tout
-      // de suite sans dépendre d'une action du coach.
-      if (!joueur && membres?.length) {
-        const { data: created } = await supabase.from('groupe_joueurs').insert({
-          groupe_id: membres[0].groupe_id,
-          client_id: c.id,
-          prenom: c.prenom || '',
-          nom: c.nom || '',
-        }).select('id, joueur_blessures(*)').maybeSingle()
-        joueur = created
-      }
-      if (joueur) {
-        setJoueurId(joueur.id)
-        const b = (joueur.joueur_blessures || [])[0]
-        if (b) {
-          setBlessureActive(b.statut !== 'ok')
-          setBlessureDesc(b.description || '')
-          setBlessureDuree(b.duree_estimee || '')
         }
       }
 
@@ -432,21 +395,6 @@ export default function ProfilClient() {
       .update({ poste: postes[groupeId] || null })
       .eq('groupe_id', groupeId).eq('client_id', client.id)
     setSavingPoste(null)
-  }
-
-  async function saveBlessure() {
-    if (!joueurId) return
-    setSavingBlessure(true)
-    await supabase.from('joueur_blessures').upsert({
-      joueur_id:      joueurId,
-      statut:         blessureActive ? 'out' : 'ok',
-      description:    blessureActive ? (blessureDesc.trim() || null) : null,
-      duree_estimee:  blessureActive ? (blessureDuree.trim() || null) : null,
-      updated_at:     new Date().toISOString(),
-    }, { onConflict: 'joueur_id' })
-    setSavingBlessure(false)
-    setSavedBlessureMsg(true)
-    setTimeout(() => setSavedBlessureMsg(false), 2000)
   }
 
   async function saveNutriProfil() {
@@ -553,18 +501,7 @@ export default function ProfilClient() {
         <div style={S.card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <h2 style={{ ...S.cardTitle, marginBottom: 0 }}>Mon poste</h2>
-            {joueurId && (
-              <button onClick={() => setBlessurePopup(true)} style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                border: 'none', borderRadius: 999, cursor: 'pointer',
-                padding: '5px 11px', fontSize: '0.7rem', fontWeight: 800,
-                background: blessureActive ? '#fee2e2' : '#f3f4f6',
-                color: blessureActive ? '#dc2626' : '#6b7280',
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: blessureActive ? '#dc2626' : '#16a34a', flexShrink: 0 }} />
-                {blessureActive ? 'Blessé' : 'Signaler une blessure'}
-              </button>
-            )}
+            <BlessureButton clientId={client?.id} prenom={prenom} nom={nom} compact />
           </div>
           {groupes.map(g => (
             <div key={g.groupe_id} style={{ marginBottom: 14 }}>
@@ -588,68 +525,6 @@ export default function ProfilClient() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Popup Blessure */}
-      {blessurePopup && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3vh 16px',
-        }} onClick={e => { if (e.target === e.currentTarget) setBlessurePopup(false) }}>
-          <div style={{ background: 'white', borderRadius: 18, width: '100%', maxWidth: 420, maxHeight: '88vh', overflowY: 'auto', padding: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <h2 style={{ ...S.cardTitle, marginBottom: 0 }}>Blessure</h2>
-              <button onClick={() => setBlessurePopup(false)} style={{ background: '#f3f4f6', border: 'none', color: '#6b7280', width: 28, height: 28, borderRadius: 8, fontSize: '1rem', cursor: 'pointer' }}>×</button>
-            </div>
-            <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 14px', lineHeight: 1.5 }}>
-              Préviens ton coach si tu es blessé et indisponible.
-            </p>
-
-            <div style={{ display: 'flex', gap: 8, marginBottom: blessureActive ? 12 : 4 }}>
-              {[
-                { v: false, label: 'Je suis apte' },
-                { v: true,  label: 'Je suis blessé' },
-              ].map(o => (
-                <button key={String(o.v)} onClick={() => setBlessureActive(o.v)} style={{
-                  flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: blessureActive === o.v ? (o.v ? '#fee2e2' : 'var(--chip-bg)') : '#f3f4f6',
-                  color: blessureActive === o.v ? (o.v ? '#dc2626' : 'var(--chip-text)') : '#6b7280',
-                  fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
-                }}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-
-            {blessureActive && (
-              <>
-                <div style={S.fieldGroup}>
-                  <label style={S.fieldLabel}>Description</label>
-                  <textarea
-                    value={blessureDesc}
-                    onChange={e => setBlessureDesc(e.target.value)}
-                    placeholder="Ex : entorse cheville droite"
-                    rows={3}
-                    style={{ ...S.input, resize: 'vertical', fontFamily: 'inherit' }}
-                  />
-                </div>
-                <div style={S.fieldGroup}>
-                  <label style={S.fieldLabel}>Durée d'indisponibilité estimée</label>
-                  <input
-                    value={blessureDuree}
-                    onChange={e => setBlessureDuree(e.target.value)}
-                    placeholder="Ex : 2 à 3 semaines"
-                    style={S.input}
-                  />
-                </div>
-              </>
-            )}
-
-            <button onClick={async () => { await saveBlessure(); setBlessurePopup(false) }} disabled={savingBlessure} style={S.saveBtn}>
-              {savingBlessure ? 'Sauvegarde…' : 'Sauvegarder'}
-            </button>
-          </div>
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
 import { supabase } from '../../supabase'
+import { noteMatieresGrasses, noteProteines, noteGlucides, noteFibres } from '../../nutritionQuality'
 
 // ─── Calcul du grade nutritionnel (A→E) ──────────────────────────────────────
 function calculateGrade(food) {
@@ -390,6 +391,21 @@ export default function ScannerArticle() {
               {food.carbs_100 != null && <Chip label={`G ${Math.round(food.carbs_100)}g`} bg="#f59e0b" color="white" />}
               {food.fat_100 != null   && <Chip label={`L ${Math.round(food.fat_100)}g`}   bg="#ef4444" color="white" />}
               {food.fibre_100 != null && food.fibre_100 > 0 && <Chip label={`Fibres ${Math.round(food.fibre_100)}g`} bg="#e5e7eb" color="#374151" />}
+            </div>
+
+            {/* Notes qualitatives par macro */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: '0.6rem' }}>
+              {[
+                ['Protéines',        noteProteines(food.prot_100)],
+                ['Glucides',         noteGlucides(food.carbs_100)],
+                ['Matières grasses', noteMatieresGrasses(food.fat_100)],
+                ['Fibres',           noteFibres(food.fibre_100)],
+              ].filter(([, n]) => n).map(([label, n]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>{label}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: n.color }}>{n.label}</span>
+                </div>
+              ))}
             </div>
 
             {/* Barre de score */}

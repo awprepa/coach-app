@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
+import { noteMatieresGrasses, noteProteines, noteGlucides, noteFibres } from '../../nutritionQuality'
 
 const GRADE_COLOR = { A: '#16a34a', B: '#65a30d', C: '#ca8a04', D: '#ea580c', E: '#dc2626' }
 
@@ -20,6 +21,7 @@ export default function HistoriqueScans() {
   const [filter, setFilter]     = useState('all')  // 'all' | 'good' | 'bad' | 'week'
   const [loading, setLoading]   = useState(true)
   const [clientId, setClientId] = useState(null)
+  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -195,8 +197,9 @@ export default function HistoriqueScans() {
             {filtered.map(scan => {
               const gc = GRADE_COLOR[scan.quality_grade] || '#9ca3af'
               const score = scan.quality_score
+              const expanded = expandedId === scan.id
               return (
-                <div key={scan.id} style={{ ...S.scanCard, cursor: 'pointer' }} onClick={() => reuseScan(scan)}>
+                <div key={scan.id} style={{ ...S.scanCard, cursor: 'pointer' }} onClick={() => setExpandedId(expanded ? null : scan.id)}>
                   <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
                     {/* Image produit */}
                     <div style={{
@@ -268,6 +271,18 @@ export default function HistoriqueScans() {
                     </div>
                   </div>
 
+                  {/* Détail macros — s'affiche au clic sur la carte */}
+                  {expanded && (
+                    <div style={{ marginTop: '0.7rem', paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <MacroDetailRow label="Calories" value={scan.kcal_100g != null ? `${Math.round(scan.kcal_100g)} kcal` : '—'} />
+                      <MacroDetailRow label="Protéines" value={scan.prot_100g != null ? `${Math.round(scan.prot_100g)} g` : '—'} note={noteProteines(scan.prot_100g)} />
+                      <MacroDetailRow label="Glucides" value={scan.carbs_100g != null ? `${Math.round(scan.carbs_100g)} g` : '—'} note={noteGlucides(scan.carbs_100g)} />
+                      <MacroDetailRow label="Matières grasses" value={scan.fat_100g != null ? `${Math.round(scan.fat_100g)} g` : '—'} note={noteMatieresGrasses(scan.fat_100g)} />
+                      <MacroDetailRow label="Fibres" value={scan.fiber_100g != null ? `${Math.round(scan.fiber_100g)} g` : '—'} note={noteFibres(scan.fiber_100g)} />
+                      <p style={{ fontSize: '0.6rem', color: '#d1d5db', margin: '2px 0 0' }}>Valeurs pour 100 g</p>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div style={S.cardActions}>
                     <button onClick={(e) => { e.stopPropagation(); reuseScan(scan) }} style={S.btnReuse}>
@@ -298,6 +313,20 @@ function StatItem({ val, lbl, color }) {
       <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
         {lbl}
       </span>
+    </div>
+  )
+}
+
+function MacroDetailRow({ label, value, note }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {note && (
+          <span style={{ fontSize: '0.62rem', fontWeight: 700, color: note.color }}>{note.label}</span>
+        )}
+        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1a1a1a' }}>{value}</span>
+      </div>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
 import SchemaSVG from '../components/SchemaSVG'
+import { ZONES, NIVEAUX, parseDureeToDate, formatRetour } from '../components/BlessureButton'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Calendrier saison (préparateur physique) — vue mois × jours d'un groupe.
@@ -1418,8 +1419,11 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   const [newNom, setNewNom] = useState('')
   const [newRang, setNewRang] = useState(1)
   const [editStatut, setEditStatut] = useState('ok')
+  const [editZone, setEditZone] = useState('general')
+  const [editNiveau, setEditNiveau] = useState('sans_contact')
   const [editDesc, setEditDesc] = useState('')
   const [editDuree, setEditDuree] = useState('')
+  const [editDateRetour, setEditDateRetour] = useState('')
   const [editRestrictions, setEditRestrictions] = useState([])
   const [editRang, setEditRang] = useState(1)
   const [editSecondaires, setEditSecondaires] = useState('')
@@ -1589,8 +1593,11 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   function openPanelJoueur(j, poste) {
     setPanelJoueur({ ...j, _poste: poste })
     setEditStatut(j.blessure?.statut || 'ok')
+    setEditZone(j.blessure?.zone || 'general')
+    setEditNiveau(j.blessure?.niveau || 'sans_contact')
     setEditDesc(j.blessure?.description || '')
     setEditDuree(j.blessure?.duree_estimee || '')
+    setEditDateRetour(j.blessure?.date_retour_prevue || '')
     setEditRestrictions(j.blessure?.restrictions || [])
     setEditRang(j.rang)
     const secondaires = (j.joueur_postes || [])
@@ -1643,11 +1650,15 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
     setSaving(true)
     const joueurId = panelJoueur.id
     // Mettre à jour blessure (upsert)
+    const parsed = editStatut !== 'ok' ? parseDureeToDate(editDuree) : null
     await supabase.from('joueur_blessures').upsert({
       joueur_id: joueurId,
       statut: editStatut,
+      zone: editStatut !== 'ok' ? editZone : null,
+      niveau: editStatut !== 'ok' ? editNiveau : null,
       description: editDesc,
       duree_estimee: editDuree,
+      date_retour_prevue: editStatut !== 'ok' ? (parsed || editDateRetour || null) : null,
       restrictions: editRestrictions,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'joueur_id' })
@@ -2001,8 +2012,35 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                   )}
                   {editStatut !== 'ok' && (
                     <>
+                      <div style={{ display:'flex', gap:5, marginBottom:6, flexWrap:'wrap' }}>
+                        {ZONES.map(z => (
+                          <button key={z.v} onClick={() => setEditZone(z.v)} type="button" style={{
+                            padding:'4px 9px', borderRadius:999, border:'none', cursor:'pointer',
+                            background: editZone===z.v ? '#1f2937' : '#f3f4f6',
+                            color: editZone===z.v ? '#e4f816' : '#6b7280',
+                            fontSize:'0.64rem', fontWeight:700, fontFamily:'inherit' }}>
+                            {z.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', gap:4, marginBottom:8 }}>
+                        {NIVEAUX.map(n => (
+                          <button key={n.v} onClick={() => setEditNiveau(n.v)} type="button" style={{
+                            textAlign:'left', padding:'6px 9px', borderRadius:8, cursor:'pointer', fontFamily:'inherit',
+                            border: editNiveau===n.v ? '1.5px solid #1f2937' : '1.5px solid #e5e7eb',
+                            background: editNiveau===n.v ? '#f9fafb' : 'white',
+                            fontSize:'0.68rem', fontWeight:700, color:'#374151' }}>
+                            {n.label}
+                          </button>
+                        ))}
+                      </div>
                       <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Ex : Entorse LLE genou droit" value={editDesc} onChange={e=>setEditDesc(e.target.value)} />
-                      <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Durée estimée" value={editDuree} onChange={e=>setEditDuree(e.target.value)} />
+                      <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Durée estimée (ex : 2 semaines)" value={editDuree} onChange={e=>setEditDuree(e.target.value)} />
+                      {(parseDureeToDate(editDuree) || editDateRetour) && (
+                        <p style={{ fontSize:'0.68rem', color:'#9ca3af', margin:'-4px 0 8px' }}>
+                          {formatRetour(parseDureeToDate(editDuree) || editDateRetour)}
+                        </p>
+                      )}
                     </>
                   )}
                   <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:6, marginTop:10 }}>Postes</div>

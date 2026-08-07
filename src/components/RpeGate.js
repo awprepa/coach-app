@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { getCoachId, sendNotif } from '../notifs'
+import BlessureButton from './BlessureButton'
 
 // ── Session-RPE différencié (échelle CR-10, 0-10) — 3 dimensions rugby ────────
 const DIMS = [
@@ -182,6 +183,10 @@ function RpeOverlay({ clientId, evenement, onDone }) {
             maxLength={400}
             style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', fontFamily: 'inherit', lineHeight: 1.4, resize: 'vertical', outline: 'none' }}
           />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+          <BlessureButton clientId={clientId} compact />
         </div>
 
         <button onClick={submit} disabled={!allFilled || saving}
