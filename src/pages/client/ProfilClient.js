@@ -565,9 +565,14 @@ export default function ProfilClient() {
       )}
 
       {/* Blessure */}
-      {joueurId && (
-        <div style={S.card}>
-          <h2 style={S.cardTitle}>Blessure</h2>
+      <div style={S.card}>
+        <h2 style={S.cardTitle}>Blessure</h2>
+        {!joueurId ? (
+          <p style={{ fontSize: '0.82rem', color: '#9ca3af', lineHeight: 1.5, margin: 0 }}>
+            Ton compte n'est pas encore rattaché à une fiche joueur dans l'effectif — demande à ton coach de t'ajouter à un groupe pour pouvoir déclarer une blessure ici.
+          </p>
+        ) : (
+        <>
           <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 14px', lineHeight: 1.5 }}>
             Préviens ton coach si tu es blessé et indisponible.
           </p>
@@ -615,8 +620,9 @@ export default function ProfilClient() {
           <button onClick={saveBlessure} disabled={savingBlessure} style={S.saveBtn}>
             {savedBlessureMsg ? '✓ Sauvegardé !' : savingBlessure ? 'Sauvegarde…' : 'Sauvegarder'}
           </button>
-        </div>
-      )}
+        </>
+        )}
+      </div>
 
       {/* Profil nutritionnel */}
       <div style={S.card}>

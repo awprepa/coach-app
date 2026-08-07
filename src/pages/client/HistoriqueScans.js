@@ -163,6 +163,11 @@ export default function HistoriqueScans() {
             )}
 
             {/* Liste */}
+            {filtered.length > 0 && (
+              <p style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, margin: '0 2px' }}>
+                Touche un aliment pour le réajouter à ta journée
+              </p>
+            )}
             {filtered.length === 0 && !loading && (
               <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
                 <p style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
