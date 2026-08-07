@@ -142,7 +142,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         corps: absent
           ? `${evenement.titre || 'Entraînement'} — signalé absent`
           : `${evenement.titre || 'Entraînement'} — RPE renseigné`,
-        type: 'rpe',
+        type: absent ? 'rpe_absence' : 'rpe',
         lien: evenement.groupe_id ? `/groupe/${evenement.groupe_id}` : '/',
       })
     } catch (e) {

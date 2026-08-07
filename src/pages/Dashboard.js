@@ -5,6 +5,7 @@ import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
 import { useNotifications } from '../hooks/useNotifications'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
+import NotifIcon from '../components/NotifIcon'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -74,7 +75,6 @@ function formatNotifTime(isoStr) {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' · ' + hhmm
 }
 
-const NOTIF_ICONS = { wellness: '🧘', message: '💬', seance: '📅', info: '🔔', default: '🔔' }
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -648,7 +648,7 @@ export default function Dashboard() {
               {notifs.slice(0, 50).map(n => (
                 <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/')) navigate(n.lien) }}
                   style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: n.lu ? 'white' : '#fafff0', cursor: n.lien ? 'pointer' : 'default' }}>
-                  <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
+                  <NotifIcon type={n.type} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a' }}>{n.titre}</p>
                     {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
