@@ -933,9 +933,18 @@ export default function FicheGroupe() {
                   const avg = membreAvg(m)
                   const col = avg !== null ? wellnessColor(avg) : '#9ca3af'
                   return (
-                    <tr key={m.id} onClick={() => {
-                      if (rosterClientIds.has(m.id)) { setEffectifOpen(true); setOpenJoueurClientId(m.id) }
-                      else navigate(`/client/${m.id}`)
+                    <tr key={m.id} onClick={async () => {
+                      if (!rosterClientIds.has(m.id)) {
+                        // Pas encore dans l'effectif (groupe_joueurs) → on le crée à la volée
+                        // pour pouvoir ouvrir directement sa fiche (statut, blessure…) sans
+                        // passer par un ajout manuel au poste.
+                        await supabase.from('groupe_joueurs').insert({
+                          groupe_id: id, client_id: m.id,
+                          prenom: m.prenom || '', nom: m.nom || '',
+                        })
+                        setRosterClientIds(prev => new Set(prev).add(m.id))
+                      }
+                      setEffectifOpen(true); setOpenJoueurClientId(m.id)
                     }} style={{ cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
                       <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>

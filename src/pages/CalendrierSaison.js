@@ -1815,10 +1815,10 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
       {/* ─── Panneau liste joueurs au poste ─── */}
       {panelPos && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)',
-          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:500 }}
+          display:'flex', alignItems:'center', justifyContent:'center', zIndex:500, padding:'3vh 16px' }}
           onClick={e => { if (e.target === e.currentTarget) setPanelPos(null) }}>
-          <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:460,
-            padding:'18px 18px 36px', maxHeight:'80vh', overflowY:'auto' }}>
+          <div style={{ background:'#fff', borderRadius:18, width:'100%', maxWidth:460,
+            padding:'18px 18px 22px', maxHeight:'88vh', overflowY:'auto' }}>
             <div style={{ width:32, height:4, background:'#e5e7eb', borderRadius:2, margin:'0 auto 16px' }} />
             <div style={{ fontSize:'0.95rem', fontWeight:900, color:'#1f2937', marginBottom:2 }}>
               Poste {panelPos} — {POSTES_RUGBY.find(p=>p.num===panelPos)?.nom}
