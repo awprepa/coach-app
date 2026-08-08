@@ -79,6 +79,11 @@ function formatNotifTime(isoStr) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { notifs, unread, markRead, markAllRead } = useNotifications()
+  // Reste surligné tant que le coach n'a pas quitté cette page, même après
+  // avoir cliqué dessus (marquer comme lu ne doit pas faire disparaître le
+  // surlignage tout de suite — sinon on perd de vue ce qu'on vient de lire).
+  const stillHighlighted = useRef(new Set()).current
+  notifs.forEach(n => { if (!n.lu) stillHighlighted.add(n.id) })
   const [loading, setLoading]         = useState(true)
   const [clients, setClients]         = useState([])
   const [categories, setCategories]   = useState([])
@@ -645,17 +650,21 @@ export default function Dashboard() {
             <div style={S.card}>
               <div style={S.cardHead}><span style={S.sectionTitle}>Notifications</span></div>
               {notifs.length === 0 && <p style={S.empty}>Aucune notification</p>}
-              {notifs.slice(0, 50).map(n => (
+              {notifs.slice(0, 50).map(n => {
+                const highlighted = stillHighlighted.has(n.id)
+                return (
                 <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/')) navigate(n.lien) }}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: n.lu ? 'white' : '#fafff0', cursor: n.lien ? 'pointer' : 'default' }}>
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: highlighted ? '#fafff0' : 'white', cursor: n.lien ? 'pointer' : 'default' }}>
                   <NotifIcon type={n.type} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: n.lu ? '500' : '700', color: '#1a1a1a' }}>{n.titre}</p>
+                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: highlighted ? '700' : '500', color: '#1a1a1a' }}>{n.titre}</p>
                     {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
                   </div>
                   <span style={{ fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
-                  {!n.lu && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
+                  {highlighted && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
                 </div>
+                )
+              })}
               ))}
             </div>
           )}
