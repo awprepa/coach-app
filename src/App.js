@@ -526,7 +526,7 @@ function App() {
               {/* ── Coach ── */}
               <Route path="/agenda"                      element={<WithNav><AgendaGlobal /></WithNav>} />
               <Route path="/groupes"                     element={<WithNav><Groupes /></WithNav>} />
-              <Route path="/clients"                     element={<WithNav><Clients /></WithNav>} />
+              <Route path="/clients/gestion"             element={<WithNav><Clients /></WithNav>} />
               <Route path="/nouveau-client"              element={<WithNav><NouveauClient /></WithNav>} />
               <Route path="/client/:id"                  element={<WithNav><FicheClient /></WithNav>} />
               <Route path="/clients"                     element={<WithNav><FicheClient /></WithNav>} />
