@@ -553,30 +553,51 @@ export default function FicheClient() {
               </div>
             </div>
 
-            <div style={styles.infoGrid}>
-              {client.email && <InfoItem label="Email" value={client.email} />}
-              {client.telephone && <InfoItem label="Téléphone" value={client.telephone} />}
-              {client.date_debut && <InfoItem label="Début" value={new Date(client.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} />}
-              {client.date_fin && <InfoItem label="Fin" value={new Date(client.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} />}
-              <div style={{ gridColumn: 'auto' }}>
-                <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Conditions générales</p>
-                {conditionsData ? (
-                  <p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: 700, margin: 0 }}>
-                    Signées le {new Date(conditionsData.date_acceptation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                ) : (
-                  <p style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 700, margin: 0 }}>Non signées</p>
+            {(client.email || client.telephone) && (
+              <div style={styles.sideSection}>
+                <p style={styles.sideLabel}>Contact</p>
+                {client.email && (
+                  <div style={styles.sideRow}>
+                    <IconMail /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{client.email}</span>
+                  </div>
+                )}
+                {client.telephone && (
+                  <div style={styles.sideRow}><IconPhone /> {client.telephone}</div>
                 )}
               </div>
-              {client.objectif && <InfoItem label="Objectif" value={client.objectif} full />}
-              {client.notes && <InfoItem label="Notes" value={client.notes} full />}
+            )}
+
+            <div style={styles.sideSection}>
+              <p style={styles.sideLabel}>Engagement</p>
+              {client.date_debut && (
+                <div style={styles.statRow}><span style={styles.statLabel}>Début</span><span style={styles.statVal}>{new Date(client.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div>
+              )}
+              {client.date_fin && (
+                <div style={styles.statRow}><span style={styles.statLabel}>Fin</span><span style={styles.statVal}>{new Date(client.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div>
+              )}
+              {client.objectif && (
+                <div style={styles.statRow}><span style={styles.statLabel}>Objectif</span><span style={{ ...styles.statVal, textAlign: 'right', maxWidth: '60%' }}>{client.objectif}</span></div>
+              )}
+              <div style={styles.statRow}>
+                <span style={styles.statLabel}>Conditions générales</span>
+                <span style={{ ...styles.statVal, color: conditionsData ? '#16a34a' : '#ef4444' }}>
+                  {conditionsData ? `Signées le ${new Date(conditionsData.date_acceptation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}` : 'Non signées'}
+                </span>
+              </div>
             </div>
+
+            {client.notes && (
+              <div style={styles.sideSection}>
+                <p style={styles.sideLabel}>Notes</p>
+                <p style={{ fontSize: '0.85rem', color: '#374151', margin: 0, lineHeight: 1.5 }}>{client.notes}</p>
+              </div>
+            )}
 
             {/* ── Contrat commercial ── */}
             {['coaching', 'preparation_physique', 'essai'].includes(client.offre) && (
-              <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1rem', marginBottom: '1.25rem' }}>
-                <div style={styles.sectionHeader}>
-                  <p style={styles.sectionTitle}>Contrat</p>
+              <div style={styles.sideSection}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <p style={styles.sideLabel}>Contrat</p>
                   <button onClick={() => setShowContratModal('envoyer')} style={styles.btnSecondary}>+ Envoyer un contrat</button>
                 </div>
                 {contrats.length === 0 ? (
@@ -643,7 +664,7 @@ export default function FicheClient() {
 
       <div className="fc-maincol" style={styles.mainCol}>
       {/* Onglets navigation */}
-      <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 12, padding: 3, gap: 3 }}>
+      <div style={{ display: 'flex', background: '#eceef0', borderRadius: 12, padding: 4, gap: 4, width: 'fit-content' }}>
         {[
           { k: 'suivi', l: 'Suivi', icon: (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -672,11 +693,11 @@ export default function FicheClient() {
             if (t.k === 'perf' && progression.length === 0) fetchProgression()
             if (t.k === 'nutrition') fetchNutrition()
           }} style={{
-            flex: 1, padding: '0.45rem 0.5rem', border: 'none', borderRadius: 9, fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer',
+            padding: '8px 18px', border: 'none', borderRadius: 9, fontSize: '0.83rem', fontWeight: '700', cursor: 'pointer',
             background: activeTab === t.k ? 'white' : 'transparent',
-            color: activeTab === t.k ? '#333333' : '#9ca3af',
-            boxShadow: activeTab === t.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            color: activeTab === t.k ? '#1a1a1a' : '#6b7280',
+            boxShadow: activeTab === t.k ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}>{t.icon}{t.l}</button>
         ))}
       </div>
@@ -1185,6 +1206,21 @@ export default function FicheClient() {
   )
 }
 
+function IconMail() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#9ca3af' }}>
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 6 10-6" />
+    </svg>
+  )
+}
+function IconPhone() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#9ca3af' }}>
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .7 3a2 2 0 0 1-.4 2.1L8 10.3a16 16 0 0 0 6 6l1.5-1.5a2 2 0 0 1 2-.4c1 .3 2 .5 3 .7a2 2 0 0 1 1.6 2z" />
+    </svg>
+  )
+}
+
 function InfoItem({ label, value, full, valueStyle }) {
   return (
     <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
@@ -1217,6 +1253,12 @@ const styles = {
   clientNameCentered: { fontSize: '1.15rem', fontWeight: '800', color: '#1a1a1a', margin: 0, textAlign: 'center' },
   badge: { padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600' },
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', padding: '1rem 0', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6' },
+  sideSection: { borderTop: '1px solid #f3f4f6', paddingTop: '1rem', marginBottom: '1.1rem' },
+  sideLabel: { fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.6rem' },
+  sideRow: { display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', marginBottom: '0.5rem', color: '#374151' },
+  statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: 8 },
+  statLabel: { fontSize: '0.8rem', color: '#6b7280', flexShrink: 0 },
+  statVal: { fontSize: '0.82rem', fontWeight: 700, color: '#1a1a1a', textAlign: 'right' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
   emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
