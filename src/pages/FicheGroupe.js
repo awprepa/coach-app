@@ -474,9 +474,13 @@ export default function FicheGroupe() {
   }
 
   async function retirerMembre(clientId) {
-    if (!window.confirm('Retirer ce membre du groupe ? Il redeviendra un client individuel.')) return
+    if (!window.confirm('Retirer ce membre du groupe ? Il redeviendra un client individuel — sa fiche et ses données restent intactes.')) return
     await supabase.from('groupe_membres').delete().eq('groupe_id', id).eq('client_id', clientId)
-    setMembres(membres.filter(m => m.id !== clientId))
+    // Retire aussi sa fiche de l'effectif tactique du groupe (poste, statut...) —
+    // ne touche jamais aux tables client/programme/wellness, propres au client.
+    await supabase.from('groupe_joueurs').delete().eq('groupe_id', id).eq('client_id', clientId)
+    setMembres(prev => prev.filter(m => m.id !== clientId))
+    setRosterClientIds(prev => { const next = new Set(prev); next.delete(clientId); return next })
   }
 
   // ── Programmes — Pousser à tous ────────────────────────────────────────────
@@ -925,6 +929,7 @@ export default function FicheGroupe() {
                       {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
                     </th>
                   ))}
+                  <th style={{ padding: '0.4rem 1.1rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', width: 40 }} />
                 </tr>
               </thead>
               <tbody>
@@ -962,6 +967,19 @@ export default function FicheGroupe() {
                         {avg !== null
                           ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: col }} />{avg.toFixed(1)}</span>
                           : <span style={{ color: '#c4ccd4' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '0.32rem 0.6rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); retirerMembre(m.id) }}
+                          title="Retirer du groupe"
+                          style={{ width: 24, height: 24, borderRadius: 7, border: 'none', background: 'transparent', color: '#c4ccd4', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#c4ccd4' }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   )

@@ -7,6 +7,7 @@ import { ChargePanel } from './ChargeEntrainement'
 import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
+import ClientListSidebar from '../components/ClientListSidebar'
 
 
 const OFFRES = {
@@ -367,14 +368,28 @@ export default function FicheClient() {
   const av = getAvatar(client.prenom, client.nom)
 
   return (
-    <div style={styles.page}>
-      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
+    <div style={styles.shell}>
+      {/* Adaptations responsive : sous 1100px on masque la liste de gauche,
+          sous 860px la colonne infos passe au-dessus du contenu principal. */}
       <style>{`
+        @media (max-width: 1100px){ .fc-listcol{ display:none !important; } }
+        @media (max-width: 860px){
+          .fc-shell{ flex-direction:column !important; }
+          .fc-sidecol{ width:100% !important; border-right:none !important; border-bottom:1px solid #eee; position:static !important; height:auto !important; }
+          .fc-maincol{ padding:1.25rem !important; }
+        }
         @media (max-width: 820px){
           .fc-hscroll{overflow-x:auto !important;-webkit-overflow-scrolling:touch;}
           .fc-hscroll > div{min-width:520px;}
         }
       `}</style>
+
+      <div className="fc-listcol">
+        <ClientListSidebar activeId={id} onSelect={cid => navigate(`/client/${cid}`)} />
+      </div>
+
+      <div className="fc-shell" style={{ display: 'flex', flex: 1, minWidth: 0 }}>
+      <div className="fc-sidecol" style={styles.sideCol}>
       <button onClick={() => navigate('/')} style={styles.backBtn}>← Retour</button>
 
       {editMode ? (
@@ -603,9 +618,11 @@ export default function FicheClient() {
           </div>
         </>
       )}
+      </div>
 
+      <div className="fc-maincol" style={styles.mainCol}>
       {/* Onglets navigation */}
-      <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 12, padding: 3, gap: 3, marginTop: '1.5rem' }}>
+      <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 12, padding: 3, gap: 3 }}>
         {[
           { k: 'suivi', l: 'Suivi', icon: (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -1141,7 +1158,8 @@ export default function FicheClient() {
           onEnvoye={() => { setShowContratModal(null); fetchContrat() }}
         />
       )}
-
+      </div>
+      </div>
     </div>
   )
 }
@@ -1166,7 +1184,9 @@ function EditField({ label, value, onChange, type = 'text' }) {
 
 const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  page: { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  shell: { display: 'flex', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f5f5' },
+  sideCol: { width: 340, flexShrink: 0, borderRight: '1px solid #eee', background: '#f5f5f5', padding: '1.5rem 1.25rem', overflowY: 'auto', height: '100vh', position: 'sticky', top: 0 },
+  mainCol: { flex: 1, minWidth: 0, padding: '1.5rem 2rem 3rem' },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
   profileCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
