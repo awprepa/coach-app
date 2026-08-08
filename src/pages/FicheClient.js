@@ -94,7 +94,20 @@ export default function FicheClient() {
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!id) { setLoading(false); return }
+    setLoading(true)
+    // Remet à zéro tout ce qui est spécifique à l'onglet Entraînement/Nutrition
+    // du client précédent — sinon en changeant de client depuis la liste on
+    // pouvait un instant voir les données (progression, plan nutrition...) de
+    // l'ancien client avant qu'elles se rechargent.
+    setActiveTab('suivi')
+    setProgression([]); setSelectedExo(null)
+    setNutritionPlan(null); setNutritionAdher([]); setNutritionProfile(null)
+    setShowPastCycles(false); setShowAllWellness(false); setShowAllSeancesClient(false)
+    setEditMode(false)
+    fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat()
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchContrat() {
     const [{ data: conditions }, { data: contratsData }] = await Promise.all([
@@ -362,8 +375,16 @@ export default function FicheClient() {
     setNutritionAdher(adher)
   }
 
-  if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
-  if (!client) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Client introuvable.</p></div>
+  if (!id || loading || !client) return (
+    <div style={styles.shell}>
+      <ClientListSidebar activeId={id} onSelect={cid => navigate(`/client/${cid}`)} />
+      <div style={{ ...styles.loading, flex: 1 }}>
+        <p style={{ color: '#9ca3af' }}>
+          {!id ? 'Choisis un client dans la liste.' : loading ? 'Chargement...' : 'Client introuvable.'}
+        </p>
+      </div>
+    </div>
+  )
 
   const av = getAvatar(client.prenom, client.nom)
 
@@ -511,32 +532,32 @@ export default function FicheClient() {
         <>
           {/* Profil */}
           <div style={styles.profileCard}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.1rem' }}>
               {client.avatar_url
-                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatar, objectFit: 'cover' }} />
-                : <div style={{ ...styles.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
+                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatarCentered, objectFit: 'cover' }} />
+                : <div style={styles.avatarCentered}>{av.initiales}</div>
               }
-              <div>
-                <h1 style={styles.clientName}>{client.prenom} {client.nom}</h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <h1 style={styles.clientNameCentered}>{client.prenom} {client.nom}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.4rem' }}>
+                {client.offre && (
                   <span style={{ ...styles.badge, ...offreBadge(client.offre) }}>
                     {offreLabel(client.offre)}
                   </span>
-                  {client.categories && (
-                    <span style={{ ...styles.badge, background: client.categories.couleur + '22', color: client.categories.couleur, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: client.categories.couleur }} />
-                      {client.categories.nom}
-                    </span>
-                  )}
-                </div>
+                )}
+                {client.categories && (
+                  <span style={{ ...styles.badge, background: client.categories.couleur + '22', color: client.categories.couleur, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: client.categories.couleur }} />
+                    {client.categories.nom}
+                  </span>
+                )}
               </div>
             </div>
 
             <div style={styles.infoGrid}>
               {client.email && <InfoItem label="Email" value={client.email} />}
               {client.telephone && <InfoItem label="Téléphone" value={client.telephone} />}
-              {client.date_debut && <InfoItem label="Début" value={client.date_debut} />}
-              {client.date_fin && <InfoItem label="Fin" value={client.date_fin} />}
+              {client.date_debut && <InfoItem label="Début" value={new Date(client.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} />}
+              {client.date_fin && <InfoItem label="Fin" value={new Date(client.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} />}
               <div style={{ gridColumn: 'auto' }}>
                 <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Conditions générales</p>
                 {conditionsData ? (
@@ -1191,7 +1212,9 @@ const styles = {
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
   profileCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   avatar: { width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '1.1rem', flexShrink: 0 },
+  avatarCentered: { width: 72, height: 72, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.4rem', flexShrink: 0, background: 'linear-gradient(135deg,#333,#1f2937)', color: '#e4f816', marginBottom: '0.6rem' },
   clientName: { fontSize: '1.4rem', fontWeight: '800', color: '#333333', margin: '0 0 0.4rem' },
+  clientNameCentered: { fontSize: '1.15rem', fontWeight: '800', color: '#1a1a1a', margin: 0, textAlign: 'center' },
   badge: { padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600' },
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', padding: '1rem 0', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },

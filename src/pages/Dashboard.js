@@ -385,6 +385,7 @@ export default function Dashboard() {
     { k: 'calendrier', label: 'Calendrier',     icon: NAV_ICONS.calendrier },
   ]
   function selectTab(k) {
+    if (k === 'clients') { navigate('/clients'); return }
     setTab(k)
     if (k === 'notifs' && unread > 0) markAllRead()
     window.scrollTo({ top: 0 })

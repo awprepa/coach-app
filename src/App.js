@@ -529,6 +529,7 @@ function App() {
               <Route path="/clients"                     element={<WithNav><Clients /></WithNav>} />
               <Route path="/nouveau-client"              element={<WithNav><NouveauClient /></WithNav>} />
               <Route path="/client/:id"                  element={<WithNav><FicheClient /></WithNav>} />
+              <Route path="/clients"                     element={<WithNav><FicheClient /></WithNav>} />
               <Route path="/rapport/:clientId"           element={<WithNav><RapportClient /></WithNav>} />
               <Route path="/client/:id/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/client/:id/import-excel"     element={<WithNav><ImportClientExcel /></WithNav>} />
