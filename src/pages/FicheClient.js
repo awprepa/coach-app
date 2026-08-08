@@ -532,24 +532,26 @@ export default function FicheClient() {
         <>
           {/* Profil */}
           <div style={styles.profileCard}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.85rem' }}>
               {client.avatar_url
-                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatarCentered, objectFit: 'cover' }} />
-                : <div style={styles.avatarCentered}>{av.initiales}</div>
+                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatarCentered, objectFit: 'cover', marginBottom: 0 }} />
+                : <div style={{ ...styles.avatarCentered, marginBottom: 0 }}>{av.initiales}</div>
               }
-              <h1 style={styles.clientNameCentered}>{client.prenom} {client.nom}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.4rem' }}>
-                {client.offre && (
-                  <span style={{ ...styles.badge, ...offreBadge(client.offre) }}>
-                    {offreLabel(client.offre)}
-                  </span>
-                )}
-                {client.categories && (
-                  <span style={{ ...styles.badge, background: client.categories.couleur + '22', color: client.categories.couleur, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: client.categories.couleur }} />
-                    {client.categories.nom}
-                  </span>
-                )}
+              <div style={{ minWidth: 0 }}>
+                <h1 style={styles.clientNameLeft}>{client.prenom} {client.nom}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+                  {client.offre && (
+                    <span style={{ ...styles.badge, ...offreBadge(client.offre) }}>
+                      {offreLabel(client.offre)}
+                    </span>
+                  )}
+                  {client.categories && (
+                    <span style={{ ...styles.badge, background: client.categories.couleur + '22', color: client.categories.couleur, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: client.categories.couleur }} />
+                      {client.categories.nom}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -575,9 +577,6 @@ export default function FicheClient() {
               {client.date_fin && (
                 <div style={styles.statRow}><span style={styles.statLabel}>Fin</span><span style={styles.statVal}>{new Date(client.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div>
               )}
-              {client.objectif && (
-                <div style={styles.statRow}><span style={styles.statLabel}>Objectif</span><span style={{ ...styles.statVal, textAlign: 'right', maxWidth: '60%' }}>{client.objectif}</span></div>
-              )}
               <div style={styles.statRow}>
                 <span style={styles.statLabel}>Conditions générales</span>
                 <span style={{ ...styles.statVal, color: conditionsData ? '#16a34a' : '#ef4444' }}>
@@ -596,42 +595,42 @@ export default function FicheClient() {
             {/* ── Contrat commercial ── */}
             {['coaching', 'preparation_physique', 'essai'].includes(client.offre) && (
               <div style={styles.sideSection}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                   <p style={styles.sideLabel}>Contrat</p>
-                  <button onClick={() => setShowContratModal('envoyer')} style={styles.btnSecondary}>+ Envoyer un contrat</button>
+                  <button onClick={() => setShowContratModal('envoyer')} style={{ background: 'none', border: 'none', color: '#6d28d9', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', padding: 0 }}>+ Envoyer</button>
                 </div>
                 {contrats.length === 0 ? (
-                  <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: 0 }}>Aucun contrat envoyé.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {contrats.map(c => (
-                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.9rem' }}>
-                        <div>
-                          <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#333333' }}>
-                            {c.formule_label} · {c.prix_mensuel}€/mois
-                          </p>
-                          <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: c.statut === 'signe' ? '#16a34a' : '#f59e0b', fontWeight: 700 }}>
-                            {c.statut === 'signe'
-                              ? `Signé le ${new Date(c.date_signature).toLocaleDateString('fr-FR')}`
-                              : `Envoyé le ${new Date(c.date_envoi).toLocaleDateString('fr-FR')} · en attente`}
-                          </p>
-                        </div>
-                        {c.pdf_url && (
-                          <button onClick={() => telechargerContratPdf(c.pdf_url)} style={{ ...styles.btnSecondary, padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}>
-                            PDF
-                          </button>
-                        )}
+                  <p style={{ fontSize: '0.76rem', color: '#9ca3af', margin: 0 }}>Aucun contrat envoyé.</p>
+                ) : (() => {
+                  const c = contrats[0]
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb', borderRadius: 9, padding: '0.5rem 0.65rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.76rem', fontWeight: 700, color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.formule_label} · {c.prix_mensuel}€/mois
+                        </p>
+                        <p style={{ margin: '1px 0 0', fontSize: '0.68rem', color: c.statut === 'signe' ? '#16a34a' : '#f59e0b', fontWeight: 700 }}>
+                          {c.statut === 'signe'
+                            ? `Signé le ${new Date(c.date_signature).toLocaleDateString('fr-FR')}`
+                            : `Envoyé · en attente`}
+                          {contrats.length > 1 && ` · ${contrats.length} au total`}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {c.pdf_url && (
+                        <button onClick={() => telechargerContratPdf(c.pdf_url)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 7, padding: '0.3rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer', flexShrink: 0 }}>
+                          PDF
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button onClick={() => setEditMode(true)} style={styles.btnSecondary}>Modifier</button>
-              <button onClick={inviterClient} style={styles.btnSecondary}>Inviter par email</button>
-              <button onClick={supprimerClient} style={styles.btnDanger}>Supprimer</button>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <button onClick={() => setEditMode(true)} style={{ ...styles.btnSecondary, padding: '0.45rem 0.7rem', fontSize: '0.76rem' }}>Modifier</button>
+              <button onClick={inviterClient} style={{ ...styles.btnSecondary, padding: '0.45rem 0.7rem', fontSize: '0.76rem' }}>Inviter</button>
+              <button onClick={supprimerClient} style={{ ...styles.btnDanger, padding: '0.45rem 0.7rem', fontSize: '0.76rem' }}>Supprimer</button>
             </div>
           </div>
 
@@ -1250,6 +1249,7 @@ const styles = {
   avatarCentered: { width: 52, height: 52, borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.05rem', flexShrink: 0, background: 'linear-gradient(135deg,#333,#1f2937)', color: '#e4f816', marginBottom: '0.4rem' },
   clientName: { fontSize: '1.4rem', fontWeight: '800', color: '#333333', margin: '0 0 0.4rem' },
   clientNameCentered: { fontSize: '1rem', fontWeight: '800', color: '#1a1a1a', margin: 0, textAlign: 'center' },
+  clientNameLeft: { fontSize: '0.92rem', fontWeight: '800', color: '#1a1a1a', margin: 0, lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   badge: { padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '600' },
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', padding: '1rem 0', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6' },
   sideSection: { borderTop: '1px solid #f3f4f6', paddingTop: '0.65rem', marginBottom: '0.65rem' },
