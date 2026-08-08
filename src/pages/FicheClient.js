@@ -636,18 +636,17 @@ export default function FicheClient() {
           </div>
 
           {/* ── Notes coach ── */}
-          <div style={{ ...styles.card, marginTop: '1rem', border: '1.5px solid #fef08a', background: '#fefce8' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '1rem' }}>📝</span>
-              <p style={{ ...styles.sectionTitle, margin: 0 }}>Notes entretiens</p>
-              <span style={{ marginLeft: 'auto', fontSize: '0.65rem', fontWeight: '700', color: '#a16207', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 999, padding: '0.1rem 0.5rem' }}>🔒 Visible uniquement par toi</span>
+          <div style={{ ...styles.card, marginTop: '0.75rem', padding: '0.85rem', border: '1.5px solid #fef08a', background: '#fefce8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+              <p style={{ ...styles.sectionTitle, margin: 0, fontSize: '0.68rem' }}>Notes entretiens</p>
+              <span style={{ marginLeft: 'auto', fontSize: '0.58rem', fontWeight: '700', color: '#a16207', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 999, padding: '0.1rem 0.45rem' }}>Privé</span>
             </div>
             <textarea
               value={notesCoach}
               onChange={e => { setNotesCoach(e.target.value); setNotesSaved(false) }}
               onBlur={e => sauvegarderNotesCoach(e.target.value)}
-              placeholder={`Notes sur ${client.prenom} — entretiens, observations, points à suivre…`}
-              rows={6}
+              placeholder={`Notes sur ${client.prenom}…`}
+              rows={3}
               style={{ width: '100%', boxSizing: 'border-box', padding: '0.75rem', border: '1.5px solid #fde68a', borderRadius: 10, fontSize: '0.88rem', lineHeight: 1.6, outline: 'none', resize: 'vertical', background: 'white', fontFamily: 'inherit', color: '#333' }}
             />
             <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#a16207' }}>
@@ -773,10 +772,10 @@ export default function FicheClient() {
       )}
 
       {/* Onglet Suivi */}
-      {activeTab === 'suivi' && <>
+      {activeTab === 'suivi' && <div style={styles.suiviGrid}>
 
       {/* Cycles */}
-      <div style={{ marginTop: '1.5rem' }}>
+      <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Cycles</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -861,7 +860,7 @@ export default function FicheClient() {
       </div>
 
       {/* Planification */}
-      <div style={{ marginTop: '1.5rem' }}>
+      <div style={{ ...styles.gridCard, gridColumn: '1 / -1' }}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Planification</p>
         </div>
@@ -878,7 +877,7 @@ export default function FicheClient() {
       </div>
 
       {/* ── Séances ajoutées par le client ──────────────────────────────── */}
-      <div style={{ marginTop: '1.5rem' }}>
+      <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>👤 Séances ajoutées par {client.prenom}</p>
           <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
@@ -959,7 +958,7 @@ export default function FicheClient() {
       </div>
 
       {/* Wellness */}
-      <div style={{ marginTop: '1.5rem' }}>
+      <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Wellness</p>
           <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
@@ -1057,7 +1056,7 @@ export default function FicheClient() {
         })()}
       </div>
 
-      </> /* fin onglet profil */}
+      </div> /* fin onglet profil */}
 
       {/* ─── Onglet Nutrition ─────────────────────────────────────────── */}
       {activeTab === 'nutrition' && (
@@ -1242,23 +1241,25 @@ function EditField({ label, value, onChange, type = 'text' }) {
 const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   shell: { display: 'flex', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f5f5' },
-  sideCol: { width: 340, flexShrink: 0, borderRight: '1px solid #eee', background: '#f5f5f5', padding: '1.5rem 1.25rem', overflowY: 'auto', height: '100vh', position: 'sticky', top: 0 },
+  sideCol: { width: 290, flexShrink: 0, borderRight: '1px solid #eee', background: '#f5f5f5', padding: '1.1rem 1rem', overflowY: 'auto', height: '100vh', position: 'sticky', top: 0 },
   mainCol: { flex: 1, minWidth: 0, padding: '1.5rem 2rem 3rem' },
-  backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
+  backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.85rem', cursor: 'pointer', padding: 0, marginBottom: '0.85rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
-  profileCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  profileCard: { background: 'white', borderRadius: '16px', padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   avatar: { width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '1.1rem', flexShrink: 0 },
-  avatarCentered: { width: 72, height: 72, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.4rem', flexShrink: 0, background: 'linear-gradient(135deg,#333,#1f2937)', color: '#e4f816', marginBottom: '0.6rem' },
+  avatarCentered: { width: 52, height: 52, borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.05rem', flexShrink: 0, background: 'linear-gradient(135deg,#333,#1f2937)', color: '#e4f816', marginBottom: '0.4rem' },
   clientName: { fontSize: '1.4rem', fontWeight: '800', color: '#333333', margin: '0 0 0.4rem' },
-  clientNameCentered: { fontSize: '1.15rem', fontWeight: '800', color: '#1a1a1a', margin: 0, textAlign: 'center' },
-  badge: { padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600' },
+  clientNameCentered: { fontSize: '1rem', fontWeight: '800', color: '#1a1a1a', margin: 0, textAlign: 'center' },
+  badge: { padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '600' },
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', padding: '1rem 0', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6' },
-  sideSection: { borderTop: '1px solid #f3f4f6', paddingTop: '1rem', marginBottom: '1.1rem' },
-  sideLabel: { fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.6rem' },
-  sideRow: { display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', marginBottom: '0.5rem', color: '#374151' },
-  statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: 8 },
-  statLabel: { fontSize: '0.8rem', color: '#6b7280', flexShrink: 0 },
-  statVal: { fontSize: '0.82rem', fontWeight: 700, color: '#1a1a1a', textAlign: 'right' },
+  sideSection: { borderTop: '1px solid #f3f4f6', paddingTop: '0.65rem', marginBottom: '0.65rem' },
+  suiviGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1rem', alignItems: 'start', marginTop: '1.25rem' },
+  gridCard: { background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  sideLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.35rem' },
+  sideRow: { display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.78rem', marginBottom: '0.3rem', color: '#374151' },
+  statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.3rem', gap: 8 },
+  statLabel: { fontSize: '0.74rem', color: '#6b7280', flexShrink: 0 },
+  statVal: { fontSize: '0.76rem', fontWeight: 700, color: '#1a1a1a', textAlign: 'right' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
   emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
