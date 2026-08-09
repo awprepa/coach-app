@@ -362,9 +362,9 @@ function PageLoader() {
 
 // Gestion des erreurs de chargement de chunk (après nouveau déploiement)
 class ChunkErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { hasError: false } }
-  static getDerivedStateFromError() {
-    return { hasError: true }
+  constructor(props) { super(props); this.state = { hasError: false, err: null } }
+  static getDerivedStateFromError(err) {
+    return { hasError: true, err }
   }
   componentDidCatch(err) {
     // Chunk introuvable (hash périmé après déploiement) → reload forcé une seule fois
@@ -377,9 +377,14 @@ class ChunkErrorBoundary extends Component {
   }
   render() {
     if (this.state.hasError) return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', gap: 12 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', gap: 12, padding: '2rem', textAlign: 'center' }}>
         <span style={{ fontSize: '2rem' }}>⚠️</span>
         <p style={{ fontWeight: 700, color: '#1a1a1a', margin: 0 }}>Une erreur est survenue</p>
+        {this.state.err && (
+          <p style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#dc2626', maxWidth: 500, whiteSpace: 'pre-wrap', margin: 0 }}>
+            {this.state.err.message}
+          </p>
+        )}
         <button onClick={() => window.location.reload(true)} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 800, cursor: 'pointer' }}>
           Recharger la page
         </button>
