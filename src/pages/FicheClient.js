@@ -106,7 +106,7 @@ export default function FicheClient() {
     setActiveTab('suivi')
     setProgression([]); setSelectedExo(null)
     setNutritionPlan(null); setNutritionAdher([]); setNutritionProfile(null)
-    setShowPastCycles(false); setShowAllWellness(false); setShowAllSeancesClient(false)
+    setShowAllWellness(false); setShowAllSeancesClient(false)
     setNextEvent(null); setWeekEventsCount(0)
     setEditMode(false)
     fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat(); fetchProchaineSeance()
