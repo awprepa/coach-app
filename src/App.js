@@ -49,7 +49,6 @@ const Conditions            = lazy(() => import('./pages/Conditions'))
 const Clients              = lazy(() => import('./pages/Clients'))
 const NouveauClient        = lazy(() => import('./pages/NouveauClient'))
 const FicheClient          = lazy(() => import('./pages/FicheClient'))
-const RapportClient        = lazy(() => import('./pages/RapportClient'))
 const NouveauProgramme     = lazy(() => import('./pages/NouveauProgramme'))
 const Programme            = lazy(() => import('./pages/Programme'))
 const Seance               = lazy(() => import('./pages/Seance'))
@@ -530,7 +529,6 @@ function App() {
               <Route path="/nouveau-client"              element={<WithNav><NouveauClient /></WithNav>} />
               <Route path="/client/:id"                  element={<WithNav><FicheClient /></WithNav>} />
               <Route path="/clients"                     element={<WithNav><FicheClient /></WithNav>} />
-              <Route path="/rapport/:clientId"           element={<WithNav><RapportClient /></WithNav>} />
               <Route path="/client/:id/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/client/:id/import-excel"     element={<WithNav><ImportClientExcel /></WithNav>} />
               <Route path="/programme/:id"               element={<WithNav><Programme /></WithNav>} />

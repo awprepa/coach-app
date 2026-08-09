@@ -428,7 +428,7 @@ export default function FicheClient() {
 
       {listCollapsed && <div className="fc-edgezone" onMouseEnter={() => setListCollapsed(false)} />}
 
-      <div className={`fc-listcol${listCollapsed ? ' collapsed' : ''}`}>
+      <div className={`fc-listcol${listCollapsed ? ' collapsed' : ''}`} onMouseLeave={() => setListCollapsed(true)}>
         <ClientListSidebar activeId={id} onSelect={cid => { navigate(`/client/${cid}`); setListCollapsed(true) }} />
       </div>
 
@@ -876,7 +876,6 @@ export default function FicheClient() {
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Cycles</p>
           <div style={{ display: 'flex', gap: '0.4rem' }}>
-            <button onClick={() => navigate(`/rapport/${id}`)} style={{ ...styles.btnSecondary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }} title="Rapport mensuel PDF">Rapport</button>
             <button onClick={() => navigate(`/client/${id}/import-excel`)} style={{ ...styles.btnSecondary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }} title="Importer depuis Excel">Excel</button>
             <button onClick={() => navigate(`/client/${id}/nouveau-programme`)} style={{ ...styles.btnPrimary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }}>+ Nouveau</button>
           </div>
@@ -1058,24 +1057,36 @@ export default function FicheClient() {
           const visible = showAllWellness ? wellness : wellness.slice(0, 5)
 
           return (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {visible.map(w => {
                 const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
                 const label = w.date === today ? "Aujourd'hui" : w.date === yesterday ? 'Hier'
                   : new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+                const c = scoreColor(Math.round(a))
                 return (
-                  <div key={w.id} style={styles.listItem}>
-                    <div>
+                  <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', background: '#f9fafb', borderRadius: 12, padding: '0.55rem 0.8rem' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                    <div style={{ minWidth: 92 }}>
                       <p style={styles.liTitle}>{label}</p>
                       <p style={styles.liSub}>{w.poids ? `${w.poids} kg` : '—'}</p>
                     </div>
-                    <span style={{ ...styles.liVal, color: scoreColor(Math.round(a)) }}>{a.toFixed(1)}/4</span>
+                    <div style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'center' }}>
+                      {INDICATORS.map(({ key, label: l }) => (
+                        <div key={key} title={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 30 }}>
+                          <div style={{ width: '100%', height: 20, borderRadius: 4, background: '#e5e7eb', position: 'relative', overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${(w[key] / 4) * 100}%`, background: scoreColor(w[key]), borderRadius: 4 }} />
+                          </div>
+                          <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#9ca3af' }}>{l.slice(0, 3)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: c, flexShrink: 0, width: 42, textAlign: 'right' }}>{a.toFixed(1)}</span>
                   </div>
                 )
               })}
               {wellness.length > 5 && (
                 <button onClick={() => setShowAllWellness(v => !v)}
-                  style={{ width: '100%', background: 'none', border: 'none', padding: '0.6rem 0 0', fontSize: '0.76rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                  style={{ width: '100%', background: 'none', border: 'none', padding: '0.4rem 0 0', fontSize: '0.76rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
                   {showAllWellness ? '↑ Voir moins' : `↓ Voir tout (${wellness.length} entrées)`}
                 </button>
               )}
