@@ -70,6 +70,7 @@ export default function FicheClient() {
   const [programmes, setCycles] = useState([])
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
+  const [listCollapsed, setListCollapsed] = useState(false)
   const [form, setForm] = useState({})
   const [categories, setCategories] = useState([])
   const [seances, setSeances] = useState([])
@@ -410,7 +411,10 @@ export default function FicheClient() {
       {/* Adaptations responsive : sous 1100px on masque la liste de gauche,
           sous 860px la colonne infos passe au-dessus du contenu principal. */}
       <style>{`
-        @media (max-width: 1100px){ .fc-listcol{ display:none !important; } }
+        .fc-listcol{ width:240px; flex-shrink:0; overflow:hidden; transition:width 0.2s ease; }
+        .fc-listcol.collapsed{ width:0; }
+        .fc-edgezone{ position:fixed; top:0; left:0; width:14px; height:100vh; z-index:50; }
+        @media (max-width: 1100px){ .fc-listcol{ display:none !important; } .fc-edgezone{ display:none !important; } }
         @media (max-width: 860px){
           .fc-shell{ flex-direction:column !important; }
           .fc-sidecol{ width:100% !important; border-right:none !important; border-bottom:1px solid #eee; position:static !important; height:auto !important; }
@@ -422,9 +426,17 @@ export default function FicheClient() {
         }
       `}</style>
 
-      <div className="fc-listcol">
-        <ClientListSidebar activeId={id} onSelect={cid => navigate(`/client/${cid}`)} />
+      {listCollapsed && <div className="fc-edgezone" onMouseEnter={() => setListCollapsed(false)} />}
+
+      <div className={`fc-listcol${listCollapsed ? ' collapsed' : ''}`}>
+        <ClientListSidebar activeId={id} onSelect={cid => { navigate(`/client/${cid}`); setListCollapsed(true) }} />
       </div>
+
+      <button onClick={() => setListCollapsed(v => !v)} title={listCollapsed ? 'Afficher la liste' : 'Masquer la liste'} style={styles.listToggleBtn}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: listCollapsed ? 'rotate(180deg)' : 'none' }}>
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
 
       <div className="fc-shell" style={{ display: 'flex', flex: 1, minWidth: 0 }}>
       <div className="fc-sidecol" style={styles.sideCol}>
@@ -860,7 +872,7 @@ export default function FicheClient() {
       <div style={styles.suiviGrid}>
 
       {/* Cycles */}
-      <div style={styles.gridCard}>
+      <div style={{ ...styles.gridCard, gridColumn: '1 / -1' }}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Cycles</p>
           <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -1032,7 +1044,7 @@ export default function FicheClient() {
       {/* Wellness */}
       <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
-          <p style={styles.sectionTitle}>Wellness</p>
+          <p style={styles.sectionTitle}>Historique wellness</p>
           <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
             {wellness.length} entrée{wellness.length > 1 ? 's' : ''}
           </span>
@@ -1042,86 +1054,30 @@ export default function FicheClient() {
           <div style={styles.emptyCard}>Aucune donnée wellness pour ce client.</div>
         ) : (() => {
           const today = new Date().toISOString().slice(0, 10)
-          const latest = wellness[0]
-          const isToday = latest.date === today
-          const avg = (latest.sommeil + latest.fatigue + latest.douleurs + latest.stress) / 4
-          const visible = showAllWellness ? wellness : wellness.slice(0, 14)
+          const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+          const visible = showAllWellness ? wellness : wellness.slice(0, 5)
 
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-
-              {/* Dernière entrée mise en avant */}
-              <div style={{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: isToday ? '1.5px solid #e4f816' : '1.5px solid #f3f4f6' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>
-                      {isToday ? "Aujourd'hui" : new Date(latest.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </p>
-                    {isToday && <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{latest.date}</p>}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {latest.poids && <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: 999 }}>⚖️ {latest.poids} kg</span>}
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: scoreColor(Math.round(avg)) }} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#374151' }}>{avg.toFixed(1)}/4</span>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                  {INDICATORS.map(({ key, label, emoji }) => (
-                    <div key={key} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '1rem' }}>{emoji}</span>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</p>
-                        <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: '700', color: scoreColor(latest[key]) }}>{scoreLabel(key, latest[key])}</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: 3 }}>
-                        {[1,2,3,4].map(v => (
-                          <div key={v} style={{ width: 6, height: 18, borderRadius: 3, background: v <= latest[key] ? scoreColor(latest[key]) : '#e5e7eb' }} />
-                        ))}
-                      </div>
+            <div>
+              {visible.map(w => {
+                const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                const label = w.date === today ? "Aujourd'hui" : w.date === yesterday ? 'Hier'
+                  : new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+                return (
+                  <div key={w.id} style={styles.listItem}>
+                    <div>
+                      <p style={styles.liTitle}>{label}</p>
+                      <p style={styles.liSub}>{w.poids ? `${w.poids} kg` : '—'}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Historique */}
-              {wellness.length > 1 && (
-                <div className="fc-hscroll" style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                  <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                    <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
+                    <span style={{ ...styles.liVal, color: scoreColor(Math.round(a)) }}>{a.toFixed(1)}/4</span>
                   </div>
-                  {/* Légende colonnes */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 48px 36px', gap: '0.25rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}>
-                    <span style={styles.colLabel}>Date</span>
-                    {INDICATORS.map(i => <span key={i.key} style={styles.colLabel}>{i.emoji}</span>)}
-                    <span style={styles.colLabel}>⚖️ kg</span>
-                    <span style={styles.colLabel}>Moy.</span>
-                  </div>
-                  {visible.slice(1).map(w => {
-                    const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
-                    return (
-                      <div key={w.id} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 48px 36px', gap: '0.25rem', padding: '0.5rem 1rem', borderBottom: '1px solid #f9fafb', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
-                          {new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        </span>
-                        {INDICATORS.map(({ key }) => (
-                          <div key={key} style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            {[1,2,3,4].map(v => (
-                              <div key={v} style={{ width: 5, height: 14, borderRadius: 2, background: v <= w[key] ? scoreColor(w[key]) : '#e5e7eb' }} />
-                            ))}
-                          </div>
-                        ))}
-                        <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>{w.poids ?? '—'}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: scoreColor(Math.round(a)) }}>{a.toFixed(1)}</span>
-                      </div>
-                    )
-                  })}
-                  {wellness.length > 15 && (
-                    <button onClick={() => setShowAllWellness(v => !v)}
-                      style={{ width: '100%', background: 'none', border: 'none', padding: '0.65rem', fontSize: '0.8rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600', borderTop: '1px solid #f3f4f6' }}>
-                      {showAllWellness ? '↑ Voir moins' : `↓ Voir tout (${wellness.length - 1} entrées)`}
-                    </button>
-                  )}
-                </div>
+                )
+              })}
+              {wellness.length > 5 && (
+                <button onClick={() => setShowAllWellness(v => !v)}
+                  style={{ width: '100%', background: 'none', border: 'none', padding: '0.6rem 0 0', fontSize: '0.76rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                  {showAllWellness ? '↑ Voir moins' : `↓ Voir tout (${wellness.length} entrées)`}
+                </button>
               )}
             </div>
           )
@@ -1323,6 +1279,7 @@ const styles = {
   shell: { display: 'flex', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f5f5' },
   sideCol: { width: 290, flexShrink: 0, borderRight: '1px solid #eee', background: '#f5f5f5', padding: '1.1rem 1rem', overflowY: 'auto', height: '100vh', position: 'sticky', top: 0 },
   mainCol: { flex: 1, minWidth: 0, padding: '1.5rem 2rem 3rem' },
+  listToggleBtn: { position: 'sticky', top: '50%', marginTop: -14, marginBottom: -28, zIndex: 40, width: 22, height: 28, borderRadius: '0 8px 8px 0', background: 'white', border: '1px solid #eee', borderLeft: 'none', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '1px 0 4px rgba(0,0,0,0.05)', flexShrink: 0 },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.85rem', cursor: 'pointer', padding: 0, marginBottom: '0.85rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
   profileCard: { background: 'white', borderRadius: '16px', padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
@@ -1369,4 +1326,8 @@ const styles = {
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
   btnDanger: { background: '#fef2f2', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
   colLabel:  { fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6' },
+  liTitle: { fontSize: '0.8rem', fontWeight: '700', margin: 0, color: '#1a1a1a' },
+  liSub: { fontSize: '0.68rem', color: '#9ca3af', margin: '1px 0 0' },
+  liVal: { fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', flexShrink: 0 },
 }

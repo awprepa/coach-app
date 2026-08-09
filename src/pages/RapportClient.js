@@ -454,7 +454,7 @@ export default function RapportClient() {
               label="Compliance"
               value={compliance !== null ? `${compliance}%` : '—'}
               sub={compliance !== null ? `${seancesReelles} / ${totalSeances} séances` : 'Pas de données'}
-              color={compliance >= 80 ? '#16a34a' : compliance >= 60 ? '#d97706' : '#dc2626'}
+              color={compliance === null ? '#6b7280' : compliance >= 80 ? '#16a34a' : compliance >= 60 ? '#d97706' : '#dc2626'}
             />
             <KpiCard
               label="RPE moyen"
@@ -464,7 +464,7 @@ export default function RapportClient() {
                   : rpeMoyen >= 6 ? 'Intensité modérée'
                   : 'Intensité légère'
                 : 'Non renseigné'}
-              color={rpeMoyen >= 8 ? '#dc2626' : rpeMoyen >= 6 ? '#d97706' : '#16a34a'}
+              color={rpeMoyen === null ? '#6b7280' : rpeMoyen >= 8 ? '#dc2626' : rpeMoyen >= 6 ? '#d97706' : '#16a34a'}
             />
             <KpiCard
               label="Séances"
@@ -564,13 +564,13 @@ export default function RapportClient() {
                 label="Énergie moyenne"
                 value={wellnessMoyen.energie !== null ? `${wellnessMoyen.energie}/4` : '—'}
                 sub={scoreLabel('energie', wellnessMoyen.energie)}
-                color={wellnessMoyen.energie >= 3 ? '#16a34a' : wellnessMoyen.energie >= 2 ? '#d97706' : '#dc2626'}
+                color={wellnessMoyen.energie === null ? '#6b7280' : wellnessMoyen.energie >= 3 ? '#16a34a' : wellnessMoyen.energie >= 2 ? '#d97706' : '#dc2626'}
               />
               <KpiCard
                 label="Sommeil moyen"
                 value={wellnessMoyen.sommeil !== null ? `${wellnessMoyen.sommeil}/4` : '—'}
                 sub={scoreLabel('sommeil', wellnessMoyen.sommeil)}
-                color={wellnessMoyen.sommeil >= 3 ? '#16a34a' : wellnessMoyen.sommeil >= 2 ? '#d97706' : '#dc2626'}
+                color={wellnessMoyen.sommeil === null ? '#6b7280' : wellnessMoyen.sommeil >= 3 ? '#16a34a' : wellnessMoyen.sommeil >= 2 ? '#d97706' : '#dc2626'}
               />
               <KpiCard
                 label="Poids"
