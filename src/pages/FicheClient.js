@@ -91,6 +91,8 @@ export default function FicheClient() {
   const [notesCoach, setNotesCoach] = useState('')
   const [notesSaved, setNotesSaved] = useState(true)
   const [notesSavedAt, setNotesSavedAt] = useState(null)
+  const [nextEvent, setNextEvent] = useState(null)
+  const [weekEventsCount, setWeekEventsCount] = useState(0)
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,8 +107,9 @@ export default function FicheClient() {
     setProgression([]); setSelectedExo(null)
     setNutritionPlan(null); setNutritionAdher([]); setNutritionProfile(null)
     setShowPastCycles(false); setShowAllWellness(false); setShowAllSeancesClient(false)
+    setNextEvent(null); setWeekEventsCount(0)
     setEditMode(false)
-    fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat()
+    fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat(); fetchProchaineSeance()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchContrat() {
@@ -143,6 +146,20 @@ export default function FicheClient() {
     await supabase.from('clients').update({ notes_coach: val || null }).eq('id', id)
     setNotesSaved(true)
     setNotesSavedAt(new Date())
+  }
+
+  async function fetchProchaineSeance() {
+    const today = new Date().toISOString().slice(0, 10)
+    const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate() + (7 - weekEnd.getDay()))
+    const weekEndISO = weekEnd.toISOString().slice(0, 10)
+    const [{ data: next }, { data: week }] = await Promise.all([
+      supabase.from('evenements').select('id, date, titre, type')
+        .eq('client_id', id).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
+      supabase.from('evenements').select('id')
+        .eq('client_id', id).gte('date', today).lte('date', weekEndISO),
+    ])
+    setNextEvent(next || null)
+    setWeekEventsCount(week?.length ?? 0)
   }
 
   async function fetchSeancesClient() {
@@ -771,22 +788,85 @@ export default function FicheClient() {
       )}
 
       {/* Onglet Suivi */}
-      {activeTab === 'suivi' && <div style={styles.suiviGrid}>
+      {activeTab === 'suivi' && <div>
+
+      {/* ── Bandeau de stats ── */}
+      {(() => {
+        const todayD = new Date()
+        const vraisActifs = programmes
+          .filter(p => p.date_debut && !isCycleTermine(p))
+          .sort((a, b) => {
+            const aStarted = new Date(a.date_debut + 'T00:00:00') <= todayD
+            const bStarted = new Date(b.date_debut + 'T00:00:00') <= todayD
+            if (aStarted && !bStarted) return -1
+            if (!aStarted && bStarted) return 1
+            return new Date(b.date_debut) - new Date(a.date_debut)
+          })
+        const cycleActif = vraisActifs[0]
+        const semaineActuelle = cycleActif?.date_debut
+          ? Math.min(cycleActif.semaines, Math.max(1, Math.floor((todayD - new Date(cycleActif.date_debut + 'T00:00:00')) / (7 * 86400000)) + 1))
+          : null
+        const todayISO = todayD.toISOString().slice(0, 10)
+        const latestW = wellness[0]
+        const wellnessToday = latestW?.date === todayISO ? latestW : null
+        const wAvg = wellnessToday ? (wellnessToday.sommeil + wellnessToday.fatigue + wellnessToday.douleurs + wellnessToday.stress) / 4 : null
+
+        return (
+          <div style={styles.statsRow}>
+            <div style={styles.statCard}>
+              <p style={styles.statCardLabel}>Cycle actif</p>
+              {cycleActif ? (
+                <>
+                  <p style={styles.statCycleName}>{cycleActif.nom}</p>
+                  <p style={styles.statCycleSub}>Semaine {semaineActuelle} / {cycleActif.semaines}</p>
+                  <div style={styles.barTrack}><div style={{ ...styles.barFill, width: `${Math.min(100, (semaineActuelle / cycleActif.semaines) * 100)}%` }} /></div>
+                </>
+              ) : <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Aucun cycle en cours</p>}
+            </div>
+
+            <div style={styles.statCard}>
+              <p style={styles.statCardLabel}>Wellness aujourd'hui</p>
+              {wellnessToday ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: scoreColor(Math.round(wAvg)), lineHeight: 1 }}>{wAvg.toFixed(1)}</span>
+                  <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+                    {INDICATORS.map(({ key, label }) => (
+                      <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+                        <div style={{ width: '100%', height: 18, background: '#f3f4f6', borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${(wellnessToday[key] / 4) * 100}%`, background: scoreColor(wellnessToday[key]), borderRadius: 4 }} />
+                        </div>
+                        <span style={{ fontSize: '0.5rem', color: '#9ca3af', fontWeight: 700 }}>{label.slice(0, 3)}.</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Pas encore renseigné</p>}
+            </div>
+
+            <div style={styles.statCard}>
+              <p style={styles.statCardLabel}>Prochaine séance</p>
+              {nextEvent ? (
+                <>
+                  <p style={styles.statCycleName}>{nextEvent.titre || 'Séance'}</p>
+                  <p style={styles.statCycleSub}>{new Date(nextEvent.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                </>
+              ) : <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Rien de prévu</p>}
+              {weekEventsCount > 0 && <span style={styles.weekPill}>{weekEventsCount} événement{weekEventsCount > 1 ? 's' : ''} cette semaine</span>}
+            </div>
+          </div>
+        )
+      })()}
+
+      <div style={styles.suiviGrid}>
 
       {/* Cycles */}
       <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Cycles</p>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => navigate(`/rapport/${id}`)} style={styles.btnSecondary} title="Rapport mensuel PDF">
-              📄 Rapport
-            </button>
-            <button onClick={() => navigate(`/client/${id}/import-excel`)} style={styles.btnSecondary} title="Importer depuis Excel">
-              📥 Excel
-            </button>
-            <button onClick={() => navigate(`/client/${id}/nouveau-programme`)} style={styles.btnPrimary}>
-              + Nouveau
-            </button>
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button onClick={() => navigate(`/rapport/${id}`)} style={{ ...styles.btnSecondary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }} title="Rapport mensuel PDF">Rapport</button>
+            <button onClick={() => navigate(`/client/${id}/import-excel`)} style={{ ...styles.btnSecondary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }} title="Importer depuis Excel">Excel</button>
+            <button onClick={() => navigate(`/client/${id}/nouveau-programme`)} style={{ ...styles.btnPrimary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }}>+ Nouveau</button>
           </div>
         </div>
         {(() => {
@@ -814,32 +894,25 @@ export default function FicheClient() {
               {visibles.length === 0 && !showPastCycles ? (
                 <div style={styles.emptyCard}>Aucun cycle en cours.</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={styles.cyclesStrip}>
                   {visibles.map((prog, i) => {
                     const termine = isCycleTermine(prog)
                     const loading = dupliquerLoading === prog.id
+                    const actif = !termine && i === 0
                     return (
-                      <div key={prog.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div onClick={() => navigate(`/programme/${prog.id}`)} style={{
-                          ...styles.progCard, flex: 1,
-                          borderLeft: `4px solid ${termine ? '#d1d5db' : i === 0 ? '#e4f816' : '#e5e7eb'}`,
-                          opacity: termine ? 0.6 : 1,
-                        }}>
-                          <div>
-                            <p style={styles.progNom}>{prog.nom}</p>
-                            <p style={styles.progMeta}>
-                              {prog.semaines} semaines
-                              {termine && <span style={{ marginLeft: '0.5rem', color: '#9ca3af' }}>· Terminé</span>}
-                            </p>
-                          </div>
-                          <span style={styles.chevron}>›</span>
+                      <div key={prog.id} style={{ ...styles.cycleChip, ...(actif ? styles.cycleChipActive : {}), opacity: termine ? 0.6 : 1 }}>
+                        <div onClick={() => navigate(`/programme/${prog.id}`)} style={{ cursor: 'pointer' }}>
+                          <p style={{ ...styles.progNom, ...(actif ? { color: 'var(--accent-fg-dark)' } : {}), fontSize: '0.8rem', margin: '0 0 2px' }}>{prog.nom}</p>
+                          <p style={{ ...styles.progMeta, ...(actif ? { color: 'rgba(228,248,22,0.6)' } : {}), fontSize: '0.68rem', margin: 0 }}>
+                            {prog.semaines} semaines{termine && ' · Terminé'}
+                          </p>
                         </div>
                         <button
                           onClick={() => dupliquerProgramme(prog)}
                           disabled={loading}
                           title="Dupliquer ce cycle"
-                          style={{ background: '#f3f4f6', border: 'none', borderRadius: 10, padding: '0.5rem 0.65rem', cursor: 'pointer', fontSize: '0.85rem', color: '#6b7280', flexShrink: 0 }}
-                        >{loading ? '⏳' : '⧉'}</button>
+                          style={{ position: 'absolute', top: 6, right: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: actif ? 'rgba(228,248,22,0.6)' : '#9ca3af', padding: 2 }}
+                        >{loading ? '…' : '⧉'}</button>
                       </div>
                     )
                   })}
@@ -848,7 +921,7 @@ export default function FicheClient() {
               {termines.length > 0 && (
                 <button
                   onClick={() => setShowPastCycles(v => !v)}
-                  style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.82rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600' }}
+                  style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.74rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600' }}
                 >
                   {showPastCycles ? '↑ Masquer les cycles passés' : `↓ Voir les cycles passés (${termines.length})`}
                 </button>
@@ -1055,6 +1128,7 @@ export default function FicheClient() {
         })()}
       </div>
 
+      </div>
       </div> /* fin onglet profil */}
 
       {/* ─── Onglet Nutrition ─────────────────────────────────────────── */}
@@ -1155,10 +1229,17 @@ export default function FicheClient() {
                 </p>
                 {(nutritionProfile.poids_kg || nutritionProfile.taille_cm || nutritionProfile.age_ans) ? (
                   <>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                      {nutritionProfile.poids_kg  && <InfoItem label="Poids"  value={`${nutritionProfile.poids_kg} kg`} />}
-                      {nutritionProfile.taille_cm && <InfoItem label="Taille" value={`${nutritionProfile.taille_cm} cm`} />}
-                      {nutritionProfile.age_ans   && <InfoItem label="Âge"    value={`${nutritionProfile.age_ans} ans`} />}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      {[
+                        ['Poids', nutritionProfile.poids_kg && `${nutritionProfile.poids_kg} kg`],
+                        ['Taille', nutritionProfile.taille_cm && `${nutritionProfile.taille_cm} cm`],
+                        ['Âge', nutritionProfile.age_ans && `${nutritionProfile.age_ans} ans`],
+                      ].filter(([, v]) => v).map(([l, v]) => (
+                        <div key={l} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem', textAlign: 'center' }}>
+                          <div style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a' }}>{v}</div>
+                          <div style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', marginTop: 2 }}>{l}</div>
+                        </div>
+                      ))}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
                       {nutritionProfile.sexe && <InfoItem label="Sexe" value={nutritionProfile.sexe === 'homme' ? '♂ Homme' : '♀ Femme'} />}
@@ -1253,8 +1334,19 @@ const styles = {
   badge: { padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '600' },
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', padding: '1rem 0', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6' },
   sideSection: { borderTop: '1px solid #f3f4f6', paddingTop: '0.65rem', marginBottom: '0.65rem' },
-  suiviGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1rem', alignItems: 'start', marginTop: '1.25rem' },
+  suiviGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1rem', alignItems: 'start', marginTop: '1rem' },
   gridCard: { background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  statsRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginTop: '1rem' },
+  statCard: { background: 'white', borderRadius: 14, padding: '0.9rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  statCardLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.4rem' },
+  statCycleName: { fontSize: '0.85rem', fontWeight: 800, margin: '0 0 2px', color: '#1a1a1a' },
+  statCycleSub: { fontSize: '0.7rem', color: '#9ca3af', margin: '0 0 6px' },
+  barTrack: { height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' },
+  barFill: { height: '100%', background: '#1a1a1a', borderRadius: 99 },
+  weekPill: { display: 'inline-flex', alignItems: 'center', fontSize: '0.62rem', fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: '#dcfce7', color: '#15803d', marginTop: 6 },
+  cyclesStrip: { display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 },
+  cycleChip: { position: 'relative', flexShrink: 0, background: '#f9fafb', border: '1px solid #eee', borderRadius: 11, padding: '8px 28px 8px 12px', minWidth: 140, cursor: 'default' },
+  cycleChipActive: { background: '#1a1a1a', borderColor: '#1a1a1a' },
   sideLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.35rem' },
   sideRow: { display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.78rem', marginBottom: '0.3rem', color: '#374151' },
   statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.3rem', gap: 8 },
