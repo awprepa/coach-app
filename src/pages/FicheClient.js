@@ -74,7 +74,6 @@ export default function FicheClient() {
   const [form, setForm] = useState({})
   const [categories, setCategories] = useState([])
   const [seances, setSeances] = useState([])
-  const [showPastCycles, setShowPastCycles] = useState(false)
   const [wellness, setWellness] = useState([])
   const [showAllWellness, setShowAllWellness] = useState(false)
   const [activeTab, setActiveTab] = useState('suivi') // 'suivi' | 'perf' | 'nutrition'
@@ -411,7 +410,7 @@ export default function FicheClient() {
       {/* Adaptations responsive : sous 1100px on masque la liste de gauche,
           sous 860px la colonne infos passe au-dessus du contenu principal. */}
       <style>{`
-        .fc-listcol{ width:240px; flex-shrink:0; overflow:hidden; transition:width 0.2s ease; }
+        .fc-listcol{ width:240px; flex-shrink:0; overflow-x:hidden; transition:width 0.2s ease; }
         .fc-listcol.collapsed{ width:0; }
         .fc-edgezone{ position:fixed; top:0; left:0; width:14px; height:100vh; z-index:50; }
         @media (max-width: 1100px){ .fc-listcol{ display:none !important; } .fc-edgezone{ display:none !important; } }
@@ -897,12 +896,10 @@ export default function FicheClient() {
           const termines = programmes
             .filter(p => p.date_debut && isCycleTermine(p))
             .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut))
-          const visibles = showPastCycles
-            ? [...vraisActifs, ...sansDates, ...termines]
-            : [...vraisActifs, ...sansDates]
+          const visibles = [...vraisActifs, ...sansDates, ...termines]
           return (
             <>
-              {visibles.length === 0 && !showPastCycles ? (
+              {visibles.length === 0 ? (
                 <div style={styles.emptyCard}>Aucun cycle en cours.</div>
               ) : (
                 <div style={styles.cyclesStrip}>
@@ -928,14 +925,6 @@ export default function FicheClient() {
                     )
                   })}
                 </div>
-              )}
-              {termines.length > 0 && (
-                <button
-                  onClick={() => setShowPastCycles(v => !v)}
-                  style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.74rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600' }}
-                >
-                  {showPastCycles ? '↑ Masquer les cycles passés' : `↓ Voir les cycles passés (${termines.length})`}
-                </button>
               )}
             </>
           )
