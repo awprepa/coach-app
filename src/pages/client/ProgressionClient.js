@@ -1,13 +1,24 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
+import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank } from '../../data/strengthStandards'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
+
+const RANK_COLORS = {
+  'Débutant':      { bg: '#f3f4f6', fg: '#6b7280' },
+  'Novice':        { bg: '#fef3e2', fg: '#c2751c' },
+  'Intermédiaire': { bg: '#e0edff', fg: '#2563eb' },
+  'Avancé':        { bg: '#eafbe7', fg: '#16a34a' },
+  'Élite':         { bg: '#f3e8ff', fg: '#7c3aed' },
+  'Exceptionnel':  { bg: '#fde2e2', fg: '#dc2626' },
+}
 
 // ─── Formules 1RM ────────────────────────────────────────────────────────────
 
@@ -288,11 +299,14 @@ function ProgressionSkeleton() {
 export default function ProgressionClient() {
   const fadeStyle = usePageFade()
 
+  const navigate = useNavigate()
+
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState(null)
   const [exercicesData, setExercicesData] = useState({})
   const [selected, setSelected]     = useState(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [profileInfo, setProfileInfo] = useState({ sexe: null, poids: null })
 
   // ── Chargement des données ────────────────────────────────────────────────
 
@@ -319,6 +333,17 @@ export default function ProgressionClient() {
           client = byEmail
         }
         if (!client?.id) { setError('Client introuvable'); setLoading(false); return }
+
+        // 1bis. Sexe + poids de corps (pour le calcul des rangs) — poids : dernière
+        // entrée wellness en priorité (historique réel), sinon le profil nutrition.
+        const [{ data: profile }, { data: lastWellness }] = await Promise.all([
+          supabase.from('nutrition_profile').select('sexe, poids_kg').eq('client_id', client.id).maybeSingle(),
+          supabase.from('wellness').select('poids').eq('client_id', client.id).not('poids', 'is', null).order('date', { ascending: false }).limit(1).maybeSingle(),
+        ])
+        setProfileInfo({
+          sexe: profile?.sexe || null,
+          poids: lastWellness?.poids || (profile?.poids_kg ? parseFloat(profile.poids_kg) : null) || null,
+        })
 
         // 2. Programmes du client
         const { data: progs } = await supabase
@@ -572,6 +597,31 @@ export default function ProgressionClient() {
     }
   }, [currentData])
 
+  // ── Médailles / rangs (Développé couché, Squat, Soulevé de terre) ─────────
+
+  const medals = useMemo(() => {
+    return BENCHMARK_EXERCISES.map(bench => {
+      // Parmi tous les noms d'exercices du client, on prend celui qui matche ce
+      // benchmark et qui a le plus de points de données (au cas où plusieurs
+      // variantes du même mouvement existent dans son historique).
+      const candidates = Object.entries(exercicesData)
+        .filter(([nom]) => matchBenchmarkExercise(nom) === bench.key)
+        .sort((a, b) => b[1].points.length - a[1].points.length)
+      const data = candidates[0]?.[1]
+      if (!data) return { ...bench, hasData: false }
+
+      const rmPoints = data.points.filter(p => p.rm !== null)
+      const best1Rep = data.direct1RepPoints?.length ? Math.max(...data.direct1RepPoints.map(p => p.poids)) : null
+      const bestRm = best1Rep ?? (rmPoints.length ? Math.max(...rmPoints.map(p => p.rm)) : null)
+      if (!bestRm) return { ...bench, hasData: false }
+
+      const rank = computeRank(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
+      return { ...bench, hasData: true, bestRm, rank }
+    })
+  }, [exercicesData, profileInfo])
+
+  const missingProfile = !profileInfo.sexe || !profileInfo.poids
+
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
   if (loading) return <ProgressionSkeleton />
@@ -592,6 +642,17 @@ export default function ProgressionClient() {
       <div style={S.header}>
         <h1 style={S.headerTitle}>📈 Progression</h1>
         <p style={S.headerSub}>Évolution de tes performances</p>
+      </div>
+      <div style={S.medalsSection}>
+        <h2 style={S.sectionTitle}>Tes rangs</h2>
+        <div style={S.medalsRow}>
+          {BENCHMARK_EXERCISES.map(bench => (
+            <div key={bench.key} style={S.medalCard}>
+              <p style={S.medalLabel}>{bench.label}</p>
+              <p style={S.medalNoData}>Pas encore de données</p>
+            </div>
+          ))}
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, minHeight: 'calc(100vh - 160px)', padding: '2rem' }}>
         <span style={{ fontSize: '3rem' }}>💪</span>
@@ -627,6 +688,39 @@ export default function ProgressionClient() {
       <div style={S.header}>
         <h1 style={S.headerTitle}>📈 Progression</h1>
         <p style={S.headerSub}>Évolution de tes performances</p>
+      </div>
+
+      {/* ── Médailles / rangs ──────────────────────────────────────────────── */}
+      <div style={S.medalsSection}>
+        <h2 style={S.sectionTitle}>Tes rangs</h2>
+        {missingProfile ? (
+          <button onClick={() => navigate('/client/profil')} style={S.medalsMissing}>
+            Renseigne ton poids et ton sexe dans ton profil pour débloquer tes rangs →
+          </button>
+        ) : (
+          <div style={S.medalsRow}>
+            {medals.map(m => {
+              const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Débutant']
+              return (
+                <div key={m.key} style={S.medalCard}>
+                  <p style={S.medalLabel}>{m.label}</p>
+                  {m.hasData ? (
+                    <>
+                      <div style={{ ...S.medalBadge, background: colors.bg, color: colors.fg }}>{m.rank.rank}</div>
+                      <p style={S.medalValue}>{m.bestRm} kg</p>
+                      {m.rank.isMax
+                        ? <p style={S.medalNext}>Rang maximal atteint 🎉</p>
+                        : <p style={S.medalNext}>{m.rank.kgToNextRank} kg pour {m.rank.nextRank}</p>
+                      }
+                    </>
+                  ) : (
+                    <p style={S.medalNoData}>Pas encore de données</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Sélecteur d'exercice ───────────────────────────────────────────── */}
@@ -988,6 +1082,69 @@ const S = {
     color: 'rgba(255,255,255,0.6)',
     fontSize: '0.78rem',
     margin: 0,
+  },
+
+  // Médailles / rangs
+  medalsSection: {
+    margin: '14px 16px 4px',
+  },
+  medalsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 8,
+  },
+  medalCard: {
+    background: 'white',
+    borderRadius: 14,
+    padding: '12px 10px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    textAlign: 'center',
+  },
+  medalLabel: {
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    color: '#6b7280',
+    margin: 0,
+  },
+  medalBadge: {
+    fontSize: '0.7rem',
+    fontWeight: 800,
+    borderRadius: 999,
+    padding: '3px 10px',
+    margin: '2px 0',
+  },
+  medalValue: {
+    fontSize: '1rem',
+    fontWeight: 800,
+    color: '#1a1a1a',
+    margin: 0,
+  },
+  medalNext: {
+    fontSize: '0.62rem',
+    color: '#9ca3af',
+    margin: 0,
+    lineHeight: 1.3,
+  },
+  medalNoData: {
+    fontSize: '0.68rem',
+    color: '#d1d5db',
+    margin: '10px 0',
+  },
+  medalsMissing: {
+    width: '100%',
+    background: 'white',
+    border: '1.5px dashed #e5e7eb',
+    borderRadius: 14,
+    padding: '14px',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    color: '#6b7280',
+    textAlign: 'left',
+    cursor: 'pointer',
   },
 
   // Chips
