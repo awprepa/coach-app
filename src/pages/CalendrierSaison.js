@@ -917,6 +917,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const isCmd = isMac ? e.metaKey : e.ctrlKey
     const tag = (e.target?.tagName || '').toLowerCase()
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+    if (panel) return // un panneau d'édition est ouvert (séance, calculateur d'intensité…) → pas de raccourcis clavier calendrier
 
     // Delete / Backspace → supprimer l'évènement ciblé OU les évènements de la sélection
     if (e.key === 'Delete' || e.key === 'Backspace') {
