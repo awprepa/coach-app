@@ -2486,10 +2486,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   function EventContent({ evt, wide }) {
     const color = evtColor(evt)
     const blocs = blocsMap[evt.id] || []
-    // En vue "large" (aperçu du jour), les séquences sont ouvertes par défaut —
-    // assez de place pour les montrer sans avoir à cliquer.
-    const [openSeqs, setOpenSeqs] = useState(() => new Set(wide ? blocs.filter(b => b.bloc_type === 'sequences').map(b => b.id) : []))
+    const [openSeqs, setOpenSeqs] = useState(new Set())
     const toggleSeqs = id => setOpenSeqs(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+    // En vue "large" (aperçu du jour), les séquences sont toujours dépliées —
+    // assez de place pour les montrer sans avoir à cliquer. On le force ici plutôt
+    // que via l'état initial, car les blocs peuvent arriver après le premier rendu.
+    const isSeqExpanded = id => wide || openSeqs.has(id)
 
     // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
     if (evt.type === 'ffr_match') {
@@ -2710,7 +2712,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     let jeuCount = 0
                     const jeuNum = {}
                     seqs.forEach(s => { if (s.type === 'jeu') { jeuCount++; jeuNum[s.id] = jeuCount } })
-                    const expanded = openSeqs.has(bloc.id)
+                    const expanded = isSeqExpanded(bloc.id)
                     return (
                       <div style={{ background: '#eef3fb' }}>
                         {/* Ligne résumé cliquable */}
