@@ -2374,6 +2374,9 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
 }
 
 /* ── Zoom semaine (modal plein écran) ── */
+// Palette pour distinguer les groupes (ex: "Avants"/"3/4") dans les blocs à colonnes
+const GROUP_COLORS = ['#0f766e', '#7c3aed', '#be123c', '#0369a1', '#a16207', '#4d7c0f']
+
 function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const groupColor = groupe?.couleur || '#2f6f76'
   const { wkNum, startISO, days, blocsMap } = weekZoom
@@ -2898,7 +2901,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       {!hasGroups && (bloc.exos||[]).length > 0 && (
                         <div style={{ display:'flex', gap:7, flexWrap:'wrap', padding:'0 12px 10px' }}>
                           {bloc.exos.map(e => (
-                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', border:'1px solid #e3e7ec', borderRadius:7, padding:'5px 10px' }}>
+                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#26313f', background:'#eef1f5', border:'1px solid #d7dde4', borderLeft:`3px solid ${iv ? iv.c : '#94a3b8'}`, borderRadius:'4px 7px 7px 4px', padding:'5px 10px 5px 8px' }}>
                               {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                             </span>
                           ))}
@@ -2906,16 +2909,19 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       )}
                       {hasGroups && (
                         <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, borderTop:'1px solid #edf0f3' }}>
-                          {groupKeys.map((g, gi) => (
-                            <div key={g} style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:7, borderLeft: gi > 0 ? '1px solid #edf0f3' : 'none' }}>
-                              {g && <div style={{ fontSize:'.6rem', fontWeight:800, letterSpacing:'.07em', textTransform:'uppercase', color:'#8a93a3', paddingBottom:6, marginBottom:2, borderBottom:'2px solid #edf0f3' }}>{g}</div>}
-                              {byGroup[g].map(e => (
-                                <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', border:'1px solid #e3e7ec', borderRadius:7, padding:'5px 10px' }}>
-                                  {e.nom}{e.prescription ? ' · '+e.prescription : ''}
-                                </span>
-                              ))}
-                            </div>
-                          ))}
+                          {groupKeys.map((g, gi) => {
+                            const gc = GROUP_COLORS[gi % GROUP_COLORS.length]
+                            return (
+                              <div key={g} style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:7, borderLeft: gi > 0 ? '1px solid #edf0f3' : 'none' }}>
+                                {g && <div style={{ fontSize:'.6rem', fontWeight:800, letterSpacing:'.07em', textTransform:'uppercase', color:gc, paddingBottom:6, marginBottom:2, borderBottom:`2px solid ${gc}` }}>{g}</div>}
+                                {byGroup[g].map(e => (
+                                  <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#26313f', background:gc+'12', border:`1px solid ${gc}35`, borderLeft:`3px solid ${gc}`, borderRadius:'4px 7px 7px 4px', padding:'5px 10px 5px 8px' }}>
+                                    {e.nom}{e.prescription ? ' · '+e.prescription : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
