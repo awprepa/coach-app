@@ -3082,7 +3082,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           </div>
 
           {/* ── Corps ── */}
-          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px' }}>
+          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px 16px 36px' }}>
             <SeanceBody evt={evt} blocs={blocs} />
           </div>
         </div>
@@ -3107,7 +3107,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           </div>
 
           {/* ── Corps : une carte par séance du jour ── */}
-          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px 16px 36px', display:'flex', flexDirection:'column', gap:16 }}>
             {day.events.length === 0 ? (
               <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
             ) : day.events.map(evt => {
