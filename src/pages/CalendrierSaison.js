@@ -2873,8 +2873,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 }
                 const groupKeys = Object.keys(byGroup)
                 const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
+                // Hauteur proportionnelle uniquement s'il y a du contenu à afficher —
+                // sinon une case vide qui s'étire ne sert à rien et casse l'esthétique.
                 const stdMins = parseDurMin(bloc.duree)
-                const stdMinHeight = stdMins ? Math.max(40, Math.round(stdMins * 5)) : 40
+                const stdMinHeight = (stdMins && bloc.exos?.length) ? Math.min(140, Math.max(40, Math.round(stdMins * 2))) : 40
                 return (
                   <div key={bloc.id} style={{ marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder, minHeight:stdMinHeight, display:'flex', flexDirection:'column' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
