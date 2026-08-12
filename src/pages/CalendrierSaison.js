@@ -2873,12 +2873,14 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 }
                 const groupKeys = Object.keys(byGroup)
                 const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
+                const stdMins = parseDurMin(bloc.duree)
+                const stdMinHeight = stdMins ? Math.max(40, Math.round(stdMins * 5)) : 40
                 return (
-                  <div key={bloc.id} style={{ marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10, padding: bloc.exos?.length ? 0 : 0 }}>
+                  <div key={bloc.id} style={{ marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder, minHeight:stdMinHeight, display:'flex', flexDirection:'column' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
                       <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
                       {bloc.intervenant && (
-                        <span style={{ fontSize:'.6rem', fontWeight:900, color:'#fff', background:bc2, borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                        <span style={{ fontSize:'.6rem', fontWeight:900, color:'#374151', background:'#e5e7eb', borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
                           {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
                         </span>
                       )}
@@ -2894,11 +2896,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       )}
                     </div>
                     {hasGroups && (
-                      <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, gap:1, background:cellBorder.split(' ')[2] }}>
+                      <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, gap:1, background:cellBorder.split(' ')[2], flex:1 }}>
                         {groupKeys.map(g => (
                           <div key={g} style={{ display:'flex', flexDirection:'column' }}>
                             {g && <div style={{ fontSize:'.58rem', fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', color:'#fff', background:bc2, padding:'3px 8px', textAlign:'center' }}>{g}</div>}
-                            <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'6px 8px', background:'#fff' }}>
+                            <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'6px 8px', background:'#fff', flex:1 }}>
                               {byGroup[g].map(e => (
                                 <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
                                   {e.nom}{e.prescription ? ' · '+e.prescription : ''}
