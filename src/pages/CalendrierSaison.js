@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
 import SchemaSVG from '../components/SchemaSVG'
@@ -2377,6 +2377,37 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
 // Palette pour distinguer les groupes (ex: "Avants"/"3/4") dans les blocs à colonnes
 const GROUP_COLORS = ['#0f766e', '#7c3aed', '#be123c', '#0369a1', '#a16207', '#4d7c0f']
 
+/* ── FitScale — réduit son contenu pour qu'il tienne toujours dans la hauteur
+     disponible, sans jamais scroller (utilisé par l'aperçu du jour). ── */
+function FitScale({ children }) {
+  const outerRef = useRef(null)
+  const innerRef = useRef(null)
+  const [scale, setScale] = useState(1)
+
+  useLayoutEffect(() => {
+    const fit = () => {
+      const outer = outerRef.current, inner = innerRef.current
+      if (!outer || !inner) return
+      const avail = outer.clientHeight
+      const needed = inner.scrollHeight
+      setScale(needed > avail && avail > 0 ? Math.max(0.45, avail / needed) : 1)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    if (outerRef.current) ro.observe(outerRef.current)
+    if (innerRef.current) ro.observe(innerRef.current)
+    return () => ro.disconnect()
+  }, [children])
+
+  return (
+    <div ref={outerRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '16px' }}>
+      <div ref={innerRef} style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: `${100 / scale}%` }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const groupColor = groupe?.couleur || '#2f6f76'
   const { wkNum, startISO, days, blocsMap } = weekZoom
@@ -3081,10 +3112,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
             <button onClick={() => setDayPreview(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
           </div>
 
-          {/* ── Corps ── */}
-          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px 16px 36px' }}>
+          {/* ── Corps — mis à l'échelle pour tout tenir sans scroller ── */}
+          <FitScale>
             <SeanceBody evt={evt} blocs={blocs} />
-          </div>
+          </FitScale>
         </div>
       </>
     )
@@ -3106,34 +3137,38 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
             <button onClick={() => setDayFull(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
           </div>
 
-          {/* ── Corps : une carte par séance du jour ── */}
-          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px 16px 36px', display:'flex', flexDirection:'column', gap:16 }}>
-            {day.events.length === 0 ? (
-              <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
-            ) : day.events.map(evt => {
-              const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
-                : evt.type === 'muscu' ? (evt.titre || 'Musculation')
-                : (evt.titre || TYPES[evt.type]?.label || 'Séance')
-              const blocs = blocsMap[evt.id] || []
-              return (
-                <div key={evt.id} style={{ background:'#fff', borderRadius:12, overflow:'hidden', boxShadow:'0 1px 6px rgba(0,0,0,.08)' }}>
-                  <div style={{ background:'#5b8ab8', padding:'10px 16px', display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:'.58rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
-                      <div style={{ fontSize:'.95rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
+          {/* ── Corps : toutes les séances du jour, mises à l'échelle pour tout tenir sans scroller ── */}
+          {day.events.length === 0 ? (
+            <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem', padding:'16px' }}>Rien de prévu ce jour.</p>
+          ) : (
+            <FitScale>
+              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                {day.events.map(evt => {
+                  const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+                    : evt.type === 'muscu' ? (evt.titre || 'Musculation')
+                    : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+                  const blocs = blocsMap[evt.id] || []
+                  return (
+                    <div key={evt.id} style={{ background:'#fff', borderRadius:12, overflow:'hidden', boxShadow:'0 1px 6px rgba(0,0,0,.08)' }}>
+                      <div style={{ background:'#5b8ab8', padding:'10px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:'.58rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
+                          <div style={{ fontSize:'.95rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
+                        </div>
+                        {evt.heure && <span style={{ fontSize:'.8rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'3px 9px' }}>{String(evt.heure).slice(0,5)}</span>}
+                      </div>
+                      <div style={{ padding:'14px' }}>
+                        {blocs.length > 0
+                          ? <SeanceBody evt={evt} blocs={blocs} />
+                          : <p style={{ color:'#c4ccd4', fontSize:'.75rem', fontStyle:'italic', margin:0 }}>Aucun déroulé renseigné.</p>
+                        }
+                      </div>
                     </div>
-                    {evt.heure && <span style={{ fontSize:'.8rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'3px 9px' }}>{String(evt.heure).slice(0,5)}</span>}
-                  </div>
-                  <div style={{ padding:'14px', overflowX:'auto' }}>
-                    {blocs.length > 0
-                      ? <SeanceBody evt={evt} blocs={blocs} />
-                      : <p style={{ color:'#c4ccd4', fontSize:'.75rem', fontStyle:'italic', margin:0 }}>Aucun déroulé renseigné.</p>
-                    }
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            </FitScale>
+          )}
         </div>
       </>
     )
