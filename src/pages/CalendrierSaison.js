@@ -2847,6 +2847,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       return { kind: 'seq', bloc, bc2, series }
     })
 
+    // Pour représenter la durée des blocs standards par une barre proportionnelle
+    // (sans forcer une case vide en hauteur quand il n'y a pas d'exercices).
+    const stdDurations = processedBlocs.filter(i => i.kind === 'std').map(i => parseDurMin(i.bloc.duree) || 0)
+    const maxStdDur = Math.max(1, ...stdDurations)
+
     // Totaux généraux (jeu + total hors inter_bloc)
     let grandJeu = 0, grandTotal = 0
     blocs.forEach(b => {
@@ -2898,6 +2903,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                           </span>
                         )}
                       </div>
+                      {/* Barre proportionnelle à la durée, relative au bloc le plus long de la séance */}
+                      {parseDurMin(bloc.duree) > 0 && (
+                        <div style={{ height:4, background:'#edf0f3', margin:'0 12px 10px' }}>
+                          <div style={{ height:'100%', width:`${Math.max(6, (parseDurMin(bloc.duree)/maxStdDur)*100)}%`, background: iv ? iv.c : '#94a3b8', borderRadius:2 }} />
+                        </div>
+                      )}
                       {!hasGroups && (bloc.exos||[]).length > 0 && (
                         <div style={{ display:'flex', gap:7, flexWrap:'wrap', padding:'0 12px 10px' }}>
                           {bloc.exos.map(e => (
@@ -3071,7 +3082,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           </div>
 
           {/* ── Corps ── */}
-          <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px' }}>
+          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px' }}>
             <SeanceBody evt={evt} blocs={blocs} />
           </div>
         </div>
@@ -3096,7 +3107,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           </div>
 
           {/* ── Corps : une carte par séance du jour ── */}
-          <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ flex:1, minHeight:0, overflowY:'auto', overflowX:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
             {day.events.length === 0 ? (
               <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
             ) : day.events.map(evt => {
