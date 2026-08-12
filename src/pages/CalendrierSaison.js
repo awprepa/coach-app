@@ -2380,6 +2380,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const todayISO = new Date().toISOString().slice(0, 10)
   const DOW_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
   const [dayPreview, setDayPreview] = useState(null) // { evt, blocs, dateLabel }
+  const [dayFull, setDayFull] = useState(null) // { day }
 
   // Date range affichage
   const endDate = new Date(startISO + 'T00:00:00'); endDate.setDate(endDate.getDate() + 6)
@@ -2706,12 +2707,16 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     )
                   })()}
 
-                  {/* Exercices */}
+                  {/* Exercices — toujours affichés (au minimum les noms), jamais masqués */}
                   {bloc.bloc_type !== 'sequences' && bloc.exos?.length > 0 && (
                     h < 40
-                    /* Bloc trop court → juste le nom centré, pas d'exercices */
-                    ? <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '.68rem', fontWeight: 700, color: bc, opacity: 0.5, fontStyle: 'italic' }}>{bloc.nom}</span>
+                    /* Bloc court → liste compacte sur une ligne, scrollable si besoin */
+                    ? <div style={{ maxHeight: Math.max(h, 22), overflowY: 'auto', padding: '3px 8px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {bloc.exos.map(exo => (
+                          <div key={exo.id} style={{ fontSize: '.62rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {exo.nom}{exo.prescription ? ` · ${exo.prescription}` : ''}
+                          </div>
+                        ))}
                       </div>
                     : <div style={{ height: h, overflow: 'hidden', padding: '5px 8px 6px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {hasGroups ? (
@@ -2790,6 +2795,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ fontSize: '1.3rem', fontWeight: 900, color: isToday ? borderColor : '#15181d', lineHeight: 1.1 }}>{dd}</div>
           <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: borderColor, marginTop: 2 }}>{typeLabel}</div>
           {isToday && <div style={{ display: 'inline-block', fontSize: '.52rem', fontWeight: 800, background: '#e4f816', color: '#333', borderRadius: 4, padding: '1px 5px', marginTop: 2 }}>Aujourd'hui</div>}
+          {day.events.length > 0 && (
+            <button onClick={() => setDayFull({ day })} style={{ display: 'block', margin: '4px auto 0', fontSize: '.56rem', fontWeight: 800, color: borderColor, background: 'none', border: `1px solid ${borderColor}55`, borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
+              Vue jour ↗
+            </button>
+          )}
         </div>
 
         {/* Séances */}
@@ -2811,13 +2821,9 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     )
   }
 
-  /* ── DayPreviewModal — fiche séance style tableau ── */
-  function DayPreviewModal({ evt, blocs }) {
-    const color = evtColor(evt)
-    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
-      : evt.type === 'muscu' ? (evt.titre || 'Musculation')
-      : (evt.titre || TYPES[evt.type]?.label || 'Séance')
-
+  /* ── SeanceBody — le corps "fiche tableau" d'une séance (blocs/séquences/totaux),
+       réutilisé par DayPreviewModal (une séance) et DayFullModal (toute la journée) ── */
+  function SeanceBody({ evt, blocs }) {
     // Découpe un tableau de séquences en séries (split à chaque inter_bloc)
     function splitSeries(seqs) {
       const series = []; let cur = []
@@ -2853,22 +2859,6 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
     return (
       <>
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:120 }} onClick={() => setDayPreview(null)} />
-        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(960px, 96vw)', maxHeight:'90vh', zIndex:121, background:'#fff', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
-
-          {/* ── Header bleu séance ── */}
-          <div style={{ background:'#5b8ab8', padding:'12px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:'.6rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
-              <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
-            </div>
-            {evt.heure && <span style={{ fontSize:'.9rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'4px 10px' }}>{String(evt.heure).slice(0,5)}</span>}
-            <button onClick={() => setDayPreview(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
-          </div>
-
-          {/* ── Corps ── */}
-          <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px' }}>
-
             {processedBlocs.map((item, itemIdx) => {
               const nextItem = processedBlocs[itemIdx + 1]
               if (item.kind === 'std') {
@@ -3012,6 +3002,83 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 </div>
               </div>
             )}
+      </>
+    )
+  }
+
+  /* ── DayPreviewModal — fiche séance style tableau (une séance) ── */
+  function DayPreviewModal({ evt, blocs }) {
+    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+      : evt.type === 'muscu' ? (evt.titre || 'Musculation')
+      : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+
+    return (
+      <>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:120 }} onClick={() => setDayPreview(null)} />
+        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(960px, 96vw)', maxHeight:'90vh', zIndex:121, background:'#fff', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
+
+          {/* ── Header bleu séance ── */}
+          <div style={{ background:'#5b8ab8', padding:'12px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:'.6rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
+              <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
+            </div>
+            {evt.heure && <span style={{ fontSize:'.9rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'4px 10px' }}>{String(evt.heure).slice(0,5)}</span>}
+            <button onClick={() => setDayPreview(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
+          </div>
+
+          {/* ── Corps ── */}
+          <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px' }}>
+            <SeanceBody evt={evt} blocs={blocs} />
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  /* ── DayFullModal — toutes les séances d'un même jour, empilées ── */
+  function DayFullModal({ day }) {
+    const [yy, mm, dd] = day.date.split('-').map(Number)
+    const dateLabel = new Date(yy, mm - 1, dd).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+    return (
+      <>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:130 }} onClick={() => setDayFull(null)} />
+        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(720px, 96vw)', maxHeight:'92vh', zIndex:131, background:'#f5f6f8', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
+
+          {/* ── Header jour ── */}
+          <div style={{ background:'#333', padding:'12px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+            <div style={{ flex:1, fontSize:'.95rem', fontWeight:900, color:'#fff', textTransform:'capitalize' }}>{dateLabel}</div>
+            <button onClick={() => setDayFull(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
+          </div>
+
+          {/* ── Corps : une carte par séance du jour ── */}
+          <div style={{ overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
+            {day.events.length === 0 ? (
+              <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
+            ) : day.events.map(evt => {
+              const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+                : evt.type === 'muscu' ? (evt.titre || 'Musculation')
+                : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+              const blocs = blocsMap[evt.id] || []
+              return (
+                <div key={evt.id} style={{ background:'#fff', borderRadius:12, overflow:'hidden', boxShadow:'0 1px 6px rgba(0,0,0,.08)' }}>
+                  <div style={{ background:'#5b8ab8', padding:'10px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:'.58rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
+                      <div style={{ fontSize:'.95rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
+                    </div>
+                    {evt.heure && <span style={{ fontSize:'.8rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'3px 9px' }}>{String(evt.heure).slice(0,5)}</span>}
+                  </div>
+                  <div style={{ padding:'14px' }}>
+                    {blocs.length > 0
+                      ? <SeanceBody evt={evt} blocs={blocs} />
+                      : <p style={{ color:'#c4ccd4', fontSize:'.75rem', fontStyle:'italic', margin:0 }}>Aucun déroulé renseigné.</p>
+                    }
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </>
@@ -3028,6 +3095,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   return (
     <>
       {dayPreview && <DayPreviewModal evt={dayPreview.evt} blocs={dayPreview.blocs} />}
+      {dayFull && <DayFullModal day={dayFull.day} />}
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 110 }} onClick={onClose} />
       <div style={{ position: 'fixed', top: '70px', left: '2vw', right: '2vw', bottom: '2vh', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
