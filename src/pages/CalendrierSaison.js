@@ -2889,12 +2889,16 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                             {iv.l}
                           </span>
                         )}
-                        {bloc.duree && <span style={{ fontSize:'.72rem', fontWeight:700, color:'#8a93a3', flexShrink:0 }}>{bloc.duree} min</span>}
+                        {bloc.duree && (
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:'.74rem', fontWeight:900, color:'#1e3a8a', background:'#e8f0fd', border:'1px solid #c7d9f7', borderRadius:6, padding:'3px 9px', flexShrink:0 }}>
+                            ⏱ {bloc.duree} min
+                          </span>
+                        )}
                       </div>
                       {!hasGroups && (bloc.exos||[]).length > 0 && (
-                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'0 12px 10px' }}>
+                        <div style={{ display:'flex', gap:7, flexWrap:'wrap', padding:'0 12px 10px' }}>
                           {bloc.exos.map(e => (
-                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', borderRadius:6, padding:'5px 9px' }}>
+                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', border:'1px solid #e3e7ec', borderRadius:7, padding:'5px 10px' }}>
                               {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                             </span>
                           ))}
@@ -2903,10 +2907,10 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       {hasGroups && (
                         <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, borderTop:'1px solid #edf0f3' }}>
                           {groupKeys.map((g, gi) => (
-                            <div key={g} style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:6, borderLeft: gi > 0 ? '1px solid #edf0f3' : 'none' }}>
+                            <div key={g} style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:7, borderLeft: gi > 0 ? '1px solid #edf0f3' : 'none' }}>
                               {g && <div style={{ fontSize:'.6rem', fontWeight:800, letterSpacing:'.07em', textTransform:'uppercase', color:'#8a93a3', paddingBottom:6, marginBottom:2, borderBottom:'2px solid #edf0f3' }}>{g}</div>}
                               {byGroup[g].map(e => (
-                                <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', borderRadius:6, padding:'5px 9px' }}>
+                                <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', border:'1px solid #e3e7ec', borderRadius:7, padding:'5px 10px' }}>
                                   {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                                 </span>
                               ))}
