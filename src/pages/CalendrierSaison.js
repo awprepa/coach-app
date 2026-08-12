@@ -3081,7 +3081,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     return (
       <>
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:130 }} onClick={() => setDayFull(null)} />
-        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(720px, 96vw)', maxHeight:'92vh', zIndex:131, background:'#f5f6f8', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
+        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(920px, 96vw)', maxHeight:'92vh', zIndex:131, background:'#f5f6f8', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
 
           {/* ── Header jour ── */}
           <div style={{ background:'#333', padding:'12px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
@@ -3090,7 +3090,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           </div>
 
           {/* ── Corps : une carte par séance du jour ── */}
-          <div style={{ overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ overflowY:'auto', overflowX:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
             {day.events.length === 0 ? (
               <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
             ) : day.events.map(evt => {
@@ -3107,7 +3107,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     </div>
                     {evt.heure && <span style={{ fontSize:'.8rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'3px 9px' }}>{String(evt.heure).slice(0,5)}</span>}
                   </div>
-                  <div style={{ padding:'14px' }}>
+                  <div style={{ padding:'14px', overflowX:'auto' }}>
                     {blocs.length > 0
                       ? <SeanceBody evt={evt} blocs={blocs} />
                       : <p style={{ color:'#c4ccd4', fontSize:'.75rem', fontStyle:'italic', margin:0 }}>Aucun déroulé renseigné.</p>
