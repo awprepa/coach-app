@@ -2864,21 +2864,48 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               if (item.kind === 'std') {
                 /* Blocs standards (échauffement, retour au calme…) */
                 const { bloc, bc2 } = item
+                // Regroupe les exercices par étiquette de groupe (ex: "Avants"/"Arrières")
+                // pour les afficher en colonnes gauche→droite plutôt qu'en liste mélangée.
+                const byGroup = {}
+                for (const exo of (bloc.exos || [])) {
+                  const g = exo.groupe_label?.trim() || ''
+                  ;(byGroup[g] ||= []).push(exo)
+                }
+                const groupKeys = Object.keys(byGroup)
+                const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
                 return (
-                  <div key={bloc.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder }}>
-                    <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
-                    {bloc.intervenant && (
-                      <span style={{ fontSize:'.6rem', fontWeight:900, color:'#fff', background:bc2, borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
-                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
-                      </span>
-                    )}
-                    {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
-                    {(bloc.exos||[]).length > 0 && (
-                      <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'4px 0' }}>
-                        {bloc.exos.map(e => (
-                          <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
-                            {e.nom}{e.prescription ? ' · '+e.prescription : ''}
-                          </span>
+                  <div key={bloc.id} style={{ marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, padding: bloc.exos?.length ? 0 : 0 }}>
+                      <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
+                      {bloc.intervenant && (
+                        <span style={{ fontSize:'.6rem', fontWeight:900, color:'#fff', background:bc2, borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                          {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
+                        </span>
+                      )}
+                      {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
+                      {!hasGroups && (bloc.exos||[]).length > 0 && (
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'4px 0' }}>
+                          {bloc.exos.map(e => (
+                            <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
+                              {e.nom}{e.prescription ? ' · '+e.prescription : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {hasGroups && (
+                      <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, gap:1, background:cellBorder.split(' ')[2] }}>
+                        {groupKeys.map(g => (
+                          <div key={g} style={{ display:'flex', flexDirection:'column' }}>
+                            {g && <div style={{ fontSize:'.58rem', fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', color:'#fff', background:bc2, padding:'3px 8px', textAlign:'center' }}>{g}</div>}
+                            <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'6px 8px', background:'#fff' }}>
+                              {byGroup[g].map(e => (
+                                <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
+                                  {e.nom}{e.prescription ? ' · '+e.prescription : ''}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -2922,7 +2949,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                     return (
                       <React.Fragment key={num}>
                         {/* Ligne de la série */}
-                        <div style={{ display:'flex', alignItems:'stretch', borderBottom: (interAfter || si < series.length-1) ? cellBorder : 'none', minHeight:52 }}>
+                        <div style={{ display:'flex', alignItems:'stretch', borderBottom: (interAfter || si < series.length-1) ? cellBorder : 'none', minHeight:'max(52px, 8vh)' }}>
                           {/* Label Bloc N */}
                           <div style={{ width:COL_BLOC, flexShrink:0, background:'#f6c344', display:'flex', alignItems:'center', justifyContent:'center', borderRight:cellBorder, padding:'6px 4px' }}>
                             <span style={{ fontSize:'.7rem', fontWeight:900, color:'#78350f', textAlign:'center', lineHeight:1.3 }}>Bloc {num}</span>
@@ -2939,7 +2966,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                                 const isJeu = seq.type === 'jeu'
                                 return (
                                   <div key={seq.id} style={{
-                                    flex: isJeu ? 2 : 1,
+                                    flex: Math.max(seq.duree_sec || 0, 1),
                                     background: isJeu ? '#c8e6a0' : '#fef3c7',
                                     display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                                     padding:'4px 3px',
