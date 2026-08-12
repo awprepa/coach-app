@@ -449,9 +449,11 @@ export default function ProgressionClient() {
               config: getFormulaConfig(nom),
               pointsByDate: {},
               rawSets: [],
+              allSets: [],           // toutes les séries valides (pour les records par tranche de reps)
               direct1RepByDate: {},  // meilleur poids × 1 rep par date (1RM réel)
             }
           }
+          byName[nom].allSets.push({ date: dateStr, poids: s.poids, reps: s.reps_reelles })
 
           // 1RM estimé avec correction RPE éventuelle
           const cfg = byName[nom].config
@@ -504,6 +506,7 @@ export default function ProgressionClient() {
             points,
             rawSets: d.rawSets.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30),
             direct1RepPoints,
+            allSets: d.allSets,
           }
         })
 
@@ -621,6 +624,38 @@ export default function ProgressionClient() {
   }, [exercicesData, profileInfo])
 
   const missingProfile = !profileInfo.sexe || !profileInfo.poids
+
+  // ── Records par nombre de répétitions ──────────────────────────────────────
+  // Pour l'exercice sélectionné : le poids le plus lourd jamais soulevé, tout
+  // court, + le record dans chaque tranche de reps (1-3, 4-6, 7-9, 10-12, 13+).
+
+  const repRecords = useMemo(() => {
+    const allSets = currentData?.allSets || []
+    if (!allSets.length) return null
+
+    const buckets = [
+      { label: '1-3 reps',   min: 1,  max: 3 },
+      { label: '4-6 reps',   min: 4,  max: 6 },
+      { label: '7-9 reps',   min: 7,  max: 9 },
+      { label: '10-12 reps', min: 10, max: 12 },
+      { label: '13+ reps',   min: 13, max: 999 },
+    ]
+
+    const bestInBucket = buckets.map(b => {
+      const inRange = allSets.filter(s => s.reps >= b.min && s.reps <= b.max)
+      if (!inRange.length) return { ...b, hasData: false }
+      const best = inRange.reduce((max, s) =>
+        (s.poids > max.poids || (s.poids === max.poids && s.date > max.date)) ? s : max
+      )
+      return { ...b, hasData: true, poids: best.poids, reps: best.reps, date: best.date }
+    }).filter(b => b.hasData)
+
+    const absolute = allSets.reduce((max, s) =>
+      (s.poids > max.poids || (s.poids === max.poids && s.date > max.date)) ? s : max
+    )
+
+    return { buckets: bestInBucket, absolute }
+  }, [currentData])
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
@@ -870,6 +905,28 @@ export default function ProgressionClient() {
               : 'Progression du poids utilisé (1RM non estimé pour cet exercice)'
             }
           </p>
+        </div>
+      )}
+
+      {/* ── Records par nombre de répétitions ───────────────────────────────── */}
+      {repRecords && (
+        <div style={S.section}>
+          <h2 style={S.sectionTitle}>Records par répétitions</h2>
+          <div style={S.absRecord}>
+            <span style={S.absRecordValue}>{repRecords.absolute.poids} kg × {repRecords.absolute.reps}</span>
+            <span style={S.absRecordLabel}>Charge la plus lourde jamais soulevée · {formatDateFull(repRecords.absolute.date)}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {repRecords.buckets.map(b => (
+              <div key={b.label} style={S.setRow}>
+                <span style={S.setDate}>{b.label}</span>
+                <div style={S.setRight}>
+                  <span style={S.setPoids}>{b.poids} kg × {b.reps}</span>
+                  <span style={S.setRm}>{formatDateShort(b.date)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1288,5 +1345,24 @@ const S = {
     fontSize: '0.72rem',
     color: 'var(--accent-fg, #6b7280)',
     fontWeight: 600,
+  },
+
+  absRecord: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    background: 'var(--header-bg)',
+    borderRadius: 12,
+    padding: '12px 14px',
+    marginBottom: 12,
+  },
+  absRecordValue: {
+    fontSize: '1.15rem',
+    fontWeight: 900,
+    color: 'var(--accent-fg-dark)',
+  },
+  absRecordLabel: {
+    fontSize: '0.68rem',
+    color: 'rgba(255,255,255,0.6)',
   },
 }
