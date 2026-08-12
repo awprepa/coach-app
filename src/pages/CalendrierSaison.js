@@ -2483,10 +2483,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     return null
   }
 
-  function EventContent({ evt }) {
+  function EventContent({ evt, wide }) {
     const color = evtColor(evt)
     const blocs = blocsMap[evt.id] || []
-    const [openSeqs, setOpenSeqs] = useState(new Set())
+    // En vue "large" (aperçu du jour), les séquences sont ouvertes par défaut —
+    // assez de place pour les montrer sans avoir à cliquer.
+    const [openSeqs, setOpenSeqs] = useState(() => new Set(wide ? blocs.filter(b => b.bloc_type === 'sequences').map(b => b.id) : []))
     const toggleSeqs = id => setOpenSeqs(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
 
     // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
@@ -2672,8 +2674,8 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(() => {
               const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
-              const PX_PER_MIN = 2.5
-              const MAX_TOTAL = 220
+              const PX_PER_MIN = wide ? 5 : 2.5
+              const MAX_TOTAL = wide ? 999999 : 220
               const rawH = totalMins * PX_PER_MIN
               const scale = rawH > MAX_TOTAL ? MAX_TOTAL / rawH : 1
               return blocs.map((bloc, idx) => {
@@ -3147,38 +3149,14 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
             <button onClick={() => setDayFull(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
           </div>
 
-          {/* ── Corps : toutes les séances du jour, mises à l'échelle pour tout tenir sans scroller ── */}
-          {day.events.length === 0 ? (
-            <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem', padding:'16px' }}>Rien de prévu ce jour.</p>
-          ) : (
-            <FitScale>
-              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                {day.events.map(evt => {
-                  const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
-                    : evt.type === 'muscu' ? (evt.titre || 'Musculation')
-                    : (evt.titre || TYPES[evt.type]?.label || 'Séance')
-                  const blocs = blocsMap[evt.id] || []
-                  return (
-                    <div key={evt.id} style={{ background:'#fff', borderRadius:12, overflow:'hidden', boxShadow:'0 1px 6px rgba(0,0,0,.08)' }}>
-                      <div style={{ background:'#5b8ab8', padding:'10px 16px', display:'flex', alignItems:'center', gap:12 }}>
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:'.58rem', fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase', letterSpacing:'.07em' }}>{TYPES[evt.type]?.label || evt.type}</div>
-                          <div style={{ fontSize:'.95rem', fontWeight:900, color:'#fff' }}>{evtLabel}</div>
-                        </div>
-                        {evt.heure && <span style={{ fontSize:'.8rem', fontWeight:900, color:'#fff', background:'rgba(0,0,0,.2)', borderRadius:7, padding:'3px 9px' }}>{String(evt.heure).slice(0,5)}</span>}
-                      </div>
-                      <div style={{ padding:'14px' }}>
-                        {blocs.length > 0
-                          ? <SeanceBody evt={evt} blocs={blocs} />
-                          : <p style={{ color:'#c4ccd4', fontSize:'.75rem', fontStyle:'italic', margin:0 }}>Aucun déroulé renseigné.</p>
-                        }
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </FitScale>
-          )}
+          {/* ── Corps : toutes les séances du jour, même rendu que le résumé de semaine mais en large ── */}
+          <div style={{ flex:1, minHeight:0, overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
+            {day.events.length === 0 ? (
+              <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
+            ) : day.events.map(evt => (
+              <EventContent key={evt.id} evt={evt} wide />
+            ))}
+          </div>
         </div>
       </>
     )
