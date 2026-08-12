@@ -2863,7 +2863,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               const nextItem = processedBlocs[itemIdx + 1]
               if (item.kind === 'std') {
                 /* Blocs standards (échauffement, retour au calme…) */
-                const { bloc, bc2 } = item
+                const { bloc } = item
                 // Regroupe les exercices par étiquette de groupe (ex: "Avants"/"Arrières")
                 // pour les afficher en colonnes gauche→droite plutôt qu'en liste mélangée.
                 const byGroup = {}
@@ -2873,46 +2873,48 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 }
                 const groupKeys = Object.keys(byGroup)
                 const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
-                // Hauteur proportionnelle uniquement s'il y a du contenu à afficher —
-                // sinon une case vide qui s'étire ne sert à rien et casse l'esthétique.
-                const stdMins = parseDurMin(bloc.duree)
-                const stdMinHeight = (stdMins && bloc.exos?.length) ? Math.min(140, Math.max(40, Math.round(stdMins * 2))) : 40
+                const iv = bloc.intervenant === 'prepa' ? { c:'#b45309', t:'#fdf2e6', l:'Prépa physique' }
+                  : bloc.intervenant === 'coachs' ? { c:'#1d4ed8', t:'#eaf0fd', l:'Coachs' }
+                  : bloc.intervenant === 'both'   ? { c:'#52606d', t:'#eef1f3', l:'PP + Coachs' }
+                  : null
                 return (
-                  <div key={bloc.id} style={{ marginBottom:8, borderRadius:7, overflow:'hidden', border:cellBorder, minHeight:stdMinHeight, display:'flex', flexDirection:'column' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-                      <div style={{ background:bc2, color:'#fff', fontSize:'.72rem', fontWeight:900, padding:'8px 12px', flexShrink:0 }}>{bloc.nom}</div>
-                      {bloc.intervenant && (
-                        <span style={{ fontSize:'.6rem', fontWeight:900, color:'#374151', background:'#e5e7eb', borderRadius:5, padding:'2px 8px', flexShrink:0, textTransform:'uppercase', letterSpacing:'.04em' }}>
-                          {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
-                        </span>
-                      )}
-                      {bloc.duree && <span style={{ fontSize:'.7rem', color:'#6b7280', fontWeight:700 }}>{bloc.duree}</span>}
+                  <div key={bloc.id} style={{ marginBottom:8, borderRadius:10, overflow:'hidden', border:cellBorder, display:'flex' }}>
+                    <div style={{ width:4, flexShrink:0, background: iv ? iv.c : '#cbd5e1' }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px' }}>
+                        <span style={{ fontSize:'.88rem', fontWeight:800, color:'#161b22', flex:1 }}>{bloc.nom}</span>
+                        {iv && (
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:'.62rem', fontWeight:800, letterSpacing:'.03em', textTransform:'uppercase', borderRadius:6, padding:'3px 8px', flexShrink:0, background:iv.t, color:iv.c }}>
+                            <span style={{ width:6, height:6, borderRadius:'50%', background:iv.c, flexShrink:0 }} />
+                            {iv.l}
+                          </span>
+                        )}
+                        {bloc.duree && <span style={{ fontSize:'.72rem', fontWeight:700, color:'#8a93a3', flexShrink:0 }}>{bloc.duree} min</span>}
+                      </div>
                       {!hasGroups && (bloc.exos||[]).length > 0 && (
-                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'4px 0' }}>
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', padding:'0 12px 10px' }}>
                           {bloc.exos.map(e => (
-                            <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
+                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', borderRadius:6, padding:'5px 9px' }}>
                               {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                             </span>
                           ))}
                         </div>
                       )}
-                    </div>
-                    {hasGroups && (
-                      <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, gap:1, background:cellBorder.split(' ')[2], flex:1 }}>
-                        {groupKeys.map(g => (
-                          <div key={g} style={{ display:'flex', flexDirection:'column' }}>
-                            {g && <div style={{ fontSize:'.58rem', fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', color:'#fff', background:bc2, padding:'3px 8px', textAlign:'center' }}>{g}</div>}
-                            <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'6px 8px', background:'#fff', flex:1 }}>
+                      {hasGroups && (
+                        <div style={{ display:'grid', gridTemplateColumns:`repeat(${groupKeys.length}, 1fr)`, borderTop:'1px solid #edf0f3' }}>
+                          {groupKeys.map((g, gi) => (
+                            <div key={g} style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:6, borderLeft: gi > 0 ? '1px solid #edf0f3' : 'none' }}>
+                              {g && <div style={{ fontSize:'.6rem', fontWeight:800, letterSpacing:'.07em', textTransform:'uppercase', color:'#8a93a3', paddingBottom:6, marginBottom:2, borderBottom:'2px solid #edf0f3' }}>{g}</div>}
                               {byGroup[g].map(e => (
-                                <span key={e.id} style={{ fontSize:'.65rem', fontWeight:700, color:'#374151', background:'#f1f5f9', borderRadius:5, padding:'2px 7px' }}>
+                                <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#3d4451', background:'#f4f6f8', borderRadius:6, padding:'5px 9px' }}>
                                   {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                                 </span>
                               ))}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )
               }
