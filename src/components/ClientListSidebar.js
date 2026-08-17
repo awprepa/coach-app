@@ -35,7 +35,7 @@ export default function ClientListSidebar({ activeId, onSelect }) {
     Promise.all([
       supabase.from('clients').select('id, prenom, nom, offre, avatar_url').order('nom', { ascending: true }),
       supabase.from('groupe_membres').select('client_id'),
-      supabase.from('groupes').select('id, nom, couleur, logo_url').is('parent_id', null).order('nom', { ascending: true }),
+      supabase.from('groupes').select('id, nom, couleur, logo_url, parent_id').order('nom', { ascending: true }),
     ]).then(([{ data: cData }, { data: mData }, { data: gData }]) => {
       setClients(cData || [])
       setGroupMemberIds(new Set((mData || []).map(m => m.client_id)))
@@ -87,22 +87,35 @@ export default function ClientListSidebar({ activeId, onSelect }) {
           )
         })}
 
-        {groupes.length > 0 && (
-          <>
-            <p style={S.groupsHead}>Groupes</p>
-            {groupes.map(g => (
-              <div key={g.id} onClick={() => navigate(`/groupe/${g.id}`)} style={S.groupRow}
-                onMouseEnter={e => e.currentTarget.style.background = '#f7f7f8'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                {g.logo_url
-                  ? <img src={g.logo_url} alt="" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'contain', flexShrink: 0 }} />
-                  : <div style={{ width: 28, height: 28, borderRadius: 7, background: (g.couleur || '#6366f1') + '22', flexShrink: 0 }} />}
-                <p style={S.groupName}>{g.nom}</p>
-              </div>
-            ))}
-          </>
-        )}
+        {groupes.length > 0 && (() => {
+          const topGroupes = groupes.filter(g => !g.parent_id)
+          const sousGroupesByParent = {}
+          groupes.filter(g => g.parent_id).forEach(g => {
+            ;(sousGroupesByParent[g.parent_id] ||= []).push(g)
+          })
+          const GroupRow = ({ g, indent }) => (
+            <div key={g.id} onClick={() => navigate(`/groupe/${g.id}`)} style={{ ...S.groupRow, ...(indent ? { paddingLeft: 9 + indent } : {}) }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f7f7f8'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              {g.logo_url
+                ? <img src={g.logo_url} alt="" style={{ width: indent ? 22 : 28, height: indent ? 22 : 28, borderRadius: 7, objectFit: 'contain', flexShrink: 0 }} />
+                : <div style={{ width: indent ? 22 : 28, height: indent ? 22 : 28, borderRadius: 7, background: (g.couleur || '#6366f1') + '22', flexShrink: 0 }} />}
+              <p style={S.groupName}>{g.nom}</p>
+            </div>
+          )
+          return (
+            <>
+              <p style={S.groupsHead}>Groupes</p>
+              {topGroupes.map(g => (
+                <div key={g.id}>
+                  <GroupRow g={g} />
+                  {(sousGroupesByParent[g.id] || []).map(sg => <GroupRow key={sg.id} g={sg} indent={20} />)}
+                </div>
+              ))}
+            </>
+          )
+        })()}
       </div>
     </div>
   )

@@ -90,7 +90,7 @@ export default function Clients() {
       supabase.from('clients').select('*, categories(id, nom, couleur)').order('created_at', { ascending: false }),
       supabase.from('wellness').select('*').eq('date', today),
       supabase.from('categories').select('*').order('created_at'),
-      supabase.from('groupes').select('*').is('parent_id', null).order('created_at'),
+      supabase.from('groupes').select('*').order('created_at'),
       supabase.from('groupe_membres').select('client_id'),
     ])
     if (error) { console.log(error); setLoading(false); return }
@@ -284,30 +284,59 @@ export default function Clients() {
       </div>
 
       {/* ── Groupes ── */}
-      {groupes.length > 0 && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <p style={S.listHeader}>GROUPES</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {groupes.map(g => (
-              <div key={g.id} style={{ background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', border: `1.5px solid ${g.couleur}22` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}
-                  onClick={() => navigate(`/groupe/${g.id}`)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                    {g.logo_url
-                      ? <img src={g.logo_url} alt={g.nom} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
-                      : <div style={{ width: 38, height: 38, borderRadius: 10, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🏆</div>}
-                    <div>
-                      <p style={{ margin: 0, fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{g.nom}</p>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af' }}>Groupe</p>
+      {groupes.length > 0 && (() => {
+        const topGroupes = groupes.filter(g => !g.parent_id)
+        const sousGroupesByParent = {}
+        groupes.filter(g => g.parent_id).forEach(g => {
+          ;(sousGroupesByParent[g.parent_id] ||= []).push(g)
+        })
+        return (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <p style={S.listHeader}>GROUPES</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {topGroupes.map(g => {
+                const sousGroupes = sousGroupesByParent[g.id] || []
+                return (
+                  <div key={g.id} style={{ background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', border: `1.5px solid ${g.couleur}22` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}
+                      onClick={() => navigate(`/groupe/${g.id}`)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        {g.logo_url
+                          ? <img src={g.logo_url} alt={g.nom} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
+                          : <div style={{ width: 38, height: 38, borderRadius: 10, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🏆</div>}
+                        <div>
+                          <p style={{ margin: 0, fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{g.nom}</p>
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af' }}>Groupe{sousGroupes.length > 0 ? ` · ${sousGroupes.length} sous-groupe${sousGroupes.length > 1 ? 's' : ''}` : ''}</p>
+                        </div>
+                      </div>
+                      <span style={S.chevron}>›</span>
                     </div>
+                    {sousGroupes.length > 0 && (
+                      <div style={{ borderTop: `1px solid ${g.couleur}18` }}>
+                        {sousGroupes.map(sg => (
+                          <div key={sg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.25rem 0.7rem 2.75rem', cursor: 'pointer' }}
+                            onClick={() => navigate(`/groupe/${sg.id}`)}
+                            onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+                              {sg.logo_url
+                                ? <img src={sg.logo_url} alt={sg.nom} style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                                : <div style={{ width: 26, height: 26, borderRadius: 7, background: (sg.couleur || g.couleur) + '20', flexShrink: 0 }} />}
+                              <p style={{ margin: 0, fontWeight: '700', fontSize: '0.85rem', color: '#374151' }}>{sg.nom}</p>
+                            </div>
+                            <span style={S.chevron}>›</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <span style={S.chevron}>›</span>
-                </div>
-              </div>
-            ))}
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Bouton + Nouveau groupe */}
       <div style={{ marginBottom: '1.5rem' }}>

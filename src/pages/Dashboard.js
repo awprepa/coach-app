@@ -157,7 +157,7 @@ export default function Dashboard() {
         .gte('date', start).lte('date', end).order('date', { ascending: true }),
       supabase.from('categories').select('*').order('created_at'),
       supabase.from('programmes').select('id, client_id, nom, semaines, date_debut'),
-      supabase.from('groupes').select('*').is('parent_id', null).order('created_at'),
+      supabase.from('groupes').select('*').order('created_at'),
       supabase.from('groupe_membres').select('client_id, groupe_id, groupes(id, nom, couleur, logo_url)'),
     ])
 
@@ -372,6 +372,13 @@ export default function Dashboard() {
   }
   const groupesAvecMembres = Object.values(membresParGroupe)
     .sort((a, b) => (a.groupe?.nom || 'zzz').localeCompare(b.groupe?.nom || 'zzz'))
+
+  // Groupes top-niveau + sous-groupes rattachés (clubs → catégories)
+  const topGroupes = groupes.filter(g => !g.parent_id)
+  const sousGroupesByParent = {}
+  groupes.filter(g => g.parent_id).forEach(g => {
+    ;(sousGroupesByParent[g.parent_id] ||= []).push(g)
+  })
 
   const nbEssai = clientsIndividuels.filter(c => c.offre === 'essai').length
   const nbPrepa = clientsIndividuels.filter(c => c.offre === 'preparation_physique').length
@@ -853,9 +860,9 @@ export default function Dashboard() {
               {groupes.length === 0 ? (
                 <p style={S.empty}>Crée un groupe pour accéder à son calendrier de saison.</p>
               ) : (
-                groupes.map(g => (
+                topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
                   <div key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
-                    style={{ ...S.miniRow, borderLeft: `3px solid ${g.couleur}` }}>
+                    style={{ ...S.miniRow, borderLeft: `3px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                     {g.logo_url
                       ? <img src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
                       : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🏆</div>}
@@ -877,16 +884,16 @@ export default function Dashboard() {
                 <div style={{ marginBottom: '1.25rem' }}>
                   <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                    {groupes.map(g => (
+                    {topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
                       <div key={g.id}
                         onClick={() => navigate(`/groupe/${g.id}`)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {g.logo_url
-                            ? <img src={g.logo_url} alt={g.nom} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-                            : <div style={{ width: 32, height: 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
+                            ? <img src={g.logo_url} alt={g.nom} style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                            : <div style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
                           }
-                          <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#1a1a1a' }}>{g.nom}</span>
+                          <span style={{ fontWeight: '700', fontSize: g.parent_id ? '0.84rem' : '0.92rem', color: g.parent_id ? '#374151' : '#1a1a1a' }}>{g.nom}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <button onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
