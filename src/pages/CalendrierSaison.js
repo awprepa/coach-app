@@ -2089,7 +2089,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
               <div style={{ marginBottom:18 }}>
                 <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Tests physiques</div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(100px,1fr))', gap:8 }}>
-                  {[['vmi','VMI','km/h'], ['vma','VMA','km/h'], ['30m','30m','s']].map(([type,label,unite]) => {
+                  {[['vmi','VMI','km/h'], ['vma','VMA','km/h'], ['30m','30m','s'], ['50m','50m','s']].map(([type,label,unite]) => {
                     const dernier = dernierTest(panelJoueur, type)
                     if (!dernier) return null
                     return (
