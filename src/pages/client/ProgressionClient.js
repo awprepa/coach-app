@@ -809,6 +809,16 @@ export default function ProgressionClient() {
                   </div>
                 )}
 
+                {selectedMedal.wr && (
+                  <div style={S.wrGlobalBox}>
+                    <div>
+                      <p style={S.wrGlobalPct}>{Math.round((selectedMedal.bestRm / selectedMedal.wr) * 1000) / 10}% du record du monde</p>
+                      <p style={S.wrGlobalSub}>Classement mondial, hors catégorie de poids — même échelle pour tout le monde</p>
+                    </div>
+                    <span style={S.wrBadge}>WR {selectedMedal.wr} kg</span>
+                  </div>
+                )}
+
                 {selectedMedal.bareme && (
                   <div style={S.baremeTable}>
                     <p style={S.baremeTitle}>Barème ({profileInfo.poids} kg)</p>
@@ -818,13 +828,6 @@ export default function ProgressionClient() {
                         <span style={S.baremeKg}>{b.kg} kg</span>
                       </div>
                     ))}
-                    {selectedMedal.wr && (
-                      <div style={S.wrRow}>
-                        <span style={S.wrBadge}>WR</span>
-                        <span style={S.wrLabel}>Record du monde</span>
-                        <span style={S.wrKg}>{selectedMedal.wr} kg</span>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -1414,15 +1417,6 @@ const S = {
     fontWeight: 800,
     color: '#1a1a1a',
   },
-  wrRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '7px 8px',
-    marginTop: 4,
-    borderRadius: 8,
-    background: 'linear-gradient(90deg, #1d3a8a, #1e40af)',
-  },
   wrBadge: {
     fontSize: '0.66rem',
     fontWeight: 900,
@@ -1431,17 +1425,30 @@ const S = {
     borderRadius: 5,
     padding: '2px 6px',
     letterSpacing: '0.03em',
+    flexShrink: 0,
   },
-  wrLabel: {
-    flex: 1,
-    fontSize: '0.72rem',
-    fontWeight: 700,
-    color: '#fde68a',
+  wrGlobalBox: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    background: 'linear-gradient(90deg, #1d3a8a, #1e40af)',
+    borderRadius: 10,
+    padding: '10px 12px',
+    margin: '10px 0',
   },
-  wrKg: {
-    fontSize: '0.82rem',
+  wrGlobalPct: {
+    fontSize: '0.92rem',
     fontWeight: 900,
     color: '#fbbf24',
+    margin: 0,
+  },
+  wrGlobalSub: {
+    fontSize: '0.6rem',
+    fontWeight: 600,
+    color: '#c7d7fb',
+    margin: '2px 0 0',
+    lineHeight: 1.3,
   },
 
   // Chips
