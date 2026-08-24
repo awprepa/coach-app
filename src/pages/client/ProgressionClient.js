@@ -11,15 +11,15 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
 
-// Palette façon rangs de jeu vidéo (bronze → argent → or → platine → diamant → légende)
+// Palette façon rangs de jeu vidéo (fer → bronze → argent → or → platine → diamant → champion)
 const RANK_COLORS = {
-  'Débutant':      { bg: 'linear-gradient(135deg, #9ca3af, #6b7280)', fg: '#ffffff', text: '#4b5563' },
-  'Novice':        { bg: 'linear-gradient(135deg, #d99a5b, #a5622a)', fg: '#ffffff', text: '#a5622a' },
-  'Intermédiaire': { bg: 'linear-gradient(135deg, #e5e9ef, #9aa4b2)', fg: '#374151', text: '#6b7787' },
-  'Avancé':        { bg: 'linear-gradient(135deg, #ffd873, #e8a417)', fg: '#5a3d00', text: '#b8790c' },
-  'Expert':        { bg: 'linear-gradient(135deg, #7dd8cf, #0d9488)', fg: '#ffffff', text: '#0d9488' },
-  'Élite':         { bg: 'linear-gradient(135deg, #7cb8ff, #2563eb)', fg: '#ffffff', text: '#2563eb' },
-  'Exceptionnel':  { bg: 'linear-gradient(135deg, #ff8fd6, #a21caf, #6d28d9)', fg: '#ffffff', text: '#a21caf' },
+  'Fer':      { bg: 'linear-gradient(135deg, #9ca3af, #6b7280)', fg: '#ffffff', text: '#4b5563' },
+  'Bronze':   { bg: 'linear-gradient(135deg, #d99a5b, #a5622a)', fg: '#ffffff', text: '#a5622a' },
+  'Argent':   { bg: 'linear-gradient(135deg, #e5e9ef, #9aa4b2)', fg: '#374151', text: '#6b7787' },
+  'Or':       { bg: 'linear-gradient(135deg, #ffd873, #e8a417)', fg: '#5a3d00', text: '#b8790c' },
+  'Platine':  { bg: 'linear-gradient(135deg, #7dd8cf, #0d9488)', fg: '#ffffff', text: '#0d9488' },
+  'Diamant':  { bg: 'linear-gradient(135deg, #7cb8ff, #2563eb)', fg: '#ffffff', text: '#2563eb' },
+  'Champion': { bg: 'linear-gradient(135deg, #ff8fd6, #a21caf, #6d28d9)', fg: '#ffffff', text: '#a21caf' },
 }
 
 // ─── Formules 1RM ────────────────────────────────────────────────────────────
@@ -251,6 +251,14 @@ function formatDateShort(dateStr) {
 function formatDateFull(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+// Format compact FR pour les grands nombres (54 800 000 → "54,8 M")
+function formatCompact(n) {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Md`
+  if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M`
+  if (n >= 1_000) return `${(n / 1_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} K`
+  return n.toLocaleString('fr-FR')
 }
 
 // ─── Tooltip Recharts personnalisé ───────────────────────────────────────────
@@ -746,7 +754,7 @@ export default function ProgressionClient() {
           <>
             <div style={S.medalsStrip}>
               {medals.map(m => {
-                const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Débutant']
+                const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Fer']
                 const isSel = selectedMedal?.key === m.key
                 return (
                   <button key={m.key} disabled={!m.hasData}
@@ -787,7 +795,16 @@ export default function ProgressionClient() {
                 {selectedMedal.percentile && (
                   <div style={S.percentileBox}>
                     <p style={S.percentileMain}>Environ top {Math.max(0.1, 100 - selectedMedal.percentile.high).toFixed(1)}–{(100 - selectedMedal.percentile.low).toFixed(1)}% des pratiquants</p>
-                    <p style={S.percentileSub}>≈ top {selectedMedal.percentile.topEurope.toLocaleString('fr-FR')} sur 745 M en Europe · top {selectedMedal.percentile.topMonde.toLocaleString('fr-FR')} sur 8,2 Md dans le monde</p>
+                    <div style={S.percentileRankRow}>
+                      <div style={S.percentileRankCell}>
+                        <span style={S.percentileRankNum}>Top {formatCompact(selectedMedal.percentile.topEurope)}</span>
+                        <span style={S.percentileRankLabel}>sur 745 M en Europe</span>
+                      </div>
+                      <div style={S.percentileRankCell}>
+                        <span style={S.percentileRankNum}>Top {formatCompact(selectedMedal.percentile.topMonde)}</span>
+                        <span style={S.percentileRankLabel}>sur 8,2 Md dans le monde</span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -1333,6 +1350,30 @@ const S = {
     color: '#9ca3af',
     margin: '3px 0 0',
     lineHeight: 1.4,
+  },
+  percentileRankRow: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 10,
+  },
+  percentileRankCell: {
+    flex: 1,
+    background: 'white',
+    borderRadius: 8,
+    padding: '7px 10px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 1,
+  },
+  percentileRankNum: {
+    fontSize: '0.9rem',
+    fontWeight: 900,
+    color: '#1a1a1a',
+  },
+  percentileRankLabel: {
+    fontSize: '0.62rem',
+    fontWeight: 600,
+    color: '#9ca3af',
   },
   baremeTable: {
     marginTop: 10,

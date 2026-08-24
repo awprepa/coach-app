@@ -1,10 +1,10 @@
 // Standards de force par ratio (charge soulevée / poids de corps), inspirés des
 // tables communément utilisées dans le milieu force/musculation (type Strength Level).
 // Pas de source officielle unique — ce sont des repères, pas des vérités absolues.
-// Seuil = ratio à partir duquel le rang est atteint. En dessous du premier seuil : "Débutant".
-// Chaque table a 6 seuils, pour les 6 rangs au-dessus de "Débutant" (Novice → Exceptionnel).
+// Seuil = ratio à partir duquel le rang est atteint. En dessous du premier seuil : "Fer".
+// Chaque table a 6 seuils, pour les 6 rangs au-dessus de "Fer" (Bronze → Champion).
 
-export const RANKS = ['Débutant', 'Novice', 'Intermédiaire', 'Avancé', 'Expert', 'Élite', 'Exceptionnel']
+export const RANKS = ['Fer', 'Bronze', 'Argent', 'Or', 'Platine', 'Diamant', 'Champion']
 
 const STANDARDS = {
   developpe_couche: {
@@ -35,16 +35,18 @@ const STANDARDS = {
     homme: [1.0, 1.5, 2.25, 3.0, 3.25, 3.5],
     femme: [1.0, 1.5, 2.0, 2.75, 3.0, 3.25],
   },
-  // Dips et tractions lestées : le "poids" saisi dans l'app est le poids total
-  // du système (poids de corps + charge ajoutée, comme pour un squat/bench),
-  // donc le ratio se lit et se compare de la même façon que les autres exercices.
+  // Dips et tractions lestées : ici le "poids" ne compte QUE la charge ajoutée
+  // (le lest), pas le poids de corps — contrairement au squat/bench où le poids
+  // saisi est la charge totale. Le ratio est donc charge ajoutée / poids de corps,
+  // avec des seuils bien plus bas (0 = tractions/dips au poids de corps, sans rien
+  // ajouté = encore "Fer").
   dips: {
-    homme: [1.2, 1.5, 1.9, 2.1, 2.3, 2.6],
-    femme: [1.1, 1.3, 1.6, 1.8, 2.0, 2.3],
+    homme: [0.15, 0.35, 0.6, 0.75, 0.9, 1.15],
+    femme: [0.05, 0.15, 0.3, 0.4, 0.5, 0.65],
   },
   tractions_lestees: {
-    homme: [1.15, 1.35, 1.7, 1.85, 2.0, 2.3],
-    femme: [1.05, 1.15, 1.35, 1.5, 1.65, 1.9],
+    homme: [0.1, 0.25, 0.45, 0.6, 0.75, 1.0],
+    femme: [0.03, 0.1, 0.2, 0.3, 0.4, 0.55],
   },
 }
 
@@ -82,13 +84,13 @@ export function computeRank(exerciseKey, oneRM, bodyweightKg, sexe) {
   if (!table) return null
 
   const ratio = oneRM / bodyweightKg
-  let rankIndex = 0 // 0 = Débutant
+  let rankIndex = 0 // 0 = Fer
   for (let i = 0; i < table.length; i++) {
     if (ratio >= table[i]) rankIndex = i + 1
   }
 
   const rank = RANKS[rankIndex]
-  const isMax = rankIndex >= table.length // déjà au-delà du dernier seuil (Exceptionnel)
+  const isMax = rankIndex >= table.length // déjà au-delà du dernier seuil (Champion)
   const nextThresholdKg = isMax ? null : Math.round(table[rankIndex] * bodyweightKg * 2) / 2
   const kgToNextRank = isMax ? null : Math.round((nextThresholdKg - oneRM) * 2) / 2
 
@@ -119,8 +121,8 @@ export function getBareme(exerciseKey, bodyweightKg, sexe) {
 // dans la population des pratiquants (hypothèse standard en science du sport
 // pour ce type de distribution de performance). On calibre μ et σ à partir de
 // deux points déjà définis dans le barème lui-même (pas de constante arbitraire
-// ajoutée) : μ = seuil "Intermédiaire" (défini comme le 50e percentile, le
-// pratiquant moyen) et σ déduit du seuil "Élite" placé au 97.5e percentile
+// ajoutée) : μ = seuil "Argent" (défini comme le 50e percentile, le
+// pratiquant moyen) et σ déduit du seuil "Diamant" placé au 97.5e percentile
 // (z = 1.96, convention statistique standard pour "97.5%"). Le percentile de
 // n'importe quel ratio se calcule ensuite avec la fonction de répartition
 // normale (Φ), pas par interpolation à la main entre des paliers choisis au jugé.
@@ -149,8 +151,8 @@ export function estimatePercentile(exerciseKey, oneRM, bodyweightKg, sexe) {
   if (!table) return null
   const ratio = oneRM / bodyweightKg
 
-  const mu = table[1]                       // seuil Intermédiaire = moyenne (50e percentile)
-  const sigma = (table[4] - mu) / Z_ELITE    // seuil Élite = 97.5e percentile
+  const mu = table[1]                       // seuil Argent = moyenne (50e percentile)
+  const sigma = (table[4] - mu) / Z_ELITE    // seuil Diamant = 97.5e percentile
   const z = (ratio - mu) / sigma
   const pct = Math.min(99.97, Math.max(0.03, normalCDF(z) * 100))
 
