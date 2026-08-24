@@ -11,14 +11,15 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
 
+// Palette façon rangs de jeu vidéo (bronze → argent → or → platine → diamant → légende)
 const RANK_COLORS = {
-  'Débutant':      { bg: '#f3f4f6', fg: '#6b7280' },
-  'Novice':        { bg: '#fef3e2', fg: '#c2751c' },
-  'Intermédiaire': { bg: '#e0edff', fg: '#2563eb' },
-  'Avancé':        { bg: '#eafbe7', fg: '#16a34a' },
-  'Expert':        { bg: '#e0fbf5', fg: '#0d9488' },
-  'Élite':         { bg: '#f3e8ff', fg: '#7c3aed' },
-  'Exceptionnel':  { bg: '#fde2e2', fg: '#dc2626' },
+  'Débutant':      { bg: 'linear-gradient(135deg, #9ca3af, #6b7280)', fg: '#ffffff', text: '#4b5563' },
+  'Novice':        { bg: 'linear-gradient(135deg, #d99a5b, #a5622a)', fg: '#ffffff', text: '#a5622a' },
+  'Intermédiaire': { bg: 'linear-gradient(135deg, #e5e9ef, #9aa4b2)', fg: '#374151', text: '#6b7787' },
+  'Avancé':        { bg: 'linear-gradient(135deg, #ffd873, #e8a417)', fg: '#5a3d00', text: '#b8790c' },
+  'Expert':        { bg: 'linear-gradient(135deg, #7dd8cf, #0d9488)', fg: '#ffffff', text: '#0d9488' },
+  'Élite':         { bg: 'linear-gradient(135deg, #7cb8ff, #2563eb)', fg: '#ffffff', text: '#2563eb' },
+  'Exceptionnel':  { bg: 'linear-gradient(135deg, #ff8fd6, #a21caf, #6d28d9)', fg: '#ffffff', text: '#a21caf' },
 }
 
 // ─── Formules 1RM ────────────────────────────────────────────────────────────
@@ -616,17 +617,17 @@ export default function ProgressionClient() {
   const medals = useMemo(() => {
     return BENCHMARK_EXERCISES.map(bench => {
       // Parmi tous les noms d'exercices du client, on prend celui qui matche ce
-      // benchmark et qui a le plus de points de données (au cas où plusieurs
-      // variantes du même mouvement existent dans son historique).
+      // benchmark et qui a le plus de tests réels à 1 rep (au cas où plusieurs
+      // variantes du même mouvement existent dans son historique). Les rangs ne
+      // doivent se baser que sur un vrai record testé, jamais sur une estimation.
       const candidates = Object.entries(exercicesData)
         .filter(([nom]) => matchBenchmarkExercise(nom) === bench.key)
-        .sort((a, b) => b[1].points.length - a[1].points.length)
+        .filter(([, d]) => d.direct1RepPoints?.length > 0)
+        .sort((a, b) => b[1].direct1RepPoints.length - a[1].direct1RepPoints.length)
       const data = candidates[0]?.[1]
       if (!data) return { ...bench, hasData: false }
 
-      const rmPoints = data.points.filter(p => p.rm !== null)
-      const best1Rep = data.direct1RepPoints?.length ? Math.max(...data.direct1RepPoints.map(p => p.poids)) : null
-      const bestRm = best1Rep ?? (rmPoints.length ? Math.max(...rmPoints.map(p => p.rm)) : null)
+      const bestRm = Math.max(...data.direct1RepPoints.map(p => p.poids))
       if (!bestRm) return { ...bench, hasData: false }
 
       const rank = computeRank(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
@@ -736,6 +737,7 @@ export default function ProgressionClient() {
       {/* ── Médailles / rangs ──────────────────────────────────────────────── */}
       <div style={S.medalsSection}>
         <h2 style={S.sectionTitle}>Tes rangs</h2>
+        <p style={S.medalsHint}>Basé uniquement sur tes vrais records testés à 1 répétition (pas d'estimation).</p>
         {missingProfile ? (
           <button onClick={() => navigate('/client/profil')} style={S.medalsMissing}>
             Renseigne ton poids et ton sexe dans ton profil pour débloquer tes rangs →
@@ -751,7 +753,7 @@ export default function ProgressionClient() {
                     onClick={() => setSelectedMedalKey(m.key)}
                     style={{
                       ...S.medalChip,
-                      ...(isSel ? { border: `2px solid ${colors.fg}` } : {}),
+                      ...(isSel ? { border: `2px solid ${colors.text}` } : {}),
                       ...(!m.hasData ? S.medalChipDisabled : {}),
                     }}>
                     <p style={S.medalChipLabel}>{m.label}</p>
@@ -784,8 +786,8 @@ export default function ProgressionClient() {
 
                 {selectedMedal.percentile && (
                   <div style={S.percentileBox}>
-                    <p style={S.percentileMain}>Environ top {Math.max(0.1, 100 - selectedMedal.percentile.high)}–{(100 - selectedMedal.percentile.low).toFixed(1)}% des pratiquants</p>
-                    <p style={S.percentileSub}>≈ top {selectedMedal.percentile.topEurope.toLocaleString('fr-FR')} sur 700 M en Europe · top {selectedMedal.percentile.topMonde.toLocaleString('fr-FR')} sur 8 Md dans le monde</p>
+                    <p style={S.percentileMain}>Environ top {Math.max(0.1, 100 - selectedMedal.percentile.high).toFixed(1)}–{(100 - selectedMedal.percentile.low).toFixed(1)}% des pratiquants</p>
+                    <p style={S.percentileSub}>≈ top {selectedMedal.percentile.topEurope.toLocaleString('fr-FR')} sur 745 M en Europe · top {selectedMedal.percentile.topMonde.toLocaleString('fr-FR')} sur 8,2 Md dans le monde</p>
                   </div>
                 )}
 
@@ -794,7 +796,7 @@ export default function ProgressionClient() {
                     <p style={S.baremeTitle}>Barème ({profileInfo.poids} kg)</p>
                     {selectedMedal.bareme.map(b => (
                       <div key={b.rank} style={{ ...S.baremeRow, ...(b.rank === selectedMedal.rank.rank ? S.baremeRowActive : {}) }}>
-                        <span style={{ ...S.baremeRank, color: RANK_COLORS[b.rank].fg }}>{b.rank}</span>
+                        <span style={{ ...S.baremeRank, color: RANK_COLORS[b.rank].text }}>{b.rank}</span>
                         <span style={S.baremeKg}>{b.kg} kg</span>
                       </div>
                     ))}
@@ -1190,6 +1192,12 @@ const S = {
   // Médailles / rangs
   medalsSection: {
     margin: '14px 16px 4px',
+  },
+  medalsHint: {
+    fontSize: '0.68rem',
+    color: '#9ca3af',
+    margin: '2px 0 10px',
+    lineHeight: 1.4,
   },
   medalsRow: {
     display: 'grid',
