@@ -5,7 +5,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
-import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank } from '../../data/strengthStandards'
+import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank, getBareme, estimatePercentile } from '../../data/strengthStandards'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -310,6 +310,7 @@ export default function ProgressionClient() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedReps, setSelectedReps] = useState(null)
   const [profileInfo, setProfileInfo] = useState({ sexe: null, poids: null })
+  const [selectedMedalKey, setSelectedMedalKey] = useState(null)
 
   // ── Chargement des données ────────────────────────────────────────────────
 
@@ -622,9 +623,13 @@ export default function ProgressionClient() {
       if (!bestRm) return { ...bench, hasData: false }
 
       const rank = computeRank(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
-      return { ...bench, hasData: true, bestRm, rank }
+      const bareme = getBareme(bench.key, profileInfo.poids, profileInfo.sexe)
+      const percentile = estimatePercentile(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
+      return { ...bench, hasData: true, bestRm, rank, bareme, percentile }
     })
   }, [exercicesData, profileInfo])
+
+  const selectedMedal = medals.find(m => m.key === selectedMedalKey && m.hasData) || medals.find(m => m.hasData) || null
 
   const missingProfile = !profileInfo.sexe || !profileInfo.poids
 
@@ -729,28 +734,68 @@ export default function ProgressionClient() {
             Renseigne ton poids et ton sexe dans ton profil pour débloquer tes rangs →
           </button>
         ) : (
-          <div style={S.medalsRow}>
-            {medals.map(m => {
-              const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Débutant']
-              return (
-                <div key={m.key} style={S.medalCard}>
-                  <p style={S.medalLabel}>{m.label}</p>
-                  {m.hasData ? (
-                    <>
+          <>
+            <div style={S.medalsStrip}>
+              {medals.map(m => {
+                const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Débutant']
+                const isSel = selectedMedal?.key === m.key
+                return (
+                  <button key={m.key} disabled={!m.hasData}
+                    onClick={() => setSelectedMedalKey(m.key)}
+                    style={{
+                      ...S.medalChip,
+                      ...(isSel ? { border: `2px solid ${colors.fg}` } : {}),
+                      ...(!m.hasData ? S.medalChipDisabled : {}),
+                    }}>
+                    <p style={S.medalChipLabel}>{m.label}</p>
+                    {m.hasData ? (
                       <div style={{ ...S.medalBadge, background: colors.bg, color: colors.fg }}>{m.rank.rank}</div>
-                      <p style={S.medalValue}>{m.bestRm} kg</p>
-                      {m.rank.isMax
-                        ? <p style={S.medalNext}>Rang maximal atteint 🎉</p>
-                        : <p style={S.medalNext}>{m.rank.kgToNextRank} kg pour {m.rank.nextRank}</p>
-                      }
-                    </>
-                  ) : (
-                    <p style={S.medalNoData}>Pas encore de données</p>
-                  )}
+                    ) : (
+                      <p style={S.medalNoData}>—</p>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {selectedMedal && (
+              <div style={S.medalDetail}>
+                <div style={S.medalDetailHead}>
+                  <div>
+                    <p style={S.medalDetailLabel}>{selectedMedal.label}</p>
+                    <p style={S.medalDetailValue}>{selectedMedal.bestRm} kg</p>
+                  </div>
+                  <div style={{ ...S.medalBadge, background: RANK_COLORS[selectedMedal.rank.rank].bg, color: RANK_COLORS[selectedMedal.rank.rank].fg, fontSize: '0.78rem', padding: '5px 12px' }}>
+                    {selectedMedal.rank.rank}
+                  </div>
                 </div>
-              )
-            })}
-          </div>
+
+                {selectedMedal.rank.isMax
+                  ? <p style={S.medalNext}>Rang maximal atteint 🎉</p>
+                  : <p style={S.medalNext}>{selectedMedal.rank.kgToNextRank} kg pour atteindre {selectedMedal.rank.nextRank}</p>
+                }
+
+                {selectedMedal.percentile && (
+                  <div style={S.percentileBox}>
+                    <p style={S.percentileMain}>Environ top {Math.max(0.1, 100 - selectedMedal.percentile.high)}–{(100 - selectedMedal.percentile.low).toFixed(1)}% des pratiquants</p>
+                    <p style={S.percentileSub}>≈ top {selectedMedal.percentile.topEurope.toLocaleString('fr-FR')} sur 700 M en Europe · top {selectedMedal.percentile.topMonde.toLocaleString('fr-FR')} sur 8 Md dans le monde</p>
+                  </div>
+                )}
+
+                {selectedMedal.bareme && (
+                  <div style={S.baremeTable}>
+                    <p style={S.baremeTitle}>Barème ({profileInfo.poids} kg)</p>
+                    {selectedMedal.bareme.map(b => (
+                      <div key={b.rank} style={{ ...S.baremeRow, ...(b.rank === selectedMedal.rank.rank ? S.baremeRowActive : {}) }}>
+                        <span style={{ ...S.baremeRank, color: RANK_COLORS[b.rank].fg }}>{b.rank}</span>
+                        <span style={S.baremeKg}>{b.kg} kg</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1196,6 +1241,114 @@ const S = {
     color: '#6b7280',
     textAlign: 'left',
     cursor: 'pointer',
+  },
+  medalsStrip: {
+    display: 'flex',
+    gap: 8,
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    paddingBottom: 2,
+    marginBottom: 10,
+  },
+  medalChip: {
+    flexShrink: 0,
+    minWidth: 92,
+    background: 'white',
+    border: '2px solid transparent',
+    borderRadius: 14,
+    padding: '10px 12px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  },
+  medalChipDisabled: {
+    opacity: 0.5,
+    cursor: 'default',
+  },
+  medalChipLabel: {
+    fontSize: '0.66rem',
+    fontWeight: 700,
+    color: '#6b7280',
+    margin: 0,
+    textAlign: 'center',
+    lineHeight: 1.2,
+  },
+  medalDetail: {
+    background: 'white',
+    borderRadius: 16,
+    padding: '14px 16px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  medalDetailHead: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  medalDetailLabel: {
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    color: '#6b7280',
+    margin: 0,
+  },
+  medalDetailValue: {
+    fontSize: '1.3rem',
+    fontWeight: 900,
+    color: '#1a1a1a',
+    margin: '2px 0 0',
+  },
+  percentileBox: {
+    background: '#f9fafb',
+    borderRadius: 10,
+    padding: '10px 12px',
+    margin: '10px 0',
+  },
+  percentileMain: {
+    fontSize: '0.85rem',
+    fontWeight: 800,
+    color: '#1a1a1a',
+    margin: 0,
+  },
+  percentileSub: {
+    fontSize: '0.68rem',
+    color: '#9ca3af',
+    margin: '3px 0 0',
+    lineHeight: 1.4,
+  },
+  baremeTable: {
+    marginTop: 10,
+    borderTop: '1px solid #f3f4f6',
+    paddingTop: 10,
+  },
+  baremeTitle: {
+    fontSize: '0.62rem',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: '#9ca3af',
+    margin: '0 0 6px',
+  },
+  baremeRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '5px 8px',
+    borderRadius: 8,
+  },
+  baremeRowActive: {
+    background: '#f9fafb',
+  },
+  baremeRank: {
+    fontSize: '0.78rem',
+    fontWeight: 700,
+  },
+  baremeKg: {
+    fontSize: '0.78rem',
+    fontWeight: 800,
+    color: '#1a1a1a',
   },
 
   // Chips
