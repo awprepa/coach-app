@@ -555,17 +555,12 @@ export default function ProgressionClient() {
       // Mode 1RM
       const rmPoints = points.filter(p => p.rm !== null)
       const currentRm = rmPoints.length ? rmPoints[rmPoints.length - 1].rm : null
-      let maxRm       = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
+      const maxRm     = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
 
       // 1RM réel = meilleur poids soulevé pour 1 rep (test direct)
       const best1RepRM = direct1RepPoints.length
         ? Math.max(...direct1RepPoints.map(p => p.poids))
         : null
-
-      // Une estimation ne doit jamais afficher plus qu'un 1RM réellement testé —
-      // sinon la case "Record" affiche un chiffre supérieur au vrai record du client,
-      // ce qui n'a pas de sens (le test réel est la référence, pas la formule).
-      if (best1RepRM !== null && maxRm > best1RepRM) maxRm = best1RepRM
 
       // Progression : comparer premier et dernier 1RM direct si ≥2 points
       let progression = null
@@ -775,41 +770,28 @@ export default function ProgressionClient() {
         <div style={S.metricsRow}>
           {metrics.mode === '1rm' ? (
             <>
+              {/* 1RM réel : uniquement un vrai test à 1 rep, jamais une estimation */}
               <MetricCard
-                label={metrics.best1RepRM !== null ? '1RM réel' : '1RM estimé'}
-                value={
-                  metrics.best1RepRM !== null
-                    ? `${metrics.best1RepRM} kg`
-                    : metrics.currentRm !== null ? `${metrics.currentRm} kg` : '—'
-                }
+                label="1RM réel"
+                value={metrics.best1RepRM !== null ? `${metrics.best1RepRM} kg` : '—'}
                 accent
               />
-              {metrics.best1RepRM !== null ? (
-                <MetricCard
-                  label="1RM estimé"
-                  value={metrics.currentRm !== null ? `${metrics.currentRm} kg` : '—'}
-                />
-              ) : (
-                <MetricCard
-                  label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Tendance'}
-                  value={
-                    metrics.progression !== null
-                      ? `${metrics.progression > 0 ? '+' : ''}${metrics.progression} kg`
-                      : '—'
-                  }
-                  positive={metrics.progression > 0}
-                  negative={metrics.progression < 0}
-                />
-              )}
+              {/* 1RM estimé : la meilleure estimation formule, jamais plafonnée par le réel —
+                  c'est un calcul, pas un record, donc il peut différer du 1RM réel dans les deux sens */}
               <MetricCard
-                label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Record'}
+                label="1RM estimé"
+                value={metrics.maxRm ? `${metrics.maxRm} kg` : '—'}
+              />
+              {/* Progression : toujours la tendance dans le temps, jamais confondue avec un record */}
+              <MetricCard
+                label={metrics.progressionSource === 'tests directs' ? 'Progression' : 'Tendance'}
                 value={
-                  metrics.progressionSource === 'tests directs' && metrics.progression !== null
+                  metrics.progression !== null
                     ? `${metrics.progression > 0 ? '+' : ''}${metrics.progression} kg`
-                    : metrics.maxRm ? `${metrics.maxRm} kg` : '—'
+                    : '—'
                 }
-                positive={metrics.progressionSource === 'tests directs' && metrics.progression > 0}
-                negative={metrics.progressionSource === 'tests directs' && metrics.progression < 0}
+                positive={metrics.progression > 0}
+                negative={metrics.progression < 0}
               />
             </>
           ) : (

@@ -25,9 +25,7 @@ const STANDARDS = {
 // (charge non standard — ex. haltères, où le poids saisi est celui d'un seul haltère
 // et ne correspond pas à la charge totale à la barre) → exclues du calcul de rang.
 export const BENCHMARK_EXERCISES = [
-  // 'couché'/'couche' seuls (pas besoin de "développé" devant) pour survivre aux
-  // fautes de frappe fréquentes ("dévelloppé", "developer"…) sur ce mot précis.
-  { key: 'developpe_couche',   label: 'Développé couché',   keywords: ['couché', 'couche', 'bench'], excludeKeywords: ['haltère', 'haltere', 'dumbbell', '(h)'] },
+  { key: 'developpe_couche',   label: 'Développé couché',   keywords: ['développé couché', 'developpe couche', 'bench'], excludeKeywords: ['haltère', 'haltere', 'dumbbell', '(h)'] },
   { key: 'squat',              label: 'Squat',               keywords: ['squat'], excludeKeywords: ['haltère', 'haltere', 'dumbbell', '(h)'] },
   { key: 'souleve_de_terre',   label: 'Soulevé de terre',    keywords: ['soulevé de terre', 'souleve de terre', 'deadlift', 'sdt'], excludeKeywords: ['haltère', 'haltere', 'dumbbell', '(h)'] },
 ]
