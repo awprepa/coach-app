@@ -6,6 +6,7 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
 import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank, getBareme, estimatePercentile, getWorldRecord } from '../../data/strengthStandards'
+import { computeExerciseXp, levelFromXp } from '../../data/xpSystem'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -650,6 +651,23 @@ export default function ProgressionClient() {
 
   const missingProfile = !profileInfo.sexe || !profileInfo.poids
 
+  // ── Niveau / XP ──────────────────────────────────────────────────────────
+  // Niveau de compte : XP cumulé sur tous les exercices jamais faits.
+  // Niveau par exercice : XP cumulé uniquement sur l'exercice sélectionné.
+
+  const globalLevel = useMemo(() => {
+    const totalXp = Object.values(exercicesData).reduce(
+      (sum, d) => sum + computeExerciseXp(d.allSets, profileInfo.poids), 0
+    )
+    return levelFromXp(totalXp)
+  }, [exercicesData, profileInfo.poids])
+
+  const exerciseLevel = useMemo(() => {
+    if (!currentData?.allSets?.length) return null
+    const xp = computeExerciseXp(currentData.allSets, profileInfo.poids)
+    return levelFromXp(xp)
+  }, [currentData, profileInfo.poids])
+
   // ── Records par nombre de répétitions ──────────────────────────────────────
   // Pour l'exercice sélectionné : le poids le plus lourd jamais soulevé, tout
   // court, + le record pour chaque nombre exact de reps choisi (1 à 15).
@@ -741,6 +759,20 @@ export default function ProgressionClient() {
       <div style={S.header}>
         <h1 style={S.headerTitle}>Progression</h1>
         <p style={S.headerSub}>Évolution de tes performances</p>
+      </div>
+
+      {/* ── Niveau de compte ─────────────────────────────────────────────────── */}
+      <div style={S.levelSection}>
+        <div style={S.levelRow}>
+          <div style={S.levelBadge}>{globalLevel.level}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={S.levelTitle}>Niveau {globalLevel.level}</p>
+            <div style={S.levelBarTrack}>
+              <div style={{ ...S.levelBarFill, width: `${(globalLevel.xp / globalLevel.xpForNextLevel) * 100}%` }} />
+            </div>
+            <p style={S.levelSub}>{globalLevel.xp} / {globalLevel.xpForNextLevel} XP</p>
+          </div>
+        </div>
       </div>
 
       {/* ── Médailles / rangs ──────────────────────────────────────────────── */}
@@ -887,6 +919,20 @@ export default function ProgressionClient() {
               <MetricCard label="Séances" value={metrics.nbSeances} />
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Niveau sur cet exercice ──────────────────────────────────────────── */}
+      {exerciseLevel && (
+        <div style={S.exLevelRow}>
+          <div style={S.exLevelBadge}>{exerciseLevel.level}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={S.exLevelTitle}>Niveau {exerciseLevel.level} sur {selected}</p>
+            <div style={S.levelBarTrack}>
+              <div style={{ ...S.levelBarFill, width: `${(exerciseLevel.xp / exerciseLevel.xpForNextLevel) * 100}%` }} />
+            </div>
+            <p style={S.levelSub}>{exerciseLevel.xp} / {exerciseLevel.xpForNextLevel} XP</p>
+          </div>
         </div>
       )}
 
@@ -1212,6 +1258,88 @@ const S = {
     color: 'rgba(255,255,255,0.6)',
     fontSize: '0.78rem',
     margin: 0,
+  },
+
+  // Niveau / XP
+  levelSection: {
+    margin: '14px 16px 0',
+    background: 'white',
+    borderRadius: 14,
+    padding: '12px 14px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  levelRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  },
+  levelBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '1.05rem',
+    fontWeight: 900,
+    color: 'var(--chip-text, #e4f816)',
+    background: 'var(--chip-bg, #1a1a1a)',
+  },
+  levelTitle: {
+    fontSize: '0.82rem',
+    fontWeight: 800,
+    color: '#1a1a1a',
+    margin: '0 0 4px',
+  },
+  levelBarTrack: {
+    height: 6,
+    background: '#f3f4f6',
+    borderRadius: 99,
+    overflow: 'hidden',
+  },
+  levelBarFill: {
+    height: '100%',
+    background: 'var(--chip-bg, #1a1a1a)',
+    borderRadius: 99,
+  },
+  levelSub: {
+    fontSize: '0.66rem',
+    color: '#9ca3af',
+    fontWeight: 600,
+    margin: '3px 0 0',
+  },
+  exLevelRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    margin: '0 16px 14px',
+    background: 'white',
+    borderRadius: 12,
+    padding: '10px 12px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  exLevelBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.85rem',
+    fontWeight: 900,
+    color: '#374151',
+    background: '#f3f4f6',
+  },
+  exLevelTitle: {
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    color: '#374151',
+    margin: '0 0 4px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
 
   // Médailles / rangs

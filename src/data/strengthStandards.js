@@ -25,34 +25,37 @@ export function getWorldRecord(exerciseKey, sexe) {
   return WORLD_RECORDS[exerciseKey]?.[sexe] ?? null
 }
 
+// Platine recalculé comme moyenne géométrique entre Or et Diamant (et non plus
+// arithmétique entre Avancé/Élite d'origine) : ça évite l'écart disproportionné
+// qui se formait entre Or et Platine sur certains exercices (ex: bench).
 const STANDARDS = {
   developpe_couche: {
-    homme: [0.5, 0.75, 1.0, 1.5, 1.625, 1.75],
-    femme: [0.25, 0.5, 0.75, 1.0, 1.125, 1.25],
+    homme: [0.5, 0.75, 1.0, 1.225, 1.5, 1.75],
+    femme: [0.25, 0.5, 0.75, 0.865, 1.0, 1.25],
   },
   squat: {
-    homme: [0.75, 1.0, 1.5, 2.0, 2.25, 2.5],
-    femme: [0.5, 0.75, 1.25, 1.75, 1.875, 2.0],
+    homme: [0.75, 1.0, 1.5, 1.73, 2.0, 2.5],
+    femme: [0.5, 0.75, 1.25, 1.48, 1.75, 2.0],
   },
   souleve_de_terre: {
-    homme: [1.0, 1.25, 1.75, 2.25, 2.5, 2.75],
-    femme: [0.75, 1.0, 1.5, 2.0, 2.125, 2.25],
+    homme: [1.0, 1.25, 1.75, 1.99, 2.25, 2.75],
+    femme: [0.75, 1.0, 1.5, 1.73, 2.0, 2.25],
   },
   front_squat: {
-    homme: [0.65, 0.85, 1.25, 1.7, 1.9, 2.1],
-    femme: [0.4, 0.6, 1.05, 1.5, 1.6, 1.7],
+    homme: [0.65, 0.85, 1.25, 1.46, 1.7, 2.1],
+    femme: [0.4, 0.6, 1.05, 1.26, 1.5, 1.7],
   },
   developpe_militaire: {
-    homme: [0.35, 0.55, 0.8, 1.05, 1.175, 1.3],
-    femme: [0.2, 0.3, 0.45, 0.6, 0.675, 0.75],
+    homme: [0.35, 0.55, 0.8, 0.92, 1.05, 1.3],
+    femme: [0.2, 0.3, 0.45, 0.52, 0.6, 0.75],
   },
   rowing: {
-    homme: [0.5, 0.75, 1.0, 1.35, 1.475, 1.6],
-    femme: [0.25, 0.4, 0.6, 0.85, 0.95, 1.05],
+    homme: [0.5, 0.75, 1.0, 1.16, 1.35, 1.6],
+    femme: [0.25, 0.4, 0.6, 0.715, 0.85, 1.05],
   },
   hip_thrust: {
-    homme: [1.0, 1.5, 2.25, 3.0, 3.25, 3.5],
-    femme: [1.0, 1.5, 2.0, 2.75, 3.0, 3.25],
+    homme: [1.0, 1.5, 2.25, 2.6, 3.0, 3.5],
+    femme: [1.0, 1.5, 2.0, 2.35, 2.75, 3.25],
   },
   // Dips et tractions lestées : ici le "poids" ne compte QUE la charge ajoutée
   // (le lest), pas le poids de corps — contrairement au squat/bench où le poids
