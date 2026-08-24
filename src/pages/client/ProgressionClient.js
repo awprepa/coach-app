@@ -895,10 +895,6 @@ export default function ProgressionClient() {
       {repRecords && (
         <div style={S.section}>
           <h2 style={S.sectionTitle}>Records par répétitions</h2>
-          <div style={S.absRecord}>
-            <span style={S.absRecordValue}>{repRecords.absolute.poids} kg × {repRecords.absolute.reps}</span>
-            <span style={S.absRecordLabel}>Charge la plus lourde jamais soulevée · {formatDateFull(repRecords.absolute.date)}</span>
-          </div>
 
           {/* Sélecteur 1 à 15 reps */}
           <select
@@ -906,7 +902,7 @@ export default function ProgressionClient() {
             onChange={e => setSelectedReps(e.target.value ? Number(e.target.value) : null)}
             style={S.repsSelect}
           >
-            <option value="">Choisir un nombre de répétitions…</option>
+            <option value="">Charge la plus lourde jamais soulevée (tous nombres de reps)</option>
             {Array.from({ length: 15 }, (_, i) => i + 1).map(r => (
               <option key={r} value={r} disabled={!repRecords.byReps[r]}>
                 {r} rep{r > 1 ? 's' : ''}{!repRecords.byReps[r] ? ' — pas de données' : ''}
@@ -915,17 +911,15 @@ export default function ProgressionClient() {
           </select>
 
           {selectedReps && repRecords.byReps[selectedReps] ? (
-            <div style={S.setRow}>
-              <span style={S.setDate}>Record à {selectedReps} rep{selectedReps > 1 ? 's' : ''}</span>
-              <div style={S.setRight}>
-                <span style={S.setPoids}>{repRecords.byReps[selectedReps].poids} kg</span>
-                <span style={S.setRm}>{formatDateShort(repRecords.byReps[selectedReps].date)}</span>
-              </div>
+            <div style={S.absRecord}>
+              <span style={S.absRecordValue}>{repRecords.byReps[selectedReps].poids} kg × {selectedReps}</span>
+              <span style={S.absRecordLabel}>Record à {selectedReps} rep{selectedReps > 1 ? 's' : ''} · {formatDateFull(repRecords.byReps[selectedReps].date)}</span>
             </div>
           ) : (
-            <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', margin: '4px 0 0' }}>
-              Choisis un nombre de répétitions dans la liste ci-dessus
-            </p>
+            <div style={S.absRecord}>
+              <span style={S.absRecordValue}>{repRecords.absolute.poids} kg × {repRecords.absolute.reps}</span>
+              <span style={S.absRecordLabel}>Charge la plus lourde jamais soulevée · {formatDateFull(repRecords.absolute.date)}</span>
+            </div>
           )}
         </div>
       )}
