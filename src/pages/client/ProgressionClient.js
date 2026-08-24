@@ -555,12 +555,17 @@ export default function ProgressionClient() {
       // Mode 1RM
       const rmPoints = points.filter(p => p.rm !== null)
       const currentRm = rmPoints.length ? rmPoints[rmPoints.length - 1].rm : null
-      const maxRm     = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
+      let maxRm       = rmPoints.reduce((max, p) => p.rm > max ? p.rm : max, 0)
 
       // 1RM réel = meilleur poids soulevé pour 1 rep (test direct)
       const best1RepRM = direct1RepPoints.length
         ? Math.max(...direct1RepPoints.map(p => p.poids))
         : null
+
+      // Une estimation ne doit jamais afficher plus qu'un 1RM réellement testé —
+      // sinon la case "Record" affiche un chiffre supérieur au vrai record du client,
+      // ce qui n'a pas de sens (le test réel est la référence, pas la formule).
+      if (best1RepRM !== null && maxRm > best1RepRM) maxRm = best1RepRM
 
       // Progression : comparer premier et dernier 1RM direct si ≥2 points
       let progression = null
