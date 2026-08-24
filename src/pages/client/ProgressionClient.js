@@ -16,6 +16,7 @@ const RANK_COLORS = {
   'Novice':        { bg: '#fef3e2', fg: '#c2751c' },
   'Intermédiaire': { bg: '#e0edff', fg: '#2563eb' },
   'Avancé':        { bg: '#eafbe7', fg: '#16a34a' },
+  'Expert':        { bg: '#e0fbf5', fg: '#0d9488' },
   'Élite':         { bg: '#f3e8ff', fg: '#7c3aed' },
   'Exceptionnel':  { bg: '#fde2e2', fg: '#dc2626' },
 }
@@ -93,10 +94,16 @@ function getFormulaConfig(nom) {
   if (n.includes('leg press') || (n.includes('presse') && n.includes('jambe')))
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 
-  // Tractions lestées uniquement (bodyweight non lestées → non pertinent)
+  // Dips (lestés — le poids saisi est le poids total du système, comme un squat)
+  if (n.includes('dip'))
+    return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
+
+  // Tractions — tout poids saisi > 0 correspond forcément à une variante lestée
+  // (le bodyweight pur ne loggue pas de charge), pas besoin du mot "lesté" dans le nom.
+  // Exclut les scapulaires (drill d'activation, pas un mouvement de force).
   if (
     (n.includes('traction') || n.includes('pull-up') || n.includes('pull up') || n.includes('chin')) &&
-    (n.includes('lest') || n.includes('charg'))
+    !n.includes('scapulaire')
   )
     return { formula: 'weight_dependent', correction: 0, label: 'SportRxiv 2024' }
 

@@ -2,38 +2,49 @@
 // tables communément utilisées dans le milieu force/musculation (type Strength Level).
 // Pas de source officielle unique — ce sont des repères, pas des vérités absolues.
 // Seuil = ratio à partir duquel le rang est atteint. En dessous du premier seuil : "Débutant".
-// Chaque table a 5 seuils, pour les 5 rangs au-dessus de "Débutant" (Novice → Exceptionnel).
+// Chaque table a 6 seuils, pour les 6 rangs au-dessus de "Débutant" (Novice → Exceptionnel).
 
-export const RANKS = ['Débutant', 'Novice', 'Intermédiaire', 'Avancé', 'Élite', 'Exceptionnel']
+export const RANKS = ['Débutant', 'Novice', 'Intermédiaire', 'Avancé', 'Expert', 'Élite', 'Exceptionnel']
 
 const STANDARDS = {
   developpe_couche: {
-    homme: [0.5, 0.75, 1.0, 1.5, 1.75],
-    femme: [0.25, 0.5, 0.75, 1.0, 1.25],
+    homme: [0.5, 0.75, 1.0, 1.5, 1.625, 1.75],
+    femme: [0.25, 0.5, 0.75, 1.0, 1.125, 1.25],
   },
   squat: {
-    homme: [0.75, 1.0, 1.5, 2.0, 2.5],
-    femme: [0.5, 0.75, 1.25, 1.75, 2.0],
+    homme: [0.75, 1.0, 1.5, 2.0, 2.25, 2.5],
+    femme: [0.5, 0.75, 1.25, 1.75, 1.875, 2.0],
   },
   souleve_de_terre: {
-    homme: [1.0, 1.25, 1.75, 2.25, 2.75],
-    femme: [0.75, 1.0, 1.5, 2.0, 2.25],
+    homme: [1.0, 1.25, 1.75, 2.25, 2.5, 2.75],
+    femme: [0.75, 1.0, 1.5, 2.0, 2.125, 2.25],
   },
   front_squat: {
-    homme: [0.65, 0.85, 1.25, 1.7, 2.1],
-    femme: [0.4, 0.6, 1.05, 1.5, 1.7],
+    homme: [0.65, 0.85, 1.25, 1.7, 1.9, 2.1],
+    femme: [0.4, 0.6, 1.05, 1.5, 1.6, 1.7],
   },
   developpe_militaire: {
-    homme: [0.35, 0.55, 0.8, 1.05, 1.3],
-    femme: [0.2, 0.3, 0.45, 0.6, 0.75],
+    homme: [0.35, 0.55, 0.8, 1.05, 1.175, 1.3],
+    femme: [0.2, 0.3, 0.45, 0.6, 0.675, 0.75],
   },
   rowing: {
-    homme: [0.5, 0.75, 1.0, 1.35, 1.6],
-    femme: [0.25, 0.4, 0.6, 0.85, 1.05],
+    homme: [0.5, 0.75, 1.0, 1.35, 1.475, 1.6],
+    femme: [0.25, 0.4, 0.6, 0.85, 0.95, 1.05],
   },
   hip_thrust: {
-    homme: [1.0, 1.5, 2.25, 3.0, 3.5],
-    femme: [1.0, 1.5, 2.0, 2.75, 3.25],
+    homme: [1.0, 1.5, 2.25, 3.0, 3.25, 3.5],
+    femme: [1.0, 1.5, 2.0, 2.75, 3.0, 3.25],
+  },
+  // Dips et tractions lestées : le "poids" saisi dans l'app est le poids total
+  // du système (poids de corps + charge ajoutée, comme pour un squat/bench),
+  // donc le ratio se lit et se compare de la même façon que les autres exercices.
+  dips: {
+    homme: [1.2, 1.5, 1.9, 2.1, 2.3, 2.6],
+    femme: [1.1, 1.3, 1.6, 1.8, 2.0, 2.3],
+  },
+  tractions_lestees: {
+    homme: [1.15, 1.35, 1.7, 1.85, 2.0, 2.3],
+    femme: [1.05, 1.15, 1.35, 1.5, 1.65, 1.9],
   },
 }
 
@@ -50,6 +61,8 @@ export const BENCHMARK_EXERCISES = [
   { key: 'developpe_militaire', label: 'Développé militaire', keywords: ['développé militaire', 'developpe militaire', 'dev militaire', 'overhead', 'ohp'], excludeKeywords: DEFAULT_EXCLUDE },
   { key: 'rowing',               label: 'Rowing barre',        keywords: ['rowing', 'pendlay'], excludeKeywords: [...DEFAULT_EXCLUDE, 'unilat'] },
   { key: 'hip_thrust',           label: 'Hip Thrust',          keywords: ['hip thrust'], excludeKeywords: [...DEFAULT_EXCLUDE, 'unilat'] },
+  { key: 'dips',                  label: 'Dips lestés',         keywords: ['dips', 'dip'], excludeKeywords: [] },
+  { key: 'tractions_lestees',    label: 'Tractions lestées',   keywords: ['traction', 'pull-up', 'pull up', 'chin'], excludeKeywords: ['scapulaire'] },
 ]
 
 // Retrouve la clé de standard pour un nom d'exercice libre, ou null si non reconnu.
@@ -100,11 +113,35 @@ export function getBareme(exerciseKey, bodyweightKg, sexe) {
   }))
 }
 
-// Percentile approximatif dans la population générale des pratiquants de force,
-// par interpolation entre les paliers (repères communément admis pour ce type de
-// barème : Novice ≈ 20e percentile, Intermédiaire ≈ 50e, Avancé ≈ 80e, Élite ≈ 95e,
-// Exceptionnel ≈ 99e). Retourne une fourchette [bas, haut] plutôt qu'un chiffre unique.
-const PERCENTILE_ANCHORS = [0, 20, 50, 80, 95, 99]
+// ─── Percentile de population ──────────────────────────────────────────────
+//
+// Modèle : le ratio charge/poids-de-corps est supposé suivre une loi normale
+// dans la population des pratiquants (hypothèse standard en science du sport
+// pour ce type de distribution de performance). On calibre μ et σ à partir de
+// deux points déjà définis dans le barème lui-même (pas de constante arbitraire
+// ajoutée) : μ = seuil "Intermédiaire" (défini comme le 50e percentile, le
+// pratiquant moyen) et σ déduit du seuil "Élite" placé au 97.5e percentile
+// (z = 1.96, convention statistique standard pour "97.5%"). Le percentile de
+// n'importe quel ratio se calcule ensuite avec la fonction de répartition
+// normale (Φ), pas par interpolation à la main entre des paliers choisis au jugé.
+function erf(x) {
+  // Approximation Abramowitz & Stegun 7.1.26 (erreur max ~1.5e-7)
+  const sign = x < 0 ? -1 : 1
+  x = Math.abs(x)
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911
+  const t = 1 / (1 + p * x)
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x)
+  return sign * y
+}
+function normalCDF(z) {
+  return 0.5 * (1 + erf(z / Math.SQRT2))
+}
+
+// Population réelle (estimations 2025) — Europe : ONU/Eurostat ; Monde : ONU.
+const POPULATION_EUROPE = 745_000_000
+const POPULATION_MONDE  = 8_200_000_000
+const Z_ELITE = 1.959963984540054 // z tel que Φ(z) = 0.975
 
 export function estimatePercentile(exerciseKey, oneRM, bodyweightKg, sexe) {
   if (!exerciseKey || !oneRM || !bodyweightKg || !sexe) return null
@@ -112,32 +149,23 @@ export function estimatePercentile(exerciseKey, oneRM, bodyweightKg, sexe) {
   if (!table) return null
   const ratio = oneRM / bodyweightKg
 
-  let pct
-  if (ratio <= table[0]) {
-    pct = (ratio / table[0]) * PERCENTILE_ANCHORS[1]
-  } else if (ratio >= table[4]) {
-    // Au-delà d'Exceptionnel : on approche asymptotiquement 99.9
-    const over = (ratio - table[4]) / table[4]
-    pct = Math.min(99.9, 99 + over * 3)
-  } else {
-    let i = 0
-    while (i < table.length - 1 && ratio >= table[i + 1]) i++
-    const lo = table[i], hi = table[i + 1]
-    const pLo = PERCENTILE_ANCHORS[i + 1], pHi = PERCENTILE_ANCHORS[i + 2]
-    pct = pLo + ((ratio - lo) / (hi - lo)) * (pHi - pLo)
-  }
+  const mu = table[1]                       // seuil Intermédiaire = moyenne (50e percentile)
+  const sigma = (table[4] - mu) / Z_ELITE    // seuil Élite = 97.5e percentile
+  const z = (ratio - mu) / sigma
+  const pct = Math.min(99.97, Math.max(0.03, normalCDF(z) * 100))
 
-  const low = Math.max(0.1, Math.round((pct - 4) * 10) / 10)
-  const high = Math.min(99.9, Math.round((pct + 4) * 10) / 10)
+  // Marge d'incertitude du modèle (±1 point), pour donner une fourchette
+  // plutôt qu'un chiffre unique à la décimale près.
+  const low = Math.max(0.03, Math.round((pct - 1) * 10) / 10)
+  const high = Math.min(99.97, Math.round((pct + 1) * 10) / 10)
 
-  // Top N sur une population donnée (proportion au-delà de ce percentile)
   const topOf = population => Math.max(1, Math.round(population * (1 - pct / 100)))
 
   return {
     pct: Math.round(pct * 10) / 10,
     low,
     high,
-    topEurope: topOf(700_000_000),
-    topMonde: topOf(8_000_000_000),
+    topEurope: topOf(POPULATION_EUROPE),
+    topMonde: topOf(POPULATION_MONDE),
   }
 }
