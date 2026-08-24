@@ -22,6 +22,17 @@ const RANK_COLORS = {
 
 // ─── Formules 1RM ────────────────────────────────────────────────────────────
 
+/** Développé couché (ou incliné/décliné) à haltères : le poids saisi est celui
+ *  d'un seul haltère. On le double pour avoir la charge totale équivalente et
+ *  pouvoir comparer directement avec le développé couché à la barre. */
+function isDevCoucheHalteres(nom) {
+  const n = (nom || '').toLowerCase()
+  const isDevCouche = n.includes('couché') || n.includes('couche') || n.includes('bench') ||
+    n.includes('décliné') || n.includes('decline') || n.includes('incliné') || n.includes('incline')
+  const isHalteres = n.includes('haltère') || n.includes('haltere') || n.includes('dumbbell') || n.includes(' db ')
+  return isDevCouche && isHalteres
+}
+
 /** Détecte si un exercice est unilatéral (un seul membre à la fois).
  *  Pour ces exercices, le 1RM bilatéral n'est pas comparable → pas d'estimation. */
 function isUnilateral(nom) {
@@ -115,14 +126,16 @@ function getFormulaConfig(nom) {
  *  Retourne null si les valeurs sont invalides ou hors plage. */
 function calculate1RM(w, r, formula, correction = 0) {
   if (!w || !r || w <= 0 || r <= 0) return null
-  // Lombardi (bench) : fiable jusqu'à 5 reps seulement
-  if (formula === 'lombardi' && r > 5) return null
-  // Autres formules : on exclut au-delà de 10 reps (trop incertaines sans RPE)
-  if (formula !== 'lombardi' && r > 10) return null
+  // Au-delà de 15 reps, aucune formule n'est fiable
+  if (r > 15) return null
   if (r === 1) return w * (1 + (correction || 0))
 
   let rm
-  if (formula === 'weight_dependent') {
+  if (formula === 'lombardi' && r > 5) {
+    // Lombardi n'est fiable que jusqu'à 5 reps — au-delà, repli sur Epley
+    // (moins précis mais mieux qu'aucune estimation sur les séries de travail 6-15 reps).
+    rm = w * (1 + r / 30)
+  } else if (formula === 'weight_dependent') {
     // SportRxiv 2024 — calibré sur 303 494 séries near-failure, 388 exercices
     const denominator = -2.55 + 4.58 * Math.log(w)
     if (denominator <= 0 || w < 20) {
@@ -306,6 +319,7 @@ export default function ProgressionClient() {
   const [exercicesData, setExercicesData] = useState({})
   const [selected, setSelected]     = useState(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [selectedReps, setSelectedReps] = useState(null)
   const [profileInfo, setProfileInfo] = useState({ sexe: null, poids: null })
 
   // ── Chargement des données ────────────────────────────────────────────────
@@ -419,9 +433,12 @@ export default function ProgressionClient() {
 
           // Convertir et valider poids + reps
           // poids est TEXT et peut contenir une virgule fr (ex: "102,5") → remplacer par "."
-          const poids = parseFloat(String(s.poids).replace(',', '.'))
+          let poids = parseFloat(String(s.poids).replace(',', '.'))
           const reps  = parseInt(s.reps_reelles)
           if (isNaN(poids) || isNaN(reps) || poids <= 0 || reps <= 0 || reps > 20) return
+          // Développé couché haltères : poids saisi = un seul haltère → on double
+          // pour obtenir la charge totale, comparable au développé couché barre.
+          if (isDevCoucheHalteres(ex.nom)) poids = poids * 2
           // Remplacer s.poids et s.reps_reelles par les valeurs numériques propres
           s = { ...s, poids, reps_reelles: reps }
 
@@ -627,34 +644,27 @@ export default function ProgressionClient() {
 
   // ── Records par nombre de répétitions ──────────────────────────────────────
   // Pour l'exercice sélectionné : le poids le plus lourd jamais soulevé, tout
-  // court, + le record dans chaque tranche de reps (1-3, 4-6, 7-9, 10-12, 13+).
+  // court, + le record pour chaque nombre exact de reps choisi (1 à 15).
 
   const repRecords = useMemo(() => {
     const allSets = currentData?.allSets || []
     if (!allSets.length) return null
 
-    const buckets = [
-      { label: '1-3 reps',   min: 1,  max: 3 },
-      { label: '4-6 reps',   min: 4,  max: 6 },
-      { label: '7-9 reps',   min: 7,  max: 9 },
-      { label: '10-12 reps', min: 10, max: 12 },
-      { label: '13+ reps',   min: 13, max: 999 },
-    ]
-
-    const bestInBucket = buckets.map(b => {
-      const inRange = allSets.filter(s => s.reps >= b.min && s.reps <= b.max)
-      if (!inRange.length) return { ...b, hasData: false }
+    const byReps = {}
+    for (let r = 1; r <= 15; r++) {
+      const inRange = allSets.filter(s => s.reps === r)
+      if (!inRange.length) continue
       const best = inRange.reduce((max, s) =>
         (s.poids > max.poids || (s.poids === max.poids && s.date > max.date)) ? s : max
       )
-      return { ...b, hasData: true, poids: best.poids, reps: best.reps, date: best.date }
-    }).filter(b => b.hasData)
+      byReps[r] = { poids: best.poids, reps: r, date: best.date }
+    }
 
     const absolute = allSets.reduce((max, s) =>
       (s.poids > max.poids || (s.poids === max.poids && s.date > max.date)) ? s : max
     )
 
-    return { buckets: bestInBucket, absolute }
+    return { byReps, absolute }
   }, [currentData])
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
@@ -766,7 +776,7 @@ export default function ProgressionClient() {
         open={pickerOpen}
         onOpen={() => setPickerOpen(true)}
         onClose={() => setPickerOpen(false)}
-        onSelect={nom => { setSelected(nom); setPickerOpen(false) }}
+        onSelect={nom => { setSelected(nom); setPickerOpen(false); setSelectedReps(null) }}
       />
 
       {/* ── Métriques ──────────────────────────────────────────────────────── */}
@@ -901,10 +911,13 @@ export default function ProgressionClient() {
           {/* Note scientifique */}
           <p style={S.sciNote}>
             {cfg
-              ? `Formule ${cfg.label} · ${cfg.formula === 'lombardi' ? 'Fiable 1–5 reps à effort maximal' : 'Fiable 1–8 reps à effort maximal'}`
+              ? `Formule ${cfg.label} · ${cfg.formula === 'lombardi' ? 'Fiable 1–5 reps à effort maximal (Epley au-delà)' : 'Fiable 1–8 reps à effort maximal'}`
               : 'Progression du poids utilisé (1RM non estimé pour cet exercice)'
             }
           </p>
+          {isDevCoucheHalteres(selected) && (
+            <p style={S.sciNote}>⚖️ Poids affiché = charge totale (2 haltères), comparable au développé couché à la barre.</p>
+          )}
         </div>
       )}
 
@@ -916,17 +929,39 @@ export default function ProgressionClient() {
             <span style={S.absRecordValue}>{repRecords.absolute.poids} kg × {repRecords.absolute.reps}</span>
             <span style={S.absRecordLabel}>Charge la plus lourde jamais soulevée · {formatDateFull(repRecords.absolute.date)}</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {repRecords.buckets.map(b => (
-              <div key={b.label} style={S.setRow}>
-                <span style={S.setDate}>{b.label}</span>
-                <div style={S.setRight}>
-                  <span style={S.setPoids}>{b.poids} kg × {b.reps}</span>
-                  <span style={S.setRm}>{formatDateShort(b.date)}</span>
-                </div>
-              </div>
-            ))}
+
+          {/* Sélecteur 1 à 15 reps */}
+          <div style={S.repsSelector}>
+            {Array.from({ length: 15 }, (_, i) => i + 1).map(r => {
+              const has = !!repRecords.byReps[r]
+              const isSel = selectedReps === r
+              return (
+                <button key={r} disabled={!has}
+                  onClick={() => setSelectedReps(isSel ? null : r)}
+                  style={{
+                    ...S.repChip,
+                    ...(isSel ? S.repChipActive : {}),
+                    ...(!has ? S.repChipDisabled : {}),
+                  }}>
+                  {r}
+                </button>
+              )
+            })}
           </div>
+
+          {selectedReps && repRecords.byReps[selectedReps] ? (
+            <div style={S.setRow}>
+              <span style={S.setDate}>Record à {selectedReps} rep{selectedReps > 1 ? 's' : ''}</span>
+              <div style={S.setRight}>
+                <span style={S.setPoids}>{repRecords.byReps[selectedReps].poids} kg</span>
+                <span style={S.setRm}>{formatDateShort(repRecords.byReps[selectedReps].date)}</span>
+              </div>
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', margin: '4px 0 0' }}>
+              Choisis un nombre de répétitions ci-dessus (en couleur = données disponibles)
+            </p>
+          )}
         </div>
       )}
 
@@ -1364,5 +1399,33 @@ const S = {
   absRecordLabel: {
     fontSize: '0.68rem',
     color: 'rgba(255,255,255,0.6)',
+  },
+
+  repsSelector: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  repChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    border: '1.5px solid #e5e7eb',
+    background: 'white',
+    color: '#374151',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  repChipActive: {
+    background: 'var(--chip-bg, #1a1a1a)',
+    color: 'var(--chip-text, #e4f816)',
+    borderColor: 'transparent',
+  },
+  repChipDisabled: {
+    color: '#d1d5db',
+    borderColor: '#f3f4f6',
+    cursor: 'default',
   },
 }
