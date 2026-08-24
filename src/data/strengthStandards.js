@@ -21,16 +21,21 @@ const STANDARDS = {
   },
 }
 
+// excludeKeywords : variantes qui ne sont pas comparables au mouvement de référence
+// (charge non standard — ex. haltères, où le poids saisi est celui d'un seul haltère
+// et ne correspond pas à la charge totale à la barre) → exclues du calcul de rang.
 export const BENCHMARK_EXERCISES = [
-  { key: 'developpe_couche',   label: 'Développé couché',   keywords: ['développé couché', 'developpe couche', 'bench'] },
-  { key: 'squat',              label: 'Squat',               keywords: ['squat'] },
-  { key: 'souleve_de_terre',   label: 'Soulevé de terre',    keywords: ['soulevé de terre', 'souleve de terre', 'deadlift', 'sdt'] },
+  { key: 'developpe_couche',   label: 'Développé couché',   keywords: ['développé couché', 'developpe couche', 'bench'], excludeKeywords: ['haltère', 'haltere', 'dumbbell'] },
+  { key: 'squat',              label: 'Squat',               keywords: ['squat'], excludeKeywords: ['haltère', 'haltere', 'dumbbell'] },
+  { key: 'souleve_de_terre',   label: 'Soulevé de terre',    keywords: ['soulevé de terre', 'souleve de terre', 'deadlift', 'sdt'], excludeKeywords: ['haltère', 'haltere', 'dumbbell'] },
 ]
 
 // Retrouve la clé de standard pour un nom d'exercice libre, ou null si non reconnu.
 export function matchBenchmarkExercise(nom) {
   const n = (nom || '').toLowerCase()
-  const found = BENCHMARK_EXERCISES.find(ex => ex.keywords.some(k => n.includes(k)))
+  const found = BENCHMARK_EXERCISES.find(ex =>
+    ex.keywords.some(k => n.includes(k)) && !(ex.excludeKeywords || []).some(k => n.includes(k))
+  )
   return found ? found.key : null
 }
 

@@ -22,17 +22,6 @@ const RANK_COLORS = {
 
 // ─── Formules 1RM ────────────────────────────────────────────────────────────
 
-/** Développé couché (ou incliné/décliné) à haltères : le poids saisi est celui
- *  d'un seul haltère. On le double pour avoir la charge totale équivalente et
- *  pouvoir comparer directement avec le développé couché à la barre. */
-function isDevCoucheHalteres(nom) {
-  const n = (nom || '').toLowerCase()
-  const isDevCouche = n.includes('couché') || n.includes('couche') || n.includes('bench') ||
-    n.includes('décliné') || n.includes('decline') || n.includes('incliné') || n.includes('incline')
-  const isHalteres = n.includes('haltère') || n.includes('haltere') || n.includes('dumbbell') || n.includes(' db ')
-  return isDevCouche && isHalteres
-}
-
 /** Détecte si un exercice est unilatéral (un seul membre à la fois).
  *  Pour ces exercices, le 1RM bilatéral n'est pas comparable → pas d'estimation. */
 function isUnilateral(nom) {
@@ -126,16 +115,16 @@ function getFormulaConfig(nom) {
  *  Retourne null si les valeurs sont invalides ou hors plage. */
 function calculate1RM(w, r, formula, correction = 0) {
   if (!w || !r || w <= 0 || r <= 0) return null
-  // Au-delà de 15 reps, aucune formule n'est fiable
-  if (r > 15) return null
+  // Lombardi (bench) : fiable jusqu'à 5 reps seulement. Au-delà, on ne renvoie
+  // rien plutôt qu'une estimation Epley qui gonfle largement le 1RM sur bench
+  // (déjà testé : produit un "Record" supérieur au vrai 1RM réel du client).
+  if (formula === 'lombardi' && r > 5) return null
+  // Autres formules : on exclut au-delà de 10 reps (trop incertaines sans RPE)
+  if (formula !== 'lombardi' && r > 10) return null
   if (r === 1) return w * (1 + (correction || 0))
 
   let rm
-  if (formula === 'lombardi' && r > 5) {
-    // Lombardi n'est fiable que jusqu'à 5 reps — au-delà, repli sur Epley
-    // (moins précis mais mieux qu'aucune estimation sur les séries de travail 6-15 reps).
-    rm = w * (1 + r / 30)
-  } else if (formula === 'weight_dependent') {
+  if (formula === 'weight_dependent') {
     // SportRxiv 2024 — calibré sur 303 494 séries near-failure, 388 exercices
     const denominator = -2.55 + 4.58 * Math.log(w)
     if (denominator <= 0 || w < 20) {
@@ -433,12 +422,9 @@ export default function ProgressionClient() {
 
           // Convertir et valider poids + reps
           // poids est TEXT et peut contenir une virgule fr (ex: "102,5") → remplacer par "."
-          let poids = parseFloat(String(s.poids).replace(',', '.'))
+          const poids = parseFloat(String(s.poids).replace(',', '.'))
           const reps  = parseInt(s.reps_reelles)
           if (isNaN(poids) || isNaN(reps) || poids <= 0 || reps <= 0 || reps > 20) return
-          // Développé couché haltères : poids saisi = un seul haltère → on double
-          // pour obtenir la charge totale, comparable au développé couché barre.
-          if (isDevCoucheHalteres(ex.nom)) poids = poids * 2
           // Remplacer s.poids et s.reps_reelles par les valeurs numériques propres
           s = { ...s, poids, reps_reelles: reps }
 
@@ -911,13 +897,10 @@ export default function ProgressionClient() {
           {/* Note scientifique */}
           <p style={S.sciNote}>
             {cfg
-              ? `Formule ${cfg.label} · ${cfg.formula === 'lombardi' ? 'Fiable 1–5 reps à effort maximal (Epley au-delà)' : 'Fiable 1–8 reps à effort maximal'}`
+              ? `Formule ${cfg.label} · ${cfg.formula === 'lombardi' ? 'Fiable 1–5 reps à effort maximal (pas d’estimation au-delà)' : 'Fiable 1–8 reps à effort maximal'}`
               : 'Progression du poids utilisé (1RM non estimé pour cet exercice)'
             }
           </p>
-          {isDevCoucheHalteres(selected) && (
-            <p style={S.sciNote}>⚖️ Poids affiché = charge totale (2 haltères), comparable au développé couché à la barre.</p>
-          )}
         </div>
       )}
 
@@ -931,23 +914,18 @@ export default function ProgressionClient() {
           </div>
 
           {/* Sélecteur 1 à 15 reps */}
-          <div style={S.repsSelector}>
-            {Array.from({ length: 15 }, (_, i) => i + 1).map(r => {
-              const has = !!repRecords.byReps[r]
-              const isSel = selectedReps === r
-              return (
-                <button key={r} disabled={!has}
-                  onClick={() => setSelectedReps(isSel ? null : r)}
-                  style={{
-                    ...S.repChip,
-                    ...(isSel ? S.repChipActive : {}),
-                    ...(!has ? S.repChipDisabled : {}),
-                  }}>
-                  {r}
-                </button>
-              )
-            })}
-          </div>
+          <select
+            value={selectedReps || ''}
+            onChange={e => setSelectedReps(e.target.value ? Number(e.target.value) : null)}
+            style={S.repsSelect}
+          >
+            <option value="">Choisir un nombre de répétitions…</option>
+            {Array.from({ length: 15 }, (_, i) => i + 1).map(r => (
+              <option key={r} value={r} disabled={!repRecords.byReps[r]}>
+                {r} rep{r > 1 ? 's' : ''}{!repRecords.byReps[r] ? ' — pas de données' : ''}
+              </option>
+            ))}
+          </select>
 
           {selectedReps && repRecords.byReps[selectedReps] ? (
             <div style={S.setRow}>
@@ -959,7 +937,7 @@ export default function ProgressionClient() {
             </div>
           ) : (
             <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', margin: '4px 0 0' }}>
-              Choisis un nombre de répétitions ci-dessus (en couleur = données disponibles)
+              Choisis un nombre de répétitions dans la liste ci-dessus
             </p>
           )}
         </div>
@@ -1401,31 +1379,18 @@ const S = {
     color: 'rgba(255,255,255,0.6)',
   },
 
-  repsSelector: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-  },
-  repChip: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  repsSelect: {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '0.65rem 0.8rem',
     border: '1.5px solid #e5e7eb',
+    borderRadius: 10,
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    color: '#1a1a1a',
     background: 'white',
-    color: '#374151',
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-  repChipActive: {
-    background: 'var(--chip-bg, #1a1a1a)',
-    color: 'var(--chip-text, #e4f816)',
-    borderColor: 'transparent',
-  },
-  repChipDisabled: {
-    color: '#d1d5db',
-    borderColor: '#f3f4f6',
-    cursor: 'default',
+    outline: 'none',
+    fontFamily: 'inherit',
+    marginBottom: 12,
   },
 }
