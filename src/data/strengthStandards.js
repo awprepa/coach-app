@@ -6,6 +6,21 @@
 
 export const RANKS = ['Fer', 'Bronze', 'Argent', 'Or', 'Platine', 'Diamant', 'Champion']
 
+// Records du monde raw (sans équipement de soutien, fédérations type IPF/records
+// reconnus) les plus larges/récents connus — uniquement pour les mouvements où un
+// record du monde a un sens univoque (powerlifting). Pas de record pour les
+// exercices d'accessoire (rowing, hip thrust, dips, tractions, développé
+// militaire...) où il n'existe pas de circuit de compétition standardisé.
+export const WORLD_RECORDS = {
+  developpe_couche:  { homme: 355, femme: 201 },
+  squat:              { homme: 505, femme: 300 },
+  souleve_de_terre:  { homme: 501, femme: 300 },
+}
+
+export function getWorldRecord(exerciseKey, sexe) {
+  return WORLD_RECORDS[exerciseKey]?.[sexe] ?? null
+}
+
 const STANDARDS = {
   developpe_couche: {
     homme: [0.5, 0.75, 1.0, 1.5, 1.625, 1.75],

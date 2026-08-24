@@ -5,7 +5,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
-import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank, getBareme, estimatePercentile } from '../../data/strengthStandards'
+import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank, getBareme, estimatePercentile, getWorldRecord } from '../../data/strengthStandards'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -167,7 +167,7 @@ function applyRpeCorrection(rm, rpe) {
 
 // ─── Groupe musculaire (pour le tri des chips) ────────────────────────────────
 
-const GROUPE_ORDER = ['jambes', 'dos', 'pectoraux', 'epaules', 'bras', 'autres']
+const GROUPE_ORDER = ['pectoraux', 'dos', 'jambes', 'epaules', 'bras', 'autres']
 
 function getGroupeMusculaire(nom) {
   const n = (nom || '').toLowerCase()
@@ -222,11 +222,17 @@ function getGroupeMusculaire(nom) {
 }
 
 /** Tri principal des exercices :
- *  1. Groupe musculaire (Jambes → Dos → Pectoraux → Épaules → Bras → Autres)
- *  2. Dans chaque groupe : polyarticulaires avec formule 1RM en premier
- *  3. Alphabétique à égalité */
+ *  1. Exercices "classés" (avec un rang/médaille) tout en haut
+ *  2. Groupe musculaire (Pectoraux → Dos → Jambes → Épaules → Bras → Autres)
+ *  3. Dans chaque groupe : polyarticulaires avec formule 1RM en premier
+ *  4. Alphabétique à égalité */
 function sortExercices(exNames, exercicesData) {
   return [...exNames].sort((a, b) => {
+    // Exercices classés (bench, squat, etc.) en priorité absolue
+    const ca = matchBenchmarkExercise(a) ? 0 : 1
+    const cb = matchBenchmarkExercise(b) ? 0 : 1
+    if (ca !== cb) return ca - cb
+
     const ga = GROUPE_ORDER.indexOf(getGroupeMusculaire(a))
     const gb = GROUPE_ORDER.indexOf(getGroupeMusculaire(b))
     if (ga !== gb) return ga - gb
@@ -532,15 +538,9 @@ export default function ProgressionClient() {
 
         setExercicesData(result)
 
-        // Sélectionner en priorité : exercice avec formule 1RM ET le plus de points
-        const keys = Object.keys(result)
-        const bestKey = keys
-          .sort((a, b) => {
-            const aHas = result[a].config ? 1 : 0
-            const bHas = result[b].config ? 1 : 0
-            if (bHas !== aHas) return bHas - aHas
-            return result[b].points.length - result[a].points.length
-          })[0]
+        // Sélectionner par défaut le premier exercice du même ordre que la liste
+        // déroulante : classés (bench/squat/etc.) d'abord, puis pecs → dos → jambes.
+        const bestKey = sortExercices(Object.keys(result), result)[0]
         if (bestKey) setSelected(bestKey)
 
       } catch (e) {
@@ -641,7 +641,8 @@ export default function ProgressionClient() {
       const rank = computeRank(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
       const bareme = getBareme(bench.key, profileInfo.poids, profileInfo.sexe)
       const percentile = estimatePercentile(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
-      return { ...bench, hasData: true, bestRm, rank, bareme, percentile }
+      const wr = getWorldRecord(bench.key, profileInfo.sexe)
+      return { ...bench, hasData: true, bestRm, rank, bareme, percentile, wr }
     })
   }, [exercicesData, profileInfo])
 
@@ -692,7 +693,7 @@ export default function ProgressionClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
       {/* Header */}
       <div style={S.header}>
-        <h1 style={S.headerTitle}>📈 Progression</h1>
+        <h1 style={S.headerTitle}>Progression</h1>
         <p style={S.headerSub}>Évolution de tes performances</p>
       </div>
       <div style={S.medalsSection}>
@@ -738,7 +739,7 @@ export default function ProgressionClient() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={S.header}>
-        <h1 style={S.headerTitle}>📈 Progression</h1>
+        <h1 style={S.headerTitle}>Progression</h1>
         <p style={S.headerSub}>Évolution de tes performances</p>
       </div>
 
@@ -817,6 +818,13 @@ export default function ProgressionClient() {
                         <span style={S.baremeKg}>{b.kg} kg</span>
                       </div>
                     ))}
+                    {selectedMedal.wr && (
+                      <div style={S.wrRow}>
+                        <span style={S.wrBadge}>WR</span>
+                        <span style={S.wrLabel}>Record du monde</span>
+                        <span style={S.wrKg}>{selectedMedal.wr} kg</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1405,6 +1413,35 @@ const S = {
     fontSize: '0.78rem',
     fontWeight: 800,
     color: '#1a1a1a',
+  },
+  wrRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '7px 8px',
+    marginTop: 4,
+    borderRadius: 8,
+    background: 'linear-gradient(90deg, #1d3a8a, #1e40af)',
+  },
+  wrBadge: {
+    fontSize: '0.66rem',
+    fontWeight: 900,
+    color: '#1e3a8a',
+    background: '#fbbf24',
+    borderRadius: 5,
+    padding: '2px 6px',
+    letterSpacing: '0.03em',
+  },
+  wrLabel: {
+    flex: 1,
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    color: '#fde68a',
+  },
+  wrKg: {
+    fontSize: '0.82rem',
+    fontWeight: 900,
+    color: '#fbbf24',
   },
 
   // Chips
