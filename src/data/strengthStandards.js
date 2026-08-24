@@ -6,15 +6,19 @@
 
 export const RANKS = ['Fer', 'Bronze', 'Argent', 'Or', 'Platine', 'Diamant', 'Champion']
 
-// Records du monde raw (sans équipement de soutien, fédérations type IPF/records
-// reconnus) les plus larges/récents connus — uniquement pour les mouvements où un
-// record du monde a un sens univoque (powerlifting). Pas de record pour les
+// Records du monde raw (sans équipement de soutien) vérifiés au 24/08/2026 :
+// Hommes — développé couché 355 kg (Julius Maddox), squat 490,5 kg (Devonte
+// Lewis), soulevé de terre 492,5 kg (Colton Engelbrecht).
+// Femmes — développé couché 207,5 kg (April Mathis), squat 318 kg (Sonita
+// Muluh), soulevé de terre 297,5 kg (Samantha Rice).
+// Ces records progressent régulièrement (record homme squat/deadlift battus
+// courant 2026) — à revérifier périodiquement. Pas de record pour les
 // exercices d'accessoire (rowing, hip thrust, dips, tractions, développé
 // militaire...) où il n'existe pas de circuit de compétition standardisé.
 export const WORLD_RECORDS = {
-  developpe_couche:  { homme: 355, femme: 201 },
-  squat:              { homme: 505, femme: 300 },
-  souleve_de_terre:  { homme: 501, femme: 300 },
+  developpe_couche:  { homme: 355,   femme: 207.5 },
+  squat:              { homme: 490.5, femme: 318 },
+  souleve_de_terre:  { homme: 492.5, femme: 297.5 },
 }
 
 export function getWorldRecord(exerciseKey, sexe) {

@@ -811,10 +811,7 @@ export default function ProgressionClient() {
 
                 {selectedMedal.wr && (
                   <div style={S.wrGlobalBox}>
-                    <div>
-                      <p style={S.wrGlobalPct}>{Math.round((selectedMedal.bestRm / selectedMedal.wr) * 1000) / 10}% du record du monde</p>
-                      <p style={S.wrGlobalSub}>Classement mondial, hors catégorie de poids — même échelle pour tout le monde</p>
-                    </div>
+                    <p style={S.wrGlobalSub}>Classement mondial, hors catégorie de poids — même échelle pour tout le monde</p>
                     <span style={S.wrBadge}>WR {selectedMedal.wr} kg</span>
                   </div>
                 )}
@@ -1437,17 +1434,12 @@ const S = {
     padding: '10px 12px',
     margin: '10px 0',
   },
-  wrGlobalPct: {
-    fontSize: '0.92rem',
-    fontWeight: 900,
-    color: '#fbbf24',
-    margin: 0,
-  },
   wrGlobalSub: {
-    fontSize: '0.6rem',
-    fontWeight: 600,
+    flex: 1,
+    fontSize: '0.68rem',
+    fontWeight: 700,
     color: '#c7d7fb',
-    margin: '2px 0 0',
+    margin: 0,
     lineHeight: 1.3,
   },
 
