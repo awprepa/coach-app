@@ -98,28 +98,55 @@ export function matchBenchmarkExercise(nom) {
   return found ? found.key : null
 }
 
+// Arrondit un seuil à un chiffre "rond" : à la dizaine près en dessous de 100 kg,
+// à la cinquantaine près au-delà — pour que les paliers affichés (et utilisés
+// pour le calcul du rang, mêmes valeurs) soient des chiffres lisibles (100,
+// 150, 200 kg...) plutôt que 94.5, 131, 169.
+function roundToNiceKg(kg) {
+  const base = kg >= 100 ? 50 : 10
+  return Math.max(base, Math.round(kg / base) * base)
+}
+
+// Seuils en kg (arrondis), pour un poids de corps donné. Garantit des seuils
+// strictement croissants : deux ratios proches peuvent arrondir sur le même
+// chiffre rond (ex: 96 et 99 → 100 et 100) ce qui ferait sauter un rang entier
+// dès qu'il est atteint — on décale alors le suivant au prochain palier rond.
+function roundedThresholdsKg(exerciseKey, bodyweightKg, sexe) {
+  const table = STANDARDS[exerciseKey]?.[sexe]
+  if (!table || !bodyweightKg) return null
+  const result = []
+  let prev = 0
+  for (const ratio of table) {
+    let kg = roundToNiceKg(ratio * bodyweightKg)
+    const base = kg >= 100 ? 50 : 10
+    while (kg <= prev) kg += base
+    result.push(kg)
+    prev = kg
+  }
+  return result
+}
+
 // Calcule le rang atteint pour un 1RM donné, + ce qu'il reste à soulever pour le rang suivant.
 // Retourne null si les données nécessaires (poids de corps, sexe, exercice reconnu) manquent.
 export function computeRank(exerciseKey, oneRM, bodyweightKg, sexe) {
   if (!exerciseKey || !oneRM || !bodyweightKg || !sexe) return null
-  const table = STANDARDS[exerciseKey]?.[sexe]
-  if (!table) return null
+  const thresholdsKg = roundedThresholdsKg(exerciseKey, bodyweightKg, sexe)
+  if (!thresholdsKg) return null
 
-  const ratio = oneRM / bodyweightKg
   let rankIndex = 0 // 0 = Fer
-  for (let i = 0; i < table.length; i++) {
-    if (ratio >= table[i]) rankIndex = i + 1
+  for (let i = 0; i < thresholdsKg.length; i++) {
+    if (oneRM >= thresholdsKg[i]) rankIndex = i + 1
   }
 
   const rank = RANKS[rankIndex]
-  const isMax = rankIndex >= table.length // déjà au-delà du dernier seuil (Champion)
-  const nextThresholdKg = isMax ? null : Math.round(table[rankIndex] * bodyweightKg * 2) / 2
+  const isMax = rankIndex >= thresholdsKg.length // déjà au-delà du dernier seuil (Champion)
+  const nextThresholdKg = isMax ? null : thresholdsKg[rankIndex]
   const kgToNextRank = isMax ? null : Math.round((nextThresholdKg - oneRM) * 2) / 2
 
   return {
     rank,
     rankIndex,
-    ratio,
+    ratio: oneRM / bodyweightKg,
     nextRank: isMax ? null : RANKS[rankIndex + 1],
     nextThresholdKg,
     kgToNextRank,
@@ -129,12 +156,9 @@ export function computeRank(exerciseKey, oneRM, bodyweightKg, sexe) {
 
 // Barème complet : à partir de combien de kg chaque rang commence, pour ce poids de corps.
 export function getBareme(exerciseKey, bodyweightKg, sexe) {
-  const table = STANDARDS[exerciseKey]?.[sexe]
-  if (!table || !bodyweightKg) return null
-  return RANKS.slice(1).map((rank, i) => ({
-    rank,
-    kg: Math.round(table[i] * bodyweightKg * 2) / 2,
-  }))
+  const thresholdsKg = roundedThresholdsKg(exerciseKey, bodyweightKg, sexe)
+  if (!thresholdsKg) return null
+  return RANKS.slice(1).map((rank, i) => ({ rank, kg: thresholdsKg[i] }))
 }
 
 // ─── Rangs personnalisés (coach) ────────────────────────────────────────────
