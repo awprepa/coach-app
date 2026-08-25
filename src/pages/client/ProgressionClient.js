@@ -646,7 +646,8 @@ export default function ProgressionClient() {
       const bareme = getBareme(bench.key, profileInfo.poids, profileInfo.sexe)
       const percentile = estimatePercentile(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
       const wr = getWorldRecord(bench.key, profileInfo.sexe)
-      return { ...bench, hasData: true, bestRm, rank, bareme, percentile, wr }
+      const level = levelFromXp(computeExerciseXp(data.allSets, profileInfo.poids))
+      return { ...bench, hasData: true, bestRm, rank, bareme, percentile, wr, level }
     })
 
     // Rangs personnalisés créés par le coach pour un exercice de son choix —
@@ -661,7 +662,8 @@ export default function ProgressionClient() {
       const thresholds = [cr.seuil_bronze_kg, cr.seuil_argent_kg, cr.seuil_or_kg, cr.seuil_platine_kg, cr.seuil_diamant_kg, cr.seuil_champion_kg]
       const rank = computeCustomRank(bestRm, thresholds)
       const bareme = getCustomBareme(thresholds)
-      return { key: `custom-${cr.id}`, label: cr.exercice_nom, hasData: true, isCustom: true, bestRm, rank, bareme, percentile: null, wr: null }
+      const level = levelFromXp(computeExerciseXp(allSets, profileInfo.poids))
+      return { key: `custom-${cr.id}`, label: cr.exercice_nom, hasData: true, isCustom: true, bestRm, rank, bareme, percentile: null, wr: null, level }
     })
 
     return [...standard, ...custom]
@@ -782,17 +784,14 @@ export default function ProgressionClient() {
       </div>
 
       {/* ── Niveau de compte ─────────────────────────────────────────────────── */}
-      <div style={S.levelSection}>
-        <div style={S.levelRow}>
-          <div style={S.levelBadge}>{globalLevel.level}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={S.levelTitle}>Niveau {globalLevel.level}</p>
-            <div style={S.levelBarTrack}>
-              <div style={{ ...S.levelBarFill, width: `${(globalLevel.xp / globalLevel.xpForNextLevel) * 100}%` }} />
-            </div>
-            <p style={S.levelSub}>{globalLevel.xp} / {globalLevel.xpForNextLevel} XP</p>
-          </div>
+      <div style={S.statusCard}>
+        <div style={S.statusTop}>
+          <div style={S.statusLevelNum}>Niveau {globalLevel.level}<span style={S.statusLevelSuffix}> de compte</span></div>
         </div>
+        <div style={S.statusTrack}>
+          <div style={{ ...S.statusFill, width: `${(globalLevel.xp / globalLevel.xpForNextLevel) * 100}%` }} />
+        </div>
+        <p style={S.statusSub}>{globalLevel.xp} / {globalLevel.xpForNextLevel} XP jusqu'au niveau {globalLevel.level + 1}</p>
       </div>
 
       {/* ── Médailles / rangs ──────────────────────────────────────────────── */}
@@ -811,7 +810,10 @@ export default function ProgressionClient() {
               </button>
             )}
             <div style={S.medalsStrip}>
-              {(missingProfile ? medals.filter(m => m.isCustom) : medals).map(m => {
+              {(missingProfile ? medals.filter(m => m.isCustom) : medals)
+                .slice()
+                .sort((a, b) => (b.level?.level || 0) - (a.level?.level || 0))
+                .map(m => {
                 const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Fer']
                 const isSel = selectedMedal?.key === m.key
                 return (
@@ -822,6 +824,7 @@ export default function ProgressionClient() {
                       ...(isSel ? { border: `2px solid ${colors.text}` } : {}),
                       ...(!m.hasData ? S.medalChipDisabled : {}),
                     }}>
+                    {m.hasData && <p style={S.medalChipLevel}>Nv. {m.level.level}</p>}
                     <p style={S.medalChipLabel}>{m.label}</p>
                     {m.hasData ? (
                       <div style={{ ...S.medalBadge, background: colors.bg, color: colors.fg }}>{m.rank.rank}</div>
@@ -835,20 +838,37 @@ export default function ProgressionClient() {
 
             {selectedMedal && (
               <div style={S.medalDetail}>
-                <div style={S.medalDetailHead}>
-                  <div>
-                    <p style={S.medalDetailLabel}>{selectedMedal.label}</p>
-                    <p style={S.medalDetailValue}>{selectedMedal.bestRm} kg</p>
+                <div style={S.exStatusCard}>
+                  <div style={S.exStatusRow}>
+                    <div>
+                      <p style={S.medalDetailLabel}>{selectedMedal.label}</p>
+                      <p style={S.exStatusValue}>{selectedMedal.bestRm} kg</p>
+                    </div>
+                    <div style={{ ...S.medalBadge, background: RANK_COLORS[selectedMedal.rank.rank].bg, color: RANK_COLORS[selectedMedal.rank.rank].fg, fontSize: '0.78rem', padding: '5px 12px' }}>
+                      {selectedMedal.rank.rank}
+                    </div>
                   </div>
-                  <div style={{ ...S.medalBadge, background: RANK_COLORS[selectedMedal.rank.rank].bg, color: RANK_COLORS[selectedMedal.rank.rank].fg, fontSize: '0.78rem', padding: '5px 12px' }}>
-                    {selectedMedal.rank.rank}
-                  </div>
-                </div>
 
-                {selectedMedal.rank.isMax
-                  ? <p style={S.medalNext}>Rang maximal atteint 🎉</p>
-                  : <p style={S.medalNext}>{selectedMedal.rank.kgToNextRank} kg pour atteindre {selectedMedal.rank.nextRank}</p>
-                }
+                  {selectedMedal.rank.isMax
+                    ? <p style={S.exStatusNextTxt}>Rang maximal atteint</p>
+                    : <p style={S.exStatusNextTxt}>{selectedMedal.rank.kgToNextRank} kg pour atteindre {selectedMedal.rank.nextRank}</p>
+                  }
+
+                  {selectedMedal.level && (
+                    <>
+                      <div style={S.exStatusDivider} />
+                      <div style={S.exStatusLevelRow}>
+                        <div style={S.exStatusLevelBadge}>{selectedMedal.level.level}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={S.exStatusLevelTitle}>Niveau {selectedMedal.level.level} sur cet exercice</p>
+                          <div style={S.exStatusLevelTrack}>
+                            <div style={{ ...S.exStatusLevelFill, width: `${(selectedMedal.level.xp / selectedMedal.level.xpForNextLevel) * 100}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {selectedMedal.percentile && (
                   <div style={S.percentileBox}>
@@ -1285,37 +1305,46 @@ const S = {
     margin: 0,
   },
 
-  // Niveau / XP
-  levelSection: {
+  // Niveau / XP — carte de statut (dégradé bleu)
+  statusCard: {
     margin: '14px 16px 0',
-    background: 'white',
-    borderRadius: 14,
-    padding: '12px 14px',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    position: 'relative',
+    borderRadius: 18,
+    padding: '17px 18px 18px',
+    background: 'linear-gradient(120deg, #1b2a52 0%, #24407a 55%, #2f5aa8 100%)',
+    boxShadow: '0 10px 26px rgba(31,55,105,0.32)',
+    overflow: 'hidden',
   },
-  levelRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
+  statusTop: {
+    marginBottom: 11,
   },
-  levelBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '1.05rem',
+  statusLevelNum: {
+    fontSize: '1.3rem',
     fontWeight: 900,
-    color: 'var(--chip-text, #e4f816)',
-    background: 'var(--chip-bg, #1a1a1a)',
+    color: 'white',
+    lineHeight: 1,
   },
-  levelTitle: {
+  statusLevelSuffix: {
     fontSize: '0.82rem',
-    fontWeight: 800,
-    color: '#1a1a1a',
-    margin: '0 0 4px',
+    fontWeight: 700,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  statusTrack: {
+    height: 8,
+    background: 'rgba(255,255,255,0.16)',
+    borderRadius: 99,
+    overflow: 'hidden',
+  },
+  statusFill: {
+    height: '100%',
+    borderRadius: 99,
+    background: 'linear-gradient(90deg, #7cb8ff, #a7d1ff)',
+  },
+  statusSub: {
+    fontSize: '0.66rem',
+    color: 'rgba(255,255,255,0.62)',
+    fontWeight: 700,
+    margin: '7px 0 0',
   },
   levelBarTrack: {
     height: 6,
@@ -1412,11 +1441,69 @@ const S = {
     color: '#1a1a1a',
     margin: 0,
   },
-  medalNext: {
-    fontSize: '0.62rem',
-    color: '#9ca3af',
-    margin: 0,
-    lineHeight: 1.3,
+  exStatusCard: {
+    position: 'relative',
+    borderRadius: 14,
+    padding: '13px 14px 14px',
+    background: 'linear-gradient(120deg, #1b2a52 0%, #24407a 55%, #2f5aa8 100%)',
+    overflow: 'hidden',
+  },
+  exStatusRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  exStatusValue: {
+    fontSize: '1.2rem',
+    fontWeight: 900,
+    color: 'white',
+    margin: '2px 0 0',
+  },
+  exStatusNextTxt: {
+    fontSize: '0.64rem',
+    color: 'rgba(255,255,255,0.62)',
+    fontWeight: 700,
+    margin: '8px 0 0',
+  },
+  exStatusDivider: {
+    height: 1,
+    background: 'rgba(255,255,255,0.16)',
+    margin: '11px 0 10px',
+  },
+  exStatusLevelRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exStatusLevelBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.64rem',
+    fontWeight: 900,
+    color: 'white',
+    background: 'rgba(255,255,255,0.16)',
+  },
+  exStatusLevelTitle: {
+    fontSize: '0.66rem',
+    fontWeight: 800,
+    color: 'white',
+    margin: '0 0 4px',
+  },
+  exStatusLevelTrack: {
+    height: 5,
+    background: 'rgba(255,255,255,0.18)',
+    borderRadius: 99,
+    overflow: 'hidden',
+  },
+  exStatusLevelFill: {
+    height: '100%',
+    borderRadius: 99,
+    background: '#e4f816',
   },
   medalNoData: {
     fontSize: '0.68rem',
@@ -1462,6 +1549,13 @@ const S = {
     opacity: 0.5,
     cursor: 'default',
   },
+  medalChipLevel: {
+    fontSize: '0.6rem',
+    fontWeight: 800,
+    color: '#9ca3af',
+    margin: '0 0 3px',
+    textAlign: 'center',
+  },
   medalChipLabel: {
     fontSize: '0.66rem',
     fontWeight: 700,
@@ -1485,14 +1579,8 @@ const S = {
   medalDetailLabel: {
     fontSize: '0.72rem',
     fontWeight: 700,
-    color: '#6b7280',
+    color: 'rgba(255,255,255,0.6)',
     margin: 0,
-  },
-  medalDetailValue: {
-    fontSize: '1.3rem',
-    fontWeight: 900,
-    color: '#1a1a1a',
-    margin: '2px 0 0',
   },
   percentileBox: {
     background: '#f9fafb',
