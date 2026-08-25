@@ -16,6 +16,8 @@ import { useNotifCtx } from '../context/NotifContext'
 import ModaleConditions from '../components/ModaleConditions'
 import ModaleContratASigner from '../components/ModaleContratASigner'
 import { CURRENT_CONDITIONS_VERSION } from './Conditions'
+import { loadClientAllSets, loadClientBodyweight } from '../data/exerciseHistory'
+import { computeExerciseXp, levelFromXp } from '../data/xpSystem'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -52,6 +54,7 @@ export default function AccueilClient() {
   const [showPastCycles, setShowPastCycles] = useState(false)
 
   const [nutritionToday, setNutritionToday] = useState(null)
+  const [levelWidget, setLevelWidget] = useState(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
@@ -63,6 +66,24 @@ export default function AccueilClient() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClientData() }, [])
+
+  useEffect(() => {
+    if (!client?.id) return
+    loadLevelWidget(client.id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client?.id])
+
+  async function loadLevelWidget(clientId) {
+    const [allSetsByName, bodyweight] = await Promise.all([
+      loadClientAllSets(clientId),
+      loadClientBodyweight(clientId),
+    ])
+    const totalXp = Object.values(allSetsByName).reduce(
+      (sum, sets) => sum + computeExerciseXp(sets, bodyweight), 0
+    )
+    if (totalXp <= 0) { setLevelWidget(false); return }
+    setLevelWidget(levelFromXp(totalXp))
+  }
 
   useEffect(() => {
     if (!client?.id) return
@@ -339,6 +360,19 @@ export default function AccueilClient() {
           {client.objectif && <p style={styles.subtitle}>{client.objectif}</p>}
         </div>
 
+        {levelWidget && (
+          <div onClick={() => navigate('/client/progression')} style={styles.levelWidget}>
+            <div style={styles.levelWidgetBadge}>{levelWidget.level}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={styles.levelWidgetTitle}>Niveau {levelWidget.level}</p>
+              <div style={styles.levelWidgetBarTrack}>
+                <div style={{ ...styles.levelWidgetBarFill, width: `${(levelWidget.xp / levelWidget.xpForNextLevel) * 100}%` }} />
+              </div>
+            </div>
+            <span style={styles.levelWidgetChevron}>›</span>
+          </div>
+        )}
+
         {(permission === 'default' || (permission === 'granted' && !subscribed)) && (
           <button onClick={requestAndSubscribe} style={styles.pushBtn}>
             🔔 Activer les notifications push
@@ -598,6 +632,12 @@ const styles = {
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
   nutritionWidget: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: '4px solid #16a34a' },
+  levelWidget: { display: 'flex', alignItems: 'center', gap: 12, background: 'white', borderRadius: 14, padding: '0.8rem 1rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: '4px solid var(--accent-stripe)' },
+  levelWidgetBadge: { width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: 'var(--chip-text, #e4f816)', background: 'var(--chip-bg, #1a1a1a)' },
+  levelWidgetTitle: { fontSize: '0.78rem', fontWeight: 800, color: '#1a1a1a', margin: '0 0 5px' },
+  levelWidgetBarTrack: { height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' },
+  levelWidgetBarFill: { height: '100%', background: 'var(--chip-bg, #1a1a1a)', borderRadius: 99 },
+  levelWidgetChevron: { color: '#d1d5db', fontSize: '1.2rem', flexShrink: 0 },
   weekRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 12, padding: '0.65rem 1rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
   weekDay:     { width: 40, height: 40, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 }
