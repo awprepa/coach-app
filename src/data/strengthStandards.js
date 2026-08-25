@@ -137,6 +137,36 @@ export function getBareme(exerciseKey, bodyweightKg, sexe) {
   }))
 }
 
+// ─── Rangs personnalisés (coach) ────────────────────────────────────────────
+// Contrairement aux exercices standards, pas de ratio poids de corps ici : le
+// coach fixe directement les seuils en kg pour un exercice de son choix.
+
+export function computeCustomRank(bestKg, thresholds) {
+  if (!bestKg || !thresholds?.length) return null
+  let rankIndex = 0
+  for (let i = 0; i < thresholds.length; i++) {
+    if (bestKg >= thresholds[i]) rankIndex = i + 1
+  }
+  const rank = RANKS[rankIndex]
+  const isMax = rankIndex >= thresholds.length
+  const nextThresholdKg = isMax ? null : thresholds[rankIndex]
+  const kgToNextRank = isMax ? null : Math.round((nextThresholdKg - bestKg) * 2) / 2
+
+  return {
+    rank,
+    rankIndex,
+    nextRank: isMax ? null : RANKS[rankIndex + 1],
+    nextThresholdKg,
+    kgToNextRank,
+    isMax,
+  }
+}
+
+export function getCustomBareme(thresholds) {
+  if (!thresholds?.length) return null
+  return RANKS.slice(1).map((rank, i) => ({ rank, kg: thresholds[i] }))
+}
+
 // ─── Percentile de population ──────────────────────────────────────────────
 //
 // Modèle : le ratio charge/poids-de-corps est supposé suivre une loi normale

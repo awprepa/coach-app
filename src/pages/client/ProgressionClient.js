@@ -5,7 +5,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
-import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank, getBareme, estimatePercentile, getWorldRecord } from '../../data/strengthStandards'
+import { BENCHMARK_EXERCISES, matchBenchmarkExercise, computeRank, getBareme, estimatePercentile, getWorldRecord, computeCustomRank, getCustomBareme } from '../../data/strengthStandards'
 import { computeExerciseXp, levelFromXp } from '../../data/xpSystem'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
@@ -333,6 +333,7 @@ export default function ProgressionClient() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedReps, setSelectedReps] = useState(null)
   const [profileInfo, setProfileInfo] = useState({ sexe: null, poids: null })
+  const [customRanks, setCustomRanks] = useState([])
   const [selectedMedalKey, setSelectedMedalKey] = useState(null)
 
   // ── Chargement des données ────────────────────────────────────────────────
@@ -363,14 +364,16 @@ export default function ProgressionClient() {
 
         // 1bis. Sexe + poids de corps (pour le calcul des rangs) — poids : dernière
         // entrée wellness en priorité (historique réel), sinon le profil nutrition.
-        const [{ data: profile }, { data: lastWellness }] = await Promise.all([
+        const [{ data: profile }, { data: lastWellness }, { data: customRanksData }] = await Promise.all([
           supabase.from('nutrition_profile').select('sexe, poids_kg').eq('client_id', client.id).maybeSingle(),
           supabase.from('wellness').select('poids').eq('client_id', client.id).not('poids', 'is', null).order('date', { ascending: false }).limit(1).maybeSingle(),
+          supabase.from('custom_rank_exercises').select('*').eq('client_id', client.id),
         ])
         setProfileInfo({
           sexe: profile?.sexe || null,
           poids: lastWellness?.poids || (profile?.poids_kg ? parseFloat(profile.poids_kg) : null) || null,
         })
+        setCustomRanks(customRanksData || [])
 
         // 2. Programmes du client
         const { data: progs } = await supabase
@@ -624,7 +627,7 @@ export default function ProgressionClient() {
   // ── Médailles / rangs (Développé couché, Squat, Soulevé de terre) ─────────
 
   const medals = useMemo(() => {
-    return BENCHMARK_EXERCISES.map(bench => {
+    const standard = BENCHMARK_EXERCISES.map(bench => {
       // Parmi tous les noms d'exercices du client, on prend celui qui matche ce
       // benchmark et qui a le plus de tests réels à 1 rep (au cas où plusieurs
       // variantes du même mouvement existent dans son historique). Les rangs ne
@@ -645,7 +648,24 @@ export default function ProgressionClient() {
       const wr = getWorldRecord(bench.key, profileInfo.sexe)
       return { ...bench, hasData: true, bestRm, rank, bareme, percentile, wr }
     })
-  }, [exercicesData, profileInfo])
+
+    // Rangs personnalisés créés par le coach pour un exercice de son choix —
+    // basés sur le poids le plus lourd réellement soulevé (donnée brute, pas
+    // une estimation), comparé aux seuils en kg fixés par le coach.
+    const custom = customRanks.map(cr => {
+      const data = exercicesData[cr.exercice_nom]
+      const allSets = data?.allSets || []
+      if (!allSets.length) return { key: `custom-${cr.id}`, label: cr.exercice_nom, hasData: false, isCustom: true }
+
+      const bestRm = Math.max(...allSets.map(s => s.poids))
+      const thresholds = [cr.seuil_bronze_kg, cr.seuil_argent_kg, cr.seuil_or_kg, cr.seuil_platine_kg, cr.seuil_diamant_kg, cr.seuil_champion_kg]
+      const rank = computeCustomRank(bestRm, thresholds)
+      const bareme = getCustomBareme(thresholds)
+      return { key: `custom-${cr.id}`, label: cr.exercice_nom, hasData: true, isCustom: true, bestRm, rank, bareme, percentile: null, wr: null }
+    })
+
+    return [...standard, ...custom]
+  }, [exercicesData, profileInfo, customRanks])
 
   const selectedMedal = medals.find(m => m.key === selectedMedalKey && m.hasData) || medals.find(m => m.hasData) || null
 
@@ -778,15 +798,20 @@ export default function ProgressionClient() {
       {/* ── Médailles / rangs ──────────────────────────────────────────────── */}
       <div style={S.medalsSection}>
         <h2 style={S.sectionTitle}>Tes rangs</h2>
-        <p style={S.medalsHint}>Basé uniquement sur tes vrais records testés à 1 répétition (pas d'estimation).</p>
-        {missingProfile ? (
+        <p style={S.medalsHint}>Basé uniquement sur tes vrais poids soulevés (pas d'estimation).</p>
+        {missingProfile && customRanks.length === 0 ? (
           <button onClick={() => navigate('/client/profil')} style={S.medalsMissing}>
             Renseigne ton poids et ton sexe dans ton profil pour débloquer tes rangs →
           </button>
         ) : (
           <>
+            {missingProfile && (
+              <button onClick={() => navigate('/client/profil')} style={S.medalsMissing}>
+                Renseigne ton poids et ton sexe pour débloquer les rangs Développé couché/Squat/etc. →
+              </button>
+            )}
             <div style={S.medalsStrip}>
-              {medals.map(m => {
+              {(missingProfile ? medals.filter(m => m.isCustom) : medals).map(m => {
                 const colors = m.hasData ? RANK_COLORS[m.rank.rank] : RANK_COLORS['Fer']
                 const isSel = selectedMedal?.key === m.key
                 return (

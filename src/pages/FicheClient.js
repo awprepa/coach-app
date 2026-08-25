@@ -82,6 +82,10 @@ export default function FicheClient() {
   const [showContratModal, setShowContratModal] = useState(null) // null|'envoyer'|contrat sélectionné
   const [progression, setProgression] = useState([]) // charges max par exercice/semaine
   const [selectedExo, setSelectedExo] = useState(null)
+  const [customRanks, setCustomRanks] = useState([])
+  const [showRankForm, setShowRankForm] = useState(false)
+  const [rankForm, setRankForm] = useState({ exercice_nom: '', bronze: '', argent: '', or: '', platine: '', diamant: '', champion: '' })
+  const [savingRank, setSavingRank] = useState(false)
   const [dupliquerLoading, setDupliquerLoading] = useState(null)
   const [nutritionPlan, setNutritionPlan]     = useState(null)  // null=pas chargé, false=aucun plan actif
   const [nutritionAdher, setNutritionAdher]   = useState([])   // 7 derniers jours
@@ -330,6 +334,38 @@ export default function FicheClient() {
       })
 
     setProgression(result)
+  }
+
+  async function fetchCustomRanks() {
+    const { data } = await supabase.from('custom_rank_exercises').select('*').eq('client_id', id).order('exercice_nom')
+    setCustomRanks(data || [])
+  }
+
+  async function creerRangPersonnalise() {
+    const { exercice_nom, bronze, argent, or: orVal, platine, diamant, champion } = rankForm
+    const vals = [bronze, argent, orVal, platine, diamant, champion].map(v => parseFloat(String(v).replace(',', '.')))
+    if (!exercice_nom.trim() || vals.some(v => isNaN(v) || v <= 0)) {
+      alert('Renseigne un exercice et les 6 seuils (en kg).')
+      return
+    }
+    setSavingRank(true)
+    const { data, error } = await supabase.from('custom_rank_exercises').insert([{
+      client_id: id,
+      exercice_nom: exercice_nom.trim(),
+      seuil_bronze_kg: vals[0], seuil_argent_kg: vals[1], seuil_or_kg: vals[2],
+      seuil_platine_kg: vals[3], seuil_diamant_kg: vals[4], seuil_champion_kg: vals[5],
+    }]).select().single()
+    setSavingRank(false)
+    if (error) { alert('Erreur : ' + error.message); return }
+    setCustomRanks(prev => [...prev, data].sort((a, b) => a.exercice_nom.localeCompare(b.exercice_nom, 'fr')))
+    setShowRankForm(false)
+    setRankForm({ exercice_nom: '', bronze: '', argent: '', or: '', platine: '', diamant: '', champion: '' })
+  }
+
+  async function supprimerRangPersonnalise(rankId) {
+    if (!window.confirm('Supprimer ce rang personnalisé ?')) return
+    await supabase.from('custom_rank_exercises').delete().eq('id', rankId)
+    setCustomRanks(prev => prev.filter(r => r.id !== rankId))
   }
 
   async function fetchNutrition() {
@@ -717,6 +753,7 @@ export default function FicheClient() {
           <button key={t.k} onClick={() => {
             setActiveTab(t.k)
             if (t.k === 'perf' && progression.length === 0) fetchProgression()
+            if (t.k === 'perf' && customRanks.length === 0) fetchCustomRanks()
             if (t.k === 'nutrition') fetchNutrition()
           }} style={{
             padding: '8px 18px', border: 'none', borderRadius: 9, fontSize: '0.83rem', fontWeight: '700', cursor: 'pointer',
@@ -788,6 +825,61 @@ export default function FicheClient() {
               })()}
             </div>
           )}
+
+          {/* ── Rangs personnalisés ─────────────────────────────────────────── */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <p style={{ ...styles.sectionTitle, margin: 0 }}>Rangs personnalisés</p>
+              <button onClick={() => setShowRankForm(v => !v)} style={{ ...styles.btnPrimary, padding: '0.35rem 0.6rem', fontSize: '0.72rem' }}>
+                {showRankForm ? 'Annuler' : '+ Créer un rang'}
+              </button>
+            </div>
+
+            {showRankForm && (
+              <div style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div>
+                  <label style={styles.label}>Exercice</label>
+                  <input list="fc-progression-noms" value={rankForm.exercice_nom}
+                    onChange={e => setRankForm(f => ({ ...f, exercice_nom: e.target.value }))}
+                    placeholder="Nom de l'exercice…" style={styles.input} />
+                  <datalist id="fc-progression-noms">
+                    {progression.map(p => <option key={p.nom} value={p.nom} />)}
+                  </datalist>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                  {[['bronze', 'Bronze'], ['argent', 'Argent'], ['or', 'Or'], ['platine', 'Platine'], ['diamant', 'Diamant'], ['champion', 'Champion']].map(([key, label]) => (
+                    <div key={key}>
+                      <label style={styles.label}>{label} (kg)</label>
+                      <input type="number" step="0.5" value={rankForm[key]}
+                        onChange={e => setRankForm(f => ({ ...f, [key]: e.target.value }))}
+                        style={styles.input} />
+                    </div>
+                  ))}
+                </div>
+                <button onClick={creerRangPersonnalise} disabled={savingRank} style={{ ...styles.btnPrimary, alignSelf: 'flex-start' }}>
+                  {savingRank ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            )}
+
+            {customRanks.length === 0 ? (
+              <div style={styles.emptyCard}>Aucun rang personnalisé pour ce client.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {customRanks.map(r => (
+                  <div key={r.id} style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: '#1a1a1a' }}>{r.exercice_nom}</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
+                        Bronze {r.seuil_bronze_kg} · Argent {r.seuil_argent_kg} · Or {r.seuil_or_kg} · Platine {r.seuil_platine_kg} · Diamant {r.seuil_diamant_kg} · Champion {r.seuil_champion_kg} kg
+                      </p>
+                    </div>
+                    <button onClick={() => supprimerRangPersonnalise(r.id)} title="Supprimer" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.9rem', flexShrink: 0 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
