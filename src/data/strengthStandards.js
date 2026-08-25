@@ -30,7 +30,7 @@ export function getWorldRecord(exerciseKey, sexe) {
 // qui se formait entre Or et Platine sur certains exercices (ex: bench).
 const STANDARDS = {
   developpe_couche: {
-    homme: [0.5, 0.75, 1.0, 1.225, 1.5, 1.75],
+    homme: [0.5, 0.75, 1.0, 1.3, 1.7, 2.2],
     femme: [0.25, 0.5, 0.75, 0.865, 1.0, 1.25],
   },
   squat: {
