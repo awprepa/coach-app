@@ -362,14 +362,14 @@ export default function AccueilClient() {
 
         {levelWidget && (
           <div onClick={() => navigate('/client/progression')} style={styles.levelWidget}>
-            <div style={styles.levelWidgetBadge}>{levelWidget.level}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={styles.levelWidgetTitle}>Niveau {levelWidget.level}</p>
-              <div style={styles.levelWidgetBarTrack}>
-                <div style={{ ...styles.levelWidgetBarFill, width: `${(levelWidget.xp / levelWidget.xpForNextLevel) * 100}%` }} />
-              </div>
+            <div style={styles.levelWidgetTop}>
+              <p style={styles.levelWidgetTitle}>Niveau {levelWidget.level} <span style={styles.levelWidgetSuffix}>de compte</span></p>
+              <span style={styles.levelWidgetChevron}>›</span>
             </div>
-            <span style={styles.levelWidgetChevron}>›</span>
+            <div style={styles.levelWidgetBarTrack}>
+              <div style={{ ...styles.levelWidgetBarFill, width: `${(levelWidget.xp / levelWidget.xpForNextLevel) * 100}%` }} />
+            </div>
+            <p style={styles.levelWidgetSub}>{levelWidget.xp} / {levelWidget.xpForNextLevel} XP</p>
           </div>
         )}
 
@@ -632,12 +632,23 @@ const styles = {
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
   nutritionWidget: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: '4px solid #16a34a' },
-  levelWidget: { display: 'flex', alignItems: 'center', gap: 12, background: 'white', borderRadius: 14, padding: '0.8rem 1rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: '4px solid var(--accent-stripe)' },
-  levelWidgetBadge: { width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: 'var(--chip-text, #e4f816)', background: 'var(--chip-bg, #1a1a1a)' },
-  levelWidgetTitle: { fontSize: '0.78rem', fontWeight: 800, color: '#1a1a1a', margin: '0 0 5px' },
-  levelWidgetBarTrack: { height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' },
-  levelWidgetBarFill: { height: '100%', background: 'var(--chip-bg, #1a1a1a)', borderRadius: 99 },
-  levelWidgetChevron: { color: '#d1d5db', fontSize: '1.2rem', flexShrink: 0 },
+  levelWidget: {
+    position: 'relative',
+    borderRadius: 16,
+    padding: '0.85rem 1rem 0.9rem',
+    marginBottom: '1.25rem',
+    background: 'linear-gradient(120deg, #1b2a52 0%, #24407a 55%, #2f5aa8 100%)',
+    boxShadow: '0 8px 20px rgba(31,55,105,0.28)',
+    cursor: 'pointer',
+    overflow: 'hidden',
+  },
+  levelWidgetTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' },
+  levelWidgetTitle: { fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0 },
+  levelWidgetSuffix: { fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)' },
+  levelWidgetBarTrack: { height: 6, background: 'rgba(255,255,255,0.16)', borderRadius: 99, overflow: 'hidden' },
+  levelWidgetBarFill: { height: '100%', background: 'linear-gradient(90deg, #7cb8ff, #a7d1ff)', borderRadius: 99 },
+  levelWidgetSub: { fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', fontWeight: 700, margin: '0.4rem 0 0' },
+  levelWidgetChevron: { color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', flexShrink: 0 },
   weekRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 12, padding: '0.65rem 1rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
   weekDay:     { width: 40, height: 40, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 }

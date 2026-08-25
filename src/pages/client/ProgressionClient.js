@@ -690,6 +690,15 @@ export default function ProgressionClient() {
     return levelFromXp(xp)
   }, [currentData, profileInfo.poids])
 
+  // ── Totaux cumulés sur l'exercice sélectionné ───────────────────────────────
+  const totals = useMemo(() => {
+    const allSets = currentData?.allSets || []
+    if (!allSets.length) return null
+    const totalReps = allSets.reduce((sum, s) => sum + s.reps, 0)
+    const totalTonnage = allSets.reduce((sum, s) => sum + s.poids * s.reps, 0)
+    return { totalReps, totalTonnage: Math.round(totalTonnage) }
+  }, [currentData])
+
   // ── Records par nombre de répétitions ──────────────────────────────────────
   // Pour l'exercice sélectionné : le poids le plus lourd jamais soulevé, tout
   // court, + le record pour chaque nombre exact de reps choisi (1 à 15).
@@ -964,6 +973,20 @@ export default function ProgressionClient() {
               <MetricCard label="Séances" value={metrics.nbSeances} />
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Totaux cumulés ────────────────────────────────────────────────────── */}
+      {totals && (
+        <div style={S.totalsRow}>
+          <div style={S.totalCard}>
+            <p style={S.totalLabel}>Répétitions totales</p>
+            <p style={S.totalValue}>{totals.totalReps}</p>
+          </div>
+          <div style={S.totalCard}>
+            <p style={S.totalLabel}>Tonnage total</p>
+            <p style={S.totalValue}>{totals.totalTonnage >= 1000 ? `${(totals.totalTonnage / 1000).toFixed(1)} t` : `${totals.totalTonnage} kg`}</p>
+          </div>
         </div>
       )}
 
@@ -1362,6 +1385,36 @@ const S = {
     color: '#9ca3af',
     fontWeight: 600,
     margin: '3px 0 0',
+  },
+  totalsRow: {
+    display: 'flex',
+    gap: 10,
+    padding: '0 16px 14px',
+  },
+  totalCard: {
+    flex: 1,
+    background: 'white',
+    borderRadius: 14,
+    padding: '12px 10px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  totalLabel: {
+    fontSize: '0.68rem',
+    fontWeight: 600,
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    margin: 0,
+  },
+  totalValue: {
+    fontSize: '1.1rem',
+    fontWeight: 800,
+    color: '#1a1a1a',
+    lineHeight: 1.1,
+    margin: 0,
   },
   exLevelRow: {
     display: 'flex',
