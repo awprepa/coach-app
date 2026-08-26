@@ -196,7 +196,12 @@ function parseStandings(data: any[], groupeId: string): StandingRow[] {
 // ── Sync d'un groupe ─────────────────────────────────────────────────────────────
 
 async function syncGroupe(groupeId: string, url: string) {
-  const baseUrl = url.replace(/\/$/, "");
+  // L'URL enregistrée peut être soit la page de base d'une compétition
+  // (".../competitions/federale-2/qualification-44288"), soit déjà une page
+  // "calendrier-resultats" ou "classements" copiée directement depuis le site
+  // (".../clubs/mon-club/calendrier-resultats") — on retire ce suffixe s'il est
+  // déjà présent pour ne jamais construire une URL en double (.../calendrier-resultats/calendrier-resultats → 404).
+  const baseUrl = url.replace(/\/$/, "").replace(/\/(calendrier-resultats|classements)$/, "");
   const clubSlugMatch = url.match(/\/clubs\/([^/]+)\//);
   const clubSlug = clubSlugMatch?.[1] || "";
 
@@ -214,8 +219,19 @@ async function syncGroupe(groupeId: string, url: string) {
     if (!calData) {
       errors.push("calendarResultsData introuvable dans le HTML");
     } else {
-      const rows = parseCalendar(calData, groupeId, clubSlug);
-      logs.push(`${rows.length} matchs parsés`);
+      const rawRows = parseCalendar(calData, groupeId, clubSlug);
+      // Le site peut lister deux fois la même rencontre (plusieurs équipes du
+      // même club, pages qui se chevauchent...) — on déduplique sur la même
+      // clé que la contrainte unique en base, sinon l'insert entier échoue et
+      // ne laisse plus aucun match (le delete juste avant, lui, a déjà eu lieu).
+      const seen = new Set<string>();
+      const rows = rawRows.filter(r => {
+        const key = `${r.date_match}|${r.equipe_dom}|${r.equipe_ext}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      logs.push(`${rawRows.length} matchs parsés (${rows.length} après dédoublonnage)`);
 
       if (rows.length > 0) {
         // Supprimer les anciens et réinsérer
