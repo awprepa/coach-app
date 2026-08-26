@@ -196,6 +196,24 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
 
   useEffect(() => { loadSeason() }, [loadSeason])
 
+  // Si la saison affichée par défaut (calculée sur la date du jour) ne contient
+  // aucun match FFR alors que le groupe en a bien (ex: entre deux saisons, les
+  // matchs de la saison qui vient de se terminer ne tombent plus dans la
+  // fenêtre juil.→juin en cours), on bascule une seule fois sur la saison qui
+  // contient réellement ces matchs — pure ajustement d'affichage, aucune
+  // donnée touchée, et ça ne se déclenche plus après un choix manuel de saison.
+  const seasonAutoCheckedRef = useRef(false)
+  useEffect(() => {
+    if (seasonAutoCheckedRef.current) return
+    if (!matchsFFR.length) return
+    seasonAutoCheckedRef.current = true
+    const inCurrentSeason = matchsFFR.some(m => m.date_match >= seasonStart && m.date_match <= seasonEnd)
+    if (inCurrentSeason) return
+    const latestMatch = matchsFFR.reduce((max, m) => m.date_match > max.date_match ? m : max)
+    const matchSeasonYear = seasonStartYear(new Date(latestMatch.date_match + 'T12:00:00'))
+    if (matchSeasonYear !== startYear) setStartYear(matchSeasonYear)
+  }, [matchsFFR, seasonStart, seasonEnd, startYear])
+
   // Accès direct à un évènement précis (ex: clic sur "Prochain entraînement"
   // depuis le tableau de bord du groupe) — ouvre son panneau d'édition dès
   // que la saison est chargée. Le ref évite de rouvrir si l'utilisateur
