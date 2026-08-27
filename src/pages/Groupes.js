@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { formatRetour } from '../components/BlessureButton'
 
 // ── Accès direct aux groupes (coach) ─────────────────────────────────────────
 // Avant, il fallait passer par le Tableau de bord (onglet Groupes) ou la page
@@ -10,24 +11,32 @@ export default function Groupes() {
   const navigate = useNavigate()
   const [groupes, setGroupes] = useState([])
   const [counts, setCounts]   = useState({})   // groupe_id → nb de membres
-  const [blesses, setBlesses] = useState({})   // groupe_id → nb de joueurs blessés
+  const [blesses, setBlesses] = useState({})   // groupe_id → [{ prenom, nom, description, duree_estimee, date_retour_prevue }]
   const [sousGroupes, setSousGroupes] = useState({}) // parent_id → [sous-groupes]
   const [loading, setLoading] = useState(true)
+  const [bulleOuverte, setBulleOuverte] = useState(null) // groupe_id de la bulle blessés ouverte
 
   useEffect(() => {
     (async () => {
       const [{ data: gs }, { data: membres }, { data: joueurs }] = await Promise.all([
         supabase.from('groupes').select('id, nom, couleur, logo_url, parent_id').order('nom'),
         supabase.from('groupe_membres').select('groupe_id'),
-        supabase.from('groupe_joueurs').select('groupe_id, joueur_blessures(statut)'),
+        supabase.from('groupe_joueurs').select('groupe_id, prenom, nom, joueur_blessures(statut, description, duree_estimee, date_retour_prevue)'),
       ])
       const all = gs || []
       const c = {}
       ;(membres || []).forEach(m => { c[m.groupe_id] = (c[m.groupe_id] || 0) + 1 })
       const b = {}
       ;(joueurs || []).forEach(j => {
-        const statut = (j.joueur_blessures || [])[0]?.statut
-        if (statut && statut !== 'ok') b[j.groupe_id] = (b[j.groupe_id] || 0) + 1
+        const bl = (j.joueur_blessures || [])[0]
+        if (bl && bl.statut !== 'ok') {
+          (b[j.groupe_id] ||= []).push({
+            nomComplet: `${j.prenom || ''} ${j.nom || ''}`.trim() || 'Joueur',
+            description: bl.description,
+            duree_estimee: bl.duree_estimee,
+            date_retour_prevue: bl.date_retour_prevue,
+          })
+        }
       })
       const sg = {}
       all.filter(g => g.parent_id).forEach(g => { (sg[g.parent_id] ||= []).push(g) })
@@ -75,12 +84,20 @@ export default function Groupes() {
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  {blesses[g.id] > 0 && (
-                    <span style={S.blessBadge}>
-                      <span style={S.blessDot} />
-                      {blesses[g.id]} blessé{blesses[g.id] > 1 ? 's' : ''}
-                    </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, position: 'relative' }}>
+                  {blesses[g.id]?.length > 0 && (
+                    <>
+                      <button
+                        onClick={e => { e.stopPropagation(); setBulleOuverte(bulleOuverte === g.id ? null : g.id) }}
+                        style={S.blessBadge}
+                      >
+                        <span style={S.blessDot} />
+                        {blesses[g.id].length} blessé{blesses[g.id].length > 1 ? 's' : ''}
+                      </button>
+                      {bulleOuverte === g.id && (
+                        <BulleBlesses joueurs={blesses[g.id]} onClose={() => setBulleOuverte(null)} />
+                      )}
+                    </>
                   )}
                   <button
                     onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
@@ -96,11 +113,21 @@ export default function Groupes() {
               {enfants.length > 0 && (
                 <div style={S.sousRow}>
                   {enfants.map(sg => (
-                    <button key={sg.id} onClick={() => navigate(`/groupe/${sg.id}`)} style={S.sousChip}>
-                      {sg.nom}
-                      <span style={{ color: '#9ca3af', fontWeight: 600 }}> · {counts[sg.id] || 0}</span>
-                      {blesses[sg.id] > 0 && <span style={{ color: '#dc2626', fontWeight: 700 }}> · {blesses[sg.id]} blessé{blesses[sg.id] > 1 ? 's' : ''}</span>}
-                    </button>
+                    <div key={sg.id} style={{ position: 'relative' }}>
+                      <button onClick={() => navigate(`/groupe/${sg.id}`)} style={S.sousChip}>
+                        {sg.nom}
+                        <span style={{ color: '#9ca3af', fontWeight: 600 }}> · {counts[sg.id] || 0}</span>
+                        {blesses[sg.id]?.length > 0 && (
+                          <span
+                            onClick={e => { e.stopPropagation(); setBulleOuverte(bulleOuverte === sg.id ? null : sg.id) }}
+                            style={{ color: '#dc2626', fontWeight: 700 }}
+                          > · {blesses[sg.id].length} blessé{blesses[sg.id].length > 1 ? 's' : ''}</span>
+                        )}
+                      </button>
+                      {bulleOuverte === sg.id && (
+                        <BulleBlesses joueurs={blesses[sg.id]} onClose={() => setBulleOuverte(null)} />
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -109,6 +136,26 @@ export default function Groupes() {
         })}
       </div>
     </div>
+  )
+}
+
+function BulleBlesses({ joueurs, onClose }) {
+  return (
+    <>
+      <div style={S.bulleOverlay} onClick={e => { e.stopPropagation(); onClose() }} />
+      <div style={S.bulle} onClick={e => e.stopPropagation()}>
+        {joueurs.map((j, i) => {
+          const duree = formatRetour(j.date_retour_prevue) || j.duree_estimee
+          return (
+            <div key={i} style={{ ...S.bulleLigne, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+              <p style={S.bulleNom}>{j.nomComplet}</p>
+              {j.description && <p style={S.bulleDesc}>{j.description}</p>}
+              {duree && <p style={S.bulleDuree}>{duree}</p>}
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -129,6 +176,12 @@ const S = {
   chevron:  { color: '#d1d5db', fontSize: '1.25rem' },
   sousRow:  { display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 1.25rem 0.9rem' },
   sousChip: { border: '1px solid #e5e7eb', background: '#f9fafb', borderRadius: 999, padding: '5px 11px', fontSize: '0.75rem', fontWeight: 700, color: '#374151', cursor: 'pointer' },
-  blessBadge: { display: 'flex', alignItems: 'center', gap: 5, background: '#fee2e2', color: '#dc2626', borderRadius: 999, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 800, whiteSpace: 'nowrap' },
+  blessBadge: { display: 'flex', alignItems: 'center', gap: 5, background: '#fee2e2', color: '#dc2626', borderRadius: 999, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 800, whiteSpace: 'nowrap', border: 'none', cursor: 'pointer' },
   blessDot: { width: 6, height: 6, borderRadius: '50%', background: '#dc2626', flexShrink: 0 },
+  bulleOverlay: { position: 'fixed', inset: 0, zIndex: 40 },
+  bulle: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,0.16)', border: '1px solid #fee2e2', width: 240, maxHeight: 280, overflowY: 'auto', padding: '4px 0' },
+  bulleLigne: { padding: '9px 14px' },
+  bulleNom:   { margin: 0, fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a' },
+  bulleDesc:  { margin: '2px 0 0', fontSize: '0.76rem', color: '#374151', lineHeight: 1.4 },
+  bulleDuree: { margin: '2px 0 0', fontSize: '0.7rem', color: '#dc2626', fontWeight: 700 },
 }
