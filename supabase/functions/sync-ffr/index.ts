@@ -118,17 +118,19 @@ function isOurTeamLocal(localNom: string, clubSlug: string): boolean {
 }
 
 /** Page "classements" : elle ne vit PAS sous l'URL du club (".../clubs/mon-club/classements"
- *  répond en 404) mais sous l'URL de la compétition elle-même — un chemin distinct
- *  qu'on ne connaît pas à l'avance. On le retrouve dans les données du calendrier :
- *  chaque match porte un `pouleId.url_monclubhouse` du type
- *  "/nationales/federale-b-championnat-de-france/qualification-50115/72980" ; le
- *  dernier segment numérique identifie la poule précise et n'existe pas sous
- *  "/classements" — on le retire pour obtenir la base de la compétition. */
-function extractPouleBaseUrl(data: Record<string, any>): string | null {
+ *  répond en 404) mais sous l'URL de la POULE précise à laquelle appartient le
+ *  club — un chemin qu'on ne connaît pas à l'avance et qu'on ne doit surtout
+ *  pas raccourcir : une compétition (ex: "qualification-50115") regroupe
+ *  plusieurs poules géographiques différentes, et son classement "de base"
+ *  sans l'identifiant de poule (le dernier segment numérique, ex: "/72980")
+ *  affiche une AUTRE poule (vérifié : sans lui on tombe sur des clubs
+ *  d'Île-de-France au lieu du Sud-Ouest). On récupère donc le chemin complet
+ *  `pouleId.url_monclubhouse` tel quel depuis les données du calendrier. */
+function extractPouleUrl(data: Record<string, any>): string | null {
   for (const journee of Object.values(data)) {
     for (const match of ((journee as any)?.listData || [])) {
       const url: string | undefined = match?.pouleId?.url_monclubhouse;
-      if (url) return url.replace(/\/\d+$/, "");
+      if (url) return url;
     }
   }
   return null;
@@ -225,7 +227,7 @@ async function syncGroupe(groupeId: string, url: string) {
   const logs: string[] = [`club: ${clubSlug}`];
   const errors: string[] = [];
   let matchCount = 0, standingsCount = 0;
-  let pouleBaseUrl: string | null = null;
+  let pouleUrl: string | null = null;
 
   const headers = { "User-Agent": "Mozilla/5.0 (compatible; AWprepa/1.0)" };
 
@@ -237,7 +239,7 @@ async function syncGroupe(groupeId: string, url: string) {
     if (!calData) {
       errors.push("calendarResultsData introuvable dans le HTML");
     } else {
-      pouleBaseUrl = extractPouleBaseUrl(calData);
+      pouleUrl = extractPouleUrl(calData);
       const rawRows = parseCalendar(calData, groupeId, clubSlug);
       // Le site peut lister deux fois la même rencontre (plusieurs équipes du
       // même club, pages qui se chevauchent...) — on déduplique sur la même
@@ -265,11 +267,11 @@ async function syncGroupe(groupeId: string, url: string) {
   }
 
   // ── Classement ────────────────────────────────────────────────────────────────
-  // La page classements vit sous l'URL de la compétition (pouleBaseUrl, extraite
+  // La page classements vit sous l'URL de la poule (pouleUrl, extraite
   // du calendrier), pas sous celle du club (baseUrl) — repli sur baseUrl si on
   // n'a pas pu la déterminer (ex: calendrier vide ou format inattendu).
   try {
-    const classementUrl = pouleBaseUrl ? `https://monclubhouse.ffr.fr${pouleBaseUrl}/classements` : `${baseUrl}/classements`;
+    const classementUrl = pouleUrl ? `https://monclubhouse.ffr.fr${pouleUrl}/classements` : `${baseUrl}/classements`;
     logs.push(`classement: ${classementUrl}`);
     const html = await (await fetch(classementUrl, { headers })).text();
     const rankData = extractKeyValue(html, "rankingData");
