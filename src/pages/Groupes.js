@@ -10,22 +10,30 @@ export default function Groupes() {
   const navigate = useNavigate()
   const [groupes, setGroupes] = useState([])
   const [counts, setCounts]   = useState({})   // groupe_id → nb de membres
+  const [blesses, setBlesses] = useState({})   // groupe_id → nb de joueurs blessés
   const [sousGroupes, setSousGroupes] = useState({}) // parent_id → [sous-groupes]
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     (async () => {
-      const [{ data: gs }, { data: membres }] = await Promise.all([
+      const [{ data: gs }, { data: membres }, { data: joueurs }] = await Promise.all([
         supabase.from('groupes').select('id, nom, couleur, logo_url, parent_id').order('nom'),
         supabase.from('groupe_membres').select('groupe_id'),
+        supabase.from('groupe_joueurs').select('groupe_id, joueur_blessures(statut)'),
       ])
       const all = gs || []
       const c = {}
       ;(membres || []).forEach(m => { c[m.groupe_id] = (c[m.groupe_id] || 0) + 1 })
+      const b = {}
+      ;(joueurs || []).forEach(j => {
+        const statut = (j.joueur_blessures || [])[0]?.statut
+        if (statut && statut !== 'ok') b[j.groupe_id] = (b[j.groupe_id] || 0) + 1
+      })
       const sg = {}
       all.filter(g => g.parent_id).forEach(g => { (sg[g.parent_id] ||= []).push(g) })
       setGroupes(all.filter(g => !g.parent_id))
       setCounts(c)
+      setBlesses(b)
       setSousGroupes(sg)
       setLoading(false)
     })()
@@ -68,6 +76,12 @@ export default function Groupes() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  {blesses[g.id] > 0 && (
+                    <span style={S.blessBadge}>
+                      <span style={S.blessDot} />
+                      {blesses[g.id]} blessé{blesses[g.id] > 1 ? 's' : ''}
+                    </span>
+                  )}
                   <button
                     onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
                     style={S.btnCal}
@@ -85,6 +99,7 @@ export default function Groupes() {
                     <button key={sg.id} onClick={() => navigate(`/groupe/${sg.id}`)} style={S.sousChip}>
                       {sg.nom}
                       <span style={{ color: '#9ca3af', fontWeight: 600 }}> · {counts[sg.id] || 0}</span>
+                      {blesses[sg.id] > 0 && <span style={{ color: '#dc2626', fontWeight: 700 }}> · {blesses[sg.id]} blessé{blesses[sg.id] > 1 ? 's' : ''}</span>}
                     </button>
                   ))}
                 </div>
@@ -114,4 +129,6 @@ const S = {
   chevron:  { color: '#d1d5db', fontSize: '1.25rem' },
   sousRow:  { display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 1.25rem 0.9rem' },
   sousChip: { border: '1px solid #e5e7eb', background: '#f9fafb', borderRadius: 999, padding: '5px 11px', fontSize: '0.75rem', fontWeight: 700, color: '#374151', cursor: 'pointer' },
+  blessBadge: { display: 'flex', alignItems: 'center', gap: 5, background: '#fee2e2', color: '#dc2626', borderRadius: 999, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 800, whiteSpace: 'nowrap' },
+  blessDot: { width: 6, height: 6, borderRadius: '50%', background: '#dc2626', flexShrink: 0 },
 }
