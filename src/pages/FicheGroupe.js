@@ -157,6 +157,7 @@ export default function FicheGroupe() {
       .map(j => ({ j, bl: (j.joueur_blessures || [])[0] }))
       .filter(({ bl }) => bl && bl.statut !== 'ok')
       .map(({ j, bl }) => ({
+        clientId: j.client_id,
         nomComplet: `${j.prenom || ''} ${j.nom || ''}`.trim() || 'Joueur',
         description: bl.description,
         duree_estimee: bl.duree_estimee,
@@ -1076,7 +1077,8 @@ export default function FicheGroupe() {
           ) : (
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {blesses.map((b, i) => (
-                <div key={i} style={{ padding: '0.6rem 1.1rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                <div key={i} onClick={() => b.clientId && navigate(`/client/${b.clientId}`)}
+                  style={{ padding: '0.6rem 1.1rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', cursor: b.clientId ? 'pointer' : 'default' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
                     <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1a1a1a' }}>{b.nomComplet}</span>
