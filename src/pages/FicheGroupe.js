@@ -5,6 +5,7 @@ import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
 import CalendrierSaison, { EffectifView, GroupesNiveauView } from './CalendrierSaison'
 import GroupeIntensite from '../components/GroupeIntensite'
+import { formatRetour } from '../components/BlessureButton'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -107,6 +108,7 @@ export default function FicheGroupe() {
   const [rosterClientIds, setRosterClientIds] = useState(new Set()) // client_id présents dans l'effectif (groupe_joueurs)
   const [openJoueurClientId, setOpenJoueurClientId] = useState(null) // déclenche l'ouverture du profil groupe depuis Membres
   const [membreFiltre, setMembreFiltre]   = useState('tous') // 'tous' | 'surveiller'
+  const [blesses, setBlesses]             = useState([]) // joueurs blessés du groupe [{ nomComplet, description, duree_estimee, date_retour_prevue }]
 
   // ── Chargement ────────────────────────────────────────────────────────────
   useEffect(() => { load() }, [id]) // eslint-disable-line
@@ -140,7 +142,7 @@ export default function FicheGroupe() {
     // Poste principal de chaque membre — vient de l'effectif (groupe_joueurs
     // liés par client_id), pas des clients directement.
     const { data: joueursData } = await supabase
-      .from('groupe_joueurs').select('client_id, joueur_postes(poste, is_primary)')
+      .from('groupe_joueurs').select('client_id, prenom, nom, joueur_postes(poste, is_primary), joueur_blessures(statut, description, duree_estimee, date_retour_prevue)')
       .eq('groupe_id', id).not('client_id', 'is', null)
     const pMap = {}
     for (const j of (joueursData || [])) {
@@ -151,6 +153,15 @@ export default function FicheGroupe() {
     }
     setPosteMap(pMap)
     setRosterClientIds(new Set((joueursData || []).map(j => j.client_id)))
+    setBlesses((joueursData || [])
+      .map(j => ({ j, bl: (j.joueur_blessures || [])[0] }))
+      .filter(({ bl }) => bl && bl.statut !== 'ok')
+      .map(({ j, bl }) => ({
+        nomComplet: `${j.prenom || ''} ${j.nom || ''}`.trim() || 'Joueur',
+        description: bl.description,
+        duree_estimee: bl.duree_estimee,
+        date_retour_prevue: bl.date_retour_prevue,
+      })))
 
     // Dernier wellness de chaque membre
     const memberIds = membresList.map(m => m.id)
@@ -903,7 +914,7 @@ export default function FicheGroupe() {
       </div>
 
       {/* ── Ligne 2 : Membres (triable, défilant) + Classement + Prochain entraînement ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1.35fr 0.8fr 0.85fr' }} className="fg-row2b">
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1.15fr 0.7fr 0.75fr 0.75fr' }} className="fg-row2b">
         <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
           <div style={S.panelHead}><span style={S.panelLabel}>Membres · {membres.length}</span></div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
@@ -1055,6 +1066,28 @@ export default function FicheGroupe() {
                 ))}
               </div>
             </>
+          )}
+        </div>
+
+        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Blessés · {blesses.length}</span></div>
+          {blesses.length === 0 ? (
+            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun joueur blessé actuellement.</p>
+          ) : (
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              {blesses.map((b, i) => (
+                <div key={i} style={{ padding: '0.6rem 1.1rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1a1a1a' }}>{b.nomComplet}</span>
+                  </div>
+                  {b.description && <p style={{ margin: '0 0 2px', fontSize: '0.74rem', color: '#374151', lineHeight: 1.35 }}>{b.description}</p>}
+                  {(formatRetour(b.date_retour_prevue) || b.duree_estimee) && (
+                    <p style={{ margin: 0, fontSize: '0.68rem', color: '#dc2626', fontWeight: 700 }}>{formatRetour(b.date_retour_prevue) || b.duree_estimee}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
