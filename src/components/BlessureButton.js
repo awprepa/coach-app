@@ -116,7 +116,7 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
         titre: `${nomClient} a signalé une blessure`,
         corps: [zoneLabel, dureeVal ? `retour estimé : ${dureeVal}` : null].filter(Boolean).join(' · ') || 'Voir la fiche joueur',
         type: 'blessure',
-        lien: '/',
+        lien: `/client/${clientId}`,
       })
     } catch (e) {
       console.warn('[BlessureButton] notif coach échouée :', e?.message)

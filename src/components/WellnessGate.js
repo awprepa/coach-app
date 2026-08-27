@@ -37,7 +37,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
         titre: 'Nouveau wellness renseigné',
         corps: `${clientName || 'Un client'} a renseigné son bilan du jour`,
         type: 'wellness',
-        lien: '/',
+        lien: `/client/${clientId}`,
       })
     } catch (e) {
       console.error('sendNotif error:', e)

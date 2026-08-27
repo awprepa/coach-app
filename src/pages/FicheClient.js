@@ -8,6 +8,7 @@ import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
 import ClientListSidebar from '../components/ClientListSidebar'
+import { ensureJoueurId, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
 
 
 const OFFRES = {
@@ -67,6 +68,7 @@ export default function FicheClient() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [client, setClient] = useState(null)
+  const [blessure, setBlessure] = useState(null)
   const [programmes, setCycles] = useState([])
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
@@ -111,9 +113,9 @@ export default function FicheClient() {
     setProgression([]); setSelectedExo(null)
     setNutritionPlan(null); setNutritionAdher([]); setNutritionProfile(null)
     setShowAllWellness(false); setShowAllSeancesClient(false)
-    setNextEvent(null); setWeekEventsCount(0)
+    setNextEvent(null); setWeekEventsCount(0); setBlessure(null)
     setEditMode(false)
-    fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat(); fetchProchaineSeance()
+    fetchClient(); fetchCycles(); fetchCategories(); fetchWellness(); fetchSeancesClient(); fetchContrat(); fetchProchaineSeance(); fetchBlessure()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchContrat() {
@@ -179,6 +181,12 @@ export default function FicheClient() {
     if (error) console.log(error)
     else { setClient(data); setForm(data); setNotesCoach(data.notes_coach || '') }
     setLoading(false)
+  }
+
+  async function fetchBlessure() {
+    const j = await ensureJoueurId(id)
+    const b = j?.joueur_blessures?.[0]
+    setBlessure(b && b.statut !== 'ok' ? b : null)
   }
 
   async function fetchCycles() {
@@ -618,6 +626,26 @@ export default function FicheClient() {
                 </div>
               </div>
             </div>
+
+            {blessure && (
+              <div style={{ ...styles.sideSection, background: '#fef2f2', borderRadius: 10, padding: '0.65rem 0.75rem', borderTop: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+                  <p style={{ ...styles.sideLabel, color: '#dc2626', margin: 0 }}>Blessé{blessure.zone ? ` · ${ZONES.find(z => z.v === blessure.zone)?.label || blessure.zone}` : ''}</p>
+                </div>
+                {blessure.niveau && (
+                  <p style={{ fontSize: '0.78rem', color: '#374151', margin: '0 0 4px', fontWeight: 600 }}>
+                    {NIVEAUX.find(n => n.v === blessure.niveau)?.label || blessure.niveau}
+                  </p>
+                )}
+                {blessure.description && (
+                  <p style={{ fontSize: '0.8rem', color: '#374151', margin: '0 0 4px', lineHeight: 1.4 }}>{blessure.description}</p>
+                )}
+                {blessure.date_retour_prevue && (
+                  <p style={{ fontSize: '0.74rem', color: '#9ca3af', margin: 0 }}>{formatRetour(blessure.date_retour_prevue)}</p>
+                )}
+              </div>
+            )}
 
             {(client.email || client.telephone) && (
               <div style={styles.sideSection}>
