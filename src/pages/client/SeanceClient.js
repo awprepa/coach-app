@@ -1566,26 +1566,6 @@ export default function SeanceClient() {
           </div>
         )}
 
-        {/* Cardio avant séance */}
-        {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
-
-        {/* Blocs cardio (texte libre) */}
-        {cardioBlocs.length > 0 && (
-          <div style={{ ...S.card, marginBottom: '0.75rem' }}>
-            <p style={S.sectionLabel}>Cardio</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {cardioBlocs.map((b, i) => (
-                (b.titre || b.texte) ? (
-                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', borderLeft: '3px solid #0ea5e9' }}>
-                    {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 800, fontSize: '0.9rem', color: '#0c4a6e' }}>{b.titre}</p>}
-                    {b.texte && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
-                  </div>
-                ) : null
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Échauffement */}
         {echauffement.length > 0 && (() => {
           const warmGroups = []
@@ -1647,6 +1627,25 @@ export default function SeanceClient() {
             </div>
           )
         })()}
+
+        {/* Cardio — traité comme un bloc de la séance, juste après l'échauffement */}
+        {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
+        {cardioFinAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioFinAll[semaineActuelle]} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
+        {cardioBlocs.length > 0 && (
+          <div style={{ ...S.card, marginBottom: '0.75rem' }}>
+            <p style={S.sectionLabel}>Cardio</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {cardioBlocs.map((b, i) => (
+                (b.titre || b.texte) ? (
+                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', borderLeft: '3px solid #0ea5e9' }}>
+                    {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 800, fontSize: '0.9rem', color: '#0c4a6e' }}>{b.titre}</p>}
+                    {b.texte && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
+                  </div>
+                ) : null
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Exercices */}
         {nonEffectuee ? (
@@ -1868,9 +1867,6 @@ export default function SeanceClient() {
             </div>
           )
         })()}
-
-        {/* Cardio après séance */}
-        {cardioFinAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioFinAll[semaineActuelle]} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
 
         {/* Intensité RPE — section repliable */}
         <div style={{ marginTop: '1.25rem' }}>
