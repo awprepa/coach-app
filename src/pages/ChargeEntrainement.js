@@ -1003,6 +1003,55 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [selectedProgId, setSelectedProgId] = useState(null)
   const [allProgs, setAllProgs] = useState([])
   const [videoDemandes, setVideoDemandes] = useState({}) // { exercice_id: demande en_attente }
+  // Liste indépendante du suivi de charges : TOUS les exercices du cycle
+  // sélectionné, y compris ceux jamais tenté/loggés — pour pouvoir demander
+  // une vidéo dessus même sans historique.
+  const [videoProgs, setVideoProgs] = useState([])
+  const [videoProgId, setVideoProgId] = useState(null)
+  const [videoExosList, setVideoExosList] = useState([])
+  const [videoExosLoading, setVideoExosLoading] = useState(false)
+  const [videoSearch, setVideoSearch] = useState('')
+  const [videoPickerOpen, setVideoPickerOpen] = useState(false)
+
+  async function loadVideoProgs(cid) {
+    const { data: progs } = await supabase
+      .from('programmes').select('id, nom, semaines, date_debut')
+      .eq('client_id', cid).order('created_at', { ascending: false })
+    setVideoProgs(progs || [])
+    if (!progs?.length) { setVideoProgId(null); return }
+    const now = new Date()
+    const today = now.toISOString().slice(0, 10)
+    const actif = progs.find(p => {
+      if (!p.date_debut) return false
+      if (p.date_debut > today) return false
+      const fin = new Date(p.date_debut + 'T00:00:00')
+      fin.setDate(fin.getDate() + p.semaines * 7)
+      return fin >= now
+    }) || progs[0]
+    setVideoProgId(actif.id)
+  }
+
+  async function loadVideoExos(progId) {
+    if (!progId) { setVideoExosList([]); return }
+    setVideoExosLoading(true)
+    const { data: seancesData } = await supabase
+      .from('seances').select('id, nom, ordre').eq('programme_id', progId).order('ordre', { ascending: true })
+    const seanceIds = (seancesData || []).map(s => s.id)
+    const seanceMap = {}
+    ;(seancesData || []).forEach(s => { seanceMap[s.id] = s })
+    let exosData = []
+    if (seanceIds.length > 0) {
+      const { data } = await supabase
+        .from('exercices').select('id, nom, seance_id, ordre').in('seance_id', seanceIds).order('ordre', { ascending: true })
+      exosData = data || []
+    }
+    setVideoExosList(
+      exosData
+        .map(e => ({ ...e, seanceNom: seanceMap[e.seance_id]?.nom || '', seanceOrdre: seanceMap[e.seance_id]?.ordre ?? 999 }))
+        .sort((a, b) => a.seanceOrdre - b.seanceOrdre || a.ordre - b.ordre)
+    )
+    setVideoExosLoading(false)
+  }
 
   function reloadVideoDemandes(cid) {
     supabase.from('demandes_video').select('*').eq('client_id', cid).eq('statut', 'en_attente')
@@ -1173,9 +1222,13 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       loadCharge(clientId)
       reloadExWeights(clientId, null)
       reloadVideoDemandes(clientId)
+      setVideoProgs([]); setVideoProgId(null); setVideoExosList([])
+      loadVideoProgs(clientId)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, loadCharge])
+
+  useEffect(() => { loadVideoExos(videoProgId) }, [videoProgId])
 
   useEffect(() => {
     if (!clientId || !clientPrenom || !clientNom) return
@@ -1335,6 +1388,80 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* ── Demander une vidéo — indépendant du suivi, marche même sans historique ── */}
+      {videoProgs.length > 0 && (
+        <div style={{ ...S.indicateursSection, marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+            onClick={() => setVideoPickerOpen(v => !v)}>
+            <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>🎥 Demander une vidéo</div>
+            <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{videoPickerOpen ? 'Masquer ▲' : 'Afficher ▼'}</span>
+          </div>
+
+          {videoPickerOpen && (
+            <div style={{ marginTop: '0.75rem' }}>
+              {videoProgs.length > 1 && (
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+                  {videoProgs.map(p => (
+                    <button key={p.id} onClick={() => setVideoProgId(p.id)}
+                      style={{ padding: '0.3rem 0.65rem', borderRadius: 20, border: `1.5px solid ${videoProgId === p.id ? '#333' : '#e5e7eb'}`, background: videoProgId === p.id ? '#333' : 'white', color: videoProgId === p.id ? '#e4f816' : '#6b7280', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      {p.nom}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input
+                value={videoSearch}
+                onChange={e => setVideoSearch(e.target.value)}
+                placeholder="Rechercher un exercice…"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', outline: 'none', marginBottom: '0.65rem' }}
+              />
+              {videoExosLoading ? (
+                <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Chargement…</p>
+              ) : videoExosList.length === 0 ? (
+                <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Aucun exercice dans ce cycle.</p>
+              ) : (() => {
+                const q = videoSearch.trim().toLowerCase()
+                const filtered = q ? videoExosList.filter(e => e.nom.toLowerCase().includes(q)) : videoExosList
+                if (filtered.length === 0) return <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Aucun résultat.</p>
+                let prevSeance = null
+                return (
+                  <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #f3f4f6', borderRadius: 8 }}>
+                    {filtered.map((exo, i) => {
+                      const seanceHeader = exo.seanceNom !== prevSeance
+                      prevSeance = exo.seanceNom
+                      const enAttente = videoDemandes[exo.id]
+                      return (
+                        <div key={exo.id}>
+                          {seanceHeader && (
+                            <div style={{ padding: '0.4rem 0.75rem', background: '#f9fafb', fontSize: '0.68rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {exo.seanceNom || 'Sans séance'}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0.75rem', borderTop: i > 0 && !seanceHeader ? '1px solid #f3f4f6' : 'none' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>{exo.nom}</span>
+                            {enAttente ? (
+                              <button onClick={() => annulerDemandeVideo(exo.id)}
+                                style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#f59e0b', borderRadius: 8, padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                En attente · Annuler
+                              </button>
+                            ) : (
+                              <button onClick={() => demanderVideo(exo.id)}
+                                style={{ background: 'white', border: '1px solid #e5e7eb', color: '#374151', borderRadius: 8, padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Demander
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+          )}
         </div>
       )}
 
