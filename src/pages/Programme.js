@@ -17,7 +17,7 @@ export default function Programme() {
   const [showImport, setShowImport] = useState(false)
   const [nomEdition, setNomEdition] = useState('')
   const [editProgramme, setEditProgramme] = useState(false)
-  const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '' })
+  const [formProgramme, setFormProgramme] = useState({ nom: '', semaines: 4, date_debut: '', description: '' })
   const [notifToast, setNotifToast] = useState(null) // { msg, ok }
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateForm, setTemplateForm] = useState({ nom: '', description: '' })
@@ -33,9 +33,9 @@ export default function Programme() {
 
   async function fetchProgramme() {
     const { data, error } = await supabase
-      .from('programmes').select('*, clients(prenom, nom), groupes(id, nom, couleur)').eq('id', id).single()
+      .from('programmes').select('*, clients(prenom, nom), groupes(id, nom, couleur), programme_templates(nom, description)').eq('id', id).single()
     if (error) console.log(error)
-    else { setProgramme(data); setFormProgramme({ nom: data.nom, semaines: data.semaines, date_debut: data.date_debut || '' }) }
+    else { setProgramme(data); setFormProgramme({ nom: data.nom, semaines: data.semaines, date_debut: data.date_debut || '', description: data.programme_templates?.description || '' }) }
     setLoading(false)
   }
 
@@ -54,7 +54,8 @@ export default function Programme() {
     if (error) { alert(error.message); return }
     setSeances([...seances, data])
     setNouvelleSeance('')
-    // Notifier le client
+    // Notifier le client (sans objet pour un brouillon bibliothèque, sans client)
+    if (!programme.client_id) return
     try {
       const { data: clientData } = await supabase
         .from('clients')
@@ -204,76 +205,104 @@ export default function Programme() {
     const { error } = await supabase.from('programmes').delete().eq('id', id)
     if (error) alert(error.message)
     else if (programme.groupe_id) navigate(`/groupe/${programme.groupe_id}`)
-    else navigate(`/client/${programme.client_id}`)
+    else if (programme.client_id) navigate(`/client/${programme.client_id}`)
+    else navigate('/bibliotheque')
+  }
+
+  // Construit les lignes programme_template_seances (exercices + échauffement +
+  // cardio + RPE cibles) à partir des vraies séances de CE programme. Utilisé à
+  // la fois pour créer un nouveau template et pour resynchroniser un brouillon
+  // bibliothèque vers son template existant.
+  async function construireLignesTemplate(templateId) {
+    if (seances.length === 0) return []
+    const seanceIds = seances.map(s => s.id)
+
+    const [{ data: exos }, { data: seancesData }, { data: rpeData }] = await Promise.all([
+      supabase.from('exercices').select('*').in('seance_id', seanceIds).order('ordre', { ascending: true }),
+      supabase.from('seances').select('id, echauffement, cardio_debut, cardio_fin, cardio_blocs').in('id', seanceIds),
+      supabase.from('rpe_seances').select('seance_id, semaine, rpe_cible').in('seance_id', seanceIds).not('rpe_cible', 'is', null),
+    ])
+
+    const bySeance = {}
+    ;(exos || []).forEach(ex => {
+      if (!bySeance[ex.seance_id]) bySeance[ex.seance_id] = []
+      bySeance[ex.seance_id].push({
+        code: ex.code, nom: ex.nom, series: ex.series,
+        repetitions: ex.repetitions, tempo: ex.tempo,
+        recuperation: ex.recuperation, type_intensite: ex.type_intensite,
+        valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
+        bibliotheque_id: ex.bibliotheque_id || null,
+        progressions: ex.progressions?.length > 0 ? ex.progressions : null,
+        series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
+        media_url: ex.media_url || null,
+      })
+    })
+
+    const echauffMap = {}
+    const cardioMap = {}
+    ;(seancesData || []).forEach(s => {
+      echauffMap[s.id] = s.echauffement || []
+      cardioMap[s.id] = { cardio_debut: s.cardio_debut || null, cardio_fin: s.cardio_fin || null, cardio_blocs: s.cardio_blocs || [] }
+    })
+
+    const rpeMap = {}
+    ;(rpeData || []).forEach(r => {
+      if (!rpeMap[r.seance_id]) rpeMap[r.seance_id] = {}
+      rpeMap[r.seance_id][r.semaine] = r.rpe_cible
+    })
+
+    return seances.map((s, idx) => ({
+      template_id: templateId,
+      nom: s.nom,
+      jour: idx + 1,
+      ordre: s.ordre || idx + 1,
+      exercices: bySeance[s.id] || [],
+      echauffement: echauffMap[s.id] || [],
+      rpe_cibles: rpeMap[s.id] || {},
+      cardio_debut: cardioMap[s.id]?.cardio_debut || null,
+      cardio_fin: cardioMap[s.id]?.cardio_fin || null,
+      cardio_blocs: cardioMap[s.id]?.cardio_blocs || [],
+    }))
   }
 
   async function sauvegarderCommeTemplate() {
     if (!templateForm.nom.trim()) return
     setSavingTemplate(true)
     try {
-      // 1. Créer le template
       const { data: tpl, error: tplErr } = await supabase
         .from('programme_templates')
         .insert({ nom: templateForm.nom.trim(), semaines: programme.semaines, description: templateForm.description || null })
         .select('id').single()
       if (tplErr) throw tplErr
 
-      // 2. Pour chaque séance, récupérer exercices + échauffement + RPE cibles
-      if (seances.length > 0) {
-        const seanceIds = seances.map(s => s.id)
-
-        const [{ data: exos }, { data: seancesData }, { data: rpeData }] = await Promise.all([
-          supabase.from('exercices').select('*').in('seance_id', seanceIds).order('ordre', { ascending: true }),
-          supabase.from('seances').select('id, echauffement, cardio_debut, cardio_fin, cardio_blocs').in('id', seanceIds),
-          supabase.from('rpe_seances').select('seance_id, semaine, rpe_cible').in('seance_id', seanceIds).not('rpe_cible', 'is', null),
-        ])
-
-        const bySeance = {}
-        ;(exos || []).forEach(ex => {
-          if (!bySeance[ex.seance_id]) bySeance[ex.seance_id] = []
-          bySeance[ex.seance_id].push({
-            code: ex.code, nom: ex.nom, series: ex.series,
-            repetitions: ex.repetitions, tempo: ex.tempo,
-            recuperation: ex.recuperation, type_intensite: ex.type_intensite,
-            valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
-            bibliotheque_id: ex.bibliotheque_id || null,
-            progressions: ex.progressions?.length > 0 ? ex.progressions : null,
-            series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
-            media_url: ex.media_url || null,
-          })
-        })
-
-        const echauffMap = {}
-        const cardioMap = {}
-        ;(seancesData || []).forEach(s => {
-          echauffMap[s.id] = s.echauffement || []
-          cardioMap[s.id] = { cardio_debut: s.cardio_debut || null, cardio_fin: s.cardio_fin || null, cardio_blocs: s.cardio_blocs || [] }
-        })
-
-        const rpeMap = {}
-        ;(rpeData || []).forEach(r => {
-          if (!rpeMap[r.seance_id]) rpeMap[r.seance_id] = {}
-          rpeMap[r.seance_id][r.semaine] = r.rpe_cible
-        })
-
-        await supabase.from('programme_template_seances').insert(
-          seances.map((s, idx) => ({
-            template_id: tpl.id,
-            nom: s.nom,
-            jour: idx + 1,
-            ordre: s.ordre || idx + 1,
-            exercices: bySeance[s.id] || [],
-            echauffement: echauffMap[s.id] || [],
-            rpe_cibles: rpeMap[s.id] || {},
-            cardio_debut: cardioMap[s.id]?.cardio_debut || null,
-            cardio_fin: cardioMap[s.id]?.cardio_fin || null,
-            cardio_blocs: cardioMap[s.id]?.cardio_blocs || [],
-          }))
-        )
-      }
+      const lignes = await construireLignesTemplate(tpl.id)
+      if (lignes.length > 0) await supabase.from('programme_template_seances').insert(lignes)
 
       setShowSaveTemplate(false)
       showToast(`Template "${templateForm.nom}" enregistré ✓`, true)
+    } catch (e) {
+      showToast(`Erreur : ${e.message}`, false)
+    }
+    setSavingTemplate(false)
+  }
+
+  // Resynchronise un brouillon bibliothèque vers son template existant
+  // (programme_templates.bibliotheque_template_id) : nom/semaines/description +
+  // toutes les séances (delete-all + reinsert, comme dans CycleTemplates.js).
+  async function sauvegarderDansBibliotheque() {
+    const templateId = programme.bibliotheque_template_id
+    if (!templateId) return
+    setSavingTemplate(true)
+    try {
+      await supabase.from('programme_templates')
+        .update({ nom: programme.nom, semaines: programme.semaines, description: formProgramme.description || null })
+        .eq('id', templateId)
+
+      const lignes = await construireLignesTemplate(templateId)
+      await supabase.from('programme_template_seances').delete().eq('template_id', templateId)
+      if (lignes.length > 0) await supabase.from('programme_template_seances').insert(lignes)
+
+      showToast('Enregistré dans la bibliothèque ✓', true)
     } catch (e) {
       showToast(`Erreur : ${e.message}`, false)
     }
@@ -310,13 +339,16 @@ export default function Programme() {
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={() => {
-          if (programme.groupe_id && !programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
+          if (programme.bibliotheque_template_id) navigate('/bibliotheque')
+          else if (programme.groupe_id && !programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
           else if (programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
           else navigate(`/client/${programme.client_id}`)
         }} style={styles.backBtn}>← Retour</button>
-        <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer' }}>
-          🧪 Test push
-        </button>
+        {programme.client_id && (
+          <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer' }}>
+            🧪 Test push
+          </button>
+        )}
       </div>
 
       {/* En-tête programme */}
@@ -327,10 +359,17 @@ export default function Programme() {
             <label style={styles.label}>Nom</label>
             <input value={formProgramme.nom} onChange={e => setFormProgramme({ ...formProgramme, nom: e.target.value })} style={styles.input} />
           </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={styles.label}>Date de début</label>
-            <input type="date" value={formProgramme.date_debut} onChange={e => setFormProgramme({ ...formProgramme, date_debut: e.target.value })} style={styles.input} />
-          </div>
+          {programme.bibliotheque_template_id ? (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={styles.label}>Description (optionnel)</label>
+              <input value={formProgramme.description} onChange={e => setFormProgramme({ ...formProgramme, description: e.target.value })} style={styles.input} placeholder="Niveau, objectifs, particularités…" />
+            </div>
+          ) : (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={styles.label}>Date de début</label>
+              <input type="date" value={formProgramme.date_debut} onChange={e => setFormProgramme({ ...formProgramme, date_debut: e.target.value })} style={styles.input} />
+            </div>
+          )}
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={styles.label}>Semaines</label>
             <select value={formProgramme.semaines} onChange={e => setFormProgramme({ ...formProgramme, semaines: e.target.value })} style={styles.select}>
@@ -344,7 +383,12 @@ export default function Programme() {
         </div>
       ) : (
         <div style={styles.card}>
-          {/* Titre selon contexte groupe ou individuel */}
+          {/* Titre selon contexte groupe, individuel ou brouillon bibliothèque */}
+          {programme.bibliotheque_template_id && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📚 Brouillon bibliothèque</span>
+            </div>
+          )}
           {programme.groupe_id && !programme.template_id && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: (programme.groupes?.couleur || '#6366f1') + '18', border: `1px solid ${(programme.groupes?.couleur || '#6366f1')}44`, borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: programme.groupes?.couleur || '#6366f1', display: 'inline-block' }} />
@@ -365,12 +409,24 @@ export default function Programme() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button onClick={() => setEditProgramme(true)} style={styles.btnSecondary}>Modifier</button>
-            <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>💾 Template</button>
-            <button onClick={supprimerProgramme} style={styles.btnDanger}>Supprimer</button>
+            {programme.bibliotheque_template_id ? (
+              <button
+                onClick={sauvegarderDansBibliotheque}
+                disabled={savingTemplate}
+                style={{ ...styles.btnPrimary, opacity: savingTemplate ? 0.7 : 1 }}
+              >
+                {savingTemplate ? 'Enregistrement…' : '📚 Enregistrer dans la bibliothèque'}
+              </button>
+            ) : (
+              <>
+                <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>💾 Template</button>
+                <button onClick={supprimerProgramme} style={styles.btnDanger}>Supprimer</button>
+              </>
+            )}
           </div>
 
           {/* Modale enregistrer comme template */}
-          {showSaveTemplate && (
+          {!programme.bibliotheque_template_id && showSaveTemplate && (
             <div style={{ marginTop: '1rem', background: '#f9fafb', borderRadius: 12, border: '1.5px solid #e5e7eb', padding: '1rem' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 💾 Enregistrer comme template de cycle

@@ -7,11 +7,9 @@ export default function CycleTemplates() {
   const navigate = useNavigate()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('list') // 'list' | 'edit'
-  const [current, setCurrent] = useState(null) // template en cours d'édition
-  const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [showAI, setShowAI] = useState(false)
+  const [ouvrantId, setOuvrantId] = useState(null) // template en cours de matérialisation en brouillon
 
   // ── Envoyer à un client ──────────────────────────────────────────────────────
   const [sendModal, setSendModal] = useState(null) // template à envoyer
@@ -103,15 +101,80 @@ export default function CycleTemplates() {
 
   useEffect(() => { load() }, [load])
 
-  function newTemplate() {
-    setCurrent({
-      id: null,
-      nom: '',
-      semaines: 8,
-      description: '',
-      programme_template_seances: [],
-    })
-    setView('edit')
+  // Insère les séances (+ exercices + RPE cibles) d'un template dans un programme
+  // réel déjà créé — logique partagée entre l'envoi à un client et l'ouverture
+  // du brouillon bibliothèque, pour que les deux matérialisent les données de la
+  // même façon (cardio compris).
+  async function materialiserSeances(templateSeancesRaw, programmeId) {
+    const seances = [...(templateSeancesRaw || [])].sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
+    for (const [idx, ts] of seances.entries()) {
+      const { data: newSeance } = await supabase
+        .from('seances')
+        .insert({
+          programme_id: programmeId, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [],
+          cardio_debut: ts.cardio_debut || null, cardio_fin: ts.cardio_fin || null, cardio_blocs: ts.cardio_blocs || [],
+        })
+        .select().single()
+      if (newSeance && ts.exercices?.length > 0) {
+        await supabase.from('exercices').insert(
+          ts.exercices.map(ex => ({
+            seance_id: newSeance.id,
+            code: ex.code, nom: ex.nom, series: ex.series,
+            repetitions: ex.repetitions, tempo: ex.tempo,
+            recuperation: ex.recuperation, type_intensite: ex.type_intensite,
+            valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
+            bibliotheque_id: ex.bibliotheque_id || null,
+            progressions: ex.progressions || null,
+            series_echauffement: ex.series_echauffement || null,
+            media_url: ex.media_url || null,
+          }))
+        )
+      }
+      const rpeCibles = ts.rpe_cibles || {}
+      if (newSeance && Object.keys(rpeCibles).length > 0) {
+        await supabase.from('rpe_seances').insert(
+          Object.entries(rpeCibles).map(([sem, val]) => ({ seance_id: newSeance.id, semaine: parseInt(sem), rpe_cible: val }))
+        )
+      }
+    }
+  }
+
+  // Crée un nouveau template vide + son brouillon d'édition, et ouvre directement
+  // ce brouillon dans le vrai éditeur de cycle (Programme.js / Seance.js).
+  async function creerTemplate() {
+    const { data: tpl, error } = await supabase
+      .from('programme_templates')
+      .insert({ nom: 'Nouveau cycle', semaines: 8, description: '' })
+      .select().single()
+    if (error) { alert(error.message); return }
+    const { data: draft, error: e2 } = await supabase
+      .from('programmes')
+      .insert({ nom: tpl.nom, semaines: tpl.semaines, bibliotheque_template_id: tpl.id })
+      .select().single()
+    if (e2) { alert(e2.message); return }
+    navigate(`/programme/${draft.id}`)
+  }
+
+  // "Modifier" un template existant : rouvre son brouillon s'il existe déjà,
+  // sinon le matérialise à partir des données du template (première ouverture,
+  // ou template créé par l'IA / migré depuis un ancien template sans brouillon).
+  async function ouvrirDraft(t) {
+    setOuvrantId(t.id)
+    try {
+      const { data: existing } = await supabase
+        .from('programmes').select('id').eq('bibliotheque_template_id', t.id).maybeSingle()
+      if (existing) { navigate(`/programme/${existing.id}`); return }
+
+      const { data: draft, error } = await supabase
+        .from('programmes')
+        .insert({ nom: t.nom, semaines: t.semaines, bibliotheque_template_id: t.id })
+        .select().single()
+      if (error) { alert(error.message); return }
+      await materialiserSeances(t.programme_template_seances, draft.id)
+      navigate(`/programme/${draft.id}`)
+    } finally {
+      setOuvrantId(null)
+    }
   }
 
   // Sauvegarde un cycle généré par l'IA comme template
@@ -135,56 +198,6 @@ export default function CycleTemplates() {
       })
     }
     await load()
-  }
-
-  function editTemplate(t) {
-    const seances = [...(t.programme_template_seances || [])]
-      .sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
-    setCurrent({ ...t, programme_template_seances: seances })
-    setView('edit')
-  }
-
-  async function saveTemplate() {
-    if (!current.nom.trim()) return
-    setSaving(true)
-    let templateId = current.id
-
-    if (!templateId) {
-      const { data, error } = await supabase
-        .from('programme_templates')
-        .insert({ nom: current.nom, semaines: current.semaines, description: current.description })
-        .select('id')
-        .single()
-      if (error) { setSaving(false); return }
-      templateId = data.id
-    } else {
-      await supabase.from('programme_templates')
-        .update({ nom: current.nom, semaines: current.semaines, description: current.description })
-        .eq('id', templateId)
-    }
-
-    // Resync séances : delete all + reinsert
-    await supabase.from('programme_template_seances').delete().eq('template_id', templateId)
-    if (current.programme_template_seances.length > 0) {
-      await supabase.from('programme_template_seances').insert(
-        current.programme_template_seances.map(s => ({
-          template_id: templateId,
-          nom: s.nom,
-          jour: s.jour,
-          ordre: s.ordre,
-          exercices: s.exercices || [],
-          echauffement: s.echauffement || [],
-          rpe_cibles: s.rpe_cibles || {},
-          cardio_debut: s.cardio_debut || null,
-          cardio_fin: s.cardio_fin || null,
-          cardio_blocs: s.cardio_blocs || [],
-        }))
-      )
-    }
-
-    setSaving(false)
-    setView('list')
-    load()
   }
 
   async function deleteTemplate(id) {
@@ -251,37 +264,7 @@ export default function CycleTemplates() {
     }
 
     // Insérer les séances du template
-    const seances = [...(sendModal.programme_template_seances || [])].sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
-    for (const [idx, ts] of seances.entries()) {
-      const { data: newSeance } = await supabase
-        .from('seances')
-        .insert({
-          programme_id: progId, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [],
-          cardio_debut: ts.cardio_debut || null, cardio_fin: ts.cardio_fin || null, cardio_blocs: ts.cardio_blocs || [],
-        })
-        .select().single()
-      if (newSeance && ts.exercices?.length > 0) {
-        await supabase.from('exercices').insert(
-          ts.exercices.map(ex => ({
-            seance_id: newSeance.id,
-            code: ex.code, nom: ex.nom, series: ex.series,
-            repetitions: ex.repetitions, tempo: ex.tempo,
-            recuperation: ex.recuperation, type_intensite: ex.type_intensite,
-            valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
-            bibliotheque_id: ex.bibliotheque_id || null,
-            progressions: ex.progressions || null,
-            series_echauffement: ex.series_echauffement || null,
-            media_url: ex.media_url || null,
-          }))
-        )
-      }
-      const rpeCibles = ts.rpe_cibles || {}
-      if (newSeance && Object.keys(rpeCibles).length > 0) {
-        await supabase.from('rpe_seances').insert(
-          Object.entries(rpeCibles).map(([sem, val]) => ({ seance_id: newSeance.id, semaine: parseInt(sem), rpe_cible: val }))
-        )
-      }
-    }
+    await materialiserSeances(sendModal.programme_template_seances, progId)
 
     const client = clients.find(c => c.id === sendForm.client_id)
     setSendSuccess(`${client?.prenom} ${client?.nom}`)
@@ -289,80 +272,8 @@ export default function CycleTemplates() {
     setTimeout(() => { setSendModal(null); navigate(`/programme/${progId}`) }, 1500)
   }
 
-  function addSeance() {
-    const seances = current.programme_template_seances
-    const maxJour = seances.length > 0 ? Math.max(...seances.map(s => s.jour)) : 0
-    setCurrent(p => ({
-      ...p,
-      programme_template_seances: [
-        ...p.programme_template_seances,
-        { nom: '', jour: maxJour + 1, ordre: 1, exercices: [] },
-      ],
-    }))
-  }
-
-  function updateSeance(idx, field, val) {
-    setCurrent(p => {
-      const seances = [...p.programme_template_seances]
-      seances[idx] = { ...seances[idx], [field]: val }
-      return { ...p, programme_template_seances: seances }
-    })
-  }
-
-  function removeSeance(idx) {
-    setCurrent(p => ({
-      ...p,
-      programme_template_seances: p.programme_template_seances.filter((_, i) => i !== idx),
-    }))
-  }
-
-  // ── Gestion exercices dans le template ──────────────────────────────────────
-  const [expandedSeances, setExpandedSeances] = useState(new Set())
-
-  function toggleExpandSeance(idx) {
-    setExpandedSeances(prev => {
-      const next = new Set(prev)
-      next.has(idx) ? next.delete(idx) : next.add(idx)
-      return next
-    })
-  }
-
-  function addExToSeance(seanceIdx) {
-    setCurrent(p => {
-      const seances = [...p.programme_template_seances]
-      const exs = seances[seanceIdx].exercices || []
-      const lastCode = exs.length > 0 ? exs[exs.length - 1].code || '' : ''
-      seances[seanceIdx] = {
-        ...seances[seanceIdx],
-        exercices: [...exs, { code: lastCode, nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', media_url: '', ordre: exs.length + 1 }],
-      }
-      return { ...p, programme_template_seances: seances }
-    })
-  }
-
-  function updateExInSeance(seanceIdx, exIdx, field, val) {
-    setCurrent(p => {
-      const seances = [...p.programme_template_seances]
-      const exs = [...(seances[seanceIdx].exercices || [])]
-      exs[exIdx] = { ...exs[exIdx], [field]: val }
-      seances[seanceIdx] = { ...seances[seanceIdx], exercices: exs }
-      return { ...p, programme_template_seances: seances }
-    })
-  }
-
-  function removeExFromSeance(seanceIdx, exIdx) {
-    setCurrent(p => {
-      const seances = [...p.programme_template_seances]
-      seances[seanceIdx] = {
-        ...seances[seanceIdx],
-        exercices: (seances[seanceIdx].exercices || []).filter((_, i) => i !== exIdx),
-      }
-      return { ...p, programme_template_seances: seances }
-    })
-  }
-
   // ─── LISTE ───────────────────────────────────────────────────────────────────
-  if (view === 'list') {
+  {
     const allFolders = [...new Set([...openFolders, ...templates.map(t => t.dossier).filter(Boolean)])].sort()
     const sansDossier = templates.filter(t => !t.dossier)
     const folderOptions = [...new Set(templates.map(t => t.dossier).filter(Boolean))].sort()
@@ -487,7 +398,9 @@ export default function CycleTemplates() {
 
           <div style={S.cardActions}>
             <button style={S.btnPrimary} onClick={() => openSendModal(t)}>📤 Envoyer</button>
-            <button style={S.btnSecondary} onClick={() => editTemplate(t)}>Modifier</button>
+            <button style={S.btnSecondary} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
+              {ouvrantId === t.id ? 'Ouverture…' : 'Modifier'}
+            </button>
             {deleteConfirm === t.id ? (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button style={S.btnDanger} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
@@ -511,7 +424,7 @@ export default function CycleTemplates() {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button style={S.btnSecondary} onClick={() => setShowNewFolder(true)}>+ Dossier</button>
             <button style={S.btnAI} onClick={() => setShowAI(true)}>✨ IA</button>
-            <button style={S.btnPrimary} onClick={newTemplate}>+ Nouveau template</button>
+            <button style={S.btnPrimary} onClick={creerTemplate}>+ Nouveau template</button>
           </div>
         </div>
 
@@ -543,7 +456,7 @@ export default function CycleTemplates() {
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
             <div style={{ fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Aucun template</div>
             <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Crée un template de cycle pour l'appliquer rapidement à tes clients</div>
-            <button style={{ ...S.btnPrimary, marginTop: '1.25rem' }} onClick={newTemplate}>Créer un template</button>
+            <button style={{ ...S.btnPrimary, marginTop: '1.25rem' }} onClick={creerTemplate}>Créer un template</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -786,120 +699,6 @@ export default function CycleTemplates() {
     </div>
   )
   }
-
-  // ─── ÉDITEUR ─────────────────────────────────────────────────────────────────
-  return (
-    <div style={S.page}>
-      <div style={S.header}>
-        <button style={S.btnBack} onClick={() => setView('list')}>← Retour</button>
-        <button style={{ ...S.btnPrimary, opacity: saving ? 0.7 : 1 }} onClick={saveTemplate} disabled={saving}>
-          {saving ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-      </div>
-
-      <div style={S.form}>
-        <div style={S.formGroup}>
-          <label style={S.label}>Nom du template *</label>
-          <input style={S.input} value={current.nom}
-            onChange={e => setCurrent(p => ({ ...p, nom: e.target.value }))}
-            placeholder="Ex: Préparation physique générale" />
-        </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div style={{ ...S.formGroup, flex: 1 }}>
-            <label style={S.label}>Durée (semaines)</label>
-            <input style={S.input} type="number" min={1} max={52} value={current.semaines}
-              onChange={e => setCurrent(p => ({ ...p, semaines: parseInt(e.target.value) || 8 }))} />
-          </div>
-        </div>
-        <div style={S.formGroup}>
-          <label style={S.label}>Description</label>
-          <textarea style={{ ...S.input, minHeight: '80px', resize: 'vertical' }}
-            value={current.description || ''}
-            onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))}
-            placeholder="Objectifs, niveau, particularités…" />
-        </div>
-
-        <div style={S.sectionTitle}>Séances ({current.programme_template_seances.length})</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {current.programme_template_seances.map((s, idx) => {
-            const isOpen = expandedSeances.has(idx)
-            const exs = s.exercices || []
-            return (
-              <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
-                {/* Ligne séance */}
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#fafafa' }}>
-                  <div style={S.seanceNum}>J{s.jour}</div>
-                  <input style={{ ...S.input, flex: 1, marginBottom: 0 }} value={s.nom}
-                    onChange={e => updateSeance(idx, 'nom', e.target.value)}
-                    placeholder="Nom de la séance" />
-                  <input style={{ ...S.input, width: '60px', marginBottom: 0, textAlign: 'center' }} type="number" min={1}
-                    value={s.jour} onChange={e => updateSeance(idx, 'jour', parseInt(e.target.value) || 1)}
-                    title="Jour" />
-                  <button
-                    onClick={() => toggleExpandSeance(idx)}
-                    style={{ ...S.btnSecondary, padding: '0.4rem 0.6rem', fontSize: '0.78rem', marginBottom: 0, whiteSpace: 'nowrap' }}>
-                    {isOpen ? '▲' : '▼'} {exs.length} ex.
-                  </button>
-                  <button style={S.btnRemove} onClick={() => removeSeance(idx)}>✕</button>
-                </div>
-
-                {/* Exercices expandables */}
-                {isOpen && (
-                  <div style={{ padding: '0.75rem', background: 'white', borderTop: '1px solid #f3f4f6' }}>
-                    {exs.length === 0 && (
-                      <p style={{ fontSize: '0.78rem', color: '#9ca3af', fontStyle: 'italic', margin: '0 0 0.5rem' }}>
-                        Aucun exercice — ajoute-en ci-dessous.
-                      </p>
-                    )}
-                    {exs.map((ex, ei) => (
-                      <div key={ei} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center', marginBottom: '0.5rem', padding: '0.5rem 0.6rem', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                        <button onClick={() => removeExFromSeance(idx, ei)}
-                          style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '0.85rem', padding: '0 2px', flexShrink: 0 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                        <input value={ex.code} onChange={e => updateExInSeance(idx, ei, 'code', e.target.value)}
-                          placeholder="A1" style={{ ...S.input, width: '52px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
-                        <input value={ex.nom} onChange={e => updateExInSeance(idx, ei, 'nom', e.target.value)}
-                          placeholder="Exercice" style={{ ...S.input, flex: 2, minWidth: '120px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
-                        <input value={ex.series} onChange={e => updateExInSeance(idx, ei, 'series', e.target.value)}
-                          placeholder="Séries" style={{ ...S.input, width: '58px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} type="number" />
-                        <input value={ex.repetitions} onChange={e => updateExInSeance(idx, ei, 'repetitions', e.target.value)}
-                          placeholder="Reps" style={{ ...S.input, width: '64px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
-                        <input value={ex.tempo} onChange={e => updateExInSeance(idx, ei, 'tempo', e.target.value)}
-                          placeholder="Tempo" style={{ ...S.input, width: '72px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
-                        <input value={ex.recuperation} onChange={e => updateExInSeance(idx, ei, 'recuperation', e.target.value)}
-                          placeholder="Récup" style={{ ...S.input, width: '64px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
-                        <select value={ex.type_intensite} onChange={e => updateExInSeance(idx, ei, 'type_intensite', e.target.value)}
-                          style={{ ...S.input, width: '82px', marginBottom: 0, padding: '0.3rem 0.35rem', fontSize: '0.78rem' }}>
-                          <option value="">Intensité</option>
-                          <option value="RPE">RPE</option>
-                          <option value="RIR">RIR</option>
-                          <option value="% 1RM">% 1RM</option>
-                          <option value="Vitesse">Vitesse</option>
-                          <option value="Libre">Libre</option>
-                        </select>
-                        <input value={ex.valeur_intensite} onChange={e => updateExInSeance(idx, ei, 'valeur_intensite', e.target.value)}
-                          placeholder="Val." style={{ ...S.input, width: '52px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.82rem' }} />
-                        <input value={ex.media_url || ''} onChange={e => updateExInSeance(idx, ei, 'media_url', e.target.value)}
-                          placeholder="URL média" style={{ ...S.input, flex: 3, minWidth: '120px', marginBottom: 0, padding: '0.3rem 0.45rem', fontSize: '0.78rem', color: '#6366f1' }} />
-                      </div>
-                    ))}
-                    <button onClick={() => addExToSeance(idx)}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.35rem 0.75rem', marginTop: '0.25rem' }}>
-                      + Exercice
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        <button style={{ ...S.btnSecondary, marginTop: '0.75rem' }} onClick={addSeance}>
-          + Ajouter une séance
-        </button>
-      </div>
-    </div>
-  )
 }
 
 const S = {
