@@ -1396,7 +1396,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         <div style={{ ...S.indicateursSection, marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
             onClick={() => setVideoPickerOpen(v => !v)}>
-            <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>🎥 Demander une vidéo</div>
+            <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>Demander une vidéo</div>
             <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{videoPickerOpen ? 'Masquer ▲' : 'Afficher ▼'}</span>
           </div>
 
@@ -1524,12 +1524,12 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                   {videoDemandes[exo.id] ? (
                     <button onClick={() => annulerDemandeVideo(exo.id)}
                       style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-                      🎥 En attente · Annuler
+                      En attente · Annuler
                     </button>
                   ) : (
                     <button onClick={() => demanderVideo(exo.id)}
                       style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-                      🎥 Demander une vidéo
+                      Demander une vidéo
                     </button>
                   )}
                 </div>
