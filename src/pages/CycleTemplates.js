@@ -173,6 +173,11 @@ export default function CycleTemplates() {
           jour: s.jour,
           ordre: s.ordre,
           exercices: s.exercices || [],
+          echauffement: s.echauffement || [],
+          rpe_cibles: s.rpe_cibles || {},
+          cardio_debut: s.cardio_debut || null,
+          cardio_fin: s.cardio_fin || null,
+          cardio_blocs: s.cardio_blocs || [],
         }))
       )
     }
@@ -250,7 +255,10 @@ export default function CycleTemplates() {
     for (const [idx, ts] of seances.entries()) {
       const { data: newSeance } = await supabase
         .from('seances')
-        .insert({ programme_id: progId, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [] })
+        .insert({
+          programme_id: progId, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [],
+          cardio_debut: ts.cardio_debut || null, cardio_fin: ts.cardio_fin || null, cardio_blocs: ts.cardio_blocs || [],
+        })
         .select().single()
       if (newSeance && ts.exercices?.length > 0) {
         await supabase.from('exercices').insert(
