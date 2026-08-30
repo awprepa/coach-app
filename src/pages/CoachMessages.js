@@ -2,12 +2,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import ChatBox from '../components/ChatBox'
 import { sendPushOnly } from '../notifs'
+import ClientPicker from '../components/ClientPicker'
 
 export default function CoachMessages() {
   const [coachId, setCoachId]         = useState(null)
   const [conversations, setConversations] = useState([]) // [{ clientId, nom, prenom, lastMsg, lastAt, unread }]
   const [selected, setSelected]       = useState(null)   // clientId sélectionné
-  const [allClients, setAllClients]   = useState([])     // pour démarrer une nouvelle conv
+  const [newConvExclude, setNewConvExclude] = useState(new Set()) // clients déjà en conv ou sans compte
   const [showNew, setShowNew]         = useState(false)
   const [loading, setLoading]         = useState(true)
 
@@ -71,10 +72,11 @@ export default function CoachMessages() {
   }, [coachId])
 
   async function openNewConv() {
-    // Charger tous les clients qui n'ont pas encore de conversation
-    const { data: clients } = await supabase.from('clients').select('user_id, nom, prenom').not('user_id', 'is', null)
+    // Exclure les clients sans compte (user_id null) et ceux qui ont déjà une conversation
+    const { data: clients } = await supabase.from('clients').select('id, user_id')
     const existingIds = new Set(conversations.map(c => c.clientId))
-    setAllClients((clients || []).filter(c => !existingIds.has(c.user_id)))
+    const exclude = new Set((clients || []).filter(c => !c.user_id || existingIds.has(c.user_id)).map(c => c.id))
+    setNewConvExclude(exclude)
     setShowNew(true)
   }
 
@@ -121,18 +123,16 @@ export default function CoachMessages() {
             <button onClick={openNewConv} style={S.newBtn} title="Nouvelle conversation">＋</button>
           </div>
 
-          {showNew && allClients.length > 0 && (
+          {showNew && (
             <div style={S.newPanel}>
               <p style={S.newLabel}>Démarrer une conversation avec :</p>
-              {allClients.map(c => (
-                <button key={c.user_id} onClick={() => startNewConv(c.user_id, c.nom, c.prenom)} style={S.newClientBtn}>
-                  {c.prenom} {c.nom}
-                </button>
-              ))}
+              <ClientPicker
+                clientFields="id, user_id, prenom, nom"
+                excludeIds={newConvExclude}
+                onChange={(_, c) => c && startNewConv(c.user_id, c.nom, c.prenom)}
+                placeholder="Choisir un client…"
+              />
             </div>
-          )}
-          {showNew && allClients.length === 0 && (
-            <p style={{ padding: '0.75rem 1rem', color: '#9ca3af', fontSize: '0.8rem' }}>Tous les clients ont déjà une conversation.</p>
           )}
 
           {conversations.length === 0 && !showNew && (

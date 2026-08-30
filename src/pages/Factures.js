@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
+import ClientPicker from '../components/ClientPicker'
 
 /* ── Icônes SVG ─────────────────────────────────────────────────────────── */
 const Ico = {
@@ -41,7 +42,9 @@ export default function Factures() {
   const [printId, setPrintId]             = useState(null)
   const [settingsForm, setSettingsForm]   = useState({})
   const [form, setForm]                   = useState(EMPTY_FORM())
-  const [selectedGroupId, setSelectedGroupId] = useState(null)
+  const [selectedGroupId, setSelectedGroupId] = useState(null) // "cat:<id>" (catégorie de facturation) ou "grp:<id>" (groupe/équipe)
+  const [teamGroupes, setTeamGroupes]     = useState([]) // groupes/équipes réels (table groupes), avec leurs membres
+  const [teamMemberIds, setTeamMemberIds] = useState(new Set())
   const printRef = useRef()
 
   // ── Paiements ────────────────────────────────────────────────────────────
@@ -71,17 +74,40 @@ export default function Factures() {
   }, [paiements])
 
   async function fetchAll() {
-    const [{ data: f }, { data: c }, { data: s }, { data: cats }, { data: pays }] = await Promise.all([
+    const [{ data: f }, { data: c }, { data: s }, { data: cats }, { data: pays }, { data: gs }, { data: membres }] = await Promise.all([
       supabase.from('factures').select('*, clients(prenom, nom, email)').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, prenom, nom, email, categorie_id').order('nom'),
       supabase.from('app_settings').select('key, value').in('key', SETTINGS_KEYS),
       supabase.from('categories').select('id, nom').order('nom'),
       supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false }),
+      supabase.from('groupes').select('id, nom, parent_id').order('nom'),
+      supabase.from('groupe_membres').select('client_id, groupe_id'),
     ])
     setFactures(f || [])
     setClients(c || [])
     setCategories(cats || [])
     setPaiements(pays || [])
+
+    // Groupes/équipes réels (table `groupes`), pour ne pas mélanger leurs
+    // membres dans la liste plate des clients individuels du destinataire.
+    const allGroupes = gs || []
+    const clientById = {}
+    ;(c || []).forEach(cl => { clientById[cl.id] = cl })
+    const membresParGroupe = {}
+    ;(membres || []).forEach(m => { (membresParGroupe[m.groupe_id] ||= []).push(m.client_id) })
+    const racineDe = (gid) => allGroupes.find(x => x.id === gid)?.parent_id || gid
+    const membresIdsParRacine = {}
+    Object.entries(membresParGroupe).forEach(([gid, ids]) => {
+      const set = (membresIdsParRacine[racineDe(gid)] ||= new Set())
+      ids.forEach(id => set.add(id))
+    })
+    const groupesResult = allGroupes.filter(g => !g.parent_id).map(g => ({
+      id: g.id, nom: g.nom,
+      membres: [...(membresIdsParRacine[g.id] || [])].map(id => clientById[id]).filter(Boolean),
+    })).filter(g => g.membres.length > 0)
+    setTeamGroupes(groupesResult)
+    setTeamMemberIds(new Set((membres || []).map(m => m.client_id)))
+
     const map = {}
     ;(s || []).forEach(r => { map[r.key] = r.value })
     setSettings(map)
@@ -189,7 +215,7 @@ export default function Factures() {
 
   // ── Fonctions paiements ──────────────────────────────────────────────────
   function openNewPaiement() {
-    setPForm({ client_id: clients[0]?.id || '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
+    setPForm({ client_id: '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
     setPModal('new')
   }
 
@@ -469,11 +495,11 @@ export default function Factures() {
               {!form.dest_manuel ? (
                 <>
                   <select
-                    value={selectedGroupId ? `group:${selectedGroupId}` : (form.client_id || '')}
+                    value={selectedGroupId || (form.client_id || '')}
                     onChange={e => {
                       const val = e.target.value
-                      if (val.startsWith('group:')) {
-                        setSelectedGroupId(val.replace('group:', ''))
+                      if (val.startsWith('cat:') || val.startsWith('grp:')) {
+                        setSelectedGroupId(val)
                         setForm(f => ({ ...f, client_id: '' }))
                       } else {
                         setSelectedGroupId(null)
@@ -483,13 +509,20 @@ export default function Factures() {
                     style={S.input}
                   >
                     <option value="">— Aucun / Particulier —</option>
-                    {clients.map(c => (
+                    {clients.filter(c => !teamMemberIds.has(c.id)).map(c => (
                       <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
                     ))}
                     {categories.length > 0 && (
-                      <optgroup label="── Groupes / Équipes ──">
+                      <optgroup label="── Catégories ──">
                         {categories.map(cat => (
-                          <option key={cat.id} value={`group:${cat.id}`}>{cat.nom} (groupe)</option>
+                          <option key={cat.id} value={`cat:${cat.id}`}>{cat.nom}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {teamGroupes.length > 0 && (
+                      <optgroup label="── Groupes / Équipes ──">
+                        {teamGroupes.map(g => (
+                          <option key={g.id} value={`grp:${g.id}`}>{g.nom}</option>
                         ))}
                       </optgroup>
                     )}
@@ -501,7 +534,10 @@ export default function Factures() {
                       style={{ ...S.input, marginTop: '0.4rem' }}
                     >
                       <option value="">— Choisir un joueur —</option>
-                      {clients.filter(c => c.categorie_id === selectedGroupId).map(c => (
+                      {(selectedGroupId.startsWith('cat:')
+                        ? clients.filter(c => c.categorie_id === selectedGroupId.replace('cat:', ''))
+                        : (teamGroupes.find(g => g.id === selectedGroupId.replace('grp:', ''))?.membres || [])
+                      ).map(c => (
                         <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
                       ))}
                     </select>
@@ -765,11 +801,10 @@ export default function Factures() {
         </div>
 
         {/* Filtres */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-          <select style={{ ...S.input, width: 'auto', cursor: 'pointer' }} value={pFilterClient} onChange={e => setPFilterClient(e.target.value)}>
-            <option value="tous">Tous les clients</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
-          </select>
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 220 }}>
+            <ClientPicker value={pFilterClient === 'tous' ? null : pFilterClient} onChange={id => setPFilterClient(id || 'tous')} allowClear clearLabel="Tous les clients" />
+          </div>
           <select style={{ ...S.input, width: 'auto', cursor: 'pointer' }} value={pFilterStatut} onChange={e => setPFilterStatut(e.target.value)}>
             <option value="tous">Tous les statuts</option>
             {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -838,10 +873,7 @@ export default function Factures() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div>
                   <label style={S.label}>Client *</label>
-                  <select style={S.input} value={pForm.client_id} onChange={e => setPForm(p => ({ ...p, client_id: e.target.value }))}>
-                    <option value="">Choisir…</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
-                  </select>
+                  <ClientPicker value={pForm.client_id} onChange={id => setPForm(p => ({ ...p, client_id: id }))} />
                 </div>
                 <div>
                   <label style={S.label}>Montant (€) *</label>

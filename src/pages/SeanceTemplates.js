@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import ImportExcel from './ImportExcel'
+import useClientsEtGroupes from '../hooks/useClientsEtGroupes'
 
 export default function SeanceTemplates() {
   const navigate = useNavigate()
@@ -23,11 +24,13 @@ export default function SeanceTemplates() {
   const [editExercices, setEditExercices] = useState([])
   const [savingEdit, setSavingEdit]       = useState(false)
 
-  // Assignation à un client
+  // Assignation à un client — individuels en liste normale, groupes à part
+  // (au clic, la liste de ses membres s'affiche pour cocher dedans).
   const [sendingTemplate, setSendingTemplate] = useState(null)
-  const [clients, setClients]             = useState([])
+  const { individuels, groupes } = useClientsEtGroupes()
   const [clientProgrammes, setClientProgrammes] = useState({})
-  const [clientsLoaded, setClientsLoaded] = useState(false)
+  const [progsLoaded, setProgsLoaded]     = useState(false)
+  const [openGroupIds, setOpenGroupIds]   = useState(new Set())
   const [selectedAssign, setSelectedAssign] = useState({})  // clientId → programmeId
   const [assigning, setAssigning]         = useState(false)
   const [assignDone, setAssignDone]       = useState(false)
@@ -160,11 +163,10 @@ export default function SeanceTemplates() {
     e.stopPropagation()
     setSendingTemplate(template)
     setSelectedAssign({})
+    setOpenGroupIds(new Set())
     setAssignDone(false)
-    if (!clientsLoaded) {
-      const { data: clientsData } = await supabase.from('clients')
-        .select('id, prenom, nom').order('prenom')
-      const ids = (clientsData || []).map(c => c.id)
+    if (!progsLoaded) {
+      const ids = [...individuels, ...groupes.flatMap(g => g.membres)].map(c => c.id)
       let progsByClient = {}
       if (ids.length > 0) {
         const { data: progsData } = await supabase.from('programmes')
@@ -176,9 +178,8 @@ export default function SeanceTemplates() {
           progsByClient[p.client_id].push(p)
         }
       }
-      setClients(clientsData || [])
       setClientProgrammes(progsByClient)
-      setClientsLoaded(true)
+      setProgsLoaded(true)
     }
   }
 
@@ -193,6 +194,40 @@ export default function SeanceTemplates() {
       }
       return next
     })
+  }
+
+  function renderAssignRow(c) {
+    const progs = clientProgrammes[c.id] || []
+    const isChecked = selectedAssign[c.id] !== undefined
+    return (
+      <div key={c.id} style={{ ...S.clientRow, background: isChecked ? '#f0fdf4' : 'white', borderColor: isChecked ? '#bbf7d0' : '#f3f4f6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: progs.length > 0 ? 'pointer' : 'default' }}
+          onClick={() => progs.length > 0 && toggleClient(c.id)}>
+          <div style={{
+            width: 20, height: 20, borderRadius: 6, border: `2px solid ${isChecked ? '#22c55e' : '#d1d5db'}`,
+            background: isChecked ? '#22c55e' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            {isChecked && <span style={{ color: 'white', fontSize: '0.7rem', fontWeight: '900' }}>✓</span>}
+          </div>
+          <div>
+            <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>{c.prenom} {c.nom}</p>
+            {progs.length === 0 && <p style={{ margin: 0, fontSize: '0.72rem', color: '#ef4444' }}>Aucun cycle de training</p>}
+          </div>
+        </div>
+        {isChecked && progs.length > 1 && (
+          <select
+            value={selectedAssign[c.id] || ''}
+            onChange={e => setSelectedAssign(prev => ({ ...prev, [c.id]: e.target.value }))}
+            onClick={e => e.stopPropagation()}
+            style={{ marginLeft: 'auto', fontSize: '0.8rem', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '0.3rem 0.5rem', background: 'white', color: '#374151', outline: 'none' }}>
+            {progs.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+          </select>
+        )}
+        {isChecked && progs.length === 1 && (
+          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', padding: '0.2rem 0.5rem', borderRadius: 6 }}>{progs[0].nom}</span>
+        )}
+      </div>
+    )
   }
 
   const assignCount = Object.keys(selectedAssign).length
@@ -422,42 +457,36 @@ export default function SeanceTemplates() {
             ) : (
               <>
                 <div style={S.clientList}>
-                  {clients.length === 0 ? (
+                  {individuels.length === 0 && groupes.length === 0 ? (
                     <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem', fontSize: '0.85rem' }}>Aucun client.</p>
                   ) : (
-                    clients.map(c => {
-                      const progs = clientProgrammes[c.id] || []
-                      const isChecked = selectedAssign[c.id] !== undefined
-                      return (
-                        <div key={c.id} style={{ ...S.clientRow, background: isChecked ? '#f0fdf4' : 'white', borderColor: isChecked ? '#bbf7d0' : '#f3f4f6' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: progs.length > 0 ? 'pointer' : 'default' }}
-                            onClick={() => progs.length > 0 && toggleClient(c.id)}>
-                            <div style={{
-                              width: 20, height: 20, borderRadius: 6, border: `2px solid ${isChecked ? '#22c55e' : '#d1d5db'}`,
-                              background: isChecked ? '#22c55e' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                            }}>
-                              {isChecked && <span style={{ color: 'white', fontSize: '0.7rem', fontWeight: '900' }}>✓</span>}
+                    <>
+                      {individuels.map(c => renderAssignRow(c))}
+                      {groupes.map(g => {
+                        const isOpen = openGroupIds.has(g.id)
+                        const nbCoches = g.membres.filter(m => selectedAssign[m.id] !== undefined).length
+                        return (
+                          <div key={g.id}>
+                            <div
+                              onClick={() => setOpenGroupIds(prev => { const n = new Set(prev); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n })}
+                              style={{ ...S.clientRow, cursor: 'pointer', background: '#f9fafb' }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: g.couleur || '#6b7280', flexShrink: 0 }} />
+                                <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>{g.nom}</p>
+                                {nbCoches > 0 && <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 700 }}>{nbCoches} coché{nbCoches > 1 ? 's' : ''}</span>}
+                              </div>
+                              <span style={{ marginLeft: 'auto', color: '#9ca3af', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} {isOpen ? '▲' : '▼'}</span>
                             </div>
-                            <div>
-                              <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>{c.prenom} {c.nom}</p>
-                              {progs.length === 0 && <p style={{ margin: 0, fontSize: '0.72rem', color: '#ef4444' }}>Aucun cycle de training</p>}
-                            </div>
+                            {isOpen && (
+                              <div style={{ paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+                                {g.membres.map(c => renderAssignRow(c))}
+                              </div>
+                            )}
                           </div>
-                          {isChecked && progs.length > 1 && (
-                            <select
-                              value={selectedAssign[c.id] || ''}
-                              onChange={e => setSelectedAssign(prev => ({ ...prev, [c.id]: e.target.value }))}
-                              onClick={e => e.stopPropagation()}
-                              style={{ marginLeft: 'auto', fontSize: '0.8rem', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '0.3rem 0.5rem', background: 'white', color: '#374151', outline: 'none' }}>
-                              {progs.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                            </select>
-                          )}
-                          {isChecked && progs.length === 1 && (
-                            <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', padding: '0.2rem 0.5rem', borderRadius: 6 }}>{progs[0].nom}</span>
-                          )}
-                        </div>
-                      )
-                    })
+                        )
+                      })}
+                    </>
                   )}
                 </div>
 

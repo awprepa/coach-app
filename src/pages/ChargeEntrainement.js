@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { sendNotif } from '../notifs'
+import ClientPicker from '../components/ClientPicker'
 
 // Références scientifiques :
 // - ACWR (Acute:Chronic Workload Ratio) — Gabbett TJ (2016) : zone optimale 0.8–1.3
@@ -20,17 +21,12 @@ const GPS_Z_METRICS = [
 ]
 
 export default function ChargeEntrainement() {
-  const [clients, setClients] = useState([])
   const [selectedClient, setSelectedClient] = useState(null)
+  const [selectedClientObj, setSelectedClientObj] = useState(null)
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [gpsZData, setGpsZData] = useState(null)   // null=not loaded, false=no data
   const [gpsZLoading, setGpsZLoading] = useState(false)
-
-  useEffect(() => {
-    supabase.from('clients').select('id, prenom, nom').order('nom')
-      .then(({ data }) => setClients(data || []))
-  }, [])
 
   const loadCharge = useCallback(async (clientId) => {
     setLoading(true)
@@ -191,14 +187,13 @@ export default function ChargeEntrainement() {
   // ─── GPS Z-scores ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (selectedClient && clients.length > 0) loadGpsZScores(selectedClient, clients)
-  }, [selectedClient, clients]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedClient && selectedClientObj) loadGpsZScores(selectedClient, selectedClientObj)
+  }, [selectedClient, selectedClientObj]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadGpsZScores(clientId, clientsList) {
+  async function loadGpsZScores(clientId, client) {
     setGpsZLoading(true)
     setGpsZData(null)
 
-    const client = clientsList.find(c => c.id === clientId)
     if (!client) { setGpsZLoading(false); return }
 
     // Format GPS : "NOM Prenom" (nom en majuscules en premier)
@@ -415,14 +410,12 @@ export default function ChargeEntrainement() {
       </div>
 
       {/* Sélecteur client */}
-      <div style={S.clientBar}>
-        {clients.map(c => (
-          <button key={c.id}
-            style={{ ...S.clientBtn, ...(selectedClient === c.id ? S.clientBtnActive : {}) }}
-            onClick={() => setSelectedClient(c.id)}>
-            {c.prenom} {c.nom}
-          </button>
-        ))}
+      <div style={{ maxWidth: 320, marginBottom: '1.25rem' }}>
+        <ClientPicker
+          value={selectedClient}
+          onChange={(id, c) => { setSelectedClient(id); setSelectedClientObj(c) }}
+          placeholder="Sélectionner un client…"
+        />
       </div>
 
       {!selectedClient && (

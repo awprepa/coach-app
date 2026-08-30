@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
+import ClientPicker from '../components/ClientPicker'
 
 const STATUTS = [
   { key: 'en_attente', label: 'En attente', color: '#f59e0b', bg: '#fef3c7' },
@@ -12,7 +13,6 @@ function statutInfo(key) {
 }
 
 export default function Paiements() {
-  const [clients, setClients] = useState([])
   const [paiements, setPaiements] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterClient, setFilterClient] = useState('tous')
@@ -32,11 +32,7 @@ export default function Paiements() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [{ data: cls }, { data: pays }] = await Promise.all([
-      supabase.from('clients').select('id, prenom, nom').order('nom'),
-      supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false }),
-    ])
-    setClients(cls || [])
+    const { data: pays } = await supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false })
     setPaiements(pays || [])
     setLoading(false)
   }, [])
@@ -54,7 +50,7 @@ export default function Paiements() {
   }, [paiements])
 
   function openNew() {
-    setForm({ client_id: clients[0]?.id || '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
+    setForm({ client_id: '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
     setModal('new')
   }
 
@@ -150,10 +146,14 @@ export default function Paiements() {
 
       {/* Filtres */}
       <div style={S.filters}>
-        <select style={S.select} value={filterClient} onChange={e => setFilterClient(e.target.value)}>
-          <option value="tous">Tous les clients</option>
-          {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
-        </select>
+        <div style={{ minWidth: 220 }}>
+          <ClientPicker
+            value={filterClient === 'tous' ? null : filterClient}
+            onChange={id => setFilterClient(id || 'tous')}
+            allowClear
+            clearLabel="Tous les clients"
+          />
+        </div>
         <select style={S.select} value={filterStatut} onChange={e => setFilterStatut(e.target.value)}>
           <option value="tous">Tous les statuts</option>
           {STATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -232,10 +232,7 @@ export default function Paiements() {
 
             <div style={S.formGroup}>
               <label style={S.label}>Client *</label>
-              <select style={S.input} value={form.client_id} onChange={e => setForm(p => ({ ...p, client_id: e.target.value }))}>
-                <option value="">Choisir…</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
-              </select>
+              <ClientPicker value={form.client_id} onChange={id => setForm(p => ({ ...p, client_id: id }))} />
             </div>
             <div style={S.formGroup}>
               <label style={S.label}>Montant (€) *</label>

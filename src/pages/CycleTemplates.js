@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SeanceAIModal from '../components/SeanceAIModal'
+import ClientPicker from '../components/ClientPicker'
 
 export default function CycleTemplates() {
   const navigate = useNavigate()
@@ -13,8 +14,7 @@ export default function CycleTemplates() {
 
   // ── Envoyer à un client ──────────────────────────────────────────────────────
   const [sendModal, setSendModal] = useState(null) // template à envoyer
-  const [clients, setClients] = useState([])
-  const [clientsLoading, setClientsLoading] = useState(false)
+  const [selectedClient, setSelectedClient] = useState(null) // client choisi via ClientPicker
   const [sendForm, setSendForm] = useState({ client_id: '', date_debut: '', nom: '' })
   const [sending, setSending] = useState(false)
   const [sendSuccess, setSendSuccess] = useState(null) // nom du client
@@ -206,20 +206,14 @@ export default function CycleTemplates() {
     load()
   }
 
-  async function openSendModal(t) {
+  function openSendModal(t) {
     setSendModal(t)
     setSendForm({ client_id: '', date_debut: '', nom: t.nom })
+    setSelectedClient(null)
     setSendSuccess(null)
     setSendMode('nouveau')
     setClientProgrammes([])
     setProgrammeToOverwrite(null)
-    setClientsLoading(true)
-    const { data } = await supabase
-      .from('clients')
-      .select('id, prenom, nom, offre')
-      .order('nom')
-    setClients(data || [])
-    setClientsLoading(false)
   }
 
   async function fetchClientProgrammes(clientId) {
@@ -266,8 +260,7 @@ export default function CycleTemplates() {
     // Insérer les séances du template
     await materialiserSeances(sendModal.programme_template_seances, progId)
 
-    const client = clients.find(c => c.id === sendForm.client_id)
-    setSendSuccess(`${client?.prenom} ${client?.nom}`)
+    setSendSuccess(`${selectedClient?.prenom} ${selectedClient?.nom}`)
     setSending(false)
     setTimeout(() => { setSendModal(null); navigate(`/programme/${progId}`) }, 1500)
   }
@@ -576,40 +569,12 @@ export default function CycleTemplates() {
                 {/* Sélection du client */}
                 <div style={S.formGroup}>
                   <label style={S.label}>Client *</label>
-                  {clientsLoading ? (
-                    <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.5rem 0' }}>Chargement…</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '180px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem' }}>
-                      {clients.map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => { setSendForm(f => ({ ...f, client_id: c.id })); fetchClientProgrammes(c.id) }}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '0.6rem 0.75rem', borderRadius: '6px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                            background: sendForm.client_id === c.id ? '#1a1a1a' : 'transparent',
-                            transition: 'background 0.15s',
-                          }}
-                        >
-                          <span style={{ fontWeight: '600', fontSize: '0.875rem', color: sendForm.client_id === c.id ? '#e4f816' : '#111827' }}>
-                            {c.prenom} {c.nom}
-                          </span>
-                          <span style={{
-                            fontSize: '0.7rem', fontWeight: '600', padding: '2px 8px', borderRadius: '20px',
-                            background: sendForm.client_id === c.id ? 'rgba(228,248,22,0.15)' : '#f3f4f6',
-                            color: sendForm.client_id === c.id ? '#e4f816' : '#6b7280',
-                          }}>
-                            {c.offre || 'coaching'}
-                          </span>
-                        </button>
-                      ))}
-                      {clients.length === 0 && (
-                        <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.75rem', textAlign: 'center' }}>
-                          Aucun client trouvé
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <ClientPicker
+                    value={sendForm.client_id}
+                    clientFields="id, prenom, nom, offre"
+                    onChange={(clientId, c) => { setSendForm(f => ({ ...f, client_id: clientId })); setSelectedClient(c); fetchClientProgrammes(clientId) }}
+                    placeholder="Choisir un client…"
+                  />
                 </div>
 
                 {/* Mode : nouveau cycle ou écraser l'existant */}

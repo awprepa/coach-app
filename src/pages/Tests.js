@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import ClientPicker from '../components/ClientPicker'
 
 const LINE_COLORS = ['#333333', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
 
@@ -9,7 +10,6 @@ const inputStyle = { width: '100%', padding: '0.6rem 0.75rem', border: '1.5px so
 
 export default function Tests() {
   const [types, setTypes]           = useState([])
-  const [clients, setClients]       = useState([])
   const [resultats, setResultats]   = useState([])
   const [selectedType, setSelectedType] = useState(null)
   const [showAddType, setShowAddType]   = useState(false)
@@ -23,12 +23,8 @@ export default function Tests() {
   useEffect(() => { init() }, [])
 
   async function init() {
-    const [{ data: t }, { data: c }] = await Promise.all([
-      supabase.from('tests_types').select('*').order('created_at'),
-      supabase.from('clients').select('id, prenom, nom').order('nom'),
-    ])
+    const { data: t } = await supabase.from('tests_types').select('*').order('created_at')
     setTypes(t || [])
-    setClients(c || [])
     if (t && t.length > 0) {
       setSelectedType(t[0])
       await fetchResultats(t[0].id)
@@ -156,10 +152,7 @@ export default function Tests() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
                   <label style={labelStyle}>Client</label>
-                  <select value={newResult.client_id} onChange={e => setNewResult(v => ({ ...v, client_id: e.target.value }))} style={inputStyle}>
-                    <option value="">Sélectionner…</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
-                  </select>
+                  <ClientPicker value={newResult.client_id} onChange={id => setNewResult(v => ({ ...v, client_id: id }))} placeholder="Sélectionner…" />
                 </div>
                 <div>
                   <label style={labelStyle}>Valeur {selectedType.unite ? `(${selectedType.unite})` : ''}</label>
