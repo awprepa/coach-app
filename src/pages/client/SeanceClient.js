@@ -10,6 +10,8 @@ import { enqueueCharge, processQueue, pendingCount } from '../../utils/offlineQu
 import { saveSeanceLocally, loadSeanceLocally, formatSavedAt } from '../../utils/localDB'
 import { createPortal } from 'react-dom'
 import { sendNotif, getCoachId } from '../../notifs'
+import { computeExerciseXp, fetchExerciceSetsByName, totalXpFromByName } from '../../data/xpSystem'
+import XpBulle, { useXpBulle } from '../../components/XpBulle'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -157,8 +159,39 @@ export default function SeanceClient() {
   const prNotifiedRef = useRef({}) // { [exId]: maxPoidsNotifié } — évite les doublons dans la même séance
   const finNotifSentRef = useRef(false) // verrou anti-doublon de la notif "séance terminée"
 
+  // ── Gain d'XP en direct (bulle éphémère) — clients hors groupe uniquement ──
+  const xpEnabledRef = useRef(false)   // true une fois confirmé que le client n'est dans aucun groupe
+  const xpByNameRef = useRef({})       // { nomExercice: { allSets: [{date,poids,reps}] } } — historique complet, même format que Progression
+  const xpTotalRef = useRef(0)         // total XP courant (identique à celui de la page Progression)
+  const bodyweightRef = useRef(null)
+  const xpBlocRef = useRef({})         // { groupLetter: xpGagnéCetteSéance } — pour le récap "Terminer le bloc"
+  const triggerXpBulle = useXpBulle()
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
+
+  // Une fois le client identifié : vérifie qu'il n'est dans aucun groupe, et si
+  // c'est le cas précharge son total d'XP (même calcul que ProgressionClient.js)
+  // pour pouvoir animer les gains en direct pendant la séance.
+  useEffect(() => {
+    const clientId = seance?.programmes?.client_id
+    if (!clientId || xpEnabledRef.current) return
+    ;(async () => {
+      try {
+        const { data: membres } = await supabase.from('groupe_membres').select('id').eq('client_id', clientId).limit(1)
+        if ((membres || []).length > 0) return // membre d'un groupe → pas d'animation XP
+        const [{ data: profile }, { data: lastWellness }, byName] = await Promise.all([
+          supabase.from('nutrition_profile').select('poids_kg').eq('client_id', clientId).maybeSingle(),
+          supabase.from('wellness').select('poids').eq('client_id', clientId).not('poids', 'is', null).order('date', { ascending: false }).limit(1).maybeSingle(),
+          fetchExerciceSetsByName(supabase, clientId),
+        ])
+        bodyweightRef.current = lastWellness?.poids || (profile?.poids_kg ? parseFloat(profile.poids_kg) : null) || null
+        xpByNameRef.current = byName
+        xpTotalRef.current = totalXpFromByName(byName, bodyweightRef.current)
+        xpEnabledRef.current = true
+      } catch (e) { console.warn('[xp] initialisation échouée:', e) }
+    })()
+  }, [seance])
 
   // Re-fetch léger quand l'app revient au premier plan
   useEffect(() => {
@@ -676,7 +709,7 @@ export default function SeanceClient() {
     flashSaved()
   }
 
-  async function validerSerie(exId, serieIdx, groupLetter, groupItems, targetReps) {
+  async function validerSerie(exId, serieIdx, groupLetter, groupItems, targetReps, boutonEl) {
     if (!exId) return
     const vKey = `${exId}-${serieIdx}`
     if (validatingSet.has(vKey)) return // anti double-tap
@@ -697,6 +730,31 @@ export default function SeanceClient() {
       valide: repsOk,
       is_done: true,
     }, { onConflict: 'exercice_id,semaine,serie' })
+
+    // ── Gain d'XP en direct (bulle éphémère, clients hors groupe) ─────────
+    if (xpEnabledRef.current) {
+      const poidsVal = parseFloat(serie.poids)
+      const repsVal = parseInt(serie.reps_reelles)
+      if (poidsVal > 0 && repsVal > 0) {
+        const exo = exercices.find(e => e.id === exId)
+        const nom = exo?.nom
+        if (nom) {
+          const prevSets = xpByNameRef.current[nom]?.allSets || []
+          const beforeXp = computeExerciseXp(prevSets, bodyweightRef.current)
+          const today = new Date().toISOString().slice(0, 10)
+          const newSets = [...prevSets, { date: today, poids: poidsVal, reps: repsVal }]
+          const afterXp = computeExerciseXp(newSets, bodyweightRef.current)
+          const delta = Math.max(0, afterXp - beforeXp)
+          if (delta > 0) {
+            xpByNameRef.current = { ...xpByNameRef.current, [nom]: { allSets: newSets } }
+            const totalAvant = xpTotalRef.current
+            xpTotalRef.current = totalAvant + delta
+            xpBlocRef.current[groupLetter] = (xpBlocRef.current[groupLetter] || 0) + delta
+            if (boutonEl) triggerXpBulle(boutonEl, delta, totalAvant)
+          }
+        }
+      }
+    }
 
     // ── Détection 1RM PR ─────────────────────────────────────────────────
     const repsR = parseInt(serie.reps_reelles)
@@ -800,7 +858,7 @@ export default function SeanceClient() {
     setValidatingSet(prev => { const n = new Set(prev); n.delete(vKey); return n })
   }
 
-  function terminerBloc(groupLetter) {
+  function terminerBloc(groupLetter, boutonEl) {
     setBlocsTermines(prev => new Set([...prev, groupLetter]))
     const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
     const idx = letters.indexOf(groupLetter)
@@ -808,6 +866,18 @@ export default function SeanceClient() {
     if (nextLetter) {
       setActiveBloc(nextLetter)
       setTimeout(() => blocRefs.current[nextLetter]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400)
+    }
+
+    // Récap XP du bloc (clients hors groupe) : aucun XP supplémentaire n'est
+    // accordé ici (déjà donné série par série) — juste une bulle qui résume
+    // ce qui vient d'être gagné sur l'ensemble du bloc.
+    if (xpEnabledRef.current && boutonEl) {
+      const gagne = xpBlocRef.current[groupLetter] || 0
+      if (gagne > 0) {
+        const totalAvantRecap = xpTotalRef.current - gagne
+        triggerXpBulle(boutonEl, gagne, totalAvantRecap)
+        delete xpBlocRef.current[groupLetter]
+      }
     }
   }
 
@@ -1373,7 +1443,7 @@ export default function SeanceClient() {
                         {serie.valide ? '✓' : '⚠'}
                       </button>
                   : <button
-                      onClick={() => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions)}
+                      onClick={e => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions, e.currentTarget)}
                       disabled={validatingSet.has(`${ex.id}-${si}`)}
                       style={{ ...S.serieValBtn, opacity: validatingSet.has(`${ex.id}-${si}`) ? 0.5 : 1 }}
                     >{validatingSet.has(`${ex.id}-${si}`) ? '…' : 'Valider'}</button>
@@ -1468,6 +1538,7 @@ export default function SeanceClient() {
 
   const main = (
     <div style={S.page}>
+      <XpBulle />
       {/* Bandeau hors ligne */}
       {offlineMode && (
         <div style={{ background: '#f59e0b', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', position: 'sticky', top: 0, zIndex: 200 }}>
@@ -1761,7 +1832,7 @@ export default function SeanceClient() {
                         return t.length > 0 && t.every(s => s.is_done)
                       })
                       return allSeriesDone
-                        ? <button onClick={() => terminerBloc(group.letter)} style={S.terminerBlocBtn}>✓ Terminer le bloc</button>
+                        ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={S.terminerBlocBtn}>✓ Terminer le bloc</button>
                         : null
                     })()}
                   </div>
@@ -1818,7 +1889,7 @@ export default function SeanceClient() {
                       return t.length > 0 && t.every(s => s.is_done)
                     })
                     return allSeriesDone
-                      ? <button onClick={() => terminerBloc(group.letter)} style={{ ...S.terminerBlocBtn, borderRadius: '0 0 12px 12px', marginTop: 0 }}>✓ Terminer le bloc</button>
+                      ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={{ ...S.terminerBlocBtn, borderRadius: '0 0 12px 12px', marginTop: 0 }}>✓ Terminer le bloc</button>
                       : null
                   })()}
                 </div>

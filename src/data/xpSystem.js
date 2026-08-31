@@ -86,3 +86,55 @@ export function levelFromXp(totalXp) {
     level++
   }
 }
+
+/** Récupère, pour un client, l'historique de séries de TOUS ses exercices
+ *  (tous cycles confondus), regroupé par nom d'exercice — même requête et
+ *  même mise en forme que ProgressionClient.js, pour que le total d'XP
+ *  affiché en séance corresponde exactement à celui de la page Progression.
+ *  Retourne { byName: { [nom]: { allSets: [{date,poids,reps}] } } }. */
+export async function fetchExerciceSetsByName(supabase, clientId) {
+  const byName = {}
+  if (!clientId) return byName
+
+  const { data: progs } = await supabase.from('programmes').select('id').eq('client_id', clientId)
+  const progIds = (progs || []).map(p => p.id)
+  if (!progIds.length) return byName
+
+  const { data: seances } = await supabase.from('seances').select('id, programme_id, date_debut, semaines')
+    .in('programme_id', progIds)
+  const seanceIds = (seances || []).map(s => s.id)
+  if (!seanceIds.length) return byName
+
+  const { data: exos } = await supabase.from('exercices').select('id, nom, seance_id').in('seance_id', seanceIds)
+  const exIds = (exos || []).map(e => e.id)
+  if (!exIds.length) return byName
+  const exoMap = {}
+  exos.forEach(e => { exoMap[e.id] = e })
+
+  const { data: series } = await supabase
+    .from('serie_tracking')
+    .select('exercice_id, semaine, serie, poids, reps_reelles, created_at')
+    .in('exercice_id', exIds)
+    .not('poids', 'is', null)
+    .not('reps_reelles', 'is', null)
+    .lt('serie', 1000) // exclut les séries d'échauffement
+
+  ;(series || []).forEach(s => {
+    const exo = exoMap[s.exercice_id]
+    if (!exo) return
+    const poids = parseFloat(String(s.poids).replace(',', '.'))
+    const reps = parseInt(s.reps_reelles)
+    if (isNaN(poids) || isNaN(reps) || poids <= 0 || reps <= 0 || reps > 20) return
+    const dateStr = s.created_at ? new Date(s.created_at).toISOString().slice(0, 10) : null
+    if (!dateStr) return
+    ;(byName[exo.nom] ||= { allSets: [] }).allSets.push({ date: dateStr, poids, reps })
+  })
+
+  return byName
+}
+
+/** Somme l'XP de tous les groupes d'exercices d'un `byName` (voir
+ *  fetchExerciceSetsByName) — le total global affiché sur Progression. */
+export function totalXpFromByName(byName, bodyweightKg) {
+  return Object.values(byName || {}).reduce((sum, d) => sum + computeExerciseXp(d.allSets, bodyweightKg), 0)
+}
