@@ -35,10 +35,10 @@ export default function XpBulleStyles() {
       .xp-bulle-inner{
         position:relative;
         background:linear-gradient(120deg,#1b2a52 0%,#24407a 55%,#2f5aa8 100%);
-        border-radius:12px;
-        padding:0.55rem 0.8rem;
+        border-radius:14px;
+        padding:0.6rem 0.85rem;
         box-shadow:0 10px 26px rgba(15,25,55,0.35);
-        display:flex; flex-direction:column; gap:0.32rem;
+        display:flex; align-items:center; gap:0.65rem;
         overflow:hidden;
         transform-origin:center;
       }
@@ -52,12 +52,16 @@ export default function XpBulleStyles() {
         40%{  transform:scale(1.07); box-shadow:0 0 0 8px rgba(228,248,22,0.22), 0 10px 26px rgba(15,25,55,0.35); }
         100%{ transform:scale(1);    box-shadow:0 10px 26px rgba(15,25,55,0.35); }
       }
-      .xp-bulle-row1{ position:relative; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
-      .xp-bulle-gain{ font-size:0.78rem; font-weight:900; color:#e4f816; opacity:0; transition:opacity 200ms ease; }
+      .xp-bulle-ringWrap{ position:relative; width:48px; height:48px; flex-shrink:0; }
+      .xp-bulle-ringWrap svg{ transform:rotate(-90deg); }
+      .xp-bulle-ringBg{ fill:none; stroke:rgba(255,255,255,0.18); stroke-width:5; }
+      .xp-bulle-ringFg{ fill:none; stroke:#e4f816; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 850ms cubic-bezier(.22,.9,.3,1); }
+      .xp-bulle-ringNum{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:900; color:#fff; }
+      .xp-bulle-txt{ position:relative; display:flex; flex-direction:column; gap:0.12rem; min-width:0; }
+      .xp-bulle-lbl{ font-size:0.56rem; font-weight:800; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
+      .xp-bulle-gain{ font-size:0.98rem; font-weight:900; color:#e4f816; white-space:nowrap; opacity:0; transition:opacity 200ms ease; }
       .xp-bulle-shown{ opacity:1; }
-      .xp-bulle-lvl{ font-size:0.58rem; font-weight:700; color:rgba(255,255,255,0.6); white-space:nowrap; }
-      .xp-bulle-track{ position:relative; height:4px; border-radius:999px; background:rgba(255,255,255,0.18); overflow:hidden; }
-      .xp-bulle-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg,#c8e60f,#e4f816); }
+      .xp-bulle-xp{ font-size:0.62rem; font-weight:700; color:rgba(255,255,255,0.6); font-variant-numeric:tabular-nums; white-space:nowrap; }
 
       .xp-bulle-bubble{
         position:fixed; z-index:2010;
@@ -135,7 +139,7 @@ export default function XpBulleStyles() {
       }
 
       @media (prefers-reduced-motion: reduce){
-        .xp-bulle-toast,.xp-bulle-bubble,.xp-bulle-flash,.xp-bulle-particle,.xp-bulle-lvlup,.xp-bulle-inner{
+        .xp-bulle-toast,.xp-bulle-bubble,.xp-bulle-flash,.xp-bulle-particle,.xp-bulle-lvlup,.xp-bulle-inner,.xp-bulle-ringFg{
           animation-duration:1ms !important; transition-duration:1ms !important;
         }
       }
@@ -201,19 +205,35 @@ function runXpBulle(fromEl, amount, totalXpBefore) {
     const fromPct = Math.max(0, Math.min(100, (before.xp / before.xpForNextLevel) * 100))
     const crossedLevel = after.level > before.level
     const toPct = crossedLevel ? 100 : Math.max(0, Math.min(100, (after.xp / after.xpForNextLevel) * 100))
+    const toXpTxt = Math.min(before.xp + amount, before.xpForNextLevel) + ' / ' + before.xpForNextLevel + ' XP'
+
+    const R = 19
+    const C = 2 * Math.PI * R
+    const fromOffset = C * (1 - fromPct / 100)
+    const toOffset = C * (1 - toPct / 100)
 
     const toast = document.createElement('div')
     toast.className = 'xp-bulle-toast xp-bulle-play'
     toast.innerHTML =
       '<div class="xp-bulle-inner">' +
-        '<div class="xp-bulle-row1"><span class="xp-bulle-gain">+' + amount + ' XP</span>' +
-        '<span class="xp-bulle-lvl">Nv. ' + before.level + '</span></div>' +
-        '<div class="xp-bulle-track"><div class="xp-bulle-fill" style="width:' + fromPct + '%"></div></div>' +
+        '<div class="xp-bulle-ringWrap">' +
+          '<svg width="48" height="48" viewBox="0 0 48 48">' +
+            '<circle class="xp-bulle-ringBg" cx="24" cy="24" r="' + R + '"></circle>' +
+            '<circle class="xp-bulle-ringFg" cx="24" cy="24" r="' + R + '" style="stroke-dasharray:' + C + 'px; stroke-dashoffset:' + fromOffset + 'px"></circle>' +
+          '</svg>' +
+          '<div class="xp-bulle-ringNum">' + before.level + '</div>' +
+        '</div>' +
+        '<div class="xp-bulle-txt">' +
+          '<span class="xp-bulle-lbl">Niveau ' + before.level + '</span>' +
+          '<span class="xp-bulle-gain">+' + amount + ' XP</span>' +
+          '<span class="xp-bulle-xp">' + before.xp + ' / ' + before.xpForNextLevel + ' XP</span>' +
+        '</div>' +
       '</div>'
     document.body.appendChild(toast)
     const inner = toast.querySelector('.xp-bulle-inner')
     const gainTxt = toast.querySelector('.xp-bulle-gain')
-    const fill = toast.querySelector('.xp-bulle-fill')
+    const ring = toast.querySelector('.xp-bulle-ringFg')
+    const xpTxt = toast.querySelector('.xp-bulle-xp')
 
     let done = false
     function finish() {
@@ -231,9 +251,9 @@ function runXpBulle(fromEl, amount, totalXpBefore) {
       flyBubble(fromEl, inner, amount, () => {
         inner.classList.add('xp-bulle-catch')
         gainTxt.classList.add('xp-bulle-shown')
+        xpTxt.textContent = toXpTxt
         requestAnimationFrame(() => requestAnimationFrame(() => {
-          fill.style.transition = 'width 850ms cubic-bezier(.22,.9,.3,1)'
-          fill.style.width = toPct + '%'
+          ring.style.strokeDashoffset = toOffset + 'px'
         }))
       })
     }, 140)
