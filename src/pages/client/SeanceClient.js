@@ -732,6 +732,9 @@ export default function SeanceClient() {
     }, { onConflict: 'exercice_id,semaine,serie' })
 
     // ── Gain d'XP en direct (bulle éphémère, clients hors groupe) ─────────
+    // Chaque série réelle (exercice+semaine+numéro) ne compte qu'une fois :
+    // on la REMPLACE dans allSets au lieu de l'ajouter, pour qu'un cycle
+    // valider → dévalider → revalider ne double-compte jamais son XP.
     if (xpEnabledRef.current) {
       const poidsVal = parseFloat(serie.poids)
       const repsVal = parseInt(serie.reps_reelles)
@@ -739,16 +742,19 @@ export default function SeanceClient() {
         const exo = exercices.find(e => e.id === exId)
         const nom = exo?.nom
         if (nom) {
+          const serieKey = `${exId}-${semaineActuelle}-${serieIdx + 1}`
           const prevSets = xpByNameRef.current[nom]?.allSets || []
           const beforeXp = computeExerciseXp(prevSets, bodyweightRef.current)
-          const today = new Date().toISOString().slice(0, 10)
-          const newSets = [...prevSets, { date: today, poids: poidsVal, reps: repsVal }]
+          const d = new Date()
+          const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+          const newSets = [...prevSets.filter(s => s.key !== serieKey), { date: today, poids: poidsVal, reps: repsVal, key: serieKey }]
           const afterXp = computeExerciseXp(newSets, bodyweightRef.current)
-          const delta = Math.max(0, afterXp - beforeXp)
+          const delta = afterXp - beforeXp
+
+          xpByNameRef.current = { ...xpByNameRef.current, [nom]: { allSets: newSets } }
+          const totalAvant = xpTotalRef.current
+          xpTotalRef.current = totalAvant + delta
           if (delta > 0) {
-            xpByNameRef.current = { ...xpByNameRef.current, [nom]: { allSets: newSets } }
-            const totalAvant = xpTotalRef.current
-            xpTotalRef.current = totalAvant + delta
             xpBlocRef.current[groupLetter] = (xpBlocRef.current[groupLetter] || 0) + delta
             if (boutonEl) triggerXpBulle(boutonEl, delta, totalAvant)
           }

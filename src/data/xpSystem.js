@@ -88,28 +88,33 @@ export function levelFromXp(totalXp) {
 }
 
 /** Récupère, pour un client, l'historique de séries de TOUS ses exercices
- *  (tous cycles confondus), regroupé par nom d'exercice — même requête et
- *  même mise en forme que ProgressionClient.js, pour que le total d'XP
- *  affiché en séance corresponde exactement à celui de la page Progression.
- *  Retourne { byName: { [nom]: { allSets: [{date,poids,reps}] } } }. */
+ *  (tous cycles confondus), regroupé par nom d'exercice — même requêtes,
+ *  même repli date_debut+semaine et même conversion de date locale que
+ *  ProgressionClient.js, pour que le total d'XP affiché en séance corresponde
+ *  exactement à celui de la page Progression (date_debut/semaines vivent sur
+ *  `programmes`, pas sur `seances` — piège à ne pas reproduire).
+ *  Chaque set porte aussi une `key` (exercice_id-semaine-serie) unique par
+ *  série réelle, pour permettre de la remplacer plutôt que la dupliquer si
+ *  elle est dévalidée puis revalidée.
+ *  Retourne { [nom]: { allSets: [{date,poids,reps,key}] } }. */
 export async function fetchExerciceSetsByName(supabase, clientId) {
   const byName = {}
   if (!clientId) return byName
 
-  const { data: progs } = await supabase.from('programmes').select('id').eq('client_id', clientId)
-  const progIds = (progs || []).map(p => p.id)
-  if (!progIds.length) return byName
+  const { data: progs } = await supabase.from('programmes').select('id, date_debut, created_at, semaines').eq('client_id', clientId)
+  if (!progs?.length) return byName
+  const progIds = progs.map(p => p.id)
+  const progMap = Object.fromEntries(progs.map(p => [p.id, p]))
 
-  const { data: seances } = await supabase.from('seances').select('id, programme_id, date_debut, semaines')
-    .in('programme_id', progIds)
-  const seanceIds = (seances || []).map(s => s.id)
-  if (!seanceIds.length) return byName
+  const { data: seances } = await supabase.from('seances').select('id, programme_id').in('programme_id', progIds)
+  if (!seances?.length) return byName
+  const seanceIds = seances.map(s => s.id)
+  const seanceProg = Object.fromEntries(seances.map(s => [s.id, s.programme_id]))
 
   const { data: exos } = await supabase.from('exercices').select('id, nom, seance_id').in('seance_id', seanceIds)
-  const exIds = (exos || []).map(e => e.id)
-  if (!exIds.length) return byName
-  const exoMap = {}
-  exos.forEach(e => { exoMap[e.id] = e })
+  if (!exos?.length) return byName
+  const exIds = exos.map(e => e.id)
+  const exoMap = Object.fromEntries(exos.map(e => [e.id, e]))
 
   const { data: series } = await supabase
     .from('serie_tracking')
@@ -125,9 +130,24 @@ export async function fetchExerciceSetsByName(supabase, clientId) {
     const poids = parseFloat(String(s.poids).replace(',', '.'))
     const reps = parseInt(s.reps_reelles)
     if (isNaN(poids) || isNaN(reps) || poids <= 0 || reps <= 0 || reps > 20) return
-    const dateStr = s.created_at ? new Date(s.created_at).toISOString().slice(0, 10) : null
-    if (!dateStr) return
-    ;(byName[exo.nom] ||= { allSets: [] }).allSets.push({ date: dateStr, poids, reps })
+
+    let dateStr
+    if (s.created_at) {
+      // Timestamp UTC → date locale (ex: "2025-05-15T22:30:00Z" → "2025-05-16" en UTC+2)
+      const d = new Date(s.created_at)
+      dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    } else {
+      const prog = progMap[seanceProg[exo.seance_id]]
+      if (!prog || !s.semaine || s.semaine <= 0) return
+      const dateDebutStr = prog.date_debut ? prog.date_debut : (prog.created_at || '').slice(0, 10)
+      if (!dateDebutStr) return
+      const [yy, mm, dd] = dateDebutStr.split('-').map(Number)
+      const weekDate = new Date(Date.UTC(yy, mm - 1, dd + (s.semaine - 1) * 7, 12))
+      dateStr = weekDate.toISOString().split('T')[0]
+    }
+
+    const key = `${s.exercice_id}-${s.semaine}-${s.serie}`
+    ;(byName[exo.nom] ||= { allSets: [] }).allSets.push({ date: dateStr, poids, reps, key })
   })
 
   return byName
