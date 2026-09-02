@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import ImportExcel from './ImportExcel'
@@ -289,7 +289,7 @@ export default function Programme() {
   // Resynchronise un brouillon bibliothèque vers son template existant
   // (programme_templates.bibliotheque_template_id) : nom/semaines/description +
   // toutes les séances (delete-all + reinsert, comme dans CycleTemplates.js).
-  async function sauvegarderDansBibliotheque() {
+  async function sauvegarderDansBibliotheque(silent = false) {
     const templateId = programme.bibliotheque_template_id
     if (!templateId) return
     setSavingTemplate(true)
@@ -302,12 +302,23 @@ export default function Programme() {
       await supabase.from('programme_template_seances').delete().eq('template_id', templateId)
       if (lignes.length > 0) await supabase.from('programme_template_seances').insert(lignes)
 
-      showToast('Enregistré dans la bibliothèque ✓', true)
+      if (!silent) showToast('Enregistré dans la bibliothèque ✓', true)
     } catch (e) {
-      showToast(`Erreur : ${e.message}`, false)
+      if (!silent) showToast(`Erreur : ${e.message}`, false)
+      else console.warn('[bibliotheque] synchronisation auto échouée :', e)
     }
     setSavingTemplate(false)
   }
+
+  // Filet de sécurité : un brouillon bibliothèque n'est fiable que si on ne
+  // dépend PAS uniquement du clic sur "Enregistrer dans la bibliothèque"
+  // (un coach peut fermer l'onglet, faire retour arrière, etc. sans cliquer).
+  // On resynchronise donc aussi silencieusement à chaque sortie de la page.
+  const saveOnLeaveRef = useRef(() => {})
+  saveOnLeaveRef.current = () => { if (programme?.bibliotheque_template_id) sauvegarderDansBibliotheque(true) }
+  useEffect(() => {
+    return () => { saveOnLeaveRef.current() }
+  }, [])
 
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
   if (!programme) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Programme introuvable.</p></div>
@@ -338,8 +349,11 @@ export default function Programme() {
         </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={() => {
-          if (programme.bibliotheque_template_id) navigate('/bibliotheque')
+        <button onClick={async () => {
+          if (programme.bibliotheque_template_id) {
+            await sauvegarderDansBibliotheque(true)
+            navigate('/bibliotheque')
+          }
           else if (programme.groupe_id && !programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
           else if (programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
           else navigate(`/client/${programme.client_id}`)
