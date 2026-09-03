@@ -124,6 +124,22 @@ function makeBlockColor(palette, letter) {
   return palette[Math.max(0, idx) % palette.length]
 }
 
+// Extrait l'id d'une vidéo YouTube depuis une URL (même logique que côté client)
+function youtubeId(url) {
+  if (!url) return null
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/)
+  return m ? m[1] : null
+}
+
+// Vignette d'exercice : media_url (image ou vidéo YouTube) > image de la
+// bibliothèque > pastille de repli colorée avec une icône générique.
+function resolveExerciseThumb(ex) {
+  const url = ex.media_url || ex.bibliotheque_exercices?.image_url || null
+  if (!url) return null
+  const yt = youtubeId(url)
+  return yt ? `https://img.youtube.com/vi/${yt}/mqdefault.jpg` : url
+}
+
 export default function SeanceProjection() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -157,7 +173,7 @@ export default function SeanceProjection() {
   async function load() {
     const [{ data: s }, { data: exs }] = await Promise.all([
       supabase.from('seances').select('*, programmes(id, nom, client_id, groupe_id, template_id)').eq('id', id).single(),
-      supabase.from('exercices').select('*').eq('seance_id', id).order('ordre', { ascending: true }),
+      supabase.from('exercices').select('*, bibliotheque_exercices(image_url)').eq('seance_id', id).order('ordre', { ascending: true }),
     ])
     setSeance(s)
     setExercices(exs || [])
@@ -230,7 +246,7 @@ export default function SeanceProjection() {
     else warmGroups.push({ groupe: l.groupe, items: [l] })
   })
 
-  const COLS = '100px 1fr 75px 110px 100px 100px 140px'
+  const COLS = '56px 1fr 75px 110px 100px 100px 140px'
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: BG_COLOR }}>
@@ -345,16 +361,16 @@ export default function SeanceProjection() {
                         background: i % 2 === 0 ? '#2e2e2e' : '#2a2a2a',
                         borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                       }}>
-                        {/* Badge */}
-                        <div>
-                          <span style={{
-                            background: blockColor + '22',
-                            color: blockColor,
-                            border: `1px solid ${blockColor}55`,
-                            padding: '3px 9px', borderRadius: 5,
-                            fontSize: '11px', fontWeight: '900',
-                            display: 'inline-block', letterSpacing: '0.04em',
-                          }}>{ex.code}</span>
+                        {/* Vignette */}
+                        <div style={{
+                          width: 44, height: 44, borderRadius: 7, overflow: 'hidden', flexShrink: 0,
+                          background: blockColor + '22',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {resolveExerciseThumb(ex)
+                            ? <img src={resolveExerciseThumb(ex)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={blockColor} strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M4 4l3 3M20 20l-3-3M7 17l-3 3M17 7l3-3" /></svg>
+                          }
                         </div>
 
                         {/* Nom */}
