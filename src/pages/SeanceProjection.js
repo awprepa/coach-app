@@ -331,7 +331,7 @@ export default function SeanceProjection() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {groups.map((g, gi) => {
                 const blockColor = makeBlockColor(BLOCK_PALETTE, g.letter)
                 const isSuperset = g.items.length > 1
@@ -341,16 +341,15 @@ export default function SeanceProjection() {
                     borderRadius: 8,
                     overflow: 'hidden',
                     background: '#2e2e2e',
-                    borderLeft: `3px solid ${blockColor}`,
+                    borderLeft: `5px solid ${blockColor}`,
+                    boxShadow: `0 0 0 1px ${blockColor}2a`,
                   }}>
-                    {/* Label bloc si superset */}
-                    {isSuperset && (
-                      <div style={{ padding: '5px 16px', background: '#272727', borderBottom: '1px solid #333' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '800', letterSpacing: '2px', color: blockColor, textTransform: 'uppercase' }}>
-                          Superset · {g.letter}
-                        </span>
-                      </div>
-                    )}
+                    {/* Label bloc — toujours affiché, pas seulement pour les supersets */}
+                    <div style={{ padding: '6px 16px', background: blockColor + '1c', borderBottom: `1px solid ${blockColor}33` }}>
+                      <span style={{ fontSize: '10px', fontWeight: '900', letterSpacing: '2.5px', color: blockColor, textTransform: 'uppercase' }}>
+                        {g.letter ? (isSuperset ? `Superset · Bloc ${g.letter}` : `Bloc ${g.letter}`) : 'Exercice'}
+                      </span>
+                    </div>
 
                     {/* Lignes exercices — fond neutre, couleur en accents seulement */}
                     {g.items.map((ex, i) => (
