@@ -47,9 +47,18 @@ export default function GroupeTestsView({ groupeId, accent }) {
     return Object.keys(TYPE_LABELS).filter(t => set.has(t))
   }, [joueurs])
 
+  // Par défaut, choisit le test qui a le plus de dates différentes — celui
+  // qui a le plus de chances d'avoir une vraie courbe d'évolution à montrer,
+  // plutôt que le premier type dans l'ordre fixe (qui peut n'avoir qu'une date).
   useEffect(() => {
-    if (!selectedType && availableTypes.length > 0) setSelectedType(availableTypes[0])
-  }, [availableTypes, selectedType])
+    if (selectedType || availableTypes.length === 0) return
+    const nbDates = {}
+    joueurs.forEach(j => (j.joueur_tests_physiques || []).forEach(t => {
+      (nbDates[t.type] ||= new Set()).add(t.date)
+    }))
+    const best = [...availableTypes].sort((a, b) => (nbDates[b]?.size || 0) - (nbDates[a]?.size || 0))[0]
+    setSelectedType(best)
+  }, [availableTypes, selectedType, joueurs])
 
   // Tableau des derniers résultats, triés du meilleur au moins bon
   const rows = useMemo(() => {
@@ -154,9 +163,11 @@ export default function GroupeTestsView({ groupeId, accent }) {
           <p style={S.empty}>Aucun test physique enregistré pour ce groupe pour l'instant.</p>
         </div>
       ) : (
-        <>
-          {/* ── Tableau des résultats ── */}
-          <div style={{ ...S.panel, marginBottom: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', alignItems: 'start' }} className="gtv-layout">
+          <style>{`@media (max-width: 900px){ .gtv-layout{ grid-template-columns:1fr !important; } }`}</style>
+
+          {/* ── Tableau des résultats (moitié gauche) ── */}
+          <div style={S.panel}>
             <div style={S.panelHead}><span style={S.panelLabel}>Résultats · {TYPE_LABELS[selectedType]}{unit ? ` (${unit})` : ''}</span></div>
             {rows.length === 0 ? (
               <p style={S.empty}>Aucun résultat pour ce test.</p>
@@ -210,9 +221,8 @@ export default function GroupeTestsView({ groupeId, accent }) {
             )}
           </div>
 
-          {/* ── Graphiques ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }} className="gtv-charts">
-            <style>{`@media (max-width: 900px){ .gtv-charts{ grid-template-columns:1fr !important; } }`}</style>
+          {/* ── Graphiques (moitié droite, empilés) ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
             <div style={S.panel}>
               <div style={S.panelHead}><span style={S.panelLabel}>Évolution du groupe</span></div>
@@ -265,7 +275,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ── Modale ajout résultat ── */}
