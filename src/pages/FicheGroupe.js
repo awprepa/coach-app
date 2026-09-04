@@ -6,6 +6,7 @@ import CropLogoModal from '../components/CropLogoModal'
 import CalendrierSaison, { EffectifView, GroupesNiveauView } from './CalendrierSaison'
 import GroupeIntensite from '../components/GroupeIntensite'
 import { formatRetour } from '../components/BlessureButton'
+import GroupeTestsView from '../components/GroupeTestsView'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -52,9 +53,10 @@ export default function FicheGroupe() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') === 'calendrier' ? 'calendrier' : 'groupe'
+  const tabParam = searchParams.get('tab')
+  const tab = tabParam === 'calendrier' ? 'calendrier' : tabParam === 'tests' ? 'tests' : 'groupe'
   const openEventId = searchParams.get('evenement') || null
-  const setTab = t => setSearchParams(t === 'calendrier' ? { tab: 'calendrier' } : {})
+  const setTab = t => setSearchParams(t === 'groupe' ? {} : { tab: t })
   const openCalendrierEvent = evId => setSearchParams({ tab: 'calendrier', evenement: evId })
 
   const [groupe, setGroupe]               = useState(null)
@@ -804,11 +806,11 @@ export default function FicheGroupe() {
     <div style={S.pageWide}>
       {/* ── Retour ── */}
       <button onClick={() => {
-        if (tab === 'calendrier') { setTab('groupe'); return }
+        if (tab === 'calendrier' || tab === 'tests') { setTab('groupe'); return }
         if (parent) { navigate(`/groupe/${parent.id}`); return }
         navigate('/groupes')
       }} style={S.back}>
-        ← {tab === 'calendrier' ? groupe.nom : parent ? parent.nom : 'Groupes'}
+        ← {tab === 'calendrier' || tab === 'tests' ? groupe.nom : parent ? parent.nom : 'Groupes'}
       </button>
 
       {/* Adaptations mobile — aucune règle au-dessus de 820px */}
@@ -845,6 +847,9 @@ export default function FicheGroupe() {
           </div>
         </div>
         <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => setTab('tests')} style={S.btnSecondary}>
+            <IcoChart /> Tests physiques
+          </button>
           <button onClick={() => setEditOpen(true)} style={S.btnSecondary}>
             <IcoEdit /> Modifier
           </button>
@@ -859,6 +864,8 @@ export default function FicheGroupe() {
 
       {tab === 'calendrier' ? (
         <CalendrierSaison groupeId={id} embedded openEventId={openEventId} />
+      ) : tab === 'tests' ? (
+        <GroupeTestsView groupeId={id} accent={accent} />
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
@@ -1468,6 +1475,9 @@ function IcoTrash() {
 }
 function IcoCalendar() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+}
+function IcoChart() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-5 4 3 5-7" /></svg>
 }
 function IcoEye() {
   return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></svg>
