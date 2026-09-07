@@ -53,6 +53,17 @@ function parseRecup(str) {
   return 0
 }
 
+// Extrait le nombre de reps cible d'un texte de prescription ("8", "6-8",
+// "3/3", '10"', "AMRAP"…) — première suite de chiffres trouvée, ou null.
+// Sert de repli quand le joueur valide une série sans avoir rempli les reps
+// réelles, pour ne jamais enregistrer reps_reelles: null (ce qui exclurait
+// silencieusement la série de la page Progression).
+function parseTargetReps(str) {
+  if (!str) return null
+  const m = String(str).match(/\d+/)
+  return m ? parseInt(m[0]) : null
+}
+
 function formatTimer(secs) {
   const m = Math.floor(secs / 60), s = secs % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
@@ -700,10 +711,11 @@ export default function SeanceClient() {
     // validerSerie/devaliderSerie. Sinon un blur déclenché en même temps qu'un
     // tap sur « Valider » peut écraser la validation en course (race condition
     // réseau) et forcer le joueur à valider une deuxième fois.
+    const exoSSF = exercices.find(e => e.id === exId)
     const { error } = await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
-      reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
+      reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : parseTargetReps(exoSSF?.repetitions),
     }, { onConflict: 'exercice_id,semaine,serie' })
     if (error) { console.error('[saveSerieField]', error.message); return }  // pas de flash « sauvegardé » si échec réel
     flashSaved()
@@ -726,7 +738,7 @@ export default function SeanceClient() {
     await supabase.from('serie_tracking').upsert({
       exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
       poids: serie.poids || null,
-      reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : null,
+      reps_reelles: serie.reps_reelles ? parseInt(serie.reps_reelles) : parseTargetReps(targetReps),
       valide: repsOk,
       is_done: true,
     }, { onConflict: 'exercice_id,semaine,serie' })
