@@ -37,8 +37,9 @@ const POSTE_NOMS = {
 const POSTE_ORDER = ['Pilier', 'Talonneur', '2e ligne', '3e ligne', 'Demi de mêlée', "Demi d'ouverture", 'Centre', 'Ailier', 'Arrière']
 
 // Niveaux de zoom du calendrier historique = largeur totale de la frise en px
+// px: null = occupe toute la largeur disponible du panneau (pas de scroll horizontal)
 const ZOOM_LEVELS = [
-  { px: 900, label: 'Saison' },
+  { px: null, label: 'Saison' },
   { px: 1500, label: '~2 mois' },
   { px: 2400, label: '~1 mois' },
   { px: 4200, label: '~2 semaines' },
@@ -199,12 +200,16 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   // Effectif complet (blessés ou non) avec poste et couleur stable, pour le
   // calendrier historique — l'ordre de la couleur/index ne dépend pas du tri.
   const rosterGantt = useMemo(() => {
-    return joueurs.map((j, i) => ({
-      joueur: j,
-      poste: posteLabel(j),
-      color: colorForIndex(i),
-      episodes: [...(j.joueur_blessures || [])].sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || '')),
-    }))
+    // Ignore les fiches vides (créées sans prénom ni nom) — sinon elles
+    // apparaissent comme des lignes sans nom en tête du calendrier.
+    return joueurs
+      .filter(j => (j.prenom || '').trim() || (j.nom || '').trim())
+      .map((j, i) => ({
+        joueur: j,
+        poste: posteLabel(j),
+        color: colorForIndex(i),
+        episodes: [...(j.joueur_blessures || [])].sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || '')),
+      }))
   }, [joueurs])
 
   const historique = useMemo(() => {
@@ -760,7 +765,10 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
   {
     let d = new Date(seasonRange.START)
     while (d < END) {
-      monthTicks.push({ left: pct(d), label: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) })
+      // Format court ("juil. '25") pour ne pas se superposer quand beaucoup
+      // de mois sont visibles (zoom "Saison").
+      const label = `${d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')} ’${String(d.getFullYear()).slice(-2)}`
+      monthTicks.push({ left: pct(d), label })
       d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
     }
   }
@@ -811,7 +819,7 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
 
   return (
     <div style={S.gWrap}>
-      <div style={{ width: Math.max(zoomPx, 700) }}>
+      <div style={zoomPx ? { width: Math.max(zoomPx, 700) } : { width: '100%' }}>
         <div style={S.gHead}>
           <div style={S.gNameCol}>
             <button onClick={() => setSortMode('nom')} style={{ ...S.gColSort, ...(sortMode === 'nom' ? { color: '#1a1a1a' } : {}) }}>Joueur <span style={S.gSortArrow}>▾</span></button>
