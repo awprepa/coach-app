@@ -44,6 +44,23 @@ function formatDateFull(d) {
 function initiales(prenom, nom) {
   return `${(prenom || '?')[0] || ''}${(nom || '?')[0] || ''}`.toUpperCase()
 }
+function labelLesion(ep) {
+  const t = TYPES_LESION.find(t => t.v === ep.type_lesion)?.label
+  const parts = [t, ep.zone_precise].filter(Boolean)
+  if (parts.length) return parts.join(' · ')
+  return ep.description || 'Blessure'
+}
+// Numéro de semaine (entier) depuis une date de référence, arrondie au lundi
+function semaineDepuis(date, refLundi) {
+  return Math.floor((date - refLundi) / (7 * 86400000))
+}
+function lundiDe(d) {
+  const r = new Date(d)
+  const day = r.getDay()
+  r.setDate(r.getDate() + (day === 0 ? -6 : 1 - day))
+  r.setHours(0, 0, 0, 0)
+  return r
+}
 
 // Page "Suivi blessures" d'un groupe : blessés actuels avec palier de reprise,
 // frise de qui est indisponible, stats de saison, historique complet par
@@ -54,6 +71,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   const [modal, setModal] = useState(null) // { episode?, joueurId } — présent = modale ouverte
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [showRecidives, setShowRecidives] = useState(false)
 
   useEffect(() => { load() }, [groupeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -104,33 +122,47 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
     // Récidive = même joueur, même zone, plus d'un épisode
     const parJoueurZone = {}
     allEpisodes.forEach(({ joueur, ep }) => {
-      const key = joueur.id + '|' + (ep.zone_precise || ep.zone)
-      parJoueurZone[key] = (parJoueurZone[key] || 0) + 1
+      const zoneKey = ep.zone_precise || (ep.zone === 'haut' ? 'Haut du corps' : ep.zone === 'bas' ? 'Bas du corps' : 'Général')
+      const key = joueur.id + '|' + zoneKey
+      ;(parJoueurZone[key] ||= { joueur, zone: zoneKey, episodes: [] }).episodes.push(ep)
     })
-    const recidives = Object.values(parJoueurZone).filter(n => n > 1).length
-    return { joursCumules, dureeMoyenne, retourProche, recidives, joueursJamaisBlesses: joueurs.length - new Set(allEpisodes.map(e => e.joueur.id)).size }
+    const groupesRecidive = Object.values(parJoueurZone).filter(g => g.episodes.length > 1)
+      .map(g => ({ ...g, episodes: g.episodes.sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || '')) }))
+    return {
+      joursCumules, dureeMoyenne, retourProche,
+      recidives: groupesRecidive.length,
+      groupesRecidive,
+      joueursJamaisBlesses: joueurs.length - new Set(allEpisodes.map(e => e.joueur.id)).size,
+    }
   }, [allEpisodes, currentCases, joueurs])
 
-  // Frise : 10 fenêtres réparties entre la 1ère blessure de la saison et aujourd'hui
+  // Frise : une colonne par semaine calendaire, de la 1ère blessure de la
+  // saison à aujourd'hui — chaque colonne porte la date de son lundi, pour
+  // qu'on puisse vraiment situer une barre dans le temps.
   const frise = useMemo(() => {
-    if (!currentCases.length && !allEpisodes.length) return null
-    const dates = allEpisodes.map(({ ep }) => new Date(ep.date_debut))
-    const debut = new Date(Math.min(...dates))
-    const fin = new Date()
-    const totalMs = Math.max(1, fin - debut)
-    const joueursAvecCase = [...new Map(currentCases.map(c => [c.joueur.id, c.joueur])).values()]
-    const bars = joueursAvecCase.map(joueur => {
+    if (!allEpisodes.length) return null
+    const dates = allEpisodes.map(({ ep }) => new Date(ep.date_debut + 'T00:00:00'))
+    const debutLundi = lundiDe(new Date(Math.min(...dates)))
+    const aujourdhui = new Date()
+    const nbSemaines = Math.max(1, semaineDepuis(aujourdhui, debutLundi) + 1)
+    const cols = Array.from({ length: nbSemaines }, (_, i) => {
+      const d = new Date(debutLundi); d.setDate(d.getDate() + i * 7)
+      return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    })
+    const semaineAujourdhui = semaineDepuis(aujourdhui, debutLundi)
+
+    const joueursAvec = [...new Map(allEpisodes.map(({ joueur }) => [joueur.id, joueur])).values()]
+    const bars = joueursAvec.map(joueur => {
       const episodes = (joueur.joueur_blessures || []).map(ep => {
-        const s = new Date(ep.date_debut)
-        const e = ep.date_fin_reelle ? new Date(ep.date_fin_reelle) : fin
-        const left = Math.max(0, Math.min(100, ((s - debut) / totalMs) * 100))
-        const right = Math.max(0, Math.min(100, ((e - debut) / totalMs) * 100))
-        return { left, width: Math.max(1.5, right - left), actif: ep.statut !== 'ok' }
+        const s = semaineDepuis(new Date(ep.date_debut + 'T00:00:00'), debutLundi)
+        const e = ep.date_fin_reelle ? semaineDepuis(new Date(ep.date_fin_reelle + 'T00:00:00'), debutLundi) : semaineAujourdhui
+        return { colStart: Math.max(0, s), colEnd: Math.max(Math.max(0, s), e), actif: ep.statut !== 'ok', ep }
       })
       return { joueur, episodes }
-    })
-    return { debut, fin, bars }
-  }, [currentCases, allEpisodes])
+    }).sort((a, b) => Math.min(...a.episodes.map(e => e.colStart)) - Math.min(...b.episodes.map(e => e.colStart)))
+
+    return { cols, nbSemaines, semaineAujourdhui, bars }
+  }, [allEpisodes])
 
   const historique = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -214,72 +246,97 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
         <div style={S.panelHead}><span style={S.panelLabel}>Blessés actuellement</span><span style={S.panelCount}>{currentCases.length} joueur{currentCases.length > 1 ? 's' : ''}</span></div>
         {currentCases.length === 0 ? (
           <p style={S.empty}>Personne n'est blessé pour l'instant.</p>
-        ) : currentCases.map(({ joueur, ep }) => {
-          const idx = stepIndex(ep)
-          return (
-            <div key={ep.id} style={S.case}>
-              <div style={S.caseTop}>
-                <div style={S.avatar}>{initiales(joueur.prenom, joueur.nom)}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={S.caseName}>{joueur.prenom} {joueur.nom}</p>
-                  <p style={S.caseMeta}>
-                    {TYPES_LESION.find(t => t.v === ep.type_lesion)?.label || 'Blessure'}{ep.zone_precise ? ` · ${ep.zone_precise}` : ''}
-                    {ep.gravite && (
-                      <span style={{ ...S.sevBadge, background: (GRAVITE_COLOR[ep.gravite] || '#6b7280') + '18', color: GRAVITE_COLOR[ep.gravite] || '#6b7280', borderColor: (GRAVITE_COLOR[ep.gravite] || '#6b7280') + '44' }}>
-                        {GRAVITES.find(g => g.v === ep.gravite)?.label}
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={S.daysOutNum}>{joursDepuis(ep.date_debut)}</div>
-                  <div style={S.daysOutLbl}>jours</div>
-                </div>
-              </div>
-
-              <div style={S.stepper}>
-                {STEP_LABELS.map((lbl, i) => (
-                  <div key={lbl} style={S.step}>
-                    {i > 0 && <span style={{ ...S.stepBar, background: i <= idx ? '#16a34a' : '#e5e7eb' }} />}
-                    <span style={{ ...S.stepDot, background: i < idx ? '#16a34a' : i === idx ? accent : '#e5e7eb', boxShadow: i === idx ? `0 0 0 3px ${accent}22` : 'none' }} />
-                    <span style={{ ...S.stepLbl, color: i === idx ? accent : '#9ca3af' }}>{lbl}</span>
+        ) : (
+          <div style={S.caseGrid}>
+            {currentCases.map(({ joueur, ep }) => {
+              const idx = stepIndex(ep)
+              const pct = (idx / (STEP_LABELS.length - 1)) * 100
+              return (
+                <div key={ep.id} style={S.case}>
+                  <div style={S.caseTop}>
+                    <div style={S.avatar}>{initiales(joueur.prenom, joueur.nom)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={S.caseName}>{joueur.prenom} {joueur.nom}</p>
+                      <p style={S.caseMeta}>
+                        {labelLesion(ep)}
+                        {ep.gravite && (
+                          <span style={{ ...S.sevBadge, background: (GRAVITE_COLOR[ep.gravite] || '#6b7280') + '18', color: GRAVITE_COLOR[ep.gravite] || '#6b7280', borderColor: (GRAVITE_COLOR[ep.gravite] || '#6b7280') + '44' }}>
+                            {GRAVITES.find(g => g.v === ep.gravite)?.label}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={S.daysOutNum}>{joursDepuis(ep.date_debut)}</div>
+                      <div style={S.daysOutLbl}>jours</div>
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              <div style={S.caseFoot}>
-                <span style={S.caseReturn}>{formatRetour(ep.date_retour_prevue) || (ep.date_retour_prevue ? `Retour prévu le ${formatDateFull(ep.date_retour_prevue)}` : 'Retour non estimé')}</span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => openEdit(joueur, ep)} style={S.btnGhost}>Modifier</button>
-                  <button onClick={() => avancerPalier(ep)} style={S.btnGhost}>{idx >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Palier suivant →'}</button>
+                  {ep.description && labelLesion(ep) !== ep.description && (
+                    <p style={S.caseDesc}>{ep.description}</p>
+                  )}
+
+                  <div style={S.stepperCompact}>
+                    <div style={S.stepperTrack}><div style={{ ...S.stepperFill, width: `${pct}%`, background: accent }} /></div>
+                    <span style={{ ...S.stepperLbl, color: accent }}>{STEP_LABELS[idx]} · {idx + 1}/{STEP_LABELS.length}</span>
+                  </div>
+
+                  <div style={S.caseFoot}>
+                    <span style={S.caseReturn}>{formatRetour(ep.date_retour_prevue) || 'Retour non estimé'}</span>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button onClick={() => openEdit(joueur, ep)} style={S.btnGhost}>Modifier</button>
+                      <button onClick={() => avancerPalier(ep)} style={S.btnGhost}>{idx >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Palier suivant'}</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Frise ── */}
       {frise && frise.bars.length > 0 && (
         <div style={{ ...S.panel, marginBottom: '1.25rem' }}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Qui est indisponible, et depuis quand</span></div>
+          <div style={S.panelHead}>
+            <span style={S.panelLabel}>Qui est indisponible, et depuis quand</span>
+            <span style={S.panelCount}>1 colonne = 1 semaine</span>
+          </div>
           <div style={{ padding: '0.3rem 1.2rem 1.1rem', overflowX: 'auto' }}>
-            <div style={{ minWidth: 520 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', marginBottom: '0.4rem' }}>
-                <span>{formatDateFull(frise.debut.toISOString().slice(0, 10))}</span>
-                <span>Aujourd'hui</span>
-              </div>
-              {frise.bars.map(({ joueur, episodes }) => (
-                <div key={joueur.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.5rem' }}>
-                  <span style={{ width: 130, flexShrink: 0, fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{joueur.prenom} {joueur.nom}</span>
-                  <div style={{ flex: 1, position: 'relative', height: 9, background: '#f3f4f6', borderRadius: 5 }}>
-                    {episodes.map((e, i) => (
-                      <div key={i} style={{ position: 'absolute', top: 0, left: e.left + '%', width: e.width + '%', height: '100%', borderRadius: 5, background: e.actif ? '#dc2626' : '#f59e0b' }} />
+            {(() => {
+              const colW = 34
+              const nameW = 140
+              const gridTemplate = `${nameW}px repeat(${frise.nbSemaines}, ${colW}px)`
+              return (
+                <div style={{ minWidth: nameW + frise.nbSemaines * colW }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: gridTemplate, marginBottom: '0.5rem' }}>
+                    <span />
+                    {frise.cols.map((label, i) => (
+                      <span key={i} style={{ fontSize: '0.56rem', fontWeight: 700, color: i === frise.semaineAujourdhui ? accent : '#9ca3af', textAlign: 'center', writingMode: 'vertical-rl', transform: 'rotate(180deg)', height: 46, whiteSpace: 'nowrap' }}>
+                        {label}
+                      </span>
                     ))}
                   </div>
+                  {frise.bars.map(({ joueur, episodes }) => (
+                    <div key={joueur.id} style={{ display: 'grid', gridTemplateColumns: gridTemplate, alignItems: 'center', height: 26 }}>
+                      <span style={{ fontSize: '0.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '0.5rem' }}>{joueur.prenom} {joueur.nom}</span>
+                      {frise.cols.map((_, i) => (
+                        <div key={i} style={{
+                          height: 16, margin: '0 1px', borderRadius: 3,
+                          background: episodes.some(e => i >= e.colStart && i <= e.colEnd)
+                            ? (episodes.find(e => i >= e.colStart && i <= e.colEnd).actif ? '#dc2626' : '#f59e0b')
+                            : (i === frise.semaineAujourdhui ? '#f3f4f6' : 'transparent'),
+                        }} />
+                      ))}
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.7rem', paddingTop: '0.6rem', borderTop: '1px solid #f3f4f6' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#dc2626' }} />Blessure en cours</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#f59e0b' }} />Blessure passée</span>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -308,7 +365,27 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             <div style={S.statLine}><span style={S.statLbl}>Retour prévu sous 7 jours</span><span style={S.statVal}>{saisonStats.retourProche}</span></div>
             <div style={S.statLine}><span style={S.statLbl}>Jours d'indispo cumulés</span><span style={S.statVal}>{saisonStats.joursCumules}</span></div>
             <div style={S.statLine}><span style={S.statLbl}>Durée moyenne d'arrêt</span><span style={S.statVal}>{saisonStats.dureeMoyenne} jour{saisonStats.dureeMoyenne > 1 ? 's' : ''}</span></div>
-            <div style={S.statLine}><span style={S.statLbl}>Blessures avec récidive</span><span style={S.statVal}>{saisonStats.recidives}</span></div>
+            <div style={{ ...S.statLine, cursor: saisonStats.recidives > 0 ? 'pointer' : 'default' }} onClick={() => saisonStats.recidives > 0 && setShowRecidives(v => !v)}>
+              <span style={S.statLbl}>Blessures avec récidive</span>
+              <span style={{ ...S.statVal, color: saisonStats.recidives > 0 ? accent : undefined, textDecoration: saisonStats.recidives > 0 ? 'underline' : 'none' }}>
+                {saisonStats.recidives}{saisonStats.recidives > 0 ? (showRecidives ? ' ▲' : ' ▾') : ''}
+              </span>
+            </div>
+            {showRecidives && saisonStats.groupesRecidive.length > 0 && (
+              <div style={{ padding: '0.2rem 1.2rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {saisonStats.groupesRecidive.map((g, i) => (
+                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+                    <p style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', fontWeight: 800 }}>{g.joueur.prenom} {g.joueur.nom} <span style={{ fontWeight: 600, color: '#6b7280' }}>· {g.zone}</span></p>
+                    {g.episodes.map(ep => (
+                      <div key={ep.id} onClick={() => openEdit(g.joueur, ep)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#6b7280', padding: '0.15rem 0', cursor: 'pointer' }}>
+                        <span>{formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}</span>
+                        <span>{dureeEpisode(ep)} j</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={S.statLine}><span style={S.statLbl}>Joueurs jamais blessés</span><span style={S.statVal}>{saisonStats.joueursJamaisBlesses} / {joueurs.length}</span></div>
           </div>
         </div>
@@ -339,7 +416,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                     {formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}
                   </span>
                   <span style={{ flex: 1, fontWeight: 600 }}>
-                    {TYPES_LESION.find(t => t.v === ep.type_lesion)?.label || 'Blessure'}{ep.zone_precise ? ` ${ep.zone_precise}` : ''}{ep.gravite ? ` (${GRAVITES.find(g => g.v === ep.gravite)?.label})` : ''}
+                    {labelLesion(ep)}{ep.gravite ? ` (${GRAVITES.find(g => g.v === ep.gravite)?.label})` : ''}
                   </span>
                   <span style={{ color: '#6b7280' }}>{dureeEpisode(ep)} j</span>
                 </div>
@@ -444,23 +521,24 @@ const S = {
   panelCount: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af' },
   empty: { fontSize: '0.82rem', color: '#9ca3af', padding: '0.5rem 1.1rem 1.1rem', margin: 0 },
 
-  case: { padding: '1rem 1.2rem 1.1rem', borderTop: '1px solid #f3f4f6' },
-  caseTop: { display: 'flex', alignItems: 'flex-start', gap: '0.8rem' },
-  avatar: { width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0, background: '#fee2e2', color: '#dc2626' },
-  caseName: { fontSize: '0.92rem', fontWeight: 800, margin: 0 },
-  caseMeta: { fontSize: '0.78rem', color: '#6b7280', margin: '0.15rem 0 0' },
-  sevBadge: { fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.03em', padding: '0.15rem 0.5rem', borderRadius: 999, border: '1px solid', marginLeft: '0.4rem', whiteSpace: 'nowrap' },
-  daysOutNum: { fontSize: '1.2rem', fontWeight: 800, lineHeight: 1 },
-  daysOutLbl: { fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' },
+  caseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.85rem', padding: '0 1.1rem 1.1rem' },
+  case: { border: '1px solid #f3f4f6', borderRadius: 12, padding: '0.85rem 0.9rem 0.9rem' },
+  caseTop: { display: 'flex', alignItems: 'flex-start', gap: '0.65rem' },
+  avatar: { width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.66rem', fontWeight: 800, flexShrink: 0, background: '#fee2e2', color: '#dc2626' },
+  caseName: { fontSize: '0.86rem', fontWeight: 800, margin: 0 },
+  caseMeta: { fontSize: '0.74rem', color: '#6b7280', margin: '0.1rem 0 0' },
+  caseDesc: { fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0', lineHeight: 1.4 },
+  sevBadge: { fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.03em', padding: '0.12rem 0.45rem', borderRadius: 999, border: '1px solid', marginLeft: '0.35rem', whiteSpace: 'nowrap' },
+  daysOutNum: { fontSize: '1.05rem', fontWeight: 800, lineHeight: 1 },
+  daysOutLbl: { fontSize: '0.56rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' },
 
-  stepper: { display: 'flex', alignItems: 'center', marginTop: '0.85rem' },
-  step: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem', position: 'relative' },
-  stepDot: { width: 9, height: 9, borderRadius: '50%', zIndex: 1 },
-  stepBar: { position: 'absolute', top: 4, left: '-50%', width: '100%', height: 2 },
-  stepLbl: { fontSize: '0.58rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.2 },
+  stepperCompact: { marginTop: '0.7rem' },
+  stepperTrack: { height: 5, borderRadius: 999, background: '#f3f4f6', overflow: 'hidden' },
+  stepperFill: { height: '100%', borderRadius: 999 },
+  stepperLbl: { display: 'block', fontSize: '0.66rem', fontWeight: 700, marginTop: '0.3rem' },
 
-  caseFoot: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.8rem', flexWrap: 'wrap', gap: '0.5rem' },
-  caseReturn: { fontSize: '0.76rem', color: '#6b7280' },
+  caseFoot: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.7rem', flexWrap: 'wrap', gap: '0.4rem' },
+  caseReturn: { fontSize: '0.72rem', color: '#6b7280' },
 
   zoneRow: { display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.5rem 1.2rem' },
   zoneLbl: { width: 96, flexShrink: 0, fontSize: '0.78rem', fontWeight: 700 },
