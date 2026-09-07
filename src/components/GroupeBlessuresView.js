@@ -93,6 +93,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   const [showRecidives, setShowRecidives] = useState(false)
   const [sortMode, setSortMode] = useState('nom') // 'nom' | 'poste' — tri du calendrier historique
   const [zoomIdx, setZoomIdx] = useState(0)       // index dans ZOOM_LEVELS
+  const [filterMode, setFilterMode] = useState('tous') // 'tous' | 'saison' | 'actuel' — filtre du calendrier historique
 
   useEffect(() => { load() }, [groupeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -351,16 +352,27 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
 
       {/* ── Calendrier historique : tout l'effectif, précis au jour, saison complète ── */}
       <div style={{ ...S.panel, marginBottom: '1.25rem' }}>
-        <div style={S.panelHead}>
-          <span style={S.panelLabel}>Historique des blessures — effectif complet</span>
-          <div style={S.zoomCtrl}>
-            <button onClick={() => setZoomIdx(z => Math.max(0, z - 1))} disabled={zoomIdx === 0} style={S.zoomBtn}>−</button>
-            <span style={S.zoomLbl}>{ZOOM_LEVELS[zoomIdx].label}</span>
-            <button onClick={() => setZoomIdx(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))} disabled={zoomIdx === ZOOM_LEVELS.length - 1} style={S.zoomBtn}>+</button>
+        <div style={{ ...S.panelHead, flexWrap: 'wrap' }}>
+          <span style={S.panelLabel}>Historique des blessures</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
+            <div style={S.filterBtns}>
+              {[['tous', 'Tout l’effectif'], ['saison', 'Blessés cette saison'], ['actuel', 'Blessés actuellement']].map(([v, lbl], i, arr) => (
+                <button key={v} onClick={() => setFilterMode(v)}
+                  style={{ ...S.filterBtn, ...(i === arr.length - 1 ? { borderRight: 'none' } : {}), ...(filterMode === v ? { background: accent, color: '#1a1a1a' } : {}) }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+            <div style={S.zoomCtrl}>
+              <button onClick={() => setZoomIdx(z => Math.max(0, z - 1))} disabled={zoomIdx === 0} style={S.zoomBtn}>−</button>
+              <span style={S.zoomLbl}>{ZOOM_LEVELS[zoomIdx].label}</span>
+              <button onClick={() => setZoomIdx(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))} disabled={zoomIdx === ZOOM_LEVELS.length - 1} style={S.zoomBtn}>+</button>
+            </div>
           </div>
         </div>
         <div style={{ padding: '0 1.1rem 1.1rem' }}>
-          <GanttHistorique roster={rosterGantt} seasonRange={seasonRange} sortMode={sortMode} setSortMode={setSortMode} zoomPx={ZOOM_LEVELS[zoomIdx].px} accent={accent} onEdit={openEdit} />
+          <GanttHistorique roster={rosterGantt} seasonRange={seasonRange} sortMode={sortMode} setSortMode={setSortMode}
+            filterMode={filterMode} zoomPx={ZOOM_LEVELS[zoomIdx].px} accent={accent} onEdit={openEdit} />
         </div>
       </div>
 
@@ -536,8 +548,11 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
 // (affichée jusqu'à son terme même si elle n'est pas encore passée, pour
 // se projeter sur les blessures longues). Tri par clic sur les en-têtes de
 // colonne, zoom horizontal via ZOOM_LEVELS.
-function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, zoomPx, accent, onEdit }) {
+function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMode, zoomPx, accent, onEdit }) {
   const { START, END, totalDays, today } = seasonRange
+  const rosterFiltre = filterMode === 'actuel' ? roster.filter(r => r.episodes.some(ep => ep.statut !== 'ok'))
+    : filterMode === 'saison' ? roster.filter(r => r.episodes.length > 0)
+    : roster
   const fmtShort = d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
   const pct = d => Math.max(0, Math.min(100, ((d - START) / 86400000 / totalDays) * 100))
 
@@ -558,11 +573,11 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, zoomPx, a
 
   let rows
   if (sortMode === 'poste') {
-    const postesPresents = [...new Set(roster.map(r => r.poste))]
+    const postesPresents = [...new Set(rosterFiltre.map(r => r.poste))]
     const ordered = [...POSTE_ORDER.filter(p => postesPresents.includes(p)), ...postesPresents.filter(p => !POSTE_ORDER.includes(p)).sort()]
-    rows = ordered.map(poste => ({ poste, joueurs: roster.filter(r => r.poste === poste).sort((a, b) => a.joueur.nom.localeCompare(b.joueur.nom)) }))
+    rows = ordered.map(poste => ({ poste, joueurs: rosterFiltre.filter(r => r.poste === poste).sort((a, b) => a.joueur.nom.localeCompare(b.joueur.nom)) }))
   } else {
-    rows = [{ poste: null, joueurs: [...roster].sort((a, b) => a.joueur.nom.localeCompare(b.joueur.nom)) }]
+    rows = [{ poste: null, joueurs: [...rosterFiltre].sort((a, b) => a.joueur.nom.localeCompare(b.joueur.nom)) }]
   }
 
   function Row({ r }) {
@@ -614,7 +629,9 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, zoomPx, a
           </div>
         </div>
 
-        {rows.map(({ poste, joueurs }) => (
+        {rosterFiltre.length === 0 ? (
+          <p style={{ ...S.empty, padding: '0.9rem 0.6rem' }}>Aucun joueur ne correspond à ce filtre.</p>
+        ) : rows.map(({ poste, joueurs }) => (
           <div key={poste || 'all'}>
             {poste && <div style={S.gPosGroupLbl}>{poste}</div>}
             {joueurs.map(r => <Row key={r.joueur.id} r={r} />)}
@@ -623,7 +640,7 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, zoomPx, a
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.9rem', marginTop: '0.6rem' }}>
-        {roster.filter(r => r.episodes.length).map(r => (
+        {rosterFiltre.filter(r => r.episodes.length).map(r => (
           <span key={r.joueur.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: '#6b7280', fontWeight: 700 }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color }} />{r.joueur.prenom} {r.joueur.nom}
           </span>
@@ -649,7 +666,7 @@ const S = {
   panelCount: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af' },
   empty: { fontSize: '0.82rem', color: '#9ca3af', padding: '0.5rem 1.1rem 1.1rem', margin: 0 },
 
-  caseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.85rem', padding: '0 1.1rem 1.1rem' },
+  caseGrid: { display: 'flex', flexDirection: 'column', gap: '0.7rem', padding: '0 1.1rem 1.1rem' },
   case: { border: '1px solid #f3f4f6', borderRadius: 12, padding: '0.85rem 0.9rem 0.9rem' },
   caseTop: { display: 'flex', alignItems: 'flex-start', gap: '0.65rem' },
   avatar: { width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.66rem', fontWeight: 800, flexShrink: 0, background: '#fee2e2', color: '#dc2626' },
@@ -678,6 +695,8 @@ const S = {
   indispoDaysLbl: { fontSize: '0.58rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' },
   indispoRetour: { fontSize: '0.64rem', color: '#059669', fontWeight: 700, margin: '0.15rem 0 0' },
 
+  filterBtns: { display: 'flex', gap: 0, border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' },
+  filterBtn: { background: 'white', color: '#6b7280', border: 'none', borderRight: '1.5px solid #e5e7eb', font: 'inherit', fontSize: '0.68rem', fontWeight: 700, padding: '0.35rem 0.6rem', cursor: 'pointer', whiteSpace: 'nowrap' },
   zoomCtrl: { display: 'flex', alignItems: 'center', gap: 8 },
   zoomBtn: { width: 24, height: 24, border: '1.5px solid #e5e7eb', borderRadius: 6, background: 'white', color: '#1a1a1a', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   zoomLbl: { fontSize: '0.66rem', color: '#9ca3af', fontWeight: 700, minWidth: 64, textAlign: 'center' },
