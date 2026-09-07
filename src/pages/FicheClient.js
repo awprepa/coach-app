@@ -8,7 +8,7 @@ import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
 import ClientListSidebar from '../components/ClientListSidebar'
-import { ensureJoueurId, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
+import { ensureJoueurId, getActiveBlessure, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
 
 
 const OFFRES = {
@@ -185,8 +185,7 @@ export default function FicheClient() {
 
   async function fetchBlessure() {
     const j = await ensureJoueurId(id)
-    const b = j?.joueur_blessures?.[0]
-    setBlessure(b && b.statut !== 'ok' ? b : null)
+    setBlessure(getActiveBlessure(j?.joueur_blessures))
   }
 
   async function fetchCycles() {

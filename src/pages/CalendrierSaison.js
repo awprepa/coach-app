@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useLayoutEffect } from
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
 import SchemaSVG from '../components/SchemaSVG'
-import { ZONES, NIVEAUX, parseDureeToDate, formatRetour } from '../components/BlessureButton'
+import { ZONES, NIVEAUX, parseDureeToDate, formatRetour, getActiveBlessure } from '../components/BlessureButton'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Calendrier saison (préparateur physique) — vue mois × jours d'un groupe.
@@ -1426,6 +1426,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   const [editDuree, setEditDuree] = useState('')
   const [editDateRetour, setEditDateRetour] = useState('')
   const [editRestrictions, setEditRestrictions] = useState([])
+  const [editEpisodeId, setEditEpisodeId] = useState(null) // id de l'épisode de blessure actif en édition, si il y en a un
   const [editRang, setEditRang] = useState(1)
   const [editSecondaires, setEditSecondaires] = useState('')
   const [saving, setSaving] = useState(false)
@@ -1517,7 +1518,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
       .map(j => ({
         ...j,
         rang: (j.joueur_postes || []).find(p => p.poste === poste)?.rang || 99,
-        blessure: (j.joueur_blessures || [])[0] || null,
+        blessure: getActiveBlessure(j.joueur_blessures),
       }))
       .sort((a, b) => a.rang - b.rang)
   }
@@ -1609,6 +1610,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
     setEditDuree(j.blessure?.duree_estimee || '')
     setEditDateRetour(j.blessure?.date_retour_prevue || '')
     setEditRestrictions(j.blessure?.restrictions || [])
+    setEditEpisodeId(j.blessure?.id || null)
     setEditRang(j.rang)
     const secondaires = (j.joueur_postes || [])
       .filter(p => p.poste !== poste)
@@ -1633,7 +1635,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
     autoOpenedClientRef.current = openClientId
     const postes = match.joueur_postes || []
     const primary = postes.find(p => p.is_primary) || postes[0]
-    openPanelJoueur({ ...match, rang: primary?.rang || 99, blessure: (match.joueur_blessures || [])[0] || null }, primary?.poste ?? null)
+    openPanelJoueur({ ...match, rang: primary?.rang || 99, blessure: getActiveBlessure(match.joueur_blessures) }, primary?.poste ?? null)
     onOpened?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openClientId, joueurs])
@@ -1659,19 +1661,31 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
     if (!panelJoueur) return
     setSaving(true)
     const joueurId = panelJoueur.id
-    // Mettre à jour blessure (upsert)
+    // Blessure : édite l'épisode actif s'il y en a un, sinon en ouvre un
+    // nouveau (date_debut = aujourd'hui) — un joueur peut avoir plusieurs
+    // épisodes dans son historique, on ne les écrase plus les uns les autres.
     const parsed = editStatut !== 'ok' ? parseDureeToDate(editDuree) : null
-    await supabase.from('joueur_blessures').upsert({
-      joueur_id: joueurId,
-      statut: editStatut,
-      zone: editStatut !== 'ok' ? editZone : null,
-      niveau: editStatut !== 'ok' ? editNiveau : null,
-      description: editDesc,
-      duree_estimee: editDuree,
-      date_retour_prevue: editStatut !== 'ok' ? (parsed || editDateRetour || null) : null,
-      restrictions: editRestrictions,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'joueur_id' })
+    if (editStatut === 'ok') {
+      if (editEpisodeId) {
+        await supabase.from('joueur_blessures').update({
+          statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), updated_at: new Date().toISOString(),
+        }).eq('id', editEpisodeId)
+      }
+    } else {
+      const payload = {
+        statut: editStatut, zone: editZone, niveau: editNiveau,
+        description: editDesc, duree_estimee: editDuree,
+        date_retour_prevue: parsed || editDateRetour || null,
+        restrictions: editRestrictions, updated_at: new Date().toISOString(),
+      }
+      if (editEpisodeId) {
+        await supabase.from('joueur_blessures').update(payload).eq('id', editEpisodeId)
+      } else {
+        await supabase.from('joueur_blessures').insert({
+          joueur_id: joueurId, date_debut: new Date().toISOString().slice(0, 10), ...payload,
+        })
+      }
+    }
     // Mettre à jour le rang au poste primaire
     const posteRec = (panelJoueur.joueur_postes || []).find(p => p.poste === panelJoueur._poste)
     if (posteRec) {

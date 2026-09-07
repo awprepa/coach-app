@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { formatRetour } from '../components/BlessureButton'
+import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 
 // ── Accès direct aux groupes (coach) ─────────────────────────────────────────
 // Avant, il fallait passer par le Tableau de bord (onglet Groupes) ou la page
@@ -28,8 +28,8 @@ export default function Groupes() {
       ;(membres || []).forEach(m => { c[m.groupe_id] = (c[m.groupe_id] || 0) + 1 })
       const b = {}
       ;(joueurs || []).forEach(j => {
-        const bl = (j.joueur_blessures || [])[0]
-        if (bl && bl.statut !== 'ok') {
+        const bl = getActiveBlessure(j.joueur_blessures)
+        if (bl) {
           (b[j.groupe_id] ||= []).push({
             nomComplet: `${j.prenom || ''} ${j.nom || ''}`.trim() || 'Joueur',
             description: bl.description,

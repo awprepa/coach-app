@@ -5,8 +5,9 @@ import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
 import CalendrierSaison, { EffectifView, GroupesNiveauView } from './CalendrierSaison'
 import GroupeIntensite from '../components/GroupeIntensite'
-import { formatRetour } from '../components/BlessureButton'
+import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 import GroupeTestsView from '../components/GroupeTestsView'
+import GroupeBlessuresView from '../components/GroupeBlessuresView'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -54,7 +55,7 @@ export default function FicheGroupe() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const tab = tabParam === 'calendrier' ? 'calendrier' : tabParam === 'tests' ? 'tests' : 'groupe'
+  const tab = tabParam === 'calendrier' ? 'calendrier' : tabParam === 'tests' ? 'tests' : tabParam === 'blessures' ? 'blessures' : 'groupe'
   const openEventId = searchParams.get('evenement') || null
   const setTab = t => setSearchParams(t === 'groupe' ? {} : { tab: t })
   const openCalendrierEvent = evId => setSearchParams({ tab: 'calendrier', evenement: evId })
@@ -156,8 +157,8 @@ export default function FicheGroupe() {
     setPosteMap(pMap)
     setRosterClientIds(new Set((joueursData || []).map(j => j.client_id)))
     setBlesses((joueursData || [])
-      .map(j => ({ j, bl: (j.joueur_blessures || [])[0] }))
-      .filter(({ bl }) => bl && bl.statut !== 'ok')
+      .map(j => ({ j, bl: getActiveBlessure(j.joueur_blessures) }))
+      .filter(({ bl }) => bl)
       .map(({ j, bl }) => ({
         clientId: j.client_id,
         nomComplet: `${j.prenom || ''} ${j.nom || ''}`.trim() || 'Joueur',
@@ -806,11 +807,11 @@ export default function FicheGroupe() {
     <div style={S.pageWide}>
       {/* ── Retour ── */}
       <button onClick={() => {
-        if (tab === 'calendrier' || tab === 'tests') { setTab('groupe'); return }
+        if (tab === 'calendrier' || tab === 'tests' || tab === 'blessures') { setTab('groupe'); return }
         if (parent) { navigate(`/groupe/${parent.id}`); return }
         navigate('/groupes')
       }} style={S.back}>
-        ← {tab === 'calendrier' || tab === 'tests' ? groupe.nom : parent ? parent.nom : 'Groupes'}
+        ← {tab === 'calendrier' || tab === 'tests' || tab === 'blessures' ? groupe.nom : parent ? parent.nom : 'Groupes'}
       </button>
 
       {/* Adaptations mobile — aucune règle au-dessus de 820px */}
@@ -847,6 +848,9 @@ export default function FicheGroupe() {
           </div>
         </div>
         <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => setTab('blessures')} style={S.btnSecondary}>
+            <IcoCross /> Suivi blessures
+          </button>
           <button onClick={() => setTab('tests')} style={S.btnSecondary}>
             <IcoChart /> Tests physiques
           </button>
@@ -866,6 +870,8 @@ export default function FicheGroupe() {
         <CalendrierSaison groupeId={id} embedded openEventId={openEventId} />
       ) : tab === 'tests' ? (
         <GroupeTestsView groupeId={id} accent={accent} />
+      ) : tab === 'blessures' ? (
+        <GroupeBlessuresView groupeId={id} accent={accent} />
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
@@ -1478,6 +1484,9 @@ function IcoCalendar() {
 }
 function IcoChart() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-5 4 3 5-7" /></svg>
+}
+function IcoCross() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v8M8 12h8" /><rect x="3" y="3" width="18" height="18" rx="4" /></svg>
 }
 function IcoEye() {
   return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></svg>

@@ -40,6 +40,14 @@ export function formatRetour(dateRetour) {
   return `Reprend dans ${Math.round(j / 30)} mois`
 }
 
+// Un joueur peut avoir plusieurs épisodes de blessure dans son historique —
+// celui-ci renvoie l'épisode actif (statut !== 'ok'), s'il y en a un.
+export function getActiveBlessure(joueurBlessures) {
+  const actives = (joueurBlessures || []).filter(b => b.statut !== 'ok')
+  if (!actives.length) return null
+  return actives.sort((a, b) => (b.date_debut || '').localeCompare(a.date_debut || ''))[0]
+}
+
 export async function ensureJoueurId(clientId, prenom, nom) {
   const { data: existing } = await supabase
     .from('groupe_joueurs').select('id, joueur_blessures(*)')
@@ -57,6 +65,7 @@ export async function ensureJoueurId(clientId, prenom, nom) {
 // Réutilisable depuis le profil, le wellness et le RPE post-entraînement.
 export default function BlessureButton({ clientId, prenom, nom, compact }) {
   const [joueurId, setJoueurId] = useState(null)
+  const [activeEpisodeId, setActiveEpisodeId] = useState(null)
   const [statutActif, setStatutActif] = useState(false)
   const [zone, setZone] = useState('general')
   const [niveau, setNiveau] = useState('sans_contact')
@@ -71,9 +80,10 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
     ensureJoueurId(clientId, prenom, nom).then(j => {
       if (!j) return
       setJoueurId(j.id)
-      const b = (j.joueur_blessures || [])[0]
+      const b = getActiveBlessure(j.joueur_blessures)
+      setActiveEpisodeId(b?.id || null)
       if (b) {
-        setStatutActif(b.statut !== 'ok')
+        setStatutActif(true)
         setZone(b.zone || 'general')
         setNiveau(b.niveau || 'sans_contact')
         setDesc(b.description || '')
@@ -88,18 +98,38 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
     if (!joueurId) return
     setSaving(true)
     const parsed = parseDureeToDate(duree)
-    await supabase.from('joueur_blessures').upsert({
-      joueur_id: joueurId,
-      statut: statutActif ? 'out' : 'ok',
-      zone: statutActif ? zone : null,
-      niveau: statutActif ? niveau : null,
-      description: statutActif ? (desc.trim() || null) : null,
-      duree_estimee: statutActif ? (duree.trim() || null) : null,
-      date_retour_prevue: statutActif ? (parsed || dateRetour || null) : null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'joueur_id' })
-    if (statutActif && parsed) setDateRetour(parsed)
-    if (statutActif) notifierCoach(zone, niveau, duree.trim())
+
+    if (statutActif) {
+      // Édite l'épisode en cours s'il y en a déjà un, sinon en ouvre un nouveau
+      // (date_debut = aujourd'hui, jamais modifiée ensuite).
+      const payload = {
+        statut: 'out',
+        zone,
+        niveau,
+        description: desc.trim() || null,
+        duree_estimee: duree.trim() || null,
+        date_retour_prevue: parsed || dateRetour || null,
+        updated_at: new Date().toISOString(),
+      }
+      if (activeEpisodeId) {
+        await supabase.from('joueur_blessures').update(payload).eq('id', activeEpisodeId)
+      } else {
+        const { data } = await supabase.from('joueur_blessures')
+          .insert({ joueur_id: joueurId, date_debut: new Date().toISOString().slice(0, 10), ...payload })
+          .select('id').maybeSingle()
+        if (data) setActiveEpisodeId(data.id)
+      }
+      if (parsed) setDateRetour(parsed)
+      notifierCoach(zone, niveau, duree.trim())
+    } else if (activeEpisodeId) {
+      // "Je suis apte" referme l'épisode sans effacer son historique (zone,
+      // description, etc. restent visibles dans le suivi des blessures).
+      await supabase.from('joueur_blessures')
+        .update({ statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), updated_at: new Date().toISOString() })
+        .eq('id', activeEpisodeId)
+      setActiveEpisodeId(null)
+    }
+
     setSaving(false)
     setPopup(false)
   }
