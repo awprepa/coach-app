@@ -80,6 +80,26 @@ function labelLesion(ep) {
   if (parts.length) return parts.join(' · ')
   return ep.description || 'Blessure'
 }
+
+// Suggestion automatique de protocole selon la zone/le type — le coach peut
+// toujours changer manuellement dans le formulaire.
+const ZONE_TO_PROTO_GUESS = {
+  'Cheville': 'entorse_cheville',
+  'Genou': 'genou_lcm',
+  'Ischio-jambiers': 'lesion_musculaire',
+  'Mollet': 'lesion_musculaire',
+  'Cuisse': 'lesion_musculaire',
+  'Épaule': 'epaule',
+  'Dos': 'cotes_lombaires',
+  'Tête / Cou': 'cervical',
+  'Poignet / Main': 'poignet_main',
+  'Autre': null,
+}
+function guessProtocoleSlug(typeLesion, zonePrecise) {
+  if (typeLesion === 'commotion') return 'commotion'
+  if (typeLesion === 'fracture') return 'fracture'
+  return ZONE_TO_PROTO_GUESS[zonePrecise] || null
+}
 // Page "Suivi blessures" d'un groupe : blessés actuels avec palier de reprise,
 // indisponibilités en cours, calendrier historique de tout l'effectif, stats
 // de saison, historique détaillé par joueur, et déclaration/édition d'un
@@ -94,8 +114,11 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   const [sortMode, setSortMode] = useState('nom') // 'nom' | 'poste' — tri du calendrier historique
   const [zoomIdx, setZoomIdx] = useState(0)       // index dans ZOOM_LEVELS
   const [filterMode, setFilterMode] = useState('tous') // 'tous' | 'saison' | 'actuel' — filtre du calendrier historique
+  const [protocoles, setProtocoles] = useState([])
+  const [protoModal, setProtoModal] = useState(null) // null | {mode:'list'} | {mode:'edit', id, nom, paliers}
+  const [testsPanel, setTestsPanel] = useState(null) // { ep, joueur, tests, checked } — checklist avant de changer de palier
 
-  useEffect(() => { load() }, [groupeId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); loadProtocoles() }, [groupeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     setLoading(true)
@@ -106,6 +129,11 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       .order('nom')
     setJoueurs(data || [])
     setLoading(false)
+  }
+
+  async function loadProtocoles() {
+    const { data } = await supabase.from('blessure_protocoles').select('*').order('nom')
+    setProtocoles(data || [])
   }
 
   const currentCases = useMemo(() => {
@@ -189,11 +217,14 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   }, [joueurs, search])
 
   function openDeclare(joueurId) {
+    const zone_precise = ZONES_PRECISES[0], type_lesion = 'entorse'
+    const guess = protocoles.find(p => p.slug === guessProtocoleSlug(type_lesion, zone_precise))
     setModal({
       joueurId: joueurId || '', episodeId: null,
-      zone_precise: ZONES_PRECISES[0], type_lesion: 'entorse', mecanisme: '', gravite: '',
+      zone_precise, type_lesion, mecanisme: '', gravite: '',
       niveau: 'repos_total', description: '', duree_estimee: '', date_retour_prevue: '',
       date_debut: new Date().toISOString().slice(0, 10),
+      protocole_id: guess?.id || '', protocoleTouched: false,
     })
   }
   function openEdit(joueur, ep) {
@@ -202,6 +233,19 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       zone_precise: ep.zone_precise || '', type_lesion: ep.type_lesion || 'entorse', mecanisme: ep.mecanisme || '', gravite: ep.gravite || '',
       niveau: ep.niveau || 'repos_total', description: ep.description || '', duree_estimee: ep.duree_estimee || '',
       date_retour_prevue: ep.date_retour_prevue || '', date_debut: ep.date_debut,
+      protocole_id: ep.protocole_id || '', protocoleTouched: true,
+    })
+  }
+  // Ré-évalue la suggestion de protocole quand zone/type changent, sauf si le
+  // coach a déjà choisi un protocole manuellement dans le formulaire ouvert.
+  function updateModalZoneType(patch) {
+    setModal(m => {
+      const next = { ...m, ...patch }
+      if (!m.protocoleTouched) {
+        const guess = protocoles.find(p => p.slug === guessProtocoleSlug(next.type_lesion, next.zone_precise))
+        next.protocole_id = guess?.id || ''
+      }
+      return next
     })
   }
 
@@ -220,6 +264,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       description: modal.description.trim() || null,
       duree_estimee: modal.duree_estimee.trim() || null,
       date_retour_prevue: parsed || modal.date_retour_prevue || null,
+      protocole_id: modal.protocole_id || null,
       updated_at: new Date().toISOString(),
     }
     if (modal.episodeId) {
@@ -232,20 +277,35 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
     load()
   }
 
-  async function avancerPalier(ep) {
+  // Tests à valider pour le palier en cours de l'épisode, selon son protocole.
+  function testsDuPalier(ep) {
+    const proto = protocoles.find(p => p.id === ep.protocole_id)
+    return proto?.paliers?.[ep.niveau]?.tests || []
+  }
+
+  function demanderPalierSuivant(joueur, ep) {
+    const tests = testsDuPalier(ep)
+    if (tests.length === 0) { avancerPalier(ep); return }
+    setTestsPanel({ joueur, ep, tests, checked: ep.tests_valides?.[ep.niveau] || [] })
+  }
+
+  async function avancerPalier(ep, testsValidesPalier) {
     const idx = NIVEAUX.findIndex(n => n.v === ep.niveau)
+    const tests_valides = testsValidesPalier ? { ...(ep.tests_valides || {}), [ep.niveau]: testsValidesPalier } : ep.tests_valides
     if (idx < 0 || idx >= NIVEAUX.length - 1) {
-      await marquerApte(ep)
+      await marquerApte(ep, tests_valides)
       return
     }
-    await supabase.from('joueur_blessures').update({ niveau: NIVEAUX[idx + 1].v, updated_at: new Date().toISOString() }).eq('id', ep.id)
+    await supabase.from('joueur_blessures').update({ niveau: NIVEAUX[idx + 1].v, tests_valides, updated_at: new Date().toISOString() }).eq('id', ep.id)
+    setTestsPanel(null)
     load()
   }
 
-  async function marquerApte(ep) {
+  async function marquerApte(ep, tests_valides) {
     await supabase.from('joueur_blessures')
-      .update({ statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), updated_at: new Date().toISOString() })
+      .update({ statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), tests_valides: tests_valides ?? ep.tests_valides, updated_at: new Date().toISOString() })
       .eq('id', ep.id)
+    setTestsPanel(null)
     load()
   }
 
@@ -253,7 +313,10 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
     <div>
       <div style={S.head}>
         <p style={S.headSub}>{loading ? 'Chargement…' : `${currentCases.length} joueur${currentCases.length > 1 ? 's' : ''} blessé${currentCases.length > 1 ? 's' : ''} actuellement`}</p>
-        <button onClick={() => openDeclare(null)} style={{ ...S.btnPrimary, background: accent }}>+ Déclarer une blessure</button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => setProtoModal({ mode: 'list' })} style={S.btnSecondaryPill}>Protocoles de reprise</button>
+          <button onClick={() => openDeclare(null)} style={{ ...S.btnPrimary, background: accent }}>+ Déclarer une blessure</button>
+        </div>
       </div>
 
       {/* ── Blessés actuellement + Indisponibilités en cours ── */}
@@ -292,6 +355,9 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                     {ep.description && labelLesion(ep) !== ep.description && (
                       <p style={S.caseDesc}>{ep.description}</p>
                     )}
+                    {ep.protocole_id && (
+                      <p style={S.protoTag}>Protocole : {protocoles.find(p => p.id === ep.protocole_id)?.nom || '—'}</p>
+                    )}
 
                     <div style={S.paliers}>
                       {STEP_LABELS.map((lbl, i) => (
@@ -315,7 +381,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                       <span style={S.caseReturn}>{formatRetour(ep.date_retour_prevue) || 'Retour non estimé'}</span>
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button onClick={() => openEdit(joueur, ep)} style={S.btnGhost}>Modifier</button>
-                        <button onClick={() => avancerPalier(ep)} style={S.btnGhost}>{idx >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Palier suivant'}</button>
+                        <button onClick={() => demanderPalierSuivant(joueur, ep)} style={S.btnGhost}>{idx >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Palier suivant'}</button>
                       </div>
                     </div>
                   </div>
@@ -480,17 +546,23 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <div style={{ flex: 1 }}>
                 <label style={S.label}>Zone touchée</label>
-                <select value={modal.zone_precise} onChange={e => setModal(m => ({ ...m, zone_precise: e.target.value }))} style={{ ...S.input, width: '100%' }}>
+                <select value={modal.zone_precise} onChange={e => updateModalZoneType({ zone_precise: e.target.value })} style={{ ...S.input, width: '100%' }}>
                   {ZONES_PRECISES.map(z => <option key={z} value={z}>{z}</option>)}
                 </select>
               </div>
               <div style={{ flex: 1 }}>
                 <label style={S.label}>Type de lésion</label>
-                <select value={modal.type_lesion} onChange={e => setModal(m => ({ ...m, type_lesion: e.target.value }))} style={{ ...S.input, width: '100%' }}>
+                <select value={modal.type_lesion} onChange={e => updateModalZoneType({ type_lesion: e.target.value })} style={{ ...S.input, width: '100%' }}>
                   {TYPES_LESION.map(t => <option key={t.v} value={t.v}>{t.label}</option>)}
                 </select>
               </div>
             </div>
+
+            <label style={S.label}>Protocole de reprise</label>
+            <select value={modal.protocole_id} onChange={e => setModal(m => ({ ...m, protocole_id: e.target.value, protocoleTouched: true }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
+              <option value="">Aucun (protocole générique)</option>
+              {protocoles.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
 
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <div style={{ flex: 1 }}>
@@ -534,6 +606,134 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
               <button onClick={() => setModal(null)} style={S.btnSecondary}>Annuler</button>
               <button onClick={submitModal} disabled={saving || !modal.joueurId} style={{ ...S.btnPrimary, flex: 1, background: accent, opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Checklist de tests avant de changer de palier ── */}
+      {testsPanel && (
+        <div style={S.overlay} onClick={() => setTestsPanel(null)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+            <p style={S.modalTitle}>
+              Avant de passer à « {stepIndex(testsPanel.ep) >= NIVEAUX.length - 1 ? 'Apte match' : NIVEAUX[stepIndex(testsPanel.ep) + 1]?.label} »
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 1rem' }}>
+              {testsPanel.joueur.prenom} {testsPanel.joueur.nom} — coche les tests validés (informatif, tu peux passer au palier suivant sans tout cocher).
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.1rem' }}>
+              {testsPanel.tests.map(t => (
+                <label key={t.id} style={S.testCheckRow}>
+                  <input type="checkbox" checked={testsPanel.checked.includes(t.id)}
+                    onChange={e => setTestsPanel(tp => ({ ...tp, checked: e.target.checked ? [...tp.checked, t.id] : tp.checked.filter(id => id !== t.id) }))} />
+                  <span>
+                    <span style={S.testCheckNom}>{t.nom}</span>
+                    <span style={S.testCheckCritere}>{t.critere}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => setTestsPanel(null)} style={S.btnSecondary}>Annuler</button>
+              <button onClick={() => avancerPalier(testsPanel.ep, testsPanel.checked)} style={{ ...S.btnPrimary, flex: 1, background: accent }}>
+                {stepIndex(testsPanel.ep) >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Passer au palier suivant'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Éditeur de protocoles de reprise ── */}
+      {protoModal?.mode === 'list' && (
+        <div style={S.overlay} onClick={() => setProtoModal(null)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+            <p style={S.modalTitle}>Protocoles de reprise</p>
+            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 1rem' }}>
+              Protocole par type de blessure : contenu de chaque palier et tests à valider avant de passer au suivant. Tu peux ajouter, modifier ou supprimer un test, ou le déplacer vers un autre palier.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+              {protocoles.map(p => (
+                <div key={p.id} style={S.protoListRow}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.84rem' }}>{p.nom}</p>
+                    {p.description && <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{p.description}</p>}
+                  </div>
+                  <button onClick={() => setProtoModal({ mode: 'edit', id: p.id, nom: p.nom, paliers: JSON.parse(JSON.stringify(p.paliers || {})) })} style={S.btnGhost}>Modifier</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setProtoModal(null)} style={S.btnSecondary}>Fermer</button>
+          </div>
+        </div>
+      )}
+
+      {protoModal?.mode === 'edit' && (
+        <div style={S.overlay} onClick={() => setProtoModal(null)}>
+          <div style={{ ...S.modal, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <p style={S.modalTitle}>{protoModal.nom}</p>
+            {NIVEAUX.map((niv, ni) => {
+              const palier = protoModal.paliers[niv.v] || { description: '', tests: [] }
+              function updatePalier(patch) {
+                setProtoModal(pm => ({ ...pm, paliers: { ...pm.paliers, [niv.v]: { ...pm.paliers[niv.v], ...patch } } }))
+              }
+              function updateTest(ti, patch) {
+                updatePalier({ tests: palier.tests.map((t, i) => i === ti ? { ...t, ...patch } : t) })
+              }
+              function removeTest(ti) {
+                updatePalier({ tests: palier.tests.filter((_, i) => i !== ti) })
+              }
+              function addTest() {
+                updatePalier({ tests: [...palier.tests, { id: `t${Date.now()}`, nom: '', critere: '' }] })
+              }
+              function moveTest(ti, dir) {
+                const targetNiv = NIVEAUX[ni + dir]
+                if (!targetNiv) return
+                const test = palier.tests[ti]
+                setProtoModal(pm => {
+                  const src = pm.paliers[niv.v]
+                  const dst = pm.paliers[targetNiv.v] || { description: '', tests: [] }
+                  return {
+                    ...pm,
+                    paliers: {
+                      ...pm.paliers,
+                      [niv.v]: { ...src, tests: src.tests.filter((_, i) => i !== ti) },
+                      [targetNiv.v]: { ...dst, tests: [...dst.tests, test] },
+                    },
+                  }
+                })
+              }
+              return (
+                <div key={niv.v} style={S.protoPalierBlock}>
+                  <p style={S.protoPalierTitle}>{niv.label}</p>
+                  <textarea value={palier.description || ''} onChange={e => updatePalier({ description: e.target.value })} rows={2}
+                    placeholder="Ce qui se travaille à ce palier…" style={{ ...S.input, width: '100%', marginBottom: '0.6rem', resize: 'vertical', fontFamily: 'inherit', fontSize: '0.8rem' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                    {palier.tests.map((t, ti) => (
+                      <div key={t.id} style={S.protoTestRow}>
+                        <input value={t.nom} onChange={e => updateTest(ti, { nom: e.target.value })} placeholder="Nom du test" style={{ ...S.input, flex: '1 1 40%', fontSize: '0.76rem' }} />
+                        <input value={t.critere} onChange={e => updateTest(ti, { critere: e.target.value })} placeholder="Critère de réussite" style={{ ...S.input, flex: '1 1 40%', fontSize: '0.76rem' }} />
+                        <button onClick={() => moveTest(ti, -1)} disabled={ni === 0} style={S.protoTestBtn} title="Déplacer au palier précédent">↑</button>
+                        <button onClick={() => moveTest(ti, 1)} disabled={ni === NIVEAUX.length - 1} style={S.protoTestBtn} title="Déplacer au palier suivant">↓</button>
+                        <button onClick={() => removeTest(ti)} style={{ ...S.protoTestBtn, color: '#dc2626' }} title="Supprimer">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={addTest} style={S.btnGhost}>+ Ajouter un test</button>
+                </div>
+              )
+            })}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <button onClick={() => setProtoModal({ mode: 'list' })} style={S.btnSecondary}>Annuler</button>
+              <button
+                onClick={async () => {
+                  await supabase.from('blessure_protocoles').update({ paliers: protoModal.paliers, updated_at: new Date().toISOString() }).eq('id', protoModal.id)
+                  await loadProtocoles()
+                  setProtoModal({ mode: 'list' })
+                }}
+                style={{ ...S.btnPrimary, flex: 1, background: accent }}
+              >
+                Enregistrer
               </button>
             </div>
           </div>
@@ -659,6 +859,17 @@ const S = {
   btnPrimary: { color: '#1a1a1a', border: 'none', borderRadius: 10, padding: '0.6rem 1.05rem', fontSize: '0.84rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { flex: 1, background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' },
   btnGhost: { border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', borderRadius: 8, padding: '0.32rem 0.65rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnSecondaryPill: { border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+
+  protoTag: { fontSize: '0.68rem', color: '#6b7280', fontWeight: 700, margin: '0.35rem 0 0' },
+  testCheckRow: { display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.8rem', cursor: 'pointer' },
+  testCheckNom: { display: 'block', fontWeight: 700 },
+  testCheckCritere: { display: 'block', fontSize: '0.72rem', color: '#6b7280', marginTop: 2 },
+  protoListRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', border: '1px solid #f3f4f6', borderRadius: 10, padding: '0.6rem 0.8rem' },
+  protoPalierBlock: { borderTop: '1px solid #f3f4f6', paddingTop: '0.8rem', marginTop: '0.8rem' },
+  protoPalierTitle: { fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.4rem' },
+  protoTestRow: { display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' },
+  protoTestBtn: { border: '1px solid #e5e7eb', background: 'white', borderRadius: 6, width: 26, height: 26, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', color: '#374151' },
 
   panel: { background: 'white', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' },
   panelHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.9rem 1.1rem 0.7rem' },
