@@ -129,11 +129,11 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
             contentStyle={{ fontSize: '0.75rem', borderRadius: 8, border: '1px solid #e5e7eb' }}
           />
           {mode === 'moyenne' ? (
-            <Line type="monotone" dataKey="moyenne" name="Intensité moy." stroke={accent} strokeWidth={2.5}
+            <Line type="linear" dataKey="moyenne" name="Intensité moy." stroke={accent} strokeWidth={2.5}
               dot={{ r: 4, fill: accent }} activeDot={{ r: 6 }} />
           ) : (
             DIM_META.map(d => (
-              <Line key={d.key} type="monotone" dataKey={d.key} name={d.label} stroke={d.col} strokeWidth={2}
+              <Line key={d.key} type="linear" dataKey={d.key} name={d.label} stroke={d.col} strokeWidth={2}
                 dot={{ r: 3, fill: d.col }} activeDot={{ r: 5 }} />
             ))
           )}

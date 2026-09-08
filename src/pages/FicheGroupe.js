@@ -904,12 +904,15 @@ export default function FicheGroupe() {
                   const iso = `${calY}-${String(calM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                   const evs = monthEvents[iso] || []
                   const isToday = iso === todayISOCal
+                  const evCol = evs[0] ? (CAL_EVENT_COLOR[evs[0]] || '#9ca3af') : null
                   return (
                     <div key={i} style={{ position: 'relative', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.72rem', fontWeight: 700, color: isToday ? accent : '#333', borderRadius: 7,
-                      background: isToday ? '#fff' : '#f9fafb', border: isToday ? `1.5px solid ${accent}` : '1px solid transparent' }}>
+                      fontSize: '0.72rem', fontWeight: evCol ? 800 : 700, color: isToday ? accent : evCol || '#333', borderRadius: 7,
+                      background: isToday ? '#fff' : evCol ? evCol + '1c' : '#f9fafb',
+                      border: isToday ? `1.5px solid ${accent}` : '1px solid transparent',
+                      borderBottom: !isToday && evCol ? `2.5px solid ${evCol}` : undefined }}>
                       {d}
-                      {evs[0] && <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: CAL_EVENT_COLOR[evs[0]] || '#9ca3af' }} />}
+                      {evs.length > 1 && <span style={{ position: 'absolute', top: 3, right: 3, width: 4, height: 4, borderRadius: '50%', background: isToday ? accent : evCol }} />}
                     </div>
                   )
                 })}
@@ -1083,14 +1086,15 @@ export default function FicheGroupe() {
           )}
         </div>
 
-        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
+        <div onClick={() => setTab('blessures')} title="Ouvrir le suivi blessures du groupe"
+          style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
           <div style={S.panelHead}><span style={S.panelLabel}>Blessés · {blesses.length}</span></div>
           {blesses.length === 0 ? (
             <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun joueur blessé actuellement.</p>
           ) : (
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {blesses.map((b, i) => (
-                <div key={i} onClick={() => b.clientId && navigate(`/client/${b.clientId}`)}
+                <div key={i} onClick={e => { e.stopPropagation(); b.clientId && navigate(`/client/${b.clientId}`) }}
                   style={{ padding: '0.6rem 1.1rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', cursor: b.clientId ? 'pointer' : 'default' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
