@@ -787,7 +787,8 @@ export default function FicheGroupe() {
   const calY = calMonth.getFullYear(), calM = calMonth.getMonth()
   const firstDow = (new Date(calY, calM, 1).getDay() + 6) % 7 // 0 = lundi
   const nbJours = new Date(calY, calM + 1, 0).getDate()
-  const todayISOCal = new Date().toISOString().slice(0, 10)
+  const nowCal = new Date()
+  const todayISOCal = `${nowCal.getFullYear()}-${String(nowCal.getMonth() + 1).padStart(2, '0')}-${String(nowCal.getDate()).padStart(2, '0')}`
   const calCells = []
   for (let i = 0; i < firstDow; i++) calCells.push(null)
   for (let d = 1; d <= nbJours; d++) calCells.push(d)
@@ -908,11 +909,11 @@ export default function FicheGroupe() {
                   return (
                     <div key={i} style={{ position: 'relative', aspectRatio: '1/1', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.72rem', fontWeight: evCol ? 800 : 700, color: isToday ? accent : evCol || '#333', borderRadius: 7,
-                      background: isToday ? '#fff' : evCol ? evCol + '1c' : '#f9fafb',
+                      background: evCol ? evCol + '1c' : (isToday ? '#fff' : '#f9fafb'),
                       border: isToday ? `1.5px solid ${accent}` : '1px solid transparent',
-                      borderBottom: !isToday && evCol ? `2.5px solid ${evCol}` : undefined }}>
+                      borderBottom: evCol ? `2.5px solid ${evCol}` : undefined }}>
                       {d}
-                      {evs.length > 1 && <span style={{ position: 'absolute', top: 3, right: 3, width: 4, height: 4, borderRadius: '50%', background: isToday ? accent : evCol }} />}
+                      {evs.length > 1 && <span style={{ position: 'absolute', top: 3, right: 3, width: 4, height: 4, borderRadius: '50%', background: evCol }} />}
                     </div>
                   )
                 })}

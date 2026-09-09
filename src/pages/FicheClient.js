@@ -46,6 +46,27 @@ const INDICATORS = [
   { key: 'stress',   label: 'Stress',   emoji: '🧠' },
 ]
 
+const MEAL_LABELS = {
+  petit_dej: 'Petit-déj', dejeuner: 'Déjeuner', collation: 'Collation',
+  diner: 'Dîner', collation_2: 'Collation 2',
+}
+const TYPE_JOUR_CONFIG = {
+  standard:     { label: 'Standard',     color: '#374151' },
+  entrainement: { label: 'Entraînement', color: '#1d4ed8' },
+  repos:        { label: 'Repos',        color: '#16a34a' },
+  competition:  { label: 'Compétition',  color: '#dc2626' },
+  custom:       { label: 'Personnalisé', color: '#7c3aed' },
+}
+function jourMacros(jour) {
+  const meals = jour.nutrition_plan_meals || []
+  return meals.reduce((acc, m) => ({
+    kcal: acc.kcal + (m.kcal || 0),
+    prot: acc.prot + (Number(m.prot_g) || 0),
+    carbs: acc.carbs + (Number(m.carbs_g) || 0),
+    fat: acc.fat + (Number(m.fat_g) || 0),
+  }), { kcal: 0, prot: 0, carbs: 0, fat: 0 })
+}
+
 function scoreColor(v) {
   if (!v) return '#e5e7eb'
   if (v <= 1) return '#ef4444'
@@ -1233,9 +1254,61 @@ export default function FicheClient() {
                 <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a', margin: '0 0 3px' }}>{nutritionPlan.nom}</p>
                 <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>
                   {nutritionPlan.date_debut ? `Depuis le ${new Date(nutritionPlan.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : 'Plan en cours'}
+                  {nutritionPlan.date_fin ? ` jusqu'au ${new Date(nutritionPlan.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : ''}
                   {' · '}{(nutritionPlan.nutrition_plan_days || []).length} jours définis
                 </p>
               </div>
+
+              {(nutritionPlan.nutrition_plan_days || []).length > 0 && (() => {
+                const jours = [...nutritionPlan.nutrition_plan_days].sort((a, b) => a.jour_numero - b.jour_numero)
+                const totJ = jours.length
+                const moy = jours.reduce((acc, j) => {
+                  const m = jourMacros(j)
+                  return { kcal: acc.kcal + m.kcal, prot: acc.prot + m.prot, carbs: acc.carbs + m.carbs, fat: acc.fat + m.fat }
+                }, { kcal: 0, prot: 0, carbs: 0, fat: 0 })
+                return (
+                  <details style={{ marginTop: '0.75rem' }}>
+                    <summary style={{ cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#6d28d9', listStyle: 'none' }}>
+                      Voir le détail des {totJ} jours ▾
+                    </summary>
+                    <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap', margin: '0.75rem 0', fontSize: '0.72rem', color: '#6b7280', fontWeight: 700 }}>
+                      <span>Moy. {Math.round(moy.kcal / totJ)} kcal/j</span>
+                      <span>{Math.round(moy.prot / totJ)}g prot</span>
+                      <span>{Math.round(moy.carbs / totJ)}g gluc</span>
+                      <span>{Math.round(moy.fat / totJ)}g lip</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {jours.map(j => {
+                        const tj = TYPE_JOUR_CONFIG[j.type_jour] || { label: j.type_jour || 'Jour', color: '#6b7280' }
+                        const m = jourMacros(j)
+                        const meals = [...(j.nutrition_plan_meals || [])].sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
+                        return (
+                          <div key={j.id} style={{ border: '1px solid #f3f4f6', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>
+                                Jour {j.jour_numero}
+                                <span style={{ marginLeft: 6, fontSize: '0.66rem', fontWeight: 700, color: tj.color, background: tj.color + '18', borderRadius: 999, padding: '0.1rem 0.5rem' }}>{tj.label}</span>
+                              </span>
+                              <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 700 }}>
+                                {m.kcal} kcal · {Math.round(m.prot)}P / {Math.round(m.carbs)}G / {Math.round(m.fat)}L
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              {meals.map(meal => (
+                                <div key={meal.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.74rem' }}>
+                                  <span style={{ color: '#9ca3af', fontWeight: 700, flexShrink: 0, width: 78 }}>{MEAL_LABELS[meal.meal_type] || meal.meal_type}</span>
+                                  <span style={{ flex: 1, color: '#374151' }}>{meal.nom}</span>
+                                  <span style={{ color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{meal.kcal} kcal</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </details>
+                )
+              })()}
             </div>
           )}
 
