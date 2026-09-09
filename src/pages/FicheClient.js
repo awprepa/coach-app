@@ -383,7 +383,7 @@ export default function FicheClient() {
 
     const [planRes, profileRes] = await Promise.all([
       supabase.from('nutrition_plans')
-        .select('id, nom, statut, date_debut, date_fin, nutrition_plan_days(id, jour, type_jour, nutrition_plan_meals(id, nom, meal_type, kcal, prot_g, carbs_g, fat_g))')
+        .select('id, nom, statut, date_debut, date_fin, nutrition_plan_days(id, jour_numero, type_jour, nutrition_plan_meals(id, nom, meal_type, kcal, prot_g, carbs_g, fat_g))')
         .eq('client_id', id).eq('statut', 'actif')
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('nutrition_profile').select('*').eq('client_id', id).maybeSingle(),
@@ -391,6 +391,7 @@ export default function FicheClient() {
 
     setNutritionProfile(profileRes.data)
 
+    if (planRes.error) console.error('fetchNutrition: erreur nutrition_plans', planRes.error)
     const plan = planRes.data
     if (!plan) { setNutritionPlan(false); setNutritionAdher([]); return }
     setNutritionPlan(plan)
@@ -412,7 +413,7 @@ export default function FicheClient() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
       const dayNum  = getDayNum(d)
-      const planDay = dayNum ? (plan.nutrition_plan_days || []).find(pd => pd.jour === dayNum) : null
+      const planDay = dayNum ? (plan.nutrition_plan_days || []).find(pd => pd.jour_numero === dayNum) : null
       const planMeals = planDay?.nutrition_plan_meals || []
       const dayLogs   = (logs || []).filter(l => l.date === d)
       const planLogs  = dayLogs.filter(l => l.meal_id !== null)

@@ -906,7 +906,7 @@ export default function FicheGroupe() {
                   const isToday = iso === todayISOCal
                   const evCol = evs[0] ? (CAL_EVENT_COLOR[evs[0]] || '#9ca3af') : null
                   return (
-                    <div key={i} style={{ position: 'relative', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    <div key={i} style={{ position: 'relative', aspectRatio: '1/1', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.72rem', fontWeight: evCol ? 800 : 700, color: isToday ? accent : evCol || '#333', borderRadius: 7,
                       background: isToday ? '#fff' : evCol ? evCol + '1c' : '#f9fafb',
                       border: isToday ? `1.5px solid ${accent}` : '1px solid transparent',
