@@ -17,6 +17,10 @@ const CONFIG = {
     bg: '#ede9fe', stroke: '#7c3aed',
     path: <path d="M20.8 4.6a5 5 0 0 0-7.1 0L12 6.3l-1.7-1.7a5 5 0 1 0-7 7.1l1.6 1.6L12 20l7.1-7.1 1.6-1.6a5 5 0 0 0 0-6.7Z" />,
   },
+  wellness_alerte: {
+    bg: '#fee2e2', stroke: '#dc2626',
+    path: <><path d="M12 9v4" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 17h.01" /></>,
+  },
   seance: {
     bg: '#dcfce7', stroke: '#16a34a',
     path: <path d="M20 6 9 17l-5-5" />,

@@ -763,6 +763,13 @@ export default function FicheGroupe() {
     const w = wellnessMap[m.id]
     return w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
   }
+  // Alerte si une note individuelle est basse (≤ 2/4), même si la moyenne
+  // globale reste correcte — un signal fort peut se cacher dans la moyenne.
+  const WELLNESS_DIMS = [['sommeil', 'Som.'], ['fatigue', 'Fat.'], ['douleurs', 'Doul.'], ['stress', 'Stress']]
+  function membreAlerte(m) {
+    const w = wellnessMap[m.id]
+    return w ? WELLNESS_DIMS.some(([k]) => w[k] <= 2) : false
+  }
   const membresAffiches = membres
     .filter(m => `${m.prenom} ${m.nom}`.toLowerCase().includes(membreSearch.toLowerCase()))
     .filter(m => {
@@ -965,7 +972,9 @@ export default function FicheGroupe() {
                 {membresAffiches.map(m => {
                   const poste = posteMap[m.id]
                   const avg = membreAvg(m)
-                  const col = avg !== null ? wellnessColor(avg) : '#9ca3af'
+                  const alerte = membreAlerte(m)
+                  const col = avg !== null ? (alerte ? '#ef4444' : wellnessColor(avg)) : '#9ca3af'
+                  const w = wellnessMap[m.id]
                   return (
                     <tr key={m.id} onClick={async () => {
                       if (!rosterClientIds.has(m.id)) {
@@ -993,9 +1002,19 @@ export default function FicheGroupe() {
                         {poste || '—'}
                       </td>
                       <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
-                        {avg !== null
-                          ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: col }} />{avg.toFixed(1)}</span>
-                          : <span style={{ color: '#c4ccd4' }}>—</span>}
+                        {avg !== null ? (
+                          <div title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: col }} />{avg.toFixed(1)}
+                              {alerte && <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#ef4444', background: '#fee2e2', borderRadius: 999, padding: '0.05rem 0.4rem' }}>alerte</span>}
+                            </span>
+                            <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                              {WELLNESS_DIMS.map(([k, l]) => (
+                                <span key={k} style={{ fontSize: '0.62rem', fontWeight: 700, color: w[k] <= 2 ? '#ef4444' : '#9ca3af' }}>{l}{w[k]}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : <span style={{ color: '#c4ccd4' }}>—</span>}
                       </td>
                       <td style={{ padding: '0.32rem 0.6rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
                         <button

@@ -43,6 +43,18 @@ function getAvatar(prenom, nom) {
   return { initiales, ...palettes[idx] }
 }
 
+// Formatte la date du dernier wellness rempli en relatif (aujourd'hui, hier, il y a Xj)
+function formatDerniereActivite(dateStr) {
+  if (!dateStr) return 'Jamais de wellness'
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(dateStr + 'T00:00:00')
+  const days = Math.round((today - d) / 86400000)
+  if (days <= 0) return "Wellness aujourd'hui"
+  if (days === 1) return 'Wellness hier'
+  if (days <= 30) return `Wellness il y a ${days}j`
+  return `Dernier wellness le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+}
+
 function getSubInfo(date_fin) {
   if (!date_fin) return null
   const today = new Date(); today.setHours(0, 0, 0, 0)
@@ -145,6 +157,7 @@ export default function Dashboard() {
     const [
       { data: clientsData },
       { data: wData },
+      { data: wLastData },
       { data: evts },
       { data: catsData },
       { data: progsData },
@@ -153,6 +166,9 @@ export default function Dashboard() {
     ] = await Promise.all([
       supabase.from('clients').select('*, categories(id, nom, couleur)').order('prenom'),
       supabase.from('wellness').select('*').gte('date', start).lte('date', end),
+      // Dernier wellness rempli tous historiques confondus (pas juste cette semaine) —
+      // sert à trier les clients par activité récente sur le tableau de bord.
+      supabase.from('wellness').select('client_id, date').order('date', { ascending: false }),
       supabase.from('evenements').select('*, clients(prenom, nom)')
         .gte('date', start).lte('date', end).order('date', { ascending: true }),
       supabase.from('categories').select('*').order('created_at'),
@@ -161,12 +177,15 @@ export default function Dashboard() {
       supabase.from('groupe_membres').select('client_id, groupe_id, groupes(id, nom, couleur, logo_url)'),
     ])
 
+    const lastWellnessMap = {}
+    for (const w of (wLastData || [])) { if (!lastWellnessMap[w.client_id]) lastWellnessMap[w.client_id] = w.date }
+
     const withWellness = (clientsData || []).map(c => {
       const wWeek = (wData || []).filter(w => w.client_id === c.id)
       const wToday = wWeek.find(w => w.date === today) || null
       const weekAvgs = wWeek.map(w => (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4)
       const weekAvg = weekAvgs.length ? weekAvgs.reduce((a, b) => a + b, 0) / weekAvgs.length : null
-      return { ...c, wellness_today: wToday, wellness_week: wWeek, wellness_week_avg: weekAvg }
+      return { ...c, wellness_today: wToday, wellness_week: wWeek, wellness_week_avg: weekAvg, derniere_activite: lastWellnessMap[c.id] || null }
     })
 
     setClients(withWellness)
@@ -358,11 +377,22 @@ export default function Dashboard() {
     `${c.prenom} ${c.nom}`.toLowerCase().includes(search.toLowerCase()) &&
     (activeCat === null ? true : c.categorie_id === activeCat)
 
-  // Filtrage clients individuels
-  const filtered = clientsIndividuels.filter(matchFiltre)
+  // Filtrage clients individuels — triés par activité récente (dernier
+  // wellness rempli), les plus récents en premier ; jamais rempli en dernier.
+  const filtered = clientsIndividuels.filter(matchFiltre).sort((a, b) => {
+    if (!a.derniere_activite && !b.derniere_activite) return 0
+    if (!a.derniere_activite) return 1
+    if (!b.derniere_activite) return -1
+    return b.derniere_activite.localeCompare(a.derniere_activite)
+  })
 
-  // Membres filtrés, regroupés par groupe
-  const membresFiltres = clientsMembres.filter(matchFiltre)
+  // Membres filtrés, regroupés par groupe — même tri par activité récente
+  const membresFiltres = clientsMembres.filter(matchFiltre).sort((a, b) => {
+    if (!a.derniere_activite && !b.derniere_activite) return 0
+    if (!a.derniere_activite) return 1
+    if (!b.derniere_activite) return -1
+    return b.derniere_activite.localeCompare(a.derniere_activite)
+  })
   const membresParGroupe = {}
   for (const m of membresFiltres) {
     const g = memberGroupMap[m.id]
@@ -765,6 +795,7 @@ export default function Dashboard() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                               {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
                               {cat && <span style={{ fontSize: '0.7rem', color: cat.couleur, fontWeight: '700' }}>· {cat.nom}</span>}
+                              <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>· {formatDerniereActivite(client.derniere_activite)}</span>
                             </div>
                           </div>
                         </div>
@@ -826,7 +857,10 @@ export default function Dashboard() {
                                 : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>}
                               <div>
                                 <p style={S.clientName}>{client.prenom} {client.nom}</p>
-                                {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
+                                  <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{client.objectif ? '· ' : ''}{formatDerniereActivite(client.derniere_activite)}</span>
+                                </div>
                               </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
