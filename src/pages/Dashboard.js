@@ -352,19 +352,17 @@ export default function Dashboard() {
   const nouveaux = clientsActifs.filter(c => c.coach_notifie === false)
   const totalAlertes = wellnessAlertes.length + expirations.length + nouveaux.length + progFinBientot.length
 
-  // Bilan hebdo (actifs uniquement)
+  // Bilan hebdo (actifs uniquement) — triés par activité récente (dernier
+  // wellness rempli), les plus récents en premier ; jamais rempli en dernier.
   const { start: wStart, end: wEnd } = getWeekBounds()
   const bilanRows = clientsActifs.map(c => {
     const evs = weekEvents.filter(e => e.client_id === c.id)
     return { ...c, eventsCount: evs.length }
   }).sort((a, b) => {
-    const aInactif = a.wellness_week?.length === 0 && a.eventsCount === 0
-    const bInactif = b.wellness_week?.length === 0 && b.eventsCount === 0
-    if (aInactif && !bInactif) return -1
-    if (!aInactif && bInactif) return 1
-    if (a.wellness_week_avg !== null && b.wellness_week_avg !== null) return a.wellness_week_avg - b.wellness_week_avg
-    if (a.wellness_week_avg === null) return 1
-    if (b.wellness_week_avg === null) return -1
+    if (!a.derniere_activite && !b.derniere_activite) return 0
+    if (!a.derniere_activite) return 1
+    if (!b.derniere_activite) return -1
+    if (a.derniere_activite !== b.derniere_activite) return b.derniere_activite.localeCompare(a.derniere_activite)
     return 0
   })
 
@@ -621,7 +619,10 @@ export default function Dashboard() {
                           ? <img src={c.avatar_url} alt={c.prenom} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                           : <div style={{ width: 28, height: 28, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
                         }
-                        <span style={{ ...S.miniName }}>{c.prenom} {c.nom}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ ...S.miniName, margin: 0 }}>{c.prenom} {c.nom}</p>
+                          <p style={{ margin: '1px 0 0', fontSize: '0.68rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatDerniereActivite(c.derniere_activite)}</p>
+                        </div>
                       </div>
                       <div>
                         {avg !== null ? (
