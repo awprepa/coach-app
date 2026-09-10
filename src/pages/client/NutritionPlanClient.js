@@ -6,6 +6,32 @@ import usePageFade from '../../hooks/usePageFade'
 
 function toISO(date) { return date.toISOString().slice(0, 10) }
 
+// ─── Classement des aliments par rayon (pour la liste de courses) ─────────────
+function normFood(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+// Ordre = parcours type d'un supermarché. Les rayons plus spécifiques
+// (épicerie sucrée) sont testés avant les plus génériques (crémerie) pour
+// éviter que « beurre de cacahuète » tombe dans les produits laitiers.
+const RAYONS = [
+  ['Fruits & légumes', ['myrtille', 'fraise', 'framboise', 'fruit rouge', 'fruits rouges', 'banane', 'pomme', 'poire', 'orange', 'citron', 'tomate', 'salade', 'epinard', 'haricot vert', 'haricots verts', 'courgette', 'carotte', 'brocoli', 'poivron', 'oignon', 'ail', 'patate douce', 'pomme de terre', 'champignon', 'concombre', 'avocat', 'mangue', 'ananas', 'kiwi', 'raisin', 'peche', 'abricot', 'chou', 'betterave', 'radis', 'celeri', 'poireau', 'aubergine', 'crudite', 'legume', 'fruit', 'herbe', 'basilic', 'persil', 'coriandre', 'menthe', 'gingembre']],
+  ['Boucherie & poissonnerie', ['poulet', 'dinde', 'boeuf', 'steak', 'viande', 'hache', 'porc', 'jambon', 'saumon', 'cabillaud', 'colin', 'crevette', 'poisson', 'escalope', 'filet', 'merguez', 'lardon', 'agneau', 'veau', 'bacon', 'truite']],
+  ['Épicerie sucrée', ['miel', 'sucre', 'confiture', 'chocolat', 'flocons d\'avoine', 'avoine', 'muesli', 'granola', 'beurre de cacahuete', 'puree d\'amande', 'amande', 'noix', 'noisette', 'cajou', 'fruits secs', 'datte', 'sirop', 'cacao', 'whey', 'proteine', 'barre', 'compote']],
+  ['Épicerie salée', ['riz', 'pates', 'semoule', 'quinoa', 'boulgour', 'lentille', 'pois chiche', 'haricot rouge', 'haricot blanc', 'conserve', 'huile', 'vinaigre', 'sauce soja', 'sauce', 'moutarde', 'sel', 'poivre', 'epice', 'bouillon', 'sardine', 'farine', 'chapelure', 'galette de riz', 'curry', 'paprika', 'cumin', 'ketchup', 'mayonnaise']],
+  ['Boulangerie', ['pain', 'baguette', 'wrap', 'tortilla', 'pita', 'biscotte']],
+  ['Crémerie & œufs', ['skyr', 'yaourt', 'fromage blanc', 'petit suisse', 'fromage', 'mozzarella', 'feta', 'parmesan', 'comte', 'oeuf', 'lait', 'beurre', 'creme', 'ricotta', 'cottage', 'kefir', 'skyr nature']],
+  ['Boissons', ['eau', 'jus', 'cafe', 'the ', 'boisson', 'lait d\'amande', 'lait de soja', 'lait vegetal']],
+  ['Surgelés', ['surgele', 'glace']],
+]
+function rayonPour(nom) {
+  const n = normFood(nom)
+  for (const [rayon, mots] of RAYONS) {
+    if (mots.some(m => n.includes(normFood(m)))) return rayon
+  }
+  return 'Autres'
+}
+const RAYON_ORDRE = ['Fruits & légumes', 'Boucherie & poissonnerie', 'Crémerie & œufs', 'Boulangerie', 'Épicerie salée', 'Épicerie sucrée', 'Surgelés', 'Boissons', 'Autres']
+
 const MEAL_LABELS = {
   petit_dej:   { label: 'Petit-déj',   color: '#f59e0b' },
   dejeuner:    { label: 'Déjeuner',    color: '#3b82f6' },
@@ -392,7 +418,7 @@ export default function NutritionPlanClient() {
     )
   }
 
-  // ── Liste de courses ─────────────────────────────────────────────────────
+  // ── Liste de courses — regroupée par rayon pour faciliter les courses ────
   function getShoppingList() {
     const items = {}
     for (const day of days) {
@@ -400,11 +426,17 @@ export default function NutritionPlanClient() {
         for (const food of (meal.nutrition_plan_foods || [])) {
           const key = food.nom.toLowerCase()
           if (items[key]) { items[key].quantite += food.quantite_g || 0; items[key].count++ }
-          else items[key] = { nom: food.nom, quantite: food.quantite_g || 0, count: 1 }
+          else items[key] = { nom: food.nom, quantite: food.quantite_g || 0, count: 1, rayon: rayonPour(food.nom) }
         }
       }
     }
-    return Object.values(items).sort((a, b) => a.nom.localeCompare(b.nom))
+    const parRayon = {}
+    for (const it of Object.values(items)) {
+      (parRayon[it.rayon] ||= []).push(it)
+    }
+    return RAYON_ORDRE
+      .filter(r => parRayon[r]?.length)
+      .map(r => ({ rayon: r, items: parRayon[r].sort((a, b) => a.nom.localeCompare(b.nom)) }))
   }
 
   // ── Render loading ───────────────────────────────────────────────────────
@@ -587,8 +619,15 @@ export default function NutritionPlanClient() {
             {shoppingList.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>Aucun aliment dans le plan.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {shoppingList.map((item, i) => <ShoppingItem key={i} item={item} />)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {shoppingList.map(groupe => (
+                  <div key={groupe.rayon}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{groupe.rayon}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {groupe.items.map((item, i) => <ShoppingItem key={i} item={item} />)}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
