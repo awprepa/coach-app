@@ -280,7 +280,7 @@ export default function NutritionClient() {
                     <div key={pm.id} style={S.prescrit}>
                       <button onClick={() => cocherRepas(pm)} disabled={!!coche}
                         aria-label={fait ? 'Décocher ce plat' : 'Valider ce plat'}
-                        style={{ ...S.check, ...(fait ? S.checkOn : {}), border: 'none', cursor: coche ? 'default' : 'pointer', padding: 0 }}>
+                        style={{ ...S.check, ...(fait ? S.checkOn : {}), cursor: coche ? 'default' : 'pointer', padding: 0 }}>
                         {fait && (
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                         )}
