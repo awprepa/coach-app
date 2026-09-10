@@ -569,11 +569,6 @@ export default function NutritionPlanClient() {
                             ))}
                           </div>
                         )}
-                        {meal.recette && (
-                          <div style={{ marginTop: 6, marginLeft: 16, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 9px', fontSize: '0.7rem', color: '#92400e', lineHeight: 1.45 }}>
-                            <strong>Préparation :</strong> {meal.recette}
-                          </div>
-                        )}
                       </div>
                     )
                   })}
