@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useLayoutEffect } from
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
 import SchemaSVG from '../components/SchemaSVG'
-import { ZONES, NIVEAUX, parseDureeToDate, formatRetour, getActiveBlessure } from '../components/BlessureButton'
+import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Calendrier saison (préparateur physique) — vue mois × jours d'un groupe.
@@ -1419,27 +1419,9 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   const [newPrenom, setNewPrenom] = useState('')
   const [newNom, setNewNom] = useState('')
   const [newRang, setNewRang] = useState(1)
-  const [editStatut, setEditStatut] = useState('ok')
-  const [editZone, setEditZone] = useState('general')
-  const [editNiveau, setEditNiveau] = useState('sans_contact')
-  const [editDesc, setEditDesc] = useState('')
-  const [editDuree, setEditDuree] = useState('')
-  const [editDateRetour, setEditDateRetour] = useState('')
-  const [editRestrictions, setEditRestrictions] = useState([])
-  const [editEpisodeId, setEditEpisodeId] = useState(null) // id de l'épisode de blessure actif en édition, si il y en a un
   const [editRang, setEditRang] = useState(1)
   const [editSecondaires, setEditSecondaires] = useState('')
   const [saving, setSaving] = useState(false)
-  const [newVmi, setNewVmi] = useState('')
-  const [newVma, setNewVma] = useState('')
-  const [new30m, setNew30m] = useState('')
-  const [savingTest, setSavingTest] = useState(null) // 'vmi' | 'vma' | '30m' | null
-
-  const RESTRICTIONS = [
-    'Sans contact','Sans changement de direction',
-    'Sans course haute intensité','Musculation uniquement',
-    'Vélo / aqua uniquement','Autre'
-  ]
 
   const POSTES_RUGBY = [
     { num:1, nom:'Pilier' },        { num:2, nom:'Talonneur' }, { num:3, nom:'Pilier' },
@@ -1603,23 +1585,12 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   }
   function openPanelJoueur(j, poste) {
     setPanelJoueur({ ...j, _poste: poste })
-    setEditStatut(j.blessure?.statut || 'ok')
-    setEditZone(j.blessure?.zone || 'general')
-    setEditNiveau(j.blessure?.niveau || 'sans_contact')
-    setEditDesc(j.blessure?.description || '')
-    setEditDuree(j.blessure?.duree_estimee || '')
-    setEditDateRetour(j.blessure?.date_retour_prevue || '')
-    setEditRestrictions(j.blessure?.restrictions || [])
-    setEditEpisodeId(j.blessure?.id || null)
     setEditRang(j.rang)
     const secondaires = (j.joueur_postes || [])
       .filter(p => p.poste !== poste)
       .map(p => p.poste)
       .join(', ')
     setEditSecondaires(secondaires)
-    setNewVmi('')
-    setNewVma('')
-    setNew30m('')
     setEditingVital(null)
     setVitalDraft('')
     setPanelPos(null)
@@ -1640,56 +1611,39 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openClientId, joueurs])
 
-  async function ajouterTestPhysique(type) {
-    const valeurStr = type === 'vmi' ? newVmi : type === 'vma' ? newVma : new30m
-    const valeur = parseFloat(valeurStr)
-    if (!panelJoueur || !valeur) return
-    setSavingTest(type)
-    const { data, error } = await supabase.from('joueur_tests_physiques')
-      .insert({ joueur_id: panelJoueur.id, type, valeur })
-      .select().single()
-    setSavingTest(null)
-    if (error) { alert(error.message); return }
-    if (type === 'vmi') setNewVmi(''); else if (type === 'vma') setNewVma(''); else setNew30m('')
-    setPanelJoueur(prev => ({ ...prev, joueur_tests_physiques: [...(prev.joueur_tests_physiques || []), data] }))
-    setJoueurs(prev => prev.map(j => j.id === panelJoueur.id
-      ? { ...j, joueur_tests_physiques: [...(j.joueur_tests_physiques || []), data] }
-      : j))
-  }
-
+  // Le panneau joueur ne gère plus les blessures (elles se modifient dans
+  // « Suivi blessures ») : on n'y enregistre que le poste (rang + secondaires).
   async function saveJoueur() {
     if (!panelJoueur) return
     setSaving(true)
     const joueurId = panelJoueur.id
-    // Blessure : édite l'épisode actif s'il y en a un, sinon en ouvre un
-    // nouveau (date_debut = aujourd'hui) — un joueur peut avoir plusieurs
-    // épisodes dans son historique, on ne les écrase plus les uns les autres.
-    const parsed = editStatut !== 'ok' ? parseDureeToDate(editDuree) : null
-    if (editStatut === 'ok') {
-      if (editEpisodeId) {
-        await supabase.from('joueur_blessures').update({
-          statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), updated_at: new Date().toISOString(),
-        }).eq('id', editEpisodeId)
-      }
-    } else {
-      const payload = {
-        statut: editStatut, zone: editZone, niveau: editNiveau,
-        description: editDesc, duree_estimee: editDuree,
-        date_retour_prevue: parsed || editDateRetour || null,
-        restrictions: editRestrictions, updated_at: new Date().toISOString(),
-      }
-      if (editEpisodeId) {
-        await supabase.from('joueur_blessures').update(payload).eq('id', editEpisodeId)
-      } else {
-        await supabase.from('joueur_blessures').insert({
-          joueur_id: joueurId, date_debut: new Date().toISOString().slice(0, 10), ...payload,
-        })
-      }
-    }
-    // Mettre à jour le rang au poste primaire
     const posteRec = (panelJoueur.joueur_postes || []).find(p => p.poste === panelJoueur._poste)
     if (posteRec) {
       await supabase.from('joueur_postes').update({ rang: editRang }).eq('id', posteRec.id)
+    }
+    // Postes secondaires : liste de numéros séparés par des virgules
+    const wanted = editSecondaires.split(',').map(s => parseInt(s.trim(), 10)).filter(n => n >= 1 && n <= 15 && n !== panelJoueur._poste)
+    const current = (panelJoueur.joueur_postes || []).filter(p => p.poste !== panelJoueur._poste)
+    for (const p of current) {
+      if (!wanted.includes(p.poste)) await supabase.from('joueur_postes').delete().eq('id', p.id)
+    }
+    for (const n of wanted) {
+      if (!current.some(p => p.poste === n)) {
+        await supabase.from('joueur_postes').insert({ joueur_id: joueurId, poste: n, rang: 99, is_primary: false })
+      }
+    }
+    setSaving(false)
+    setPanelJoueur(null)
+    fetchAll()
+  }
+
+  async function retirerDuGroupe() {
+    if (!panelJoueur) return
+    if (!window.confirm('Retirer ce joueur du groupe ? Sa fiche client et son historique restent intacts, il redevient un client individuel.')) return
+    setSaving(true)
+    await supabase.from('groupe_joueurs').delete().eq('id', panelJoueur.id)
+    if (panelJoueur.client_id) {
+      await supabase.from('groupe_membres').delete().eq('groupe_id', groupeId).eq('client_id', panelJoueur.client_id)
     }
     setSaving(false)
     setPanelJoueur(null)
@@ -1978,9 +1932,21 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
               <button onClick={() => setPanelJoueur(null)} style={{ background:'rgba(255,255,255,.12)', border:'none', color:'#fff', width:32, height:32, borderRadius:9, fontSize:'1.1rem', cursor:'pointer', flexShrink:0 }}>×</button>
             </div>
 
-            <div style={{ padding:'18px 20px 22px' }}>
-              {/* Chiffres clés — toujours visibles, cliquables pour saisie manuelle */}
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginBottom:20 }}>
+            <div style={{ padding:'16px 18px 18px' }}>
+              {(() => {
+                const secLbl = { fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.06em', textTransform:'uppercase', color:'#9aa1ac', margin:'0 0 8px' }
+                const bl = panelJoueur.blessure
+                const statutInfo = bl?.statut === 'out'
+                  ? { l:'Indisponible', bg:'#fbe9e9', c:'#b91c1c', bd:'#dc2626' }
+                  : bl?.statut === 'cond'
+                  ? { l:'Aménagé', bg:'#fdf0dc', c:'#b45309', bd:'#d97706' }
+                  : { l:'Disponible', bg:'#e7f6ec', c:'#15803d', bd:'#16a34a' }
+                return (
+                <>
+              {/* ── Mesures ── */}
+              <div style={{ marginBottom:16 }}>
+              <p style={secLbl}>Mesures</p>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
                 <VitalTile champ="age" label="Âge" valeur={age} unite="ans" />
                 <VitalTile champ="taille" label="Taille" valeur={taille} unite="cm" />
                 <VitalTile champ="poids" label="Poids" valeur={poidsInfo?.valeur ?? null} unite="kg"
@@ -1999,143 +1965,106 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                   ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>}
                 </div>
               </div>
+              </div>
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginBottom:20 }}>
-                {/* Statut + blessure */}
-                <div>
-                  <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Statut</div>
-                  <div style={{ display:'flex', gap:5, marginBottom:10 }}>
-                    {[['ok','Dispo.'],['cond','Cond.'],['out','Indispo.']].map(([v,l]) => {
-                      const selBg = { ok:'#dcfce7', cond:'#fef3c7', out:'#fee2e2' }[v]
-                      const selBorder = { ok:'#16a34a', cond:'#f59e0b', out:'#dc2626' }[v]
-                      const selColor = { ok:'#15803d', cond:'#b45309', out:'#b91c1c' }[v]
-                      const sel = editStatut === v
+              {/* ── Disponibilité (lecture seule — se modifie dans Suivi blessures) ── */}
+              <div style={{ marginBottom:16 }}>
+                <p style={secLbl}>Disponibilité</p>
+                <div style={{ border:'1px solid #e6e8ec', borderRadius:12, padding:'12px 14px', background:'#fbfbfc' }}>
+                  <span style={{ display:'inline-block', fontSize:'0.72rem', fontWeight:800, padding:'3px 10px', borderRadius:99, background:statutInfo.bg, color:statutInfo.c, border:`1.5px solid ${statutInfo.bd}44` }}>{statutInfo.l}</span>
+                  {bl && bl.statut !== 'ok' ? (
+                    <div style={{ marginTop:8, fontSize:'0.8rem', color:'#374151', lineHeight:1.5 }}>
+                      {(bl.zone_precise || bl.description) && <div style={{ fontWeight:700, color:'#1a1a1a' }}>{bl.zone_precise || bl.description}</div>}
+                      {bl.zone_precise && bl.description && bl.description !== bl.zone_precise && <div style={{ color:'#6b7280' }}>{bl.description}</div>}
+                      {(formatRetour(bl.date_retour_prevue) || bl.duree_estimee) && (
+                        <div style={{ marginTop:2, fontSize:'0.72rem', color:'#b45309', fontWeight:700 }}>{formatRetour(bl.date_retour_prevue) || bl.duree_estimee}</div>
+                      )}
+                      {(bl.restrictions || []).length > 0 && (
+                        <div style={{ marginTop:4, fontSize:'0.72rem', color:'#6b7280' }}>Restrictions : {bl.restrictions.join(', ')}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop:8, fontSize:'0.76rem', color:'#9aa1ac' }}>Aucune blessure ni restriction en cours.</div>
+                  )}
+                  <p style={{ margin:'10px 0 0', fontSize:'0.7rem', color:'#9aa1ac' }}>
+                    Statut, blessure et protocole de reprise se gèrent dans l'onglet <strong style={{ color:'#6b7280' }}>Suivi blessures</strong> du groupe.
+                  </p>
+                </div>
+              </div>
+
+              {/* ── Poste (modifiable) ── */}
+              <div style={{ marginBottom:16 }}>
+                <p style={secLbl}>Poste</p>
+                <div style={{ display:'flex', gap:8 }}>
+                  <div style={{ flex:'0 0 84px' }}>
+                    <label style={{ display:'block', fontSize:'0.62rem', fontWeight:700, color:'#6b7280', marginBottom:3 }}>Rang</label>
+                    <input style={{ ...inputStyle, marginBottom:0 }} type="number" min={1} value={editRang} onChange={e=>setEditRang(Number(e.target.value))} />
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <label style={{ display:'block', fontSize:'0.62rem', fontWeight:700, color:'#6b7280', marginBottom:3 }}>Postes secondaires</label>
+                    <input style={{ ...inputStyle, marginBottom:0 }} placeholder="ex : 1, 3" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Tests physiques (lecture seule — saisie dans l'onglet Tests physiques) ── */}
+              <div style={{ marginBottom:16 }}>
+                <p style={secLbl}>Tests physiques</p>
+                {['vmi','vma','30m','50m'].some(t => dernierTest(panelJoueur, t)) ? (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+                    {[['vmi','VMI','km/h'], ['vma','VMA','km/h'], ['30m','30m','s'], ['50m','50m','s']].map(([type,label,unite]) => {
+                      const dernier = dernierTest(panelJoueur, type)
                       return (
-                        <button key={v} onClick={() => setEditStatut(v)}
-                          style={{ flex:1, padding:'7px 2px', borderRadius:8,
-                            border:`2px solid ${sel ? selBorder : 'transparent'}`,
-                            fontSize:'0.66rem', fontWeight:800, cursor:'pointer', textAlign:'center',
-                            background: sel ? selBg : '#f3f4f6',
-                            color: sel ? selColor : '#6b7280',
-                            fontFamily:'inherit' }}>
-                          {l}
-                        </button>
+                        <div key={type} style={{ background:'#f7f8fa', border:'1px solid #e6e8ec', borderRadius:10, padding:'8px 6px', textAlign:'center' }}>
+                          <div style={{ fontSize:'0.56rem', fontWeight:800, color:'#6b7280', textTransform:'uppercase' }}>{label}</div>
+                          {dernier ? (
+                            <>
+                              <div style={{ fontSize:'0.9rem', fontWeight:800, color:'#1a1a1a', marginTop:2 }}>{dernier.valeur}<span style={{ fontSize:'0.55rem', fontWeight:700, color:'#9ca3af' }}>{unite}</span></div>
+                              <div style={{ fontSize:'0.54rem', color:'#9ca3af', marginTop:2 }}>{new Date(dernier.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
+                            </>
+                          ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700, marginTop:2 }}>—</div>}
+                        </div>
                       )
                     })}
                   </div>
-                  {editStatut === 'cond' && (
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10 }}>
-                      {RESTRICTIONS.map(r => {
-                        const on = editRestrictions.includes(r)
-                        return (
-                          <div key={r} onClick={() => setEditRestrictions(prev => on ? prev.filter(x=>x!==r) : [...prev,r])}
-                            style={{ padding:'3px 8px', borderRadius:12, fontSize:'0.64rem', fontWeight:700,
-                              cursor:'pointer', border:`1.5px solid ${on?'#f59e0b':'#e5e7eb'}`,
-                              background: on?'#fef3c7':'#f9fafb', color: on?'#b45309':'#374151' }}>
-                            {r}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {editStatut !== 'ok' && (
-                    <>
-                      <div style={{ display:'flex', gap:5, marginBottom:6, flexWrap:'wrap' }}>
-                        {ZONES.map(z => (
-                          <button key={z.v} onClick={() => setEditZone(z.v)} type="button" style={{
-                            padding:'4px 9px', borderRadius:999, border:'none', cursor:'pointer',
-                            background: editZone===z.v ? '#1f2937' : '#f3f4f6',
-                            color: editZone===z.v ? '#e4f816' : '#6b7280',
-                            fontSize:'0.64rem', fontWeight:700, fontFamily:'inherit' }}>
-                            {z.label}
-                          </button>
-                        ))}
+                ) : (
+                  <p style={{ fontSize:'0.76rem', color:'#9aa1ac', margin:0 }}>Aucun résultat. Ajoute-les dans l'onglet <strong style={{ color:'#6b7280' }}>Tests physiques</strong> du groupe.</p>
+                )}
+              </div>
+
+              {/* ── Derniers événements du groupe (rappel) ── */}
+              <div>
+                <p style={secLbl}>Derniers événements du groupe</p>
+                {recentEvents.length ? (
+                  <div style={{ border:'1px solid #e6e8ec', borderRadius:10, overflow:'hidden' }}>
+                    {recentEvents.map(ev => (
+                      <div key={ev.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 11px', borderTop:'1px solid #f1f2f4', background:'#fff' }}>
+                        <span style={{ width:7, height:7, borderRadius:'50%', background:EVT_COLOR[ev.type]||'#9ca3af', flexShrink:0 }} />
+                        <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {ev.type === 'match' ? `Match${ev.adversaire ? ' · ' + ev.adversaire : ''}` : (ev.titre || EVT_LABEL[ev.type] || ev.type)}
+                        </span>
+                        <span style={{ fontSize:'0.64rem', color:'#9ca3af', fontWeight:600, flexShrink:0 }}>
+                          {new Date(ev.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+                        </span>
                       </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:4, marginBottom:8 }}>
-                        {NIVEAUX.map(n => (
-                          <button key={n.v} onClick={() => setEditNiveau(n.v)} type="button" style={{
-                            textAlign:'left', padding:'6px 9px', borderRadius:8, cursor:'pointer', fontFamily:'inherit',
-                            border: editNiveau===n.v ? '1.5px solid #1f2937' : '1.5px solid #e5e7eb',
-                            background: editNiveau===n.v ? '#f9fafb' : 'white',
-                            fontSize:'0.68rem', fontWeight:700, color:'#374151' }}>
-                            {n.label}
-                          </button>
-                        ))}
-                      </div>
-                      <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Ex : Entorse LLE genou droit" value={editDesc} onChange={e=>setEditDesc(e.target.value)} />
-                      <input style={{ ...inputStyle, fontSize:'0.75rem' }} placeholder="Durée estimée (ex : 2 semaines)" value={editDuree} onChange={e=>setEditDuree(e.target.value)} />
-                      {(parseDureeToDate(editDuree) || editDateRetour) && (
-                        <p style={{ fontSize:'0.68rem', color:'#9ca3af', margin:'-4px 0 8px' }}>
-                          {formatRetour(parseDureeToDate(editDuree) || editDateRetour)}
-                        </p>
-                      )}
-                    </>
-                  )}
-                  <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:6, marginTop:10 }}>Postes</div>
-                  <div style={{ display:'flex', gap:6, marginBottom:6 }}>
-                    <input style={{ ...inputStyle, marginBottom:0, width:60, flexShrink:0 }} type="number" min={1} value={editRang} onChange={e=>setEditRang(Number(e.target.value))} placeholder="Rang" title="Rang au poste principal" />
-                    <input style={{ ...inputStyle, marginBottom:0, flex:1 }} placeholder="Postes secondaires (ex : 6, 8)" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
+                    ))}
                   </div>
-                </div>
-
-                {/* Derniers événements du groupe — rappel simple, pas de pointage individuel */}
-                <div>
-                  <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Derniers événements du groupe</div>
-                  {recentEvents.length ? (
-                    <div style={{ border:'1px solid #e5e7eb', borderRadius:10, overflow:'hidden' }}>
-                      {recentEvents.map(ev => (
-                        <div key={ev.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 11px', borderBottom:'1px solid #f3f4f6', background:'#fff' }}>
-                          <span style={{ width:7, height:7, borderRadius:'50%', background:EVT_COLOR[ev.type]||'#9ca3af', flexShrink:0 }} />
-                          <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                            {ev.type === 'match' ? `Match${ev.adversaire ? ' · ' + ev.adversaire : ''}` : (ev.titre || EVT_LABEL[ev.type] || ev.type)}
-                          </span>
-                          <span style={{ fontSize:'0.64rem', color:'#9ca3af', fontWeight:600, flexShrink:0 }}>
-                            {new Date(ev.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p style={{ fontSize:'0.72rem', color:'#c4ccd4', fontStyle:'italic', margin:0 }}>Aucun événement récent.</p>}
-                </div>
+                ) : <p style={{ fontSize:'0.72rem', color:'#c4ccd4', fontStyle:'italic', margin:0 }}>Aucun événement récent.</p>}
               </div>
+                </>
+                )
+              })()}
+            </div>
 
-              {/* Tests physiques — tuiles, plus une saisie compacte */}
-              <div style={{ marginBottom:18 }}>
-                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:8 }}>Tests physiques</div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(100px,1fr))', gap:8 }}>
-                  {[['vmi','VMI','km/h'], ['vma','VMA','km/h'], ['30m','30m','s'], ['50m','50m','s']].map(([type,label,unite]) => {
-                    const dernier = dernierTest(panelJoueur, type)
-                    if (!dernier) return null
-                    return (
-                      <div key={type} style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:10, padding:'8px 10px' }}>
-                        <div style={{ fontSize:'0.58rem', fontWeight:800, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.03em', marginBottom:3 }}>{label}</div>
-                        <div style={{ fontSize:'0.85rem', fontWeight:900, color:'#1a1a1a' }}>{dernier.valeur}<span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', marginLeft:2 }}>{unite}</span></div>
-                        <div style={{ fontSize:'0.58rem', color:'#9ca3af', marginTop:2 }}>{new Date(dernier.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
-                  {[['vmi', 'VMI', newVmi, setNewVmi], ['vma', 'VMA', newVma, setNewVma], ['30m', '30m', new30m, setNew30m]].map(([type, label, val, setVal]) => (
-                    <div key={type} style={{ display:'flex', alignItems:'center', gap:4, background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:8, padding:'3px 4px 3px 9px' }}>
-                      <span style={{ fontSize:'0.66rem', fontWeight:800, color:'#6b7280' }}>{label}</span>
-                      <input type="number" step="0.1" placeholder="+"
-                        value={val} onChange={e => setVal(e.target.value)}
-                        style={{ width:52, border:'none', outline:'none', fontSize:'0.75rem', fontFamily:'inherit', padding:'4px 2px' }} />
-                      <button onClick={() => ajouterTestPhysique(type)} disabled={!val || savingTest === type}
-                        style={{ padding:'4px 9px', borderRadius:6, border:'none', background:'#1f2937', color:'#fff',
-                          fontSize:'0.7rem', fontWeight:800, cursor: val ? 'pointer' : 'not-allowed', opacity: val ? 1 : 0.5, fontFamily:'inherit' }}>
-                        {savingTest === type ? '…' : 'OK'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+            <div style={{ display:'flex', gap:8, padding:'12px 18px', borderTop:'1px solid #e6e8ec', background:'#fafbfc' }}>
+              <button onClick={retirerDuGroupe} disabled={saving}
+                style={{ background:'none', border:'1px solid #fbe9e9', color:'#dc2626', borderRadius:10, padding:'10px 14px', fontSize:'0.78rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                Retirer du groupe
+              </button>
               <button onClick={saveJoueur} disabled={saving}
-                style={{ width:'100%', padding:'11px', background:groupColor,
+                style={{ flex:1, padding:'10px', background:groupColor,
                   color: isLight(groupColor)?'#1a1a1a':'#fff',
-                  border:'none', borderRadius:11, fontSize:'0.86rem', fontWeight:900,
+                  border:'none', borderRadius:10, fontSize:'0.85rem', fontWeight:800,
                   cursor:'pointer', fontFamily:'inherit' }}>
                 {saving ? '…' : 'Enregistrer'}
               </button>
