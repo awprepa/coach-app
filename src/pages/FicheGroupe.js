@@ -955,17 +955,17 @@ export default function FicheGroupe() {
               </button>
             ))}
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
               <thead>
                 <tr>
                   {[['nom', 'Nom'], ['poste', 'Poste'], ['wellness', 'Wellness']].map(([k, l]) => (
                     <th key={k} onClick={() => toggleMembreSort(k)}
-                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 1.1rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 0.55rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
                       {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
                     </th>
                   ))}
-                  <th style={{ padding: '0.4rem 1.1rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', width: 40 }} />
+                  <th style={{ padding: '0.4rem 0.5rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', width: 34, position: 'sticky', right: 0 }} />
                 </tr>
               </thead>
               <tbody>
@@ -990,7 +990,7 @@ export default function FicheGroupe() {
                       setEffectifOpen(true); setOpenJoueurClientId(m.id)
                     }} style={{ cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
-                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ width: 20, height: 20, borderRadius: '50%', background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.56rem', fontWeight: 800, flexShrink: 0 }}>
                             {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
@@ -998,10 +998,10 @@ export default function FicheGroupe() {
                           <span style={{ fontWeight: 700, color: '#333' }}>{m.nom} {m.prenom}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6', color: poste ? '#374151' : '#c4ccd4', fontSize: '0.74rem' }}>
+                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6', color: poste ? '#374151' : '#c4ccd4', fontSize: '0.74rem' }}>
                         {poste || '—'}
                       </td>
-                      <td style={{ padding: '0.32rem 1.1rem', borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
                         {avg !== null ? (
                           <div title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}>
@@ -1016,13 +1016,11 @@ export default function FicheGroupe() {
                           </div>
                         ) : <span style={{ color: '#c4ccd4' }}>—</span>}
                       </td>
-                      <td style={{ padding: '0.32rem 0.6rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
+                      <td style={{ padding: '0.32rem 0.5rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', position: 'sticky', right: 0, background: 'white' }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); retirerMembre(m.id) }}
                           title="Retirer du groupe"
-                          style={{ width: 24, height: 24, borderRadius: 7, border: 'none', background: 'transparent', color: '#c4ccd4', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#c4ccd4' }}
+                          style={{ width: 24, height: 24, borderRadius: 7, border: 'none', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M18 6L6 18M6 6l12 12" />
