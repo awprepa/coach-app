@@ -118,6 +118,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   const [protocoles, setProtocoles] = useState([])
   const [protoModal, setProtoModal] = useState(null) // null | {mode:'list'} | {mode:'edit', id, nom, paliers}
   const [testsPanel, setTestsPanel] = useState(null) // { ep, joueur, tests, checked } — checklist avant de changer de palier
+  const [detailPalier, setDetailPalier] = useState(null) // { ep, idx } — détail protocole d'une étape de la timeline
 
   useEffect(() => { load(); loadProtocoles() }, [groupeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -360,27 +361,42 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                     {ep.description && labelLesion(ep) !== ep.description && (
                       <p style={S.caseDesc}>{ep.description}</p>
                     )}
-                    {ep.protocole_id && (
-                      <p style={S.protoTag}>Protocole : {protocoles.find(p => p.id === ep.protocole_id)?.nom || '—'}</p>
-                    )}
-
-                    <div style={S.paliers}>
-                      {STEP_LABELS.map((lbl, i) => (
-                        <div key={i} style={S.pal}>
-                          <div style={{
-                            ...S.palDot,
-                            ...(i < idx ? { background: accent, borderColor: accent, color: 'white' }
-                              : i === idx ? { borderColor: accent, color: accent, boxShadow: `0 0 0 3px ${accent}22` } : {}),
-                          }}>
-                            {i < idx ? '✓' : i + 1}
+                    {(() => {
+                      const proto = protocoles.find(p => p.id === ep.protocole_id)
+                      const palierCourantKey = NIVEAUX[idx]?.v
+                      const descCourante = proto?.paliers?.[palierCourantKey]?.description
+                      return (
+                        <>
+                          {proto && <p style={S.protoTag}>Protocole : {proto.nom}</p>}
+                          <div style={S.paliers}>
+                            {STEP_LABELS.map((lbl, i) => {
+                              const pKey = NIVEAUX[i]?.v
+                              const aDuContenu = !!(proto?.paliers?.[pKey]?.description || proto?.paliers?.[pKey]?.tests?.length)
+                              return (
+                                <button key={i} onClick={() => setDetailPalier({ ep, idx: i })} style={S.pal}>
+                                  <div style={{
+                                    ...S.palDot,
+                                    ...(i < idx ? { background: accent, borderColor: accent, color: 'white' }
+                                      : i === idx ? { borderColor: accent, color: accent, boxShadow: `0 0 0 3px ${accent}22` } : {}),
+                                  }}>
+                                    {i < idx ? '✓' : i + 1}
+                                  </div>
+                                  {i < STEP_LABELS.length - 1 && (
+                                    <div style={{ ...S.palLine, ...(i < idx ? { background: accent } : {}) }} />
+                                  )}
+                                  <span style={{ ...S.palLbl, ...(i === idx ? { color: accent, fontWeight: 800 } : {}) }}>
+                                    {lbl}{aDuContenu ? ' ›' : ''}
+                                  </span>
+                                </button>
+                              )
+                            })}
                           </div>
-                          {i < STEP_LABELS.length - 1 && (
-                            <div style={{ ...S.palLine, ...(i < idx ? { background: accent } : {}) }} />
+                          {descCourante && (
+                            <p style={S.palierDesc} onClick={() => setDetailPalier({ ep, idx })}>{descCourante}</p>
                           )}
-                          <span style={{ ...S.palLbl, ...(i === idx ? { color: accent, fontWeight: 800 } : {}) }}>{lbl}</span>
-                        </div>
-                      ))}
-                    </div>
+                        </>
+                      )
+                    })()}
 
                     <div style={S.caseFoot}>
                       <span style={S.caseReturn}>{formatRetour(ep.date_retour_prevue) || 'Retour non estimé'}</span>
@@ -616,6 +632,55 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
           </div>
         </div>
       )}
+
+      {/* ── Détail d'une étape de la timeline (contenu du protocole) ── */}
+      {detailPalier && (() => {
+        const { ep, idx } = detailPalier
+        const proto = protocoles.find(p => p.id === ep.protocole_id)
+        const isApte = idx >= NIVEAUX.length - 1
+        const pKey = NIVEAUX[idx]?.v
+        const contenu = isApte ? null : proto?.paliers?.[pKey]
+        return (
+          <div style={S.overlay} onClick={() => setDetailPalier(null)}>
+            <div style={S.modal} onClick={e => e.stopPropagation()}>
+              <p style={S.modalTitle}>Étape {idx + 1}/{STEP_LABELS.length} — {STEP_LABELS[idx]}</p>
+              {proto && <p style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 700, margin: '0 0 0.9rem' }}>Protocole : {proto.nom}</p>}
+              {isApte ? (
+                <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: 0 }}>
+                  Retour à la compétition : tous les paliers précédents validés + aval médical.
+                </p>
+              ) : !proto ? (
+                <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.5, margin: 0 }}>
+                  Aucun protocole spécifique associé à cette blessure. Choisis un protocole via « Modifier » pour préciser le contenu et les tests de chaque étape.
+                </p>
+              ) : (
+                <>
+                  {contenu?.description && (
+                    <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: '0 0 1rem' }}>{contenu.description}</p>
+                  )}
+                  <p style={S.modalTitle} >Tests à valider avant l'étape suivante</p>
+                  {contenu?.tests?.length ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {contenu.tests.map(t => (
+                        <div key={t.id} style={S.testCheckRow}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, marginTop: 6, flexShrink: 0 }} />
+                          <span>
+                            <span style={S.testCheckNom}>{t.nom}</span>
+                            <span style={S.testCheckCritere}>{t.critere}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Aucun test défini pour cette étape.</p>
+                  )}
+                </>
+              )}
+              <button onClick={() => setDetailPalier(null)} style={{ ...S.btnSecondary, marginTop: '1.1rem' }}>Fermer</button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Checklist de tests avant de changer de palier ── */}
       {testsPanel && (
@@ -897,7 +962,8 @@ const S = {
   daysOutLbl: { fontSize: '0.56rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' },
 
   paliers: { display: 'flex', alignItems: 'flex-start', gap: 0, marginTop: '0.6rem' },
-  pal: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' },
+  pal: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' },
+  palierDesc: { fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.4, margin: '0.6rem 0 0', cursor: 'pointer' },
   palDot: { width: 18, height: 18, borderRadius: '50%', border: '2px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, zIndex: 1, color: '#9ca3af' },
   palLine: { position: 'absolute', top: 8, left: '50%', width: '100%', height: 2, background: '#e5e7eb', zIndex: 0 },
   palLbl: { fontSize: '0.58rem', color: '#9ca3af', fontWeight: 700, marginTop: 4, textAlign: 'center', lineHeight: 1.15, maxWidth: 58 },
