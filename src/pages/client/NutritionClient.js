@@ -47,6 +47,7 @@ export default function NutritionClient() {
   const [joursPlan, setJoursPlan] = useState([])
   const [logs, setLogs]       = useState([])
   const [coche, setCoche]     = useState(null)   // id du repas en cours d'envoi
+  const [detailPlat, setDetailPlat] = useState(null) // repas prescrit dont on affiche le détail
 
   const iso = toISO(jour)
 
@@ -70,7 +71,7 @@ export default function NutritionClient() {
       if (p) {
         setPlan(p)
         const { data: jrs } = await supabase.from('nutrition_plan_days')
-          .select('jour_numero, nutrition_plan_meals(id, meal_type, nom, kcal, prot_g, carbs_g, fat_g)')
+          .select('jour_numero, nutrition_plan_meals(id, meal_type, nom, kcal, prot_g, carbs_g, fat_g, recette, nutrition_plan_foods(id, nom, quantite_g, kcal, prot_g, carbs_g, fat_g, ordre))')
           .eq('plan_id', p.id).order('jour_numero')
         setJoursPlan(jrs || [])
       }
@@ -276,18 +277,21 @@ export default function NutritionClient() {
                 {prescrits.map(pm => {
                   const fait = statutDe(pm.id) === 'fait'
                   return (
-                    <button key={pm.id} onClick={() => cocherRepas(pm)} disabled={!!coche} style={S.prescrit}>
-                      <span style={{ ...S.check, ...(fait ? S.checkOn : {}) }}>
+                    <div key={pm.id} style={S.prescrit}>
+                      <button onClick={() => cocherRepas(pm)} disabled={!!coche}
+                        aria-label={fait ? 'Décocher ce plat' : 'Valider ce plat'}
+                        style={{ ...S.check, ...(fait ? S.checkOn : {}), border: 'none', cursor: coche ? 'default' : 'pointer', padding: 0 }}>
                         {fait && (
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                         )}
-                      </span>
-                      <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
-                        <p style={{ ...S.itemName, opacity: fait ? 1 : 0.75 }}>{pm.nom}</p>
-                        <p style={S.itemQty}>Prévu par ton coach</p>
-                      </div>
+                      </button>
+                      <button onClick={() => setDetailPlat(pm)}
+                        style={{ minWidth: 0, flex: 1, textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                        <p style={{ ...S.itemName, opacity: fait ? 1 : 0.75, textDecoration: 'underline', textDecorationColor: '#e5e7eb' }}>{pm.nom}</p>
+                        <p style={S.itemQty}>Prévu par ton coach · voir le détail</p>
+                      </button>
                       <span style={{ ...S.itemKcal, opacity: fait ? 1 : 0.45 }}>{fmt(pm.kcal)} kcal</span>
-                    </button>
+                    </div>
                   )
                 })}
                 {items.length ? items.map(it => (
@@ -351,6 +355,37 @@ export default function NutritionClient() {
         </button>
       </div>
 
+      {/* Détail d'un plat prescrit — quantités par ingrédient */}
+      {detailPlat && (
+        <div style={S.overlay} onClick={() => setDetailPlat(null)}>
+          <div style={S.sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 14px' }} />
+            <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: '#1a1a1a' }}>{detailPlat.nom}</p>
+            <p style={{ fontSize: '0.74rem', color: '#9ca3af', margin: '0 0 14px' }}>
+              {[detailPlat.kcal && `${fmt(detailPlat.kcal)} kcal`, detailPlat.prot_g && `P ${fmt(detailPlat.prot_g)}g`, detailPlat.carbs_g && `G ${fmt(detailPlat.carbs_g)}g`, detailPlat.fat_g && `L ${fmt(detailPlat.fat_g)}g`].filter(Boolean).join(' · ')}
+            </p>
+            {(detailPlat.nutrition_plan_foods || []).length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[...detailPlat.nutrition_plan_foods].sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0)).map(f => (
+                  <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
+                    <span style={{ fontSize: '0.86rem', color: '#1a1a1a', fontWeight: 600 }}>{f.nom}</span>
+                    <span style={{ fontSize: '0.82rem', color: '#4b5563', fontWeight: 800, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                      {f.quantite_g ? `${Math.round(f.quantite_g)} g` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Pas de détail par ingrédient pour ce plat.</p>
+            )}
+            <button onClick={() => setDetailPlat(null)}
+              style={{ marginTop: 16, width: '100%', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
       <ClientBottomNav />
     </div>
   )
@@ -390,7 +425,7 @@ const S = {
   empty:      { padding: '15px 14px', color: '#9ca3af', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
   add:        { width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', borderTop: '1px dashed #e2e6ea', padding: 11, fontSize: '0.8rem', fontWeight: 800, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   addIco:     { width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  prescrit:   { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: '1px solid #eef0f3', cursor: 'pointer', fontFamily: 'inherit' },
+  prescrit:   { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'none', borderBottom: '1px solid #eef0f3', fontFamily: 'inherit' },
   check:      { width: 22, height: 22, borderRadius: 7, border: '2px solid #d1d5db', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'white' },
   checkOn:    { background: 'var(--accent)', borderColor: 'var(--accent)' },
   waterIco:   { width: 36, height: 36, borderRadius: 11, background: '#e8f4fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -400,4 +435,6 @@ const S = {
   scanCta:    { position: 'fixed', bottom: 'calc(96px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
   scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
   loading:    { color: '#9ca3af', fontSize: '0.85rem', fontWeight: 600 },
+  overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
+  sheet:      { background: 'white', borderRadius: '20px 20px 0 0', padding: '14px 18px calc(20px + env(safe-area-inset-bottom, 0px))', width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' },
 }
