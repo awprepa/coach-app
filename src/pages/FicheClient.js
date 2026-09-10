@@ -404,7 +404,7 @@ export default function FicheClient() {
 
     const [planRes, profileRes] = await Promise.all([
       supabase.from('nutrition_plans')
-        .select('id, nom, statut, date_debut, date_fin, nutrition_plan_days(id, jour_numero, type_jour, nutrition_plan_meals(id, nom, meal_type, kcal, prot_g, carbs_g, fat_g))')
+        .select('id, nom, statut, date_debut, date_fin, nutrition_plan_days(id, jour_numero, type_jour, nutrition_plan_meals(id, nom, meal_type, ordre, kcal, prot_g, carbs_g, fat_g, recette, nutrition_plan_foods(id, nom, quantite_g, ordre)))')
         .eq('client_id', id).eq('statut', 'actif')
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('nutrition_profile').select('*').eq('client_id', id).maybeSingle(),
@@ -1293,14 +1293,29 @@ export default function FicheClient() {
                                 {m.kcal} kcal · {Math.round(m.prot)}P / {Math.round(m.carbs)}G / {Math.round(m.fat)}L
                               </span>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              {meals.map(meal => (
-                                <div key={meal.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.74rem' }}>
-                                  <span style={{ color: '#9ca3af', fontWeight: 700, flexShrink: 0, width: 78 }}>{MEAL_LABELS[meal.meal_type] || meal.meal_type}</span>
-                                  <span style={{ flex: 1, color: '#374151' }}>{meal.nom}</span>
-                                  <span style={{ color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{meal.kcal} kcal</span>
-                                </div>
-                              ))}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              {meals.map(meal => {
+                                const foods = [...(meal.nutrition_plan_foods || [])].sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
+                                return (
+                                  <div key={meal.id}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.74rem' }}>
+                                      <span style={{ color: '#9ca3af', fontWeight: 700, flexShrink: 0, width: 78 }}>{MEAL_LABELS[meal.meal_type] || meal.meal_type}</span>
+                                      <span style={{ flex: 1, color: '#374151', fontWeight: 600 }}>{meal.nom}</span>
+                                      <span style={{ color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{meal.kcal} kcal</span>
+                                    </div>
+                                    {foods.length > 0 && (
+                                      <div style={{ paddingLeft: 86, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {foods.map(f => (
+                                          <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.7rem', color: '#9ca3af' }}>
+                                            <span>{f.nom}</span>
+                                            <span style={{ flexShrink: 0, fontWeight: 700 }}>{f.quantite_g ? `${Math.round(f.quantite_g)} g` : '—'}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
                         )

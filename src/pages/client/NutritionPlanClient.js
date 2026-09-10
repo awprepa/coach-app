@@ -545,16 +545,35 @@ export default function NutritionPlanClient() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {(day.nutrition_plan_meals || []).sort((a, b) => a.ordre - b.ordre).map(meal => {
                     const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#9ca3af' }
+                    const foods = (meal.nutrition_plan_foods || []).sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
                     return (
-                      <div key={meal.id} style={S.weekMealRow}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</span>
-                          <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
-                            {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`].filter(Boolean).join(' · ')}
+                      <div key={meal.id} style={S.weekMealCard}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0, transform: 'translateY(-1px)' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</span>
+                            <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
+                              {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`, meal.fat_g && `L ${meal.fat_g}g`].filter(Boolean).join(' · ')}
+                            </div>
                           </div>
                         </div>
-                        <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>{(meal.nutrition_plan_foods || []).length} aliments</span>
+                        {foods.length > 0 && (
+                          <div style={{ marginTop: 5, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {foods.map(food => (
+                              <div key={food.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.74rem' }}>
+                                <span style={{ color: '#374151' }}>{food.nom}</span>
+                                <span style={{ color: '#6b7280', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                                  {food.quantite_g ? `${food.quantite_g % 1 === 0 ? food.quantite_g : food.quantite_g.toFixed(0)} g` : '—'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {meal.recette && (
+                          <div style={{ marginTop: 6, marginLeft: 16, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 9px', fontSize: '0.7rem', color: '#92400e', lineHeight: 1.45 }}>
+                            <strong>Préparation :</strong> {meal.recette}
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -738,6 +757,7 @@ const S = {
   mealHeader: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 14px', textAlign: 'left' },
   actionBtn: { flex: 1, padding: '0.55rem 0', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' },
   weekMealRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'white', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
+  weekMealCard: { padding: '9px 12px', background: 'white', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
   shopRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
   waterCard: { background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', borderRadius: 18, padding: '16px 16px 18px', boxShadow: '0 4px 16px rgba(29,78,216,0.25)' },
   waterBtnMinus: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, width: 72, height: 60, borderRadius: 16, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', color: 'white', cursor: 'pointer', flexShrink: 0 },
