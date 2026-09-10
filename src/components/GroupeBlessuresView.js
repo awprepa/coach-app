@@ -22,7 +22,6 @@ const NIVEAUX = [
   { v: 'sans_contact', label: 'Sans contact' },
   { v: 'entrainement_complet', label: 'Entraîn. complet' },
 ]
-const STEP_LABELS = [...NIVEAUX.map(n => n.label), 'Apte match']
 
 // Même mapping poste (numéro de maillot) → nom que FicheGroupe.js / CalendrierSaison.js
 const POSTE_NOMS = {
@@ -55,10 +54,19 @@ function colorForIndex(i) {
   return `hsl(${(i * 47) % 360} 62% 42%)`
 }
 
-function stepIndex(episode) {
-  if (episode.statut === 'ok') return 4
-  const idx = NIVEAUX.findIndex(n => n.v === episode.niveau)
-  return idx >= 0 ? idx : 0
+// Timeline de reprise d'un épisode : soit les étapes libres de son protocole,
+// soit la timeline générique (4 paliers) si aucun protocole n'est associé.
+// `steps` = étapes de travail ; l'état "Apte" correspond à idx === steps.length.
+function timelineFor(episode, protocoles) {
+  const proto = (protocoles || []).find(p => p.id === episode.protocole_id)
+  const etapes = proto?.paliers?.etapes
+  if (Array.isArray(etapes) && etapes.length) {
+    const idx = episode.statut === 'ok' ? etapes.length : Math.min(episode.etape_index || 0, etapes.length)
+    return { steps: etapes, idx, custom: true, proto }
+  }
+  const gen = NIVEAUX.map(n => ({ id: n.v, titre: n.label, description: '', tests: [] }))
+  const idx = episode.statut === 'ok' ? gen.length : Math.max(0, NIVEAUX.findIndex(n => n.v === episode.niveau))
+  return { steps: gen, idx, custom: false, proto: null }
 }
 function joursDepuis(dateStr) {
   if (!dateStr) return 0
@@ -228,7 +236,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
     setModal({
       joueurId: joueurId || '', episodeId: null,
       zone_precise, type_lesion, mecanisme: '', gravite: '',
-      niveau: 'repos_total', description: '', duree_estimee: '', date_retour_prevue: '',
+      niveau: 'repos_total', etape_index: 0, description: '', duree_estimee: '', date_retour_prevue: '',
       date_debut: new Date().toISOString().slice(0, 10),
       protocole_id: guess?.id || '', protocoleTouched: false,
     })
@@ -237,7 +245,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
     setModal({
       joueurId: joueur.id, episodeId: ep.id,
       zone_precise: ep.zone_precise || '', type_lesion: ep.type_lesion || 'entorse', mecanisme: ep.mecanisme || '', gravite: ep.gravite || '',
-      niveau: ep.niveau || 'repos_total', description: ep.description || '', duree_estimee: ep.duree_estimee || '',
+      niveau: ep.niveau || 'repos_total', etape_index: ep.etape_index || 0, description: ep.description || '', duree_estimee: ep.duree_estimee || '',
       date_retour_prevue: ep.date_retour_prevue || '', date_debut: ep.date_debut,
       protocole_id: ep.protocole_id || '', protocoleTouched: true,
     })
@@ -267,6 +275,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       mecanisme: modal.mecanisme || null,
       gravite: modal.gravite || null,
       niveau: modal.niveau,
+      etape_index: modal.etape_index || 0,
       description: modal.description.trim() || null,
       duree_estimee: modal.duree_estimee.trim() || null,
       date_retour_prevue: parsed || modal.date_retour_prevue || null,
@@ -283,26 +292,30 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
     load()
   }
 
-  // Tests à valider pour le palier en cours de l'épisode, selon son protocole.
-  function testsDuPalier(ep) {
-    const proto = protocoles.find(p => p.id === ep.protocole_id)
-    return proto?.paliers?.[ep.niveau]?.tests || []
+  // Clé de stockage des tests validés d'une étape (id d'étape si dispo, sinon index).
+  function stepKeyOf(tl) {
+    return tl.steps[tl.idx]?.id ?? String(tl.idx)
   }
 
   function demanderPalierSuivant(joueur, ep) {
-    const tests = testsDuPalier(ep)
+    const tl = timelineFor(ep, protocoles)
+    const tests = tl.steps[tl.idx]?.tests || []
     if (tests.length === 0) { avancerPalier(ep); return }
-    setTestsPanel({ joueur, ep, tests, checked: ep.tests_valides?.[ep.niveau] || [] })
+    setTestsPanel({ joueur, ep, tests, checked: ep.tests_valides?.[stepKeyOf(tl)] || [] })
   }
 
-  async function avancerPalier(ep, testsValidesPalier) {
-    const idx = NIVEAUX.findIndex(n => n.v === ep.niveau)
-    const tests_valides = testsValidesPalier ? { ...(ep.tests_valides || {}), [ep.niveau]: testsValidesPalier } : ep.tests_valides
-    if (idx < 0 || idx >= NIVEAUX.length - 1) {
+  async function avancerPalier(ep, testsValidesEtape) {
+    const tl = timelineFor(ep, protocoles)
+    const key = stepKeyOf(tl)
+    const tests_valides = testsValidesEtape ? { ...(ep.tests_valides || {}), [key]: testsValidesEtape } : ep.tests_valides
+    if (tl.idx >= tl.steps.length - 1) {
       await marquerApte(ep, tests_valides)
       return
     }
-    await supabase.from('joueur_blessures').update({ niveau: NIVEAUX[idx + 1].v, tests_valides, updated_at: new Date().toISOString() }).eq('id', ep.id)
+    const patch = tl.custom
+      ? { etape_index: tl.idx + 1, tests_valides, updated_at: new Date().toISOString() }
+      : { niveau: NIVEAUX[tl.idx + 1].v, tests_valides, updated_at: new Date().toISOString() }
+    await supabase.from('joueur_blessures').update(patch).eq('id', ep.id)
     setTestsPanel(null)
     load()
   }
@@ -336,7 +349,9 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
           ) : (
             <div style={S.caseGrid}>
               {currentCases.map(({ joueur, ep }) => {
-                const idx = stepIndex(ep)
+                const tl = timelineFor(ep, protocoles)
+                const idx = tl.idx
+                const allSteps = [...tl.steps, { titre: 'Apte match', description: '', tests: [] }]
                 return (
                   <div key={ep.id} style={S.case}>
                     <div style={S.caseTop}>
@@ -361,48 +376,38 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                     {ep.description && labelLesion(ep) !== ep.description && (
                       <p style={S.caseDesc}>{ep.description}</p>
                     )}
-                    {(() => {
-                      const proto = protocoles.find(p => p.id === ep.protocole_id)
-                      const palierCourantKey = NIVEAUX[idx]?.v
-                      const descCourante = proto?.paliers?.[palierCourantKey]?.description
-                      return (
-                        <>
-                          {proto && <p style={S.protoTag}>Protocole : {proto.nom}</p>}
-                          <div style={S.paliers}>
-                            {STEP_LABELS.map((lbl, i) => {
-                              const pKey = NIVEAUX[i]?.v
-                              const aDuContenu = !!(proto?.paliers?.[pKey]?.description || proto?.paliers?.[pKey]?.tests?.length)
-                              return (
-                                <button key={i} onClick={() => setDetailPalier({ ep, idx: i })} style={S.pal}>
-                                  <div style={{
-                                    ...S.palDot,
-                                    ...(i < idx ? { background: accent, borderColor: accent, color: 'white' }
-                                      : i === idx ? { borderColor: accent, color: accent, boxShadow: `0 0 0 3px ${accent}22` } : {}),
-                                  }}>
-                                    {i < idx ? '✓' : i + 1}
-                                  </div>
-                                  {i < STEP_LABELS.length - 1 && (
-                                    <div style={{ ...S.palLine, ...(i < idx ? { background: accent } : {}) }} />
-                                  )}
-                                  <span style={{ ...S.palLbl, ...(i === idx ? { color: accent, fontWeight: 800 } : {}) }}>
-                                    {lbl}{aDuContenu ? ' ›' : ''}
-                                  </span>
-                                </button>
-                              )
-                            })}
-                          </div>
-                          {descCourante && (
-                            <p style={S.palierDesc} onClick={() => setDetailPalier({ ep, idx })}>{descCourante}</p>
-                          )}
-                        </>
-                      )
-                    })()}
+                    {tl.proto && <p style={S.protoTag}>Protocole : {tl.proto.nom}</p>}
+                    <div style={S.paliers}>
+                      {allSteps.map((st, i) => {
+                        const aDuContenu = !!(st.description || st.tests?.length)
+                        return (
+                          <button key={i} onClick={() => setDetailPalier({ ep, idx: i })} style={S.pal}>
+                            <div style={{
+                              ...S.palDot,
+                              ...(i < idx ? { background: accent, borderColor: accent, color: 'white' }
+                                : i === idx ? { borderColor: accent, color: accent, boxShadow: `0 0 0 3px ${accent}22` } : {}),
+                            }}>
+                              {i < idx ? '✓' : i + 1}
+                            </div>
+                            {i < allSteps.length - 1 && (
+                              <div style={{ ...S.palLine, ...(i < idx ? { background: accent } : {}) }} />
+                            )}
+                            <span style={{ ...S.palLbl, ...(i === idx ? { color: accent, fontWeight: 800 } : {}) }}>
+                              {st.titre}{aDuContenu ? ' ›' : ''}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {allSteps[idx]?.description && (
+                      <p style={S.palierDesc} onClick={() => setDetailPalier({ ep, idx })}>{allSteps[idx].description}</p>
+                    )}
 
                     <div style={S.caseFoot}>
                       <span style={S.caseReturn}>{formatRetour(ep.date_retour_prevue) || 'Retour non estimé'}</span>
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button onClick={() => openEdit(joueur, ep)} style={S.btnGhost}>Modifier</button>
-                        <button onClick={() => demanderPalierSuivant(joueur, ep)} style={S.btnGhost}>{idx >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Palier suivant'}</button>
+                        <button onClick={() => demanderPalierSuivant(joueur, ep)} style={S.btnGhost}>{idx >= tl.steps.length - 1 ? 'Marquer apte' : 'Étape suivante'}</button>
                       </div>
                     </div>
                   </div>
@@ -602,10 +607,22 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
               </div>
             </div>
 
-            <label style={S.label}>Palier de reprise actuel</label>
-            <select value={modal.niveau} onChange={e => setModal(m => ({ ...m, niveau: e.target.value }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
-              {NIVEAUX.map(n => <option key={n.v} value={n.v}>{n.label}</option>)}
-            </select>
+            <label style={S.label}>Étape de reprise actuelle</label>
+            {(() => {
+              const protoEtapes = protocoles.find(p => p.id === modal.protocole_id)?.paliers?.etapes
+              if (Array.isArray(protoEtapes) && protoEtapes.length) {
+                return (
+                  <select value={modal.etape_index} onChange={e => setModal(m => ({ ...m, etape_index: Number(e.target.value) }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
+                    {protoEtapes.map((et, i) => <option key={i} value={i}>{i + 1}. {et.titre || `Étape ${i + 1}`}</option>)}
+                  </select>
+                )
+              }
+              return (
+                <select value={modal.niveau} onChange={e => setModal(m => ({ ...m, niveau: e.target.value }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
+                  {NIVEAUX.map(n => <option key={n.v} value={n.v}>{n.label}</option>)}
+                </select>
+              )
+            })()}
 
             <label style={S.label}>Description</label>
             <textarea value={modal.description} onChange={e => setModal(m => ({ ...m, description: e.target.value }))} rows={2}
@@ -636,32 +653,32 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       {/* ── Détail d'une étape de la timeline (contenu du protocole) ── */}
       {detailPalier && (() => {
         const { ep, idx } = detailPalier
-        const proto = protocoles.find(p => p.id === ep.protocole_id)
-        const isApte = idx >= NIVEAUX.length - 1
-        const pKey = NIVEAUX[idx]?.v
-        const contenu = isApte ? null : proto?.paliers?.[pKey]
+        const tl = timelineFor(ep, protocoles)
+        const allSteps = [...tl.steps, { titre: 'Apte match', description: '', tests: [] }]
+        const isApte = idx >= tl.steps.length
+        const st = allSteps[idx]
         return (
           <div style={S.overlay} onClick={() => setDetailPalier(null)}>
             <div style={S.modal} onClick={e => e.stopPropagation()}>
-              <p style={S.modalTitle}>Étape {idx + 1}/{STEP_LABELS.length} — {STEP_LABELS[idx]}</p>
-              {proto && <p style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 700, margin: '0 0 0.9rem' }}>Protocole : {proto.nom}</p>}
+              <p style={S.modalTitle}>Étape {idx + 1}/{allSteps.length} — {st?.titre}</p>
+              {tl.proto && <p style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 700, margin: '0 0 0.9rem' }}>Protocole : {tl.proto.nom}</p>}
               {isApte ? (
                 <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: 0 }}>
-                  Retour à la compétition : tous les paliers précédents validés + aval médical.
+                  Retour à la compétition : toutes les étapes précédentes validées + aval médical.
                 </p>
-              ) : !proto ? (
+              ) : !tl.custom ? (
                 <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.5, margin: 0 }}>
-                  Aucun protocole spécifique associé à cette blessure. Choisis un protocole via « Modifier » pour préciser le contenu et les tests de chaque étape.
+                  Aucun protocole spécifique associé à cette blessure. Choisis un protocole via « Modifier » pour préciser les étapes, leur contenu et leurs tests.
                 </p>
               ) : (
                 <>
-                  {contenu?.description && (
-                    <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: '0 0 1rem' }}>{contenu.description}</p>
+                  {st?.description && (
+                    <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: '0 0 1rem' }}>{st.description}</p>
                   )}
-                  <p style={S.modalTitle} >Tests à valider avant l'étape suivante</p>
-                  {contenu?.tests?.length ? (
+                  <p style={S.modalTitle}>Tests à valider avant l'étape suivante</p>
+                  {st?.tests?.length ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                      {contenu.tests.map(t => (
+                      {st.tests.map(t => (
                         <div key={t.id} style={S.testCheckRow}>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, marginTop: 6, flexShrink: 0 }} />
                           <span>
@@ -682,15 +699,16 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
         )
       })()}
 
-      {/* ── Checklist de tests avant de changer de palier ── */}
-      {testsPanel && (
+      {/* ── Checklist de tests avant de changer d'étape ── */}
+      {testsPanel && (() => {
+        const tl = timelineFor(testsPanel.ep, protocoles)
+        const prochaine = tl.idx >= tl.steps.length - 1 ? 'Apte match' : (tl.steps[tl.idx + 1]?.titre || 'Étape suivante')
+        return (
         <div style={S.overlay} onClick={() => setTestsPanel(null)}>
           <div style={S.modal} onClick={e => e.stopPropagation()}>
-            <p style={S.modalTitle}>
-              Avant de passer à « {stepIndex(testsPanel.ep) >= NIVEAUX.length - 1 ? 'Apte match' : NIVEAUX[stepIndex(testsPanel.ep) + 1]?.label} »
-            </p>
+            <p style={S.modalTitle}>Avant de passer à « {prochaine} »</p>
             <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 1rem' }}>
-              {testsPanel.joueur.prenom} {testsPanel.joueur.nom} — coche les tests validés (informatif, tu peux passer au palier suivant sans tout cocher).
+              {testsPanel.joueur.prenom} {testsPanel.joueur.nom} — coche les tests validés (informatif, tu peux passer à l'étape suivante sans tout cocher).
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.1rem' }}>
               {testsPanel.tests.map(t => (
@@ -707,12 +725,13 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => setTestsPanel(null)} style={S.btnSecondary}>Annuler</button>
               <button onClick={() => avancerPalier(testsPanel.ep, testsPanel.checked)} style={{ ...S.btnPrimary, flex: 1, background: accent }}>
-                {stepIndex(testsPanel.ep) >= NIVEAUX.length - 1 ? 'Marquer apte' : 'Passer au palier suivant'}
+                {tl.idx >= tl.steps.length - 1 ? 'Marquer apte' : "Passer à l'étape suivante"}
               </button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* ── Éditeur de protocoles de reprise ── */}
       {protoModal?.mode === 'list' && (
@@ -720,7 +739,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
           <div style={S.modal} onClick={e => e.stopPropagation()}>
             <p style={S.modalTitle}>Protocoles de reprise</p>
             <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 1rem' }}>
-              Protocole par type de blessure : contenu de chaque palier et tests à valider avant de passer au suivant. Tu peux ajouter, modifier ou supprimer un test, ou le déplacer vers un autre palier.
+              Protocole par type de blessure : ses étapes de reprise, leur contenu et les tests à valider avant de passer à la suivante. Tu peux ajouter, réordonner ou supprimer des étapes et des tests.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
               {protocoles.map(p => (
@@ -738,54 +757,48 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
         </div>
       )}
 
-      {protoModal?.mode === 'edit' && (
+      {protoModal?.mode === 'edit' && (() => {
+        const etapes = protoModal.paliers?.etapes || []
+        const setEtapes = fn => setProtoModal(pm => ({ ...pm, paliers: { ...pm.paliers, etapes: fn(pm.paliers?.etapes || []) } }))
+        const updateEtape = (ei, patch) => setEtapes(es => es.map((e, i) => i === ei ? { ...e, ...patch } : e))
+        const moveEtape = (ei, dir) => setEtapes(es => {
+          const j = ei + dir
+          if (j < 0 || j >= es.length) return es
+          const copy = [...es];[copy[ei], copy[j]] = [copy[j], copy[ei]]; return copy
+        })
+        const removeEtape = ei => setEtapes(es => es.filter((_, i) => i !== ei))
+        const addEtape = () => setEtapes(es => [...es, { id: `e${Date.now()}`, titre: '', description: '', tests: [] }])
+        return (
         <div style={S.overlay} onClick={() => setProtoModal(null)}>
-          <div style={{ ...S.modal, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+          <div style={{ ...S.modal, maxWidth: 660 }} onClick={e => e.stopPropagation()}>
             <p style={S.modalTitle}>{protoModal.nom}</p>
-            {NIVEAUX.map((niv, ni) => {
-              const palier = protoModal.paliers[niv.v] || { description: '', tests: [] }
-              function updatePalier(patch) {
-                setProtoModal(pm => ({ ...pm, paliers: { ...pm.paliers, [niv.v]: { ...pm.paliers[niv.v], ...patch } } }))
-              }
-              function updateTest(ti, patch) {
-                updatePalier({ tests: palier.tests.map((t, i) => i === ti ? { ...t, ...patch } : t) })
-              }
-              function removeTest(ti) {
-                updatePalier({ tests: palier.tests.filter((_, i) => i !== ti) })
-              }
-              function addTest() {
-                updatePalier({ tests: [...palier.tests, { id: `t${Date.now()}`, nom: '', critere: '' }] })
-              }
-              function moveTest(ti, dir) {
-                const targetNiv = NIVEAUX[ni + dir]
-                if (!targetNiv) return
-                const test = palier.tests[ti]
-                setProtoModal(pm => {
-                  const src = pm.paliers[niv.v]
-                  const dst = pm.paliers[targetNiv.v] || { description: '', tests: [] }
-                  return {
-                    ...pm,
-                    paliers: {
-                      ...pm.paliers,
-                      [niv.v]: { ...src, tests: src.tests.filter((_, i) => i !== ti) },
-                      [targetNiv.v]: { ...dst, tests: [...dst.tests, test] },
-                    },
-                  }
-                })
-              }
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', margin: '0 0 1rem' }}>
+              Ordonne les étapes de reprise. Chaque étape a un titre, un contenu et les tests à valider avant de passer à la suivante.
+            </p>
+            {etapes.map((et, ei) => {
+              const updateTest = (ti, patch) => updateEtape(ei, { tests: (et.tests || []).map((t, i) => i === ti ? { ...t, ...patch } : t) })
+              const removeTest = ti => updateEtape(ei, { tests: (et.tests || []).filter((_, i) => i !== ti) })
+              const addTest = () => updateEtape(ei, { tests: [...(et.tests || []), { id: `t${Date.now()}`, nom: '', critere: '' }] })
               return (
-                <div key={niv.v} style={S.protoPalierBlock}>
-                  <p style={S.protoPalierTitle}>{niv.label}</p>
-                  <textarea value={palier.description || ''} onChange={e => updatePalier({ description: e.target.value })} rows={2}
-                    placeholder="Ce qui se travaille à ce palier…" style={{ ...S.input, width: '100%', marginBottom: '0.6rem', resize: 'vertical', fontFamily: 'inherit', fontSize: '0.8rem' }} />
+                <div key={et.id || ei} style={S.protoPalierBlock}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.4rem' }}>
+                    <span style={S.protoPalierTitle}>Étape {ei + 1}</span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                      <button onClick={() => moveEtape(ei, -1)} disabled={ei === 0} style={S.protoTestBtn} title="Monter l'étape">↑</button>
+                      <button onClick={() => moveEtape(ei, 1)} disabled={ei === etapes.length - 1} style={S.protoTestBtn} title="Descendre l'étape">↓</button>
+                      <button onClick={() => removeEtape(ei)} style={{ ...S.protoTestBtn, color: '#dc2626' }} title="Supprimer l'étape">✕</button>
+                    </div>
+                  </div>
+                  <input value={et.titre || ''} onChange={e => updateEtape(ei, { titre: e.target.value })} placeholder="Titre de l'étape (ex : Travail de force excentrique)"
+                    style={{ ...S.input, width: '100%', marginBottom: '0.5rem', fontWeight: 700 }} />
+                  <textarea value={et.description || ''} onChange={e => updateEtape(ei, { description: e.target.value })} rows={2}
+                    placeholder="Ce qui se travaille à cette étape…" style={{ ...S.input, width: '100%', marginBottom: '0.6rem', resize: 'vertical', fontFamily: 'inherit', fontSize: '0.8rem' }} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                    {palier.tests.map((t, ti) => (
-                      <div key={t.id} style={S.protoTestRow}>
+                    {(et.tests || []).map((t, ti) => (
+                      <div key={t.id || ti} style={S.protoTestRow}>
                         <input value={t.nom} onChange={e => updateTest(ti, { nom: e.target.value })} placeholder="Nom du test" style={{ ...S.input, flex: '1 1 40%', fontSize: '0.76rem' }} />
                         <input value={t.critere} onChange={e => updateTest(ti, { critere: e.target.value })} placeholder="Critère de réussite" style={{ ...S.input, flex: '1 1 40%', fontSize: '0.76rem' }} />
-                        <button onClick={() => moveTest(ti, -1)} disabled={ni === 0} style={S.protoTestBtn} title="Déplacer au palier précédent">↑</button>
-                        <button onClick={() => moveTest(ti, 1)} disabled={ni === NIVEAUX.length - 1} style={S.protoTestBtn} title="Déplacer au palier suivant">↓</button>
-                        <button onClick={() => removeTest(ti)} style={{ ...S.protoTestBtn, color: '#dc2626' }} title="Supprimer">✕</button>
+                        <button onClick={() => removeTest(ti)} style={{ ...S.protoTestBtn, color: '#dc2626' }} title="Supprimer le test">✕</button>
                       </div>
                     ))}
                   </div>
@@ -793,11 +806,12 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                 </div>
               )
             })}
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button onClick={addEtape} style={{ ...S.btnGhost, marginTop: '0.6rem' }}>+ Ajouter une étape</button>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
               <button onClick={() => setProtoModal({ mode: 'list' })} style={S.btnSecondary}>Annuler</button>
               <button
                 onClick={async () => {
-                  await supabase.from('blessure_protocoles').update({ paliers: protoModal.paliers, updated_at: new Date().toISOString() }).eq('id', protoModal.id)
+                  await supabase.from('blessure_protocoles').update({ paliers: { etapes }, updated_at: new Date().toISOString() }).eq('id', protoModal.id)
                   await loadProtocoles()
                   setProtoModal({ mode: 'list' })
                 }}
@@ -808,7 +822,8 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
