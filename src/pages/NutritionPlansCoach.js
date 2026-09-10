@@ -44,6 +44,10 @@ export default function NutritionPlansCoach() {
   const [plans,   setPlans]   = useState([])
   const [loading, setLoading] = useState(true)
   const [tab,     setTab]     = useState('plans')
+  const [allClients, setAllClients] = useState([])
+  const [copyModal,  setCopyModal]  = useState(null) // { plan } — présent = modale ouverte
+  const [copyTarget, setCopyTarget] = useState('')
+  const [copying,    setCopying]    = useState(false)
 
   // Suivi state
   const [suiviData,    setSuiviData]    = useState([])
@@ -52,16 +56,70 @@ export default function NutritionPlansCoach() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: c }, { data: p }] = await Promise.all([
+      const [{ data: c }, { data: p }, { data: cls }] = await Promise.all([
         supabase.from('clients').select('id, prenom, nom').eq('id', clientId).single(),
         supabase.from('nutrition_plans').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+        supabase.from('clients').select('id, prenom, nom').order('prenom'),
       ])
       setClient(c)
       setPlans(p || [])
+      setAllClients(cls || [])
       setLoading(false)
     }
     load()
   }, [clientId])
+
+  // ── Dupliquer un plan (copie profonde) vers un client ─────────────────────
+  async function duplicatePlan(sourcePlan, targetClientId) {
+    setCopying(true)
+    // 1. Charge toute la hiérarchie du plan source
+    const { data: days } = await supabase
+      .from('nutrition_plan_days')
+      .select('*, nutrition_plan_meals(*, nutrition_plan_foods(*))')
+      .eq('plan_id', sourcePlan.id).order('jour_numero')
+
+    // 2. Nouveau plan (brouillon, sans dates — à repositionner pour le client)
+    const { data: newPlan, error: pErr } = await supabase.from('nutrition_plans').insert({
+      client_id: targetClientId,
+      nom: `${sourcePlan.nom} (copie)`,
+      description: sourcePlan.description,
+      date_debut: null, date_fin: null,
+      statut: 'brouillon',
+      objectif_kcal: sourcePlan.objectif_kcal, objectif_prot: sourcePlan.objectif_prot,
+      objectif_carbs: sourcePlan.objectif_carbs, objectif_fat: sourcePlan.objectif_fat,
+    }).select('id').single()
+    if (pErr || !newPlan) { setCopying(false); alert('Erreur lors de la copie du plan.'); return }
+
+    // 3. Jours → repas → aliments
+    for (const d of (days || [])) {
+      const { data: newDay } = await supabase.from('nutrition_plan_days').insert({
+        plan_id: newPlan.id, jour_numero: d.jour_numero, label: d.label, type_jour: d.type_jour,
+        objectif_kcal: d.objectif_kcal, objectif_prot: d.objectif_prot,
+        objectif_carbs: d.objectif_carbs, objectif_fat: d.objectif_fat,
+      }).select('id').single()
+      if (!newDay) continue
+      for (const m of (d.nutrition_plan_meals || [])) {
+        const { data: newMeal } = await supabase.from('nutrition_plan_meals').insert({
+          day_id: newDay.id, meal_type: m.meal_type, nom: m.nom, ordre: m.ordre,
+          kcal: m.kcal, prot_g: m.prot_g, carbs_g: m.carbs_g, fat_g: m.fat_g,
+          recette: m.recette, notes: m.notes,
+        }).select('id').single()
+        if (!newMeal) continue
+        const foods = (m.nutrition_plan_foods || [])
+        if (foods.length) {
+          await supabase.from('nutrition_plan_foods').insert(foods.map(f => ({
+            meal_id: newMeal.id, nom: f.nom, quantite_g: f.quantite_g, ordre: f.ordre,
+            kcal: f.kcal, prot_g: f.prot_g, carbs_g: f.carbs_g, fat_g: f.fat_g, fibre_g: f.fibre_g,
+          })))
+        }
+      }
+    }
+
+    setCopying(false)
+    setCopyModal(null)
+    setCopyTarget('')
+    navigate(`/nutrition/plan/${newPlan.id}`)
+  }
 
   // ── Chargement du suivi ───────────────────────────────────────────────────
   const loadSuivi = useCallback(async () => {
@@ -217,17 +275,43 @@ export default function NutritionPlansCoach() {
               {actif.length > 0 && (
                 <div style={{ marginBottom: '1.5rem' }}>
                   <div style={S.sectionLabel}>Plan actif</div>
-                  {actif.map(plan => <PlanCard key={plan.id} plan={plan} navigate={navigate} onDelete={deletePlan} onToggle={toggleStatut} />)}
+                  {actif.map(plan => <PlanCard key={plan.id} plan={plan} navigate={navigate} onDelete={deletePlan} onToggle={toggleStatut} onCopy={() => { setCopyModal({ plan }); setCopyTarget('') }} />)}
                 </div>
               )}
               {autres.length > 0 && (
                 <div>
                   <div style={S.sectionLabel}>Autres plans</div>
-                  {autres.map(plan => <PlanCard key={plan.id} plan={plan} navigate={navigate} onDelete={deletePlan} onToggle={toggleStatut} />)}
+                  {autres.map(plan => <PlanCard key={plan.id} plan={plan} navigate={navigate} onDelete={deletePlan} onToggle={toggleStatut} onCopy={() => { setCopyModal({ plan }); setCopyTarget('') }} />)}
                 </div>
               )}
             </>
           )
+        )}
+
+        {/* ══ MODALE COPIE ═══════════════════════════════════════════════════ */}
+        {copyModal && (
+          <div style={S.overlay} onClick={() => !copying && setCopyModal(null)}>
+            <div style={S.modal} onClick={e => e.stopPropagation()}>
+              <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 0.3rem' }}>Copier ce plan</p>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 1rem', lineHeight: 1.45 }}>
+                « {copyModal.plan.nom} » sera dupliqué (jours, repas, aliments) en brouillon pour le client choisi. Les dates de début/fin ne sont pas reprises.
+              </p>
+              <label style={S.label}>Client destinataire</label>
+              <select value={copyTarget} onChange={e => setCopyTarget(e.target.value)} style={{ ...S.input, width: '100%', marginBottom: '1.25rem' }}>
+                <option value="">— Choisir un client —</option>
+                {allClients.map(c => (
+                  <option key={c.id} value={c.id}>{c.prenom} {c.nom}{c.id === clientId ? ' (ce client)' : ''}</option>
+                ))}
+              </select>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setCopyModal(null)} disabled={copying} style={S.btnSecondary}>Annuler</button>
+                <button onClick={() => duplicatePlan(copyModal.plan, copyTarget)} disabled={copying || !copyTarget}
+                  style={{ ...S.newBtn, flex: 1, opacity: (copying || !copyTarget) ? 0.6 : 1 }}>
+                  {copying ? 'Copie…' : 'Copier le plan'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ══ TAB SUIVI ════════════════════════════════════════════════════ */}
@@ -385,7 +469,7 @@ function DayAdherenceCard({ day }) {
 }
 
 // ─── Carte plan ───────────────────────────────────────────────────────────────
-function PlanCard({ plan, navigate, onDelete, onToggle }) {
+function PlanCard({ plan, navigate, onDelete, onToggle, onCopy }) {
   const sc = STATUT_CONFIG[plan.statut] || STATUT_CONFIG.brouillon
   return (
     <div onClick={() => navigate(`/nutrition/plan/${plan.id}`)} style={S.card}>
@@ -404,6 +488,11 @@ function PlanCard({ plan, navigate, onDelete, onToggle }) {
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
           <button onClick={e => onToggle(plan, e)} style={{ ...S.badge, background: sc.bg, color: sc.color }}>{sc.label}</button>
+          <button onClick={e => { e.stopPropagation(); onCopy() }} style={S.copyBtn} title="Copier ce plan vers un autre client">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
           <button onClick={e => onDelete(plan.id, e)} style={S.deleteBtn}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -430,5 +519,11 @@ const S = {
   summaryCard: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 12, border: '1.5px solid #f0f0f0' },
   card:       { background: 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 10, border: '1.5px solid #f0f0f0', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   badge:      { fontSize: '0.7rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: 'none', cursor: 'pointer' },
+  copyBtn:    { width: 26, height: 26, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   deleteBtn:  { width: 26, height: 26, borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' },
+  modal:      { background: 'white', borderRadius: 16, padding: '1.4rem', width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
+  label:      { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' },
+  input:      { padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', color: '#1a1a1a', background: 'white' },
+  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
 }
