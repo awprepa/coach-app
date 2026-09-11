@@ -5,11 +5,6 @@ import { supabase } from '../supabase'
 // ── Onboarding profil joueur (date de naissance, taille, poids, postes) ──────
 // Blocage dur (même esprit que WellnessGate) mais one-shot : une fois le
 // profil complet, on ne redemande plus jamais (pas de reset quotidien).
-//
-// Restriction temporaire : n'affiche la notif qu'au compte de test d'Arthur,
-// le temps de valider avant ouverture à tous les joueurs. Retirer TEST_EMAIL
-// une fois validé.
-const TEST_EMAIL = 'a.r.t.h.u.r@outlook.fr'
 
 const POSTES_RUGBY = [
   { num: 1, nom: 'Pilier' }, { num: 2, nom: 'Talonneur' }, { num: 3, nom: 'Pilier' },
@@ -136,7 +131,6 @@ export default function ProfilJoueurGate({ children }) {
         clientData = res.data
       }
       if (!clientData) return // pas un compte client (coach)
-      if (clientData.email !== TEST_EMAIL) return // restriction de test — retirer une fois validé
 
       const [{ data: np }, { data: gj }] = await Promise.all([
         supabase.from('nutrition_profile').select('taille_cm, poids_kg').eq('client_id', clientData.id).maybeSingle(),
