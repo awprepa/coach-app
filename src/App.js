@@ -12,6 +12,7 @@ import GlobalTimerBubble from './components/GlobalTimerBubble'
 import InstallGuide, { shouldShowInstall, markInstalled } from './components/InstallGuide'
 import WellnessGate from './components/WellnessGate'
 import RpeGate from './components/RpeGate'
+import ProfilJoueurGate from './components/ProfilJoueurGate'
 import { initAccountSwitch } from './accountSwitch'
 
 // ── Pages chargées immédiatement (Auth critique) ──────────────────────────────
@@ -340,7 +341,7 @@ function WithNav({ children }) {
 }
 
 function WithNotifs({ children }) {
-  return <NotifProvider><WellnessGate><RpeGate>{children}</RpeGate></WellnessGate></NotifProvider>
+  return <NotifProvider><WellnessGate><ProfilJoueurGate><RpeGate>{children}</RpeGate></ProfilJoueurGate></WellnessGate></NotifProvider>
 }
 
 // Fallback minimaliste — évite un flash blanc prolongé
