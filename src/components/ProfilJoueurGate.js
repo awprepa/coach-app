@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 
@@ -33,8 +33,17 @@ function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
   const dateNaissance = dateValide ? `${aaaa}-${String(mm).padStart(2, '0')}-${String(jj).padStart(2, '0')}` : ''
   const allFilled = dateNaissance && taille && poids && postes.length > 0
 
-  function numField(setter, max) {
-    return e => setter(e.target.value.replace(/\D/g, '').slice(0, max))
+  const mmRef = useRef(null)
+  const aaaaRef = useRef(null)
+
+  // Passe automatiquement au champ suivant dès que le nombre de chiffres
+  // attendu est atteint (JJ → MM → AAAA), pour ne pas avoir à taper Tab/entrée.
+  function numField(setter, max, nextRef) {
+    return e => {
+      const v = e.target.value.replace(/\D/g, '').slice(0, max)
+      setter(v)
+      if (v.length === max && nextRef?.current) nextRef.current.focus()
+    }
   }
 
   function togglePoste(num) {
@@ -70,9 +79,9 @@ function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
 
         <label style={S.label}>Date de naissance</label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input type="text" inputMode="numeric" placeholder="JJ" value={jj} onChange={numField(setJj, 2)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
-          <input type="text" inputMode="numeric" placeholder="MM" value={mm} onChange={numField(setMm, 2)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
-          <input type="text" inputMode="numeric" placeholder="AAAA" value={aaaa} onChange={numField(setAaaa, 4)} style={{ ...S.input, flex: 1.6, textAlign: 'center' }} />
+          <input type="text" inputMode="numeric" placeholder="JJ" value={jj} onChange={numField(setJj, 2, mmRef)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
+          <input ref={mmRef} type="text" inputMode="numeric" placeholder="MM" value={mm} onChange={numField(setMm, 2, aaaaRef)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
+          <input ref={aaaaRef} type="text" inputMode="numeric" placeholder="AAAA" value={aaaa} onChange={numField(setAaaa, 4, null)} style={{ ...S.input, flex: 1.6, textAlign: 'center' }} />
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
