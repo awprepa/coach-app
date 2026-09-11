@@ -56,12 +56,12 @@ function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
   return (
     <div style={S.overlay}>
       <div style={S.card}>
-        <p style={S.subtitle}>Ton profil joueur</p>
-        <h2 style={S.title}>Encore un petit détail</h2>
-        <p style={S.intro}>Ton coach a besoin de ces infos pour adapter ton suivi. Tu pourras les modifier plus tard dans ton profil.</p>
+        <p style={S.subtitle}>Avant de continuer</p>
+        <h2 style={S.title}>Ton profil joueur</h2>
+        <p style={S.intro}>Ton coach s'en sert pour adapter tes séances et ton suivi. Tu pourras modifier ces informations plus tard dans ton profil.</p>
 
         <label style={S.label}>Date de naissance</label>
-        <input type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} style={S.input} />
+        <input type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} style={{ ...S.input, maxWidth: '100%' }} />
 
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1 }}>
@@ -157,7 +157,7 @@ const S = {
   title: { fontSize: '1.3rem', fontWeight: '800', color: '#333333', margin: '0 0 0.5rem' },
   intro: { fontSize: '0.8rem', color: '#6b7280', lineHeight: 1.5, margin: '0 0 1.1rem' },
   label: { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', margin: '0.9rem 0 0.4rem' },
-  input: { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', color: '#1a1a1a', background: 'white' },
+  input: { display: 'block', width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', color: '#1a1a1a', background: 'white' },
   posteGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 },
   posteBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 2px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', cursor: 'pointer', fontFamily: 'inherit' },
   posteBtnOn: { border: '1.5px solid #333333', background: '#1a1a1a', color: '#fff' },

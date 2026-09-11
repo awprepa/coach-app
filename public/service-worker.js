@@ -8,9 +8,9 @@
 // v15 : lectures local-first (stale-while-revalidate) + invalidation ciblée du
 //       cache API après une écriture réussie (message INVALIDATE_API_CACHE).
 
-const CACHE_SHELL   = 'aw-shell-v184'
-const CACHE_API     = 'aw-api-v184'
-const CACHE_PAGES   = 'aw-pages-v184'
+const CACHE_SHELL   = 'aw-shell-v185'
+const CACHE_API     = 'aw-api-v185'
+const CACHE_PAGES   = 'aw-pages-v185'
 
 // ── Install : précache l'intégralité du bundle via asset-manifest.json ────────
 self.addEventListener('install', event => {
@@ -40,7 +40,7 @@ self.addEventListener('install', event => {
 
 // ── Activate : purge les anciens caches + force rechargement des pages ouvertes ─
 self.addEventListener('activate', event => {
-  const KEEP = ['aw-shell-v184', 'aw-api-v184', 'aw-pages-v184']
+  const KEEP = ['aw-shell-v185', 'aw-api-v185', 'aw-pages-v185']
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k))))
