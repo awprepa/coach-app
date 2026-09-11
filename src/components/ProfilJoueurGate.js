@@ -21,12 +21,21 @@ const POSTES_RUGBY = [
 ]
 
 function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
-  const [dateNaissance, setDateNaissance] = useState('')
+  const [jj, setJj] = useState('')
+  const [mm, setMm] = useState('')
+  const [aaaa, setAaaa] = useState('')
   const [taille, setTaille] = useState('')
   const [poids, setPoids] = useState('')
   const [postes, setPostes] = useState([]) // numéros sélectionnés, ordre = priorité (1er = principal)
   const [saving, setSaving] = useState(false)
+  const dateValide = jj.length > 0 && mm.length > 0 && aaaa.length === 4
+    && Number(jj) >= 1 && Number(jj) <= 31 && Number(mm) >= 1 && Number(mm) <= 12
+  const dateNaissance = dateValide ? `${aaaa}-${String(mm).padStart(2, '0')}-${String(jj).padStart(2, '0')}` : ''
   const allFilled = dateNaissance && taille && poids && postes.length > 0
+
+  function numField(setter, max) {
+    return e => setter(e.target.value.replace(/\D/g, '').slice(0, max))
+  }
 
   function togglePoste(num) {
     setPostes(prev => {
@@ -57,10 +66,14 @@ function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
     <div style={S.overlay}>
       <div style={S.card}>
         <h2 style={S.title}>Ton profil</h2>
-        <p style={S.intro}>Quelques infos pour ton coach.</p>
+        <p style={S.intro}>Complète ces quelques informations.</p>
 
         <label style={S.label}>Date de naissance</label>
-        <input type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} style={S.input} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input type="text" inputMode="numeric" placeholder="JJ" value={jj} onChange={numField(setJj, 2)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
+          <input type="text" inputMode="numeric" placeholder="MM" value={mm} onChange={numField(setMm, 2)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
+          <input type="text" inputMode="numeric" placeholder="AAAA" value={aaaa} onChange={numField(setAaaa, 4)} style={{ ...S.input, flex: 1.6, textAlign: 'center' }} />
+        </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
