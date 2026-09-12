@@ -15,7 +15,7 @@ const POSTES_RUGBY = [
   { num: 14, nom: 'Ailier' }, { num: 15, nom: 'Arrière' },
 ]
 
-function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
+function ProfilOverlay({ clientId, prenom, nom, groupeIds, gjByGroupe, onDone }) {
   const [jj, setJj] = useState('')
   const [mm, setMm] = useState('')
   const [aaaa, setAaaa] = useState('')
@@ -55,8 +55,17 @@ function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
     await supabase.from('clients').update({ date_naissance: dateNaissance }).eq('id', clientId)
     await supabase.from('nutrition_profile')
       .upsert({ client_id: clientId, taille_cm: Number(taille), poids_kg: Number(poids) }, { onConflict: 'client_id' })
-    // Postes : remplace la sélection dans chaque groupe où le joueur a une fiche effectif.
-    for (const gjId of groupeJoueurIds) {
+    // Postes : remplace la sélection dans chaque groupe dont le joueur est membre —
+    // crée sa fiche effectif (groupe_joueurs) au passage si elle n'existe pas encore.
+    for (const groupeId of groupeIds) {
+      let gjId = gjByGroupe[groupeId]
+      if (!gjId) {
+        const { data: newGj } = await supabase.from('groupe_joueurs')
+          .insert({ groupe_id: groupeId, client_id: clientId, prenom: prenom || '', nom: nom || '' })
+          .select('id').maybeSingle()
+        gjId = newGj?.id
+      }
+      if (!gjId) continue
       await supabase.from('joueur_postes').delete().eq('joueur_id', gjId)
       await supabase.from('joueur_postes').insert(
         postes.map((num, i) => ({ joueur_id: gjId, poste: num, rang: 99, is_primary: i === 0 }))
@@ -116,8 +125,9 @@ function ProfilOverlay({ clientId, groupeJoueurIds, onDone }) {
 
 export default function ProfilJoueurGate({ children }) {
   const [show, setShow] = useState(false)
-  const [clientInfo, setClientInfo] = useState(null) // { id }
-  const [groupeJoueurIds, setGroupeJoueurIds] = useState([])
+  const [clientInfo, setClientInfo] = useState(null) // { id, prenom, nom }
+  const [groupeIds, setGroupeIds] = useState([])
+  const [gjByGroupe, setGjByGroupe] = useState({})
 
   useEffect(() => {
     async function check() {
@@ -125,20 +135,27 @@ export default function ProfilJoueurGate({ children }) {
       if (!session?.user) return
 
       let { data: clientData } = await supabase
-        .from('clients').select('id, email, date_naissance').eq('user_id', session.user.id).maybeSingle()
+        .from('clients').select('id, prenom, nom, email, date_naissance').eq('user_id', session.user.id).maybeSingle()
       if (!clientData && session.user.email) {
-        const res = await supabase.from('clients').select('id, email, date_naissance').eq('email', session.user.email).maybeSingle()
+        const res = await supabase.from('clients').select('id, prenom, nom, email, date_naissance').eq('email', session.user.email).maybeSingle()
         clientData = res.data
       }
       if (!clientData) return // pas un compte client (coach)
 
+      // Ne concerne que les joueurs d'un groupe (rugby) — un client individuel
+      // (coaching seul, pas de poste) n'a pas à renseigner un poste.
+      const { data: membres } = await supabase.from('groupe_membres').select('groupe_id').eq('client_id', clientData.id)
+      if (!membres?.length) return
+      const gIds = membres.map(m => m.groupe_id)
+
       const [{ data: np }, { data: gj }] = await Promise.all([
         supabase.from('nutrition_profile').select('taille_cm, poids_kg').eq('client_id', clientData.id).maybeSingle(),
-        supabase.from('groupe_joueurs').select('id').eq('client_id', clientData.id),
+        supabase.from('groupe_joueurs').select('id, groupe_id').eq('client_id', clientData.id),
       ])
 
-      let hasPostes = true
-      const gjIds = (gj || []).map(g => g.id)
+      const gjMap = Object.fromEntries((gj || []).map(g => [g.groupe_id, g.id]))
+      const gjIds = Object.values(gjMap)
+      let hasPostes = false
       if (gjIds.length > 0) {
         const { data: jp } = await supabase.from('joueur_postes').select('id').in('joueur_id', gjIds).limit(1)
         hasPostes = (jp?.length || 0) > 0
@@ -147,7 +164,8 @@ export default function ProfilJoueurGate({ children }) {
       const complete = !!clientData.date_naissance && !!np?.taille_cm && !!np?.poids_kg && hasPostes
       if (complete) return
 
-      setGroupeJoueurIds(gjIds)
+      setGroupeIds(gIds)
+      setGjByGroupe(gjMap)
       setClientInfo(clientData)
       setShow(true)
     }
@@ -158,7 +176,8 @@ export default function ProfilJoueurGate({ children }) {
     <>
       {children}
       {show && clientInfo && createPortal(
-        <ProfilOverlay clientId={clientInfo.id} groupeJoueurIds={groupeJoueurIds} onDone={() => setShow(false)} />,
+        <ProfilOverlay clientId={clientInfo.id} prenom={clientInfo.prenom} nom={clientInfo.nom}
+          groupeIds={groupeIds} gjByGroupe={gjByGroupe} onDone={() => setShow(false)} />,
         document.body
       )}
     </>
