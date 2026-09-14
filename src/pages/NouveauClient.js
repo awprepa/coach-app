@@ -6,7 +6,7 @@ export default function NouveauClient() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', telephone: '',
-    objectif: '', offre: 'coaching', engagement_mois: '',
+    objectif: '', offre: 'coaching', engagement_mois: '3',
     date_debut: '', date_fin: '', notes: '', categorie_id: ''
   })
   const [categories, setCategories] = useState([])
@@ -20,13 +20,6 @@ export default function NouveauClient() {
 
   function handleChange(e) {
     const updated = { ...form, [e.target.name]: e.target.value }
-    // Auto date_fin à 1 mois pour l'essai
-    if (e.target.name === 'offre' && e.target.value === 'essai') {
-      const base = updated.date_debut || new Date().toISOString().slice(0, 10)
-      const fin = new Date(base + 'T00:00:00')
-      fin.setMonth(fin.getMonth() + 1)
-      updated.date_fin = fin.toISOString().slice(0, 10)
-    }
     setForm(updated)
   }
 
@@ -101,20 +94,21 @@ export default function NouveauClient() {
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Offre</label>
             <select name="offre" value={form.offre} onChange={handleChange} style={styles.select}>
-              <option value="essai">Essai (1 mois — 49€)</option>
               <option value="preparation_physique">Préparation physique</option>
               <option value="coaching">Coaching</option>
               <option value="club">Club</option>
             </select>
           </div>
-          {form.offre !== 'essai' && (
+          {(form.offre === 'preparation_physique' || form.offre === 'coaching') && (
             <div style={{ marginBottom: '1rem' }}>
-              <label style={styles.label}>Engagement</label>
+              <label style={styles.label}>Engagement (premier engagement — 3 mois minimum)</label>
               <select name="engagement_mois" value={form.engagement_mois} onChange={handleChange} style={styles.select}>
-                <option value="">Sans engagement — {form.offre === 'preparation_physique' ? '89€' : '79€'}/mois</option>
-                <option value="3">3 mois — {form.offre === 'preparation_physique' ? '79€' : '69€'}/mois</option>
-                <option value="6">6 mois — {form.offre === 'preparation_physique' ? '69€' : '59€'}/mois</option>
+                <option value="3">3 mois — 69€/mois</option>
+                <option value="6">6 mois — 69€/mois</option>
               </select>
+              <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.4rem 0 0' }}>
+                Le tarif dégressif sans engagement (89€/79€/69€) ne s'applique qu'au renouvellement, depuis la fiche client.
+              </p>
             </div>
           )}
           {categories.length > 0 && (

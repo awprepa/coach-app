@@ -1439,6 +1439,7 @@ export default function FicheClient() {
       {showContratModal === 'envoyer' && (
         <EnvoyerContratModal
           client={client}
+          estPremierContrat={contrats.length === 0}
           onClose={() => setShowContratModal(null)}
           onEnvoye={() => { setShowContratModal(null); fetchContrat() }}
         />

@@ -3,22 +3,28 @@ import { supabase } from '../supabase'
 import { sendNotif } from '../notifs'
 import { CGV_CONTENU } from '../pages/CGV'
 
+// Préparation physique et coaching sont désormais au même tarif. Le premier
+// engagement (aucun contrat précédent pour ce client) est à 69€/mois quelle
+// que soit la durée (3 ou 6 mois) et n'a jamais l'option « sans engagement » —
+// celle-ci n'apparaît qu'au renouvellement, avec la grille dégressive normale.
+const PREMIER_TARIF = 69
 const TARIFS = {
-  essai:                { label: 'Essai', sans: 49, m3: null, m6: null },
   preparation_physique: { label: 'Préparation physique', sans: 89, m3: 79, m6: 69 },
-  coaching:             { label: 'Coaching remise en forme', sans: 79, m3: 69, m6: 59 },
+  coaching:             { label: 'Coaching remise en forme', sans: 89, m3: 79, m6: 69 },
 }
 
-export default function EnvoyerContratModal({ client, onClose, onEnvoye }) {
+export default function EnvoyerContratModal({ client, estPremierContrat, onClose, onEnvoye }) {
   const [formule,    setFormule]    = useState(TARIFS[client.offre] ? client.offre : 'coaching')
-  const [engagement, setEngagement] = useState(client.engagement_mois || null)
+  const [engagement, setEngagement] = useState(estPremierContrat ? 3 : (client.engagement_mois || null))
   const [dateDebut,  setDateDebut]  = useState(client.date_debut || '')
   const [dateFin,    setDateFin]    = useState(client.date_fin || '')
   const [sending,    setSending]    = useState(false)
   const [error,      setError]      = useState(null)
 
   const tarif = TARIFS[formule]
-  const prixMensuel = engagement === 3 ? tarif.m3 : engagement === 6 ? tarif.m6 : tarif.sans
+  const prixMensuel = estPremierContrat
+    ? PREMIER_TARIF
+    : (engagement === 3 ? tarif.m3 : engagement === 6 ? tarif.m6 : tarif.sans)
   const prixTotal = engagement ? prixMensuel * engagement : null
 
   async function envoyer() {
@@ -57,7 +63,7 @@ export default function EnvoyerContratModal({ client, onClose, onEnvoye }) {
         <p style={S.sub}>{client.prenom} {client.nom}</p>
 
         <label style={S.label}>Formule</label>
-        <select value={formule} onChange={e => { setFormule(e.target.value); setEngagement(null) }} style={S.select}>
+        <select value={formule} onChange={e => { setFormule(e.target.value); setEngagement(estPremierContrat ? 3 : null) }} style={S.select}>
           {Object.entries(TARIFS).map(([key, t]) => (
             <option key={key} value={key}>{t.label}</option>
           ))}
@@ -65,10 +71,15 @@ export default function EnvoyerContratModal({ client, onClose, onEnvoye }) {
 
         <label style={S.label}>Engagement</label>
         <select value={engagement || ''} onChange={e => setEngagement(e.target.value ? parseInt(e.target.value) : null)} style={S.select}>
-          <option value="">Sans engagement — {tarif.sans}€/mois</option>
-          {tarif.m3 && <option value="3">3 mois — {tarif.m3}€/mois</option>}
-          {tarif.m6 && <option value="6">6 mois — {tarif.m6}€/mois</option>}
+          {!estPremierContrat && <option value="">Sans engagement — {tarif.sans}€/mois</option>}
+          <option value="3">3 mois — {estPremierContrat ? PREMIER_TARIF : tarif.m3}€/mois</option>
+          <option value="6">6 mois — {estPremierContrat ? PREMIER_TARIF : tarif.m6}€/mois</option>
         </select>
+        {estPremierContrat && (
+          <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0' }}>
+            Premier engagement : {PREMIER_TARIF}€/mois, 3 mois minimum. La formule sans engagement n'est proposée qu'au renouvellement.
+          </p>
+        )}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <div style={{ flex: 1 }}>

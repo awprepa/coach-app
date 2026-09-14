@@ -613,16 +613,16 @@ export default function Factures() {
             >
               <option value="">— Choisir une prestation —</option>
               <optgroup label="Préparation physique">
-                <option value="Préparation physique — sans engagement||89">Préparation physique — sans engagement — 89 €/mois</option>
-                <option value="Préparation physique — 3 mois||79">Préparation physique — 3 mois — 79 €/mois</option>
-                <option value="Préparation physique — 6 mois||69">Préparation physique — 6 mois — 69 €/mois</option>
-                <option value="Préparation physique — mois d'essai||49">Préparation physique — mois d'essai — 49 €</option>
+                <option value="Préparation physique — premier engagement (3 ou 6 mois)||69">Préparation physique — premier engagement (3 ou 6 mois) — 69 €/mois</option>
+                <option value="Préparation physique — renouvellement sans engagement||89">Préparation physique — renouvellement sans engagement — 89 €/mois</option>
+                <option value="Préparation physique — renouvellement 3 mois||79">Préparation physique — renouvellement 3 mois — 79 €/mois</option>
+                <option value="Préparation physique — renouvellement 6 mois||69">Préparation physique — renouvellement 6 mois — 69 €/mois</option>
               </optgroup>
               <optgroup label="Coaching remise en forme">
-                <option value="Coaching remise en forme — sans engagement||79">Coaching remise en forme — sans engagement — 79 €/mois</option>
-                <option value="Coaching remise en forme — 3 mois||69">Coaching remise en forme — 3 mois — 69 €/mois</option>
-                <option value="Coaching remise en forme — 6 mois||59">Coaching remise en forme — 6 mois — 59 €/mois</option>
-                <option value="Coaching remise en forme — mois d'essai||49">Coaching remise en forme — mois d'essai — 49 €</option>
+                <option value="Coaching remise en forme — premier engagement (3 ou 6 mois)||69">Coaching remise en forme — premier engagement (3 ou 6 mois) — 69 €/mois</option>
+                <option value="Coaching remise en forme — renouvellement sans engagement||89">Coaching remise en forme — renouvellement sans engagement — 89 €/mois</option>
+                <option value="Coaching remise en forme — renouvellement 3 mois||79">Coaching remise en forme — renouvellement 3 mois — 79 €/mois</option>
+                <option value="Coaching remise en forme — renouvellement 6 mois||69">Coaching remise en forme — renouvellement 6 mois — 69 €/mois</option>
               </optgroup>
               <optgroup label="Autre">
                 <option value="Programme one-shot||30">Programme one-shot — 30 €</option>
