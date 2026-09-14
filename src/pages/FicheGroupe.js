@@ -205,6 +205,17 @@ export default function FicheGroupe() {
     if (g?.monclubhouse_url) {
       const { data: cls } = await supabase.from('classements_ffr').select('*').eq('groupe_id', g.id).order('position')
       setClassementFFR(cls || [])
+      // Sync auto en arrière-plan (au plus une fois toutes les 3h par groupe) pour que le
+      // classement se mette à jour sans que le coach ait besoin d'aller cliquer "Sync" ailleurs.
+      const throttleKey = `ffrSync_${g.id}`
+      const lastSync = Number(localStorage.getItem(throttleKey) || 0)
+      if (Date.now() - lastSync > 3 * 60 * 60 * 1000) {
+        localStorage.setItem(throttleKey, String(Date.now()))
+        supabase.functions.invoke('sync-ffr', { body: { groupe_id: g.id } })
+          .then(() => supabase.from('classements_ffr').select('*').eq('groupe_id', g.id).order('position'))
+          .then(res => { if (res?.data) setClassementFFR(res.data) })
+          .catch(() => {})
+      }
     } else {
       setClassementFFR([])
     }

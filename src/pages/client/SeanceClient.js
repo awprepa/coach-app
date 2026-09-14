@@ -639,6 +639,45 @@ export default function SeanceClient() {
     clearTimeout(saveTimersRef.current[key])
     saveTimersRef.current[key] = setTimeout(() => { saveSerieField(exId, serieIdx) }, 800)
   }
+  // Prévient le coach une seule fois si le client a saisi des données dans la
+  // séance (poids/reps) sans jamais la terminer. Verrou côté DB
+  // (notif_incomplete_envoyee) : sûr même si l'app repasse plusieurs fois en
+  // arrière-plan, et n'envoie rien si la séance a entre-temps été terminée.
+  async function flagSeanceIncomplete() {
+    const hasData = Object.values(trackingRef.current || {}).some(
+      series => (series || []).some(s => s?.poids || s?.reps_reelles)
+    )
+    if (!hasData) return
+    try {
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+      const ydate = yesterday.toISOString().slice(0, 10)
+      const { data: ev } = await supabase.from('evenements').select('id, terminee, notif_incomplete_envoyee')
+        .eq('seance_id', id).gte('date', ydate)
+        .order('date', { ascending: true }).limit(1).maybeSingle()
+      if (!ev?.id || ev.terminee || ev.notif_incomplete_envoyee) return
+      const { data: updated } = await supabase.from('evenements')
+        .update({ notif_incomplete_envoyee: true }).eq('id', ev.id)
+        .eq('terminee', false).eq('notif_incomplete_envoyee', false)
+        .select('id').maybeSingle()
+      if (!updated) return // déjà signalé par un autre déclenchement
+      const clientId = seance?.programmes?.client_id
+      const [coachId, clientRes] = await Promise.all([
+        getCoachId(),
+        clientId
+          ? supabase.from('clients').select('prenom').eq('id', clientId).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ])
+      const prenom = clientRes?.data?.prenom || 'Un client'
+      if (coachId) {
+        sendNotif(coachId, {
+          titre: '⚠️ Séance incomplète',
+          corps: `${prenom} a commencé "${seance?.nom || 'sa séance'}" sans la terminer`,
+          type: 'seance',
+          lien: clientId ? `/client/${clientId}` : '/',
+        })
+      }
+    } catch (e) { console.warn('[notif-seance-incomplete] échec:', e) }
+  }
   // Flush toutes les sauvegardes en attente si l'app passe en arrière-plan
   useEffect(() => {
     const flushAll = () => {
@@ -647,6 +686,7 @@ export default function SeanceClient() {
         const [exId, si] = [key.slice(0, key.lastIndexOf('-')), key.slice(key.lastIndexOf('-') + 1)]
         saveSerieField(exId, parseInt(si))
       })
+      flagSeanceIncomplete()
     }
     const onHide = () => { if (document.visibilityState === 'hidden') flushAll() }
     document.addEventListener('visibilitychange', onHide)
