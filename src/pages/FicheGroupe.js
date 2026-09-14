@@ -8,6 +8,7 @@ import GroupeIntensite from '../components/GroupeIntensite'
 import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 import GroupeTestsView from '../components/GroupeTestsView'
 import GroupeBlessuresView from '../components/GroupeBlessuresView'
+import GroupeClassementView from '../components/GroupeClassementView'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -55,7 +56,7 @@ export default function FicheGroupe() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const tab = tabParam === 'calendrier' ? 'calendrier' : tabParam === 'tests' ? 'tests' : tabParam === 'blessures' ? 'blessures' : 'groupe'
+  const tab = tabParam === 'calendrier' ? 'calendrier' : tabParam === 'tests' ? 'tests' : tabParam === 'blessures' ? 'blessures' : tabParam === 'classement' ? 'classement' : 'groupe'
   const openEventId = searchParams.get('evenement') || null
   const setTab = t => setSearchParams(t === 'groupe' ? {} : { tab: t })
   const openCalendrierEvent = evId => setSearchParams({ tab: 'calendrier', evenement: evId })
@@ -71,7 +72,7 @@ export default function FicheGroupe() {
 
   // Modales
   const [editOpen, setEditOpen]           = useState(false)
-  const [editForm, setEditForm]           = useState({ nom: '', couleur: '', couleur_secondaire: '', monclubhouse_url: '', monclubhouse_competition: '' })
+  const [editForm, setEditForm]           = useState({ nom: '', couleur: '', couleur_secondaire: '', monclubhouse_url: '', monclubhouse_competition: '', monclubhouse_competition_espoirs: '' })
   const [editLogoFile, setEditLogoFile]   = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
@@ -134,7 +135,7 @@ export default function FicheGroupe() {
       await supabase.from('groupes').update({ couleur: couleurEffective, couleur_secondaire: couleur2Effective }).eq('id', g.id)
     }
     setGroupe(cleanedG)
-    setEditForm({ nom: cleanedG?.nom || '', couleur: cleanedG?.couleur || '', couleur_secondaire: cleanedG?.couleur_secondaire || '', monclubhouse_url: cleanedG?.monclubhouse_url || '', monclubhouse_competition: cleanedG?.monclubhouse_competition || '' })
+    setEditForm({ nom: cleanedG?.nom || '', couleur: cleanedG?.couleur || '', couleur_secondaire: cleanedG?.couleur_secondaire || '', monclubhouse_url: cleanedG?.monclubhouse_url || '', monclubhouse_competition: cleanedG?.monclubhouse_competition || '', monclubhouse_competition_espoirs: cleanedG?.monclubhouse_competition_espoirs || '' })
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
@@ -324,6 +325,7 @@ export default function FicheGroupe() {
       logo_url: logoUrl,
       monclubhouse_url: editForm.monclubhouse_url?.trim() || null,
       monclubhouse_competition: editForm.monclubhouse_competition?.trim() || null,
+      monclubhouse_competition_espoirs: editForm.monclubhouse_competition_espoirs?.trim() || null,
     }).eq('id', id)
     if (error) { alert(error.message); setSaving(false); return }
     await load()
@@ -827,11 +829,11 @@ export default function FicheGroupe() {
     <div style={S.pageWide}>
       {/* ── Retour ── */}
       <button onClick={() => {
-        if (tab === 'calendrier' || tab === 'tests' || tab === 'blessures') { setTab('groupe'); return }
+        if (tab === 'calendrier' || tab === 'tests' || tab === 'blessures' || tab === 'classement') { setTab('groupe'); return }
         if (parent) { navigate(`/groupe/${parent.id}`); return }
         navigate('/groupes')
       }} style={S.back}>
-        ← {tab === 'calendrier' || tab === 'tests' || tab === 'blessures' ? groupe.nom : parent ? parent.nom : 'Groupes'}
+        ← {tab === 'calendrier' || tab === 'tests' || tab === 'blessures' || tab === 'classement' ? groupe.nom : parent ? parent.nom : 'Groupes'}
       </button>
 
       {/* Adaptations mobile — aucune règle au-dessus de 820px */}
@@ -892,6 +894,8 @@ export default function FicheGroupe() {
         <GroupeTestsView groupeId={id} accent={accent} />
       ) : tab === 'blessures' ? (
         <GroupeBlessuresView groupeId={id} accent={accent} />
+      ) : tab === 'classement' ? (
+        <GroupeClassementView groupe={groupe} classementFFR={classementFFR} accent={accent} />
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
@@ -1051,7 +1055,8 @@ export default function FicheGroupe() {
           <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>+ Ajouter un membre</button>
         </div>
 
-        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: classementFFR.length > 0 ? 'pointer' : 'default' }}
+          onClick={() => classementFFR.length > 0 && setTab('classement')} title={classementFFR.length > 0 ? 'Ouvrir le classement complet' : undefined}>
           <div style={S.panelHead}>
             <span style={S.panelLabel}>Classement</span>
           </div>
@@ -1061,7 +1066,7 @@ export default function FicheGroupe() {
             <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
           ) : (
             <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {classementFFR.map(c => {
+              {classementFFR.filter(c => (c.competition || null) === (groupe.monclubhouse_competition || null)).map(c => {
                 const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase())
                 return (
                   <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
@@ -1407,6 +1412,20 @@ export default function FicheGroupe() {
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
                 Laisse vide si le club n'a qu'une équipe. Sinon, mets l'identifiant visible dans l'URL de la compétition sur monclubhouse.ffr.fr (ex: ".../nationales/federale-2/...").
               </p>
+            </div>
+          )}
+
+          {editForm.monclubhouse_url && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
+                Équipe espoirs <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel — ajoute un onglet Espoirs au classement)</span>
+              </label>
+              <input
+                value={editForm.monclubhouse_competition_espoirs}
+                onChange={e => setEditForm({ ...editForm, monclubhouse_competition_espoirs: e.target.value })}
+                placeholder="federale-b-championnat-de-france"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151', background: '#fff' }}
+              />
             </div>
           )}
 

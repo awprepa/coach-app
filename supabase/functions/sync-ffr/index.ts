@@ -107,6 +107,8 @@ interface StandingRow {
   bonus_off: number;
   bonus_def: number;
   logo: string | null;
+  competition: string | null;
+  competition_label: string | null;
   synced_at: string;
 }
 
@@ -138,6 +140,19 @@ function extractPouleUrl(data: Record<string, any>, competitionFilter: string | 
       if (!matchesCompetition(match, competitionFilter)) continue;
       const url: string | undefined = match?.pouleId?.url_monclubhouse;
       if (url) return url;
+    }
+  }
+  return null;
+}
+
+/** Nom lisible d'une compétition (ex: "Fédérale 2"), retrouvé depuis le premier
+ *  match du calendrier qui lui correspond — sert de libellé d'onglet. */
+function extractCompetitionLabel(data: Record<string, any>, competitionFilter: string | null): string | null {
+  for (const journee of Object.values(data)) {
+    for (const match of ((journee as any)?.listData || [])) {
+      if (!matchesCompetition(match, competitionFilter)) continue;
+      const nom: string | undefined = match?.competitionId?.nom;
+      if (nom) return nom;
     }
   }
   return null;
@@ -195,7 +210,7 @@ function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: st
   return rows;
 }
 
-function parseStandings(data: any[], groupeId: string): StandingRow[] {
+function parseStandings(data: any[], groupeId: string, competition: string | null, competitionLabel: string | null): StandingRow[] {
   const now = new Date().toISOString();
   return data
     .map((entry: any) => {
@@ -217,6 +232,8 @@ function parseStandings(data: any[], groupeId: string): StandingRow[] {
         bonus_off: Number(cls.bonusOffensif) || 0,
         bonus_def: Number(cls.bonusDefensif) || 0,
         logo,
+        competition,
+        competition_label: competitionLabel,
         synced_at: now,
       } as StandingRow;
     })
@@ -225,7 +242,7 @@ function parseStandings(data: any[], groupeId: string): StandingRow[] {
 
 // ── Sync d'un groupe ─────────────────────────────────────────────────────────────
 
-async function syncGroupe(groupeId: string, url: string, competitionFilter: string | null) {
+async function syncGroupe(groupeId: string, url: string, competitionFilter: string | null, competitionEspoirs: string | null) {
   // L'URL enregistrée peut être soit la page de base d'une compétition
   // (".../competitions/federale-2/qualification-44288"), soit déjà une page
   // "calendrier-resultats" ou "classements" copiée directement depuis le site
@@ -238,19 +255,22 @@ async function syncGroupe(groupeId: string, url: string, competitionFilter: stri
   const logs: string[] = [`club: ${clubSlug}`, `competition: ${competitionFilter || "(toutes)"}`];
   const errors: string[] = [];
   let matchCount = 0, standingsCount = 0;
-  let pouleUrl: string | null = null;
+  let calData: Record<string, any> | null = null;
 
   const headers = { "User-Agent": "Mozilla/5.0 (compatible; AWprepa/1.0)" };
 
   // ── Calendrier ────────────────────────────────────────────────────────────────
+  // Une seule page calendrier contient déjà les matchs de TOUTES les équipes du
+  // club (seniors, espoirs...) — on la récupère une fois et on filtre ensuite
+  // par compétition, aussi bien pour les matchs que pour retrouver la bonne
+  // poule (classement) de chaque équipe.
   try {
     const html = await (await fetch(`${baseUrl}/calendrier-resultats`, { headers })).text();
-    const calData = extractKeyValue(html, "calendarResultsData");
+    calData = extractKeyValue(html, "calendarResultsData");
 
     if (!calData) {
       errors.push("calendarResultsData introuvable dans le HTML");
     } else {
-      pouleUrl = extractPouleUrl(calData, competitionFilter);
       const rawRows = parseCalendar(calData, groupeId, clubSlug, competitionFilter);
       // Le site peut lister deux fois la même rencontre (plusieurs équipes du
       // même club, pages qui se chevauchent...) — on déduplique sur la même
@@ -277,31 +297,44 @@ async function syncGroupe(groupeId: string, url: string, competitionFilter: stri
     errors.push(`Erreur calendrier: ${String(e)}`);
   }
 
-  // ── Classement ────────────────────────────────────────────────────────────────
-  // La page classements vit sous l'URL de la poule (pouleUrl, extraite
-  // du calendrier), pas sous celle du club (baseUrl) — repli sur baseUrl si on
-  // n'a pas pu la déterminer (ex: calendrier vide ou format inattendu).
-  try {
-    const classementUrl = pouleUrl ? `https://monclubhouse.ffr.fr${pouleUrl}/classements` : `${baseUrl}/classements`;
-    logs.push(`classement: ${classementUrl}`);
-    const html = await (await fetch(classementUrl, { headers })).text();
-    const rankData = extractKeyValue(html, "rankingData");
+  // ── Classement(s) ─────────────────────────────────────────────────────────────
+  // La page classements vit sous l'URL de la poule (extraite du calendrier),
+  // pas sous celle du club (baseUrl) — repli sur baseUrl si on n'a pas pu la
+  // déterminer (ex: calendrier vide ou format inattendu). On synchronise la
+  // compétition principale, et en plus la compétition "espoirs" si le groupe
+  // en a une de configurée (deux équipes du même club sur les mêmes pages).
+  const allStandingRows: StandingRow[] = [];
+  const competitionsToSync: Array<{ filter: string | null; tag: string | null }> = [
+    { filter: competitionFilter, tag: competitionFilter },
+  ];
+  if (competitionEspoirs) competitionsToSync.push({ filter: competitionEspoirs, tag: competitionEspoirs });
 
-    if (!rankData || !Array.isArray(rankData)) {
-      errors.push("rankingData introuvable ou non-array");
-    } else {
-      const rows = parseStandings(rankData, groupeId);
-      logs.push(`${rows.length} équipes parsées`);
+  for (const { filter, tag } of competitionsToSync) {
+    try {
+      const pouleUrl = calData ? extractPouleUrl(calData, filter) : null;
+      const label = calData ? extractCompetitionLabel(calData, filter) : null;
+      const classementUrl = pouleUrl ? `https://monclubhouse.ffr.fr${pouleUrl}/classements` : `${baseUrl}/classements`;
+      logs.push(`classement (${tag || "principale"}): ${classementUrl}`);
+      const html = await (await fetch(classementUrl, { headers })).text();
+      const rankData = extractKeyValue(html, "rankingData");
 
-      if (rows.length > 0) {
-        await supabase.from("classements_ffr").delete().eq("groupe_id", groupeId);
-        const { error } = await supabase.from("classements_ffr").insert(rows);
-        if (error) errors.push(`Insert classement: ${error.message}`);
-        else standingsCount = rows.length;
+      if (!rankData || !Array.isArray(rankData)) {
+        errors.push(`rankingData introuvable ou non-array (${tag || "principale"})`);
+        continue;
       }
+      const rows = parseStandings(rankData, groupeId, tag, label);
+      logs.push(`${rows.length} équipes parsées (${tag || "principale"})`);
+      allStandingRows.push(...rows);
+    } catch (e) {
+      errors.push(`Erreur classement (${tag || "principale"}): ${String(e)}`);
     }
-  } catch (e) {
-    errors.push(`Erreur classement: ${String(e)}`);
+  }
+
+  if (allStandingRows.length > 0) {
+    await supabase.from("classements_ffr").delete().eq("groupe_id", groupeId);
+    const { error } = await supabase.from("classements_ffr").insert(allStandingRows);
+    if (error) errors.push(`Insert classement: ${error.message}`);
+    else standingsCount = allStandingRows.length;
   }
 
   return { groupeId, matchCount, standingsCount, errors, logs };
@@ -318,7 +351,7 @@ Deno.serve(async (req) => {
 
     let q = supabase
       .from("groupes")
-      .select("id, monclubhouse_url, monclubhouse_competition")
+      .select("id, monclubhouse_url, monclubhouse_competition, monclubhouse_competition_espoirs")
       .not("monclubhouse_url", "is", null)
       .neq("monclubhouse_url", "");
     if (targetId) q = q.eq("id", targetId);
@@ -328,7 +361,7 @@ Deno.serve(async (req) => {
 
     const results = [];
     for (const g of groupes || []) {
-      results.push(await syncGroupe(g.id, g.monclubhouse_url, g.monclubhouse_competition || null));
+      results.push(await syncGroupe(g.id, g.monclubhouse_url, g.monclubhouse_competition || null, g.monclubhouse_competition_espoirs || null));
     }
 
     return new Response(JSON.stringify({ ok: true, synced: results.length, results }), {
