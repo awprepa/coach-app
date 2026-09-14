@@ -126,9 +126,16 @@ function isOurTeamLocal(localNom: string, clubSlug: string): boolean {
  *  affiche une AUTRE poule (vérifié : sans lui on tombe sur des clubs
  *  d'Île-de-France au lieu du Sud-Ouest). On récupère donc le chemin complet
  *  `pouleId.url_monclubhouse` tel quel depuis les données du calendrier. */
-function extractPouleUrl(data: Record<string, any>): string | null {
+function matchesCompetition(match: any, competitionFilter: string | null): boolean {
+  if (!competitionFilter) return true;
+  const identifiant: string = match?.competitionId?.identifiant || "";
+  return identifiant.toLowerCase() === competitionFilter.toLowerCase();
+}
+
+function extractPouleUrl(data: Record<string, any>, competitionFilter: string | null): string | null {
   for (const journee of Object.values(data)) {
     for (const match of ((journee as any)?.listData || [])) {
+      if (!matchesCompetition(match, competitionFilter)) continue;
       const url: string | undefined = match?.pouleId?.url_monclubhouse;
       if (url) return url;
     }
@@ -136,7 +143,7 @@ function extractPouleUrl(data: Record<string, any>): string | null {
   return null;
 }
 
-function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: string): MatchRow[] {
+function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: string, competitionFilter: string | null): MatchRow[] {
   const rows: MatchRow[] = [];
   const now = new Date().toISOString();
 
@@ -145,6 +152,10 @@ function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: st
     const titre = String(j.listTitle || "").replace("J ", "");
 
     for (const match of (j.listData || [])) {
+      // Un même club peut avoir plusieurs équipes (seniors, espoirs...) mélangées
+      // dans les mêmes pages du site — on ne garde que la compétition demandée
+      // quand elle est précisée sur le groupe (monclubhouse_competition).
+      if (!matchesCompetition(match, competitionFilter)) continue;
       const local = match.competitionEquipeLocaleId || {};
       const visiteur = match.competitionEquipeVisiteuseId || {};
       const scoreLocal = match.rencontreResultatLocaleId?.pointsDeMarque ?? null;
@@ -214,7 +225,7 @@ function parseStandings(data: any[], groupeId: string): StandingRow[] {
 
 // ── Sync d'un groupe ─────────────────────────────────────────────────────────────
 
-async function syncGroupe(groupeId: string, url: string) {
+async function syncGroupe(groupeId: string, url: string, competitionFilter: string | null) {
   // L'URL enregistrée peut être soit la page de base d'une compétition
   // (".../competitions/federale-2/qualification-44288"), soit déjà une page
   // "calendrier-resultats" ou "classements" copiée directement depuis le site
@@ -224,7 +235,7 @@ async function syncGroupe(groupeId: string, url: string) {
   const clubSlugMatch = url.match(/\/clubs\/([^/]+)\//);
   const clubSlug = clubSlugMatch?.[1] || "";
 
-  const logs: string[] = [`club: ${clubSlug}`];
+  const logs: string[] = [`club: ${clubSlug}`, `competition: ${competitionFilter || "(toutes)"}`];
   const errors: string[] = [];
   let matchCount = 0, standingsCount = 0;
   let pouleUrl: string | null = null;
@@ -239,8 +250,8 @@ async function syncGroupe(groupeId: string, url: string) {
     if (!calData) {
       errors.push("calendarResultsData introuvable dans le HTML");
     } else {
-      pouleUrl = extractPouleUrl(calData);
-      const rawRows = parseCalendar(calData, groupeId, clubSlug);
+      pouleUrl = extractPouleUrl(calData, competitionFilter);
+      const rawRows = parseCalendar(calData, groupeId, clubSlug, competitionFilter);
       // Le site peut lister deux fois la même rencontre (plusieurs équipes du
       // même club, pages qui se chevauchent...) — on déduplique sur la même
       // clé que la contrainte unique en base, sinon l'insert entier échoue et
@@ -307,7 +318,7 @@ Deno.serve(async (req) => {
 
     let q = supabase
       .from("groupes")
-      .select("id, monclubhouse_url")
+      .select("id, monclubhouse_url, monclubhouse_competition")
       .not("monclubhouse_url", "is", null)
       .neq("monclubhouse_url", "");
     if (targetId) q = q.eq("id", targetId);
@@ -317,7 +328,7 @@ Deno.serve(async (req) => {
 
     const results = [];
     for (const g of groupes || []) {
-      results.push(await syncGroupe(g.id, g.monclubhouse_url));
+      results.push(await syncGroupe(g.id, g.monclubhouse_url, g.monclubhouse_competition || null));
     }
 
     return new Response(JSON.stringify({ ok: true, synced: results.length, results }), {

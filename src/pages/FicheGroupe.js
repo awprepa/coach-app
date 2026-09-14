@@ -71,7 +71,7 @@ export default function FicheGroupe() {
 
   // Modales
   const [editOpen, setEditOpen]           = useState(false)
-  const [editForm, setEditForm]           = useState({ nom: '', couleur: '', couleur_secondaire: '', monclubhouse_url: '' })
+  const [editForm, setEditForm]           = useState({ nom: '', couleur: '', couleur_secondaire: '', monclubhouse_url: '', monclubhouse_competition: '' })
   const [editLogoFile, setEditLogoFile]   = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving]               = useState(false)
@@ -134,7 +134,7 @@ export default function FicheGroupe() {
       await supabase.from('groupes').update({ couleur: couleurEffective, couleur_secondaire: couleur2Effective }).eq('id', g.id)
     }
     setGroupe(cleanedG)
-    setEditForm({ nom: cleanedG?.nom || '', couleur: cleanedG?.couleur || '', couleur_secondaire: cleanedG?.couleur_secondaire || '', monclubhouse_url: cleanedG?.monclubhouse_url || '' })
+    setEditForm({ nom: cleanedG?.nom || '', couleur: cleanedG?.couleur || '', couleur_secondaire: cleanedG?.couleur_secondaire || '', monclubhouse_url: cleanedG?.monclubhouse_url || '', monclubhouse_competition: cleanedG?.monclubhouse_competition || '' })
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
@@ -323,6 +323,7 @@ export default function FicheGroupe() {
       couleur_secondaire: editForm.couleur_secondaire || null,
       logo_url: logoUrl,
       monclubhouse_url: editForm.monclubhouse_url?.trim() || null,
+      monclubhouse_competition: editForm.monclubhouse_competition?.trim() || null,
     }).eq('id', id)
     if (error) { alert(error.message); setSaving(false); return }
     await load()
@@ -1391,6 +1392,23 @@ export default function FicheGroupe() {
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>⚠️ Le lien doit provenir de monclubhouse.ffr.fr</p>
             )}
           </div>
+
+          {editForm.monclubhouse_url && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
+                Compétition à suivre <span style={{ fontWeight: 400, color: '#9ca3af' }}>(si le club a plusieurs équipes, ex: federale-2)</span>
+              </label>
+              <input
+                value={editForm.monclubhouse_competition}
+                onChange={e => setEditForm({ ...editForm, monclubhouse_competition: e.target.value })}
+                placeholder="federale-2"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151', background: '#fff' }}
+              />
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
+                Laisse vide si le club n'a qu'une équipe. Sinon, mets l'identifiant visible dans l'URL de la compétition sur monclubhouse.ffr.fr (ex: ".../nationales/federale-2/...").
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={sauvegarderGroupe} disabled={saving || extractingEditColors} style={{ ...S.btnPrimary, flex: 1, opacity: (saving || extractingEditColors) ? 0.6 : 1 }}>

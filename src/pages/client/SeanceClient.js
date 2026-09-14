@@ -640,7 +640,10 @@ export default function SeanceClient() {
     saveTimersRef.current[key] = setTimeout(() => { saveSerieField(exId, serieIdx) }, 800)
   }
   // Prévient le coach une seule fois si le client a saisi des données dans la
-  // séance (poids/reps) sans jamais la terminer. Verrou côté DB
+  // séance (poids/reps) sans jamais la terminer. Info simple dans l'onglet 🔔
+  // (pas de push téléphone : insert direct dans `notifications`, pas de
+  // sendNotif) pour qu'Arthur puisse aller consulter les charges utilisées,
+  // sans que ça sonne comme une alerte urgente. Verrou côté DB
   // (notif_incomplete_envoyee) : sûr même si l'app repasse plusieurs fois en
   // arrière-plan, et n'envoie rien si la séance a entre-temps été terminée.
   async function flagSeanceIncomplete() {
@@ -669,12 +672,15 @@ export default function SeanceClient() {
       ])
       const prenom = clientRes?.data?.prenom || 'Un client'
       if (coachId) {
-        sendNotif(coachId, {
-          titre: '⚠️ Séance incomplète',
-          corps: `${prenom} a commencé "${seance?.nom || 'sa séance'}" sans la terminer`,
+        // Insert direct (pas sendNotif) : reste dans l'onglet 🔔 sans déclencher
+        // de push téléphone, volontairement discret.
+        await supabase.from('notifications').insert([{
+          destinataire_id: coachId,
+          titre: 'Séance non terminée',
+          corps: `${prenom} a commencé "${seance?.nom || 'sa séance'}" sans la terminer — charges à consulter dans son suivi`,
           type: 'seance',
           lien: clientId ? `/client/${clientId}` : '/',
-        })
+        }])
       }
     } catch (e) { console.warn('[notif-seance-incomplete] échec:', e) }
   }
