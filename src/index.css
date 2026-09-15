@@ -23,6 +23,11 @@
 html {
   scrollbar-gutter: stable;
   overflow-y: scroll;
+  /* Sans ça, le rebond élastique de Safari iOS en haut de page révèle le fond
+     blanc par défaut de <html> au lieu du gris de <body> — visible comme un
+     dégradé blanc au-dessus de la barre du haut sur les pages qui scrollent
+     normalement (Accueil, Programme, Compétition). */
+  background: #efefef;
 }
 
 body {
