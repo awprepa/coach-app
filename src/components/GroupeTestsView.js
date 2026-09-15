@@ -4,6 +4,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 
 const TYPE_LABELS = { vmi: 'VMI', vma: 'VMA', '30m': '30m', '50m': '50m', '30-15': '30-15 IFT' }
 const TYPE_UNITS  = { vmi: 'km/h', vma: 'km/h', '30m': 's', '50m': 's', '30-15': '' }
+// Tests chronométrés : un temps plus bas = une meilleure performance.
+const TYPE_LOWER_IS_BETTER = { '30m': true, '50m': true }
 
 function formatDateShort(d) {
   if (!d) return ''
@@ -24,6 +26,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
   const [selectedType, setSelectedType] = useState(null)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [sortMode, setSortMode] = useState('valeur') // 'valeur' | 'amelioration'
   const [showAdd, setShowAdd] = useState(false)
   const [addForm, setAddForm] = useState({ joueur_id: '', type: '', valeur: '', date: new Date().toISOString().slice(0, 10), notes: '' })
   const [saving, setSaving] = useState(false)
@@ -60,19 +63,37 @@ export default function GroupeTestsView({ groupeId, accent }) {
     setSelectedType(best)
   }, [availableTypes, selectedType, joueurs])
 
-  // Tableau des derniers résultats, triés du meilleur au moins bon
+  // Tableau des derniers résultats, avec l'amélioration par rapport au test précédent
+  // (négatif pour un chrono = amélioration, géré via TYPE_LOWER_IS_BETTER).
+  const lowerIsBetter = selectedType ? !!TYPE_LOWER_IS_BETTER[selectedType] : false
   const rows = useMemo(() => {
     if (!selectedType) return []
-    return joueurs
+    const withDelta = joueurs
       .map(j => {
         const tests = (j.joueur_tests_physiques || [])
           .filter(t => t.type === selectedType)
           .sort((a, b) => b.date.localeCompare(a.date))
-        return { joueur: j, tests, latest: tests[0] || null }
+        const latest = tests[0] || null
+        const previous = tests[1] || null
+        const rawDelta = (latest && previous) ? parseFloat(latest.valeur) - parseFloat(previous.valeur) : null
+        // amelioration > 0 = progrès, quel que soit le sens du test
+        const amelioration = rawDelta === null ? null : (lowerIsBetter ? -rawDelta : rawDelta)
+        return { joueur: j, tests, latest, previous, rawDelta, amelioration }
       })
       .filter(r => r.latest)
-      .sort((a, b) => parseFloat(b.latest.valeur) - parseFloat(a.latest.valeur))
-  }, [joueurs, selectedType])
+
+    if (sortMode === 'amelioration') {
+      return withDelta.sort((a, b) => {
+        if (a.amelioration === null && b.amelioration === null) return 0
+        if (a.amelioration === null) return 1
+        if (b.amelioration === null) return -1
+        return b.amelioration - a.amelioration
+      })
+    }
+    return withDelta.sort((a, b) => lowerIsBetter
+      ? parseFloat(a.latest.valeur) - parseFloat(b.latest.valeur)
+      : parseFloat(b.latest.valeur) - parseFloat(a.latest.valeur))
+  }, [joueurs, selectedType, sortMode, lowerIsBetter])
 
   // Évolution du groupe : moyenne à chaque date où au moins un test existe
   const groupChartData = useMemo(() => {
@@ -168,7 +189,13 @@ export default function GroupeTestsView({ groupeId, accent }) {
 
           {/* ── Tableau des résultats (moitié gauche) ── */}
           <div style={S.panel}>
-            <div style={S.panelHead}><span style={S.panelLabel}>Résultats · {TYPE_LABELS[selectedType]}{unit ? ` (${unit})` : ''}</span></div>
+            <div style={S.panelHead}>
+              <span style={S.panelLabel}>Résultats · {TYPE_LABELS[selectedType]}{unit ? ` (${unit})` : ''}</span>
+              <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={S.selectSmall}>
+                <option value="valeur">Trier : meilleur résultat</option>
+                <option value="amelioration">Trier : amélioration</option>
+              </select>
+            </div>
             {rows.length === 0 ? (
               <p style={S.empty}>Aucun résultat pour ce test.</p>
             ) : (
@@ -176,8 +203,8 @@ export default function GroupeTestsView({ groupeId, accent }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
                     <tr>
-                      {['Joueur', 'Dernier résultat', 'Date', ''].map((h, i) => (
-                        <th key={i} style={{ textAlign: i === 1 ? 'center' : 'left', padding: '0.5rem 1rem', fontSize: '0.65rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f3f4f6' }}>{h}</th>
+                      {['Joueur', 'Dernier résultat', 'Évolution', 'Date', ''].map((h, i) => (
+                        <th key={i} style={{ textAlign: (i === 1 || i === 2) ? 'center' : 'left', padding: '0.5rem 1rem', fontSize: '0.65rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f3f4f6' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -194,6 +221,9 @@ export default function GroupeTestsView({ groupeId, accent }) {
                             <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 800, color: accent === '#e4f816' ? '#727a0b' : accent }}>
                               {r.latest.valeur}{unit ? ` ${unit}` : ''}
                             </td>
+                            <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 800, color: r.amelioration === null ? '#d1d5db' : r.amelioration > 0 ? '#16a34a' : r.amelioration < 0 ? '#dc2626' : '#9ca3af' }}>
+                              {r.amelioration === null ? '—' : `${r.amelioration > 0 ? '+' : ''}${r.amelioration.toFixed(2)}${unit ? ` ${unit}` : ''}`}
+                            </td>
                             <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #f3f4f6', color: '#6b7280' }}>
                               {formatDateFull(r.latest.date)}
                             </td>
@@ -206,6 +236,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
                             <tr key={t.id} style={{ background: '#fafafa' }}>
                               <td style={{ padding: '0.4rem 1rem 0.4rem 2.25rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.78rem', color: '#9ca3af' }}>Historique</td>
                               <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>{t.valeur}{unit ? ` ${unit}` : ''}</td>
+                              <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}></td>
                               <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.78rem', color: '#9ca3af' }}>{formatDateFull(t.date)}</td>
                               <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'right' }}>
                                 <button onClick={e => { e.stopPropagation(); supprimerTest(t.id) }} style={S.btnDeleteMini}>Supprimer</button>
