@@ -230,7 +230,7 @@ export default function CompetitionClient() {
     <div style={{ minHeight: '100vh', background: '#f5f6f8', paddingBottom: 100, fontFamily: 'inherit' }}>
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, #333333 0%, #1f2937 100%)`,
-        padding: '18px 18px 16px', color: '#fff' }}>
+        padding: '18px 18px 16px', color: '#fff', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ fontSize: '.62rem', fontWeight: 800, color: '#e4f816', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Compétition</div>
         {groupes.length > 1 ? (
           <select value={activeGroupe?.id || ''} onChange={async e => {

@@ -269,6 +269,9 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    position: 'sticky',
+    top: 0,
+    zIndex: 40,
   },
   backBtn: {
     background: 'rgba(255,255,255,0.1)',
