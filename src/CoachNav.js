@@ -211,8 +211,8 @@ export default function CoachNav() {
 const CSS = `
 .coachnav{
   position:sticky;top:0;z-index:100;
-  background:#fff;min-height:62px;display:flex;align-items:center;
-  padding:env(safe-area-inset-top) 22px 0;gap:22px;border-bottom:1px solid #e6e8ec;
+  background:#fff;height:62px;display:flex;align-items:center;
+  padding:0 22px;gap:22px;border-bottom:1px solid #e6e8ec;
   box-shadow:0 1px 0 rgba(0,0,0,0.02);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
