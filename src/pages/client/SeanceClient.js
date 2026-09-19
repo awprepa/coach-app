@@ -126,6 +126,7 @@ export default function SeanceClient() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [seance, setSeance] = useState(null)
+  const seanceRef = useRef(null)       // miroir de `seance` toujours à jour (évite les closures périmées dans les handlers montés une seule fois)
   const [exercices, setExercices] = useState([])
   const [videoDemandes, setVideoDemandes] = useState({}) // { exercice_id: demande en_attente }
   const [charges, setCharges] = useState({})
@@ -166,6 +167,7 @@ export default function SeanceClient() {
   const [localSavedAt, setLocalSavedAt] = useState(null)
   const [validatingSet, setValidatingSet] = useState(new Set()) // anti double-tap : clés "exId-si"
   trackingRef.current = tracking       // synchronisé à chaque rendu
+  seanceRef.current = seance
   const blocRefs = useRef({})
   const prNotifiedRef = useRef({}) // { [exId]: maxPoidsNotifié } — évite les doublons dans la même séance
   const finNotifSentRef = useRef(false) // verrou anti-doublon de la notif "séance terminée"
@@ -663,7 +665,11 @@ export default function SeanceClient() {
         .eq('terminee', false).eq('notif_incomplete_envoyee', false)
         .select('id').maybeSingle()
       if (!updated) return // déjà signalé par un autre déclenchement
-      const clientId = seance?.programmes?.client_id
+      // Lecture depuis la ref → `seance` (state) est capturé une fois pour toutes par
+      // ce handler monté au chargement (deps [] ci-dessous) et resterait figé à sa
+      // valeur initiale (null) sinon — même piège que `tracking`/`trackingRef` plus haut.
+      const currentSeance = seanceRef.current
+      const clientId = currentSeance?.programmes?.client_id
       const [coachId, clientRes] = await Promise.all([
         getCoachId(),
         clientId
@@ -677,7 +683,7 @@ export default function SeanceClient() {
         await supabase.from('notifications').insert([{
           destinataire_id: coachId,
           titre: 'Séance non terminée',
-          corps: `${prenom} a commencé "${seance?.nom || 'sa séance'}" sans la terminer — charges à consulter dans son suivi`,
+          corps: `${prenom} a commencé "${currentSeance?.nom || 'sa séance'}" sans la terminer — charges à consulter dans son suivi`,
           type: 'seance',
           lien: clientId ? `/client/${clientId}` : '/',
         }])
