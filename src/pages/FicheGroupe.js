@@ -1068,11 +1068,12 @@ export default function FicheGroupe() {
             <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {classementFFR.filter(c => (c.competition || null) === (groupe.monclubhouse_competition || null)).map(c => {
                 const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase())
+                const logoAff = (isOurs && groupe?.logo_url) || c.logo
                 return (
                   <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
                     <span style={{ fontSize: '0.68rem', color: isOurs ? accent : '#9ca3af', fontWeight: 800, width: 16, flexShrink: 0 }}>{c.position}</span>
-                    {c.logo
-                      ? <img src={c.logo} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+                    {logoAff
+                      ? <img src={logoAff} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
                       : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#9ca3af', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
                     }
                     <span style={{ flex: 1, fontSize: '0.75rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.equipe}</span>

@@ -61,12 +61,14 @@ export default function GroupeClassementView({ groupe, classementFFR, accent }) 
           <tbody>
             {current.rows.map((c, i) => {
               const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase() || '')
+              // Notre ligne : logo uploadé dans l'appli plutôt que celui scrapé sur monclubhouse.
+              const logoAff = (isOurs && groupe?.logo_url) || c.logo
               return (
                 <tr key={c.equipe + i} style={{ background: isOurs ? accent + '14' : 'transparent', borderBottom: '1px solid #f6f6f6' }}>
                   <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: isOurs ? accent : '#9ca3af' }}>{c.position}</td>
                   <td style={{ padding: '0.55rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {c.logo
-                      ? <img src={c.logo} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+                    {logoAff
+                      ? <img src={logoAff} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
                       : <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#f3f4f6', color: '#9ca3af', fontSize: '0.55rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
                     }
                     <span style={{ fontSize: '0.82rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333' }}>{c.equipe}</span>

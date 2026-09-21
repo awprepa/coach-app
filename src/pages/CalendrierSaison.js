@@ -2447,7 +2447,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       // Extérieur → notre logo = logo_ext, adverse = logo_dom
       const notreEquipeNom  = evt.est_domicile === true  ? evt.equipe_dom : evt.est_domicile === false ? evt.equipe_ext : (evt.equipe_dom || evt.equipe_ext)
       const advEquipeNom    = evt.est_domicile === true  ? evt.equipe_ext : evt.est_domicile === false ? evt.equipe_dom : (evt.equipe_ext || evt.equipe_dom)
-      const notreLogoUrl    = evt.est_domicile === true  ? evt.logo_dom   : evt.est_domicile === false ? evt.logo_ext   : (evt.logo_dom || evt.logo_ext)
+      // Notre logo = celui du groupe dans l'appli (uploadé par le coach), pas celui scrapé sur
+      // monclubhouse — évite aussi que le logo adverse se retrouve dupliqué des deux côtés quand
+      // le domicile/extérieur n'a pas pu être déterminé (logo_dom et logo_ext retombent alors sur
+      // la même valeur via les replis ci-dessous).
+      const notreLogoUrl    = groupe?.logo_url || (evt.est_domicile === true ? evt.logo_dom : evt.est_domicile === false ? evt.logo_ext : (evt.logo_dom || evt.logo_ext))
       const advLogoUrl      = evt.est_domicile === true  ? evt.logo_ext   : evt.est_domicile === false ? evt.logo_dom   : (evt.logo_ext || evt.logo_dom)
       const notreInitials   = (notreEquipeNom || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
       const advInitials     = (advEquipeNom || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()

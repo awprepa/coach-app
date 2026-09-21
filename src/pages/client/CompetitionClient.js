@@ -106,10 +106,12 @@ export default function CompetitionClient() {
     const lose = joue && (m.est_domicile ? m.score_dom < m.score_ext : m.est_domicile === false ? m.score_ext < m.score_dom : null)
     const bg = big ? (joue ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : (activeGroupe?.couleur || '#1e40af')) : '#fff'
 
-    // Logos : dom = logo_dom / ext = logo_ext ; notre équipe selon est_domicile
+    // Logos : dom = logo_dom / ext = logo_ext ; notre équipe selon est_domicile.
+    // Notre logo = celui du groupe dans l'appli (pas celui scrapé sur monclubhouse) — évite
+    // aussi le logo adverse dupliqué des deux côtés quand le domicile/extérieur est inconnu.
     const notreNom  = m.est_domicile === true  ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : (m.equipe_dom || m.equipe_ext)
     const advNom    = m.est_domicile === true  ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
-    const notreLogo = m.est_domicile === true  ? m.logo_dom   : m.est_domicile === false ? m.logo_ext   : (m.logo_dom || m.logo_ext)
+    const notreLogo = activeGroupe?.logo_url || (m.est_domicile === true ? m.logo_dom : m.est_domicile === false ? m.logo_ext : (m.logo_dom || m.logo_ext))
     const advLogo   = m.est_domicile === true  ? m.logo_ext   : m.est_domicile === false ? m.logo_dom   : (m.logo_ext || m.logo_dom)
     const notreInit = (notreNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
     const advInit   = (advNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -284,14 +286,15 @@ export default function CompetitionClient() {
                         {classement.map(c => {
                           const isOurs = notreEquipe?.equipe === c.equipe
                           const initials = c.equipe.split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                          const logoAff = (isOurs && activeGroupe?.logo_url) || c.logo
                           return (
                             <tr key={c.equipe} style={{ background: isOurs ? `color-mix(in srgb, ${gc} 8%, #fff)` : 'transparent', borderBottom: '1px solid #f3f4f6' }}>
                               <td style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: isOurs ? gc : '#6b7280', fontSize: '.78rem' }}>{c.position}</td>
                               <td style={{ padding: '4px 4px', width: 28, textAlign: 'center' }}>
-                                {c.logo
-                                  ? <img src={c.logo} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+                                {logoAff
+                                  ? <img src={logoAff} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
                                   : null}
-                                <div style={{ width: 22, height: 22, borderRadius: 4, background: '#f0f2f5', display: c.logo ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.55rem', fontWeight: 800, color: '#6b7280', margin: '0 auto' }}>{initials}</div>
+                                <div style={{ width: 22, height: 22, borderRadius: 4, background: '#f0f2f5', display: logoAff ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.55rem', fontWeight: 800, color: '#6b7280', margin: '0 auto' }}>{initials}</div>
                               </td>
                               <td style={{ padding: '8px 8px', fontWeight: isOurs ? 800 : 500, color: isOurs ? gc : '#1f2937',
                                 borderLeft: isOurs ? `3px solid ${gc}` : '3px solid transparent',
