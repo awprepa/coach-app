@@ -128,10 +128,24 @@ function isOurTeamLocal(localNom: string, clubSlug: string): boolean {
  *  affiche une AUTRE poule (vérifié : sans lui on tombe sur des clubs
  *  d'Île-de-France au lieu du Sud-Ouest). On récupère donc le chemin complet
  *  `pouleId.url_monclubhouse` tel quel depuis les données du calendrier. */
+/** Normalise pour comparer sans se soucier des espaces/accents/majuscules —
+ *  le champ "Compétition à suivre" est rempli à la main par le coach, qui
+ *  peut y coller le nom affiché sur le site ("National U18") plutôt que
+ *  l'identifiant technique ("national-u18"). */
+function slugify(s: string): string {
+  return s
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function matchesCompetition(match: any, competitionFilter: string | null): boolean {
   if (!competitionFilter) return true;
-  const identifiant: string = match?.competitionId?.identifiant || "";
-  return identifiant.toLowerCase() === competitionFilter.toLowerCase();
+  const filter = slugify(competitionFilter);
+  const identifiant: string = slugify(match?.competitionId?.identifiant || "");
+  const nom: string = slugify(match?.competitionId?.nom || "");
+  return filter === identifiant || filter === nom;
 }
 
 function extractPouleUrl(data: Record<string, any>, competitionFilter: string | null): string | null {
