@@ -140,6 +140,33 @@ function resolveExerciseThumb(ex) {
   return yt ? `https://img.youtube.com/vi/${yt}/mqdefault.jpg` : url
 }
 
+// Même calcul que côté client (SeanceClient.js) : la semaine réelle du cycle
+// dépend de la date de début du programme, pas d'un champ fixe sur la séance.
+function getSemaineActuelle(dateDebut) {
+  if (!dateDebut) return 1
+  const debut = new Date(dateDebut)
+  const diffJours = Math.floor((new Date() - debut) / (1000 * 60 * 60 * 24))
+  return Math.max(1, Math.ceil((diffJours + 1) / 7))
+}
+
+// Valeurs effectives d'un exercice pour la semaine en cours : la progression
+// (variante, séries, reps, intensité) prime sur les valeurs par défaut —
+// exactement la logique de renderExContent côté client, dupliquée ici pour
+// que la projection affiche la bonne variante (ex: goblet squat en S1 sur un
+// cycle de squat à la barre) plutôt que le nom générique de l'exercice.
+function resolveEffectif(ex, semaineActuelle) {
+  const progActif = (ex.progressions || []).find(p =>
+    semaineActuelle >= (p.semaine_debut || 1) && semaineActuelle <= (p.semaine_fin || 999)
+  )
+  return {
+    nom: progActif?.nom_variante || ex.nom,
+    series: progActif?.series || ex.series,
+    repetitions: progActif?.repetitions || ex.repetitions,
+    valeurIntensite: progActif?.valeur_intensite || ex.valeur_intensite,
+    progActif,
+  }
+}
+
 export default function SeanceProjection() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -172,7 +199,7 @@ export default function SeanceProjection() {
 
   async function load() {
     const [{ data: s }, { data: exs }] = await Promise.all([
-      supabase.from('seances').select('*, programmes(id, nom, client_id, groupe_id, template_id)').eq('id', id).single(),
+      supabase.from('seances').select('*, programmes(id, nom, client_id, groupe_id, template_id, date_debut, created_at, semaines)').eq('id', id).single(),
       supabase.from('exercices').select('*, bibliotheque_exercices(image_url)').eq('seance_id', id).order('ordre', { ascending: true }),
     ])
     setSeance(s)
@@ -199,11 +226,16 @@ export default function SeanceProjection() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'sans-serif' }}>Chargement...</p>
+    <div style={{ minHeight: '100vh', background: '#3d3d3d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'sans-serif' }}>Chargement...</p>
     </div>
   )
   if (!seance) return null
+
+  // ── Semaine réelle du cycle (détermine la variante/progression affichée) ──────
+  const dateDebutCycle = seance.programmes?.date_debut || seance.programmes?.created_at
+  const totalSemaines = seance.programmes?.semaines
+  const semaineActuelle = Math.min(getSemaineActuelle(dateDebutCycle), totalSemaines || Infinity)
 
   // ── Couleurs ──────────────────────────────────────────────────────────────────
   const PRIMARY   = club?.couleur            || '#FFD600'
@@ -215,8 +247,9 @@ export default function SeanceProjection() {
   const DARK_COLOR  = SECONDARY ? darkerOf(PRIMARY, SECONDARY) : PRIMARY
 
   // Fond : dérivé de la couleur sombre, très désaturé — luminosité relevée
+  // (32 plutôt que 22 : thème sombre mais plus clair, moins écrasé)
   const { h: darkH, s: darkS } = hexToHSL(DARK_COLOR)
-  const BG_COLOR = hslToHex(darkH, Math.min(darkS * 0.15, 10), 22)
+  const BG_COLOR = hslToHex(darkH, Math.min(darkS * 0.15, 10), 32)
 
   // Barre de gradient en haut si 2 couleurs
   const TOP_BAR = SECONDARY
@@ -293,16 +326,18 @@ export default function SeanceProjection() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            {seance.date && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: '700', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 3 }}>
-                  {seance.semaine ? `Semaine ${seance.semaine}` : ''}
+            <div style={{ textAlign: 'right' }}>
+              {dateDebutCycle && (
+                <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 3 }}>
+                  Semaine {semaineActuelle}{totalSemaines ? ` / ${totalSemaines}` : ''}
                 </div>
+              )}
+              {seance.date && (
                 <div style={{ fontSize: '1.5rem', fontWeight: '800', color: LIGHT_COLOR }}>
                   {new Date(seance.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             <button onClick={() => navigate(-1)} style={{
               background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
               color: 'rgba(255,255,255,0.4)', borderRadius: 10, padding: '0.5rem 1rem',
@@ -324,8 +359,8 @@ export default function SeanceProjection() {
             }}>
               {['', 'Exercice', 'Séries', 'Répétitions', 'Tempo', 'Récup.', 'Intensité'].map((label, i) => (
                 <span key={i} style={{
-                  fontSize: '8px', fontWeight: '700', letterSpacing: '1.5px',
-                  color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
+                  fontSize: '0.72rem', fontWeight: '800', letterSpacing: '1px',
+                  color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
                   textAlign: i > 1 ? 'center' : 'left',
                 }}>{label}</span>
               ))}
@@ -340,25 +375,27 @@ export default function SeanceProjection() {
                   <div key={gi} style={{
                     borderRadius: 8,
                     overflow: 'hidden',
-                    background: '#2e2e2e',
+                    background: '#383838',
                     borderLeft: `5px solid ${blockColor}`,
                     boxShadow: `0 0 0 1px ${blockColor}2a`,
                   }}>
                     {/* Label bloc — toujours affiché, pas seulement pour les supersets */}
                     <div style={{ padding: '6px 16px', background: blockColor + '1c', borderBottom: `1px solid ${blockColor}33` }}>
-                      <span style={{ fontSize: '10px', fontWeight: '900', letterSpacing: '2.5px', color: blockColor, textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '900', letterSpacing: '2px', color: blockColor, textTransform: 'uppercase' }}>
                         {g.letter ? (isSuperset ? `Superset · Bloc ${g.letter}` : `Bloc ${g.letter}`) : 'Exercice'}
                       </span>
                     </div>
 
                     {/* Lignes exercices — fond neutre, couleur en accents seulement */}
-                    {g.items.map((ex, i) => (
+                    {g.items.map((ex, i) => {
+                      const eff = resolveEffectif(ex, semaineActuelle)
+                      return (
                       <div key={ex.id} style={{
                         display: 'grid', gridTemplateColumns: COLS, gap: '8px',
                         alignItems: 'center',
                         padding: '11px 16px',
-                        background: i % 2 === 0 ? '#2e2e2e' : '#2a2a2a',
-                        borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                        background: i % 2 === 0 ? '#383838' : '#333333',
+                        borderTop: i > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
                       }}>
                         {/* Vignette */}
                         <div style={{
@@ -372,39 +409,47 @@ export default function SeanceProjection() {
                           }
                         </div>
 
-                        {/* Nom */}
-                        <span style={{ fontSize: '1.05rem', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                          {ex.nom}
-                        </span>
+                        {/* Nom — variante de la semaine en cours si une progression s'applique */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <span style={{ fontSize: '1.05rem', fontWeight: '600', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {eff.nom}
+                          </span>
+                          {eff.progActif && (
+                            <span style={{ flexShrink: 0, fontSize: '0.62rem', fontWeight: 800, color: blockColor, background: blockColor + '22', border: `1px solid ${blockColor}55`, borderRadius: 5, padding: '1px 6px' }}>
+                              {eff.progActif.label || `S${eff.progActif.semaine_debut}-${eff.progActif.semaine_fin}`}
+                            </span>
+                          )}
+                        </div>
 
                         {/* Séries */}
                         <span style={{ fontSize: '1.15rem', fontWeight: '900', color: blockColor, textAlign: 'center' }}>
-                          {ex.series ? `${ex.series}×` : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                          {eff.series ? `${eff.series}×` : <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
                         </span>
 
                         {/* Répétitions */}
-                        <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'rgba(255,255,255,0.85)', textAlign: 'center' }}>
-                          {ex.repetitions || <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'rgba(255,255,255,0.92)', textAlign: 'center' }}>
+                          {eff.repetitions || <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
                         </span>
 
                         {/* Tempo */}
-                        <span style={{ fontSize: '0.95rem', fontWeight: '500', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '500', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
                           {ex.tempo || '—'}
                         </span>
 
                         {/* Récupération */}
-                        <span style={{ fontSize: '1.05rem', fontWeight: '700', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
-                          {ex.recuperation || <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        <span style={{ fontSize: '1.05rem', fontWeight: '700', color: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
+                          {ex.recuperation || <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
                         </span>
 
                         {/* Intensité */}
-                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
                           {ex.type_intensite
-                            ? `${ex.type_intensite}${ex.valeur_intensite ? ' · ' + ex.valeur_intensite : ''}`
-                            : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                            ? `${ex.type_intensite}${eff.valeurIntensite ? ' · ' + eff.valeurIntensite : ''}`
+                            : <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
                         </span>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -415,7 +460,7 @@ export default function SeanceProjection() {
           {hasWarmup && (
             <div style={{ width: 270, flexShrink: 0 }}>
               <div style={{
-                fontSize: '9px', fontWeight: '900', letterSpacing: '3px',
+                fontSize: '0.75rem', fontWeight: '900', letterSpacing: '2px',
                 color: LIGHT_COLOR, textTransform: 'uppercase',
                 marginBottom: 14, paddingBottom: 8,
                 borderBottom: `1px solid rgba(255,255,255,0.1)`,
