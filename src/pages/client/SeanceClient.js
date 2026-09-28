@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom'
 import { sendNotif, getCoachId } from '../../notifs'
 import { computeExerciseXp, fetchExerciceSetsByName, totalXpFromByName } from '../../data/xpSystem'
 import XpBulle, { useXpBulle } from '../../components/XpBulle'
+import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -425,6 +426,26 @@ export default function SeanceClient() {
     const cur = (local.commentaires || []).find(c => c.semaine === local.semaineActuelle)
     if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
   }
+
+  // Rafraîchit uniquement les paramètres affichés de chaque exercice (nom,
+  // séries, reps, tempo, récup, intensité, progressions par semaine, média) —
+  // sans toucher à `tracking`/`charges`, pour ne jamais écraser une saisie en
+  // cours (le SW peut déclencher ce rafraîchissement à tout moment via
+  // aw:data-refreshed dès qu'il détecte un changement serveur, y compris pendant
+  // que le joueur tape). Corrige le cas où le coach modifie un exercice (ex: une
+  // variante sur 1-2 semaines) pendant que la page du joueur est déjà ouverte.
+  async function refreshExerciceParams() {
+    const { data, error } = await supabase
+      .from('exercices').select('*, bibliotheque_exercices(image_url)')
+      .eq('seance_id', id).order('ordre', { ascending: true })
+    if (error || !data) return
+    const fraisParId = Object.fromEntries(data.map(e => [e.id, e]))
+    setExercices(prev => prev.map(ex => {
+      const frais = fraisParId[ex.id]
+      return frais ? { ...ex, ...frais, charges: ex.charges } : ex
+    }))
+  }
+  useAutoRefresh(refreshExerciceParams)
 
   async function fetchExercices(totalSem, dateDebut, semAct) {
     const { data, error } = await supabase
