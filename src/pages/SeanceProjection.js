@@ -131,10 +131,17 @@ function youtubeId(url) {
   return m ? m[1] : null
 }
 
-// Vignette d'exercice : media_url (image ou vidéo YouTube) > image de la
-// bibliothèque > pastille de repli colorée avec une icône générique.
-function resolveExerciseThumb(ex) {
-  const url = ex.media_url || ex.bibliotheque_exercices?.image_url || null
+// Média d'un exercice : quand une progression change l'exercice pour la semaine
+// en cours (ex: squat → gobelet squat), son propre média prime — sinon on
+// affiche celui de l'exercice de base, ce qui induirait en erreur (mauvais
+// mouvement affiché). Repli : media_url de l'exercice > image bibliothèque.
+function resolveExerciseMedia(ex, variantImageMap, progActif) {
+  const variantImg = progActif?.nom_variante ? variantImageMap[progActif.nom_variante.toLowerCase()] : null
+  return variantImg || ex.media_url || ex.bibliotheque_exercices?.image_url || null
+}
+
+// Vignette (image ou poster YouTube) à partir d'une URL média résolue.
+function thumbFromMedia(url) {
   if (!url) return null
   const yt = youtubeId(url)
   return yt ? `https://img.youtube.com/vi/${yt}/mqdefault.jpg` : url
@@ -175,6 +182,8 @@ export default function SeanceProjection() {
   const [club, setClub] = useState(null)
   const [loading, setLoading] = useState(true)
   const [scale, setScale] = useState(1)
+  const [variantImageMap, setVariantImageMap] = useState({}) // { nom_lower: image_url }
+  const [mediaModal, setMediaModal] = useState(null) // { nom, url }
   const contentRef = useRef(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,6 +213,19 @@ export default function SeanceProjection() {
     ])
     setSeance(s)
     setExercices(exs || [])
+
+    // Images des variantes de progression (ex: "Gobelet Squat (H)") depuis la
+    // bibliothèque — même logique que côté client (SeanceClient.js).
+    const variantNoms = [...new Set(
+      (exs || []).flatMap(ex => (ex.progressions || []).map(p => p.nom_variante).filter(Boolean))
+    )]
+    if (variantNoms.length > 0) {
+      const { data: variantData } = await supabase
+        .from('bibliotheque_exercices').select('nom, image_url').in('nom', variantNoms)
+      const vMap = {}
+      ;(variantData || []).forEach(v => { if (v.image_url) vMap[v.nom.toLowerCase()] = v.image_url })
+      setVariantImageMap(vMap)
+    }
 
     const groupeId = s?.programmes?.groupe_id
     const clientId = s?.programmes?.client_id
@@ -397,17 +419,26 @@ export default function SeanceProjection() {
                         background: i % 2 === 0 ? '#383838' : '#333333',
                         borderTop: i > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
                       }}>
-                        {/* Vignette */}
-                        <div style={{
-                          width: 44, height: 44, borderRadius: 7, overflow: 'hidden', flexShrink: 0,
-                          background: blockColor + '22',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {resolveExerciseThumb(ex)
-                            ? <img src={resolveExerciseThumb(ex)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={blockColor} strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M4 4l3 3M20 20l-3-3M7 17l-3 3M17 7l3-3" /></svg>
-                          }
-                        </div>
+                        {/* Vignette — média de la variante active si la progression en définit une,
+                            jamais celui de l'exercice de base (induirait en erreur sur le mouvement à faire) */}
+                        {(() => {
+                          const media = resolveExerciseMedia(ex, variantImageMap, eff.progActif)
+                          const thumb = thumbFromMedia(media)
+                          return (
+                            <div onClick={() => thumb && setMediaModal({ nom: eff.nom, url: media })}
+                              style={{
+                                width: 44, height: 44, borderRadius: 7, overflow: 'hidden', flexShrink: 0,
+                                background: blockColor + '22',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: thumb ? 'pointer' : 'default',
+                              }}>
+                              {thumb
+                                ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={blockColor} strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M4 4l3 3M20 20l-3-3M7 17l-3 3M17 7l3-3" /></svg>
+                              }
+                            </div>
+                          )
+                        })()}
 
                         {/* Nom — variante de la semaine en cours si une progression s'applique */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
@@ -518,6 +549,34 @@ export default function SeanceProjection() {
           )}
         </div>
       </div>
+
+      {/* ── Média agrandi ── */}
+      {mediaModal && (
+        <div onClick={() => setMediaModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: '#1c1c1c', borderRadius: 16, overflow: 'hidden', width: '100%', maxWidth: 640, boxShadow: '0 30px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1.2rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>{mediaModal.nom}</span>
+              <button onClick={() => setMediaModal(null)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, fontSize: '1.2rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            {youtubeId(mediaModal.url)
+              ? <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${youtubeId(mediaModal.url)}?autoplay=1&rel=0`}
+                    title={mediaModal.nom}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+                  />
+                </div>
+              : <img src={mediaModal.url} alt={mediaModal.nom} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block', background: '#000' }} />
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
 }
