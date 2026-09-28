@@ -166,17 +166,37 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
 
   // ── Chargement saison (évènements + phases) ─────────────────────────────────
   // silent=true : pas de spinner, préserve la position de scroll (utilisé après create/edit/delete)
+  // Remonte la chaîne de groupes parents (sous-sous-groupe → sous-groupe → groupe
+  // principal…) pour hériter de leurs évènements dans le calendrier.
+  async function getAncestorIds(startParentId) {
+    const ids = []
+    let pid = startParentId
+    let guard = 0
+    while (pid && guard < 10) {
+      ids.push(pid)
+      const { data } = await supabase.from('groupes').select('parent_id').eq('id', pid).maybeSingle()
+      pid = data?.parent_id || null
+      guard++
+    }
+    return ids
+  }
+
   const loadSeason = useCallback(async (silent = false) => {
     if (!groupe) return
     const scrollY = window.scrollY
     if (!silent) setLoading(true)
+    const ancestorIds = groupe.parent_id ? await getAncestorIds(groupe.parent_id) : []
     const [{ data: evs }, { data: phs }] = await Promise.all([
       supabase.from('groupe_evenements').select('*')
-        .eq('groupe_id', groupe.id).gte('date', seasonStart).lte('date', seasonEnd).order('date'),
+        .in('groupe_id', [groupe.id, ...ancestorIds]).gte('date', seasonStart).lte('date', seasonEnd).order('date'),
       supabase.from('groupe_phases').select('*')
         .eq('groupe_id', groupe.id).order('ordre'),
     ])
-    setEvenements(evs || [])
+    // Évènements hérités d'un groupe parent (entraînements communs à toute
+    // l'équipe) : affichés partout, mais modifiables seulement depuis le
+    // groupe qui les a créés — sinon un joueur de "Avants" pourrait supprimer
+    // l'entraînement de tout "Juniors U18".
+    setEvenements((evs || []).map(e => ({ ...e, _inherited: e.groupe_id !== groupe.id })))
     setPhases(phs || [])
     // Charger les données FFR si le groupe a un lien monclubhouse
     if (groupe.monclubhouse_url) {
@@ -204,7 +224,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   useEffect(() => {
     if (!openEventId || autoOpenedRef.current === openEventId || !evenements.length) return
     const found = evenements.find(e => e.id === openEventId)
-    if (found) { autoOpenedRef.current = openEventId; openEdit(found) }
+    if (found) {
+      autoOpenedRef.current = openEventId
+      if (found._inherited) loadBlocs(found.id).then(blocs => setDayPreview({ evt: found, blocs }))
+      else openEdit(found)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEventId, evenements])
 
@@ -712,7 +736,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const s = selRef.current
     if (!s || !groupe) return
     const [start, end] = [s.start, s.end].sort()
-    const toDelete = evenements.filter(ev => ev.date >= start && ev.date <= end)
+    // Jamais les évènements hérités d'un groupe parent — sinon une sélection
+    // multiple depuis un sous-groupe supprimerait l'entraînement de tout le monde.
+    const toDelete = evenements.filter(ev => ev.date >= start && ev.date <= end && !ev._inherited)
     if (!toDelete.length) return
     for (const ev of toDelete) {
       await supabase.from('groupe_evenements').delete().eq('id', ev.id)
@@ -862,9 +888,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
         {/* ── Évènements normaux (flux normal, derrière l'overlay FFR si présent) ── */}
         {evs.map(e => {
           const T = TYPES[e.type] || TYPES.autre
-          const onCtx = ev => openCtx(ev, e.date, e)
-          const onEvtClick = () => { lastEvtRef.current = e; openEdit(e) }
-          const dragProps = {
+          // Évènement hérité d'un groupe parent : lecture seule (aperçu), pas de
+          // menu contextuel ni de déplacement — à modifier depuis son groupe d'origine.
+          const onCtx = e._inherited ? undefined : ev => openCtx(ev, e.date, e)
+          const onEvtClick = e._inherited
+            ? async () => { const blocs = await loadBlocs(e.id); setDayPreview({ evt: e, blocs }) }
+            : () => { lastEvtRef.current = e; openEdit(e) }
+          const dragProps = e._inherited ? {} : {
             draggable: true,
             onMouseDown: ev => { ev.stopPropagation(); lastEvtRef.current = e; lastDateRef.current = e.date },
             onDragStart: ev => { ev.stopPropagation(); setDragEvt(e); ev.dataTransfer.effectAllowed = 'move' },
@@ -874,30 +904,30 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
           if (e.type === 'match') {
             const mc = matchCatColor(e.categorie, groupColor)
             return (
-              <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}`}
-                style={{ background: mc, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
+              <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}${e._inherited ? ' (groupe principal)' : ''}`}
+                style={{ background: mc, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: e._inherited ? 'pointer' : 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
                 {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
               </div>
             )
           }
           if (e.type === 'recup') {
-            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: 'grab', opacity: dragOpacity }} />
+            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: e._inherited ? 'pointer' : 'grab', opacity: dragOpacity }} />
           }
           if (e.type === 'test') {
-            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Tests" style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
+            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Tests${e._inherited ? ' (groupe principal)' : ''}`} style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: e._inherited ? 'pointer' : 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
           }
           const neutral = T.neutral
           const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
           const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
           return (
-            <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={T.label}
+            <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`${T.label}${e._inherited ? ' (groupe principal)' : ''}`}
               style={{
-                fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: 'grab',
+                fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: e._inherited ? 'pointer' : 'grab',
                 overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
                 color: styleColor ? '#fff' : neutral ? '#5b626c' : '#3a4049',
                 background: styleColor || (neutral ? '#f0f2f5' : `color-mix(in srgb, ${groupColor} 12%, #fff)`),
-                borderLeft: `3px solid ${styleColor || (neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`)}`,
+                borderLeft: `3px ${e._inherited ? 'dashed' : 'solid'} ${styleColor || (neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`)}`,
               }}>
               {txt}
             </div>
