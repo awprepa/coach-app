@@ -336,8 +336,17 @@ export default function FicheGroupe() {
   // ── Sous-groupes ───────────────────────────────────────────────────────────
   async function creerSousGroupe() {
     if (!newSGNom.trim()) return
+    // Hérite des couleurs/logo du groupe principal par défaut (identité visuelle
+    // commune dans le calendrier, la projection, le classement...) — la pastille
+    // sélectionnée ci-dessus permet de le distinguer visuellement si besoin.
     const { data, error } = await supabase.from('groupes')
-      .insert([{ nom: newSGNom.trim(), couleur: newSGCouleur || null, parent_id: id }]).select().single()
+      .insert([{
+        nom: newSGNom.trim(),
+        couleur: newSGCouleur || groupe?.couleur || null,
+        couleur_secondaire: groupe?.couleur_secondaire || null,
+        logo_url: groupe?.logo_url || null,
+        parent_id: id,
+      }]).select().single()
     if (error) { alert(error.message); return }
     setSousGroupes([...sousGroupes, data])
     setNewSGNom('')
