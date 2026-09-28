@@ -357,12 +357,31 @@ export default function FicheGroupe() {
   }
 
   // ── Membres ────────────────────────────────────────────────────────────────
+  // Sous-groupe (parent_id défini) → on transfère des joueurs déjà présents dans
+  // le groupe principal, plutôt que de proposer des clients qui n'y sont pas.
   async function ouvrirAddMembre() {
+    if (groupe?.parent_id) return ouvrirTransfererMembre()
     // Charger tous les clients qui ne sont dans AUCUN groupe
     const { data: tousMembres } = await supabase.from('groupe_membres').select('client_id')
     const membresIds = new Set((tousMembres || []).map(m => m.client_id))
     const { data: allClients } = await supabase.from('clients').select('id, prenom, nom, offre').order('nom')
     const dispo = (allClients || []).filter(c => !membresIds.has(c.id))
+    setCandidats(dispo)
+    setSearchMembre('')
+    setSelectedCandidats(new Set())
+    setShowAddMembre(true)
+  }
+
+  async function ouvrirTransfererMembre() {
+    // Membres déjà dans CE sous-groupe (à exclure des candidats)
+    const dejaIds = new Set(membres.map(m => m.id))
+    const { data: rows } = await supabase
+      .from('groupe_membres').select('client_id, clients(id, prenom, nom, offre)')
+      .eq('groupe_id', groupe.parent_id)
+    const dispo = (rows || [])
+      .map(r => r.clients).filter(Boolean)
+      .filter(c => !dejaIds.has(c.id))
+      .sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
     setCandidats(dispo)
     setSearchMembre('')
     setSelectedCandidats(new Set())
@@ -386,6 +405,7 @@ export default function FicheGroupe() {
   }
 
   async function ajouterMembresSelectionnes() {
+    if (groupe?.parent_id) return transfererMembresSelectionnes()
     if (!selectedCandidats.size) return
     setAddingMembres(true)
     const newIds = [...selectedCandidats]
@@ -401,6 +421,29 @@ export default function FicheGroupe() {
     setSelectedCandidats(new Set())
 
     // Rafraîchir les données sans passer par le spinner (silent)
+    await load(true)
+  }
+
+  // Transfère des joueurs du groupe principal vers ce sous-groupe : ils quittent
+  // le principal (retirés de groupe_membres) et rejoignent le sous-groupe. Leur
+  // fiche effectif (poste, blessures, tests — table groupe_joueurs) les suit pour
+  // ne pas perdre cet historique.
+  async function transfererMembresSelectionnes() {
+    if (!selectedCandidats.size) return
+    setAddingMembres(true)
+    const clientIds = [...selectedCandidats]
+
+    await supabase.from('groupe_membres').delete().eq('groupe_id', groupe.parent_id).in('client_id', clientIds)
+    const rows = clientIds.map(clientId => ({ groupe_id: id, client_id: clientId }))
+    const { error } = await supabase.from('groupe_membres').insert(rows)
+    if (error) { setAddingMembres(false); alert(error.message); return }
+
+    await supabase.from('groupe_joueurs').update({ groupe_id: id })
+      .eq('groupe_id', groupe.parent_id).in('client_id', clientIds)
+
+    setAddingMembres(false)
+    setShowAddMembre(false)
+    setSelectedCandidats(new Set())
     await load(true)
 
     // Proposer de pousser les programmes existants aux nouveaux membres
@@ -1052,7 +1095,9 @@ export default function FicheGroupe() {
               </tbody>
             </table>
           </div>
-          <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>+ Ajouter un membre</button>
+          <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>
+            {groupe.parent_id ? `+ Transférer depuis ${parent?.nom || 'le groupe principal'}` : '+ Ajouter un membre'}
+          </button>
         </div>
 
         <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: classementFFR.length > 0 ? 'pointer' : 'default' }}
@@ -1441,7 +1486,7 @@ export default function FicheGroupe() {
 
       {/* ── Modal ajout membre ── */}
       {showAddMembre && (
-        <Modal title="Ajouter des membres" onClose={() => setShowAddMembre(false)}>
+        <Modal title={groupe.parent_id ? `Transférer depuis ${parent?.nom || 'le groupe principal'}` : 'Ajouter des membres'} onClose={() => setShowAddMembre(false)}>
           <label style={S.label}>Rechercher un client</label>
           <input
             autoFocus value={searchMembre} onChange={e => setSearchMembre(e.target.value)}
@@ -1459,7 +1504,11 @@ export default function FicheGroupe() {
           )}
           {candidatsFiltres.length === 0 ? (
             <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1rem 0' }}>
-              {searchMembre ? 'Aucun client trouvé.' : 'Tous les clients sont déjà dans un groupe.'}
+              {searchMembre
+                ? 'Aucun client trouvé.'
+                : groupe.parent_id
+                  ? `Tous les joueurs de ${parent?.nom || 'le groupe principal'} sont déjà dans ce sous-groupe.`
+                  : 'Tous les clients sont déjà dans un groupe.'}
             </p>
           ) : (
             <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1rem' }}>
@@ -1484,7 +1533,9 @@ export default function FicheGroupe() {
           {selectedCandidats.size > 0 && (
             <button onClick={ajouterMembresSelectionnes} disabled={addingMembres}
               style={{ width: '100%', background: accent, color: '#fff', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {addingMembres ? 'Ajout en cours…' : `Ajouter ${selectedCandidats.size} membre${selectedCandidats.size > 1 ? 's' : ''}`}
+              {groupe.parent_id
+                ? (addingMembres ? 'Transfert en cours…' : `Transférer ${selectedCandidats.size} joueur${selectedCandidats.size > 1 ? 's' : ''}`)
+                : (addingMembres ? 'Ajout en cours…' : `Ajouter ${selectedCandidats.size} membre${selectedCandidats.size > 1 ? 's' : ''}`)}
             </button>
           )}
         </Modal>
