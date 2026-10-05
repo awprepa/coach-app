@@ -120,6 +120,7 @@ export default function Factures() {
 
   // ── Tableau paiements ───────────────────────────────────────────────────
   const [filter, setFilter]               = useState('tous')
+  const [caView, setCaView]               = useState(null) // null | 'mois' | 'total'
   const [expanded, setExpanded]           = useState(null) // clientId déplié
   const [showManual, setShowManual]       = useState(false)
   const [manualForm, setManualForm]       = useState(EMPTY_MANUAL())
@@ -485,6 +486,26 @@ export default function Factures() {
   const caMois  = paiementsRecus.filter(p => p.date_paiement.slice(0, 7) === moisCourant).reduce((s, p) => s + (parseFloat(p.montant) || 0), 0)
   const caTotal = paiementsRecus.reduce((s, p) => s + (parseFloat(p.montant) || 0), 0)
 
+  // Liste pour le détail "Chiffre d'affaires" (ce mois, ou tout l'historique
+  // groupé par mois) : quand ils ont été validés comme payés, par qui, combien.
+  const caListe = caView
+    ? paiementsRecus
+        .filter(p => caView === 'total' || p.date_paiement.slice(0, 7) === moisCourant)
+        .sort((a, b) => b.date_paiement.localeCompare(a.date_paiement))
+    : []
+  const caListeParMois = []
+  caListe.forEach(p => {
+    const moisKey = p.date_paiement.slice(0, 7)
+    let groupe = caListeParMois.find(g => g.moisKey === moisKey)
+    if (!groupe) { groupe = { moisKey, items: [], total: 0 }; caListeParMois.push(groupe) }
+    groupe.items.push(p)
+    groupe.total += parseFloat(p.montant) || 0
+  })
+  function moisLabel(moisKey) {
+    const [y, m] = moisKey.split('-').map(Number)
+    return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  }
+
   return (
     <div style={S.page}>
 
@@ -492,7 +513,6 @@ export default function Factures() {
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Paiements</h1>
-          <p style={S.sub}>Calculé automatiquement depuis les contrats signés.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
@@ -502,14 +522,14 @@ export default function Factures() {
 
       {/* ── Chiffre d'affaires (comptabilité) ── */}
       <div style={S.caRow}>
-        <div style={S.caCard}>
-          <div style={S.caLabel}>CA ce mois-ci</div>
+        <button onClick={() => setCaView('mois')} style={S.caCard}>
+          <div style={S.caLabel}>Chiffre d'affaires ce mois-ci</div>
           <div style={S.caVal}>{caMois.toFixed(0)} €</div>
-        </div>
-        <div style={S.caCard}>
-          <div style={S.caLabel}>CA total</div>
+        </button>
+        <button onClick={() => setCaView('total')} style={S.caCard}>
+          <div style={S.caLabel}>Chiffre d'affaires total</div>
           <div style={S.caVal}>{caTotal.toFixed(0)} €</div>
-        </div>
+        </button>
       </div>
 
       {/* ── Paramètres coach (pour les factures PDF) ── */}
@@ -898,6 +918,47 @@ export default function Factures() {
         </div>
       )}
 
+      {/* ── Détail chiffre d'affaires (ce mois / tout l'historique) ── */}
+      {caView && (
+        <div style={S.caPageOverlay} onClick={() => setCaView(null)}>
+          <div style={S.caPage} onClick={e => e.stopPropagation()}>
+            <div style={S.caPageHead}>
+              <div>
+                <p style={S.caPageTitle}>Chiffre d'affaires {caView === 'mois' ? `— ${moisLabel(moisCourant)}` : '— Historique complet'}</p>
+                <p style={S.caPageTotal}>{(caView === 'mois' ? caMois : caTotal).toFixed(0)} € reçus{caView === 'mois' ? ' ce mois-ci' : ' au total'}</p>
+              </div>
+              <button onClick={() => setCaView(null)} style={S.btnClose}>✕</button>
+            </div>
+
+            {caListe.length === 0 ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 0' }}>Aucun paiement reçu pour l'instant.</p>
+            ) : caListeParMois.map(groupe => (
+              <div key={groupe.moisKey} style={{ marginBottom: '1.25rem' }}>
+                {caView === 'total' && (
+                  <div style={S.caMoisHead}>
+                    <span style={{ textTransform: 'capitalize' }}>{moisLabel(groupe.moisKey)}</span>
+                    <span>{groupe.total.toFixed(0)} €</span>
+                  </div>
+                )}
+                <div style={S.card}>
+                  {groupe.items.map((p, i) => (
+                    <div key={p.id} style={{ ...S.caLigne, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 700, color: '#111', fontSize: '0.86rem' }}>{p.clients?.prenom} {p.clients?.nom}</p>
+                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.76rem', color: '#9ca3af' }}>
+                          Validé le {fmtDate(p.date_paiement)}{(p.contrats?.formule_label || p.description) && ` — ${p.contrats?.formule_label || p.description}`}
+                        </p>
+                      </div>
+                      <span style={{ fontWeight: 800, color: '#111', fontSize: '0.95rem' }}>{parseFloat(p.montant).toFixed(0)} €</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Aperçu + impression facture ── */}
       {facturePrint && (
         <div style={{ ...S.card, marginTop: '1rem' }}>
@@ -1089,7 +1150,7 @@ const S = {
   // Pastilles filtre
   // Chiffre d'affaires (informatif, pas des filtres — fond sombre pour les distinguer des pastilles)
   caRow:       { display: 'flex', gap: '0.7rem', marginBottom: '1rem', flexWrap: 'wrap' },
-  caCard:      { flex: 1, minWidth: 160, background: '#1f2937', borderRadius: 14, padding: '0.85rem 1.1rem' },
+  caCard:      { flex: 1, minWidth: 160, background: '#1f2937', borderRadius: 14, padding: '0.85rem 1.1rem', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
   caLabel:     { fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '0.25rem' },
   caVal:       { fontSize: '1.4rem', fontWeight: 900, color: '#e4f816' },
 
@@ -1114,6 +1175,15 @@ const S = {
   detailRow:   { background: '#fafafa', borderBottom: '1px solid #f3f4f6' },
   detailInner: { padding: '0.2rem 1rem 1rem 3.6rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   caClient:    { fontSize: '0.74rem', color: '#6b7280', fontWeight: 600, marginBottom: '0.15rem' },
+
+  // Page détail chiffre d'affaires
+  caPageOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', justifyContent: 'center', overflowY: 'auto', padding: '2.5rem 1rem' },
+  caPage:         { background: '#f6f7f8', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 640, height: 'fit-content', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' },
+  caPageHead:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
+  caPageTitle:    { fontSize: '1.1rem', fontWeight: 900, color: '#111', margin: 0 },
+  caPageTotal:    { fontSize: '0.85rem', color: '#6b7280', margin: '0.25rem 0 0', fontWeight: 600 },
+  caMoisHead:     { display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '0.4rem', padding: '0 0.2rem' },
+  caLigne:        { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.2rem' },
   hist:        { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#6b7280', padding: '0.3rem 0' },
   histLink:    { background: 'none', border: 'none', color: '#374151', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', padding: 0 },
   histIconBtn: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '0.2rem', display: 'flex' },
