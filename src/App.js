@@ -181,8 +181,12 @@ function IOSInstallWall() {
   const isInApp    = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i.test(ua)
   const isStandalone = window.navigator.standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
+  // Chrome/Firefox/Edge/Opera sur iOS tournent sur le moteur WebKit imposé par
+  // Apple mais n'exposent pas (ou mal) "Sur l'écran d'accueil" — seul Safari
+  // le permet de façon fiable. On les détecte via leur UA dédié.
+  const isNonSafariBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\//i.test(ua)
 
-  // Afficher seulement sur iOS Safari, non installé, hors in-app browser
+  // Afficher seulement sur iOS, non installé, hors in-app browser
   if (!isIOS || isStandalone || isInApp) return null
 
   return createPortal(
@@ -203,53 +207,81 @@ function IOSInstallWall() {
         AWprepa fonctionne uniquement en tant qu'application installée.
       </p>
 
-      {/* Étapes */}
-      <div style={{
-        width: '100%', maxWidth: 340,
-        background: 'rgba(255,255,255,0.06)', borderRadius: 16,
-        padding: '16px 18px', marginBottom: 32,
-        display: 'flex', flexDirection: 'column', gap: 14,
-      }}>
-        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-          3 étapes pour installer
-        </p>
-        {/* Étape 1 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={SW.num}><span>1</span></div>
-          <div>
-            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>•••</strong> en bas de Safari</p>
-            <p style={SW.stepSub}>Le bouton avec trois points dans la barre de navigation</p>
+      {isNonSafariBrowser ? (
+        /* Chrome / Firefox / Edge sur iPhone : l'ajout à l'écran d'accueil n'y
+           est pas fiable — on redirige vers Safari plutôt que de montrer des
+           étapes qui ne fonctionneront pas dans ce navigateur. */
+        <div style={{
+          width: '100%', maxWidth: 340,
+          background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+          padding: '18px', marginBottom: 8,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+        }}>
+          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', textAlign: 'center', margin: 0 }}>
+            Ouvre ce lien dans <span style={{ color: '#e4f816' }}>Safari</span>
+          </p>
+          <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+            Sur iPhone, l'installation ne fonctionne que depuis Safari. Copie l'adresse ci-dessous et colle-la dans Safari pour installer l'application.
+          </p>
+          <div style={{
+            width: '100%', background: 'rgba(255,255,255,0.08)', borderRadius: 10,
+            padding: '10px 12px', fontSize: '0.78rem', color: '#e4f816', wordBreak: 'break-all',
+            textAlign: 'center', fontFamily: 'monospace',
+          }}>
+            {window.location.href}
           </div>
         </div>
-        {/* Étape 2 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={SW.num}><span>2</span></div>
-          <div>
-            <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Partager"</strong></p>
-            <p style={SW.stepSub}>Dans le menu qui s'affiche</p>
+      ) : (
+        <>
+          {/* Étapes */}
+          <div style={{
+            width: '100%', maxWidth: 340,
+            background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+            padding: '16px 18px', marginBottom: 32,
+            display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+            <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+              3 étapes pour installer
+            </p>
+            {/* Étape 1 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={SW.num}><span>1</span></div>
+              <div>
+                <p style={SW.stepTitle}>Appuie sur l'icône <strong style={{ color: '#e4f816' }}>menu</strong> en bas de Safari</p>
+                <p style={SW.stepSub}>Le bouton avec des traits horizontaux, dans la barre de navigation</p>
+              </div>
+            </div>
+            {/* Étape 2 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={SW.num}><span>2</span></div>
+              <div>
+                <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Partager"</strong></p>
+                <p style={SW.stepSub}>Dans le menu qui s'affiche</p>
+              </div>
+            </div>
+            {/* Étape 3 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={SW.num}><span>3</span></div>
+              <div>
+                <p style={SW.stepTitle}>Choisis <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
+                <p style={SW.stepSub}>Puis appuie sur "Ajouter" en haut à droite</p>
+              </div>
+            </div>
           </div>
-        </div>
-        {/* Étape 3 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={SW.num}><span>3</span></div>
-          <div>
-            <p style={SW.stepTitle}>Choisis <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
-            <p style={SW.stepSub}>Puis appuie sur "Ajouter" en haut à droite</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-          Le bouton ••• est ici ↓
-        </p>
-        <div style={{ animation: 'bounceDown 1.2s ease-in-out infinite' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
-          </svg>
-        </div>
-      </div>
+          {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+              Le bouton menu est ici ↓
+            </p>
+            <div style={{ animation: 'bounceDown 1.2s ease-in-out infinite' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+              </svg>
+            </div>
+          </div>
+        </>
+      )}
       <style>{`@keyframes bounceDown { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }`}</style>
     </div>,
     document.body
