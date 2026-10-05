@@ -243,25 +243,39 @@ function IOSInstallWall() {
             <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
               3 étapes pour installer
             </p>
-            {/* Étape 1 */}
+            {/* Étape 1 — icône menu (traits horizontaux) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={SW.num}><span>1</span></div>
+              <div style={SW.num}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+                </svg>
+              </div>
               <div>
                 <p style={SW.stepTitle}>Appuie sur l'icône <strong style={{ color: '#e4f816' }}>menu</strong> en bas de Safari</p>
                 <p style={SW.stepSub}>Le bouton avec des traits horizontaux, dans la barre de navigation</p>
               </div>
             </div>
-            {/* Étape 2 */}
+            {/* Étape 2 — icône partager (carré + flèche vers le haut) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={SW.num}><span>2</span></div>
+              <div style={SW.num}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                  <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+              </div>
               <div>
                 <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Partager"</strong></p>
                 <p style={SW.stepSub}>Dans le menu qui s'affiche</p>
               </div>
             </div>
-            {/* Étape 3 */}
+            {/* Étape 3 — icône "+" dans un carré arrondi (Sur l'écran d'accueil) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={SW.num}><span>3</span></div>
+              <div style={SW.num}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="6"/>
+                  <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+              </div>
               <div>
                 <p style={SW.stepTitle}>Choisis <strong style={{ color: '#e4f816' }}>"Sur l'écran d'accueil"</strong></p>
                 <p style={SW.stepSub}>Puis appuie sur "Ajouter" en haut à droite</p>

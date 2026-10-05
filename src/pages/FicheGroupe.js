@@ -463,7 +463,7 @@ export default function FicheGroupe() {
       .is('template_id', null)
       .order('created_at', { ascending: false })
     if (progs?.length > 0) {
-      setNewMembresIds(newIds)
+      setNewMembresIds(clientIds)
       setProgsDispos(progs)
       setSelectedProgsForNew(new Set(progs.map(p => p.id)))
       setShowPushToNew(true)
