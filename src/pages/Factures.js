@@ -43,6 +43,20 @@ const EMPTY_MANUAL = () => ({ client_id: '', montant: '', description: '', date_
 function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
 function initials(prenom, nom) { return `${(prenom||'?')[0]}${(nom||'?')[0]}`.toUpperCase() }
 
+// Temps restant sur l'engagement du contrat en cours (null si pas de contrat,
+// "Sans engagement" pour un renouvellement mois par mois sans date de fin).
+function engagementRestant(contrat) {
+  if (!contrat) return null
+  if (!contrat.engagement_mois) return 'Sans engagement'
+  if (!contrat.date_fin) return null
+  const today = new Date().toISOString().slice(0, 10)
+  if (contrat.date_fin < today) return 'Terminé'
+  const jours = Math.ceil((new Date(contrat.date_fin) - new Date(today)) / 86400000)
+  if (jours < 30) return `${jours} j restant${jours > 1 ? 's' : ''}`
+  const mois = Math.round(jours / 30)
+  return `${mois} mois restant${mois > 1 ? 's' : ''}`
+}
+
 // Regroupe les lignes `paiements` par client et calcule le statut global de
 // chacun (à jour / bientôt / en retard) à partir de sa plus proche échéance
 // non payée — c'est tout le "système" : rien à entretenir à la main.
@@ -70,11 +84,15 @@ function buildRows(paiements) {
       }
     }
 
+    const caTotal = paid.reduce((s, p) => s + (parseFloat(p.montant) || 0), 0)
+
     return {
       clientId: client?.id, client,
       history: [...rows].sort((a, b) => (b.date_echeance || b.date_paiement || '').localeCompare(a.date_echeance || a.date_paiement || '')),
       next, last, offre, statusKey,
       montant: next?.montant ?? last?.montant ?? 0,
+      caTotal,
+      engagement: engagementRestant(offre),
     }
   })
 
@@ -113,7 +131,7 @@ export default function Factures() {
   const loadPaiements = useCallback(async () => {
     const { data } = await supabase
       .from('paiements')
-      .select('*, clients(id, prenom, nom, email), contrats(formule_label, engagement_mois, prix_mensuel)')
+      .select('*, clients(id, prenom, nom, email), contrats(formule_label, engagement_mois, prix_mensuel, date_fin)')
       .order('date_echeance', { ascending: false })
     setPaiements(data || [])
   }, [])
@@ -137,7 +155,7 @@ export default function Factures() {
       supabase.from('clients').select('id, prenom, nom, email, categorie_id').order('nom'),
       supabase.from('app_settings').select('key, value').in('key', SETTINGS_KEYS),
       supabase.from('categories').select('id, nom').order('nom'),
-      supabase.from('paiements').select('*, clients(id, prenom, nom, email), contrats(formule_label, engagement_mois, prix_mensuel)').order('date_echeance', { ascending: false }),
+      supabase.from('paiements').select('*, clients(id, prenom, nom, email), contrats(formule_label, engagement_mois, prix_mensuel, date_fin)').order('date_echeance', { ascending: false }),
       supabase.from('groupes').select('id, nom, parent_id').order('nom'),
       supabase.from('groupe_membres').select('client_id, groupe_id'),
     ])
@@ -460,6 +478,13 @@ export default function Factures() {
   rows.forEach(r => { counts[r.statusKey]++ })
   const visibleRows = filter === 'tous' ? rows : rows.filter(r => r.statusKey === filter)
 
+  // CA (comptabilité) : basé sur les paiements effectivement reçus (date_paiement),
+  // pas sur les échéances dues — ce qui est réellement encaissé.
+  const moisCourant = new Date().toISOString().slice(0, 7) // "2026-10"
+  const paiementsRecus = paiements.filter(p => p.statut === 'paye' && p.date_paiement)
+  const caMois  = paiementsRecus.filter(p => p.date_paiement.slice(0, 7) === moisCourant).reduce((s, p) => s + (parseFloat(p.montant) || 0), 0)
+  const caTotal = paiementsRecus.reduce((s, p) => s + (parseFloat(p.montant) || 0), 0)
+
   return (
     <div style={S.page}>
 
@@ -472,6 +497,18 @@ export default function Factures() {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
           <button onClick={() => openManual(null)} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.plus()} Paiement manuel</button>
+        </div>
+      </div>
+
+      {/* ── Chiffre d'affaires (comptabilité) ── */}
+      <div style={S.caRow}>
+        <div style={S.caCard}>
+          <div style={S.caLabel}>CA ce mois-ci</div>
+          <div style={S.caVal}>{caMois.toFixed(0)} €</div>
+        </div>
+        <div style={S.caCard}>
+          <div style={S.caLabel}>CA total</div>
+          <div style={S.caVal}>{caTotal.toFixed(0)} €</div>
         </div>
       </div>
 
@@ -536,8 +573,8 @@ export default function Factures() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Client', 'Offre', 'Montant', 'Dernier paiement', 'Prochaine échéance', 'Statut', ''].map((h, i) => (
-                  <th key={h} style={{ ...S.th, textAlign: i === 2 ? 'right' : 'left' }}>{h}</th>
+                {['Client', 'Offre', 'Engagement', 'Montant', 'Dernier paiement', 'Prochaine échéance', 'Statut', ''].map((h, i) => (
+                  <th key={h} style={{ ...S.th, textAlign: i === 3 ? 'right' : 'left' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -558,6 +595,7 @@ export default function Factures() {
                       <td style={{ ...S.td, color: '#6b7280' }}>
                         {r.offre ? `${r.offre.prix_mensuel}€/mois${r.offre.engagement_mois ? ` · ${r.offre.engagement_mois} mois` : ' · sans engagement'}` : '—'}
                       </td>
+                      <td style={{ ...S.td, color: r.engagement === 'Terminé' ? '#dc2626' : '#6b7280' }}>{r.engagement || '—'}</td>
                       <td style={{ ...S.td, textAlign: 'right', fontWeight: 800, color: '#111' }}>{parseFloat(r.montant).toFixed(0)} €</td>
                       <td style={{ ...S.td, color: '#6b7280' }}>{r.last ? fmtDate(r.last.date_paiement) : '—'}</td>
                       <td style={{ ...S.td, color: '#374151', fontWeight: 600 }}>{r.next ? fmtDate(r.next.date_echeance) : 'Terminé'}</td>
@@ -572,8 +610,9 @@ export default function Factures() {
                     </tr>
                     {isOpen && (
                       <tr style={S.detailRow}>
-                        <td colSpan={7} style={{ padding: 0 }}>
+                        <td colSpan={8} style={{ padding: 0 }}>
                           <div style={S.detailInner}>
+                            <div style={S.caClient}>Total payé par {r.client?.prenom} : <b>{r.caTotal.toFixed(0)} €</b></div>
                             {r.history.length === 0 ? (
                               <p style={{ fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Pas encore d'historique.</p>
                             ) : r.history.map(p => (
@@ -1048,11 +1087,17 @@ const S = {
   badge:       { padding: '0.15rem 0.55rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: '700' },
 
   // Pastilles filtre
+  // Chiffre d'affaires (informatif, pas des filtres — fond sombre pour les distinguer des pastilles)
+  caRow:       { display: 'flex', gap: '0.7rem', marginBottom: '1rem', flexWrap: 'wrap' },
+  caCard:      { flex: 1, minWidth: 160, background: '#1f2937', borderRadius: 14, padding: '0.85rem 1.1rem' },
+  caLabel:     { fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '0.25rem' },
+  caVal:       { fontSize: '1.4rem', fontWeight: 900, color: '#e4f816' },
+
   stats:       { display: 'flex', gap: '0.7rem', marginBottom: '1.25rem', flexWrap: 'wrap' },
   stat:        { flex: 1, minWidth: 140, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '0.85rem 1.1rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
   statActive:  { borderColor: '#111', boxShadow: '0 1px 3px rgba(0,0,0,.08)' },
   statN:       { fontSize: '1.4rem', fontWeight: 900, lineHeight: 1, marginBottom: '0.3rem' },
-  statL:       { fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: '0.4rem' },
+  statL:       { fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' },
   dot:         { width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block' },
 
   // Tableau
@@ -1063,11 +1108,12 @@ const S = {
   caret:       { display: 'inline-flex', color: '#9ca3af', transition: 'transform .15s' },
   avatar:      { width: 32, height: 32, borderRadius: '50%', background: '#333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 800, flexShrink: 0 },
   name:        { fontWeight: 800, color: '#111', fontSize: '0.86rem' },
-  pill:        { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.26rem 0.65rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: 800 },
+  pill:        { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.26rem 0.65rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: 800, whiteSpace: 'nowrap' },
   actionBtn:   { background: '#333', color: '#e4f816', border: 'none', borderRadius: 9, padding: '0.4rem 0.75rem', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
 
   detailRow:   { background: '#fafafa', borderBottom: '1px solid #f3f4f6' },
   detailInner: { padding: '0.2rem 1rem 1rem 3.6rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  caClient:    { fontSize: '0.74rem', color: '#6b7280', fontWeight: 600, marginBottom: '0.15rem' },
   hist:        { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#6b7280', padding: '0.3rem 0' },
   histLink:    { background: 'none', border: 'none', color: '#374151', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', padding: 0 },
   histIconBtn: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '0.2rem', display: 'flex' },
