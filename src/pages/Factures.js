@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
 import { supabase } from '../supabase'
 import ClientPicker from '../components/ClientPicker'
 
@@ -11,7 +11,8 @@ const Ico = {
   invoice:  (s=36) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>,
   person:   (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.5 8.5 0 0 1 13 0"/></svg>,
   building: (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="18" height="13" rx="1"/><path d="M8 9V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>,
-  group:    (s=13) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a5 5 0 0 1 10 0v2"/><circle cx="17" cy="8" r="2.5" strokeOpacity=".6"/><path d="M21 21v-2a5 5 0 0 0-5.27-4.98" strokeOpacity=".6"/></svg>,
+  chevron:  (s=11) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+  plus:     (s=14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
 }
 
 const STATUTS = {
@@ -19,6 +20,13 @@ const STATUTS = {
   envoyee:   { label: 'Envoyée',   bg: '#eff6ff', color: '#1d4ed8' },
   payee:     { label: 'Payée',     bg: '#f0fdf4', color: '#15803d' },
 }
+
+// Statut d'échéance (paiements.statut) — mêmes couleurs que partout ailleurs dans l'app
+const PAY_OK   = { key: 'ok',   label: 'À jour',     color: '#15803d', bg: '#dcfce7' }
+const PAY_SOON = { key: 'soon', label: 'Bientôt',    color: '#b45309', bg: '#fef3c7' }
+const PAY_LATE = { key: 'late', label: 'En retard',  color: '#b91c1c', bg: '#fee2e2' }
+const PAY_STATUTS = [PAY_OK, PAY_SOON, PAY_LATE]
+const SOON_JOURS = 7 // échéance à moins de 7 jours → "Bientôt"
 
 const SETTINGS_KEYS = ['facture_nom', 'facture_adresse', 'facture_siret', 'facture_iban', 'facture_email', 'facture_numero_debut', 'facture_activite']
 
@@ -30,7 +38,52 @@ const EMPTY_FORM = () => ({
   dest_manuel: false, dest_nom: '', dest_adresse: '', dest_siret: '', dest_email: '',
 })
 
+const EMPTY_MANUAL = () => ({ client_id: '', montant: '', description: '', date_echeance: new Date().toISOString().slice(0, 10) })
+
+function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
+function initials(prenom, nom) { return `${(prenom||'?')[0]}${(nom||'?')[0]}`.toUpperCase() }
+
+// Regroupe les lignes `paiements` par client et calcule le statut global de
+// chacun (à jour / bientôt / en retard) à partir de sa plus proche échéance
+// non payée — c'est tout le "système" : rien à entretenir à la main.
+function buildRows(paiements) {
+  const byClient = {}
+  paiements.forEach(p => { if (p.client_id) (byClient[p.client_id] ||= []).push(p) })
+  const today = new Date().toISOString().slice(0, 10)
+
+  const rows = Object.values(byClient).map(rows => {
+    const client = rows[0].clients
+    const sorted = [...rows].sort((a, b) => (a.date_echeance || '9999-99-99').localeCompare(b.date_echeance || '9999-99-99'))
+    const pending = sorted.filter(r => r.statut !== 'paye')
+    const paid = [...rows].filter(r => r.statut === 'paye').sort((a, b) => (b.date_paiement || '').localeCompare(a.date_paiement || ''))
+    const next = pending[0] || null
+    const last = paid[0] || null
+    const offre = next?.contrats || last?.contrats || null
+
+    let statusKey = 'ok'
+    if (next) {
+      const late = next.statut === 'en_retard' || (next.date_echeance && next.date_echeance < today)
+      if (late) statusKey = 'late'
+      else if (next.date_echeance) {
+        const jours = Math.ceil((new Date(next.date_echeance) - new Date(today)) / 86400000)
+        statusKey = jours <= SOON_JOURS ? 'soon' : 'ok'
+      }
+    }
+
+    return {
+      clientId: client?.id, client,
+      history: [...rows].sort((a, b) => (b.date_echeance || b.date_paiement || '').localeCompare(a.date_echeance || a.date_paiement || '')),
+      next, last, offre, statusKey,
+      montant: next?.montant ?? last?.montant ?? 0,
+    }
+  })
+
+  const order = { late: 0, soon: 1, ok: 2 }
+  return rows.sort((a, b) => order[a.statusKey] - order[b.statusKey] || (a.client?.nom || '').localeCompare(b.client?.nom || ''))
+}
+
 export default function Factures() {
+  const [paiements, setPaiements]         = useState([])
   const [factures, setFactures]           = useState([])
   const [clients, setClients]             = useState([])
   const [categories, setCategories]       = useState([])
@@ -42,30 +95,35 @@ export default function Factures() {
   const [printId, setPrintId]             = useState(null)
   const [settingsForm, setSettingsForm]   = useState({})
   const [form, setForm]                   = useState(EMPTY_FORM())
-  const [selectedGroupId, setSelectedGroupId] = useState(null) // "cat:<id>" (catégorie de facturation) ou "grp:<id>" (groupe/équipe)
-  const [teamGroupes, setTeamGroupes]     = useState([]) // groupes/équipes réels (table groupes), avec leurs membres
+  const [selectedGroupId, setSelectedGroupId] = useState(null)
+  const [teamGroupes, setTeamGroupes]     = useState([])
   const [teamMemberIds, setTeamMemberIds] = useState(new Set())
   const printRef = useRef()
 
-  // ── Paiements ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab]             = useState('factures')
-  const [paiements, setPaiements]             = useState([])
-  const [pFilterClient, setPFilterClient]     = useState('tous')
-  const [pFilterStatut, setPFilterStatut]     = useState('tous')
-  const [pModal, setPModal]                   = useState(null)
-  const [pSaving, setPSaving]                 = useState(false)
-  const [pDeleteConfirm, setPDeleteConfirm]   = useState(null)
-  const [pForm, setPForm]                     = useState({ client_id: '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
+  // ── Tableau paiements ───────────────────────────────────────────────────
+  const [filter, setFilter]               = useState('tous')
+  const [expanded, setExpanded]           = useState(null) // clientId déplié
+  const [showManual, setShowManual]       = useState(false)
+  const [manualForm, setManualForm]       = useState(EMPTY_MANUAL())
+  const [manualSaving, setManualSaving]   = useState(false)
+  const [editingPaiement, setEditingPaiement] = useState(null) // ligne en édition (modal léger)
 
   useEffect(() => { fetchAll() }, [])
 
   const loadPaiements = useCallback(async () => {
-    const { data } = await supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false })
+    const { data } = await supabase
+      .from('paiements')
+      .select('*, clients(id, prenom, nom, email), contrats(formule_label, engagement_mois, prix_mensuel)')
+      .order('date_echeance', { ascending: false })
     setPaiements(data || [])
   }, [])
 
+  // Filet de sécurité : une échéance "en_attente" dont la date est dépassée
+  // passe en "en_retard" (le statut affiché, lui, est de toute façon recalculé
+  // en direct depuis la date dans buildRows — ceci ne fait que garder la
+  // donnée en base cohérente pour les autres vues qui liraient `statut`).
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toISOString().slice(0, 10)
     paiements.forEach(async p => {
       if (p.statut === 'en_attente' && p.date_echeance && p.date_echeance < today) {
         await supabase.from('paiements').update({ statut: 'en_retard' }).eq('id', p.id)
@@ -79,7 +137,7 @@ export default function Factures() {
       supabase.from('clients').select('id, prenom, nom, email, categorie_id').order('nom'),
       supabase.from('app_settings').select('key, value').in('key', SETTINGS_KEYS),
       supabase.from('categories').select('id, nom').order('nom'),
-      supabase.from('paiements').select('*, clients(prenom, nom)').order('date_echeance', { ascending: false }),
+      supabase.from('paiements').select('*, clients(id, prenom, nom, email), contrats(formule_label, engagement_mois, prix_mensuel)').order('date_echeance', { ascending: false }),
       supabase.from('groupes').select('id, nom, parent_id').order('nom'),
       supabase.from('groupe_membres').select('client_id, groupe_id'),
     ])
@@ -88,8 +146,6 @@ export default function Factures() {
     setCategories(cats || [])
     setPaiements(pays || [])
 
-    // Groupes/équipes réels (table `groupes`), pour ne pas mélanger leurs
-    // membres dans la liste plate des clients individuels du destinataire.
     const allGroupes = gs || []
     const clientById = {}
     ;(c || []).forEach(cl => { clientById[cl.id] = cl })
@@ -124,15 +180,15 @@ export default function Factures() {
   }
 
   function nextNumero() {
-    const yy = new Date().getFullYear().toString().slice(2) // "26"
+    const yy = new Date().getFullYear().toString().slice(2)
     const offset = parseInt(settings.facture_numero_debut || '0')
     const yearCount = factures.filter(f => f.numero?.startsWith(yy)).length
     return yy + String(offset + yearCount + 1).padStart(3, '0')
   }
 
-  function openCreate() {
+  function openCreate(clientId) {
     setEditingId(null)
-    setForm(EMPTY_FORM())
+    setForm({ ...EMPTY_FORM(), client_id: clientId || '' })
     setSelectedGroupId(null)
     setShowForm(true)
     setPrintId(null)
@@ -170,7 +226,6 @@ export default function Factures() {
     }
 
     if (editingId) {
-      // Mise à jour
       const { data, error } = await supabase.from('factures')
         .update(payload)
         .eq('id', editingId)
@@ -179,7 +234,6 @@ export default function Factures() {
       setFactures(prev => prev.map(f => f.id === editingId ? data : f))
       setPrintId(editingId)
     } else {
-      // Création
       const numero = nextNumero()
       const { data, error } = await supabase.from('factures')
         .insert([{ ...payload, numero, statut: 'brouillon' }])
@@ -194,7 +248,7 @@ export default function Factures() {
     setForm(EMPTY_FORM())
   }
 
-  async function updateStatut(id, statut) {
+  async function updateStatutFacture(id, statut) {
     const { error } = await supabase.from('factures').update({ statut }).eq('id', id)
     if (error) { alert('Erreur mise à jour statut : ' + error.message); return }
     setFactures(prev => prev.map(f => f.id === id ? { ...f, statut } : f))
@@ -213,41 +267,51 @@ export default function Factures() {
     return (lignes || []).reduce((s, l) => s + (parseFloat(l.prix) || 0) * (parseFloat(l.quantite) || 1), 0)
   }
 
-  // ── Fonctions paiements ──────────────────────────────────────────────────
-  function openNewPaiement() {
-    setPForm({ client_id: '', montant: '', description: '', date_echeance: '', date_paiement: '', statut: 'en_attente' })
-    setPModal('new')
-  }
-
-  function openEditPaiement(p) {
-    setPForm({ client_id: p.client_id, montant: p.montant, description: p.description || '', date_echeance: p.date_echeance || '', date_paiement: p.date_paiement || '', statut: p.statut })
-    setPModal(p)
-  }
-
-  async function savePaiement() {
-    if (!pForm.client_id || !pForm.montant) return
-    setPSaving(true)
-    const payload = { client_id: pForm.client_id, montant: parseFloat(pForm.montant), description: pForm.description || null, date_echeance: pForm.date_echeance || null, date_paiement: pForm.date_paiement || null, statut: pForm.statut }
-    if (pModal === 'new') {
-      await supabase.from('paiements').insert(payload)
-    } else {
-      await supabase.from('paiements').update(payload).eq('id', pModal.id)
-    }
-    setPSaving(false)
-    setPModal(null)
+  // ── Échéances / paiements ────────────────────────────────────────────────
+  async function marquerPaye(p) {
+    await supabase.from('paiements').update({ statut: 'paye', date_paiement: new Date().toISOString().slice(0, 10) }).eq('id', p.id)
     loadPaiements()
   }
 
-  async function updateStatutPaiement(id, statut) {
-    const updates = { statut }
-    if (statut === 'paye') updates.date_paiement = new Date().toISOString().split('T')[0]
-    await supabase.from('paiements').update(updates).eq('id', id)
+  async function marquerNonPaye(p) {
+    await supabase.from('paiements').update({ statut: 'en_attente', date_paiement: null }).eq('id', p.id)
     loadPaiements()
   }
 
-  async function deletePaiement(id) {
+  function openManual(clientId) {
+    setManualForm({ ...EMPTY_MANUAL(), client_id: clientId || '' })
+    setShowManual(true)
+  }
+
+  async function saveManual() {
+    if (!manualForm.client_id || !manualForm.montant) return
+    setManualSaving(true)
+    await supabase.from('paiements').insert({
+      client_id: manualForm.client_id,
+      montant: parseFloat(manualForm.montant),
+      description: manualForm.description || null,
+      date_echeance: manualForm.date_echeance || null,
+      statut: 'en_attente',
+    })
+    setManualSaving(false)
+    setShowManual(false)
+    loadPaiements()
+  }
+
+  async function saveEditPaiement() {
+    if (!editingPaiement) return
+    await supabase.from('paiements').update({
+      montant: parseFloat(editingPaiement.montant),
+      description: editingPaiement.description || null,
+      date_echeance: editingPaiement.date_echeance || null,
+    }).eq('id', editingPaiement.id)
+    setEditingPaiement(null)
+    loadPaiements()
+  }
+
+  async function deletePaiementLigne(id) {
+    if (!window.confirm('Supprimer cette ligne ?')) return
     await supabase.from('paiements').delete().eq('id', id)
-    setPDeleteConfirm(null)
     loadPaiements()
   }
 
@@ -268,7 +332,6 @@ export default function Factures() {
 
   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
-    <!-- Header -->
     <tr><td style="background:#1a1a1a;border-radius:14px 14px 0 0;padding:28px 36px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
@@ -284,7 +347,6 @@ export default function Factures() {
       </table>
     </td></tr>
 
-    <!-- Body -->
     <tr><td style="background:#ffffff;padding:36px 36px 28px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
 
       <p style="font-size:15px;color:#374151;margin:0 0 20px;line-height:1.65;font-family:sans-serif;">Bonjour${prenom ? ` <strong style="color:#111;">${prenom}</strong>` : ''},</p>
@@ -293,7 +355,6 @@ export default function Factures() {
         Veuillez trouver ci-joint la facture <strong style="color:#111;">n°${numero}</strong> d'un montant de <strong style="color:#111;">${total} €</strong>, établie le ${dateEmission}.
       </p>
 
-      <!-- Récap facture -->
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;margin:0 0 28px 0;">
         <tr><td style="padding:20px 24px;">
           <table width="100%" cellpadding="0" cellspacing="0">
@@ -319,7 +380,6 @@ export default function Factures() {
         N'hésitez pas à me contacter si vous avez la moindre question.
       </p>
 
-      <!-- Signature -->
       <table cellpadding="0" cellspacing="0" style="border-top:1px solid #f3f4f6;padding-top:20px;margin-top:4px;width:100%;">
         <tr>
           <td style="width:44px;vertical-align:top;">
@@ -337,7 +397,6 @@ export default function Factures() {
 
     </td></tr>
 
-    <!-- Footer -->
     <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:18px 36px;text-align:center;">
       <p style="margin:0;font-size:11px;color:#9ca3af;font-family:sans-serif;">
         ${nomCoach} · ${activite} · TVA non applicable, art. 293 B du CGI
@@ -396,47 +455,27 @@ export default function Factures() {
 
   if (loading) return <div style={S.page}><p style={{ color: '#9ca3af' }}>Chargement…</p></div>
 
-  const pFiltered    = paiements.filter(p => (pFilterClient === 'tous' || p.client_id === pFilterClient) && (pFilterStatut === 'tous' || p.statut === pFilterStatut))
-  const pTotalAttendu = pFiltered.reduce((s, p) => s + parseFloat(p.montant || 0), 0)
-  const pTotalPercu   = pFiltered.filter(p => p.statut === 'paye').reduce((s, p) => s + parseFloat(p.montant || 0), 0)
-  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
-
-  const PSTATUTS = [
-    { key: 'en_attente', label: 'En attente', color: '#f59e0b', bg: '#fef3c7' },
-    { key: 'paye',       label: 'Payé',       color: '#22c55e', bg: '#dcfce7' },
-    { key: 'en_retard',  label: 'En retard',  color: '#ef4444', bg: '#fee2e2' },
-  ]
+  const rows = buildRows(paiements)
+  const counts = { tous: rows.length, ok: 0, soon: 0, late: 0 }
+  rows.forEach(r => { counts[r.statusKey]++ })
+  const visibleRows = filter === 'tous' ? rows : rows.filter(r => r.statusKey === filter)
 
   return (
     <div style={S.page}>
 
       {/* ── En-tête ── */}
       <div style={S.header}>
-        <h1 style={S.title}>Facturation</h1>
+        <div>
+          <h1 style={S.title}>Paiements</h1>
+          <p style={S.sub}>Calculé automatiquement depuis les contrats signés.</p>
+        </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {activeTab === 'factures' && <>
-            <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
-            <button onClick={openCreate} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouvelle facture</button>
-          </>}
-          {activeTab === 'paiements' && (
-            <button onClick={openNewPaiement} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouveau paiement</button>
-          )}
+          <button onClick={() => setShowSettings(v => !v)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.settings()} Mes infos</button>
+          <button onClick={() => openManual(null)} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.plus()} Paiement manuel</button>
         </div>
       </div>
 
-      {/* ── Onglets ── */}
-      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: '#f3f4f6', borderRadius: 10, padding: '0.25rem' }}>
-        {[{ key: 'factures', label: '🧾 Factures' }, { key: 'paiements', label: '💳 Paiements' }].map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{ flex: 1, padding: '0.55rem 1rem', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', transition: 'all .15s', background: activeTab === t.key ? '#333' : 'transparent', color: activeTab === t.key ? '#e4f816' : '#6b7280' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ══ ONGLET FACTURES ══════════════════════════════════════════════════ */}
-      {activeTab === 'factures' && <>
-
-      {/* ── Paramètres coach ── */}
+      {/* ── Paramètres coach (pour les factures PDF) ── */}
       {showSettings && (
         <div style={S.card}>
           <p style={S.sectionTitle}>Mes informations (apparaissent sur chaque facture)</p>
@@ -465,450 +504,388 @@ export default function Factures() {
         </div>
       )}
 
-      {/* ── Formulaire création / édition ── */}
-      {showForm && (
-        <div style={S.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <p style={{ ...S.sectionTitle, margin: 0 }}>
-              {editingId ? 'Modifier la facture' : `Nouvelle facture — N° ${nextNumero()}`}
-            </p>
-            <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnClose}>✕</button>
-          </div>
+      {/* ── Pastilles = filtre ── */}
+      <div style={S.stats}>
+        <button onClick={() => setFilter('tous')} style={{ ...S.stat, ...(filter === 'tous' ? S.statActive : {}) }}>
+          <div style={{ ...S.statN, color: '#111' }}>{counts.tous}</div>
+          <div style={S.statL}>Tous les clients</div>
+        </button>
+        <button onClick={() => setFilter('ok')} style={{ ...S.stat, ...(filter === 'ok' ? S.statActive : {}) }}>
+          <div style={{ ...S.statN, color: PAY_OK.color }}>{counts.ok}</div>
+          <div style={S.statL}><span style={{ ...S.dot, background: PAY_OK.color }} />{PAY_OK.label}</div>
+        </button>
+        <button onClick={() => setFilter('soon')} style={{ ...S.stat, ...(filter === 'soon' ? S.statActive : {}) }}>
+          <div style={{ ...S.statN, color: PAY_SOON.color }}>{counts.soon}</div>
+          <div style={S.statL}><span style={{ ...S.dot, background: PAY_SOON.color }} />{PAY_SOON.label}</div>
+        </button>
+        <button onClick={() => setFilter('late')} style={{ ...S.stat, ...(filter === 'late' ? S.statActive : {}) }}>
+          <div style={{ ...S.statN, color: PAY_LATE.color }}>{counts.late}</div>
+          <div style={S.statL}><span style={{ ...S.dot, background: PAY_LATE.color }} />{PAY_LATE.label}</div>
+        </button>
+      </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-            <div style={{ gridColumn: form.dest_manuel ? '1 / -1' : undefined }}>
-              <label style={S.label}>Facturer à</label>
-              {/* Toggle client enregistré / manuel */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => { setForm(f => ({ ...f, dest_manuel: false })); setSelectedGroupId(null) }}
-                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', display:'flex', alignItems:'center', gap:'0.35rem', background: !form.dest_manuel ? '#333' : 'white', color: !form.dest_manuel ? '#e4f816' : '#374151', borderColor: !form.dest_manuel ? '#333' : '#e5e7eb' }}
-                >{Ico.person()} Client enregistré</button>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, dest_manuel: true, client_id: '' }))}
-                  style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', display:'flex', alignItems:'center', gap:'0.35rem', background: form.dest_manuel ? '#333' : 'white', color: form.dest_manuel ? '#e4f816' : '#374151', borderColor: form.dest_manuel ? '#333' : '#e5e7eb' }}
-                >{Ico.building()} Club / Autre</button>
-              </div>
-
-              {!form.dest_manuel ? (
-                <>
-                  <select
-                    value={selectedGroupId || (form.client_id || '')}
-                    onChange={e => {
-                      const val = e.target.value
-                      if (val.startsWith('cat:') || val.startsWith('grp:')) {
-                        setSelectedGroupId(val)
-                        setForm(f => ({ ...f, client_id: '' }))
-                      } else {
-                        setSelectedGroupId(null)
-                        setForm(f => ({ ...f, client_id: val }))
-                      }
-                    }}
-                    style={S.input}
-                  >
-                    <option value="">— Aucun / Particulier —</option>
-                    {clients.filter(c => !teamMemberIds.has(c.id)).map(c => (
-                      <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
-                    ))}
-                    {categories.length > 0 && (
-                      <optgroup label="── Catégories ──">
-                        {categories.map(cat => (
-                          <option key={cat.id} value={`cat:${cat.id}`}>{cat.nom}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {teamGroupes.length > 0 && (
-                      <optgroup label="── Groupes / Équipes ──">
-                        {teamGroupes.map(g => (
-                          <option key={g.id} value={`grp:${g.id}`}>{g.nom}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                  {selectedGroupId && (
-                    <select
-                      value={form.client_id || ''}
-                      onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
-                      style={{ ...S.input, marginTop: '0.4rem' }}
-                    >
-                      <option value="">— Choisir un joueur —</option>
-                      {(selectedGroupId.startsWith('cat:')
-                        ? clients.filter(c => c.categorie_id === selectedGroupId.replace('cat:', ''))
-                        : (teamGroupes.find(g => g.id === selectedGroupId.replace('grp:', ''))?.membres || [])
-                      ).map(c => (
-                        <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
-                      ))}
-                    </select>
-                  )}
-                </>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
-                  <div>
-                    <label style={{ ...S.label, marginTop: 0 }}>Nom / Club *</label>
-                    <input
-                      value={form.dest_nom}
-                      onChange={e => setForm(f => ({ ...f, dest_nom: e.target.value }))}
-                      placeholder="Ex : FC Toulouse, M. Dupont…"
-                      style={S.input}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...S.label, marginTop: 0 }}>Adresse</label>
-                    <input
-                      value={form.dest_adresse}
-                      onChange={e => setForm(f => ({ ...f, dest_adresse: e.target.value }))}
-                      placeholder="Ex : 12 rue des Sports, 31000 Toulouse"
-                      style={S.input}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...S.label, marginTop: 0 }}>SIRET (optionnel)</label>
-                    <input
-                      value={form.dest_siret}
-                      onChange={e => setForm(f => ({ ...f, dest_siret: e.target.value }))}
-                      placeholder="Ex : 123 456 789 00012"
-                      style={S.input}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...S.label, marginTop: 0 }}>Email (pour envoi mail)</label>
-                    <input
-                      type="email"
-                      value={form.dest_email}
-                      onChange={e => setForm(f => ({ ...f, dest_email: e.target.value }))}
-                      placeholder="contact@club.fr"
-                      style={S.input}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            <div>
-              <label style={S.label}>Date d'émission</label>
-              <input type="date" value={form.date_emission} onChange={e => setForm(f => ({ ...f, date_emission: e.target.value }))} style={S.input} />
-            </div>
-            <div>
-              <label style={S.label}>Date d'échéance</label>
-              <input type="date" value={form.date_echeance} onChange={e => setForm(f => ({ ...f, date_echeance: e.target.value }))} style={S.input} />
-            </div>
-          </div>
-
-          {/* Preset prestations */}
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label style={S.label}>Ajouter une prestation prédéfinie</label>
-            <select
-              value=""
-              onChange={e => {
-                if (!e.target.value) return
-                const [desc, prix] = e.target.value.split('||')
-                setForm(f => ({
-                  ...f,
-                  lignes: [...f.lignes.filter(l => l.description.trim()), { id: Math.random().toString(36).slice(2), description: desc, quantite: 1, prix: parseFloat(prix) }]
-                }))
-                e.target.value = ''
-              }}
-              style={{ ...S.input, color: '#374151', cursor: 'pointer' }}
-            >
-              <option value="">— Choisir une prestation —</option>
-              <optgroup label="Préparation physique">
-                <option value="Préparation physique — premier engagement (3 ou 6 mois)||69">Préparation physique — premier engagement (3 ou 6 mois) — 69 €/mois</option>
-                <option value="Préparation physique — renouvellement sans engagement||89">Préparation physique — renouvellement sans engagement — 89 €/mois</option>
-                <option value="Préparation physique — renouvellement 3 mois||79">Préparation physique — renouvellement 3 mois — 79 €/mois</option>
-                <option value="Préparation physique — renouvellement 6 mois||69">Préparation physique — renouvellement 6 mois — 69 €/mois</option>
-              </optgroup>
-              <optgroup label="Coaching remise en forme">
-                <option value="Coaching remise en forme — premier engagement (3 ou 6 mois)||69">Coaching remise en forme — premier engagement (3 ou 6 mois) — 69 €/mois</option>
-                <option value="Coaching remise en forme — renouvellement sans engagement||89">Coaching remise en forme — renouvellement sans engagement — 89 €/mois</option>
-                <option value="Coaching remise en forme — renouvellement 3 mois||79">Coaching remise en forme — renouvellement 3 mois — 79 €/mois</option>
-                <option value="Coaching remise en forme — renouvellement 6 mois||69">Coaching remise en forme — renouvellement 6 mois — 69 €/mois</option>
-              </optgroup>
-              <optgroup label="Autre">
-                <option value="Programme one-shot||30">Programme one-shot — 30 €</option>
-              </optgroup>
-            </select>
-          </div>
-
-          {/* Lignes */}
-          <p style={S.label}>Prestations</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            {form.lignes.map((l, i) => (
-              <div key={l.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <input
-                  value={l.description}
-                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, description: e.target.value } : x) }))}
-                  placeholder="Ex : Coaching mensuel — Juin 2026"
-                  style={{ ...S.input, flex: '3 1 180px' }}
-                />
-                <input
-                  type="number" value={l.quantite} min="1"
-                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, quantite: e.target.value } : x) }))}
-                  style={{ ...S.input, width: 72, flex: '0 0 72px' }} placeholder="Qté"
-                />
-                <input
-                  type="number" value={l.prix} min="0" step="0.01"
-                  onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, prix: e.target.value } : x) }))}
-                  style={{ ...S.input, width: 96, flex: '0 0 96px' }} placeholder="Prix €"
-                />
-                <span style={{ minWidth: 78, textAlign: 'right', fontWeight: '700', fontSize: '0.9rem', color: '#111' }}>
-                  {((parseFloat(l.prix)||0) * (parseFloat(l.quantite)||1)).toFixed(2)} €
-                </span>
-                {form.lignes.length > 1 && (
-                  <button onClick={() => setForm(f => ({ ...f, lignes: f.lignes.filter((_, j) => j!==i) }))} style={S.btnClose}>✕</button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={() => setForm(f => ({ ...f, lignes: [...f.lignes, newLigne()] }))}
-              style={{ ...S.btnSecondary, alignSelf: 'flex-start', fontSize: '0.8rem', padding: '0.35rem 0.7rem', display:'flex', alignItems:'center', gap:'0.3rem' }}
-            ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ligne</button>
-          </div>
-
-          {/* Total */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-            <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1.25rem', textAlign: 'right' }}>
-              <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.15rem', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Total</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 }}>
-                {totalFacture(form.lignes).toFixed(2)} €
-              </p>
-              <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '0.2rem 0 0' }}>TVA non applicable — Art. 293B CGI</p>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={S.label}>Notes (optionnel)</label>
-            <textarea
-              value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="Conditions de règlement, informations complémentaires…"
-              rows={2}
-              style={{ ...S.input, width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnSecondary}>Annuler</button>
-            <button onClick={submitForm} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              {editingId ? 'Enregistrer les modifications' : 'Créer la facture'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Liste ── */}
-      {factures.length === 0 && !showForm ? (
+      {/* ── Tableau ── */}
+      {rows.length === 0 ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
           <p style={{ marginBottom: '0.75rem', color: '#d1d5db' }}>{Ico.invoice(36)}</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucune facture pour l'instant.</p>
-          <button onClick={openCreate} style={{ ...S.btnPrimary, display:'inline-flex', alignItems:'center', gap:'0.4rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Créer ma première facture</button>
+          <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucun paiement suivi pour l'instant.</p>
+          <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Les échéances apparaissent ici automatiquement dès qu'un contrat est signé.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {factures.map(f => {
-            const isOpen = printId === f.id
-            return (
-              <div key={f.id} style={{ ...S.card, padding: '1rem 1.25rem', border: isOpen ? '1.5px solid #333' : '1.5px solid transparent' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  {/* Numéro + client */}
-                  <div style={{ flex: 1, minWidth: 160 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                      <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#111' }}>N° {f.numero}</span>
-                      <span style={{ ...S.badge, background: STATUTS[f.statut]?.bg, color: STATUTS[f.statut]?.color }}>
-                        {STATUTS[f.statut]?.label}
-                      </span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b7280' }}>
-                      {f.clients ? `${f.clients.prenom} ${f.clients.nom}` : 'Sans client'} · {new Date(f.date_emission + 'T12:00:00').toLocaleDateString('fr-FR')}
-                      {f.date_echeance && ` · Échéance ${new Date(f.date_echeance + 'T12:00:00').toLocaleDateString('fr-FR')}`}
-                    </p>
-                  </div>
-
-                  {/* Montant */}
-                  <div style={{ textAlign: 'right', minWidth: 90 }}>
-                    <p style={{ margin: 0, fontWeight: '800', fontSize: '1.1rem', color: '#111' }}>{totalFacture(f.lignes).toFixed(2)} €</p>
-                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{(f.lignes||[]).filter(l=>l.description).length} prestation{f.lignes?.length!==1?'s':''}</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    <select
-                      value={f.statut}
-                      onChange={e => updateStatut(f.id, e.target.value)}
-                      style={{ ...S.input, padding: '0.3rem 0.5rem', fontSize: '0.78rem', width: 'auto', cursor: 'pointer' }}
-                    >
-                      <option value="brouillon">Brouillon</option>
-                      <option value="envoyee">Envoyée</option>
-                      <option value="payee">Payée</option>
-                    </select>
-                    <button
-                      onClick={() => { openEdit(f); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', display:'flex', alignItems:'center', gap:'0.35rem' }}
-                    >{Ico.edit()} Modifier</button>
-                    <button
-                      onClick={() => setPrintId(isOpen ? null : f.id)}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', display:'flex', alignItems:'center', gap:'0.35rem', background: isOpen ? '#333' : 'white', color: isOpen ? '#e4f816' : '#374151', borderColor: isOpen ? '#333' : '#e5e7eb' }}
-                    >{Ico.print()} {isOpen ? 'Fermer' : 'Aperçu PDF'}</button>
-                    <button
-                      onClick={() => deleteFacture(f.id)}
-                      style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.65rem', color: '#dc2626', borderColor: '#fecaca', display:'flex', alignItems:'center' }}
-                    >{Ico.trash()}</button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+        <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Client', 'Offre', 'Montant', 'Dernier paiement', 'Prochaine échéance', 'Statut', ''].map((h, i) => (
+                  <th key={h} style={{ ...S.th, textAlign: i === 2 ? 'right' : 'left' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map(r => {
+                const st = PAY_STATUTS.find(s => s.key === r.statusKey)
+                const isOpen = expanded === r.clientId
+                return (
+                  <Fragment key={r.clientId}>
+                    <tr onClick={() => setExpanded(isOpen ? null : r.clientId)} style={S.tr}>
+                      <td style={S.td}>
+                        <div style={S.who}>
+                          <span style={{ ...S.caret, transform: isOpen ? 'rotate(90deg)' : 'none' }}>{Ico.chevron()}</span>
+                          <div style={S.avatar}>{initials(r.client?.prenom, r.client?.nom)}</div>
+                          <span style={S.name}>{r.client?.prenom} {r.client?.nom}</span>
+                        </div>
+                      </td>
+                      <td style={{ ...S.td, color: '#6b7280' }}>
+                        {r.offre ? `${r.offre.prix_mensuel}€/mois${r.offre.engagement_mois ? ` · ${r.offre.engagement_mois} mois` : ' · sans engagement'}` : '—'}
+                      </td>
+                      <td style={{ ...S.td, textAlign: 'right', fontWeight: 800, color: '#111' }}>{parseFloat(r.montant).toFixed(0)} €</td>
+                      <td style={{ ...S.td, color: '#6b7280' }}>{r.last ? fmtDate(r.last.date_paiement) : '—'}</td>
+                      <td style={{ ...S.td, color: '#374151', fontWeight: 600 }}>{r.next ? fmtDate(r.next.date_echeance) : 'Terminé'}</td>
+                      <td style={S.td}>
+                        <span style={{ ...S.pill, background: st.bg, color: st.color }}><span style={{ ...S.dot, background: 'currentColor' }} />{st.label}</span>
+                      </td>
+                      <td style={{ ...S.td, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                        {r.next && (
+                          <button onClick={() => marquerPaye(r.next)} style={S.actionBtn}>Marquer payé</button>
+                        )}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr style={S.detailRow}>
+                        <td colSpan={7} style={{ padding: 0 }}>
+                          <div style={S.detailInner}>
+                            {r.history.length === 0 ? (
+                              <p style={{ fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Pas encore d'historique.</p>
+                            ) : r.history.map(p => (
+                              <div key={p.id} style={S.hist}>
+                                <span>
+                                  {p.statut === 'paye'
+                                    ? <>Payé <b>{fmtDate(p.date_paiement)}</b></>
+                                    : <>Échéance <b>{fmtDate(p.date_echeance)}</b>{p.statut === 'en_retard' && <span style={{ color: PAY_LATE.color, fontWeight: 700 }}> · en retard</span>}</>}
+                                  {p.description && <span style={{ color: '#9ca3af' }}> — {p.description}</span>}
+                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                  <span style={{ fontWeight: 700, color: '#111' }}>{parseFloat(p.montant).toFixed(0)} €</span>
+                                  {p.statut === 'paye'
+                                    ? <button onClick={() => marquerNonPaye(p)} style={S.histLink}>Annuler</button>
+                                    : <button onClick={() => marquerPaye(p)} style={S.histLink}>Marquer payé</button>}
+                                  <button onClick={() => setEditingPaiement({ ...p })} style={S.histIconBtn}>{Ico.edit(12)}</button>
+                                  <button onClick={() => deletePaiementLigne(p.id)} style={{ ...S.histIconBtn, color: '#dc2626' }}>{Ico.trash(12)}</button>
+                                </div>
+                              </div>
+                            ))}
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.4rem' }}>
+                              <button onClick={() => openManual(r.clientId)} style={S.histAddBtn}>+ Échéance manuelle</button>
+                              <button onClick={() => openCreate(r.clientId)} style={S.histAddBtn}>{Ico.print(12)} Générer une facture PDF</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* ── Aperçu + impression ── */}
+      <p style={S.footnote}>Besoin d'un document officiel pour un client sans contrat dans l'app ? <a onClick={() => openCreate(null)} style={S.footnoteLink}>Générer une facture PDF</a></p>
+
+      {/* ── Modal paiement manuel ── */}
+      {showManual && (
+        <div style={S.overlay} onClick={() => setShowManual(false)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+            <p style={S.modalTitle}>Échéance manuelle</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={S.label}>Client *</label>
+                <ClientPicker value={manualForm.client_id} onChange={id => setManualForm(p => ({ ...p, client_id: id }))} />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Montant (€) *</label>
+                  <input style={S.input} type="number" min={0} step={0.01} value={manualForm.montant} onChange={e => setManualForm(p => ({ ...p, montant: e.target.value }))} placeholder="69" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Échéance</label>
+                  <input style={S.input} type="date" value={manualForm.date_echeance} onChange={e => setManualForm(p => ({ ...p, date_echeance: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label style={S.label}>Description (optionnel)</label>
+                <input style={S.input} value={manualForm.description} onChange={e => setManualForm(p => ({ ...p, description: e.target.value }))} placeholder="Bilan, programme one-shot…" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button style={S.btnSecondary} onClick={() => setShowManual(false)}>Annuler</button>
+              <button style={{ ...S.btnPrimary, opacity: manualSaving ? 0.7 : 1 }} onClick={saveManual} disabled={manualSaving}>{manualSaving ? 'Enregistrement…' : 'Ajouter'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal édition d'une ligne ── */}
+      {editingPaiement && (
+        <div style={S.overlay} onClick={() => setEditingPaiement(null)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+            <p style={S.modalTitle}>Modifier l'échéance</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Montant (€)</label>
+                  <input style={S.input} type="number" min={0} step={0.01} value={editingPaiement.montant} onChange={e => setEditingPaiement(p => ({ ...p, montant: e.target.value }))} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Échéance</label>
+                  <input style={S.input} type="date" value={editingPaiement.date_echeance || ''} onChange={e => setEditingPaiement(p => ({ ...p, date_echeance: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label style={S.label}>Description</label>
+                <input style={S.input} value={editingPaiement.description || ''} onChange={e => setEditingPaiement(p => ({ ...p, description: e.target.value }))} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button style={S.btnSecondary} onClick={() => setEditingPaiement(null)}>Annuler</button>
+              <button style={S.btnPrimary} onClick={saveEditPaiement}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Formulaire facture (accès secondaire, via "Générer une facture PDF") ── */}
+      {showForm && (
+        <div style={S.overlay} onClick={() => { setShowForm(false); setEditingId(null) }}>
+          <div style={{ ...S.modal, maxWidth: 680, maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <p style={{ ...S.sectionTitle, margin: 0 }}>
+                {editingId ? 'Modifier la facture' : `Nouvelle facture — N° ${nextNumero()}`}
+              </p>
+              <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnClose}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ gridColumn: form.dest_manuel ? '1 / -1' : undefined }}>
+                <label style={S.label}>Facturer à</label>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setForm(f => ({ ...f, dest_manuel: false })); setSelectedGroupId(null) }}
+                    style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', display:'flex', alignItems:'center', gap:'0.35rem', background: !form.dest_manuel ? '#333' : 'white', color: !form.dest_manuel ? '#e4f816' : '#374151', borderColor: !form.dest_manuel ? '#333' : '#e5e7eb' }}
+                  >{Ico.person()} Client enregistré</button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, dest_manuel: true, client_id: '' }))}
+                    style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.3rem 0.75rem', display:'flex', alignItems:'center', gap:'0.35rem', background: form.dest_manuel ? '#333' : 'white', color: form.dest_manuel ? '#e4f816' : '#374151', borderColor: form.dest_manuel ? '#333' : '#e5e7eb' }}
+                  >{Ico.building()} Club / Autre</button>
+                </div>
+
+                {!form.dest_manuel ? (
+                  <>
+                    <select
+                      value={selectedGroupId || (form.client_id || '')}
+                      onChange={e => {
+                        const val = e.target.value
+                        if (val.startsWith('cat:') || val.startsWith('grp:')) {
+                          setSelectedGroupId(val)
+                          setForm(f => ({ ...f, client_id: '' }))
+                        } else {
+                          setSelectedGroupId(null)
+                          setForm(f => ({ ...f, client_id: val }))
+                        }
+                      }}
+                      style={S.input}
+                    >
+                      <option value="">— Aucun / Particulier —</option>
+                      {clients.filter(c => !teamMemberIds.has(c.id)).map(c => (
+                        <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
+                      ))}
+                      {categories.length > 0 && (
+                        <optgroup label="── Catégories ──">
+                          {categories.map(cat => (
+                            <option key={cat.id} value={`cat:${cat.id}`}>{cat.nom}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {teamGroupes.length > 0 && (
+                        <optgroup label="── Groupes / Équipes ──">
+                          {teamGroupes.map(g => (
+                            <option key={g.id} value={`grp:${g.id}`}>{g.nom}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    {selectedGroupId && (
+                      <select
+                        value={form.client_id || ''}
+                        onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
+                        style={{ ...S.input, marginTop: '0.4rem' }}
+                      >
+                        <option value="">— Choisir un joueur —</option>
+                        {(selectedGroupId.startsWith('cat:')
+                          ? clients.filter(c => c.categorie_id === selectedGroupId.replace('cat:', ''))
+                          : (teamGroupes.find(g => g.id === selectedGroupId.replace('grp:', ''))?.membres || [])
+                        ).map(c => (
+                          <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
+                        ))}
+                      </select>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ ...S.label, marginTop: 0 }}>Nom / Club *</label>
+                      <input value={form.dest_nom} onChange={e => setForm(f => ({ ...f, dest_nom: e.target.value }))} placeholder="Ex : FC Toulouse, M. Dupont…" style={S.input} />
+                    </div>
+                    <div>
+                      <label style={{ ...S.label, marginTop: 0 }}>Adresse</label>
+                      <input value={form.dest_adresse} onChange={e => setForm(f => ({ ...f, dest_adresse: e.target.value }))} placeholder="Ex : 12 rue des Sports, 31000 Toulouse" style={S.input} />
+                    </div>
+                    <div>
+                      <label style={{ ...S.label, marginTop: 0 }}>SIRET (optionnel)</label>
+                      <input value={form.dest_siret} onChange={e => setForm(f => ({ ...f, dest_siret: e.target.value }))} placeholder="Ex : 123 456 789 00012" style={S.input} />
+                    </div>
+                    <div>
+                      <label style={{ ...S.label, marginTop: 0 }}>Email (pour envoi mail)</label>
+                      <input type="email" value={form.dest_email} onChange={e => setForm(f => ({ ...f, dest_email: e.target.value }))} placeholder="contact@club.fr" style={S.input} />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label style={S.label}>Date d'émission</label>
+                <input type="date" value={form.date_emission} onChange={e => setForm(f => ({ ...f, date_emission: e.target.value }))} style={S.input} />
+              </div>
+              <div>
+                <label style={S.label}>Date d'échéance</label>
+                <input type="date" value={form.date_echeance} onChange={e => setForm(f => ({ ...f, date_echeance: e.target.value }))} style={S.input} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label style={S.label}>Ajouter une prestation prédéfinie</label>
+              <select
+                value=""
+                onChange={e => {
+                  if (!e.target.value) return
+                  const [desc, prix] = e.target.value.split('||')
+                  setForm(f => ({
+                    ...f,
+                    lignes: [...f.lignes.filter(l => l.description.trim()), { id: Math.random().toString(36).slice(2), description: desc, quantite: 1, prix: parseFloat(prix) }]
+                  }))
+                  e.target.value = ''
+                }}
+                style={{ ...S.input, color: '#374151', cursor: 'pointer' }}
+              >
+                <option value="">— Choisir une prestation —</option>
+                <optgroup label="Préparation physique">
+                  <option value="Préparation physique — premier engagement (3 ou 6 mois)||69">Préparation physique — premier engagement (3 ou 6 mois) — 69 €/mois</option>
+                  <option value="Préparation physique — renouvellement sans engagement||89">Préparation physique — renouvellement sans engagement — 89 €/mois</option>
+                  <option value="Préparation physique — renouvellement 3 mois||79">Préparation physique — renouvellement 3 mois — 79 €/mois</option>
+                  <option value="Préparation physique — renouvellement 6 mois||69">Préparation physique — renouvellement 6 mois — 69 €/mois</option>
+                </optgroup>
+                <optgroup label="Coaching remise en forme">
+                  <option value="Coaching remise en forme — premier engagement (3 ou 6 mois)||69">Coaching remise en forme — premier engagement (3 ou 6 mois) — 69 €/mois</option>
+                  <option value="Coaching remise en forme — renouvellement sans engagement||89">Coaching remise en forme — renouvellement sans engagement — 89 €/mois</option>
+                  <option value="Coaching remise en forme — renouvellement 3 mois||79">Coaching remise en forme — renouvellement 3 mois — 79 €/mois</option>
+                  <option value="Coaching remise en forme — renouvellement 6 mois||69">Coaching remise en forme — renouvellement 6 mois — 69 €/mois</option>
+                </optgroup>
+                <optgroup label="Autre">
+                  <option value="Programme one-shot||30">Programme one-shot — 30 €</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <p style={S.label}>Prestations</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              {form.lignes.map((l, i) => (
+                <div key={l.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input value={l.description} onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, description: e.target.value } : x) }))} placeholder="Ex : Coaching mensuel — Juin 2026" style={{ ...S.input, flex: '3 1 180px' }} />
+                  <input type="number" value={l.quantite} min="1" onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, quantite: e.target.value } : x) }))} style={{ ...S.input, width: 72, flex: '0 0 72px' }} placeholder="Qté" />
+                  <input type="number" value={l.prix} min="0" step="0.01" onChange={e => setForm(f => ({ ...f, lignes: f.lignes.map((x, j) => j===i ? { ...x, prix: e.target.value } : x) }))} style={{ ...S.input, width: 96, flex: '0 0 96px' }} placeholder="Prix €" />
+                  <span style={{ minWidth: 78, textAlign: 'right', fontWeight: '700', fontSize: '0.9rem', color: '#111' }}>
+                    {((parseFloat(l.prix)||0) * (parseFloat(l.quantite)||1)).toFixed(2)} €
+                  </span>
+                  {form.lignes.length > 1 && (
+                    <button onClick={() => setForm(f => ({ ...f, lignes: f.lignes.filter((_, j) => j!==i) }))} style={S.btnClose}>✕</button>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => setForm(f => ({ ...f, lignes: [...f.lignes, newLigne()] }))} style={{ ...S.btnSecondary, alignSelf: 'flex-start', fontSize: '0.8rem', padding: '0.35rem 0.7rem', display:'flex', alignItems:'center', gap:'0.3rem' }}>{Ico.plus(12)} Ligne</button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+              <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1.25rem', textAlign: 'right' }}>
+                <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.15rem', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Total</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 }}>{totalFacture(form.lignes).toFixed(2)} €</p>
+                <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '0.2rem 0 0' }}>TVA non applicable — Art. 293B CGI</p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={S.label}>Notes (optionnel)</label>
+              <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Conditions de règlement, informations complémentaires…" rows={2} style={{ ...S.input, width: '100%', resize: 'vertical', boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={() => { setShowForm(false); setEditingId(null) }} style={S.btnSecondary}>Annuler</button>
+              <button onClick={submitForm} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                {editingId ? 'Enregistrer les modifications' : 'Créer la facture'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Aperçu + impression facture ── */}
       {facturePrint && (
         <div style={{ ...S.card, marginTop: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <p style={{ ...S.sectionTitle, margin: 0 }}>Aperçu — Facture N° {facturePrint.numero}</p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                value={facturePrint.statut}
+                onChange={e => updateStatutFacture(facturePrint.id, e.target.value)}
+                style={{ ...S.input, padding: '0.3rem 0.5rem', fontSize: '0.78rem', width: 'auto', cursor: 'pointer' }}
+              >
+                <option value="brouillon">Brouillon</option>
+                <option value="envoyee">Envoyée</option>
+                <option value="payee">Payée</option>
+              </select>
+              <button onClick={() => openEdit(facturePrint)} style={{ ...S.btnSecondary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.edit()} Modifier</button>
               <button onClick={handlePrint} style={{ ...S.btnPrimary, display:'flex', alignItems:'center', gap:'0.4rem' }}>{Ico.print()} Imprimer / PDF</button>
+              <button onClick={() => deleteFacture(facturePrint.id)} style={{ ...S.btnSecondary, color: '#dc2626', borderColor: '#fecaca' }}>{Ico.trash()}</button>
               <button onClick={() => setPrintId(null)} style={S.btnSecondary}>✕ Fermer</button>
             </div>
           </div>
 
-          {/* Zone imprimable */}
           <div ref={printRef}>
             <InvoiceTemplate facture={facturePrint} settings={settings} total={totalFacture(facturePrint.lignes)} />
           </div>
         </div>
       )}
-
-      </> /* fin onglet factures */ }
-
-      {/* ══ ONGLET PAIEMENTS ══════════════════════════════════════════════════ */}
-      {activeTab === 'paiements' && <>
-
-        {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
-          {[
-            { val: `${pTotalPercu.toFixed(0)} €`,   label: 'Perçu',      color: '#22c55e' },
-            { val: `${(pTotalAttendu - pTotalPercu).toFixed(0)} €`, label: 'En attente', color: '#f59e0b' },
-            { val: pFiltered.filter(p => p.statut === 'en_retard').length, label: 'En retard', color: '#ef4444' },
-            { val: `${pTotalAttendu.toFixed(0)} €`, label: 'Total',      color: '#111827' },
-          ].map((k, i) => (
-            <div key={i} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: '1rem 1.25rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: k.color }}>{k.val}</div>
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2, fontWeight: 500 }}>{k.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtres */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 220 }}>
-            <ClientPicker value={pFilterClient === 'tous' ? null : pFilterClient} onChange={id => setPFilterClient(id || 'tous')} allowClear clearLabel="Tous les clients" />
-          </div>
-          <select style={{ ...S.input, width: 'auto', cursor: 'pointer' }} value={pFilterStatut} onChange={e => setPFilterStatut(e.target.value)}>
-            <option value="tous">Tous les statuts</option>
-            {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-        </div>
-
-        {/* Liste */}
-        {pFiltered.length === 0 ? (
-          <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💳</div>
-            <div style={{ fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>Aucun paiement</div>
-            <button style={{ ...S.btnPrimary, display:'inline-flex', alignItems:'center', gap:'0.4rem' }} onClick={openNewPaiement}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter</button>
-          </div>
-        ) : (
-          <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f9fafb' }}>
-                  {['Client', 'Description', 'Montant', 'Échéance', 'Paiement', 'Statut', ''].map(h => (
-                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pFiltered.map(p => {
-                  const st = PSTATUTS.find(s => s.key === p.statut) || PSTATUTS[0]
-                  return (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: 600, color: '#111' }}>{p.clients?.prenom} {p.clients?.nom}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{p.description || <span style={{ color: '#d1d5db' }}>—</span>}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontSize: '1rem', fontWeight: 700, color: '#111' }}>{parseFloat(p.montant).toFixed(0)} €</td>
-                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{fmtDate(p.date_echeance)}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{fmtDate(p.date_paiement)}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <select value={p.statut} onChange={e => updateStatutPaiement(p.id, e.target.value)}
-                          style={{ padding: '0.25rem 0.5rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', outline: 'none', background: st.bg, color: st.color, border: `1px solid ${st.color}40` }}>
-                          {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                        </select>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <button onClick={() => openEditPaiement(p)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 6, padding: '0.3rem 0.5rem', cursor: 'pointer' }}>✏️</button>
-                          {pDeleteConfirm === p.id ? <>
-                            <button onClick={() => deletePaiement(p.id)} style={{ background: '#fef2f2', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', color: '#ef4444', fontWeight: 700 }}>Oui</button>
-                            <button onClick={() => setPDeleteConfirm(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', color: '#6b7280', fontWeight: 700 }}>Non</button>
-                          </> : (
-                            <button onClick={() => setPDeleteConfirm(p.id)} style={{ background: '#fef2f2', border: 'none', borderRadius: 6, padding: '0.3rem 0.5rem', cursor: 'pointer' }}>🗑️</button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Modal paiement */}
-        {pModal && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-            onClick={() => setPModal(null)}>
-            <div style={{ background: 'white', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 500, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
-              onClick={e => e.stopPropagation()}>
-              <p style={{ fontWeight: 700, fontSize: '1.05rem', color: '#111', margin: '0 0 1.25rem' }}>{pModal === 'new' ? 'Nouveau paiement' : 'Modifier le paiement'}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div>
-                  <label style={S.label}>Client *</label>
-                  <ClientPicker value={pForm.client_id} onChange={id => setPForm(p => ({ ...p, client_id: id }))} />
-                </div>
-                <div>
-                  <label style={S.label}>Montant (€) *</label>
-                  <input style={S.input} type="number" min={0} step={0.01} value={pForm.montant} onChange={e => setPForm(p => ({ ...p, montant: e.target.value }))} placeholder="150" />
-                </div>
-                <div>
-                  <label style={S.label}>Description</label>
-                  <input style={S.input} value={pForm.description} onChange={e => setPForm(p => ({ ...p, description: e.target.value }))} placeholder="Mensualité mai, Bilan…" />
-                </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={S.label}>Date d'échéance</label>
-                    <input style={S.input} type="date" value={pForm.date_echeance} onChange={e => setPForm(p => ({ ...p, date_echeance: e.target.value }))} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={S.label}>Date de paiement</label>
-                    <input style={S.input} type="date" value={pForm.date_paiement} onChange={e => setPForm(p => ({ ...p, date_paiement: e.target.value }))} />
-                  </div>
-                </div>
-                <div>
-                  <label style={S.label}>Statut</label>
-                  <select style={S.input} value={pForm.statut} onChange={e => setPForm(p => ({ ...p, statut: e.target.value }))}>
-                    {PSTATUTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                <button style={S.btnSecondary} onClick={() => setPModal(null)}>Annuler</button>
-                <button style={{ ...S.btnPrimary, opacity: pSaving ? 0.7 : 1 }} onClick={savePaiement} disabled={pSaving}>{pSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </> /* fin onglet paiements */ }
 
     </div>
   )
@@ -931,17 +908,13 @@ function InvoiceTemplate({ facture, settings, total }) {
   return (
     <div id="invoice-print-wrap" style={INV.wrap}>
 
-      {/* ── Ligne 1 : Logo + nom  ·  Boîte référence ── */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'2.75rem' }}>
-
-        {/* Gauche : logo + identité */}
         <div style={{ display:'flex', flexDirection:'column' }}>
           <img src="/logo-noir.png" alt="AWprepa" style={{ height:48, width:'auto', marginBottom:10, marginLeft:-18 }} onError={e => e.target.style.display='none'} />
           <p style={{ fontWeight:900, fontSize:'1rem', color:'#111', margin:0 }}>{nomCoach}</p>
           {activite && <p style={{ fontSize:'0.78rem', color:'#6b7280', margin:'3px 0 0' }}>{activite}</p>}
         </div>
 
-        {/* Droite : boîte référence grisée (style Sosh) */}
         <div style={{ background:'#f3f4f6', borderRadius:8, padding:'0.8rem 1.1rem', textAlign:'right', minWidth:185 }}>
           <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>N° de facture</p>
           <p style={{ fontWeight:800, fontSize:'0.92rem', color:'#111', margin:'0 0 10px' }}>{facture.numero}</p>
@@ -954,10 +927,7 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
       </div>
 
-      {/* ── Ligne 2 : Titre FACTURE + émetteur  ·  Destinataire (fenêtre enveloppe) ── */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'2rem' }}>
-
-        {/* Gauche : grand titre + infos émetteur */}
         <div>
           <p style={{ fontWeight:900, fontSize:'2rem', letterSpacing:'-1px', color:'#111', margin:'0 0 0.875rem' }}>FACTURE</p>
           <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
@@ -967,7 +937,6 @@ function InvoiceTemplate({ facture, settings, total }) {
           </div>
         </div>
 
-        {/* Droite : destinataire — fenêtre enveloppe */}
         <div style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'0.875rem 1.1rem', minWidth:200, maxWidth:240 }}>
           <p style={{ fontSize:'0.62rem', fontWeight:800, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>Facturé à</p>
           {facture.destinataire
@@ -986,10 +955,8 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
       </div>
 
-      {/* ── Séparateur ── */}
       <div style={{ height:1, background:'#e5e7eb', marginBottom:'1.25rem' }} />
 
-      {/* ── Tableau prestations ── */}
       <table style={INV.table}>
         <thead>
           <tr style={{ background: '#111' }}>
@@ -1013,7 +980,6 @@ function InvoiceTemplate({ facture, settings, total }) {
         </tbody>
       </table>
 
-      {/* ── Total ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '0.75rem 0 1.5rem' }}>
         <div style={INV.totalBox}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '3rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1034,7 +1000,6 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
       </div>
 
-      {/* ── Règlement ── */}
       {iban && (
         <div style={INV.infoSection}>
           <p style={INV.infoTitle}>Règlement par virement bancaire</p>
@@ -1043,7 +1008,6 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
       )}
 
-      {/* ── Notes ── */}
       {facture.notes && (
         <div style={INV.infoSection}>
           <p style={INV.infoTitle}>Notes</p>
@@ -1051,10 +1015,8 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
       )}
 
-      {/* Spacer — pousse le pied de page en bas */}
       <div style={{ flex: 1 }} />
 
-      {/* ── Pied de page ── */}
       <div style={INV.footer}>
         <p style={INV.footerTxt}>{nomCoach}{activite ? ` · ${activite}` : ''}</p>
         {siret && <p style={INV.footerTxt}>SIRET {siret}</p>}
@@ -1062,7 +1024,6 @@ function InvoiceTemplate({ facture, settings, total }) {
         {emailCoach && <p style={INV.footerTxt}>{emailCoach}</p>}
       </div>
 
-      {/* ── Mentions légales ── */}
       <div style={INV.legal}>
         <p style={INV.legalTxt}>TVA non applicable — Article 293 B du CGI.</p>
         <p style={INV.legalTxt}>En cas de retard de paiement, des pénalités de retard au taux de 3 fois le taux d'intérêt légal en vigueur seront appliquées, ainsi qu'une indemnité forfaitaire de recouvrement de 40 € (art. L.441-10 du Code de commerce). Pas d'escompte pour paiement anticipé.</p>
@@ -1074,7 +1035,7 @@ function InvoiceTemplate({ facture, settings, total }) {
 /* ── Styles page ── */
 const S = {
   page:        { padding: '1.5rem', maxWidth: 960, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' },
+  header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' },
   title:       { fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 },
   sub:         { fontSize: '0.82rem', color: '#9ca3af', margin: '0.2rem 0 0' },
   card:        { background: 'white', borderRadius: 16, padding: '1.25rem 1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
@@ -1085,6 +1046,39 @@ const S = {
   btnSecondary:{ background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnClose:    { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem 0.4rem', flexShrink: 0 },
   badge:       { padding: '0.15rem 0.55rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: '700' },
+
+  // Pastilles filtre
+  stats:       { display: 'flex', gap: '0.7rem', marginBottom: '1.25rem', flexWrap: 'wrap' },
+  stat:        { flex: 1, minWidth: 140, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '0.85rem 1.1rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
+  statActive:  { borderColor: '#111', boxShadow: '0 1px 3px rgba(0,0,0,.08)' },
+  statN:       { fontSize: '1.4rem', fontWeight: 900, lineHeight: 1, marginBottom: '0.3rem' },
+  statL:       { fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: '0.4rem' },
+  dot:         { width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block' },
+
+  // Tableau
+  th:          { textAlign: 'left', padding: '0.65rem 1rem', fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: '1px solid #e5e7eb' },
+  tr:          { borderBottom: '1px solid #f3f4f6', cursor: 'pointer' },
+  td:          { padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#374151', verticalAlign: 'middle' },
+  who:         { display: 'flex', alignItems: 'center', gap: '0.6rem' },
+  caret:       { display: 'inline-flex', color: '#9ca3af', transition: 'transform .15s' },
+  avatar:      { width: 32, height: 32, borderRadius: '50%', background: '#333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 800, flexShrink: 0 },
+  name:        { fontWeight: 800, color: '#111', fontSize: '0.86rem' },
+  pill:        { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.26rem 0.65rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: 800 },
+  actionBtn:   { background: '#333', color: '#e4f816', border: 'none', borderRadius: 9, padding: '0.4rem 0.75rem', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+
+  detailRow:   { background: '#fafafa', borderBottom: '1px solid #f3f4f6' },
+  detailInner: { padding: '0.2rem 1rem 1rem 3.6rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  hist:        { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#6b7280', padding: '0.3rem 0' },
+  histLink:    { background: 'none', border: 'none', color: '#374151', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', padding: 0 },
+  histIconBtn: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '0.2rem', display: 'flex' },
+  histAddBtn:  { background: 'none', border: '1px dashed #d1d5db', color: '#6b7280', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '0.35rem 0.7rem', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '0.3rem' },
+
+  footnote:     { marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' },
+  footnoteLink: { color: '#374151', fontWeight: 700, cursor: 'pointer', borderBottom: '1px dashed #9ca3af' },
+
+  overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' },
+  modal:       { background: 'white', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 500, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
+  modalTitle:  { fontWeight: 700, fontSize: '1.05rem', color: '#111', margin: '0 0 1.25rem' },
 }
 
 /* ── Styles facture imprimable ── */
