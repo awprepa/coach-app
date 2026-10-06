@@ -9,6 +9,15 @@ function formatDate(str) {
   return `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 }
 function todayISO() { return new Date().toISOString().slice(0, 10) }
+// Remonte le champ au centre de l'écran une fois le clavier déployé (iOS ne
+// recadre pas le viewport autour du champ actif, et ClientBottomNav étant en
+// position fixed il finit par flotter au-dessus du clavier et cacher la ligne).
+function scrollInputIntoView(e) {
+  const target = e.target
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, 300)
+}
 // Normalise pour une recherche insensible aux accents et à la casse
 function normalize(str) {
   return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -450,14 +459,16 @@ export default function SeancePonctuelleClient() {
                     return (
                       <div key={serie.id} style={{ ...S.serieRow, ...(filled ? S.serieRowDone : {}) }}>
                         <span style={S.serieNum}>{serie.num_serie}</span>
-                        <input type="number" inputMode="decimal" placeholder="kg" value={serie.poids}
+                        <input type="text" inputMode="decimal" placeholder="kg" value={serie.poids}
                           onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
                           onBlur={() => saveSerie(ex.id, serie.id)}
+                          onFocus={scrollInputIntoView}
                           style={{ ...S.serieInput, width: 52 }} />
                         <span style={S.serieUnit}>kg</span>
-                        <input type="number" inputMode="numeric" placeholder="reps" value={serie.reps}
+                        <input type="text" inputMode="numeric" placeholder="reps" value={serie.reps}
                           onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
                           onBlur={() => saveSerie(ex.id, serie.id)}
+                          onFocus={scrollInputIntoView}
                           style={{ ...S.serieInput, width: 48 }} />
                         <span style={S.serieUnit}>reps</span>
                         <button onClick={() => supprimerSerie(ex.id, serie.id)}

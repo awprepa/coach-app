@@ -36,6 +36,16 @@ function getCycleWeekForDate(date, programmeDebut, programmeSemaines) {
   return w > programmeSemaines ? null : w
 }
 
+// Remonte le champ au centre de l'écran une fois le clavier déployé (iOS ne
+// recadre pas le viewport autour du champ actif, et ClientBottomNav étant en
+// position fixed il finit par flotter au-dessus du clavier et cacher la ligne).
+function scrollInputIntoView(e) {
+  const target = e.target
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, 300)
+}
+
 function parseRecup(str) {
   if (!str) return 0
   const s = String(str).trim()
@@ -1467,12 +1477,14 @@ export default function SeanceClient() {
                       <input type="text" inputMode="decimal" value={ws.poids}
                         onChange={e => updateWarmupField(ex.id, wi, 'poids', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
+                        onFocus={scrollInputIntoView}
                         placeholder="kg"
                         style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
                       <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>kg</span>
-                      <input type="number" inputMode="numeric" value={ws.reps_reelles}
+                      <input type="text" inputMode="numeric" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
+                        onFocus={scrollInputIntoView}
                         placeholder={tempsMode ? 'sec' : 'reps'}
                         style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
                       <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>{tempsMode ? 's' : 'reps'}</span>
@@ -1494,14 +1506,15 @@ export default function SeanceClient() {
                 <input type="text" inputMode="decimal" value={serie.poids}
                   onChange={e => updateTrackingField(ex.id, si, 'poids', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
-                  onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len) }}
+                  onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len); scrollInputIntoView(e) }}
                   placeholder="kg"
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 52, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>kg</span>
-                <input type="number" inputMode="numeric" value={serie.reps_reelles}
+                <input type="text" inputMode="numeric" value={serie.reps_reelles}
                   onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
                   onBlur={() => saveSerieField(ex.id, si)}
+                  onFocus={scrollInputIntoView}
                   placeholder={tempsMode ? (effReps ? String(effReps).replace('"', '') : 'sec') : (effReps ? String(effReps) : 'reps')}
                   readOnly={serie.is_done}
                   style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />

@@ -63,7 +63,10 @@ export default function Groupes() {
             {loading ? 'Chargement…' : `${groupes.length} groupe${groupes.length > 1 ? 's' : ''}`}
           </p>
         </div>
-        <button onClick={() => navigate('/clients')} style={S.btnSecondary}>Gérer depuis Clients</button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => navigate('/groupes/charges')} style={S.btnSecondary}>Charges</button>
+          <button onClick={() => navigate('/clients')} style={S.btnSecondary}>Gérer depuis Clients</button>
+        </div>
       </div>
 
       {!loading && groupes.length === 0 && (
