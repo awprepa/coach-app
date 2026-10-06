@@ -13,6 +13,7 @@ import { sendNotif, getCoachId } from '../../notifs'
 import { computeExerciseXp, fetchExerciceSetsByName, totalXpFromByName } from '../../data/xpSystem'
 import XpBulle, { useXpBulle } from '../../components/XpBulle'
 import { useAutoRefresh } from '../../hooks/useAutoRefresh'
+import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -802,6 +803,7 @@ export default function SeanceClient() {
     }, { onConflict: 'exercice_id,semaine,serie' })
     if (error) { console.error('[saveSerieField]', error.message); return }  // pas de flash « sauvegardé » si échec réel
     flashSaved()
+    autoPlacerSeanceSurCalendrier(seance?.programmes?.client_id, id, semaineActuelle)
   }
 
   async function validerSerie(exId, serieIdx, groupLetter, groupItems, targetReps, boutonEl) {
@@ -825,6 +827,7 @@ export default function SeanceClient() {
       valide: repsOk,
       is_done: true,
     }, { onConflict: 'exercice_id,semaine,serie' })
+    autoPlacerSeanceSurCalendrier(seance?.programmes?.client_id, id, semaineActuelle)
 
     // ── Gain d'XP en direct (bulle éphémère, clients hors groupe) ─────────
     // Chaque série réelle (exercice+semaine+numéro) ne compte qu'une fois :
@@ -961,6 +964,7 @@ export default function SeanceClient() {
 
   function terminerBloc(groupLetter, boutonEl) {
     setBlocsTermines(prev => new Set([...prev, groupLetter]))
+    autoPlacerSeanceSurCalendrier(seance?.programmes?.client_id, id, semaineActuelle)
     const letters = [...new Set(exercices.map(e => e.code?.match(/^([A-Za-z]+)/)?.[1]).filter(Boolean))]
     const idx = letters.indexOf(groupLetter)
     const nextLetter = letters.slice(idx + 1).find(l => !blocsTermines.has(l) && !blocsSkippes.has(l))
@@ -1008,6 +1012,7 @@ export default function SeanceClient() {
       valide: false, is_done: false,
     }, { onConflict: 'exercice_id,semaine,serie' })
     flashSaved()
+    autoPlacerSeanceSurCalendrier(seance?.programmes?.client_id, id, semaineActuelle)
   }
 
   async function removeWarmupSet(exId, idx) {

@@ -16,6 +16,12 @@ function initiales(prenom, nom) {
   return ((prenom?.[0] || '') + (nom?.[0] || '')).toUpperCase() || '?'
 }
 
+function formatDateEntree(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+}
+
 export default function ChargesGroupes() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -87,7 +93,7 @@ export default function ChargesGroupes() {
 
     const { data: trackings } = await supabase
       .from('serie_tracking')
-      .select('exercice_id, semaine, poids, reps_reelles')
+      .select('exercice_id, semaine, poids, reps_reelles, created_at')
       .in('exercice_id', exIds)
       .eq('is_done', true)
 
@@ -120,7 +126,7 @@ export default function ChargesGroupes() {
       const reps = parseFloat(t.reps_reelles)
       if (!(poids > 0)) return
       const key = `${t.exercice_id}_${t.semaine}`
-      if (!best[key] || poids > best[key].poids) best[key] = { poids, reps: reps || null }
+      if (!best[key] || poids > best[key].poids) best[key] = { poids, reps: reps || null, date: t.created_at || null }
     })
 
     // exercice_id → { nom, seance_id } pour relier aux clients
@@ -226,6 +232,7 @@ export default function ChargesGroupes() {
                                 <div style={S.cell}>
                                   <span style={S.cellPoids}>{v.poids}kg</span>
                                   {v.reps && <span style={S.cellReps}>×{v.reps}</span>}
+                                  {formatDateEntree(v.date) && <span style={S.cellDate}>{formatDateEntree(v.date)}</span>}
                                 </div>
                                 {isLast && delta != null && (
                                   <span style={{ ...S.delta, ...(delta > 0 ? S.deltaUp : S.deltaFlat) }}>
@@ -245,7 +252,7 @@ export default function ChargesGroupes() {
           </div>
 
           <p style={S.legend}>
-            Charge affichée = série la plus lourde validée cette semaine-là. La pastille compare la dernière semaine à la première disponible.
+            Charge affichée = série la plus lourde validée cette semaine-là, avec la date de saisie. La pastille compare la dernière semaine à la première disponible. (Les entrées antérieures à l'ajout de l'horodatage n'affichent pas de date.)
           </p>
         </>
       )}
@@ -283,6 +290,7 @@ const S = {
   cell: { display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.25 },
   cellPoids: { fontSize: '0.86rem', fontWeight: 800, color: '#111' },
   cellReps: { fontSize: '0.66rem', color: '#9ca3af' },
+  cellDate: { fontSize: '0.6rem', color: '#c7cbd1', fontWeight: 500, marginTop: 1 },
   cellEmpty: { fontSize: '0.86rem', color: '#d1d5db', fontWeight: 600 },
 
   delta: { display: 'inline-flex', alignItems: 'center', fontSize: '0.66rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 },
