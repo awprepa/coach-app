@@ -24,8 +24,8 @@ with premiere_saisie as (
   where st.is_done = true and st.created_at is not null
   group by exo.seance_id, st.semaine
 )
-insert into evenements (client_id, date, type, seance_id, source, semaine, semaine_override)
-select prog.client_id, ps.jour, 'seance', ps.seance_id, 'client', ps.semaine, ps.semaine
+insert into evenements (client_id, date, type, titre, seance_id, source, semaine, semaine_override)
+select prog.client_id, ps.jour, 'seance', sea.nom, ps.seance_id, 'client', ps.semaine, ps.semaine
 from premiere_saisie ps
 join seances sea on sea.id = ps.seance_id
 join programmes prog on prog.id = sea.programme_id

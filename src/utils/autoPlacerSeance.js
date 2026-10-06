@@ -36,10 +36,16 @@ export function autoPlacerSeanceSurCalendrier(clientId, seanceId, semaine) {
         .maybeSingle()
       if (dejaAujourdhui) return
 
+      // `titre` est NOT NULL en base — Calendrier.js l'ignore pour les
+      // événements de type séance (il affiche seances(nom) via jointure) mais
+      // il faut quand même lui donner une valeur à l'insertion.
+      const { data: sea } = await supabase.from('seances').select('nom').eq('id', seanceId).maybeSingle()
+
       await supabase.from('evenements').insert([{
         client_id: clientId,
         date: today,
         type: 'seance',
+        titre: sea?.nom || 'Séance',
         seance_id: seanceId,
         source: 'client',
         semaine,
