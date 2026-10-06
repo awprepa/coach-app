@@ -366,8 +366,9 @@ export default function FicheGroupe() {
   }
 
   // ── Membres ────────────────────────────────────────────────────────────────
-  // Sous-groupe (parent_id défini) → on transfère des joueurs déjà présents dans
-  // le groupe principal, plutôt que de proposer des clients qui n'y sont pas.
+  // Sous-groupe (parent_id défini) → on ajoute des joueurs déjà présents dans
+  // le groupe principal (ils y restent), plutôt que de proposer des clients
+  // qui n'y sont pas.
   async function ouvrirAddMembre() {
     if (groupe?.parent_id) return ouvrirTransfererMembre()
     // Charger tous les clients qui ne sont dans AUCUN groupe
@@ -433,22 +434,19 @@ export default function FicheGroupe() {
     await load(true)
   }
 
-  // Transfère des joueurs du groupe principal vers ce sous-groupe : ils quittent
-  // le principal (retirés de groupe_membres) et rejoignent le sous-groupe. Leur
-  // fiche effectif (poste, blessures, tests — table groupe_joueurs) les suit pour
-  // ne pas perdre cet historique.
+  // Ajoute des joueurs déjà présents dans le groupe principal à ce sous-groupe.
+  // Ils RESTENT membres du groupe principal (plus de transfert destructif) —
+  // un joueur peut appartenir à plusieurs sous-groupes à la fois (ex. avants +
+  // un autre découpage), et continue d'apparaître dans le calendrier/l'effectif
+  // du groupe principal.
   async function transfererMembresSelectionnes() {
     if (!selectedCandidats.size) return
     setAddingMembres(true)
     const clientIds = [...selectedCandidats]
 
-    await supabase.from('groupe_membres').delete().eq('groupe_id', groupe.parent_id).in('client_id', clientIds)
     const rows = clientIds.map(clientId => ({ groupe_id: id, client_id: clientId }))
     const { error } = await supabase.from('groupe_membres').insert(rows)
     if (error) { setAddingMembres(false); alert(error.message); return }
-
-    await supabase.from('groupe_joueurs').update({ groupe_id: id })
-      .eq('groupe_id', groupe.parent_id).in('client_id', clientIds)
 
     setAddingMembres(false)
     setShowAddMembre(false)
@@ -1105,7 +1103,7 @@ export default function FicheGroupe() {
             </table>
           </div>
           <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>
-            {groupe.parent_id ? `+ Transférer depuis ${parent?.nom || 'le groupe principal'}` : '+ Ajouter un membre'}
+            {groupe.parent_id ? `+ Ajouter depuis ${parent?.nom || 'le groupe principal'}` : '+ Ajouter un membre'}
           </button>
         </div>
 
@@ -1495,7 +1493,7 @@ export default function FicheGroupe() {
 
       {/* ── Modal ajout membre ── */}
       {showAddMembre && (
-        <Modal title={groupe.parent_id ? `Transférer depuis ${parent?.nom || 'le groupe principal'}` : 'Ajouter des membres'} onClose={() => setShowAddMembre(false)}>
+        <Modal title={groupe.parent_id ? `Ajouter depuis ${parent?.nom || 'le groupe principal'}` : 'Ajouter des membres'} onClose={() => setShowAddMembre(false)}>
           <label style={S.label}>Rechercher un client</label>
           <input
             autoFocus value={searchMembre} onChange={e => setSearchMembre(e.target.value)}
@@ -1542,9 +1540,7 @@ export default function FicheGroupe() {
           {selectedCandidats.size > 0 && (
             <button onClick={ajouterMembresSelectionnes} disabled={addingMembres}
               style={{ width: '100%', background: accent, color: '#fff', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {groupe.parent_id
-                ? (addingMembres ? 'Transfert en cours…' : `Transférer ${selectedCandidats.size} joueur${selectedCandidats.size > 1 ? 's' : ''}`)
-                : (addingMembres ? 'Ajout en cours…' : `Ajouter ${selectedCandidats.size} membre${selectedCandidats.size > 1 ? 's' : ''}`)}
+              {addingMembres ? 'Ajout en cours…' : `Ajouter ${selectedCandidats.size} joueur${selectedCandidats.size > 1 ? 's' : ''}`}
             </button>
           )}
         </Modal>
