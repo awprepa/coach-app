@@ -4,6 +4,24 @@ import { supabase } from '../supabase'
 import { PageLoading } from '../components/Skeleton'
 
 const MAX_SEMAINES_AFFICHEES = 8
+const TAILLE_LOT_IN = 150 // un filtre .in() avec trop d'ids dépasse la limite de
+// taille d'en-têtes HTTP/2 de Supabase et échoue silencieusement (data vide,
+// sans erreur visible) — un gros groupe (50+ joueurs, plusieurs cycles)
+// accumule facilement plus de 2000 exercice_id d'un coup. On découpe en lots.
+
+async function selectEnLots(table, selectCols, colonne, valeurs, { eq } = {}) {
+  if (valeurs.length === 0) return []
+  const lots = []
+  for (let i = 0; i < valeurs.length; i += TAILLE_LOT_IN) lots.push(valeurs.slice(i, i + TAILLE_LOT_IN))
+  const resultats = await Promise.all(lots.map(async lot => {
+    let q = supabase.from(table).select(selectCols).in(colonne, lot)
+    if (eq) for (const [col, val] of Object.entries(eq)) q = q.eq(col, val)
+    const { data, error } = await q
+    if (error) { console.error(`[selectEnLots] ${table}.${colonne}`, error.message); return [] }
+    return data || []
+  }))
+  return resultats.flat()
+}
 
 function getSemaineActuelle(dateDebut) {
   if (!dateDebut) return 1
@@ -151,21 +169,20 @@ export default function ChargesGroupes() {
     const progIds = (progs || []).map(p => p.id)
     if (progIds.length === 0) { setLoading(false); return }
 
-    const { data: seances } = await supabase.from('seances').select('id, programme_id, nom, ordre').in('programme_id', progIds)
-    const seanceIds = (seances || []).map(s => s.id)
+    const seances = await selectEnLots('seances', 'id, programme_id, nom, ordre', 'programme_id', progIds)
+    const seanceIds = seances.map(s => s.id)
     if (seanceIds.length === 0) { setLoading(false); return }
 
-    const { data: exos } = await supabase.from('exercices').select('id, nom, seance_id, ordre').in('seance_id', seanceIds)
-    const exIds = (exos || []).map(e => e.id)
+    const exos = await selectEnLots('exercices', 'id, nom, seance_id, ordre', 'seance_id', seanceIds)
+    const exIds = exos.map(e => e.id)
     if (exIds.length === 0) { setLoading(false); return }
 
-    const { data: trackings } = await supabase
-      .from('serie_tracking')
-      .select('exercice_id, semaine, poids, reps_reelles, created_at')
-      .in('exercice_id', exIds)
-      .eq('is_done', true)
+    const trackings = await selectEnLots(
+      'serie_tracking', 'exercice_id, semaine, poids, reps_reelles, created_at', 'exercice_id', exIds,
+      { eq: { is_done: true } }
+    )
 
-    setRaw({ clientIds, clientById, progs: progs || [], seances: seances || [], exos: exos || [], trackings: trackings || [] })
+    setRaw({ clientIds, clientById, progs: progs || [], seances, exos, trackings })
     setLoading(false)
   }, [])
 
