@@ -78,6 +78,8 @@ export default function ChargesGroupes() {
   const [raw, setRaw] = useState(null)                // données brutes du groupe (tous cycles confondus)
   const [cycles, setCycles] = useState([])            // [{ key, nom, date_debut }] triés du + récent au + ancien
   const [cycleActif, setCycleActif] = useState('')
+  const [seancesCycle, setSeancesCycle] = useState([]) // noms de séances distincts du cycle, triés par ordre
+  const [seanceActive, setSeanceActive] = useState('')
   const [exercices, setExercices] = useState([])      // noms distincts, triés par ordre dans la séance
   const [exerciceActif, setExerciceActif] = useState('')
   const [semaines, setSemaines] = useState([1])       // colonnes affichées
@@ -149,7 +151,7 @@ export default function ChargesGroupes() {
     const progIds = (progs || []).map(p => p.id)
     if (progIds.length === 0) { setLoading(false); return }
 
-    const { data: seances } = await supabase.from('seances').select('id, programme_id').in('programme_id', progIds)
+    const { data: seances } = await supabase.from('seances').select('id, programme_id, nom, ordre').in('programme_id', progIds)
     const seanceIds = (seances || []).map(s => s.id)
     if (seanceIds.length === 0) { setLoading(false); return }
 
@@ -201,9 +203,25 @@ export default function ChargesGroupes() {
 
     const progBySeance = {}
     raw.seances.forEach(s => { progBySeance[s.id] = s.programme_id })
-    const seanceIdsCycle = new Set(raw.seances.filter(s => progIdsCycle.has(s.programme_id)).map(s => s.id))
+    const seancesDuCycle = raw.seances.filter(s => progIdsCycle.has(s.programme_id))
+    const seanceIdsCycle = new Set(seancesDuCycle.map(s => s.id))
 
-    const exosCycle = raw.exos.filter(e => seanceIdsCycle.has(e.seance_id))
+    // Séances distinctes (par nom) du cycle, triées par leur position.
+    const ordreParNomSeance = {}
+    seancesDuCycle.forEach(s => {
+      if (!(s.nom in ordreParNomSeance) || (s.ordre ?? 0) < ordreParNomSeance[s.nom]) ordreParNomSeance[s.nom] = s.ordre ?? 0
+    })
+    const nomsSeances = Object.keys(ordreParNomSeance).sort((a, b) => ordreParNomSeance[a] - ordreParNomSeance[b])
+    setSeancesCycle(nomsSeances)
+
+    const seanceEffective = nomsSeances.includes(seanceActive) ? seanceActive : (nomsSeances[0] || '')
+    if (seanceEffective !== seanceActive) { setSeanceActive(seanceEffective); return } // redéclenche avec la bonne valeur
+
+    const seanceIdsSelection = seanceEffective
+      ? new Set(seancesDuCycle.filter(s => s.nom === seanceEffective).map(s => s.id))
+      : seanceIdsCycle
+
+    const exosCycle = raw.exos.filter(e => seanceIdsSelection.has(e.seance_id))
     const exIdsCycle = new Set(exosCycle.map(e => e.id))
 
     // Liste des exercices distincts (par nom), ordonnés selon leur position
@@ -249,7 +267,7 @@ export default function ChargesGroupes() {
     }).filter(Boolean)
     setLignes(rows)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [raw, cycleActif])
+  }, [raw, cycleActif, seanceActive])
 
   function valeurPour(ligne, nomExercice, semaine) {
     const exo = ligne.mesExos.find(e => e.nom === nomExercice)
@@ -358,6 +376,20 @@ export default function ChargesGroupes() {
                   style={{ ...S.cycleChip, ...(c.key === cycleActif ? S.cycleChipOn : {}) }}
                 >
                   {c.nom}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {seancesCycle.length > 1 && (
+            <div style={S.exRow}>
+              {seancesCycle.map(nom => (
+                <button
+                  key={nom}
+                  onClick={() => setSeanceActive(nom)}
+                  style={{ ...S.exChip, ...(nom === seanceActive ? S.exChipOn : {}) }}
+                >
+                  {nom}
                 </button>
               ))}
             </div>

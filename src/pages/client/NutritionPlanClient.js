@@ -5,6 +5,10 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
 
 function toISO(date) { return date.toISOString().slice(0, 10) }
+function formatDateCourt(iso) {
+  if (!iso) return ''
+  return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
 
 // ─── Classement des aliments par rayon (pour la liste de courses) ─────────────
 function normFood(s) {
@@ -252,6 +256,9 @@ export default function NutritionPlanClient() {
   const [client, setClient] = useState(null)
   const [plan, setPlan]     = useState(null)
   const [days, setDays]     = useState([])
+  const [planAVenir, setPlanAVenir] = useState(null)
+  const [daysAVenir, setDaysAVenir] = useState([])
+  const [coursesAvenir, setCoursesAvenir] = useState(false)
   const [logs, setLogs]     = useState([])
   const [water, setWater]   = useState({ ml: 0 })
   const [loading, setLoading] = useState(true)
@@ -308,6 +315,21 @@ export default function NutritionPlanClient() {
           .select(`*, nutrition_plan_meals(*, nutrition_plan_foods(*))`)
           .eq('plan_id', activePlan.id).order('jour_numero')
         setDays(daysData || [])
+      }
+
+      // Prochain plan (statut actif, pas encore commencé) : pas pour logger —
+      // seulement pour que le client prépare ses courses en avance.
+      const { data: nextPlan } = await supabase
+        .from('nutrition_plans').select('*').eq('client_id', c.id).eq('statut', 'actif')
+        .gt('date_debut', today)
+        .order('date_debut', { ascending: true }).limit(1).maybeSingle()
+      if (nextPlan) {
+        setPlanAVenir(nextPlan)
+        const { data: daysNext } = await supabase
+          .from('nutrition_plan_days')
+          .select(`*, nutrition_plan_meals(*, nutrition_plan_foods(*))`)
+          .eq('plan_id', nextPlan.id).order('jour_numero')
+        setDaysAVenir(daysNext || [])
       }
       setLoading(false)
     }
@@ -420,9 +442,9 @@ export default function NutritionPlanClient() {
   }
 
   // ── Liste de courses — regroupée par rayon pour faciliter les courses ────
-  function getShoppingList() {
+  function getShoppingList(joursSource) {
     const items = {}
-    for (const day of days) {
+    for (const day of joursSource) {
       for (const meal of (day.nutrition_plan_meals || [])) {
         for (const food of (meal.nutrition_plan_foods || [])) {
           const key = food.nom.toLowerCase()
@@ -524,7 +546,7 @@ export default function NutritionPlanClient() {
 
   const waterTarget = 2000
   const waterPct = Math.min((water.ml / waterTarget) * 100, 100)
-  const shoppingList = getShoppingList()
+  const shoppingList = getShoppingList(coursesAvenir ? daysAVenir : days)
 
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
@@ -565,6 +587,14 @@ export default function NutritionPlanClient() {
         {/* ══ 7 JOURS ══════════════════════════════════════════════════════ */}
         {tab === 'semaine' && (
           <div>
+            {planAVenir && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffbe8', border: '1px solid #fde68a', borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: '0.9rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <div style={{ flex: 1, fontSize: '0.78rem', color: '#92400e', lineHeight: 1.4 }}>
+                  Nouveau plan « {planAVenir.nom} » dès le {formatDateCourt(planAVenir.date_debut)} — tu peux déjà préparer tes courses dans l'onglet <b>Courses</b>.
+                </div>
+              </div>
+            )}
             {days.map(day => (
               <div key={day.id} style={{ marginBottom: '0.75rem' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.83rem', color: '#1a1a1a', marginBottom: 4 }}>
@@ -614,8 +644,26 @@ export default function NutritionPlanClient() {
         {/* ══ COURSES ══════════════════════════════════════════════════════ */}
         {tab === 'courses' && (
           <div>
+            {planAVenir && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: '0.85rem', background: '#f3f4f6', borderRadius: 12, padding: 4 }}>
+                <button
+                  onClick={() => setCoursesAvenir(false)}
+                  style={{ flex: 1, border: 'none', borderRadius: 9, padding: '0.5rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: !coursesAvenir ? 'white' : 'none', color: !coursesAvenir ? '#1a1a1a' : '#6b7280', boxShadow: !coursesAvenir ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}
+                >
+                  Plan en cours
+                </button>
+                <button
+                  onClick={() => setCoursesAvenir(true)}
+                  style={{ flex: 1, border: 'none', borderRadius: 9, padding: '0.5rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: coursesAvenir ? 'white' : 'none', color: coursesAvenir ? '#1a1a1a' : '#6b7280', boxShadow: coursesAvenir ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}
+                >
+                  Dès le {formatDateCourt(planAVenir.date_debut)}
+                </button>
+              </div>
+            )}
             <p style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: '0.75rem' }}>
-              Liste complète pour les 7 jours. Les quantités sont cumulées.
+              {coursesAvenir
+                ? `Liste pour le prochain plan (${planAVenir?.nom || ''}), à partir du ${formatDateCourt(planAVenir?.date_debut)}. Tu peux l'acheter en avance.`
+                : 'Liste complète pour les 7 jours. Les quantités sont cumulées.'}
             </p>
             {shoppingList.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>Aucun aliment dans le plan.</div>
