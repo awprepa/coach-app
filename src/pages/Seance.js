@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, Fragment } from 'react'
 import SeanceAIModal from '../components/SeanceAIModal'
+import SeanceTerrainCoach from './SeanceTerrainCoach'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -1020,6 +1021,7 @@ export default function Seance() {
 
   if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
   if (!seance) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Séance introuvable.</p></div>
+  if (seance.type === 'terrain') return <SeanceTerrainCoach id={id} seance={seance} />
 
   const colSemaines = Array.from({ length: semaines }, (_, i) => i + 1)
 

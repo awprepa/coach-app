@@ -14,6 +14,7 @@ import { computeExerciseXp, fetchExerciceSetsByName, totalXpFromByName } from '.
 import XpBulle, { useXpBulle } from '../../components/XpBulle'
 import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
+import SeanceTerrainClient from './SeanceTerrainClient'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -1220,6 +1221,7 @@ export default function SeanceClient() {
 
   if (loading) return <PageLoading />
   if (!seance) return <div style={S.centered}><p style={{ color: '#888' }}>Séance introuvable.</p></div>
+  if (seance.type === 'terrain') return <SeanceTerrainClient id={id} seance={seance} />
 
   const cols = Array.from({ length: semaines }, (_, i) => i + 1)
   const graphData = cols.map(s => ({

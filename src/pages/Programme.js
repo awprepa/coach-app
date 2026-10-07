@@ -11,6 +11,7 @@ export default function Programme() {
   const [seances, setSeances] = useState([])
   const [loading, setLoading] = useState(true)
   const [nouvelleSeance, setNouvelleSeance] = useState('')
+  const [nouvelleSeanceType, setNouvelleSeanceType] = useState('musculation')
   const [enEdition, setEnEdition] = useState(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [templates, setTemplates] = useState([])
@@ -50,10 +51,11 @@ export default function Programme() {
     e.preventDefault()
     if (!nouvelleSeance.trim()) return
     const { data, error } = await supabase
-      .from('seances').insert([{ programme_id: id, nom: nouvelleSeance, ordre: seances.length + 1 }]).select().single()
+      .from('seances').insert([{ programme_id: id, nom: nouvelleSeance, ordre: seances.length + 1, type: nouvelleSeanceType }]).select().single()
     if (error) { alert(error.message); return }
     setSeances([...seances, data])
     setNouvelleSeance('')
+    setNouvelleSeanceType('musculation')
     // Notifier le client (sans objet pour un brouillon bibliothèque, sans client)
     if (!programme.client_id) return
     try {
@@ -517,6 +519,9 @@ export default function Programme() {
                     >
                       <span style={styles.seanceOrdre}>Jour {i + 1}</span>
                       <span style={styles.seanceNom}>{seance.nom}</span>
+                      {seance.type === 'terrain' && (
+                        <span style={{ background: '#ecfccb', color: '#3f6212', fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: 999, marginLeft: 'auto' }}>Terrain</span>
+                      )}
                     </div>
                     <button onClick={() => { setEnEdition(seance.id); setNomEdition(seance.nom) }} style={styles.iconBtn}>✏️</button>
                     <button onClick={() => supprimerSeance(seance.id)} style={styles.iconBtn}>🗑️</button>
@@ -536,6 +541,17 @@ export default function Programme() {
               style={{ ...styles.input, flex: 1 }}
             />
             <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
+          </div>
+          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+            {[['musculation', 'Musculation'], ['terrain', 'Terrain']].map(([val, label]) => (
+              <button key={val} type="button" onClick={() => setNouvelleSeanceType(val)}
+                style={{
+                  border: '1.5px solid', borderColor: nouvelleSeanceType === val ? '#1f2937' : '#e5e7eb',
+                  background: nouvelleSeanceType === val ? '#1f2937' : 'white',
+                  color: nouvelleSeanceType === val ? '#e4f816' : '#6b7280',
+                  fontSize: '0.76rem', fontWeight: 700, padding: '0.35rem 0.75rem', borderRadius: 8, cursor: 'pointer',
+                }}>{label}</button>
+            ))}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
             <button type="button" onClick={ouvrirTemplates} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>📋 Depuis un modèle</button>

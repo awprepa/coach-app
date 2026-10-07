@@ -169,7 +169,12 @@ export default function ChargesGroupes() {
     const progIds = (progs || []).map(p => p.id)
     if (progIds.length === 0) { setLoading(false); return }
 
-    const seances = await selectEnLots('seances', 'id, programme_id, nom, ordre', 'programme_id', progIds)
+    // Les séances terrain n'ont pas de poids/reps à suivre — on ne garde que
+    // les séances de musculation pour cette page.
+    const seances = await selectEnLots(
+      'seances', 'id, programme_id, nom, ordre', 'programme_id', progIds,
+      { eq: { type: 'musculation' } }
+    )
     const seanceIds = seances.map(s => s.id)
     if (seanceIds.length === 0) { setLoading(false); return }
 
