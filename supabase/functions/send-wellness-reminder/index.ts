@@ -78,6 +78,7 @@ Deno.serve(async (_req) => {
         .from("nutrition_plans").select("client_id")
         .in("client_id", clientIds)
         .eq("statut", "actif")
+        .lte("date_debut", today)
         .or(`date_fin.is.null,date_fin.gte.${today}`);
       const clientsWithPlan = new Set((plansData || []).map((p: any) => p.client_id));
 

@@ -406,7 +406,9 @@ export default function FicheClient() {
       supabase.from('nutrition_plans')
         .select('id, nom, statut, date_debut, date_fin, nutrition_plan_days(id, jour_numero, type_jour, nutrition_plan_meals(id, nom, meal_type, ordre, kcal, prot_g, carbs_g, fat_g, recette, nutrition_plan_foods(id, nom, quantite_g, ordre)))')
         .eq('client_id', id).eq('statut', 'actif')
-        .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        .lte('date_debut', today)
+        .or(`date_fin.is.null,date_fin.gte.${today}`)
+        .order('date_debut', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('nutrition_profile').select('*').eq('client_id', id).maybeSingle(),
     ])
 

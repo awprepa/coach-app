@@ -98,7 +98,9 @@ export default function AccueilClient() {
       .select('id, date_debut')
       .eq('client_id', clientId)
       .eq('statut', 'actif')
-      .maybeSingle()
+      .lte('date_debut', today)
+      .or(`date_fin.is.null,date_fin.gte.${today}`)
+      .order('date_debut', { ascending: false }).limit(1).maybeSingle()
     if (!plan) { setNutritionToday(false); return }
     const diffDays = Math.floor((new Date(today + 'T00:00:00') - new Date(plan.date_debut + 'T00:00:00')) / 86400000)
     const dayNum = diffDays >= 0 ? (diffDays % 7) + 1 : null

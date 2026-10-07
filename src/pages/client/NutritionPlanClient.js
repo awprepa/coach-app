@@ -297,8 +297,9 @@ export default function NutritionPlanClient() {
       const today = toISO(new Date())
       const { data: activePlan } = await supabase
         .from('nutrition_plans').select('*').eq('client_id', c.id).eq('statut', 'actif')
+        .lte('date_debut', today)
         .or(`date_fin.is.null,date_fin.gte.${today}`)
-        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        .order('date_debut', { ascending: false }).limit(1).maybeSingle()
 
       if (activePlan) {
         setPlan(activePlan)

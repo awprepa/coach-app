@@ -47,8 +47,11 @@ export default function NutritionCoach() {
       for (const p of (allPlans || [])) {
         if (!plansMap[p.client_id]) plansMap[p.client_id] = { total: 0, actif: null }
         plansMap[p.client_id].total++
-        const isValidActif = p.statut === 'actif' && (!p.date_fin || p.date_fin >= today)
-        if (isValidActif && !plansMap[p.client_id].actif) plansMap[p.client_id].actif = p
+        const isValidActif = p.statut === 'actif' && p.date_debut <= today && (!p.date_fin || p.date_fin >= today)
+        // Si plusieurs plans "actif" se chevauchent (ex. le suivant programmé à
+        // l'avance), on garde celui dont le début est le plus récent.
+        const actuel = plansMap[p.client_id].actif
+        if (isValidActif && (!actuel || p.date_debut > actuel.date_debut)) plansMap[p.client_id].actif = p
       }
 
       // Adhérence 7 derniers jours (plan logs)

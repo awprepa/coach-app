@@ -66,8 +66,9 @@ export default function NutritionClient() {
       const today = new Date().toISOString().slice(0, 10)
       const { data: p } = await supabase.from('nutrition_plans')
         .select('id, nom, date_debut').eq('client_id', data.id).eq('statut', 'actif')
+        .lte('date_debut', today)
         .or(`date_fin.is.null,date_fin.gte.${today}`)
-        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        .order('date_debut', { ascending: false }).limit(1).maybeSingle()
       if (p) {
         setPlan(p)
         const { data: jrs } = await supabase.from('nutrition_plan_days')

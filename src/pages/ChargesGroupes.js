@@ -75,7 +75,10 @@ export default function ChargesGroupes() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerRef = useRef(null)
   const [loading, setLoading] = useState(true)
-  const [exercices, setExercices] = useState([])     // [{ nom, ordre }] distincts, triés
+  const [raw, setRaw] = useState(null)                // données brutes du groupe (tous cycles confondus)
+  const [cycles, setCycles] = useState([])            // [{ key, nom, date_debut }] triés du + récent au + ancien
+  const [cycleActif, setCycleActif] = useState('')
+  const [exercices, setExercices] = useState([])      // noms distincts, triés par ordre dans la séance
   const [exerciceActif, setExerciceActif] = useState('')
   const [semaines, setSemaines] = useState([1])       // colonnes affichées
   const [lignes, setLignes] = useState([])            // [{ client, mesExos }]
@@ -112,11 +115,21 @@ export default function ChargesGroupes() {
     setPickerOpen(false)
   }
 
-  // Chargement des charges du groupe sélectionné : membres → programme actif
-  // de chacun → séances → exercices → séries validées (serie_tracking).
+  // Clé de cycle : le template partagé si les séances viennent d'un cycle
+  // poussé au groupe, sinon le nom du programme (repli pour un programme créé
+  // à la main, sans template).
+  function cycleKeyDe(p) {
+    return p.template_id || p.nom
+  }
+
+  // Chargement brut du groupe sélectionné : membres → TOUS leurs programmes
+  // (tous cycles confondus) → séances → exercices → séries validées. Le
+  // détail par cycle est ensuite calculé localement (recalculerCycle), sans
+  // nouvel appel réseau, pour un changement de cycle instantané.
   const loadGroupe = useCallback(async (id) => {
     if (!id) return
     setLoading(true)
+    setRaw(null)
     setExercices([])
     setLignes([])
 
@@ -128,21 +141,15 @@ export default function ChargesGroupes() {
     const clientById = {}
     ;(clients || []).forEach(c => { clientById[c.id] = c })
 
-    // Programme actif = le plus récent par client.
     const { data: progs } = await supabase
       .from('programmes')
-      .select('id, client_id, semaines, date_debut, created_at')
+      .select('id, client_id, nom, template_id, semaines, date_debut, created_at')
       .in('client_id', clientIds)
       .order('created_at', { ascending: false })
-    const progByClient = {}
-    ;(progs || []).forEach(p => { if (!progByClient[p.client_id]) progByClient[p.client_id] = p })
-
-    const progIds = Object.values(progByClient).map(p => p.id)
+    const progIds = (progs || []).map(p => p.id)
     if (progIds.length === 0) { setLoading(false); return }
 
     const { data: seances } = await supabase.from('seances').select('id, programme_id').in('programme_id', progIds)
-    const progBySeance = {}
-    ;(seances || []).forEach(s => { progBySeance[s.id] = s.programme_id })
     const seanceIds = (seances || []).map(s => s.id)
     if (seanceIds.length === 0) { setLoading(false); return }
 
@@ -156,10 +163,53 @@ export default function ChargesGroupes() {
       .in('exercice_id', exIds)
       .eq('is_done', true)
 
+    setRaw({ clientIds, clientById, progs: progs || [], seances: seances || [], exos: exos || [], trackings: trackings || [] })
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { if (groupeId) loadGroupe(groupeId) }, [groupeId, loadGroupe])
+
+  // Recalcul (pur, sans réseau) de la liste des cycles + du détail affiché,
+  // à chaque chargement du groupe ou changement de cycle sélectionné.
+  useEffect(() => {
+    if (!raw) return
+
+    // Liste des cycles distincts présents dans le groupe, du + récent au + ancien.
+    const cycleMap = {}
+    raw.progs.forEach(p => {
+      const k = cycleKeyDe(p)
+      if (!cycleMap[k] || (p.date_debut || '') > (cycleMap[k].date_debut || '')) {
+        cycleMap[k] = { key: k, nom: p.nom, date_debut: p.date_debut }
+      }
+    })
+    const cyclesList = Object.values(cycleMap).sort((a, b) => (b.date_debut || '').localeCompare(a.date_debut || ''))
+    setCycles(cyclesList)
+
+    const cycleEffectif = cyclesList.some(c => c.key === cycleActif) ? cycleActif : (cyclesList[0]?.key || '')
+    if (cycleEffectif !== cycleActif) { setCycleActif(cycleEffectif); return } // redéclenche cet effet avec la bonne valeur
+
+    if (!cycleEffectif) { setExercices([]); setLignes([]); return }
+
+    // Un seul programme par client pour ce cycle (le plus récent si doublon).
+    const progByClient = {}
+    raw.progs.forEach(p => {
+      if (cycleKeyDe(p) !== cycleEffectif) return
+      const existant = progByClient[p.client_id]
+      if (!existant || p.created_at > existant.created_at) progByClient[p.client_id] = p
+    })
+    const progIdsCycle = new Set(Object.values(progByClient).map(p => p.id))
+
+    const progBySeance = {}
+    raw.seances.forEach(s => { progBySeance[s.id] = s.programme_id })
+    const seanceIdsCycle = new Set(raw.seances.filter(s => progIdsCycle.has(s.programme_id)).map(s => s.id))
+
+    const exosCycle = raw.exos.filter(e => seanceIdsCycle.has(e.seance_id))
+    const exIdsCycle = new Set(exosCycle.map(e => e.id))
+
     // Liste des exercices distincts (par nom), ordonnés selon leur position
     // dans la séance pour retrouver l'ordre du programme.
     const ordreParNom = {}
-    ;(exos || []).forEach(e => {
+    exosCycle.forEach(e => {
       if (!(e.nom in ordreParNom) || e.ordre < ordreParNom[e.nom]) ordreParNom[e.nom] = e.ordre
     })
     const nomsExercices = Object.keys(ordreParNom).sort((a, b) => ordreParNom[a] - ordreParNom[b])
@@ -168,46 +218,38 @@ export default function ChargesGroupes() {
 
     // Semaine courante par client (pour calibrer les colonnes affichées).
     let semaineMax = 1
-    clientIds.forEach(cid => {
+    raw.clientIds.forEach(cid => {
       const p = progByClient[cid]
       if (!p) return
       const sActuelle = Math.min(getSemaineActuelle(p.date_debut), p.semaines || 999)
       if (sActuelle > semaineMax) semaineMax = sActuelle
     })
     semaineMax = Math.min(semaineMax, MAX_SEMAINES_AFFICHEES)
-    const colonnes = Array.from({ length: semaineMax }, (_, i) => i + 1)
-    setSemaines(colonnes)
+    setSemaines(Array.from({ length: semaineMax }, (_, i) => i + 1))
 
-    // meilleure charge (poids le + lourd) par exercice_id + semaine
-    const best = {} // `${exercice_id}_${semaine}` → { poids, reps }
-    ;(trackings || []).forEach(t => {
+    // meilleure charge (poids le + lourd) par exercice_id + semaine, limitée
+    // aux exercices de ce cycle.
+    const best = {}
+    raw.trackings.forEach(t => {
+      if (!exIdsCycle.has(t.exercice_id)) return
       const poids = parseFloat(t.poids)
       const reps = parseFloat(t.reps_reelles)
       if (!(poids > 0)) return
       const key = `${t.exercice_id}_${t.semaine}`
       if (!best[key] || poids > best[key].poids) best[key] = { poids, reps: reps || null, date: t.created_at || null }
     })
+    setBestMap(best)
 
-    // exercice_id → { nom, seance_id } pour relier aux clients
-    const exoById = {}
-    ;(exos || []).forEach(e => { exoById[e.id] = e })
-
-    // Pour chaque client, retrouver ses propres exercices (par nom) et
-    // construire la ligne [valeur_S1, valeur_S2, ...].
-    const rows = clientIds.map(cid => {
-      const client = clientById[cid]
+    const rows = raw.clientIds.map(cid => {
+      const client = raw.clientById[cid]
       const prog = progByClient[cid]
       if (!client || !prog) return null
-      const mesExos = (exos || []).filter(e => progBySeance[e.seance_id] === prog.id)
+      const mesExos = exosCycle.filter(e => progBySeance[e.seance_id] === prog.id)
       return { client, mesExos }
     }).filter(Boolean)
-
-    setLignes(rows.map(r => ({ client: r.client, mesExos: r.mesExos })))
-    setBestMap(best)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => { if (groupeId) loadGroupe(groupeId) }, [groupeId, loadGroupe])
+    setLignes(rows)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw, cycleActif])
 
   function valeurPour(ligne, nomExercice, semaine) {
     const exo = ligne.mesExos.find(e => e.nom === nomExercice)
@@ -307,6 +349,20 @@ export default function ChargesGroupes() {
 
       {!loading && exercices.length > 0 && (
         <>
+          {cycles.length > 1 && (
+            <div style={S.cycleRow}>
+              {cycles.map(c => (
+                <button
+                  key={c.key}
+                  onClick={() => setCycleActif(c.key)}
+                  style={{ ...S.cycleChip, ...(c.key === cycleActif ? S.cycleChipOn : {}) }}
+                >
+                  {c.nom}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div style={S.exRow}>
             {exercices.map(nom => (
               <button
@@ -420,6 +476,10 @@ const S = {
   pickerEquipe: { display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.8rem', borderRadius: 8, border: 'none', background: 'none', fontSize: '0.86rem', fontWeight: 700, color: '#1a1a1a', cursor: 'pointer', fontFamily: 'inherit' },
   pickerSousGroupe: { display: 'block', width: '100%', textAlign: 'left', padding: '0.45rem 0.8rem 0.45rem 1.6rem', borderRadius: 8, border: 'none', background: 'none', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' },
   pickerOptionOn: { background: '#e4f816', color: '#1f2937' },
+
+  cycleRow: { display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.2rem', marginBottom: '0.6rem' },
+  cycleChip: { flexShrink: 0, padding: '5px 12px', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, background: 'none', color: '#9ca3af', border: '1.5px solid transparent', whiteSpace: 'nowrap', cursor: 'pointer' },
+  cycleChipOn: { background: '#f3f4f6', color: '#1a1a1a', borderColor: '#e5e7eb' },
 
   exRow: { display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.2rem', marginBottom: '1rem' },
   exChip: { flexShrink: 0, padding: '8px 14px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 700, background: '#f9fafb', color: '#6b7280', border: '1.5px solid #e5e7eb', whiteSpace: 'nowrap', cursor: 'pointer' },
