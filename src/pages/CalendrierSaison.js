@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
 import SchemaSVG from '../components/SchemaSVG'
@@ -1444,6 +1445,7 @@ function generateBlocPalette(primary, secondary) {
 
 /* ── Effectif du groupe — organigramme rugby ── */
 export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
+  const navigate = useNavigate()
   const [joueurs, setJoueurs] = useState([])    // groupe_joueurs avec leurs postes et blessure
   const [wellness, setWellness] = useState({})  // client_id → { score, poids, date } (dernière entrée)
   const [clientInfo, setClientInfo] = useState({ dateNaissance: {}, taille: {}, poids: {}, age: {} }) // client_id → valeur (fallback compte lié)
@@ -1960,9 +1962,13 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                     </span>
                   )}
                   {panelJoueur.client_id && (
-                    <span style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(74,222,128,.18)', color:'#86efac', display:'flex', alignItems:'center', gap:4 }}>
-                      <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ade80' }} />Compte lié
-                    </span>
+                    <button
+                      onClick={() => navigate(`/client/${panelJoueur.client_id}`)}
+                      title="Ouvrir la fiche client complète"
+                      style={{ fontSize:'.65rem', fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(74,222,128,.18)', color:'#86efac', display:'flex', alignItems:'center', gap:4, border:'none', cursor:'pointer', font:'inherit' }}
+                    >
+                      <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ade80' }} />Compte lié · Voir la fiche →
+                    </button>
                   )}
                 </div>
               </div>
