@@ -341,7 +341,7 @@ export default function SeanceClient() {
         const prenom = clientRes?.data?.prenom || 'Un client'
         if (coachId) {
           sendNotif(coachId, {
-            titre: '✅ Séance terminée',
+            titre: 'Séance terminée',
             corps: `${prenom} a terminé "${seance?.nom || 'sa séance'}"`,
             type: 'seance',
             lien: clientId ? `/client/${clientId}` : '/',
@@ -889,7 +889,7 @@ export default function SeanceClient() {
                 .from('clients').select('prenom').eq('id', clientId).maybeSingle()
               const prenom = clientData?.prenom || 'Un client'
               sendNotif(coachId, {
-                titre: '🏆 Nouveau 1RM !',
+                titre: 'Nouveau 1RM',
                 corps: `${prenom} — ${exoNom} : ${poids1RM} kg`,
                 type: 'pr',
                 lien: `/client/${clientId}`,

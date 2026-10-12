@@ -5,18 +5,17 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 const INDICATORS = [
-  { key: 'sommeil',  label: 'Sommeil',  emoji: '🌙' },
-  { key: 'fatigue',  label: 'Fatigue',  emoji: '⚡' },
-  { key: 'douleurs', label: 'Douleurs', emoji: '🩹' },
-  { key: 'stress',   label: 'Stress',   emoji: '🧠' },
+  { key: 'sommeil',  label: 'Sommeil' },
+  { key: 'fatigue',  label: 'Fatigue' },
+  { key: 'douleurs', label: 'Douleurs' },
+  { key: 'stress',   label: 'Stress' },
 ]
 
+const INK = '#222222'
+const ALERT = '#b42318'
 function scoreColor(v) {
-  if (!v) return '#e5e7eb'
-  if (v <= 1) return '#ef4444'
-  if (v <= 2) return '#f97316'
-  if (v <= 3) return '#eab308'
-  return '#22c55e'
+  if (!v) return '#e3e3e3'
+  return v <= 2 ? ALERT : INK
 }
 
 const LABELS = {
@@ -102,7 +101,7 @@ export default function WellnessClient() {
 
       {/* Onglets */}
       <div style={{ display: 'flex', background: '#f3f4f6', margin: '1rem', borderRadius: 12, padding: 3, gap: 3 }}>
-        {[{ k: 'bilan', l: '❤️ Bilan' }, { k: 'poids', l: '⚖️ Poids' }].map(t => (
+        {[{ k: 'bilan', l: 'Bilan' }, { k: 'poids', l: 'Poids' }].map(t => (
           <button key={t.k} onClick={() => setTab(t.k)} style={{
             flex: 1, padding: '0.5rem', border: 'none', borderRadius: 9, fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer',
             background: tab === t.k ? 'white' : 'transparent',
@@ -118,76 +117,76 @@ export default function WellnessClient() {
         ) : tab === 'bilan' ? (
           bilanEntries.length === 0 ? (
             <div style={S.empty}>
-              <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>❤️</p>
               <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée wellness</p>
               <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Remplis ton bilan quotidien depuis l'accueil.</p>
             </div>
           ) : (
           <>
             {/* Dernière entrée */}
-            {latest && (
-              <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', marginBottom: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: latest.date === today ? '2px solid var(--accent)' : '2px solid transparent' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#1a1a1a' }}>
-                    {latest.date === today ? "Aujourd'hui" : new Date(latest.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {latest && (() => {
+              const moy = (latest.sommeil + latest.fatigue + latest.douleurs + latest.stress) / 4
+              return (
+              <div style={{ background: 'white', borderRadius: 14, padding: '1.1rem', marginBottom: '1rem', border: '1px solid #e8e8e8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {latest.date === today ? "Score d'aujourd'hui" : new Date(latest.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {latest.poids && <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#6b7280' }}>⚖️ {latest.poids} kg</span>}
-                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: scoreColor(Math.round((latest.sommeil + latest.fatigue + latest.douleurs + latest.stress) / 4)) }}>
-                      {((latest.sommeil + latest.fatigue + latest.douleurs + latest.stress) / 4).toFixed(1)}/4
-                    </span>
-                  </div>
+                  {latest.poids && <span style={{ fontSize: '0.78rem', fontWeight: '600', color: '#6b6b6b' }}>{latest.poids} kg</span>}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  {INDICATORS.map(({ key, label, emoji }) => (
-                    <div key={key} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.55rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.9rem' }}>{emoji}</span>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' }}>{label}</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: '700', color: scoreColor(latest[key]) }}>{LABELS[key][latest[key]]}</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '0.45rem 0 0.4rem' }}>
+                  <span style={{ fontSize: '2.1rem', fontWeight: '700', lineHeight: 1, color: INK, fontVariantNumeric: 'tabular-nums' }}>{moy.toFixed(1).replace('.', ',')}</span>
+                  <span style={{ fontSize: '0.85rem', color: '#9a9a9a' }}>/ 4</span>
+                </div>
+                {INDICATORS.map(({ key, label }) => {
+                  const bas = latest[key] <= 2
+                  return (
+                    <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr auto 64px', gap: 12, alignItems: 'center', padding: '0.65rem 0', borderTop: '1px solid #efefef' }}>
+                      <div>
+                        <div style={{ fontSize: '0.86rem', fontWeight: '600', color: INK }}>{label}</div>
+                        <div style={{ fontSize: '0.74rem', color: bas ? ALERT : '#8a8a8a', marginTop: 1 }}>{LABELS[key][latest[key]]}{bas ? ' · sous le seuil' : ''}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: 2 }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '700', color: bas ? ALERT : INK, fontVariantNumeric: 'tabular-nums' }}>{latest[key]}/4</span>
+                      <div style={{ display: 'flex', gap: 3 }}>
                         {[1,2,3,4].map(v => (
-                          <div key={v} style={{ width: 5, height: 14, borderRadius: 2, background: v <= latest[key] ? scoreColor(latest[key]) : '#e5e7eb' }} />
+                          <div key={v} style={{ flex: 1, height: 6, borderRadius: 2, background: v <= latest[key] ? scoreColor(latest[key]) : '#e8e8e8' }} />
                         ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
-            )}
+              )
+            })()}
 
             {/* Historique */}
             {bilanEntries.length > 1 && (
-              <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
-                </div>
-                <div style={{ padding: '0.25rem 0' }}>
-                  {bilanEntries.slice(1).map(w => {
-                    const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
-                    return (
-                      <div key={w.id} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 1rem', borderBottom: '1px solid #f9fafb', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: '600', minWidth: 60 }}>
-                          {new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        </span>
-                        <div style={{ flex: 1, display: 'flex', gap: '0.35rem' }}>
+              <div style={{ background: 'white', borderRadius: 14, padding: '1rem', border: '1px solid #e8e8e8' }}>
+                <p style={{ margin: '0 0 0.6rem', fontSize: '0.68rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Historique</p>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', fontVariantNumeric: 'tabular-nums' }}>
+                  <thead>
+                    <tr>
+                      {['Date', 'Som.', 'Fat.', 'Dou.', 'Str.', 'Moy.'].map((h, i) => (
+                        <th key={h} style={{ textAlign: i === 0 ? 'left' : 'right', fontSize: '0.62rem', fontWeight: '700', color: '#9a9a9a', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: 8 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bilanEntries.slice(1).map(w => {
+                      const avg = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                      return (
+                        <tr key={w.id}>
+                          <td style={{ padding: '0.55rem 0', borderTop: '1px solid #efefef', fontWeight: '600', color: INK }}>
+                            {new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </td>
                           {INDICATORS.map(({ key }) => (
-                            <div key={key} style={{ display: 'flex', gap: 2 }}>
-                              {[1,2,3,4].map(v => (
-                                <div key={v} style={{ width: 4, height: 12, borderRadius: 2, background: v <= w[key] ? scoreColor(w[key]) : '#e5e7eb' }} />
-                              ))}
-                            </div>
+                            <td key={key} style={{ padding: '0.55rem 0', borderTop: '1px solid #efefef', textAlign: 'right', color: w[key] <= 2 ? ALERT : '#555', fontWeight: w[key] <= 2 ? 700 : 400 }}>{w[key]}</td>
                           ))}
-                        </div>
-                        {w.poids && <span style={{ fontSize: '0.7rem', color: '#6b7280', minWidth: 40 }}>⚖️{w.poids}</span>}
-                        <span style={{ fontSize: '0.78rem', fontWeight: '700', color: scoreColor(Math.round(avg)), minWidth: 28, textAlign: 'right' }}>
-                          {avg.toFixed(1)}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
+                          <td style={{ padding: '0.55rem 0', borderTop: '1px solid #efefef', textAlign: 'right', fontWeight: '700', color: INK }}>{avg.toFixed(1).replace('.', ',')}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </>
@@ -199,7 +198,7 @@ export default function WellnessClient() {
             {/* ── Saisie du poids du jour ── */}
             <div style={{ background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '2px solid var(--accent)' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.9rem', color: '#1a1a1a' }}>
-                ⚖️ Poids du jour
+                Poids du jour
               </p>
               <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
                 <input
@@ -241,7 +240,6 @@ export default function WellnessClient() {
 
             {poidsEntries.length === 0 ? (
             <div style={S.empty}>
-              <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>⚖️</p>
               <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée de poids</p>
               <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Enregistre ton premier poids ci-dessus.</p>
             </div>

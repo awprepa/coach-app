@@ -377,7 +377,7 @@ export default function AccueilClient() {
 
         {(permission === 'default' || (permission === 'granted' && !subscribed)) && (
           <button onClick={requestAndSubscribe} style={styles.pushBtn}>
-            🔔 Activer les notifications push
+            Activer les notifications push
           </button>
         )}
 
@@ -404,10 +404,10 @@ export default function AccueilClient() {
                 })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ ...styles.nextTitle, marginBottom: 2 }}>{prochaineSeance.titre}</p>
-                  {prochaineSeance.heure && <span style={{ fontSize: '0.72rem', color: 'var(--header-text)', opacity: 0.8, fontWeight: 700 }}>🕐 {prochaineSeance.heure}</span>}
+                  {prochaineSeance.heure && <span style={{ fontSize: '0.72rem', color: 'var(--header-text)', opacity: 0.8, fontWeight: 700 }}>{prochaineSeance.heure}</span>}
                 </div>
                 <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>
-                  {prochaineSeance.est_domicile ? '🏠 Dom.' : prochaineSeance.est_domicile === false ? '✈️ Ext.' : 'Match'}
+                  {prochaineSeance.est_domicile ? 'Dom.' : prochaineSeance.est_domicile === false ? 'Ext.' : 'Match'}
                 </span>
               </div>
             ) : (
@@ -579,7 +579,6 @@ export default function AccueilClient() {
       {deleteConfirm && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalCard}>
-            <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>⚠️</p>
             <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 0.5rem' }}>
               Supprimer mon compte
             </p>

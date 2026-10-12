@@ -190,7 +190,7 @@ export default function Programme() {
       // Envoyer directement (la Edge Function vérifie la subscription côté serveur avec service_role)
       showToast('⏳ Envoi en cours…', true)
       const result = await sendNotif(clientData.user_id, {
-        titre: '🧪 Test push',
+        titre: 'Test push',
         corps: 'Si tu vois cette notification sur ton téléphone, les push fonctionnent !',
         type: 'info',
         lien: '/client/notifications',

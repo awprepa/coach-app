@@ -155,7 +155,7 @@ Deno.serve(async (_req) => {
               ? `Tu as "${labels[0]}" aujourd'hui. C'est le moment de te préparer !`
               : `Tu as ${count} événements aujourd'hui : ${labels.slice(0, 2).join(", ")}${count > 2 ? "…" : ""}.`;
             const payload = JSON.stringify({
-              titre: "📅 Programme du jour",
+              titre: "Programme du jour",
               corps,
               lien: "/client/mon-programme",
             });

@@ -40,10 +40,10 @@ function isCycleTermine(prog) {
 }
 
 const INDICATORS = [
-  { key: 'sommeil',  label: 'Sommeil',  emoji: '🌙' },
-  { key: 'fatigue',  label: 'Fatigue',  emoji: '⚡' },
-  { key: 'douleurs', label: 'Douleurs', emoji: '🩹' },
-  { key: 'stress',   label: 'Stress',   emoji: '🧠' },
+  { key: 'sommeil',  label: 'Sommeil' },
+  { key: 'fatigue',  label: 'Fatigue' },
+  { key: 'douleurs', label: 'Douleurs' },
+  { key: 'stress',   label: 'Stress' },
 ]
 
 const MEAL_LABELS = {
@@ -981,15 +981,17 @@ export default function FicheClient() {
             <div style={styles.statCard}>
               <p style={styles.statCardLabel}>Wellness aujourd'hui</p>
               {wellnessToday ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: scoreColor(Math.round(wAvg)), lineHeight: 1 }}>{wAvg.toFixed(1)}</span>
-                  <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 8 }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#222', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{wAvg.toFixed(1).replace('.', ',')}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#9a9a9a' }}>/ 4</span>
+                    {wellnessToday.poids && <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: '#6b6b6b', fontWeight: 600 }}>{wellnessToday.poids} kg</span>}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {INDICATORS.map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
-                        <div style={{ width: '100%', height: 18, background: '#f3f4f6', borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
-                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${(wellnessToday[key] / 4) * 100}%`, background: scoreColor(wellnessToday[key]), borderRadius: 4 }} />
-                        </div>
-                        <span style={{ fontSize: '0.5rem', color: '#9ca3af', fontWeight: 700 }}>{label.slice(0, 3)}.</span>
+                      <div key={key}>
+                        <div style={{ fontSize: '0.58rem', color: '#9a9a9a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label.slice(0, 3)}.</div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: wellnessToday[key] <= 2 ? '#b42318' : '#222' }}>{wellnessToday[key]}/4</div>
                       </div>
                     ))}
                   </div>
@@ -1190,32 +1192,33 @@ export default function FicheClient() {
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {visible.map(w => {
-                const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
-                const label = w.date === today ? "Aujourd'hui" : w.date === yesterday ? 'Hier'
-                  : new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-                const c = scoreColor(Math.round(a))
-                return (
-                  <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', background: '#f9fafb', borderRadius: 12, padding: '0.55rem 0.8rem' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                    <div style={{ minWidth: 92 }}>
-                      <p style={styles.liTitle}>{label}</p>
-                      <p style={styles.liSub}>{w.poids ? `${w.poids} kg` : '—'}</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'center' }}>
-                      {INDICATORS.map(({ key, label: l }) => (
-                        <div key={key} title={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 30 }}>
-                          <div style={{ width: '100%', height: 20, borderRadius: 4, background: '#e5e7eb', position: 'relative', overflow: 'hidden' }}>
-                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${(w[key] / 4) * 100}%`, background: scoreColor(w[key]), borderRadius: 4 }} />
-                          </div>
-                          <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#9ca3af' }}>{l.slice(0, 3)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: c, flexShrink: 0, width: 42, textAlign: 'right' }}>{a.toFixed(1)}</span>
-                  </div>
-                )
-              })}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+                <thead>
+                  <tr>
+                    {['Date', 'Poids', 'Som.', 'Fat.', 'Dou.', 'Str.', 'Moy.'].map((h, i) => (
+                      <th key={h} style={{ textAlign: i === 0 ? 'left' : 'right', fontSize: '0.62rem', fontWeight: 700, color: '#9a9a9a', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: 8 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map(w => {
+                    const a = (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4
+                    const label = w.date === today ? "Aujourd'hui" : w.date === yesterday ? 'Hier'
+                      : new Date(w.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                    const td = { padding: '0.55rem 0', borderTop: '1px solid #efefef', textAlign: 'right', color: '#555' }
+                    return (
+                      <tr key={w.id}>
+                        <td style={{ ...td, textAlign: 'left', fontWeight: 600, color: '#222' }}>{label}</td>
+                        <td style={td}>{w.poids ? `${w.poids}` : '—'}</td>
+                        {INDICATORS.map(({ key }) => (
+                          <td key={key} style={{ ...td, color: w[key] <= 2 ? '#b42318' : '#555', fontWeight: w[key] <= 2 ? 700 : 400 }}>{w[key]}</td>
+                        ))}
+                        <td style={{ ...td, fontWeight: 700, color: '#222' }}>{a.toFixed(1).replace('.', ',')}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
               {wellness.length > 5 && (
                 <button onClick={() => setShowAllWellness(v => !v)}
                   style={{ width: '100%', background: 'none', border: 'none', padding: '0.4rem 0 0', fontSize: '0.76rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>

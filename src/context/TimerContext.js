@@ -38,7 +38,7 @@ export function TimerProvider({ children }) {
         user_id:   cId,
         seance_id: sId || null,
         send_at:   sendAt,
-        titre:     '🔔 Récupération terminée',
+        titre:     'Récupération terminée',
         corps:     "C'est reparti !",
         lien:      `/client/seance/${sId}`,
       }).select('id').single().then(({ data }) => {
