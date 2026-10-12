@@ -138,10 +138,10 @@ function RpeOverlay({ clientId, evenement, onDone }) {
       ])
       const nomClient = client ? `${client.prenom} ${client.nom}` : 'Un joueur'
       await sendNotif(coachId, {
-        titre: absent ? `${nomClient} était absent` : `${nomClient} a noté un entraînement`,
+        titre: absent ? `${nomClient} était absent` : `${nomClient} a noté ${isMatch ? 'un match' : 'un entraînement'}`,
         corps: absent
-          ? `${evenement.titre || 'Entraînement'} — signalé absent`
-          : `${evenement.titre || 'Entraînement'} — RPE renseigné`,
+          ? `${nomEvenement} — signalé absent`
+          : `${nomEvenement} — RPE renseigné`,
         type: absent ? 'rpe_absence' : 'rpe',
         lien: evenement.groupe_id ? `/groupe/${evenement.groupe_id}` : '/',
       })
@@ -150,6 +150,8 @@ function RpeOverlay({ clientId, evenement, onDone }) {
     }
   }
 
+  const isMatch = evenement.type === 'match'
+  const nomEvenement = evenement.titre || (isMatch ? (evenement.adversaire ? `Match contre ${evenement.adversaire}` : 'Match') : 'Entraînement')
   const dateLabel = new Date(evenement.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
@@ -157,8 +159,8 @@ function RpeOverlay({ clientId, evenement, onDone }) {
       <style>{RANGE_CSS}</style>
       <div style={W.card}>
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-          <p style={W.subtitle}>Intensité de l'entraînement</p>
-          <h2 style={W.title}>{evenement.titre || 'Entraînement'}</h2>
+          <p style={W.subtitle}>{isMatch ? "Intensité du match" : "Intensité de l'entraînement"}</p>
+          <h2 style={W.title}>{nomEvenement}</h2>
           <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0.25rem 0 0', textTransform: 'capitalize' }}>{dateLabel}</p>
         </div>
 
@@ -195,7 +197,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         </button>
         <button onClick={marquerAbsent} disabled={saving}
           style={{ width: '100%', marginTop: '0.6rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, color: '#6b7280', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', padding: '0.8rem' }}>
-          Je n'étais pas à cet entraînement
+          {isMatch ? "Je n'ai pas joué ce match" : "Je n'étais pas à cet entraînement"}
         </button>
       </div>
     </div>
@@ -250,9 +252,9 @@ export default function RpeGate({ children }) {
         const from3 = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
         const { data: evsBruts } = await supabase
           .from('groupe_evenements')
-          .select('id, titre, date, type, heure, duree_min, groupe_id')
+          .select('id, titre, date, type, heure, duree_min, groupe_id, adversaire')
           .in('groupe_id', groupeIds)
-          .eq('type', 'entrainement')
+          .in('type', ['entrainement', 'match'])
           .gte('date', from3).lte('date', today)
           .order('date', { ascending: false })
         if (!evsBruts?.length) return

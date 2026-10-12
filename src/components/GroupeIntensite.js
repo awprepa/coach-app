@@ -35,9 +35,9 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
       // Séances terrain du groupe
       const { data: evs } = await supabase
         .from('groupe_evenements')
-        .select('id, titre, date, type')
+        .select('id, titre, date, type, adversaire')
         .eq('groupe_id', groupeId)
-        .eq('type', 'entrainement')
+        .in('type', ['entrainement', 'match'])
         .order('date', { ascending: true })
       if (!evs?.length) { setSessions([]); setLoading(false); return }
 
@@ -74,7 +74,7 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
           const moyenne = avg(perPlayer.filter(v => v != null))
           const r1 = x => x == null ? null : Math.round(x * 10) / 10
           return {
-            evId: ev.id, date: ev.date, titre: ev.titre || 'Entraînement',
+            evId: ev.id, date: ev.date, titre: ev.titre || (ev.type === 'match' ? (ev.adversaire ? `Match contre ${ev.adversaire}` : 'Match') : 'Entraînement'),
             moyenne: r1(moyenne), cardio: r1(cardio), jambes: r1(jambes), contact: r1(contact),
             nbNotes: presents.length, nbAbsents: ns.length - presents.length, notes: ns,
           }

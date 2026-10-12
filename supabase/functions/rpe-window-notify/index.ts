@@ -34,8 +34,8 @@ Deno.serve(async (_req) => {
 
     const { data: evs, error } = await supabase
       .from("groupe_evenements")
-      .select("id, groupe_id, titre, date")
-      .eq("type", "entrainement")
+      .select("id, groupe_id, titre, date, type, adversaire")
+      .in("type", ["entrainement", "match"])
       .eq("rpe_ouverture_notifiee", false)
       .gte("date", from2)
       .lte("date", today);
@@ -61,7 +61,8 @@ Deno.serve(async (_req) => {
       const dateLabel = new Date(`${ev.date}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
       const nom = groupeNom[ev.groupe_id] || "Groupe";
       const titre = `Notation RPE ouverte — ${nom}`;
-      const corps = `${ev.titre || "Entraînement"} du ${dateLabel} : les joueurs peuvent noter.`;
+      const nomEv = ev.titre || (ev.type === "match" ? (ev.adversaire ? `Match contre ${ev.adversaire}` : "Match") : "Entraînement");
+      const corps = `${nomEv} du ${dateLabel} : les joueurs peuvent noter.`;
       const lien = `/groupe/${ev.groupe_id}`;
 
       const { error: insErr } = await supabase.from("notifications").insert([
