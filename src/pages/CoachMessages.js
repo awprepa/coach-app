@@ -168,7 +168,6 @@ export default function CoachMessages() {
         <div style={S.main} className="cm-main">
           {!selected ? (
             <div style={S.emptyState}>
-              <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>💬</p>
               <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Sélectionnez une conversation</p>
               <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Ou cliquez sur ＋ pour en démarrer une nouvelle.</p>
             </div>

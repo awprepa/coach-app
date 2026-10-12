@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import Icon from '../components/Icon'
 
 function newId() { return Math.random().toString(36).slice(2) }
 
@@ -250,7 +251,7 @@ export default function EchauffementsTemplates() {
           <div style={{ marginBottom: '0.875rem' }}>
             <button onClick={() => { setShowPaste(v => !v); setParsedPreview(null); setPasteText('') }}
               style={{ ...S.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-              📋 Coller depuis Excel {showPaste ? '▲' : '▼'}
+              Coller depuis Excel {showPaste ? '▲' : '▼'}
             </button>
             {showPaste && (
               <div style={{ marginTop: '0.5rem', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
@@ -269,7 +270,7 @@ export default function EchauffementsTemplates() {
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
                   <button onClick={() => parsePaste()} disabled={!pasteText.trim()}
                     style={{ ...S.btnPrimary, opacity: !pasteText.trim() ? 0.5 : 1, fontSize: '0.82rem', padding: '0.45rem 0.875rem' }}>
-                    🔍 Analyser
+                    Analyser
                   </button>
                   {parsedPreview && (
                     <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{parsedPreview.length} exercice{parsedPreview.length > 1 ? 's' : ''} détecté{parsedPreview.length > 1 ? 's' : ''}</span>
@@ -326,7 +327,7 @@ export default function EchauffementsTemplates() {
                       )}
                       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
                       <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
-                      <button onClick={() => startEditLine(l)} style={{ ...S.iconBtn, fontSize: '0.75rem' }}>✏️</button>
+                      <button onClick={() => startEditLine(l)} style={{ ...S.iconBtn, fontSize: '0.75rem' }}><Icon name="edit" size={14} /></button>
                       <button onClick={() => moveLigne(i, -1)} disabled={i === 0} style={{ ...S.iconBtn, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
                       <button onClick={() => moveLigne(i, 1)} disabled={i === formLignes.length - 1} style={{ ...S.iconBtn, opacity: i === formLignes.length - 1 ? 0.3 : 1 }}>↓</button>
                       <button onClick={() => removeLigne(l.id)} style={{ ...S.iconBtn, color: '#dc2626', borderColor: '#fecaca' }}>✕</button>
@@ -404,8 +405,8 @@ export default function EchauffementsTemplates() {
                   <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>{(t.lignes || []).length} exercice{(t.lignes || []).length !== 1 ? 's' : ''}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
-                  <button onClick={() => startEdit(t)} style={S.iconBtn}>✏️</button>
-                  <button onClick={() => deleteTemplate(t.id)} style={{ ...S.iconBtn, color: '#dc2626' }}>🗑</button>
+                  <button onClick={() => startEdit(t)} style={S.iconBtn}><Icon name="edit" size={14} /></button>
+                  <button onClick={() => deleteTemplate(t.id)} style={{ ...S.iconBtn, color: '#dc2626' }}><Icon name="trash" size={14} /></button>
                 </div>
               </div>
               {(t.lignes || []).length === 0 ? (

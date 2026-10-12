@@ -13,7 +13,7 @@ function IlluAccueil() {
       <div style={{ background: 'linear-gradient(135deg,#333 0%,#1f2937 100%)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 800, color: '#1d4ed8' }}>TH</div>
         <div>
-          <div style={{ color: 'white', fontWeight: 700, fontSize: '0.65rem' }}>Bonjour Thomas 👋</div>
+          <div style={{ color: 'white', fontWeight: 700, fontSize: '0.65rem' }}>Bonjour Thomas</div>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem' }}>Semaine 3</div>
         </div>
       </div>
@@ -115,13 +115,13 @@ function IlluWellness() {
       </div>
       <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {[
-          { emoji: '🌙', label: 'Sommeil', val: 3, color: '#6366f1' },
-          { emoji: '⚡', label: 'Fatigue', val: 2, color: '#f59e0b' },
-          { emoji: '🩹', label: 'Douleurs', val: 4, color: '#22c55e' },
-          { emoji: '🧠', label: 'Stress', val: 3, color: '#ec4899' },
+          { label: 'Sommeil', val: 3, color: '#6366f1' },
+          { label: 'Fatigue', val: 2, color: '#f59e0b' },
+          { label: 'Douleurs', val: 4, color: '#22c55e' },
+          { label: 'Stress', val: 3, color: '#ec4899' },
         ].map(item => (
           <div key={item.label} style={{ background: 'white', borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.75rem' }}>{item.emoji}</span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
             <div style={{ fontSize: '0.58rem', fontWeight: 700, color: '#374151', width: 44 }}>{item.label}</div>
             <div style={{ display: 'flex', gap: 3 }}>
               {[1,2,3,4].map(v => (
@@ -233,7 +233,7 @@ export default function ClientOnboarding() {
             <button onClick={() => setStep(s => s - 1)} style={S.btnSecondary}>←</button>
           )}
           <button onClick={() => isLast ? finish() : setStep(s => s + 1)} style={S.btnPrimary}>
-            {isLast ? "C'est parti ! 🚀" : 'Suivant →'}
+            {isLast ? "C'est parti !" : 'Suivant →'}
           </button>
         </div>
 

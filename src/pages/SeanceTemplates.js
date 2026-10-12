@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import ImportExcel from './ImportExcel'
 import useClientsEtGroupes from '../hooks/useClientsEtGroupes'
+import Icon from '../components/Icon'
 
 export default function SeanceTemplates() {
   const navigate = useNavigate()
@@ -352,13 +353,13 @@ export default function SeanceTemplates() {
             ) : (
               <>
                 {/* Envoyer à un client */}
-                <button onClick={e => openAssign(t, e)} style={S.actionBtn} title="Envoyer à un client">📤</button>
+                <button onClick={e => openAssign(t, e)} style={S.actionBtn} title="Envoyer à un client"><Icon name="send" size={14} /></button>
                 {/* Éditer */}
-                <button onClick={e => startEdit(t, e)} style={S.actionBtn} title="Modifier le modèle">✏️</button>
+                <button onClick={e => startEdit(t, e)} style={S.actionBtn} title="Modifier le modèle"><Icon name="edit" size={14} /></button>
                 {/* Déplacer */}
                 <div style={{ position: 'relative' }}>
                   <button onClick={e => { e.stopPropagation(); setMovingId(movingId === t.id ? null : t.id) }}
-                    style={S.actionBtn} title="Déplacer dans un dossier">📁</button>
+                    style={S.actionBtn} title="Déplacer dans un dossier"><Icon name="folder" size={14} /></button>
                   {movingId === t.id && (
                     <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
                       <div style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
@@ -384,7 +385,7 @@ export default function SeanceTemplates() {
                     </div>
                   )}
                 </div>
-                <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={S.actionBtn}>🗑️</button>
+                <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={S.actionBtn}><Icon name="trash" size={14} /></button>
                 <span style={{ color: '#d1d5db', fontSize: '1.2rem', transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
               </>
             )}
@@ -451,7 +452,6 @@ export default function SeanceTemplates() {
 
             {assignDone ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</p>
                 <p style={{ fontWeight: '700', color: '#333' }}>Séance ajoutée !</p>
               </div>
             ) : (
@@ -553,7 +553,7 @@ export default function SeanceTemplates() {
                 </button>
                 <button onClick={() => supprimerBrouillon(d.id)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontSize: '0.85rem', padding: '0.2rem' }}>
-                  🗑️
+                  <Icon name="trash" size={14} />
                 </button>
               </div>
             ))}
@@ -563,7 +563,6 @@ export default function SeanceTemplates() {
 
       {templates.length === 0 && allFolders.length === 0 ? (
         <div style={S.empty}>
-          <p style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>📋</p>
           <p style={{ fontWeight: '700', color: '#374151', marginBottom: '0.35rem' }}>Aucun modèle</p>
           <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée ta première séance ou importe depuis Excel.</p>
           <button onClick={nouvelleSeance} style={S.importBtn}>+ Nouvelle séance</button>
@@ -579,7 +578,7 @@ export default function SeanceTemplates() {
               <div key={folderName} style={S.folderBlock}>
                 <div style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
-                    <span style={{ fontSize: '1rem' }}>{isOpen ? '📂' : '📁'}</span>
+                    <span style={{ fontSize: '1rem' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
                     {renamingFolder === folderName ? (
                       <input autoFocus value={renameVal}
                         onChange={e => setRenameVal(e.target.value)}
@@ -593,8 +592,8 @@ export default function SeanceTemplates() {
                     <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} modèle{items.length > 1 ? 's' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.folderActionBtn}>✏️</button>
-                    <button onClick={() => supprimerDossier(folderName)} style={S.folderActionBtn}>🗑️</button>
+                    <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.folderActionBtn}><Icon name="edit" size={14} /></button>
+                    <button onClick={() => supprimerDossier(folderName)} style={S.folderActionBtn}><Icon name="trash" size={14} /></button>
                     <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
                       onClick={() => toggleFolder(folderName)}>›</span>
                   </div>
@@ -602,7 +601,7 @@ export default function SeanceTemplates() {
                 {isOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem 0.75rem 0.75rem' }}>
                     {items.length === 0 ? (
-                      <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un modèle ici via 📁</p>
+                      <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un modèle ici avec le bouton dossier</p>
                     ) : (
                       items.map(t => renderTemplate(t))
                     )}

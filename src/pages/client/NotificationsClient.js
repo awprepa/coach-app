@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useNotifCtx } from '../../context/NotifContext'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import Icon from '../../components/Icon'
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -15,10 +16,10 @@ function timeAgo(dateStr) {
 }
 
 function typeIcon(type) {
-  if (type === 'wellness')   return '💪'
-  if (type === 'seance')     return '📋'
-  if (type === 'programme')  return '🏋️'
-  return '🔔'
+  if (type === 'wellness')   return 'dumbbell'
+  if (type === 'seance')     return 'clipboard'
+  if (type === 'programme')  return 'dumbbell'
+  return 'bell'
 }
 
 export default function NotificationsClient() {
@@ -46,13 +47,12 @@ export default function NotificationsClient() {
       <div style={S.list}>
         {notifs.length === 0 ? (
           <div style={S.empty}>
-            <span style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔔</span>
             <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Aucune notification</p>
           </div>
         ) : (
           notifs.map(notif => (
             <div key={notif.id} onClick={() => handleClick(notif)} style={{ ...S.item, background: notif.lu ? '#f9fafb' : 'white' }}>
-              <span style={S.icon}>{typeIcon(notif.type)}</span>
+              <span style={S.icon}><Icon name={typeIcon(notif.type)} size={22} /></span>
               <div style={S.itemContent}>
                 <p style={{ ...S.itemTitle, fontWeight: notif.lu ? '500' : '700' }}>{notif.titre}</p>
                 {notif.corps && <p style={S.itemBody}>{notif.corps}</p>}

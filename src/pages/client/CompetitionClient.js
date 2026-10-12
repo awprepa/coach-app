@@ -80,7 +80,7 @@ export default function CompetitionClient() {
       const col = win ? '#16a34a' : lose ? '#dc2626' : '#64748b'
       return <span style={{ fontWeight: 900, fontSize: '1.1rem', color: col }}>{s}</span>
     }
-    return m.heure ? <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>🕐 {m.heure}</span> : null
+    return m.heure ? <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>{m.heure}</span> : null
   }
 
   function LogoBadge({ url, initials, size = 52 }) {
@@ -149,7 +149,7 @@ export default function CompetitionClient() {
               ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{scoreStr}</div>
               : <>
                   <div style={{ fontSize: '.82rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>
-                  {m.heure && <div style={{ fontSize: '.65rem', opacity: .75 }}>🕐 {m.heure}</div>}
+                  {m.heure && <div style={{ fontSize: '.65rem', opacity: .75 }}>{m.heure}</div>}
                 </>
             }
           </div>
@@ -167,11 +167,11 @@ export default function CompetitionClient() {
           </span>
           {m.est_domicile != null && (
             <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 800 }}>
-              {m.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}
+              {m.est_domicile ? 'Domicile' : 'Extérieur'}
             </span>
           )}
           {joue && <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>
-            {win ? '✅ Victoire' : lose ? '❌ Défaite' : '🤝 Nul'}
+            {win ? 'Victoire' : lose ? 'Défaite' : 'Nul'}
           </span>}
         </div>
       </div>
@@ -211,10 +211,10 @@ export default function CompetitionClient() {
             <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{advNom}</div>
             <div style={{ fontSize: '.68rem', color: '#6b7280', marginTop: 1 }}>
               {m.journee ? `J${m.journee} · ` : ''}{fmtDate(m.date_match)}
-              {m.est_domicile != null ? ` · ${m.est_domicile ? '🏠' : '✈️'}` : ''}
+              {m.est_domicile != null ? ` · ${m.est_domicile ? 'Dom.' : 'Ext.'}` : ''}
             </div>
           </div>
-          {!scoreStr && m.heure && <span style={{ fontSize: '.7rem', color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>🕐 {m.heure}</span>}
+          {!scoreStr && m.heure && <span style={{ fontSize: '.7rem', color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{m.heure}</span>}
         </div>
       </div>
     )
@@ -250,13 +250,11 @@ export default function CompetitionClient() {
       <div style={{ padding: '16px 16px 0' }}>
         {groupes.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
-            <p style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏆</p>
             <p style={{ fontWeight: 700, color: '#374151', fontSize: '1rem' }}>Aucune compétition disponible</p>
             <p style={{ fontSize: '.85rem' }}>Ton coach n'a pas encore configuré de lien de compétition.</p>
           </div>
         ) : matchs.length === 0 && classement.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
-            <p style={{ fontSize: '2.5rem', marginBottom: 8 }}>📡</p>
             <p style={{ fontWeight: 700, color: '#374151' }}>Pas encore de données</p>
             <p style={{ fontSize: '.85rem' }}>Le coach doit synchroniser les données depuis l'onglet Compétition.</p>
           </div>

@@ -218,7 +218,7 @@ export default function ImportClientExcel() {
       }
     }
 
-    setProgress(`✅ Import terminé — ${toImport.length} programme${toImport.length > 1 ? 's' : ''}, ${totalSeances} séances, ${totalEx} exercices importés.`)
+    setProgress(`Import terminé — ${toImport.length} programme${toImport.length > 1 ? 's' : ''}, ${totalSeances} séances, ${totalEx} exercices importés.`)
     setStep('done')
   }
 
@@ -250,7 +250,6 @@ export default function ImportClientExcel() {
               onDrop={ev => { ev.preventDefault(); const f = ev.dataTransfer.files[0]; if (f) { fileRef.current.files = ev.dataTransfer.files; handleFile({ target: { files: [f] } }) } }}
               style={S.dropzone}
             >
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📂</div>
               <p style={{ fontWeight: '800', color: '#111827', margin: '0 0 0.35rem', fontSize: '1.05rem' }}>
                 Dépose ton fichier Excel ici
               </p>
@@ -360,7 +359,6 @@ export default function ImportClientExcel() {
         {/* ── Étape 3 : Import en cours ── */}
         {step === 'importing' && (
           <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⏳</div>
             <p style={{ fontWeight: '800', color: '#111827', fontSize: '1.1rem', marginBottom: '0.5rem' }}>Import en cours…</p>
             <p style={{ color: '#6b7280', fontSize: '0.88rem' }}>{progress}</p>
           </div>
@@ -369,7 +367,6 @@ export default function ImportClientExcel() {
         {/* ── Étape 4 : Done ── */}
         {step === 'done' && (
           <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
             <p style={{ fontWeight: '800', color: '#111827', fontSize: '1.15rem', marginBottom: '0.5rem' }}>Import réussi !</p>
             <p style={{ color: '#6b7280', fontSize: '0.88rem', marginBottom: '1.75rem' }}>{progress}</p>
             <button onClick={() => navigate(`/client/${clientId}`)} style={S.btnPrimary}>

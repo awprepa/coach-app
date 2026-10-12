@@ -9,6 +9,7 @@ import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 import GroupeTestsView from '../components/GroupeTestsView'
 import GroupeBlessuresView from '../components/GroupeBlessuresView'
 import GroupeClassementView from '../components/GroupeClassementView'
+import Icon from '../components/Icon'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -626,7 +627,7 @@ export default function FicheGroupe() {
     }
 
     setPushLoading(null)
-    alert(`✅ Programme envoyé à ${count} membre(s) !`)
+    alert(`Programme envoyé à ${count} membre(s) !`)
   }
 
   async function supprimerDoublons(prog) {
@@ -794,7 +795,7 @@ export default function FicheGroupe() {
     }
 
     setPushLoading(null)
-    alert(`✅ ${count} copie(s) mise(s) à jour !`)
+    alert(`${count} copie(s) mise(s) à jour !`)
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1342,10 +1343,10 @@ export default function FicheGroupe() {
                 ? <img loading="lazy" src={editLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 : groupe?.logo_url
                   ? <img loading="lazy" src={groupe.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                  : <span style={{ fontSize: '1.1rem' }}>📂</span>}
+                  : <span style={{ fontSize: '1.1rem' }}><Icon name="folder-open" size={14} /></span>}
             </div>
             <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: '600' }}>
-              {extractingEditColors ? '⏳ Analyse couleurs...' : editLogoFile ? editLogoFile.name : groupe?.logo_url ? 'Changer le logo...' : 'Choisir un logo...'}
+              {extractingEditColors ? 'Analyse couleurs...' : editLogoFile ? editLogoFile.name : groupe?.logo_url ? 'Changer le logo...' : 'Choisir un logo...'}
             </span>
             <input type="file" accept="image/*" onChange={handleEditLogoChange} style={{ display: 'none' }} />
           </label>
@@ -1355,7 +1356,7 @@ export default function FicheGroupe() {
             <div style={{ background: editPickingFor ? '#fffbeb' : '#f9fafb', borderRadius: 11, padding: '0.65rem', border: `1.5px solid ${editPickingFor ? '#f59e0b' : '#e5e7eb'}`, marginBottom: '1.25rem', transition: 'all 0.15s' }}>
               {editPickingFor && (
                 <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>
-                  🎨 Cliquez sur le logo pour choisir la couleur {editPickingFor === 'primary' ? 'principale' : 'secondaire'}
+                  Cliquez sur le logo pour choisir la couleur {editPickingFor === 'primary' ? 'principale' : 'secondaire'}
                 </p>
               )}
               <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1404,7 +1405,7 @@ export default function FicheGroupe() {
                 <button onClick={() => setEditPickingFor(editPickingFor === 'primary' ? null : 'primary')}
                   title="Pipette — cliquer sur le logo"
                   style={{ background: editPickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${editPickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
-                  🎨
+                  <Icon name="palette" size={14} />
                 </button>
               )}
             </div>
@@ -1416,7 +1417,7 @@ export default function FicheGroupe() {
                 <button onClick={() => setEditPickingFor(editPickingFor === 'secondary' ? null : 'secondary')}
                   title="Pipette — cliquer sur le logo"
                   style={{ background: editPickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${editPickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
-                  🎨
+                  <Icon name="palette" size={14} />
                 </button>
               )}
               {editForm.couleur_secondaire && (
@@ -1429,7 +1430,7 @@ export default function FicheGroupe() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.55rem 0.9rem', borderRadius: 11, background: '#f9fafb', border: `1.5px solid ${editForm.couleur}`, marginBottom: '1.25rem' }}>
             {(editLogoPreview || groupe?.logo_url)
               ? <img loading="lazy" src={editLogoPreview || groupe.logo_url} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
-              : <div style={{ width: 26, height: 26, borderRadius: 7, background: editForm.couleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
+              : <div style={{ width: 26, height: 26, borderRadius: 7, background: editForm.couleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}><Icon name="trophy" size={14} /></div>
             }
             <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{editForm.nom || groupe?.nom || 'Nom du groupe'}</span>
             <span style={{ background: editForm.couleur + '18', color: editForm.couleur, border: `1px solid ${editForm.couleur}33`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: '700' }}>Groupe</span>

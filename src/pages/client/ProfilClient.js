@@ -5,6 +5,7 @@ import { purgerCachePrive } from '../../utils/purgeCachePrive'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import BlessureButton from '../../components/BlessureButton'
 import usePageFade from '../../hooks/usePageFade'
+import Icon from '../../components/Icon'
 
 const OFFRES = {
   essai:               'Essai',
@@ -453,7 +454,7 @@ export default function ProfilClient() {
             <div style={S.avatarInitials}>{initiales}</div>
           )}
           <div style={S.avatarEditBadge}>
-            {uploading ? '⏳' : '📷'}
+            {uploading ? '…' : <Icon name="camera" size={14} />}
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />

@@ -446,7 +446,6 @@ export default function CycleTemplates() {
           <div style={S.empty}>Chargement…</div>
         ) : templates.length === 0 && allFolders.length === 0 ? (
           <div style={S.emptyState}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
             <div style={{ fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Aucun template</div>
             <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Crée un template de cycle pour l'appliquer rapidement à tes clients</div>
             <button style={{ ...S.btnPrimary, marginTop: '1.25rem' }} onClick={creerTemplate}>Créer un template</button>
@@ -521,7 +520,6 @@ export default function CycleTemplates() {
             {sendSuccess ? (
               // Succès
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
                 <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827', marginBottom: '0.4rem' }}>
                   {sendMode === 'ecraser' ? 'Cycle mis à jour !' : 'Cycle envoyé !'}
                 </div>
@@ -634,7 +632,7 @@ export default function CycleTemplates() {
                     )}
                     {programmeToOverwrite && (
                       <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '0.4rem', padding: '0.4rem 0.75rem', background: '#fef3c7', borderRadius: '8px' }}>
-                        ⚠️ Les séances et exercices de « {programmeToOverwrite.nom} » seront effacés et remplacés par le template.
+                        Les séances et exercices de « {programmeToOverwrite.nom} » seront effacés et remplacés par le template.
                       </div>
                     )}
                   </div>
@@ -653,7 +651,7 @@ export default function CycleTemplates() {
                   >
                     {sending
                       ? (sendMode === 'ecraser' ? 'Mise à jour…' : 'Création en cours…')
-                      : sendMode === 'ecraser' ? '🔄 Écraser le cycle' : '📤 Envoyer le cycle'}
+                      : sendMode === 'ecraser' ? 'Écraser le cycle' : 'Envoyer le cycle'}
                   </button>
                 </div>
               </>

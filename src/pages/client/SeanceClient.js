@@ -675,7 +675,7 @@ export default function SeanceClient() {
     saveTimersRef.current[key] = setTimeout(() => { saveSerieField(exId, serieIdx) }, 800)
   }
   // Prévient le coach une seule fois si le client a saisi des données dans la
-  // séance (poids/reps) sans jamais la terminer. Info simple dans l'onglet 🔔
+  // séance (poids/reps) sans jamais la terminer. Info simple dans l'onglet notifications
   // (pas de push téléphone : insert direct dans `notifications`, pas de
   // sendNotif) pour qu'Arthur puisse aller consulter les charges utilisées,
   // sans que ça sonne comme une alerte urgente. Verrou côté DB
@@ -711,7 +711,7 @@ export default function SeanceClient() {
       ])
       const prenom = clientRes?.data?.prenom || 'Un client'
       if (coachId) {
-        // Insert direct (pas sendNotif) : reste dans l'onglet 🔔 sans déclencher
+        // Insert direct (pas sendNotif) : reste dans l'onglet sans déclencher
         // de push téléphone, volontairement discret.
         await supabase.from('notifications').insert([{
           destinataire_id: coachId,
@@ -1327,7 +1327,7 @@ export default function SeanceClient() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: '0.3rem', flexWrap: 'wrap' }}>
                   {progActif && (
                     <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
-                      📈 {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
+                      {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
                     </span>
                   )}
                   <span style={S.semBadge}>S{semaineActuelle}</span>
@@ -1402,7 +1402,7 @@ export default function SeanceClient() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={S.seriesTrackerLabel}>SÉRIES · SEMAINE {semaineActuelle}</span>
               <button onClick={() => toggleHisto(ex.id)} style={S.histoBtn}>
-                📋 {isHistoOpen ? 'Masquer' : 'Historique'}
+                {isHistoOpen ? 'Masquer' : 'Historique'}
               </button>
             </div>
 
@@ -1603,7 +1603,7 @@ export default function SeanceClient() {
               const recupSecs = parseRecup(ex.recuperation)
               return recupSecs > 0 ? (
                 <button onClick={() => lancerTimer(recupSecs)} style={S.recupBtn}>
-                  ⏱ Lancer la récup · {ex.recuperation}
+                  Lancer la récup · {ex.recuperation}
                 </button>
               ) : null
             })()}
@@ -1653,7 +1653,7 @@ export default function SeanceClient() {
       {/* Bandeau hors ligne */}
       {offlineMode && (
         <div style={{ background: '#f59e0b', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', position: 'sticky', top: 0, zIndex: 200 }}>
-          ✈️ Mode hors ligne · données locales {localSavedAt ? `(${formatSavedAt(localSavedAt)})` : ''}
+          Mode hors ligne · données locales {localSavedAt ? `(${formatSavedAt(localSavedAt)})` : ''}
         </div>
       )}
       {/* Badge charges en attente (visible si online + items en queue) */}
@@ -1832,7 +1832,6 @@ export default function SeanceClient() {
         {/* Exercices */}
         {nonEffectuee ? (
           <div style={S.nonEffectueeCard}>
-            <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>😴</p>
             <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Séance non effectuée</p>
             <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0 }}>Semaine {semaineActuelle} — Appuie sur le bouton ci-dessus pour annuler</p>
           </div>

@@ -77,7 +77,6 @@ export default function ResetPassword() {
         {/* Chargement */}
         {status === 'loading' && (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔐</div>
             <p style={{ fontWeight: 700, color: '#374151' }}>Vérification du lien…</p>
             <p style={{ color: '#6b7280', fontSize: '0.82rem', marginTop: '0.4rem' }}>Un instant</p>
           </div>
@@ -86,7 +85,6 @@ export default function ResetPassword() {
         {/* Lien invalide ou expiré */}
         {status === 'error' && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⚠️</div>
             <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.5rem' }}>
               Lien invalide ou expiré
             </p>
@@ -169,7 +167,6 @@ export default function ResetPassword() {
         {/* Succès */}
         {status === 'success' && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
             <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#065f46', marginBottom: '0.5rem' }}>
               Mot de passe mis à jour !
             </p>
@@ -199,7 +196,7 @@ function strengthColor(pwd) {
 }
 function strengthLabel(pwd) {
   const s = passwordStrength(pwd)
-  return s <= 1 ? 'Trop court' : s === 2 ? 'Faible' : s === 3 ? 'Bien' : 'Fort 💪'
+  return s <= 1 ? 'Trop court' : s === 2 ? 'Faible' : s === 3 ? 'Bien' : 'Fort'
 }
 
 const S = {

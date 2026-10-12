@@ -84,10 +84,10 @@ function InAppBrowserSheet({ onDismiss }) {
   // Étapes selon plateforme
   const steps = isIOS ? [
     { icon: '···', text: <span>Appuie sur <strong style={{ color: '#fff' }}>···</strong> en haut à droite</span> },
-    { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans un navigateur externe"</strong></span> },
+    { icon: '↗', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans un navigateur externe"</strong></span> },
   ] : [
     { icon: '···', text: <span>Appuie sur <strong style={{ color: '#fff' }}>⋮</strong> en haut à droite</span> },
-    { icon: '🌐', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans Chrome"</strong></span> },
+    { icon: '↗', text: <span>Puis <strong style={{ color: '#fff' }}>"Ouvrir dans Chrome"</strong></span> },
   ]
 
   return createPortal(
@@ -427,7 +427,6 @@ class ChunkErrorBoundary extends Component {
   render() {
     if (this.state.hasError) return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', gap: 12, padding: '2rem', textAlign: 'center' }}>
-        <span style={{ fontSize: '2rem' }}>⚠️</span>
         <p style={{ fontWeight: 700, color: '#1a1a1a', margin: 0 }}>Une erreur est survenue</p>
         {this.state.err && (
           <p style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#dc2626', maxWidth: 500, whiteSpace: 'pre-wrap', margin: 0 }}>
@@ -458,7 +457,7 @@ function OfflineBanner() {
     if (navigator.onLine) {
       pendingCount().then(async n => {
         if (n > 0) {
-          show('🔄 Synchronisation en cours…')
+          show('Synchronisation en cours…')
           await _flushQueue()
           await syncDown()
           show('✓ Synchronisé', 1500)
@@ -468,17 +467,17 @@ function OfflineBanner() {
 
     const onOffline = async () => {
       const n = await pendingCount()
-      show(`📴 Hors ligne${n > 0 ? ` — ${n} action${n > 1 ? 's' : ''} en attente` : ''}`)
+      show(`Hors ligne${n > 0 ? ` — ${n} action${n > 1 ? 's' : ''} en attente` : ''}`)
     }
     const onOnline  = () => {
       // supabase.js lance le flush+sync et dispatche aw:synced quand c'est fini
-      setMsg(prev => prev !== null ? '🔄 Synchronisation en cours…' : null)
+      setMsg(prev => prev !== null ? 'Synchronisation en cours…' : null)
     }
     const onSynced  = () => show('✓ Synchronisé', 1500)
     const onQueue   = async () => {
       if (!navigator.onLine) {
         const n = await pendingCount()
-        setMsg(`📴 Hors ligne${n > 0 ? ` — ${n} action${n > 1 ? 's' : ''} en attente` : ''}`)
+        setMsg(`Hors ligne${n > 0 ? ` — ${n} action${n > 1 ? 's' : ''} en attente` : ''}`)
       }
     }
 
@@ -497,8 +496,8 @@ function OfflineBanner() {
 
   if (!msg) return null
 
-  const isOffline = msg.startsWith('📴')
-  const isSyncing = msg.startsWith('🔄')
+  const isOffline = msg.startsWith('Hors ligne')
+  const isSyncing = msg.startsWith('Synchronisation')
   return (
     <div style={{
       background: isOffline ? '#b45309' : isSyncing ? '#1d4ed8' : '#15803d',

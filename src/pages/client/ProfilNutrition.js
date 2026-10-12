@@ -4,20 +4,21 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import ScanHistoryCard from '../../components/ScanHistoryCard'
 import usePageFade from '../../hooks/usePageFade'
+import Icon from '../../components/Icon'
 
 const OBJECTIFS = [
-  { key: 'masse',         emoji: '💪', label: 'Prise de masse',          desc: 'Développer muscle et force' },
-  { key: 'perte',         emoji: '🔥', label: 'Perte de poids',           desc: 'Brûler les graisses en douceur' },
-  { key: 'maintien',      emoji: '⚖️', label: 'Maintien du poids',        desc: 'Garder ton poids actuel' },
-  { key: 'recomposition', emoji: '🔄', label: 'Recomposition corporelle', desc: 'Perdre du gras, gagner du muscle' },
+  { key: 'masse', label: 'Prise de masse',          desc: 'Développer muscle et force' },
+  { key: 'perte', label: 'Perte de poids',           desc: 'Brûler les graisses en douceur' },
+  { key: 'maintien', label: 'Maintien du poids',        desc: 'Garder ton poids actuel' },
+  { key: 'recomposition', label: 'Recomposition corporelle', desc: 'Perdre du gras, gagner du muscle' },
 ]
 
 const ACTIVITES = [
-  { key: 'sedentaire',  emoji: '🛋️', label: 'Sédentaire',         desc: 'Bureau, peu de mouvement au quotidien', mult: 1.2 },
-  { key: 'leger',       emoji: '🚶', label: 'Légèrement actif',    desc: '1-3 entraînements / semaine', mult: 1.375 },
-  { key: 'modere',      emoji: '🏃', label: 'Modérément actif',    desc: '3-5 entraînements / semaine', mult: 1.55 },
-  { key: 'actif',       emoji: '🏋️', label: 'Très actif',          desc: '6-7 entraînements / semaine', mult: 1.725 },
-  { key: 'tres_actif',  emoji: '⚡', label: 'Sportif intensif',    desc: 'Double entraînement ou travail physique', mult: 1.9 },
+  { key: 'sedentaire', label: 'Sédentaire',         desc: 'Bureau, peu de mouvement au quotidien', mult: 1.2 },
+  { key: 'leger', label: 'Légèrement actif',    desc: '1-3 entraînements / semaine', mult: 1.375 },
+  { key: 'modere', label: 'Modérément actif',    desc: '3-5 entraînements / semaine', mult: 1.55 },
+  { key: 'actif', label: 'Très actif',          desc: '6-7 entraînements / semaine', mult: 1.725 },
+  { key: 'tres_actif', label: 'Sportif intensif',    desc: 'Double entraînement ou travail physique', mult: 1.9 },
 ]
 
 // ── Algorithme scientifique ───────────────────────────────────────────────────
@@ -277,7 +278,6 @@ export default function ProfilNutrition() {
               {OBJECTIFS.map(o => (
                 <button key={o.key} onClick={() => setObjectif(o.key)}
                   style={{ ...S.bigCard, ...(objectif === o.key ? S.bigCardActive : {}) }}>
-                  <span style={{ fontSize: '1.9rem', flexShrink: 0 }}>{o.emoji}</span>
                   <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.95rem', color: objectif === o.key ? 'var(--accent)' : '#1a1a1a', lineHeight: 1.2 }}>{o.label}</div>
                     <div style={{ fontSize: '0.76rem', color: objectif === o.key ? 'rgba(228,248,22,0.65)' : '#9ca3af', marginTop: 3 }}>{o.desc}</div>
@@ -346,7 +346,6 @@ export default function ProfilNutrition() {
               {ACTIVITES.map(a => (
                 <button key={a.key} onClick={() => setActivite(a.key)}
                   style={{ ...S.bigCard, ...(activite === a.key ? S.bigCardActive : {}) }}>
-                  <span style={{ fontSize: '1.7rem', flexShrink: 0 }}>{a.emoji}</span>
                   <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: activite === a.key ? 'var(--accent)' : '#1a1a1a', lineHeight: 1.2 }}>{a.label}</div>
                     <div style={{ fontSize: '0.74rem', color: activite === a.key ? 'rgba(228,248,22,0.65)' : '#9ca3af', marginTop: 3 }}>{a.desc}</div>
@@ -392,7 +391,7 @@ export default function ProfilNutrition() {
                   <MacroCell label="Lipides"   val={`${computed.fat_g}g`} color="#f87171" note={`${Math.round(computed.fat_g * 9 / computed.kcal * 100)}% AET`} />
                 </div>
                 <div style={{ background: 'rgba(96,165,250,0.12)', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                  <span style={{ fontSize: '1.3rem' }}>💧</span>
+                  <span style={{ fontSize: '1.3rem' }}><Icon name="droplet" size={14} /></span>
                   <div>
                     <p style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem', margin: 0 }}>{(computed.hydration_ml / 1000).toFixed(1)} L d'eau / jour</p>
                     <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.65rem', margin: '2px 0 0' }}>35 ml/kg de poids corporel · EFSA 2010</p>
@@ -467,7 +466,7 @@ export default function ProfilNutrition() {
           <>
             {saved && (
               <div style={{ background: '#dcfce7', borderRadius: 12, padding: '12px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.9rem' }}>
-                ✅ Objectifs enregistrés avec succès !
+                Objectifs enregistrés avec succès !
               </div>
             )}
 
@@ -479,7 +478,6 @@ export default function ProfilNutrition() {
                       <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
                       {physProfile && (
                         <p style={{ color: 'var(--accent-fg)', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
-                          {OBJECTIFS.find(o => o.key === physProfile.objectif)?.emoji}{' '}
                           {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
                         </p>
                       )}
@@ -499,7 +497,7 @@ export default function ProfilNutrition() {
                   </div>
                   {existingGoals.hydration_ml != null && (
                     <div style={{ background: 'rgba(96,165,250,0.1)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '1.1rem' }}>💧</span>
+                      <span style={{ fontSize: '1.1rem' }}><Icon name="droplet" size={14} /></span>
                       <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', fontWeight: 700 }}>
                         {(existingGoals.hydration_ml / 1000).toFixed(1)} L d'eau / jour
                       </span>
@@ -511,13 +509,13 @@ export default function ProfilNutrition() {
                   <div style={S.card}>
                     <h3 style={{ fontWeight: 700, color: '#1a1a1a', fontSize: '0.95rem', margin: '0 0 12px' }}>Profil physique utilisé</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      {physProfile.sexe    && <PhysRow icon="🧬" label="Sexe"     val={physProfile.sexe === 'homme' ? 'Homme' : 'Femme'} />}
-                      {physProfile.age     && <PhysRow icon="🗓" label="Âge"      val={`${physProfile.age} ans`} />}
-                      {physProfile.taille  && <PhysRow icon="📏" label="Taille"   val={`${physProfile.taille} cm`} />}
-                      {physProfile.poids   && <PhysRow icon="⚖️" label="Poids"    val={`${physProfile.poids} kg`} />}
+                      {physProfile.sexe    && <PhysRow label="Sexe"     val={physProfile.sexe === 'homme' ? 'Homme' : 'Femme'} />}
+                      {physProfile.age     && <PhysRow label="Âge"      val={`${physProfile.age} ans`} />}
+                      {physProfile.taille  && <PhysRow label="Taille"   val={`${physProfile.taille} cm`} />}
+                      {physProfile.poids   && <PhysRow label="Poids"    val={`${physProfile.poids} kg`} />}
                       {physProfile.activite && (
                         <div style={{ gridColumn: '1/-1' }}>
-                          <PhysRow icon="🏃" label="Activité" val={ACTIVITES.find(a => a.key === physProfile.activite)?.label} />
+                          <PhysRow label="Activité" val={ACTIVITES.find(a => a.key === physProfile.activite)?.label} />
                         </div>
                       )}
                     </div>
@@ -531,7 +529,6 @@ export default function ProfilNutrition() {
               </>
             ) : (
               <div style={S.emptyCard}>
-                <p style={{ fontSize: '3rem', margin: '0 0 12px' }}>🎯</p>
                 <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1.1rem', margin: '0 0 10px', letterSpacing: '-0.02em' }}>Définis tes objectifs nutritionnels</h3>
                 <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.65, margin: '0 0 18px', maxWidth: 280, textAlign: 'center' }}>
                   En 3 questions, un algorithme basé sur des études scientifiques calcule tes besoins quotidiens en kcal, protéines, glucides, lipides et hydratation.
@@ -648,15 +645,14 @@ function SourceBadge({ label, dark }) {
       color:      dark ? '#6b7280'  : 'rgba(255,255,255,0.5)',
       fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.02em',
     }}>
-      📚 {label}
+      {label}
     </span>
   )
 }
 
-function PhysRow({ icon, label, val }) {
+function PhysRow({ label, val }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9fafb', borderRadius: 10, padding: '8px 10px' }}>
-      <span style={{ fontSize: '0.9rem' }}>{icon}</span>
       <div style={{ minWidth: 0 }}>
         <p style={{ fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>{label}</p>
         <p style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1a1a1a', margin: '1px 0 0' }}>{val}</p>

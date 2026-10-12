@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import ImportExcel from './ImportExcel'
 import { sendNotif } from '../notifs'
+import Icon from '../components/Icon'
 
 export default function Programme() {
   const { id } = useParams()
@@ -183,12 +184,12 @@ export default function Programme() {
         .from('clients').select('user_id, prenom').eq('id', programme.client_id).single()
 
       if (!clientData?.user_id) {
-        showToast('❌ clients.user_id est null — le client doit ouvrir l\'app une fois', false)
+        showToast('clients.user_id est null — le client doit ouvrir l\'app une fois', false)
         return
       }
 
       // Envoyer directement (la Edge Function vérifie la subscription côté serveur avec service_role)
-      showToast('⏳ Envoi en cours…', true)
+      showToast('Envoi en cours…', true)
       const result = await sendNotif(clientData.user_id, {
         titre: 'Test push',
         corps: 'Si tu vois cette notification sur ton téléphone, les push fonctionnent !',
@@ -196,9 +197,9 @@ export default function Programme() {
         lien: '/client/notifications',
       })
       if (result?.ok) showToast('✓ Notif envoyée — vérifie le téléphone', true)
-      else showToast(`❌ ${result?.reason}`, false)
+      else showToast(`Échec : ${result?.reason}`, false)
     } catch (e) {
-      showToast(`❌ Erreur : ${e.message}`, false)
+      showToast(`Erreur : ${e.message}`, false)
     }
   }
 
@@ -362,7 +363,7 @@ export default function Programme() {
         }} style={styles.backBtn}>← Retour</button>
         {programme.client_id && (
           <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer' }}>
-            🧪 Test push
+            Test push
           </button>
         )}
       </div>
@@ -431,7 +432,7 @@ export default function Programme() {
                 disabled={savingTemplate}
                 style={{ ...styles.btnPrimary, opacity: savingTemplate ? 0.7 : 1 }}
               >
-                {savingTemplate ? 'Enregistrement…' : '📚 Enregistrer dans la bibliothèque'}
+                {savingTemplate ? 'Enregistrement…' : 'Enregistrer dans la bibliothèque'}
               </button>
             ) : (
               <>
@@ -445,7 +446,7 @@ export default function Programme() {
           {!programme.bibliotheque_template_id && showSaveTemplate && (
             <div style={{ marginTop: '1rem', background: '#f9fafb', borderRadius: 12, border: '1.5px solid #e5e7eb', padding: '1rem' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                💾 Enregistrer comme template de cycle
+                Enregistrer comme template de cycle
               </p>
               <div style={{ marginBottom: '0.65rem' }}>
                 <label style={styles.label}>Nom du template *</label>
@@ -523,8 +524,8 @@ export default function Programme() {
                         <span style={{ background: '#ecfccb', color: '#3f6212', fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: 999, marginLeft: 'auto' }}>Terrain</span>
                       )}
                     </div>
-                    <button onClick={() => { setEnEdition(seance.id); setNomEdition(seance.nom) }} style={styles.iconBtn}>✏️</button>
-                    <button onClick={() => supprimerSeance(seance.id)} style={styles.iconBtn}>🗑️</button>
+                    <button onClick={() => { setEnEdition(seance.id); setNomEdition(seance.nom) }} style={styles.iconBtn}><Icon name="edit" size={14} /></button>
+                    <button onClick={() => supprimerSeance(seance.id)} style={styles.iconBtn}><Icon name="trash" size={14} /></button>
                   </>
                 )}
               </div>

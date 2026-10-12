@@ -6,6 +6,7 @@ import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { autoLinkBiblio } from '../utils/exerciceMatch'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
+import Icon from '../components/Icon'
 
 function newId() { return Math.random().toString(36).slice(2) }
 function youtubeId(url) {
@@ -1074,10 +1075,10 @@ export default function Seance() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => navigate(`/seance/${id}/projection`)} style={{ background: '#111827', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            📺 Projection
+            Projection
           </button>
           <button onClick={sauvegarderTemplate} style={{ background: templateSaved ? '#f0fdf4' : 'white', color: templateSaved ? '#16a34a' : '#374151', border: `1.5px solid ${templateSaved ? '#86efac' : '#e5e7eb'}`, borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.3s' }}>
-            {templateSaved ? '✓ Modèle sauvegardé' : '📋 Sauvegarder comme modèle'}
+            {templateSaved ? '✓ Modèle sauvegardé' : 'Sauvegarder comme modèle'}
           </button>
         </div>
       </div>
@@ -1088,11 +1089,11 @@ export default function Seance() {
           <p style={styles.sectionTitle}>Échauffement</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={openImportTemplates} style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-              📥 Importer {showImportEchauff ? '▲' : '▼'}
+              Importer {showImportEchauff ? '▲' : '▼'}
             </button>
             {echauffement.length > 0 && (
               <button onClick={saveEchauffAsTemplate} style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-                💾 Sauvegarder comme template
+                Sauvegarder comme template
               </button>
             )}
           </div>
@@ -1102,7 +1103,7 @@ export default function Seance() {
         <div style={{ marginBottom: '0.875rem' }}>
           <button onClick={() => { setShowEchauffPaste(v => !v); setEchauffParsed(null); setEchauffPasteText('') }}
             style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-            📋 Coller depuis Excel {showEchauffPaste ? '▲' : '▼'}
+            Coller depuis Excel {showEchauffPaste ? '▲' : '▼'}
           </button>
           {showEchauffPaste && (
             <div style={{ marginTop: '0.5rem', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
@@ -1121,7 +1122,7 @@ export default function Seance() {
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
                 <button onClick={() => parseEchauffPaste()} disabled={!echauffPasteText.trim()}
                   style={{ ...styles.btnSecondary, opacity: !echauffPasteText.trim() ? 0.5 : 1, fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}>
-                  🔍 Analyser
+                  Analyser
                 </button>
                 {echauffParsed && <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{echauffParsed.length} exercice{echauffParsed.length > 1 ? 's' : ''} détecté{echauffParsed.length > 1 ? 's' : ''}</span>}
               </div>
@@ -1269,7 +1270,7 @@ export default function Seance() {
                     )}
                     <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                     <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
-                    <button onClick={() => startEditEchauffLine(l)} style={{ ...styles.iconBtnSm, fontSize: '0.75rem' }}>✏️</button>
+                    <button onClick={() => startEditEchauffLine(l)} style={{ ...styles.iconBtnSm, fontSize: '0.75rem' }}><Icon name="edit" size={14} /></button>
                     {l.nom?.trim() && (
                       <button
                         onClick={() => sauvegarderEchauffEnBiblio(l)}
@@ -1280,7 +1281,7 @@ export default function Seance() {
                           background: echauffBiblioFlash[l.id] === 'saved' ? '#f0fdf4' : echauffBiblioFlash[l.id] === 'exists' ? '#f5f3ff' : undefined
                         }}
                       >
-                        {echauffBiblioFlash[l.id] === 'saved' ? '✓' : echauffBiblioFlash[l.id] === 'exists' ? '~' : '📚'}
+                        {echauffBiblioFlash[l.id] === 'saved' ? '✓' : echauffBiblioFlash[l.id] === 'exists' ? '~' : <Icon name="save" size={12} />}
                       </button>
                     )}
                     <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.iconBtnSm, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
@@ -1603,7 +1604,7 @@ export default function Seance() {
                       <input value={f.media_url} onChange={e => updateFormEdition(ex.id, 'media_url', e.target.value)} style={styles.editInput} placeholder="https://youtube.com/..." />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.1rem' }}>
-                      <button onClick={() => supprimerExercice(ex.id)} style={{ ...styles.iconBtnSm, color: '#dc2626', borderColor: '#fecaca' }}>🗑️</button>
+                      <button onClick={() => supprimerExercice(ex.id)} style={{ ...styles.iconBtnSm, color: '#dc2626', borderColor: '#fecaca' }}><Icon name="trash" size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -1780,7 +1781,7 @@ export default function Seance() {
                       <td style={styles.tdCenter}>
                         {ex.media_url
                           ? <span title={ex.media_url} style={{ fontSize: '0.8rem', cursor: 'default' }}>
-                              {/youtube|youtu\.be/i.test(ex.media_url) ? '▶' : '🖼'}
+                              {/youtube|youtu\.be/i.test(ex.media_url) ? '▶' : <Icon name="image" size={14} />}
                             </span>
                           : <span style={{ color: '#e5e7eb', fontSize: '0.75rem' }}>—</span>
                         }
@@ -2163,7 +2164,7 @@ export default function Seance() {
                       >
                         {ex.image_url
                           ? <img loading="lazy" src={ex.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
-                          : <div style={{ width: 40, height: 40, background: '#f3f4f6', borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>💪</div>
+                          : <div style={{ width: 40, height: 40, background: '#f3f4f6', borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}><Icon name="dumbbell" size={14} /></div>
                         }
                         <span style={{ flex: 1 }}>{ex.nom}</span>
                         {ex.categorie && <span style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '400' }}>{ex.categorie}</span>}

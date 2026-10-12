@@ -6,6 +6,7 @@ import CropLogoModal from '../components/CropLogoModal'
 import { useNotifications } from '../hooks/useNotifications'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 import NotifIcon from '../components/NotifIcon'
+import Icon from '../components/Icon'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -547,7 +548,7 @@ export default function Dashboard() {
                       ))}
                       {progFinBientot.map(p => (
                         <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, border: '1.5px solid #0ea5e9' }}>
-                          <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
+                          <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}><Icon name="clipboard" size={14} /></div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
                           <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
                         </div>
@@ -564,7 +565,7 @@ export default function Dashboard() {
                   ) : (
                     seancesAujourdhui.map(ev => (
                       <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)} style={S.miniRow}>
-                        <div style={S.miniIco}>📅</div>
+                        <div style={S.miniIco}><Icon name="calendar" size={14} /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={S.miniName}>{ev.titre}</p>
                           <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
@@ -575,7 +576,7 @@ export default function Dashboard() {
                   )}
                   {sansWellness.length > 0 && (
                     <div style={{ ...S.miniRow, cursor: 'default' }}>
-                      <div style={S.miniIco}>🔕</div>
+                      <div style={S.miniIco}><Icon name="bell" size={14} /></div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={S.miniName}>{sansWellness.length} sans wellness 3j+</p>
                         <p style={S.miniSub}>{sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}</p>
@@ -716,7 +717,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }}>🔍</span>
+                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }}><Icon name="search" size={14} /></span>
                 <input type="text" placeholder="Rechercher..." aria-label="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem 0.875rem 0.65rem 2.4rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', background: 'white' }}
                 />
@@ -899,12 +900,12 @@ export default function Dashboard() {
                     style={{ ...S.miniRow, border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                     {g.logo_url
                       ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-                      : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🏆</div>}
+                      : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 800, color: g.couleur, flexShrink: 0 }}>{(g.nom || '?').charAt(0).toUpperCase()}</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={S.miniName}>{g.nom}</p>
                       <p style={S.miniSub}>Ouvrir le calendrier de saison</p>
                     </div>
-                    <span style={{ ...S.pill, background: g.couleur + '18', color: g.couleur }}>📅</span>
+                    <span style={{ ...S.pill, background: g.couleur + '18', color: g.couleur }}><Icon name="calendar" size={14} /></span>
                   </div>
                 ))
               )}
@@ -925,7 +926,7 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {g.logo_url
                             ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-                            : <div style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
+                            : <div style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 800, color: g.couleur, flexShrink: 0 }}>{(g.nom || '?').charAt(0).toUpperCase()}</div>
                           }
                           <span style={{ fontWeight: '700', fontSize: g.parent_id ? '0.84rem' : '0.92rem', color: g.parent_id ? '#374151' : '#1a1a1a' }}>{g.nom}</span>
                         </div>
@@ -933,7 +934,7 @@ export default function Dashboard() {
                           <button onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
                             title="Ouvrir le calendrier du groupe"
                             style={{ background: g.couleur + '14', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 8, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' }}>
-                            📅 Calendrier
+                            Calendrier
                           </button>
                           <span style={S.chevron}>›</span>
                         </div>
@@ -959,10 +960,10 @@ export default function Dashboard() {
                 <div style={{ width: 36, height: 36, borderRadius: 8, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
                   {newGroupeLogoPreview
                     ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    : <span style={{ fontSize: '1rem' }}>📂</span>}
+                    : <span style={{ fontSize: '1rem' }}><Icon name="folder-open" size={14} /></span>}
                 </div>
                 <span style={{ fontSize: '0.82rem', color: newGroupeLogoFile ? '#374151' : '#9ca3af', fontWeight: '600' }}>
-                  {extractingColors ? '⏳ Analyse couleurs...' : newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir un logo...'}
+                  {extractingColors ? 'Analyse couleurs...' : newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir un logo...'}
                 </span>
                 <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
               </label>
@@ -973,7 +974,7 @@ export default function Dashboard() {
               <div style={{ background: pickingFor ? '#fffbeb' : '#f9fafb', borderRadius: 11, padding: '0.65rem', border: `1.5px solid ${pickingFor ? '#f59e0b' : '#e5e7eb'}`, transition: 'all 0.15s' }}>
                 {pickingFor && (
                   <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>
-                    🎨 Cliquez sur le logo pour choisir la couleur {pickingFor === 'primary' ? 'principale' : 'secondaire'}
+                    Cliquez sur le logo pour choisir la couleur {pickingFor === 'primary' ? 'principale' : 'secondaire'}
                   </p>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1021,7 +1022,7 @@ export default function Dashboard() {
                   <button onClick={() => setPickingFor(pickingFor === 'primary' ? null : 'primary')}
                     title="Pipette — cliquer sur le logo"
                     style={{ background: pickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
-                    🎨
+                    <Icon name="palette" size={14} />
                   </button>
                 )}
               </div>
@@ -1043,7 +1044,7 @@ export default function Dashboard() {
                   <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')}
                     title="Pipette — cliquer sur le logo"
                     style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem', lineHeight: 1 }}>
-                    🎨
+                    <Icon name="palette" size={14} />
                   </button>
                 )}
               </div>
@@ -1053,7 +1054,7 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.6rem 0.9rem', borderRadius: 11, background: '#f9fafb', border: `1.5px solid ${newGroupeCouleur}` }}>
               {newGroupeLogoPreview
                 ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
-                : <div style={{ width: 26, height: 26, borderRadius: 7, background: newGroupeCouleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
+                : <div style={{ width: 26, height: 26, borderRadius: 7, background: newGroupeCouleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}><Icon name="trophy" size={14} /></div>
               }
               <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{newGroupeNom || 'Nom du groupe'}</span>
               <span style={{ background: newGroupeCouleur + '18', color: newGroupeCouleur, border: `1px solid ${newGroupeCouleur}33`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: '700' }}>Groupe</span>
@@ -1085,7 +1086,7 @@ export default function Dashboard() {
         ) : (
           <button onClick={() => setShowGroupeForm(true)}
             style={{ width: '100%', background: 'white', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.65rem', fontSize: '0.85rem', fontWeight: '700', color: '#6b7280', cursor: 'pointer' }}>
-            🏆 Nouveau groupe
+            Nouveau groupe
           </button>
         )}
       </div>

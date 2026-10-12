@@ -730,7 +730,6 @@ export default function ProgressionClient() {
 
   if (error) return (
     <div style={{ ...S.page, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-      <span style={{ fontSize: '2rem' }}>⚠️</span>
       <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>{error}</p>
       <ClientBottomNav />
     </div>
@@ -757,10 +756,9 @@ export default function ProgressionClient() {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, minHeight: 'calc(100vh - 160px)', padding: '2rem' }}>
-        <span style={{ fontSize: '3rem' }}>💪</span>
         <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1a1a1a', margin: 0 }}>Aucune donnée encore</p>
         <p style={{ fontSize: '0.85rem', color: '#6b7280', textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
-          Commence ta première séance pour voir ta progression ici 💪
+          Commence ta première séance pour voir ta progression ici
         </p>
       </div>
       <ClientBottomNav />
@@ -1007,7 +1005,7 @@ export default function ProgressionClient() {
       {/* ── Warning reps > 8 ────────────────────────────────────────────────── */}
       {metrics?.showWarning && (
         <div style={S.warningBanner}>
-          ⚠️ La plupart de tes séries dépassent 5 reps — l'estimation 1RM suppose un effort maximal (RPE 10). Si les séries n'étaient pas à l'échec, le 1RM réel peut être inférieur.
+          La plupart de tes séries dépassent 5 reps — l'estimation 1RM suppose un effort maximal (RPE 10). Si les séries n'étaient pas à l'échec, le 1RM réel peut être inférieur.
         </div>
       )}
 

@@ -85,7 +85,7 @@ export default function SchemasEntrainement() {
         <button onClick={() => setDossierActif('sans')} style={{ ...S.filterBtn, ...(dossierActif === 'sans' ? S.filterBtnActive : {}) }}>Sans dossier</button>
         {dossiers.map(d => (
           <button key={d.id} onClick={() => setDossierActif(d.id)} style={{ ...S.filterBtn, ...(dossierActif === d.id ? S.filterBtnActive : {}) }}>
-            📁 {d.nom}
+            {d.nom}
           </button>
         ))}
         {nouveauDossier === null ? (

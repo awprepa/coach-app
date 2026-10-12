@@ -12,12 +12,12 @@ import ClientPicker from '../components/ClientPicker'
 
 // ── Métriques GPS à analyser ──────────────────────────────────────────────────
 const GPS_Z_METRICS = [
-  { key: 'distance',    label: 'Distance',          unit: 'm',    icon: '📏' },
-  { key: 'vmax',        label: 'Vitesse max',        unit: 'km/h', icon: '⚡' },
-  { key: 'player_load', label: 'Player Load',        unit: '',     icon: '🔋' },
-  { key: 'dist_v20',    label: 'Dist. > 20 km/h',   unit: 'm',    icon: '🏃' },
-  { key: 'nb_acc_25',   label: 'Accélérations',      unit: '',     icon: '🚀' },
-  { key: 'nb_dec_25',   label: 'Décélérations',      unit: '',     icon: '🛑' },
+  { key: 'distance',    label: 'Distance',          unit: 'm' },
+  { key: 'vmax',        label: 'Vitesse max',        unit: 'km/h' },
+  { key: 'player_load', label: 'Player Load',        unit: '' },
+  { key: 'dist_v20',    label: 'Dist. > 20 km/h',   unit: 'm' },
+  { key: 'nb_acc_25',   label: 'Accélérations',      unit: '' },
+  { key: 'nb_dec_25',   label: 'Décélérations',      unit: '' },
 ]
 
 export default function ChargeEntrainement() {
@@ -269,10 +269,10 @@ export default function ChargeEntrainement() {
   // Zone Z-score (Batterham & Hopkins : ±1 SD normal, ±2 SD vigilance, >±2 alarme)
   function zZone(z) {
     if (z === null || z === undefined) return null
-    if (Math.abs(z) <= 1) return { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅', label: 'Normal' }
-    if (z > 1 && z <= 2)  return { color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', icon: '📈', label: 'Progression' }
-    if (z >= -2 && z < -1) return { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', icon: '📉', label: 'Attention' }
-    return { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', icon: '🚨', label: 'Alarme' }
+    if (Math.abs(z) <= 1) return { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', label: 'Normal' }
+    if (z > 1 && z <= 2)  return { color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', label: 'Progression' }
+    if (z >= -2 && z < -1) return { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', label: 'Attention' }
+    return { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: 'Alarme' }
   }
 
   function formatVal(val, unit) {
@@ -420,7 +420,6 @@ export default function ChargeEntrainement() {
 
       {!selectedClient && (
         <div style={S.emptyState}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
           <div style={{ fontWeight: '600', color: '#374151' }}>Sélectionne un client</div>
           <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>pour voir sa charge d'entraînement</div>
         </div>
@@ -430,7 +429,6 @@ export default function ChargeEntrainement() {
 
       {selectedClient && !loading && data.length === 0 && (
         <div style={S.emptyState}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
           <div style={{ color: '#374151', fontWeight: '600' }}>Aucune donnée RPE</div>
           <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE après les séances</div>
         </div>
@@ -441,7 +439,7 @@ export default function ChargeEntrainement() {
         <>
           {gpsZLoading && (
             <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem' }}>
-              📡 Chargement des données GPS…
+              Chargement des données GPS…
             </div>
           )}
 
@@ -450,7 +448,7 @@ export default function ChargeEntrainement() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
                   <div style={S.indicateursTitle}>
-                    📡 GPS — Analyse individuelle · {gpsZData.clientName}
+                    GPS — Analyse individuelle · {gpsZData.clientName}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.1rem' }}>
                     Dernière séance : {gpsZData.lastNom || gpsZData.lastDate} · {gpsZData.nbSessions} séances analysées
@@ -462,14 +460,14 @@ export default function ChargeEntrainement() {
               </div>
 
               <div style={S.indicateursGrid}>
-                {GPS_Z_METRICS.map(({ key, label, unit, icon }) => {
+                {GPS_Z_METRICS.map(({ key, label, unit }) => {
                   const d = gpsZData.zScores[key]
                   if (!d) return null
 
                   if (d.insufficient) {
                     return (
                       <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
-                        <div style={S.indLabel}>{icon} {label}</div>
+                        <div style={S.indLabel}>{label}</div>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.25rem' }}>
                           Données insuffisantes
                         </div>
@@ -483,7 +481,7 @@ export default function ChargeEntrainement() {
                   if (d.z === null) {
                     return (
                       <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
-                        <div style={S.indLabel}>{icon} {label}</div>
+                        <div style={S.indLabel}>{label}</div>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pas de donnée</div>
                       </div>
                     )
@@ -492,13 +490,13 @@ export default function ChargeEntrainement() {
                   const zone = zZone(d.z)
                   return (
                     <div key={key} style={{ ...S.indCard, background: zone.bg, border: `1px solid ${zone.border}` }}>
-                      <div style={{ ...S.indLabel, color: '#6b7280' }}>{icon} {label}</div>
+                      <div style={{ ...S.indLabel, color: '#6b7280' }}>{label}</div>
                       <div style={{ ...S.indValue, color: zone.color }}>
                         {d.z > 0 ? '+' : ''}{d.z}
                         <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 500 }}> SD</span>
                       </div>
                       <div style={{ ...S.indBadge, background: zone.color + '20', color: zone.color }}>
-                        {zone.icon} {zone.label}
+                        {zone.label}
                       </div>
                       <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.3rem', lineHeight: 1.4 }}>
                         {formatVal(d.current, unit)} · moy. {formatVal(d.mean, unit)}
@@ -512,13 +510,13 @@ export default function ChargeEntrainement() {
               {/* Légende zones */}
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
                 {[
-                  { icon: '✅', label: 'Normal (±1 SD)',          color: '#22c55e' },
-                  { icon: '📈', label: 'Progression (+1→+2 SD)',  color: '#3b82f6' },
-                  { icon: '📉', label: 'Attention (−2→−1 SD)',    color: '#f59e0b' },
-                  { icon: '🚨', label: 'Alarme (> ±2 SD)',        color: '#ef4444' },
+                  { label: 'Normal (±1 SD)',          color: '#22c55e' },
+                  { label: 'Progression (+1→+2 SD)',  color: '#3b82f6' },
+                  { label: 'Attention (−2→−1 SD)',    color: '#f59e0b' },
+                  { label: 'Alarme (> ±2 SD)',        color: '#ef4444' },
                 ].map(z => (
                   <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', color: '#6b7280' }}>
-                    <span>{z.icon}</span>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: z.color, flexShrink: 0 }} />
                     <span style={{ color: z.color, fontWeight: 600 }}>{z.label}</span>
                   </div>
                 ))}
@@ -632,13 +630,12 @@ export default function ChargeEntrainement() {
               {(() => {
                 const risk = getRiskLevel(lastRow, lastIdx, data)
                 const config = {
-                  green:  { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅', label: 'Risque faible', desc: 'La charge est bien équilibrée. Continuez sur cette lancée.' },
-                  orange: { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', icon: '⚠️', label: 'Vigilance', desc: 'Certains indicateurs méritent attention. Surveiller la récupération.' },
-                  red:    { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', icon: '🚨', label: 'Risque élevé', desc: 'Plusieurs signaux d\'alarme. Envisager une semaine de décharge.' },
+                  green:  { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', label: 'Risque faible', desc: 'La charge est bien équilibrée. Continuez sur cette lancée.' },
+                  orange: { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', label: 'Vigilance', desc: 'Certains indicateurs méritent attention. Surveiller la récupération.' },
+                  red:    { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: 'Risque élevé', desc: 'Plusieurs signaux d\'alarme. Envisager une semaine de décharge.' },
                 }[risk]
                 return (
                   <div style={{ background: config.bg, border: `1.5px solid ${config.border}`, borderRadius: 12, padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.875rem' }}>
-                    <div style={{ fontSize: '1.75rem', lineHeight: 1 }}>{config.icon}</div>
                     <div>
                       <div style={{ fontWeight: '700', color: config.color, fontSize: '0.95rem' }}>{config.label}</div>
                       <div style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '0.15rem' }}>{config.desc}</div>
@@ -1261,10 +1258,10 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
   function zZone(z) {
     if (z === null || z === undefined) return null
-    if (Math.abs(z) <= 1) return { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅', label: 'Normal' }
-    if (z > 1 && z <= 2)  return { color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', icon: '📈', label: 'Progression' }
-    if (z >= -2 && z < -1) return { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', icon: '📉', label: 'Attention' }
-    return { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', icon: '🚨', label: 'Alarme' }
+    if (Math.abs(z) <= 1) return { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', label: 'Normal' }
+    if (z > 1 && z <= 2)  return { color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', label: 'Progression' }
+    if (z >= -2 && z < -1) return { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', label: 'Attention' }
+    return { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: 'Alarme' }
   }
   function formatVal(val, unit) {
     if (val === undefined || val === null) return '—'
@@ -1461,7 +1458,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       {/* ── Suivi des charges par exercice ── */}
       {exWeightLoading && (
         <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          🏋️ Chargement des charges par exercice…
+          Chargement des charges par exercice…
         </div>
       )}
 
@@ -1663,7 +1660,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                           <td colSpan={1 + allWeeks.length + nbExtraCols}
                             style={{ padding: '0.45rem 0.75rem', background: '#f0f4ff', borderTop: si > 0 ? '2px solid #dde3f4' : undefined, borderBottom: '1px solid #dde3f4', position: 'sticky', left: 0 }}>
                             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#3b5bdb', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                              📋 {seance.nom}
+                              {seance.nom}
                             </span>
                           </td>
                         </tr>
@@ -1712,7 +1709,6 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
       {!loading && !exWeightLoading && data.length === 0 && !exWeightData && !gpsZLoading && !gpsZData && (
         <div style={S.emptyState}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
           <div style={{ color: '#374151', fontWeight: '600' }}>Aucune donnée</div>
           <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE et ses charges après les séances</div>
         </div>
@@ -1732,28 +1728,28 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 <div style={{ padding: '3px 10px', borderRadius: 999, background: '#f0fdf4', color: '#22c55e', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bbf7d0', whiteSpace: 'nowrap' }}>Z-score individuel</div>
               </div>
               <div style={S.indicateursGrid}>
-                {GPS_Z_METRICS.map(({ key, label, unit, icon }) => {
+                {GPS_Z_METRICS.map(({ key, label, unit }) => {
                   const d = gpsZData.zScores[key]
                   if (!d) return null
                   if (d.insufficient) return (
                     <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
-                      <div style={S.indLabel}>{icon} {label}</div>
+                      <div style={S.indLabel}>{label}</div>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.25rem' }}>Données insuffisantes</div>
                       <div style={{ fontSize: '0.62rem', color: '#d1d5db', marginTop: '0.3rem' }}>{d.n} séance{d.n > 1 ? 's' : ''} · min. 5 requises</div>
                     </div>
                   )
                   if (d.z === null) return (
                     <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
-                      <div style={S.indLabel}>{icon} {label}</div>
+                      <div style={S.indLabel}>{label}</div>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pas de donnée</div>
                     </div>
                   )
                   const zone = zZone(d.z)
                   return (
                     <div key={key} style={{ ...S.indCard, background: zone.bg, border: `1px solid ${zone.border}` }}>
-                      <div style={{ ...S.indLabel, color: '#6b7280' }}>{icon} {label}</div>
+                      <div style={{ ...S.indLabel, color: '#6b7280' }}>{label}</div>
                       <div style={{ ...S.indValue, color: zone.color }}>{d.z > 0 ? '+' : ''}{d.z}<span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 500 }}> SD</span></div>
-                      <div style={{ ...S.indBadge, background: zone.color + '20', color: zone.color }}>{zone.icon} {zone.label}</div>
+                      <div style={{ ...S.indBadge, background: zone.color + '20', color: zone.color }}>{zone.label}</div>
                       <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.3rem', lineHeight: 1.4 }}>{formatVal(d.current, unit)} · moy. {formatVal(d.mean, unit)}</div>
                       <div style={S.indRef}>{d.n} séances · ±1SD = {formatVal(d.sd, unit)}</div>
                     </div>
@@ -1761,8 +1757,8 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 })}
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
-                {[{icon:'✅',label:'Normal (±1 SD)',color:'#22c55e'},{icon:'📈',label:'Progression (+1→+2 SD)',color:'#3b82f6'},{icon:'📉',label:'Attention (−2→−1 SD)',color:'#f59e0b'},{icon:'🚨',label:'Alarme (> ±2 SD)',color:'#ef4444'}].map(z=>(
-                  <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', color: '#6b7280' }}><span>{z.icon}</span><span style={{ color: z.color, fontWeight: 600 }}>{z.label}</span></div>
+                {[{label:'Normal (±1 SD)',color:'#22c55e'},{label:'Progression (+1→+2 SD)',color:'#3b82f6'},{label:'Attention (−2→−1 SD)',color:'#f59e0b'},{label:'Alarme (> ±2 SD)',color:'#ef4444'}].map(z=>(
+                  <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', color: '#6b7280' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: z.color, flexShrink: 0 }} /><span style={{ color: z.color, fontWeight: 600 }}>{z.label}</span></div>
                 ))}
               </div>
               <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.4rem' }}>Batterham &amp; Hopkins (2006) · Comparaison du joueur à lui-même sur l'ensemble de ses séances GPS</div>
@@ -1785,7 +1781,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               </div>
               {(() => {
                 const risk = getRiskLevel(lastRow, lastIdx, data)
-                const config = { green: { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅', label: 'Risque faible', desc: 'La charge est bien équilibrée. Continuez sur cette lancée.' }, orange: { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', icon: '⚠️', label: 'Vigilance', desc: 'Certains indicateurs méritent attention. Surveiller la récupération.' }, red: { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', icon: '🚨', label: 'Risque élevé', desc: "Plusieurs signaux d'alarme. Envisager une semaine de décharge." } }[risk]
+                const config = { green: { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', label: 'Risque faible', desc: 'La charge est bien équilibrée. Continuez sur cette lancée.' }, orange: { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', label: 'Vigilance', desc: 'Certains indicateurs méritent attention. Surveiller la récupération.' }, red: { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: 'Risque élevé', desc: "Plusieurs signaux d'alarme. Envisager une semaine de décharge." } }[risk]
                 return (<div style={{ background: config.bg, border: `1.5px solid ${config.border}`, borderRadius: 12, padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.875rem' }}><div style={{ fontSize: '1.75rem', lineHeight: 1 }}>{config.icon}</div><div><div style={{ fontWeight: '700', color: config.color, fontSize: '0.95rem' }}>{config.label}</div><div style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '0.15rem' }}>{config.desc}</div></div></div>)
               })()}
             </div>

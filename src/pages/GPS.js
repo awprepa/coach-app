@@ -495,7 +495,6 @@ export default function GPS() {
       <div style={S.main} className="gps-main">
         {!selected ? (
           <div style={S.empty}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📡</div>
             <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#374151' }}>Données GPS</div>
             <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>Importez un rapport Catapult ou sélectionnez une session</div>
           </div>

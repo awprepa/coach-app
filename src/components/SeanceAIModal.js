@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
+import Icon from './Icon'
 
 export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultMode = null, onCycleDone, onCycleGenerated }) {
   const [biblioFull, setBiblioFull]             = useState([])
@@ -158,7 +159,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
     } catch { setPhase('error') }
   }
 
-  const genLabel = aiMode === 'cycle' ? '✨ Générer le cycle complet' : '✨ Générer la séance'
+  const genLabel = aiMode === 'cycle' ? 'Générer le cycle complet' : 'Générer la séance'
   const genLoadLabel = aiMode === 'cycle' ? 'Génération du cycle en cours…' : 'Génération de la séance en cours…'
 
   return createPortal(
@@ -168,7 +169,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
       <div style={AI.header}>
         <div>
           <p style={AI.headerSup}>Préparation physique · IA</p>
-          <h2 style={AI.headerTitle}>✨ {aiMode === 'cycle' ? 'Génération de cycle' : 'Génération de séance'}</h2>
+          <h2 style={AI.headerTitle}>{aiMode === 'cycle' ? 'Génération de cycle' : 'Génération de séance'}</h2>
         </div>
         <button onClick={onClose} style={AI.closeBtn}>✕</button>
       </div>
@@ -181,14 +182,14 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Que veux-tu générer ?</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: 340 }}>
               <button onClick={() => startChat('seance')} style={AI.modeBtn}>
-                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🏋</span>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}><Icon name="dumbbell" size={14} /></span>
                 <div style={{ textAlign: 'left' }}>
                   <p style={AI.modeBtnTitle}>Séance unique</p>
                   <p style={AI.modeBtnDesc}>Génère une séance adaptée au contexte actuel</p>
                 </div>
               </button>
               <button onClick={() => startChat('cycle')} style={{ ...AI.modeBtn, ...AI.modeBtnCycle }}>
-                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>📅</span>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}><Icon name="calendar" size={14} /></span>
                 <div style={{ textAlign: 'left' }}>
                   <p style={AI.modeBtnTitle}>Cycle complet</p>
                   <p style={AI.modeBtnDesc}>Programme N semaines · progressions automatiques par bloc</p>
@@ -206,7 +207,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
           <div style={AI.centered}>
             {phase === 'loading'
               ? <><div style={AI.spinner} /><p style={AI.spinnerText}>Initialisation…</p></>
-              : <><p style={{ fontSize: '2rem' }}>⚠️</p><p style={AI.spinnerText}>Une erreur est survenue</p><button onClick={onClose} style={{ ...AI.btnSecondary, marginTop: 16 }}>Fermer</button></>
+              : <><p style={AI.spinnerText}>Une erreur est survenue</p><button onClick={onClose} style={{ ...AI.btnSecondary, marginTop: 16 }}>Fermer</button></>
             }
           </div>
         )}
@@ -225,7 +226,6 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
         {/* Done (cycle inséré) */}
         {phase === 'done' && (
           <div style={{ ...AI.centered, gap: 12, padding: '2rem' }}>
-            <p style={{ fontSize: '2.5rem', margin: 0 }}>✅</p>
             <p style={{ ...AI.spinnerText, fontSize: '1.05rem' }}>Cycle créé !</p>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.82rem', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
               {generatedCycle?.seances?.length} séances ont été ajoutées au cycle.<br/>
@@ -249,11 +249,11 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
                   {msg.from === 'ai' ? (
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                        <span style={AI.aiAvatar}>✨</span>
+                        <span style={AI.aiAvatar}><Icon name="sparkle" size={14} /></span>
                         <span style={AI.aiName}>IA Prépa</span>
                       </div>
                       <div style={{ ...AI.aiBubble, ...(msg.isReady ? AI.readyBubble : {}), ...(msg.isError ? AI.errorBubble : {}) }}>
-                        {msg.isReady && '✅ '}{msg.text}
+                        {msg.isReady && '✓ '}{msg.text}
                       </div>
                       {msg.options?.length > 0 && i === uiMessages.length - 1 && !aiLoading && (
                         <div style={AI.optionsRow}>
@@ -272,7 +272,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
               ))}
               {aiLoading && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1rem' }}>
-                  <span style={AI.aiAvatar}>✨</span>
+                  <span style={AI.aiAvatar}><Icon name="sparkle" size={14} /></span>
                   <div style={AI.typingBubble}>
                     {[0, 1, 2].map(d => <span key={d} style={{ ...AI.dot, animationDelay: `${d * 0.18}s` }} />)}
                   </div>
@@ -308,7 +308,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
           <>
             <div style={AI.preview}>
               <p style={AI.previewTitle}>{generatedSession.nom}</p>
-              {generatedSession.note_ia && <div style={AI.noteIA}>🤖 {generatedSession.note_ia}</div>}
+              {generatedSession.note_ia && <div style={AI.noteIA}>{generatedSession.note_ia}</div>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {generatedSession.exercices.map((ex, i) => {
                   const inBiblio = biblioFull.some(b => b.nom.toLowerCase() === ex.nom.toLowerCase())
@@ -346,7 +346,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
                 <span style={AI.chip}>{generatedCycle.semaines} semaines</span>
                 <span style={AI.chip}>{generatedCycle.seances?.length} séances / semaine</span>
               </div>
-              {generatedCycle.note_ia && <div style={AI.noteIA}>🤖 {generatedCycle.note_ia}</div>}
+              {generatedCycle.note_ia && <div style={AI.noteIA}>{generatedCycle.note_ia}</div>}
               {generatedCycle.seances.map((s, si) => (
                 <div key={si} style={{ marginBottom: '1.25rem' }}>
                   <p style={AI.sessionHeader}>{s.nom}</p>
@@ -384,7 +384,7 @@ export default function SeanceAIModal({ onClose, onInsert, programmeId, defaultM
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button onClick={() => { setPhase('chat'); setGeneratedCycle(null) }} style={AI.btnSecondary}>← Recommencer</button>
                 <button onClick={confirmInsertCycle} style={{ ...AI.btnGenerate, flex: 1 }}>
-                  ✅ Créer {generatedCycle.seances.length} séances
+                  Créer {generatedCycle.seances.length} séances
                 </button>
               </div>
             </div>

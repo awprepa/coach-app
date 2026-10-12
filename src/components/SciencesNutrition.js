@@ -40,7 +40,6 @@ const ETUDES = [
   {
     id: 1,
     cat: 'metabolisme',
-    emoji: '🔥',
     titre_fr: 'Formule de Mifflin-St Jeor — Métabolisme de base',
     titre_en: 'A new predictive equation for resting energy expenditure in healthy individuals',
     auteurs: 'Mifflin MD, St Jeor ST, Hill LA, Scott BJ, Daugherty SA, Koh YO',
@@ -56,7 +55,6 @@ const ETUDES = [
   {
     id: 2,
     cat: 'metabolisme',
-    emoji: '⚡',
     titre_fr: 'Compendium des activités physiques (MET)',
     titre_en: '2011 Compendium of Physical Activities: A Second Update of Codes and MET Values',
     auteurs: 'Ainsworth BE, Haskell WL, Herrmann SD, Meckes N, Bassett DR Jr, Tudor-Locke C, et al.',
@@ -73,7 +71,6 @@ const ETUDES = [
   {
     id: 3,
     cat: 'proteines',
-    emoji: '💪',
     titre_fr: 'Protéines & gains musculaires — Méta-analyse',
     titre_en: 'A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults',
     auteurs: 'Morton RW, Murphy KT, McKellar SR, Schoenfeld BJ, Henselmans M, Helms E, et al.',
@@ -90,7 +87,6 @@ const ETUDES = [
   {
     id: 4,
     cat: 'nutrition',
-    emoji: '🥑',
     titre_fr: 'Références nutritionnelles ANSES — Lipides',
     titre_en: 'Actualisation des repères du PNNS : révision des repères de consommations alimentaires pour les adultes',
     auteurs: 'Agence nationale de sécurité sanitaire de l\'alimentation, de l\'environnement et du travail (ANSES)',
@@ -107,7 +103,6 @@ const ETUDES = [
   {
     id: 5,
     cat: 'hydratation',
-    emoji: '💧',
     titre_fr: 'Références européennes pour l\'hydratation (EFSA)',
     titre_en: 'Scientific Opinion on Dietary Reference Values for water',
     auteurs: 'EFSA Panel on Dietetic Products, Nutrition, and Allergies (NDA)',
@@ -124,7 +119,6 @@ const ETUDES = [
   {
     id: 6,
     cat: 'aliments',
-    emoji: '🏷️',
     titre_fr: 'Nutri-Score — Notation nutritionnelle A–E',
     titre_en: 'The Nutri-Score: A Science-Based Front-of-Pack Nutrition Label to Prevent Obesity',
     auteurs: 'Hercberg S, Touvier M, Salas-Salvadó J',
@@ -140,7 +134,6 @@ const ETUDES = [
   {
     id: 7,
     cat: 'aliments',
-    emoji: '🔬',
     titre_fr: 'Classification NOVA — Transformation alimentaire',
     titre_en: 'Ultra-processed foods: what they are and how to identify them',
     auteurs: 'Monteiro CA, Cannon G, Levy RB, Moubarac JC, Louzada ML, Rauber F, et al.',
@@ -157,7 +150,6 @@ const ETUDES = [
   {
     id: 8,
     cat: 'charge',
-    emoji: '📊',
     titre_fr: 'Session RPE (sRPE) — Mesure de la charge d\'entraînement',
     titre_en: 'A new approach to monitoring exercise training',
     auteurs: 'Foster C, Florhaug JA, Franklin J, Gottschall L, Hrovatin LA, Parker S, et al.',
@@ -173,7 +165,6 @@ const ETUDES = [
   {
     id: 9,
     cat: 'charge',
-    emoji: '⚠️',
     titre_fr: 'ACWR — Ratio charge aiguë/chronique et prévention des blessures',
     titre_en: 'The training—injury prevention paradox: should athletes be training smarter and harder?',
     auteurs: 'Gabbett TJ',
@@ -190,7 +181,6 @@ const ETUDES = [
   {
     id: 12,
     cat: 'charge',
-    emoji: '📡',
     titre_fr: 'Z-scores individuels GPS — Limites de référence statistiques',
     titre_en: 'Making Meaningful Inferences About Magnitudes',
     auteurs: 'Batterham AM, Hopkins WG',
@@ -206,7 +196,6 @@ const ETUDES = [
   {
     id: 13,
     cat: 'charge',
-    emoji: '🏃',
     titre_fr: 'GPS — Métriques de charge externe en sports collectifs',
     titre_en: 'Training Loads and Player Monitoring in High-Level Football: Current Practice and Perceptions',
     auteurs: 'Akenhead R, Nassis GP',
@@ -222,7 +211,6 @@ const ETUDES = [
   {
     id: 14,
     cat: 'charge',
-    emoji: '📐',
     titre_fr: 'VMA/VMI — Calcul de distance et de temps pour l\'intermittent',
     titre_en: 'Interval training for performance: a scientific and empirical practice',
     auteurs: 'Billat VL',
@@ -239,7 +227,6 @@ const ETUDES = [
   {
     id: 10,
     cat: 'wellness',
-    emoji: '😴',
     titre_fr: 'Questionnaire de bien-être — Détection du surentraînement',
     titre_en: 'Monitoring overtraining in athletes: recommendations',
     auteurs: 'Hooper SL, Mackinnon LT',
@@ -255,7 +242,6 @@ const ETUDES = [
   {
     id: 11,
     cat: 'wellness',
-    emoji: '🎯',
     titre_fr: 'Échelle de Borg — Perception de l\'effort (RPE)',
     titre_en: 'Psychophysical bases of perceived exertion',
     auteurs: 'Borg GAV',
@@ -363,7 +349,6 @@ export default function SciencesNutrition({ coachMode = false }) {
                   textAlign: 'left', borderLeft: `4px solid ${color}`,
                 }}
               >
-                <span style={{ fontSize: '1.4rem', flexShrink: 0, lineHeight: 1.1 }}>{etude.emoji}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontWeight: 800, fontSize: '0.87rem', color: '#1a1a1a', margin: 0, lineHeight: 1.35 }}>
                     {etude.titre_fr}
@@ -401,7 +386,6 @@ export default function SciencesNutrition({ coachMode = false }) {
 
                   {/* Utilisation dans l'app */}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>📱</span>
                     <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0, lineHeight: 1.55 }}>
                       <span style={{ fontWeight: 700, color: '#374151' }}>Dans l'app : </span>
                       {etude.usage_app}

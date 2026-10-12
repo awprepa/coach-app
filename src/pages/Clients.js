@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
+import Icon from '../components/Icon'
 
 const PALETTE_GROUPES = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
@@ -221,7 +222,7 @@ export default function Clients() {
 
       {/* Recherche */}
       <div style={{ marginBottom: '1rem', position: 'relative' }}>
-        <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }}>🔍</span>
+        <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }}><Icon name="search" size={14} /></span>
         <input type="text" placeholder="Rechercher un client..." aria-label="Rechercher un client..."
           value={search} onChange={e => setSearch(e.target.value)}
           style={{ width: '100%', padding: '0.7rem 0.875rem 0.7rem 2.5rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', background: 'white' }}
@@ -303,7 +304,7 @@ export default function Clients() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                         {g.logo_url
                           ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
-                          : <div style={{ width: 38, height: 38, borderRadius: 10, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🏆</div>}
+                          : <div style={{ width: 38, height: 38, borderRadius: 10, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 800, color: g.couleur, flexShrink: 0 }}>{(g.nom || '?').charAt(0).toUpperCase()}</div>}
                         <div>
                           <p style={{ margin: 0, fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{g.nom}</p>
                           <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>Groupe{sousGroupes.length > 0 ? ` · ${sousGroupes.length} sous-groupe${sousGroupes.length > 1 ? 's' : ''}` : ''}</p>
@@ -348,10 +349,10 @@ export default function Clients() {
             {/* Logo */}
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: 9, padding: '0.45rem 0.85rem', border: '1.5px solid #e5e7eb', alignSelf: 'flex-start' }}>
               <div style={{ width: 32, height: 32, borderRadius: 7, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
-                {newGroupeLogoPreview ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.9rem' }}>📂</span>}
+                {newGroupeLogoPreview ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.9rem' }}><Icon name="folder-open" size={14} /></span>}
               </div>
               <span style={{ fontSize: '0.82rem', color: newGroupeLogoFile ? '#374151' : '#9ca3af', fontWeight: '600' }}>
-                {extractingColors ? '⏳ Analyse...' : newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir un logo...'}
+                {extractingColors ? 'Analyse...' : newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir un logo...'}
               </span>
               <input type="file" accept="image/*" onChange={handleLogoChangeGroupe} style={{ display: 'none' }} />
             </label>
@@ -379,7 +380,7 @@ export default function Clients() {
                   <button onClick={() => setNewGroupeCouleur('#6366f1')} style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 7, padding: '0.2rem 0.65rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>+ Couleur principale</button>
                 )}
                 {newGroupeLogoPreview && newGroupeCouleur && (
-                  <button onClick={() => setPickingFor(pickingFor === 'primary' ? null : 'primary')} style={{ background: pickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}>🎨</button>
+                  <button onClick={() => setPickingFor(pickingFor === 'primary' ? null : 'primary')} style={{ background: pickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}><Icon name="palette" size={14} /></button>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -393,7 +394,7 @@ export default function Clients() {
                   <button onClick={() => setNewGroupeCouleur2('#e5e7eb')} style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 7, padding: '0.2rem 0.65rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>+ Couleur secondaire</button>
                 )}
                 {newGroupeLogoPreview && newGroupeCouleur2 && (
-                  <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')} style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}>🎨</button>
+                  <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')} style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}><Icon name="palette" size={14} /></button>
                 )}
               </div>
             </div>
@@ -419,7 +420,7 @@ export default function Clients() {
         ) : (
           <button onClick={() => setShowGroupeForm(true)}
             style={{ width: '100%', background: 'white', border: '1.5px dashed #d1d5db', borderRadius: 14, padding: '0.85rem', fontSize: '0.875rem', fontWeight: '700', color: '#6b7280', cursor: 'pointer' }}>
-            🏆 Nouveau groupe
+            Nouveau groupe
           </button>
         )}
       </div>
@@ -499,7 +500,7 @@ function ClientRow({ client, i, navigate, onToggleActif, actif }) {
           onClick={e => { e.stopPropagation(); onToggleActif(client.id, actif) }}
           title={actif ? 'Archiver ce client' : 'Réactiver ce client'}
           style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.25rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: actif ? '#9ca3af' : '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>
-          {actif ? '📦 Archiver' : '↩ Réactiver'}
+          {actif ? 'Archiver' : '↩ Réactiver'}
         </button>
         <span style={S.chevron} onClick={() => navigate(`/client/${client.id}`)}>›</span>
       </div>

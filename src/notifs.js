@@ -35,7 +35,7 @@ export async function sendNotif(destinataireId, { titre, corps = '', type = 'inf
   return { ok: true }
 }
 
-// Push uniquement — sans entrée dans l'onglet 🔔 (utilisé pour les messages)
+// Push uniquement — sans entrée dans l'onglet (utilisé pour les messages)
 export async function sendPushOnly(destinataireId, { titre, corps = '', lien = '' }) {
   if (!destinataireId) return
   try {

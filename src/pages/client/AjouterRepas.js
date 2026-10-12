@@ -2,33 +2,34 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
+import Icon from '../../components/Icon'
 
 const MEAL_TYPES = [
-  { key: 'petit_dej', label: 'Petit-déj', emoji: '🥐' },
-  { key: 'dejeuner',  label: 'Déjeuner',  emoji: '🍽️' },
-  { key: 'collation', label: 'Collation', emoji: '🍎' },
-  { key: 'diner',     label: 'Dîner',     emoji: '🌙' },
+  { key: 'petit_dej', label: 'Petit-déj' },
+  { key: 'dejeuner',  label: 'Déjeuner' },
+  { key: 'collation', label: 'Collation' },
+  { key: 'diner',     label: 'Dîner' },
 ]
 
 const CATEGORIES = [
-  { key: 'viandes_poissons',   label: 'Viandes & Poissons', emoji: '🥩' },
-  { key: 'feculents',          label: 'Féculents',           emoji: '🍚' },
-  { key: 'legumes',            label: 'Légumes',             emoji: '🥦' },
-  { key: 'fruits',             label: 'Fruits',              emoji: '🍎' },
-  { key: 'laitiers',           label: 'Laitiers',            emoji: '🥛' },
-  { key: 'oeufs_legumineuses', label: 'Œufs & Légumineuses', emoji: '🥚' },
-  { key: 'matieres_grasses',   label: 'Matières grasses',    emoji: '🥑' },
-  { key: 'snacks',             label: 'Snacks',              emoji: '🍫' },
-  { key: 'boissons',           label: 'Boissons',            emoji: '💧' },
+  { key: 'viandes_poissons',   label: 'Viandes & Poissons' },
+  { key: 'feculents',          label: 'Féculents' },
+  { key: 'legumes',            label: 'Légumes' },
+  { key: 'fruits',             label: 'Fruits' },
+  { key: 'laitiers',           label: 'Laitiers' },
+  { key: 'oeufs_legumineuses', label: 'Œufs & Légumineuses' },
+  { key: 'matieres_grasses',   label: 'Matières grasses' },
+  { key: 'snacks',             label: 'Snacks' },
+  { key: 'boissons',           label: 'Boissons' },
 ]
 
 const MODES = [
-  { key: 'scan',    label: 'Code-barres', emoji: '▦' },
-  { key: 'manuel',  label: 'Manuel',      emoji: '✏️' },
-  { key: 'photo',   label: 'Photo IA',    emoji: '📷' },
-  { key: 'vocal',   label: 'Vocal IA',    emoji: '🎤' },
-  { key: 'favoris', label: 'Favoris',     emoji: '⭐' },
-  { key: 'historique', label: 'Historique', emoji: '🕘' },
+  { key: 'scan',    label: 'Code-barres' },
+  { key: 'manuel',  label: 'Manuel' },
+  { key: 'photo',   label: 'Photo IA' },
+  { key: 'vocal',   label: 'Vocal IA' },
+  { key: 'favoris', label: 'Favoris' },
+  { key: 'historique', label: 'Historique' },
 ]
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
@@ -107,7 +108,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
         <div style={{
           background: '#f0fdf4', borderRadius: 10, padding: '0.55rem 0.75rem',
           fontSize: '0.78rem', color: '#166534', marginBottom: '0.7rem', lineHeight: 1.4,
-        }}>🤖 {analysis.note_ia}</div>
+        }}>{analysis.note_ia}</div>
       )}
 
       {analysis.confiance && (
@@ -235,7 +236,6 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
 function AILoading({ label }) {
   return (
     <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤖</div>
       <p style={{ fontWeight: 700, color: '#374151', margin: 0 }}>{label}</p>
       <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>Groq IA analyse…</p>
     </div>
@@ -245,7 +245,6 @@ function AILoading({ label }) {
 function AIError({ error, onRetry }) {
   return (
     <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-      <div style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>⚠️</div>
       <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>Analyse échouée</p>
       <p style={{ color: '#6b7280', fontSize: '0.78rem', marginBottom: '1rem' }}>{error}</p>
       <button onClick={onRetry} style={S.btnSecondary}>Réessayer</button>
@@ -803,7 +802,6 @@ export default function AjouterRepas() {
               boxShadow: mealType === t.key ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
               transition: 'all 0.15s',
             }}>
-              <div style={{ fontSize: '1.2rem', marginBottom: 3 }}>{t.emoji}</div>
               {t.label}
             </button>
           ))}
@@ -830,7 +828,7 @@ export default function AjouterRepas() {
               transition: 'all 0.15s',
               whiteSpace: 'nowrap',
             }}>
-              {m.emoji} {m.label}
+              {m.label}
             </button>
           ))}
         </div>
@@ -839,7 +837,6 @@ export default function AjouterRepas() {
           <div style={S.card}>
             {loadingBarcode && (
               <div style={{ textAlign: 'center', padding: '2.5rem' }}>
-                <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🔍</p>
                 <p style={{ color: '#6b7280', fontWeight: 600 }}>Recherche du produit…</p>
               </div>
             )}
@@ -886,7 +883,7 @@ export default function AjouterRepas() {
                           color: selectedCat === cat.key ? 'var(--accent)' : '#374151',
                           fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                         }}>
-                          {cat.emoji} {cat.label}
+                          {cat.label}
                         </button>
                       ))}
                     </div>
@@ -930,7 +927,6 @@ export default function AjouterRepas() {
           <div style={S.card}>
             {templates.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '1.5rem' }}>
-                <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>⭐</p>
                 <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Aucun favori</p>
                 <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>Sauvegarde un repas depuis l'onglet Nutrition pour le retrouver ici.</p>
               </div>
@@ -977,7 +973,6 @@ export default function AjouterRepas() {
                 <p style={{ fontSize: '0.78rem', color: '#6b7280', textAlign: 'center', padding: '1.5rem' }}>Chargement…</p>
               ) : scanHistory.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '1.5rem' }}>
-                  <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🕘</p>
                   <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Aucun scan pour l'instant</p>
                   <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>Scanne un article pour le retrouver ici plus tard.</p>
                 </div>
@@ -997,7 +992,7 @@ export default function AjouterRepas() {
                           background: '#f3f4f6', overflow: 'hidden',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
                         }}>
-                          {scan.image_url ? <img loading="lazy" src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🛒'}
+                          {scan.image_url ? <img loading="lazy" src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="bag" size={18} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scan.product_name}</div>
@@ -1027,17 +1022,16 @@ export default function AjouterRepas() {
 
             {!aiAnalysis && !analyzingAI && !aiError && (
               <div style={{ textAlign: 'center', padding: '1.25rem 1rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '0.6rem' }}>📷</div>
                 <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Analyse photo IA</p>
                 <p style={{ color: '#6b7280', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.2rem' }}>
                   Prends en photo ton repas ou sélectionne une image — l'IA identifie les aliments et calcule les macros.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <button onClick={() => photoInputRef.current?.click()} style={{ ...S.btnPrimary, width: '100%' }}>
-                    📷 Prendre une photo
+                    Prendre une photo
                   </button>
                   <button onClick={() => galleryInputRef.current?.click()} style={{ ...S.btnSecondary, width: '100%' }}>
-                    🖼️ Choisir depuis la galerie
+                    Choisir depuis la galerie
                   </button>
                 </div>
               </div>
@@ -1056,7 +1050,6 @@ export default function AjouterRepas() {
             {/* Non supporté */}
             {!voiceSupported && (
               <div style={{ textAlign: 'center', padding: '1.5rem' }}>
-                <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🎤</p>
                 <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Micro non disponible</p>
                 <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>Utilise la saisie texte ci-dessous.</p>
                 <textarea
@@ -1066,7 +1059,7 @@ export default function AjouterRepas() {
                 />
                 {transcript.trim().length > 4 && (
                   <button onClick={() => callParseVoice(transcript)} style={{ ...S.btnPrimary, width:'100%', marginTop:'0.6rem' }}>
-                    🤖 Analyser ce repas
+                    Analyser ce repas
                   </button>
                 )}
               </div>
@@ -1088,8 +1081,8 @@ export default function AjouterRepas() {
                   fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                 }}>
-                  <span>🎤</span>
-                  {isRecording ? '⏹ Arrêter l\'enregistrement' : 'Parler'}
+                  <span><Icon name="mic" size={14} /></span>
+                  {isRecording ? 'Arrêter l\'enregistrement' : 'Parler'}
                 </button>
 
                 {isRecording && (
@@ -1105,7 +1098,7 @@ export default function AjouterRepas() {
                     padding: '0.6rem 0.75rem', marginTop: '0.6rem',
                     fontSize: '0.8rem', color: '#dc2626', lineHeight: 1.4,
                   }}>
-                    ⚠️ {aiError}
+                    {aiError}
                   </div>
                 )}
 
@@ -1132,7 +1125,7 @@ export default function AjouterRepas() {
 
                 {transcript.trim().length > 4 && !isRecording && (
                   <button onClick={() => callParseVoice(transcript)} style={{ ...S.btnPrimary, width: '100%', marginTop: '0.6rem' }}>
-                    🤖 Analyser ce repas
+                    Analyser ce repas
                   </button>
                 )}
               </div>
@@ -1239,7 +1232,7 @@ export default function AjouterRepas() {
                 width: 38, height: 38, borderRadius: '50%', fontSize: '1rem',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-              }}>⚡</button>
+              }}>Rapide</button>
             </div>
 
             {/* Texte sous la zone */}
@@ -1254,12 +1247,11 @@ export default function AjouterRepas() {
                 color: 'rgba(255,255,255,0.8)', padding: '12px 32px',
                 borderRadius: 99, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
                 backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-              }}>✏︎ Saisie manuelle</button>
+              }}>Saisie manuelle</button>
             </div>
           </>
         ) : (
           <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
-            <p style={{ fontSize: '3rem', margin: '0 0 0.5rem' }}>📷</p>
             <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.4rem' }}>Caméra inaccessible</p>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', marginBottom: '1.5rem' }}>Vérifie les permissions dans les réglages</p>
             <button onClick={() => setMode('manuel')} style={{ background: '#e4f816', border: 'none', color: '#000', padding: '12px 28px', borderRadius: 99, fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>

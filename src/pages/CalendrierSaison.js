@@ -338,7 +338,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
 
       // Message de résultat
       const r = result?.results?.[0]
-      const msg = `Sync terminée\n• ${ffr?.length || 0} matchs\n• ${cls?.length || 0} équipes au classement${r?.errors?.length ? '\n\n⚠️ ' + r.errors.join('\n') : ''}`
+      const msg = `Sync terminée\n• ${ffr?.length || 0} matchs\n• ${cls?.length || 0} équipes au classement${r?.errors?.length ? '\n\n! ' + r.errors.join('\n') : ''}`
       alert(msg)
     } catch (e) {
       alert('Erreur sync : ' + (e?.message || String(e)))
@@ -1896,7 +1896,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                 <input style={inputStyle} placeholder="Nom de famille" aria-label="Nom de famille" value={newNom} onChange={e=>setNewNom(e.target.value)} />
                 <input style={{...inputStyle}} type="number" placeholder="Rang (1 = titulaire)" aria-label="Rang (1 = titulaire)" value={newRang} min={1} onChange={e=>setNewRang(Number(e.target.value))} />
                 <p style={{ fontSize:'0.68rem', color: '#6b7280', marginBottom:10 }}>
-                  💡 Si ce joueur crée un compte avec ce nom exact, il sera automatiquement lié.
+                  Si ce joueur crée un compte avec ce nom exact, il sera automatiquement lié.
                 </p>
                 <button onClick={addJoueur} disabled={saving}
                   style={{ width:'100%', padding:'11px', background:groupColor, color: isLight(groupColor)?'#1a1a1a':'#fff',
@@ -2599,7 +2599,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                 {score
                   ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{score}</div>
                   : <div style={{ fontSize: '.78rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>}
-                {!score && evt.heure && <div style={{ fontSize: '.65rem', opacity: .75, fontWeight: 600 }}>🕐 {evt.heure}</div>}
+                {!score && evt.heure && <div style={{ fontSize: '.65rem', opacity: .75, fontWeight: 600 }}>{evt.heure}</div>}
               </div>
               {/* Logo droite */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
@@ -2614,12 +2614,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
             {evt.est_domicile != null && (
               <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 800 }}>
-                {evt.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}
+                {evt.est_domicile ? 'Domicile' : 'Extérieur'}
               </span>
             )}
             {joue && (
               <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 700 }}>
-                {gagné ? '✅ Victoire' : perdu ? '❌ Défaite' : '🤝 Match nul'}
+                {gagné ? 'Victoire' : perdu ? 'Défaite' : 'Match nul'}
               </span>
             )}
           </div>
@@ -2662,12 +2662,12 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             {evt.heure && (
               <span style={{ fontSize: '.8rem', fontWeight: 900, color: '#fff', background: 'rgba(0,0,0,.22)', borderRadius: 6, padding: '3px 8px', letterSpacing: '.01em' }}>
-                🕐 {String(evt.heure).slice(0, 5)}
+                {String(evt.heure).slice(0, 5)}
               </span>
             )}
             {evt.duree_min && (
               <span style={{ fontSize: '.68rem', background: 'rgba(255,255,255,.25)', color: '#fff', borderRadius: 5, padding: '2px 7px', fontWeight: 800 }}>
-                ⏱ {evt.duree_min} min
+                {evt.duree_min} min
               </span>
             )}
             {blocs.length > 0 && (
@@ -2846,7 +2846,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
           <div style={{ padding: '10px 13px' }}>
             {(evt.lieu || evt.note) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
-                {evt.lieu && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>📍 {evt.lieu}</span>}
+                {evt.lieu && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>{evt.lieu}</span>}
                 {evt.note && <span style={{ fontSize: '.65rem', color: '#7a8290', fontStyle: 'italic' }}>{evt.note}</span>}
               </div>
             )}
@@ -2980,7 +2980,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                         )}
                         {bloc.duree && (
                           <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:'.74rem', fontWeight:900, color:'#1e3a8a', background:'#e8f0fd', border:'1px solid #c7d9f7', borderRadius:6, padding:'3px 9px', flexShrink:0 }}>
-                            ⏱ {bloc.duree} min
+                            {bloc.duree} min
                           </span>
                         )}
                       </div>
@@ -4152,7 +4152,7 @@ function SeanceModal({
                           </div>
                         ) : bloc.recup_apres ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: '.62rem', color: '#374151', fontWeight: 700, background: '#e5e7eb', borderRadius: 5, padding: '2px 8px' }}>⏱ {bloc.recup_apres} min</span>
+                            <span style={{ fontSize: '.62rem', color: '#374151', fontWeight: 700, background: '#e5e7eb', borderRadius: 5, padding: '2px 8px' }}>{bloc.recup_apres} min</span>
                             <button onClick={() => { setRecupEditBloc(bloc.id); setRecupDraft(String(bloc.recup_apres)) }} style={{ background: 'none', border: 'none', fontSize: '.6rem', color: '#6b7280', cursor: 'pointer', padding: 0 }}>Modifier</button>
                             <button onClick={async () => { await updateBloc(bloc.id, { recup_apres: null }) }} style={{ background: 'none', border: 'none', fontSize: '.65rem', color: '#ef4444', cursor: 'pointer', padding: 0 }}>✕</button>
                           </div>
@@ -4324,13 +4324,12 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 20,
             border: 'none', background: groupColor, color: '#fff', fontWeight: 700, fontSize: '0.8rem',
             cursor: syncing ? 'wait' : 'pointer', opacity: syncing ? 0.7 : 1 }}>
-          {syncing ? '⏳ Sync...' : '🔄 Synchroniser'}
+          {syncing ? 'Sync...' : 'Synchroniser'}
         </button>
       </div>
 
       {classement.length === 0 && matchs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
-          <p style={{ fontSize: '2rem', marginBottom: 8 }}>📡</p>
           <p style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Aucune donnée chargée</p>
           <p style={{ fontSize: '0.82rem' }}>Clique sur "Synchroniser" pour charger les matchs et le classement depuis monclubhouse.ffr.fr</p>
         </div>
@@ -4346,7 +4345,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
             <p style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 900 }}>{opponent(prochain)}</p>
             <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.9 }}>
               {fmtDate(prochain.date_match)}{prochain.heure ? ` · ${prochain.heure}` : ''}
-              {' · '}{prochain.est_domicile ? '🏠 Domicile' : prochain.est_domicile === false ? '✈️ Extérieur' : ''}
+              {' · '}{prochain.est_domicile ? 'Domicile' : prochain.est_domicile === false ? 'Extérieur' : ''}
             </p>
           </div>
         )}
@@ -4436,7 +4435,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
                   <span style={{ fontSize: '0.7rem', color: '#6b7280', minWidth: 60 }}>{fmtDate(m.date_match)}</span>
                   <span style={{ flex: 1, fontWeight: 700, fontSize: '0.78rem', color: '#1f2937' }}>{opponent(m)}</span>
                   {m.heure && <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>{m.heure}</span>}
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280' }}>{m.est_domicile ? '🏠' : m.est_domicile === false ? '✈️' : ''}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280' }}>{m.est_domicile ? 'Dom.' : m.est_domicile === false ? 'Ext.' : ''}</span>
                 </div>
               ))}
             </div>

@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { findMuscles, MUSCLES } from '../data/muscleData'
 import { findBiblioMatch } from '../utils/exerciceMatch'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
+import Icon from '../components/Icon'
 
 // ── Helpers média ──────────────────────────────────────────────────────────
 function youtubeId(url) {
@@ -119,7 +120,7 @@ function AuthGif({ url, apiKey, style, alt }) {
 
   if (!src) return (
     <div style={{ ...style, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ fontSize: '1.2rem', opacity: 0.4 }}>⏳</span>
+      <span style={{ fontSize: '1.2rem', opacity: 0.4 }}><Icon name="clock" size={14} /></span>
     </div>
   )
   return <img loading="lazy" src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
@@ -578,7 +579,7 @@ export default function BibliothequeExercices() {
               onClick={() => ouvrirGifSearch(formEdit.nom || ex.nom, ex.id)}
               style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              🎬 Trouver GIF automatiquement
+              Trouver GIF automatiquement
             </button>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
@@ -602,7 +603,6 @@ export default function BibliothequeExercices() {
                   {thumb
                     ? <img loading="lazy" src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
-                        <span style={{ fontSize: '2rem' }}>🔗</span>
                       </div>
                   }
                   {isYt && (
@@ -669,7 +669,7 @@ export default function BibliothequeExercices() {
                   setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
                   setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary, image_url: ex.image_url || '' })
                 }} style={S.iconBtn}>Modifier</button>
-                <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
+                <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}><Icon name="trash" size={14} /></button>
               </div>
             </div>
           </>
@@ -710,7 +710,6 @@ export default function BibliothequeExercices() {
             {/* Loading */}
             {backfillState === 'loading' && (
               <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔍</div>
                 <p style={{ fontWeight: 700, color: '#333' }}>Analyse en cours…</p>
                 <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Comparaison de tous les exercices sans lien</p>
               </div>
@@ -719,7 +718,6 @@ export default function BibliothequeExercices() {
             {/* Applying */}
             {backfillState === 'applying' && (
               <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
                 <p style={{ fontWeight: 700, color: '#333' }}>Liaison en cours…</p>
                 <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Mise à jour de la base de données</p>
               </div>
@@ -728,7 +726,6 @@ export default function BibliothequeExercices() {
             {/* Done */}
             {backfillState === 'done' && (
               <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
                 <p style={{ fontWeight: 800, fontSize: '1.1rem', color: '#333', marginBottom: '0.5rem' }}>
                   {backfillResult?.matched?.length
                     ? `${backfillResult.matched.length} exercice${backfillResult.matched.length > 1 ? 's' : ''} lié${backfillResult.matched.length > 1 ? 's' : ''} !`
@@ -789,7 +786,7 @@ export default function BibliothequeExercices() {
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                     <button onClick={() => { setBackfillState(null); setBackfillResult(null) }} style={S.btnSecondary}>Annuler</button>
                     <button onClick={appliquerBackfill} style={S.btnPrimary}>
-                      ✅ Lier les {backfillResult.matched.length} exercices
+                      Lier les {backfillResult.matched.length} exercices
                     </button>
                   </div>
                 )}
@@ -822,12 +819,12 @@ export default function BibliothequeExercices() {
                   style={{ ...S.input, flex: 1, fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
                 />
                 <button onClick={() => doGifSearch(gifQuery)} disabled={gifSearching} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem', flexShrink: 0 }}>
-                  {gifSearching ? '⏳' : '🔍 Chercher'}
+                  {gifSearching ? '…' : 'Chercher'}
                 </button>
               </div>
               {gifTranslated && gifTranslated !== gifQuery && (
                 <p style={{ margin: '0.4rem 0 0', fontSize: '0.7rem', color: '#6b7280' }}>
-                  🔤 Recherche en anglais : <strong style={{ color: '#6366f1' }}>{gifTranslated}</strong>
+                  Recherche en anglais : <strong style={{ color: '#6366f1' }}>{gifTranslated}</strong>
                   <span style={{ marginLeft: 6, color: '#d1d5db' }}>· tape en EN directement pour affiner</span>
                 </p>
               )}
@@ -836,7 +833,6 @@ export default function BibliothequeExercices() {
             <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
               {gifSearching && gifResults.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-                  <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</p>
                   <p style={{ fontSize: '0.85rem' }}>Recherche en cours…</p>
                 </div>
               )}
@@ -847,7 +843,6 @@ export default function BibliothequeExercices() {
               )}
               {!gifSearching && gifResults.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-                  <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🤷</p>
                   <p style={{ fontSize: '0.85rem' }}>Aucun résultat. Essaie en anglais (ex : "bench press", "squat")</p>
                 </div>
               )}
@@ -882,7 +877,7 @@ export default function BibliothequeExercices() {
         <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 220 }}>
             <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#92400e' }}>
-              🔑 Clé API WorkoutX
+              Clé API WorkoutX
               <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#b45309', fontWeight: 400, fontSize: '0.72rem' }}>
                 Obtenir une clé gratuite →
               </a>
@@ -918,11 +913,11 @@ export default function BibliothequeExercices() {
             style={{ ...S.btnSecondary, fontSize: '0.82rem', color: workoutxKey ? '#16a34a' : '#92400e', borderColor: workoutxKey ? '#bbf7d0' : '#fde68a', background: workoutxKey ? '#f0fdf4' : '#fffbeb' }}
             title={workoutxKey ? 'Clé WorkoutX configurée' : 'Configurer la clé API WorkoutX'}
           >
-            {workoutxKey ? '🔑 GIF configuré' : '🔑 Config clé GIF'}
+            {workoutxKey ? 'GIF configuré' : 'Config clé GIF'}
           </button>
           {!modeEchauff && (
             <button onClick={lancerBackfill} style={{ ...S.btnSecondary, fontSize: '0.82rem' }} title="Lier automatiquement les exercices existants à la bibliothèque">
-              🔗 Lier les anciens exercices
+              Lier les anciens exercices
             </button>
           )}
           <button onClick={() => { if (!showForm) setForm({ nom: '', categorie: '', primary: [], secondary: [], image_url: '' }); setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
@@ -998,7 +993,7 @@ export default function BibliothequeExercices() {
               onClick={() => ouvrirGifSearch(form.nom, 'create')}
               style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              🎬 Trouver GIF automatiquement
+              Trouver GIF automatiquement
             </button>
             <button type="submit" disabled={saving} style={S.btnPrimary}>
               {saving ? 'Enregistrement...' : '✓ Créer'}
@@ -1119,11 +1114,11 @@ function MediaField({ value, onChange, onFile, uploading }) {
           disabled={uploading}
           style={{ flex: '0 0 auto', background: uploading ? '#f3f4f6' : '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: uploading ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
         >
-          {uploading ? '⏳ Upload…' : '📎 Upload fichier'}
+          {uploading ? 'Upload…' : 'Upload fichier'}
         </button>
       </div>
       {value && !thumb && (
-        <p style={{ fontSize: '0.7rem', color: '#6366f1', margin: '0.3rem 0 0', wordBreak: 'break-all' }}>🔗 {value}</p>
+        <p style={{ fontSize: '0.7rem', color: '#6366f1', margin: '0.3rem 0 0', wordBreak: 'break-all' }}>{value}</p>
       )}
       <p style={{ fontSize: '0.65rem', color: '#6b7280', margin: '0.3rem 0 0' }}>
         Lien YouTube · image directe (.jpg .png .gif .webp) · ou upload depuis ton appareil

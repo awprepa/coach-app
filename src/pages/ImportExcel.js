@@ -210,7 +210,6 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
         {step === 'upload' && (
           <div>
             <div onClick={() => fileRef.current.click()} style={S.dropzone}>
-              <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>📂</p>
               <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Clique pour choisir un fichier</p>
               <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0 }}>.xlsx ou .xls</p>
             </div>
@@ -267,7 +266,6 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
         {/* Étape 3 : Import en cours */}
         {step === 'importing' && (
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <p style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⏳</p>
             <p style={{ fontWeight: '700', color: '#333333', marginBottom: '0.35rem' }}>Import en cours...</p>
             <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>{progress}</p>
           </div>

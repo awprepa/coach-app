@@ -596,7 +596,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                             ? <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>{scoreStr}</span>
                             : <span style={{ fontSize: '.72rem', fontWeight: 900, opacity: .9, letterSpacing: '.04em' }}>VS</span>
                           }
-                          {!scoreStr && m.heure && <span style={{ fontSize: '.6rem', opacity: .7 }}>🕐 {m.heure}</span>}
+                          {!scoreStr && m.heure && <span style={{ fontSize: '.6rem', opacity: .7 }}>{m.heure}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
                           <LogoBadgeSmall url={logoD} initials={initD} />
@@ -606,11 +606,11 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
                         {m.est_domicile != null && (
                           <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '.6rem', fontWeight: 800 }}>
-                            {m.est_domicile ? '🏠 Domicile' : '✈️ Extérieur'}
+                            {m.est_domicile ? 'Domicile' : 'Extérieur'}
                           </span>
                         )}
                         {joue && <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 6, padding: '2px 8px', fontSize: '.6rem', fontWeight: 700 }}>
-                          {win ? '✅ Victoire' : lose ? '❌ Défaite' : '🤝 Nul'}
+                          {win ? 'Victoire' : lose ? 'Défaite' : 'Nul'}
                         </span>}
                       </div>
                     </div>
@@ -708,7 +708,6 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                 style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
                 onClick={() => setShowSyncModal(false)}
               >
-                <span style={{ fontSize: '1.2rem' }}>🍎</span>
                 <span>Apple Calendrier</span>
               </a>
 
@@ -718,7 +717,6 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                 style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: '#f8f9fa', color: '#1a1a1a', border: '1.5px solid #e5e7eb', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
                 onClick={() => setShowSyncModal(false)}
               >
-                <span style={{ fontSize: '1.2rem' }}>📆</span>
                 <span>Google Agenda</span>
               </a>
 
@@ -727,7 +725,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                 onClick={() => { navigator.clipboard?.writeText(httpsUrl); setShowSyncModal(false) }}
                 style={{ width: '100%', padding: '0.75rem 1rem', background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 14, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: '#6b7280' }}
               >
-                🔗 Copier le lien (autres agendas)
+                Copier le lien (autres agendas)
               </button>
             </div>
           </div>

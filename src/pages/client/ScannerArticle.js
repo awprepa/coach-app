@@ -4,6 +4,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
 import { supabase } from '../../supabase'
 import { noteMatieresGrasses, noteProteines, noteGlucides, noteFibres } from '../../nutritionQuality'
+import Icon from '../../components/Icon'
 
 // ─── Calcul du grade nutritionnel (A→E) ──────────────────────────────────────
 function calculateGrade(food) {
@@ -241,7 +242,6 @@ export default function ScannerArticle() {
         <div style={{ position: 'relative', flex: 1 }}>
           {camError ? (
             <div style={S.centered}>
-              <p style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📷</p>
               <p style={{ fontWeight: 700, color: '#1a1a1a', marginBottom: '0.4rem' }}>Caméra inaccessible</p>
               <p style={{ color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.5 }}>
                 Autorise l'accès à la caméra dans les réglages de ton navigateur.
@@ -322,7 +322,6 @@ export default function ScannerArticle() {
       {/* ── Phase : not found ─────────────────────────────────── */}
       {phase === 'notfound' && (
         <div style={S.centered}>
-          <p style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</p>
           <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1a1a1a', marginBottom: '0.4rem' }}>
             Produit introuvable
           </p>
@@ -339,7 +338,6 @@ export default function ScannerArticle() {
       {/* ── Phase : error ─────────────────────────────────────── */}
       {phase === 'error' && (
         <div style={S.centered}>
-          <p style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>⚠️</p>
           <p style={{ fontWeight: 700, color: '#1a1a1a', marginBottom: '0.4rem' }}>Erreur réseau</p>
           <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
             Vérifie ta connexion et réessaie.
@@ -364,7 +362,7 @@ export default function ScannerArticle() {
               }}>
                 {food.image_url
                   ? <img loading="lazy" src={food.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : '🛒'}
+                  : <Icon name="bag" size={18} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1a1a1a', margin: '0 0 2px', lineHeight: 1.25 }}>
@@ -505,7 +503,7 @@ export default function ScannerArticle() {
               {saved ? '✓ Enregistré dans l\'historique' : 'Enregistrement dans l\'historique…'}
             </span>
             <button onClick={rescan} style={{ ...S.btnSecondary, width: 'auto', padding: '0.5rem 1.1rem' }}>
-              📷 Rescanner
+              Rescanner
             </button>
           </div>
         </div>

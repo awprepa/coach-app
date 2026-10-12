@@ -160,7 +160,7 @@ export default function NouveauProgramme() {
             onClick={() => setShowTemplates(v => !v)}
             style={{ ...styles.btnSecondary, width: '100%', justifyContent: 'center', display: 'flex', gap: '0.5rem' }}
           >
-            📋 {selectedTemplate ? `Template : ${selectedTemplate.nom}` : 'Partir d\'un template'}
+            {selectedTemplate ? `Template : ${selectedTemplate.nom}` : 'Partir d\'un template'}
             <span style={{ marginLeft: 'auto', color: '#6b7280' }}>{showTemplates ? '▲' : '▼'}</span>
           </button>
 
@@ -180,7 +180,7 @@ export default function NouveauProgramme() {
                   </div>
                   <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
                     <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 6, padding: '0.2rem 0.55rem', fontSize: '0.74rem', fontWeight: '600' }}>{t.semaines} sem.</span>
-                    <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 6, padding: '0.2rem 0.55rem', fontSize: '0.74rem', fontWeight: '600' }}>🏋️ {(t.programme_template_seances || []).length}</span>
+                    <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 6, padding: '0.2rem 0.55rem', fontSize: '0.74rem', fontWeight: '600' }}>{(t.programme_template_seances || []).length}</span>
                   </div>
                 </div>
               ))}
@@ -246,13 +246,13 @@ export default function NouveauProgramme() {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button type="button" onClick={() => groupeId ? navigate(`/groupe/${groupeId}`) : navigate(`/client/${id}`)} style={styles.btnSecondary}>Annuler</button>
           <button type="submit" disabled={creating} style={{ ...styles.btnPrimary, opacity: creating ? 0.7 : 1 }}>
-            {creating ? 'Création…' : selectedTemplate ? '📋 Créer depuis le template' : 'Créer le cycle'}
+            {creating ? 'Création…' : selectedTemplate ? 'Créer depuis le template' : 'Créer le cycle'}
           </button>
           <button type="button" onClick={handleAI} disabled={creating} style={styles.btnAI}>
-            ✨ Générer avec l'IA
+            Générer avec l'IA
           </button>
           <button type="button" onClick={() => { setShowImport(true); setImportJson(''); setImportError('') }} disabled={creating} style={styles.btnImport}>
-            📥 Importer un JSON
+            Importer un JSON
           </button>
         </div>
       </form>
@@ -274,7 +274,7 @@ export default function NouveauProgramme() {
               placeholder={'{\n  "nom": "Cycle Force",\n  "semaines": 8,\n  "seances": [...]\n}'}
               style={{ width: '100%', height: 220, padding: '0.75rem', border: `1.5px solid ${importError ? '#ef4444' : '#e5e7eb'}`, borderRadius: 10, fontSize: '0.78rem', fontFamily: 'monospace', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#111827' }}
             />
-            {importError && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.4rem 0 0' }}>⚠️ {importError}</p>}
+            {importError && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.4rem 0 0' }}>{importError}</p>}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
               <button onClick={() => setShowImport(false)} style={styles.btnSecondary}>Annuler</button>
               <button
@@ -282,7 +282,7 @@ export default function NouveauProgramme() {
                 disabled={importing || !importJson.trim()}
                 style={{ ...styles.btnPrimary, opacity: (importing || !importJson.trim()) ? 0.6 : 1 }}
               >
-                {importing ? 'Import en cours…' : '📥 Importer le cycle'}
+                {importing ? 'Import en cours…' : 'Importer le cycle'}
               </button>
             </div>
           </div>

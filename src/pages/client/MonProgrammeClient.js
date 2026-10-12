@@ -53,7 +53,6 @@ export default function MonProgrammeClient() {
       </div>
       <div style={S.content}>
         <div style={S.emptyCard}>
-          <span style={{ fontSize: '3rem' }}>📋</span>
           <p style={S.emptyTitle}>Aucun programme assigné</p>
           <p style={S.emptyText}>
             Ton coach n'a pas encore créé de programme pour toi.{'\n'}
