@@ -854,7 +854,7 @@ export default function AjouterRepas() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {!food && (
               <div style={S.card}>
-                <p style={S.cardLabel}>🔍 Rechercher dans le catalogue</p>
+                <p style={S.cardLabel}>Rechercher dans le catalogue</p>
                 <div style={{ position: 'relative' }}>
                   <input value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setSelectedCat(null); setCatFoods([]) }}
                     placeholder="Ex : yaourt nature, poulet…" style={S.input} />
@@ -908,7 +908,7 @@ export default function AjouterRepas() {
             {food && <div style={S.card}><FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={clearFood} /></div>}
             {!food && (
               <div style={S.card}>
-                <p style={S.cardLabel}>✏️ Saisie libre</p>
+                <p style={S.cardLabel}>Saisie libre</p>
                 <input value={manualForm.name} onChange={e => setManualForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Nom du repas *" style={{ ...S.input, marginBottom: '0.5rem', fontWeight: 700 }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -936,7 +936,7 @@ export default function AjouterRepas() {
               </div>
             ) : (
               <>
-                <p style={S.cardLabel}>⭐ Mes repas favoris</p>
+                <p style={S.cardLabel}>Mes repas favoris</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {templates.map(t => (
                     <button key={t.id} onClick={() => pickTemplate(t)} style={{
@@ -983,7 +983,7 @@ export default function AjouterRepas() {
                 </div>
               ) : (
                 <>
-                  <p style={S.cardLabel}>🕘 Déjà scannés</p>
+                  <p style={S.cardLabel}>Déjà scannés</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     {scanHistory.map(scan => (
                       <button key={scan.id} onClick={() => pickFromHistory(scan)} style={{
@@ -1148,7 +1148,7 @@ export default function AjouterRepas() {
         {/* ── Tag entraînement ──────────────────────────────────────── */}
         {canSave && client?.offre === 'preparation_physique' && (
           <div style={S.card}>
-            <p style={S.cardLabel}>🏋️ Lié à l'entraînement ?</p>
+            <p style={S.cardLabel}>Lié à l'entraînement ?</p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {[{ key: null, label: 'Non' }, { key: 'pre', label: 'Pré-séance' }, { key: 'post', label: 'Post-séance' }].map(({ key, label }) => (
                 <button key={String(key)} onClick={() => setWorkoutTag(key)} style={{

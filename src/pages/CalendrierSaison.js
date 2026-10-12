@@ -338,7 +338,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
 
       // Message de résultat
       const r = result?.results?.[0]
-      const msg = `✅ Sync terminée\n• ${ffr?.length || 0} matchs\n• ${cls?.length || 0} équipes au classement${r?.errors?.length ? '\n\n⚠️ ' + r.errors.join('\n') : ''}`
+      const msg = `Sync terminée\n• ${ffr?.length || 0} matchs\n• ${cls?.length || 0} équipes au classement${r?.errors?.length ? '\n\n⚠️ ' + r.errors.join('\n') : ''}`
       alert(msg)
     } catch (e) {
       alert('Erreur sync : ' + (e?.message || String(e)))
@@ -1022,7 +1022,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
 
       {/* ── Barre d'actions ── */}
       <div style={S.toolbar}>
-        {!embedded && <h1 style={{ ...S.h1, borderLeft: `3px solid ${groupColor}`, paddingLeft: 10 }}>Calendrier saison</h1>}
+        {!embedded && <h1 style={{ ...S.h1, border: `1.5px solid ${groupColor}`, paddingLeft: 10 }}>Calendrier saison</h1>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginLeft: embedded ? 0 : 'auto' }}>
           {!groupeId && (
             <div style={{ ...S.groupSel, borderColor: `color-mix(in srgb, ${groupColor} 40%, #e6e8ec)` }}>
@@ -1744,7 +1744,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
             return (
               <div key={j.id} onClick={e => { e.stopPropagation(); openPanelJoueur(j, poste.num) }}
                 style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 11px',
-                borderRadius:8, background:'#fff', borderLeft:`4px solid ${statutBorderColor(s)}`, minHeight:38 }}>
+                borderRadius:8, background:'#fff', border: `1.5px solid ${statutBorderColor(s)}`, minHeight:38 }}>
                 <span style={{ fontSize:'0.72rem', color:'#c4ccd4', fontWeight:700, minWidth:16 }}>
                   {RANK_LABELS[i]}
                 </span>
@@ -1867,7 +1867,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                   onClick={() => openPanelJoueur(j, panelPos)}
                   style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
                     background:stBg, borderRadius:9, marginBottom:5,
-                    borderLeft:`3px solid ${statutBorderColor(s)}`, cursor:'pointer' }}>
+                    border: `1.5px solid ${statutBorderColor(s)}`, cursor:'pointer' }}>
                   <span style={{ fontSize:'0.66rem', fontWeight:900, color: '#6b7280', minWidth:14 }}>{RANK_LABELS[i]}</span>
                   <span style={{ fontSize:'0.83rem', fontWeight:800, flex:1 }}>{j.prenom} {j.nom}</span>
                   {j.client_id && getWellness(j) !== null && (
@@ -2993,7 +2993,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                       {!hasGroups && (bloc.exos||[]).length > 0 && (
                         <div style={{ display:'flex', gap:7, flexWrap:'wrap', padding:'0 12px 10px' }}>
                           {bloc.exos.map(e => (
-                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#26313f', background:'#eef1f5', border:'1px solid #d7dde4', borderLeft:`3px solid ${iv ? iv.c : '#94a3b8'}`, borderRadius:'4px 7px 7px 4px', padding:'5px 10px 5px 8px' }}>
+                            <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#26313f', background:'#eef1f5', border:'1px solid #d7dde4', borderRadius:'4px 7px 7px 4px', padding:'5px 10px 5px 8px' }}>
                               {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                             </span>
                           ))}
@@ -3007,7 +3007,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                               <div key={g} style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:7, borderLeft: gi > 0 ? '1px solid #edf0f3' : 'none' }}>
                                 {g && <div style={{ fontSize:'.6rem', fontWeight:800, letterSpacing:'.07em', textTransform:'uppercase', color:gc, paddingBottom:6, marginBottom:2, borderBottom:`2px solid ${gc}` }}>{g}</div>}
                                 {byGroup[g].map(e => (
-                                  <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#26313f', background:gc+'12', border:`1px solid ${gc}35`, borderLeft:`3px solid ${gc}`, borderRadius:'4px 7px 7px 4px', padding:'5px 10px 5px 8px' }}>
+                                  <span key={e.id} style={{ fontSize:'.74rem', fontWeight:600, color:'#26313f', background:gc+'12', border:`1px solid ${gc}35`, borderRadius:'4px 7px 7px 4px', padding:'5px 10px 5px 8px' }}>
                                     {e.nom}{e.prescription ? ' · '+e.prescription : ''}
                                   </span>
                                 ))}

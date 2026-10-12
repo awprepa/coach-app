@@ -89,7 +89,7 @@ function CardioCard({ cardio, label, youtubeId, S }) {
   const [mediaOpen, setMediaOpen] = useState(false)
   const ytId = cardio.media_url ? youtubeId(cardio.media_url) : null
   return (
-    <div style={{ ...S.card, marginBottom: '0.75rem', borderLeft: '3px solid #3b82f6' }}>
+    <div style={{ ...S.card, marginBottom: '0.75rem', border: '1.5px solid #3b82f6' }}>
       <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>{label}</p>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
         {cardio.media_url && (
@@ -463,7 +463,7 @@ export default function SeanceClient() {
     const { data, error } = await supabase
       .from('exercices').select('*, charges(*), bibliotheque_exercices(image_url)')
       .eq('seance_id', id).order('ordre', { ascending: true })
-    if (error) { console.log(error); return null }
+    if (error) { console.error(error); return null }
     setExercices(data)
     const map = {}
     data.forEach(ex => {
@@ -644,7 +644,7 @@ export default function SeanceClient() {
 
   async function fetchRpeSeances() {
     const { data, error } = await supabase.from('rpe_seances').select('*').eq('seance_id', id)
-    if (error) { console.log(error); return null }
+    if (error) { console.error(error); return null }
     const map = {}
     data.forEach(r => { map[r.semaine] = { id: r.id, rpe_cible: r.rpe_cible, rpe_reel: r.rpe_reel } })
     setRpeSeances(map)
@@ -1359,7 +1359,7 @@ export default function SeanceClient() {
         {/* Demande de vidéo de correction par le coach */}
         {videoDemandes[ex.id] && (
           <div style={S.videoBanner}>
-            <span>🎥 Ton coach veut une vidéo de ce mouvement — filme-toi et envoie-la lui sur WhatsApp.</span>
+            <span>Ton coach veut une vidéo de ce mouvement — filme-toi et envoie-la lui sur WhatsApp.</span>
             <button onClick={() => marquerVideoEnvoyee(ex.id)} style={S.videoBannerBtn}>J'ai envoyé la vidéo</button>
           </div>
         )}
@@ -1779,7 +1779,7 @@ export default function SeanceClient() {
                   }
                   const tours = g.items[0]?.tours
                   return (
-                    <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid var(--accent)', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem' }}>
+                    <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid var(--accent)', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem' }}>
                       <div style={{ flex: 1 }}>
                         {g.items.map((l, i) => (
                           <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
@@ -1819,7 +1819,7 @@ export default function SeanceClient() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {cardioBlocs.map((b, i) => (
                 (b.titre || b.texte) ? (
-                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', borderLeft: '3px solid #0ea5e9' }}>
+                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', border: '1.5px solid #0ea5e9' }}>
                     {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 800, fontSize: '0.9rem', color: '#0c4a6e' }}>{b.titre}</p>}
                     {b.texte && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
                   </div>
@@ -2054,7 +2054,7 @@ export default function SeanceClient() {
         <div style={{ marginTop: '1.25rem' }}>
           <button onClick={() => setRpeOpen(v => !v)}
             style={S.rpeToggle}>
-            <span>📊 Intensité de la séance</span>
+            <span>Intensité de la séance</span>
             <span style={{ transform: rpeOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '1rem', color: '#6b7280' }}>›</span>
           </button>
           {rpeOpen && (

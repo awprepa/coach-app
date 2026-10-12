@@ -21,7 +21,7 @@ function IlluAccueil() {
         {/* Carte séance */}
         <div style={{ background: 'white', borderRadius: 10, padding: '8px 10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
           <div style={{ fontSize: '0.55rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>Prochaine séance</div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1a1a1a' }}>💪 Séance A — Haut du corps</div>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1a1a1a' }}>Séance A — Haut du corps</div>
         </div>
         {/* Carte nutrition */}
         <div style={{ background: '#1a1a1a', borderRadius: 10, padding: '8px 10px' }}>

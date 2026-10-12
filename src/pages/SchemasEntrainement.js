@@ -76,7 +76,7 @@ export default function SchemasEntrainement() {
   return (
     <div style={S.page}>
       <div style={S.topRow}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher un schéma…" style={S.search} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un schéma…" style={S.search} />
         <button onClick={() => navigate('/bibliotheque/schemas/nouveau')} style={S.newBtn}>+ Nouveau schéma</button>
       </div>
 

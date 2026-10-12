@@ -119,7 +119,7 @@ export default function CoachMessages() {
         {/* Colonne gauche — liste des conversations */}
         <div style={S.sidebar} className="cm-sidebar">
           <div style={S.sideHeader}>
-            <span style={S.sideTitle}>💬 Messagerie</span>
+            <span style={S.sideTitle}>Messagerie</span>
             <button onClick={openNewConv} style={S.newBtn} title="Nouvelle conversation">＋</button>
           </div>
 

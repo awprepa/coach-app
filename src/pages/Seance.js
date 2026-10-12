@@ -179,14 +179,14 @@ export default function Seance() {
 
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
-    if (error) console.log(error)
+    if (error) console.error(error)
     else { setSeance(data); setSemaines(data.programmes?.semaines || 4); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); setCardioBlocs(Array.isArray(data.cardio_blocs) ? data.cardio_blocs : []); await fetchExercices(); await fetchRpeSeances() }
     setLoading(false)
   }
 
   async function fetchExercices() {
     const { data, error } = await supabase.from('exercices').select('*, charges(*)').eq('seance_id', id).order('ordre', { ascending: true })
-    if (error) console.log(error)
+    if (error) console.error(error)
     else {
       // Garantir que chaque bloc de progression a un id unique
       // (les anciens enregistrements en DB peuvent ne pas en avoir)
@@ -252,7 +252,7 @@ export default function Seance() {
 
   async function fetchRpeSeances() {
     const { data, error } = await supabase.from('rpe_seances').select('*').eq('seance_id', id)
-    if (error) console.log(error)
+    if (error) console.error(error)
     else {
       const rpeMap = {}
       data.forEach(r => { rpeMap[r.semaine] = { id: r.id, rpe_cible: r.rpe_cible, rpe_reel: r.rpe_reel } })
@@ -1148,7 +1148,7 @@ export default function Seance() {
                             : (() => {
                                 const tours = g.items[0]?.tours
                                 return (
-                                  <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+                                  <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
                                     <div style={{ flex: 1 }}>
                                       {g.items.map((l, i) => (
                                         <div key={l.id || i} style={{ display: 'flex', gap: '0.75rem', marginTop: i > 0 ? '0.25rem' : 0 }}>
@@ -1234,7 +1234,7 @@ export default function Seance() {
                       <input
                         value={editEchauffForm.image_url}
                         onChange={e => setEditEchauffForm(f => ({ ...f, image_url: e.target.value }))}
-                        placeholder="🖼 URL image / YouTube (optionnel)"
+                        placeholder="URL image / YouTube (optionnel)"
                         style={{ ...styles.formInput, flex: 1, minWidth: 180, padding: '0.35rem 0.6rem', fontSize: '0.78rem' }}
                       />
                       <button
@@ -1539,9 +1539,9 @@ export default function Seance() {
             ) : (
               <>
                 {exercices.length > 0 && (
-                  <button onClick={startEditAll} style={{ ...styles.btnSecondary, padding: '0.45rem 0.875rem', fontSize: '0.82rem', fontWeight: '700' }}>✏️ Modifier les exercices</button>
+                  <button onClick={startEditAll} style={{ ...styles.btnSecondary, padding: '0.45rem 0.875rem', fontSize: '0.82rem', fontWeight: '700' }}>Modifier les exercices</button>
                 )}
-                <button onClick={() => setShowAIModal(true)} style={styles.btnAI}>✨ Générer avec l'IA</button>
+                <button onClick={() => setShowAIModal(true)} style={styles.btnAI}>Générer avec l'IA</button>
               </>
             )}
           </div>

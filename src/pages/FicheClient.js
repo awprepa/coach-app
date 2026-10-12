@@ -201,7 +201,7 @@ export default function FicheClient() {
 
   async function fetchClient() {
     const { data, error } = await supabase.from('clients').select('*, categories(id, nom, couleur)').eq('id', id).single()
-    if (error) console.log(error)
+    if (error) console.error(error)
     else { setClient(data); setForm(data); setNotesCoach(data.notes_coach || '') }
     setLoading(false)
   }
@@ -213,7 +213,7 @@ export default function FicheClient() {
 
   async function fetchCycles() {
     const { data, error } = await supabase.from('programmes').select('*').eq('client_id', id).order('created_at', { ascending: false })
-    if (error) { console.log(error); return }
+    if (error) { console.error(error); return }
     setCycles(data)
     const active = data.filter(p => !isCycleTermine(p))
     if (active.length > 0) {
@@ -1115,7 +1115,7 @@ export default function FicheClient() {
       {/* ── Séances ajoutées par le client ──────────────────────────────── */}
       <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
-          <p style={styles.sectionTitle}>👤 Séances ajoutées par {client.prenom}</p>
+          <p style={styles.sectionTitle}>Séances ajoutées par {client.prenom}</p>
           <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
             {seancesClient.length} séance{seancesClient.length > 1 ? 's' : ''}
           </span>

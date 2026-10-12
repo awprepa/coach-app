@@ -708,9 +708,9 @@ export default function ChargeEntrainement() {
                     const strain = getStrain(d)
                     const risk = getRiskLevel(d, idx, data)
                     const riskConfig = {
-                      green:  { color: '#22c55e', label: '✅ OK' },
-                      orange: { color: '#f59e0b', label: '⚠️ Vigilance' },
-                      red:    { color: '#ef4444', label: '🚨 Risque' },
+                      green:  { color: '#22c55e', label: 'OK' },
+                      orange: { color: '#f59e0b', label: 'Vigilance' },
+                      red:    { color: '#ef4444', label: 'Risque' },
                     }[risk]
                     return (
                       <tr key={d.key} style={S.tr}>
@@ -741,7 +741,7 @@ export default function ChargeEntrainement() {
 
           {/* ── Références scientifiques ── */}
           <div style={S.refsCard}>
-            <div style={S.refsTitle}>📚 Bases scientifiques</div>
+            <div style={S.refsTitle}>Bases scientifiques</div>
             <div style={S.refsList}>
               <div style={S.refItem}>
                 <span style={S.refBullet}>•</span>
@@ -1559,7 +1559,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
                 {isPR
                   ? myLastWeek === prWeek
-                    ? <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>★ PR</span>
+                    ? <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>PR</span>
                     : <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>PR</span>
                   : <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>}
               </td>
@@ -1612,7 +1612,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
             {/* Titre + badge semaine */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div>
-                <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>🏋️ Suivi des charges par exercice</div>
+                <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>Suivi des charges par exercice</div>
                 <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.1rem' }}>{progNom}</div>
               </div>
               <div style={{ padding: '3px 10px', borderRadius: 999, background: '#eff6ff', color: '#3b82f6', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
@@ -1721,12 +1721,12 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       {/* GPS */}
       {!loading && (
         <>
-          {gpsZLoading && <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem' }}>📡 Chargement des données GPS…</div>}
+          {gpsZLoading && <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem' }}>Chargement des données GPS…</div>}
           {!gpsZLoading && gpsZData && (
             <div style={S.indicateursSection}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
-                  <div style={S.indicateursTitle}>📡 GPS — Analyse individuelle · {gpsZData.clientName}</div>
+                  <div style={S.indicateursTitle}>GPS — Analyse individuelle · {gpsZData.clientName}</div>
                   <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.1rem' }}>Dernière séance : {gpsZData.lastNom || gpsZData.lastDate} · {gpsZData.nbSessions} séances analysées</div>
                 </div>
                 <div style={{ padding: '3px 10px', borderRadius: 999, background: '#f0fdf4', color: '#22c55e', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bbf7d0', whiteSpace: 'nowrap' }}>Z-score individuel</div>
@@ -1812,7 +1812,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     const tACWR = getTonnageACWR(data, idx)
                     const strain = getStrain(d)
                     const risk = getRiskLevel(d, idx, data)
-                    const riskConfig = { green: { color: '#22c55e', label: '✅ OK' }, orange: { color: '#f59e0b', label: '⚠️ Vigilance' }, red: { color: '#ef4444', label: '🚨 Risque' } }[risk]
+                    const riskConfig = { green: { color: '#22c55e', label: 'OK' }, orange: { color: '#f59e0b', label: 'Vigilance' }, red: { color: '#ef4444', label: 'Risque' } }[risk]
                     return (<tr key={d.key} style={S.tr}><td style={S.td}>{d.prog_nom}</td><td style={S.td}>S{d.semaine}</td><td style={S.td}>{d.nb_seances}</td><td style={S.td}>{d.rpe_moy.toFixed(1)}</td><td style={{ ...S.td, fontWeight: '700' }}>{d.charge.toFixed(0)}</td><td style={{ ...S.td, fontWeight: '700', color: acwrColor(acwr) }}>{acwr || '—'}</td><td style={S.td}>{d.tonnage > 0 ? Math.round(d.tonnage).toLocaleString('fr-FR') + ' kg' : '—'}</td><td style={{ ...S.td, fontWeight: '600', color: acwrColor(tACWR) }}>{tACWR || '—'}</td><td style={{ ...S.td, fontWeight: '600', color: monotonyColor(d.monotonie) }}>{d.monotonie !== null ? d.monotonie.toFixed(2) : '—'}</td><td style={{ ...S.td, color: strainColor(strain) }}>{strain !== null ? strain.toLocaleString('fr-FR') : '—'}</td><td style={{ ...S.td, fontWeight: '700', color: riskConfig.color, whiteSpace: 'nowrap' }}>{riskConfig.label}</td></tr>)
                   })}
                 </tbody>
@@ -1820,7 +1820,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
             </div>
           </div>
           <div style={S.refsCard}>
-            <div style={S.refsTitle}>📚 Bases scientifiques</div>
+            <div style={S.refsTitle}>Bases scientifiques</div>
             <div style={S.refsList}>
               <div style={S.refItem}><span style={S.refBullet}>•</span><span><strong>ACWR interne (RPE)</strong> — Gabbett TJ (2016). Rapport charge aiguë / charge chronique (4 sem.). Zone optimale 0.8–1.3 ; au-delà de 1.5, le risque de blessure double.</span></div>
               <div style={S.refItem}><span style={S.refBullet}>•</span><span><strong>ACWR tonnage (charge externe)</strong> — Hulin BT et al. (2016). Volume en kg × reps. Complète l'ACWR RPE en mesurant la contrainte mécanique réelle.</span></div>

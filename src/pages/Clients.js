@@ -93,7 +93,7 @@ export default function Clients() {
       supabase.from('groupes').select('*').order('created_at'),
       supabase.from('groupe_membres').select('client_id'),
     ])
-    if (error) { console.log(error); setLoading(false); return }
+    if (error) { console.error(error); setLoading(false); return }
     const withWellness = (clientsData || []).map(c => ({
       ...c,
       wellness_today: wData?.find(w => w.client_id === c.id) || null,
@@ -298,7 +298,7 @@ export default function Clients() {
                 const sousGroupes = sousGroupesByParent[g.id] || []
                 return (
                   <div key={g.id} style={{ background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', border: `1.5px solid ${g.couleur}22` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}` }}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer', border: `1.5px solid ${g.couleur}` }}
                       onClick={() => navigate(`/groupe/${g.id}`)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                         {g.logo_url
@@ -358,7 +358,7 @@ export default function Clients() {
             {/* Pipette logo */}
             {newGroupeLogoPreview && (
               <div style={{ background: pickingFor ? '#fffbeb' : '#f9fafb', borderRadius: 10, padding: '0.6rem', border: `1.5px solid ${pickingFor ? '#f59e0b' : '#e5e7eb'}` }}>
-                {pickingFor && <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>🎨 Cliquez sur le logo pour choisir la couleur {pickingFor === 'primary' ? 'principale' : 'secondaire'}</p>}
+                {pickingFor && <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>Cliquez sur le logo pour choisir la couleur {pickingFor === 'primary' ? 'principale' : 'secondaire'}</p>}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <img loading="lazy" ref={logoPickRef} src={newGroupeLogoPreview} alt="logo" onClick={pickingFor ? handleLogoColorPickGroupe : undefined} crossOrigin="anonymous"
                     style={{ height: pickingFor ? 90 : 48, maxWidth: '100%', objectFit: 'contain', borderRadius: 7, cursor: pickingFor ? 'crosshair' : 'default', outline: pickingFor ? '2px solid #f59e0b' : 'none' }} />
@@ -406,7 +406,7 @@ export default function Clients() {
                 placeholder="https://monclubhouse.ffr.fr/clubs/..."
                 style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151' }} />
               {newGroupeUrl && !newGroupeUrl.includes('monclubhouse.ffr.fr') && (
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>⚠️ Le lien doit provenir de monclubhouse.ffr.fr</p>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>Le lien doit provenir de monclubhouse.ffr.fr</p>
               )}
             </div>
             <div style={{ display: 'flex', gap: '0.6rem' }}>

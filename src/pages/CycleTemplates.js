@@ -390,7 +390,7 @@ export default function CycleTemplates() {
           })()}
 
           <div style={S.cardActions}>
-            <button style={S.btnPrimary} onClick={() => openSendModal(t)}>📤 Envoyer</button>
+            <button style={S.btnPrimary} onClick={() => openSendModal(t)}>Envoyer</button>
             <button style={S.btnSecondary} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
               {ouvrantId === t.id ? 'Ouverture…' : 'Modifier'}
             </button>
@@ -416,7 +416,7 @@ export default function CycleTemplates() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button style={S.btnSecondary} onClick={() => setShowNewFolder(true)}>+ Dossier</button>
-            <button style={S.btnAI} onClick={() => setShowAI(true)}>✨ IA</button>
+            <button style={S.btnAI} onClick={() => setShowAI(true)}>IA</button>
             <button style={S.btnPrimary} onClick={creerTemplate}>+ Nouveau template</button>
           </div>
         </div>
@@ -536,7 +536,7 @@ export default function CycleTemplates() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
                   <div>
-                    <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827' }}>📤 Envoyer un cycle</div>
+                    <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827' }}>Envoyer un cycle</div>
                     <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
                       Template : <strong>{sendModal.nom}</strong> · {sendModal.semaines} sem.
                     </div>
@@ -583,8 +583,8 @@ export default function CycleTemplates() {
                     <label style={S.label}>Mode d'application</label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       {[
-                        { key: 'nouveau',  label: '✨ Nouveau cycle' },
-                        { key: 'ecraser', label: '🔄 Écraser le cycle actuel' },
+                        { key: 'nouveau',  label: 'Nouveau cycle' },
+                        { key: 'ecraser', label: 'Écraser le cycle actuel' },
                       ].map(m => (
                         <button
                           key={m.key}

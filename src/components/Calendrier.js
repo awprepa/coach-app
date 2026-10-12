@@ -501,7 +501,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
           <button onClick={() => setShowSyncModal(true)} style={{
             padding: '0.3rem 0.9rem', borderRadius: 8, border: 'none', fontSize: '0.78rem', fontWeight: '700',
             cursor: 'pointer', background: 'var(--chip-bg)', color: 'var(--chip-text)',
-          }}>📅 Sync. Agenda</button>
+          }}>Sync. Agenda</button>
         )}
       </div>
 
@@ -697,7 +697,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
               onClick={e => e.stopPropagation()}
             >
               <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1.1rem' }} />
-              <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.4rem', color: '#1a1a1a' }}>📅 Synchroniser avec ton agenda</p>
+              <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.4rem', color: '#1a1a1a' }}>Synchroniser avec ton agenda</p>
               <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
                 Les événements se mettent à jour automatiquement — ajouts et suppressions compris.
               </p>

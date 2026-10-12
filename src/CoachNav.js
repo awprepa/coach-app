@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { supabase, maybeSyncDown } from './supabase'
+import { purgerCachePrive } from './utils/purgeCachePrive'
 import { canSwitch, switchAccount } from './accountSwitch'
 
 const ICONS = {
@@ -126,7 +127,7 @@ export default function CoachNav() {
   }, [])
 
   async function handleLogout() {
-    try { await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
+    try { await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
     navigate('/login')
   }
 

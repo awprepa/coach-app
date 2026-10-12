@@ -35,7 +35,7 @@ export default function ProgrammeClient() {
       .select('*')
       .eq('id', id)
       .single()
-    if (error) { console.log(error); setLoading(false); return }
+    if (error) { console.error(error); setLoading(false); return }
 
     setProgramme(prog)
 
@@ -48,7 +48,7 @@ export default function ProgrammeClient() {
       .select('id, nom, ordre, exercices(charges(semaine)), rpe_seances(semaine, rpe_reel)')
       .eq('programme_id', id)
       .order('ordre', { ascending: true })
-    if (errSeances) { console.log(errSeances); setLoading(false); return }
+    if (errSeances) { console.error(errSeances); setLoading(false); return }
 
     setSeances(seancesData)
 

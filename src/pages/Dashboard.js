@@ -523,7 +523,7 @@ export default function Dashboard() {
                   ) : (
                     <>
                       {wellnessAlertes.map(c => (
-                        <div key={'w' + c.id} style={{ ...S.miniRow, borderLeft: '3px solid #ef4444', cursor: 'default' }}>
+                        <div key={'w' + c.id} style={{ ...S.miniRow, border: '1.5px solid #ef4444', cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas · {c.avg.toFixed(1)}/4</p></div>
                           <button style={S.miniBtnDark} onClick={() => navigate('/messages')}>Message</button>
@@ -531,14 +531,14 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {expirations.map(c => (
-                        <div key={'e' + c.id} style={{ ...S.miniRow, borderLeft: '3px solid #f59e0b', cursor: 'default' }}>
+                        <div key={'e' + c.id} style={{ ...S.miniRow, border: '1.5px solid #f59e0b', cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire {c.daysLeft === 0 ? "auj." : `dans ${c.daysLeft}j`}</p></div>
                           <button style={S.miniBtn} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
                         </div>
                       ))}
                       {nouveaux.map(c => (
-                        <div key={'n' + c.id} style={{ ...S.miniRow, borderLeft: '3px solid #6366f1', cursor: 'default' }}>
+                        <div key={'n' + c.id} style={{ ...S.miniRow, border: '1.5px solid #6366f1', cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
                           <button style={S.miniBtnDark} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
@@ -546,7 +546,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {progFinBientot.map(p => (
-                        <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, borderLeft: '3px solid #0ea5e9' }}>
+                        <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, border: '1.5px solid #0ea5e9' }}>
                           <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}>📋</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
                           <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
@@ -640,7 +640,7 @@ export default function Dashboard() {
                       {inactif ? (
                         <span style={{ ...S.pill, background: '#f3f4f6', color: '#6b7280' }}>Inactif</span>
                       ) : avg !== null && avg <= 2 ? (
-                        <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ Bas</span>
+                        <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>Bas</span>
                       ) : (
                         <span style={{ ...S.pill, background: '#f0fdf4', color: '#16a34a' }}>✓ OK</span>
                       )}
@@ -843,7 +843,7 @@ export default function Dashboard() {
                       <div style={{ flex: 1, height: 1, background: (g?.couleur || '#e5e7eb') + '33' }} />
                     </div>
 
-                    <div style={{ ...S.listCard, borderLeft: `3px solid ${g?.couleur || '#e5e7eb'}` }}>
+                    <div style={{ ...S.listCard, border: `1.5px solid ${g?.couleur || '#e5e7eb'}` }}>
                       {membres.map((client, i) => {
                         const av  = getAvatar(client.prenom, client.nom)
                         const sub = getSubInfo(client.date_fin)
@@ -896,7 +896,7 @@ export default function Dashboard() {
               ) : (
                 topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
                   <div key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
-                    style={{ ...S.miniRow, borderLeft: `3px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
+                    style={{ ...S.miniRow, border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                     {g.logo_url
                       ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
                       : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🏆</div>}
@@ -921,7 +921,7 @@ export default function Dashboard() {
                     {topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
                       <div key={g.id}
                         onClick={() => navigate(`/groupe/${g.id}`)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {g.logo_url
                             ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
@@ -1050,7 +1050,7 @@ export default function Dashboard() {
             </div>
 
             {/* Aperçu live */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.6rem 0.9rem', borderRadius: 11, background: '#f9fafb', borderLeft: `4px solid ${newGroupeCouleur}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.6rem 0.9rem', borderRadius: 11, background: '#f9fafb', border: `1.5px solid ${newGroupeCouleur}` }}>
               {newGroupeLogoPreview
                 ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
                 : <div style={{ width: 26, height: 26, borderRadius: 7, background: newGroupeCouleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
@@ -1071,7 +1071,7 @@ export default function Dashboard() {
                 style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151', background: '#fff' }}
               />
               {newGroupeUrl && !newGroupeUrl.includes('monclubhouse.ffr.fr') && (
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>⚠️ Le lien doit provenir de monclubhouse.ffr.fr</p>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>Le lien doit provenir de monclubhouse.ffr.fr</p>
               )}
             </div>
 

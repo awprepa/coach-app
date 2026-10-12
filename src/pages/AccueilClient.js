@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { purgerCachePrive } from '../utils/purgeCachePrive'
 import Calendrier from '../components/Calendrier'
 import AppLogo from '../components/AppLogo'
 import { useClientTheme } from '../context/ClientThemeContext'
@@ -273,7 +274,7 @@ export default function AccueilClient() {
   }
 
   async function handleLogout() {
-    try { await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
+    try { await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
     navigate('/login')
   }
 
@@ -285,7 +286,7 @@ export default function AccueilClient() {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       })
       if (error) throw error
-      await supabase.auth.signOut({ scope: 'local' })
+      await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' })
       navigate('/login')
     } catch (e) {
       console.error('delete-account error:', e)

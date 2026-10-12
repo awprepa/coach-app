@@ -398,7 +398,7 @@ export default function SeanceProjection() {
                     borderRadius: 8,
                     overflow: 'hidden',
                     background: '#383838',
-                    borderLeft: `5px solid ${blockColor}`,
+                    border: `1.5px solid ${blockColor}`,
                     boxShadow: `0 0 0 1px ${blockColor}2a`,
                   }}>
                     {/* Label bloc — toujours affiché, pas seulement pour les supersets */}

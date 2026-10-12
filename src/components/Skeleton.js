@@ -118,7 +118,7 @@ export function AccueilSkeleton() {
           <Skeleton width={160} height={28} borderRadius={8} />
         </div>
         {/* Carte prochaine séance */}
-        <div style={{ background: '#1f2937', borderRadius: 16, padding: '1.25rem 1.5rem', borderLeft: '4px solid rgba(228,248,22,0.3)' }}>
+        <div style={{ background: '#1f2937', borderRadius: 16, padding: '1.25rem 1.5rem', border: '1.5px solid rgba(228,248,22,0.3)' }}>
           <Skeleton width={100} height={11} borderRadius={4} style={{ background: 'rgba(255,255,255,0.08)', marginBottom: 10 }} />
           <Skeleton width={180} height={20} borderRadius={6} style={{ background: 'rgba(255,255,255,0.12)', marginBottom: 8 }} />
           <Skeleton width={120} height={12} borderRadius={4} style={{ background: 'rgba(255,255,255,0.08)' }} />

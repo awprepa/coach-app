@@ -513,7 +513,7 @@ export default function GPS() {
                   <button onClick={() => setShowPeriodes(false)} style={{ ...S.toggleBtn, ...(showPeriodes ? {} : S.toggleActive) }}>Session</button>
                   <button onClick={() => setShowPeriodes(true)}  style={{ ...S.toggleBtn, ...(showPeriodes ? S.toggleActive : {}) }}>Périodes</button>
                 </div>
-                <button onClick={() => setShowMetaCfg(v => !v)} style={S.cfgBtn}>⚙ Métriques</button>
+                <button onClick={() => setShowMetaCfg(v => !v)} style={S.cfgBtn}>Métriques</button>
               </div>
             </div>
 

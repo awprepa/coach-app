@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { purgerCachePrive } from '../utils/purgeCachePrive'
 import { canSwitch, switchAccount } from '../accountSwitch'
 
 const OFFRES = {
@@ -22,7 +23,7 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
 
   async function handleLogout() {
     onClose()
-    try { await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
+    try { await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' }) } catch (e) { console.error(e) }
     navigate('/login')
   }
 

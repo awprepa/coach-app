@@ -330,8 +330,8 @@ export default function ScannerArticle() {
             Ce produit n'est pas encore dans la base Open Food Facts. Essaie la saisie manuelle.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: 280 }}>
-            <button onClick={rescan} style={S.btnPrimary}>📷 Rescanner</button>
-            <button onClick={addToMeal} style={S.btnSecondary}>✏️ Saisie manuelle</button>
+            <button onClick={rescan} style={S.btnPrimary}>Rescanner</button>
+            <button onClick={addToMeal} style={S.btnSecondary}>Saisie manuelle</button>
           </div>
         </div>
       )}

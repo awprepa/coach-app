@@ -23,7 +23,7 @@ function WarmupDisplay({ lignes }) {
         }
         const tours = g.items[0]?.tours
         return (
-          <div key={gi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: '3px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+          <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
             <div style={{ flex: 1 }}>
               {g.items.map((l, i) => (
                 <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: i > 0 ? '0.3rem' : 0, paddingTop: i > 0 ? '0.3rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>

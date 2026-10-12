@@ -27,7 +27,6 @@ export function usePush() {
                 user_id: user.id,
                 subscription: sub.toJSON()
               }], { onConflict: 'user_id' })
-              console.log('[usePush] Subscription re-sauvegardée en base après update SW')
             }
           }
         } else {
@@ -52,7 +51,6 @@ export function usePush() {
           subscription: sub.toJSON()
         }], { onConflict: 'user_id' })
         if (error) console.error('[usePush] Erreur sauvegarde subscription :', error.message, error)
-        else console.log('[usePush] Subscription sauvegardée en base ✓', sub.endpoint)
       }
       setPermission('granted')
       setSubscribed(true)

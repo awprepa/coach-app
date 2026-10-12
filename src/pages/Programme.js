@@ -35,7 +35,7 @@ export default function Programme() {
   async function fetchProgramme() {
     const { data, error } = await supabase
       .from('programmes').select('*, clients(prenom, nom), groupes(id, nom, couleur), programme_templates(nom, description)').eq('id', id).single()
-    if (error) console.log(error)
+    if (error) console.error(error)
     else { setProgramme(data); setFormProgramme({ nom: data.nom, semaines: data.semaines, date_debut: data.date_debut || '', description: data.programme_templates?.description || '' }) }
     setLoading(false)
   }
@@ -43,7 +43,7 @@ export default function Programme() {
   async function fetchSeances() {
     const { data, error } = await supabase
       .from('seances').select('*').eq('programme_id', id).order('ordre', { ascending: true })
-    if (error) console.log(error)
+    if (error) console.error(error)
     else setSeances(data)
   }
 
@@ -402,7 +402,7 @@ export default function Programme() {
           {/* Titre selon contexte groupe, individuel ou brouillon bibliothèque */}
           {programme.bibliotheque_template_id && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📚 Brouillon bibliothèque</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Brouillon bibliothèque</span>
             </div>
           )}
           {programme.groupe_id && !programme.template_id && (
@@ -435,7 +435,7 @@ export default function Programme() {
               </button>
             ) : (
               <>
-                <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>💾 Template</button>
+                <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>Template</button>
                 <button onClick={supprimerProgramme} style={styles.btnDanger}>Supprimer</button>
               </>
             )}
@@ -515,7 +515,7 @@ export default function Programme() {
                     </div>
                     <div
                       onClick={() => navigate(`/seance/${seance.id}`)}
-                      style={{ ...styles.seanceCard, borderLeft: `4px solid ${i === 0 ? '#e4f816' : '#e5e7eb'}` }}
+                      style={{ ...styles.seanceCard, border: `1.5px solid ${i === 0 ? '#e4f816' : '#e5e7eb'}` }}
                     >
                       <span style={styles.seanceOrdre}>Jour {i + 1}</span>
                       <span style={styles.seanceNom}>{seance.nom}</span>
@@ -554,8 +554,8 @@ export default function Programme() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button type="button" onClick={ouvrirTemplates} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>📋 Depuis un modèle</button>
-            <button type="button" onClick={() => setShowImport(true)} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>⬆ Importer Excel</button>
+            <button type="button" onClick={ouvrirTemplates} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>Depuis un modèle</button>
+            <button type="button" onClick={() => setShowImport(true)} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>Importer Excel</button>
           </div>
         </form>
 

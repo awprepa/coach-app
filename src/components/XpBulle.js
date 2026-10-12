@@ -46,7 +46,7 @@ export default function XpBulleStyles() {
         content:""; position:absolute; inset:-50% -10% auto auto; width:100px; height:100px;
         background:radial-gradient(circle,rgba(255,255,255,0.14),transparent 70%);
       }
-      .xp-bulle-catch{ animation:xpBulleCatch 460ms cubic-bezier(.34,1.56,.64,1); }
+      .xp-bulle-catch{ animation:xpBulleCatch 460ms cubic-bezier(.22, 1, .36, 1); }
       @keyframes xpBulleCatch{
         0%{   transform:scale(1);    box-shadow:0 10px 26px rgba(15,25,55,0.35); }
         40%{  transform:scale(1.07); box-shadow:0 0 0 8px rgba(228,248,22,0.22), 0 10px 26px rgba(15,25,55,0.35); }

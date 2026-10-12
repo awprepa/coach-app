@@ -72,7 +72,7 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
   const borderColor = statut === 'fait' ? '#16a34a' : statut === 'hors_plan' ? '#d97706' : statut === 'saute' ? '#ef4444' : '#e5e7eb'
 
   return (
-    <div style={{ ...S.mealCard, borderLeft: `3px solid ${borderColor}` }}>
+    <div style={{ ...S.mealCard, border: `1.5px solid ${borderColor}` }}>
       {/* En-tête */}
       <button onClick={() => setExpanded(v => !v)} style={S.mealHeader}>
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
@@ -148,7 +148,7 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
 // ─── Carte repas libre ajouté par le client ───────────────────────────────────
 function ExtraCard({ log, onDelete }) {
   return (
-    <div style={{ ...S.mealCard, borderLeft: '3px solid #6366f1' }}>
+    <div style={{ ...S.mealCard, border: '1.5px solid #6366f1' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366f1', display: 'inline-block', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>

@@ -290,7 +290,7 @@ function IOSInstallWall() {
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
               Le bouton menu est ici ↓
             </p>
-            <div style={{ animation: 'bounceDown 1.2s ease-in-out infinite' }}>
+            <div style={{ animation: 'nudgeDown 1.2s ease-in-out infinite' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
               </svg>
@@ -298,7 +298,7 @@ function IOSInstallWall() {
           </div>
         </>
       )}
-      <style>{`@keyframes bounceDown { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }`}</style>
+      <style>{`@keyframes nudgeDown { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }`}</style>
     </div>,
     document.body
   )

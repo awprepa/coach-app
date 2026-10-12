@@ -425,7 +425,7 @@ export default function SciencesNutrition({ coachMode = false }) {
 
                   {/* Méthodologie (coach uniquement) */}
                   {coachMode && (
-                    <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px', borderLeft: `3px solid ${color}` }}>
+                    <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px', border: `1.5px solid ${color}` }}>
                       <p style={{ fontSize: '0.65rem', fontWeight: 700, color, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Méthodologie & nuances
                       </p>

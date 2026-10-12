@@ -296,7 +296,7 @@ export default function SeanceTemplates() {
       }
       const color = bloc ? blocColor(bloc) : null
       items.push(
-        <div key={i} style={{ ...S.exRow, borderLeft: `3px solid ${color || '#e5e7eb'}`, paddingLeft: '0.5rem', borderRadius: '0 4px 4px 0' }}>
+        <div key={i} style={{ ...S.exRow, border: `1.5px solid ${color || '#e5e7eb'}`, paddingLeft: '0.5rem', borderRadius: '0 4px 4px 0' }}>
           {ex.code && <span style={S.codeTag}>{ex.code}</span>}
           <span style={S.exNom}>{ex.nom}</span>
           <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
@@ -516,7 +516,7 @@ export default function SeanceTemplates() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={() => setShowNewFolder(true)} style={S.secondaryBtn}>+ Dossier</button>
-          <button onClick={() => setShowImport(true)} style={S.secondaryBtn}>⬆ Excel</button>
+          <button onClick={() => setShowImport(true)} style={S.secondaryBtn}>Excel</button>
           <button onClick={nouvelleSeance} style={S.importBtn}>+ Nouvelle séance</button>
         </div>
       </div>

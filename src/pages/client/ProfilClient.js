@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
+import { purgerCachePrive } from '../../utils/purgeCachePrive'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import BlessureButton from '../../components/BlessureButton'
 import usePageFade from '../../hooks/usePageFade'
@@ -421,7 +422,7 @@ export default function ProfilClient() {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut({ scope: 'local' })
+    await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' })
     navigate('/login')
   }
 

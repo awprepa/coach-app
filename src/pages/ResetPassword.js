@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { purgerCachePrive } from '../utils/purgeCachePrive'
 
 export default function ResetPassword() {
   const navigate = useNavigate()
@@ -58,7 +59,7 @@ export default function ResetPassword() {
       setError(err.message)
     } else {
       setStatus('success')
-      await supabase.auth.signOut({ scope: 'local' })
+      await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' })
       setTimeout(() => navigate('/login'), 2500)
     }
     setSaving(false)

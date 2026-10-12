@@ -271,7 +271,7 @@ export default function AgendaGlobal() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {selEvents.map(e => (
                 <button key={e.id} onClick={() => navigate(e.linkTo)} style={{
-                  ...S.row, borderLeft: `4px solid ${typeStyle(e.type).color}`,
+                  ...S.row, border: `1.5px solid ${typeStyle(e.type).color}`,
                   background: tint(e.whoColor, 0.1), opacity: e.terminee ? 0.6 : 1,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>

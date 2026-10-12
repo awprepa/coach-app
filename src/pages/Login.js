@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { purgerCachePrive } from '../utils/purgeCachePrive'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -80,7 +81,7 @@ export default function Login() {
       setError(error.message)
     } else {
       setSuccess('Mot de passe mis à jour ! Tu peux maintenant te connecter.')
-      await supabase.auth.signOut({ scope: 'local' })
+      await purgerCachePrive(); await supabase.auth.signOut({ scope: 'local' })
       setNewPassword(''); setConfirmPassword('')
       setTimeout(() => switchMode('connexion'), 2000)
     }

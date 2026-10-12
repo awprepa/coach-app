@@ -269,7 +269,6 @@ const SYNC_TABLES = [
 
 export async function syncDown() {
   if (!navigator.onLine) return
-  console.log('[sync] ↓ pull Supabase → Dexie')
   for (const table of SYNC_TABLES) {
     try {
       const { data, error } = await _client.from(table).select('*')
@@ -283,7 +282,6 @@ export async function syncDown() {
     } catch {}
   }
   await localDB._sync_meta.put({ table: '__all__', lastSync: Date.now() })
-  console.log('[sync] ↓ terminé')
 }
 
 // ── Warm sync : remplit la base locale au démarrage (Phase 3) ──────────────
@@ -301,7 +299,6 @@ export async function maybeSyncDown(maxAgeMs = 10 * 60 * 1000) {
 // ── Reconnexion → flush + resync ──────────────────────────────────────────
 if (typeof window !== 'undefined') {
   window.addEventListener('online', async () => {
-    console.log('[offline] connexion rétablie')
     await _flushQueue()
     // Resync throttlé (10 min) : le réseau mobile bascule souvent online/offline,
     // retélécharger toutes les tables à chaque fois serait très lourd.

@@ -1426,7 +1426,7 @@ export default function FicheGroupe() {
           </div>
 
           {/* Aperçu live */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.55rem 0.9rem', borderRadius: 11, background: '#f9fafb', borderLeft: `4px solid ${editForm.couleur}`, marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.55rem 0.9rem', borderRadius: 11, background: '#f9fafb', border: `1.5px solid ${editForm.couleur}`, marginBottom: '1.25rem' }}>
             {(editLogoPreview || groupe?.logo_url)
               ? <img loading="lazy" src={editLogoPreview || groupe.logo_url} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
               : <div style={{ width: 26, height: 26, borderRadius: 7, background: editForm.couleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
@@ -1447,7 +1447,7 @@ export default function FicheGroupe() {
               style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151', background: '#fff' }}
             />
             {editForm.monclubhouse_url && !editForm.monclubhouse_url.includes('monclubhouse.ffr.fr') && (
-              <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>⚠️ Le lien doit provenir de monclubhouse.ffr.fr</p>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#ef4444' }}>Le lien doit provenir de monclubhouse.ffr.fr</p>
             )}
           </div>
 

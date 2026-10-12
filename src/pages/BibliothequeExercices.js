@@ -668,7 +668,7 @@ export default function BibliothequeExercices() {
                 <button onClick={() => {
                   setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
                   setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary, image_url: ex.image_url || '' })
-                }} style={S.iconBtn}>✏️ Modifier</button>
+                }} style={S.iconBtn}>Modifier</button>
                 <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}>🗑️</button>
               </div>
             </div>
@@ -750,7 +750,7 @@ export default function BibliothequeExercices() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
-                    <p style={{ fontWeight: 800, fontSize: '1rem', color: '#333', margin: 0 }}>🔗 Liaison automatique</p>
+                    <p style={{ fontWeight: 800, fontSize: '1rem', color: '#333', margin: 0 }}>Liaison automatique</p>
                     <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
                       {backfillResult.matched.length} correspondance{backfillResult.matched.length !== 1 ? 's' : ''} trouvée{backfillResult.matched.length !== 1 ? 's' : ''}
                       {backfillResult.skipped > 0 && ` · ${backfillResult.skipped} sans correspondance`}
@@ -806,7 +806,7 @@ export default function BibliothequeExercices() {
             {/* Header */}
             <div style={{ padding: '1.25rem 1.25rem 0.75rem', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontWeight: 800, color: '#333', fontSize: '0.95rem' }}>🎬 Choisir un GIF</p>
+                <p style={{ margin: 0, fontWeight: 800, color: '#333', fontSize: '0.95rem' }}>Choisir un GIF</p>
                 <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Clique sur le GIF à utiliser pour cet exercice</p>
               </div>
               <button onClick={() => { setGifModal(null); setGifResults([]) }} style={{ background: 'none', border: 'none', fontSize: '1.3rem', color: '#6b7280', cursor: 'pointer' }}>✕</button>
