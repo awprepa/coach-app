@@ -524,7 +524,7 @@ export default function Dashboard() {
                   ) : (
                     <>
                       {wellnessAlertes.map(c => (
-                        <div key={'w' + c.id} style={{ ...S.miniRow, border: '1.5px solid #ef4444', cursor: 'default' }}>
+                        <div key={'w' + c.id} style={{ ...S.miniRow, cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas · {c.avg.toFixed(1)}/4</p></div>
                           <button style={S.miniBtnDark} onClick={() => navigate('/messages')}>Message</button>
@@ -532,14 +532,14 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {expirations.map(c => (
-                        <div key={'e' + c.id} style={{ ...S.miniRow, border: '1.5px solid #f59e0b', cursor: 'default' }}>
+                        <div key={'e' + c.id} style={{ ...S.miniRow, cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire {c.daysLeft === 0 ? "auj." : `dans ${c.daysLeft}j`}</p></div>
                           <button style={S.miniBtn} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
                         </div>
                       ))}
                       {nouveaux.map(c => (
-                        <div key={'n' + c.id} style={{ ...S.miniRow, border: '1.5px solid #6366f1', cursor: 'default' }}>
+                        <div key={'n' + c.id} style={{ ...S.miniRow, cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
                           <button style={S.miniBtnDark} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
@@ -547,7 +547,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {progFinBientot.map(p => (
-                        <div role="button" tabIndex={0} key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, border: '1.5px solid #0ea5e9' }}>
+                        <div role="button" tabIndex={0} key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={S.miniRow}>
                           <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}><Icon name="clipboard" size={14} /></div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
                           <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
