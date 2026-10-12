@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useLayoutEffect } from
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import CalculateurIntensite from '../components/CalculateurIntensite'
+import DocumentsEvenement from '../components/DocumentsEvenement'
 import SchemaSVG from '../components/SchemaSVG'
 import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 
@@ -3613,6 +3614,13 @@ function SeanceModal({
                 </div>
               )}
             </div>
+
+            {hasBlocs && evtId && form.type !== 'collectif' && (
+              <div style={Sm.section}>
+                <div style={Sm.sTitle}>Document joint</div>
+                <DocumentsEvenement evenementId={evtId} />
+              </div>
+            )}
 
             <div style={Sm.section}>
               <div style={Sm.sTitle}>{TYPES[form.type]?.label || 'Détails'}</div>
