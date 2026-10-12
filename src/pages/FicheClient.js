@@ -116,6 +116,7 @@ export default function FicheClient() {
   const [seancesClient, setSeancesClient] = useState([])
   const [showAllSeancesClient, setShowAllSeancesClient] = useState(false)
   const [notesCoach, setNotesCoach] = useState('')
+  const [notesOuvertes, setNotesOuvertes] = useState(false) // fermées par défaut : rien d'affiché si l'écran est filmé
   const [notesSaved, setNotesSaved] = useState(true)
   const [notesSavedAt, setNotesSavedAt] = useState(null)
   const [nextEvent, setNextEvent] = useState(null)
@@ -751,10 +752,18 @@ export default function FicheClient() {
 
           {/* ── Notes coach ── */}
           <div style={{ ...styles.card, marginTop: '0.75rem', padding: '0.85rem', border: '1.5px solid #fef08a', background: '#fefce8' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+            <button
+              onClick={() => setNotesOuvertes(o => !o)}
+              aria-expanded={notesOuvertes}
+              aria-label={notesOuvertes ? 'Fermer les notes' : 'Ouvrir les notes'}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginBottom: notesOuvertes ? '0.4rem' : 0 }}
+            >
               <p style={{ ...styles.sectionTitle, margin: 0, fontSize: '0.68rem' }}>Notes entretiens</p>
-              <span style={{ marginLeft: 'auto', fontSize: '0.58rem', fontWeight: '700', color: '#a16207', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 999, padding: '0.1rem 0.45rem' }}>Privé</span>
-            </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a16207" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto', transition: 'transform .15s', transform: notesOuvertes ? 'rotate(180deg)' : 'none' }}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+            {notesOuvertes && <>
             <textarea
               value={notesCoach}
               onChange={e => { setNotesCoach(e.target.value); setNotesSaved(false) }}
@@ -770,6 +779,7 @@ export default function FicheClient() {
                   : '✓ Sauvegardé'
                 : '● Non sauvegardé — quitte le champ pour sauvegarder'}
             </p>
+            </>}
           </div>
         </>
       )}
