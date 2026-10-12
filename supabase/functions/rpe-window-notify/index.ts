@@ -16,7 +16,17 @@ function parisNow() {
 // l'entraînement, ou déjà ouverte si le jour est passé) et notifie le coach
 // une seule fois par entraînement, pour qu'il puisse vérifier que la
 // notation est bien accessible aux joueurs.
-Deno.serve(async (_req) => {
+// Appel autorisé : tâche planifiée (en-tête x-cron-secret) ou clé de service.
+// Sans ce contrôle, n'importe qui disposant de la clé publique pouvait la déclencher.
+function appelAutorise(req: Request): boolean {
+  const secret = Deno.env.get("CRON_SECRET") ?? "";
+  if (secret && req.headers.get("x-cron-secret") === secret) return true;
+  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  return bearer !== "" && bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+}
+
+Deno.serve(async (req) => {
+  if (!appelAutorise(req)) return new Response("forbidden", { status: 403 });
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   try {
     const supabase = createClient(

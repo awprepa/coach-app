@@ -8,7 +8,17 @@ const VAPID_PUBLIC  = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
 webpush.setVapidDetails("mailto:wehrey.arthur@gmail.com", VAPID_PUBLIC, VAPID_PRIVATE);
 
-Deno.serve(async (_req) => {
+// Appel autorisé : tâche planifiée (en-tête x-cron-secret) ou clé de service.
+// Sans ce contrôle, n'importe qui disposant de la clé publique pouvait la déclencher.
+function appelAutorise(req: Request): boolean {
+  const secret = Deno.env.get("CRON_SECRET") ?? "";
+  if (secret && req.headers.get("x-cron-secret") === secret) return true;
+  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  return bearer !== "" && bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+}
+
+Deno.serve(async (req) => {
+  if (!appelAutorise(req)) return new Response("forbidden", { status: 403 });
   console.log("[process-timer-pushes] ► déclenchée");
 
   const supabase = createClient(

@@ -1,3 +1,5 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!
 
 Deno.serve(async (req) => {
@@ -11,6 +13,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Réservé au coach : sans ce contrôle, n'importe quel utilisateur connecté
+    // (un athlète) pouvait envoyer un e-mail quelconque depuis le compte d'envoi.
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+    })
+    const { data: estCoach } = await sb.rpc("is_coach")
+    if (estCoach !== true) {
+      return new Response(JSON.stringify({ error: "Réservé au coach" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      })
+    }
+
     const { to, subject, html, pdfBase64, pdfName, fromName } = await req.json()
 
     if (!to || !subject || !html) {

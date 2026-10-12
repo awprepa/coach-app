@@ -5,9 +5,21 @@ const VAPID_PUBLIC  = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
 webpush.setVapidDetails("mailto:wehrey.arthur@gmail.com", VAPID_PUBLIC, VAPID_PRIVATE);
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   console.error("[wellness-reminder] ► déclenchée");
   try {
+    // Autorisé : la clé de service (tâche planifiée) ou le coach. Sans ce
+    // contrôle, tout utilisateur connecté pouvait déclencher l'envoi à tous.
+    const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const cronOk = !!Deno.env.get("CRON_SECRET") && req.headers.get("x-cron-secret") === Deno.env.get("CRON_SECRET");
+    if (!cronOk && bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+      const sbUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+      });
+      const { data: estCoach } = await sbUser.rpc("is_coach");
+      if (estCoach !== true) return new Response("forbidden", { status: 403 });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
