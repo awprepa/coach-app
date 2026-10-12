@@ -190,32 +190,43 @@ export async function chargerBilan({ groupeId, debut, fin }) {
     }
   })
 
-  // Musculation : événements « séance » des membres, séances de type musculation
-  const evClients = await selectEnLots('evenements', 'id, client_id, date, seance_id, terminee', 'client_id', clientIds,
-    q => q.eq('type', 'seance').gte('date', debut).lte('date', fin).not('seance_id', 'is', null))
-  const seanceIds = [...new Set(evClients.map(e => e.seance_id))]
-  const seances = await selectEnLots('seances', 'id, nom, type', 'id', seanceIds, q => q.eq('type', 'musculation'))
-  const seanceParId = {}
-  seances.forEach(s => { seanceParId[s.id] = s })
-  const exos = await selectEnLots('exercices', 'id, seance_id, code, nom, series, repetitions, tempo, recuperation, type_intensite, valeur_intensite, ordre', 'seance_id', seances.map(s => s.id))
+  // Musculation : on part du PROGRAMME de chaque joueur (cycle, semaines, séances),
+  // pas du calendrier — un joueur qui n'a rien saisi n'a aucun événement
+  // calendrier, mais la séance était bien prévue. La date d'une séance = début
+  // du cycle + 7 jours par semaine. Présent = au moins une série validée
+  // (is_done) pour cette séance et cette semaine du programme.
+  const progs = await selectEnLots('programmes', 'id, client_id, date_debut, semaines', 'client_id', clientIds)
+  const progParId = {}
+  progs.forEach(p => { progParId[p.id] = p })
+  const seances = await selectEnLots('seances', 'id, programme_id, nom, ordre', 'programme_id', progs.map(p => p.id), q => q.eq('type', 'musculation'))
+  const exos = await selectEnLots('exercices', 'id, seance_id, code, nom, series, repetitions, tempo, recuperation, type_intensite, valeur_intensite, ordre', 'seance_id', seances.map(x => x.id))
+  const seanceDeExo = {}
   const exosParSeance = {}
-  exos.sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).forEach(x => { (exosParSeance[x.seance_id] ||= []).push(x) })
+  exos.sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).forEach(x => { seanceDeExo[x.id] = x.seance_id; (exosParSeance[x.seance_id] ||= []).push(x) })
+  const suivi = await selectEnLots('serie_tracking', 'exercice_id, semaine', 'exercice_id', exos.map(x => x.id), q => q.eq('is_done', true))
+  const faits = new Set()
+  suivi.forEach(t => faits.add(`${seanceDeExo[t.exercice_id]}|${t.semaine}`))
 
+  const aujourdhui = isoLocal(new Date())
   const groupesMuscu = {}
-  evClients.filter(e => seanceParId[e.seance_id]).forEach(e => {
-    const nom = seanceParId[e.seance_id].nom
-    const cle = `${e.date}|${nom}`
-    const g = (groupesMuscu[cle] ||= { date: e.date, nom, evts: [] })
-    g.evts.push(e)
+  seances.forEach(se => {
+    const prog = progParId[se.programme_id]
+    if (!prog?.date_debut) return
+    for (let w = 1; w <= (prog.semaines || 0); w++) {
+      const d = dateDe(prog.date_debut); d.setDate(d.getDate() + 7 * (w - 1))
+      const date = isoLocal(d)
+      if (date < debut || date > fin || date > aujourdhui) continue
+      const g = (groupesMuscu[`${date}|${se.nom}`] ||= { date, nom: se.nom, clients: [], modele: se.id })
+      g.clients.push({ id: prog.client_id, fait: faits.has(`${se.id}|${w}`) })
+    }
   })
   const muscu = Object.values(groupesMuscu).map(g => {
-    const faits = g.evts.filter(e => e.terminee)
-    const modele = (faits[0] || g.evts[0]).seance_id
+    const presents = g.clients.filter(c => c.fait)
     return {
       date: g.date, nom: g.nom,
-      presents: faits.length || null,
-      absents: !faits.length ? [] : g.evts.filter(e => !e.terminee).map(e => nomClient[e.client_id]).filter(Boolean).sort(),
-      exercices: (exosParSeance[modele] || []).map(x => ({
+      presents: presents.length || null,
+      absents: !presents.length ? [] : g.clients.filter(c => !c.fait).map(c => nomClient[c.id]).filter(Boolean).sort(),
+      exercices: (exosParSeance[g.modele] || []).map(x => ({
         nom: (x.code ? x.code + ' · ' : '') + x.nom,
         seriesReps: [x.series, x.repetitions].filter(v => v != null && v !== '').join(' × ') || '—',
         tempo: x.tempo && x.tempo !== '-' ? x.tempo : '—',
