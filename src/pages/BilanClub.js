@@ -83,13 +83,12 @@ function Rapport({ b }) {
   const { identite: id, synthese: s, semaines } = b
   const periodeTxt = `du ${libelleCourt(b.debut)} ${b.debut.slice(0, 4)} au ${libelleCourt(b.fin)} ${b.fin.slice(0, 4)}`
   const style = { '--club': id.couleur, '--club2': id.couleur2 }
-  const pied = n => <div className="foot"><span>Bilan {id.nom} · {periodeTxt}</span><span>Page {n}</span></div>
   const delta = s.blesses.fin - s.blesses.avant
   const matchs = semaines.flatMap(w => w.matchs)
 
   return (
     <div className="bilan-rapport" style={style}>
-      <section className="page">
+      <section className="page synth">
         <Entete id={id} periodeTxt={periodeTxt} />
         <div className="kpis">
           <div className="kpi"><b>{s.seancesMuscu}</b><span>séances de musculation</span></div>
@@ -149,25 +148,18 @@ function Rapport({ b }) {
             </table>
           </div>
         )}
-        {pied(1)}
       </section>
 
-      {semaines.map((w, i) => (
-        <section className="page" key={w.cle}>
-          <div className="head" style={{ marginBottom: 16 }}>
-            <div className="who">
-              {id.logo && <img className="logo" src={id.logo} alt="" />}
-              <div>
-                <div className="eyebrow">{w.libelle.split(' · ')[0]} · {w.libelle.split(' · ')[1]}</div>
-                <h1 style={{ fontSize: 24 }}>{id.nom}</h1>
-              </div>
-            </div>
+      <section className="page suite">
+        {semaines.filter(w => w.jours.length > 0).map(w => (
+          <div className="semaine" key={w.cle}>
+            <h2 className="semaine-titre">{w.libelle}</h2>
+            {w.jours.flatMap(j => j.items.map((it, k) => <Jour key={j.date + k} it={it} b={b} />))}
           </div>
-          {w.jours.length === 0 && <p className="muted">Aucune activité enregistrée cette semaine.</p>}
-          {w.jours.flatMap(j => j.items.map((it, k) => <Jour key={j.date + k} it={it} b={b} />))}
-          {pied(i + 2)}
-        </section>
-      ))}
+        ))}
+        {semaines.every(w => w.jours.length === 0) && <p className="muted">Aucune activité enregistrée sur la période.</p>}
+      </section>
+      <div className="pied-fixe">Bilan {id.nom} · {periodeTxt}</div>
     </div>
   )
 }
@@ -224,7 +216,7 @@ function Jour({ it, b }) {
           )}
         </div></div>
         <div className="sec"><div className="k">Présence</div><div>
-          <b>{it.presents} joueur{it.presents > 1 ? 's' : ''} sur {eff}</b>
+          {it.presents == null ? <span className="muted">Non renseignée</span> : <b>{it.presents} joueur{it.presents > 1 ? 's' : ''} sur {eff}</b>}
           {it.absents.length > 0 && <div className="muted">Absents : {it.absents.join(', ')}</div>}
         </div></div>
       </div>
@@ -350,19 +342,21 @@ const S = {
 const CSS = `
 .bilan-rapport{--paper:#fff;--ink:#1b1b1b;--ink-2:#555;--ink-3:#6b6b6b;--line:#e3e3e1;--soft:#f6f6f4;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:12.5px;line-height:1.5}
 .bilan-rapport *{box-sizing:border-box}
-.bilan-rapport .page{width:100%;max-width:794px;min-height:1000px;margin:0 auto 22px;background:var(--paper);padding:44px 48px 56px;box-shadow:0 1px 3px rgba(0,0,0,.12);position:relative}
-.bilan-rapport .foot{position:absolute;left:48px;right:48px;bottom:18px;display:flex;justify-content:space-between;color:var(--ink-3);font-size:11px;border-top:1px solid var(--line);padding-top:8px}
+.bilan-rapport .page{width:100%;max-width:794px;margin:0 auto 18px;background:var(--paper);padding:32px 40px 28px;box-shadow:0 1px 3px rgba(0,0,0,.12);position:relative}
+.bilan-rapport .pied-fixe{display:none}
+.bilan-rapport .semaine-titre{margin:16px 0 8px;break-after:avoid;page-break-after:avoid}
+.bilan-rapport .semaine:first-child .semaine-titre{margin-top:0}
 .bilan-rapport .eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
-.bilan-rapport h1{font-size:30px;line-height:1.1;margin:8px 0 4px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
-.bilan-rapport h2{font-size:15px;margin:26px 0 10px;font-weight:700;color:var(--ink)}
+.bilan-rapport h1{font-size:26px;line-height:1.1;margin:6px 0 3px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.bilan-rapport h2{font-size:14px;margin:18px 0 8px;font-weight:700;color:var(--ink)}
 .bilan-rapport h3{font-size:12px;margin:0;font-weight:700;color:var(--ink)}
 .bilan-rapport .sub{color:var(--ink-2);font-size:13px}
-.bilan-rapport .head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px}
+.bilan-rapport .head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
 .bilan-rapport .who{display:flex;gap:16px;align-items:center}
-.bilan-rapport .logo{width:62px;height:62px;flex-shrink:0;object-fit:contain}
+.bilan-rapport .logo{width:54px;height:54px;flex-shrink:0;object-fit:contain}
 .bilan-rapport .coach{text-align:right;font-size:11px;color:var(--ink-2)}
 .bilan-rapport .kpis{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:6px}
-.bilan-rapport .kpi{padding:14px 14px 12px;border-left:1px solid var(--line)}
+.bilan-rapport .kpi{padding:10px 12px 9px;border-left:1px solid var(--line)}
 .bilan-rapport .kpi:first-child{border-left:none}
 .bilan-rapport .kpi b{display:block;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
 .bilan-rapport .withtrend{display:flex;align-items:center;gap:10px}
@@ -373,13 +367,13 @@ const CSS = `
 .bilan-rapport .kpi span{font-size:11px;color:var(--ink-2)}
 .bilan-rapport .kpi small{display:block;margin-top:4px;font-size:11px;color:var(--ink-3)}
 .bilan-rapport .two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-.bilan-rapport .chart{border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.bilan-rapport .chart{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
 .bilan-rapport .chart svg{display:block;width:100%;height:auto}
 .bilan-rapport table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .bilan-rapport th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;text-align:left;padding:0 8px 7px 0}
 .bilan-rapport th.r,.bilan-rapport td.r{text-align:right}
-.bilan-rapport td{padding:8px 8px 8px 0;border-top:1px solid var(--line);vertical-align:top}
-.bilan-rapport .blk{margin-bottom:14px;border-left:3px solid var(--club);padding-left:12px}
+.bilan-rapport td{padding:5px 8px 5px 0;border-top:1px solid var(--line);vertical-align:top}
+.bilan-rapport .blk{margin-bottom:10px;border-left:3px solid var(--club);padding-left:12px}
 .bilan-rapport .blk.t{border-left-color:var(--club2)}
 .bilan-rapport .blk.m{border-left-color:var(--ink)}
 .bilan-rapport .blk .blkt{font-size:12px;font-weight:700;margin-bottom:4px}
@@ -387,26 +381,25 @@ const CSS = `
 .bilan-rapport table.opp td{vertical-align:middle}
 .bilan-rapport tr.tot td{font-weight:700;border-top:1px solid var(--ink-3)}
 .bilan-rapport .foot-note{font-size:11px;color:var(--ink-3);margin:6px 0 0}
-.bilan-rapport .day{border:1px solid var(--line);border-radius:6px;margin-bottom:12px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
+.bilan-rapport .day{border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
 .bilan-rapport .day.mu{border-left:3px solid var(--club)}
 .bilan-rapport .day.en{border-left:3px solid var(--club2)}
 .bilan-rapport .day.ma{border-left:3px solid var(--ink)}
-.bilan-rapport .dayhead{display:flex;justify-content:space-between;align-items:baseline;padding:9px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+.bilan-rapport .dayhead{display:flex;justify-content:space-between;align-items:baseline;padding:6px 12px;background:var(--soft);border-bottom:1px solid var(--line)}
 .bilan-rapport .dayhead b{font-size:12.5px}
 .bilan-rapport .dayhead span{font-size:11px;color:var(--ink-2)}
-.bilan-rapport .sec{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.bilan-rapport .sec{display:grid;grid-template-columns:84px 1fr;gap:10px;padding:6px 12px;border-top:1px solid var(--line)}
 .bilan-rapport .dayhead + .sec{border-top:none}
 .bilan-rapport .sec .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding-top:2px}
 .bilan-rapport .muted{color:var(--ink-3)}
 .bilan-rapport .docimg{display:block;width:100%;max-width:420px;border:1px solid var(--line);border-radius:4px;margin-bottom:6px}
 @media print{
-  @page{size:A4;margin:0}
+  @page{size:A4;margin:12mm 12mm 14mm}
   body *{visibility:hidden}
   .bilan-rapport,.bilan-rapport *{visibility:visible}
   .bilan-hors-page{display:none!important}
-  .bilan-rapport{position:absolute;left:0;top:0;width:100%}
-  .bilan-rapport .page{box-shadow:none;margin:0;max-width:none;min-height:0;height:auto;page-break-after:always;break-after:page}
-  .bilan-rapport .foot{position:static;margin-top:24px}
-  .bilan-rapport{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bilan-rapport{position:absolute;left:0;top:0;width:100%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bilan-rapport .page{box-shadow:none;margin:0;max-width:none;padding:0}
+  .bilan-rapport .pied-fixe{display:block;position:fixed;left:0;right:0;bottom:-9mm;font-size:10px;color:var(--ink-3);text-align:right}
 }
 `

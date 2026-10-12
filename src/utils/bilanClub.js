@@ -183,7 +183,7 @@ export async function chargerBilan({ groupeId, debut, fin }) {
     return {
       id: e.id, date: e.date, type: e.type, titre: e.titre, adversaire: e.adversaire, domicile: e.domicile,
       duree: e.duree_min,
-      presents: reps.length, rpe: arrondi1(rpe), cardio: arrondi1(cardio), jambes: arrondi1(jambes), contact: arrondi1(contact),
+      presents: reps.length || null, rpe: arrondi1(rpe), cardio: arrondi1(cardio), jambes: arrondi1(jambes), contact: arrondi1(contact),
       documents: docsParEvt[e.id] || [],
       trame: trame.lignes.length ? trame : null,
       jeuSec: trame.jeuTotal,
@@ -213,8 +213,8 @@ export async function chargerBilan({ groupeId, debut, fin }) {
     const modele = (faits[0] || g.evts[0]).seance_id
     return {
       date: g.date, nom: g.nom,
-      presents: faits.length,
-      absents: g.evts.filter(e => !e.terminee).map(e => nomClient[e.client_id]).filter(Boolean).sort(),
+      presents: faits.length || null,
+      absents: !faits.length ? [] : g.evts.filter(e => !e.terminee).map(e => nomClient[e.client_id]).filter(Boolean).sort(),
       exercices: (exosParSeance[modele] || []).map(x => ({
         nom: (x.code ? x.code + ' · ' : '') + x.nom,
         seriesReps: [x.series, x.repetitions].filter(v => v != null && v !== '').join(' × ') || '—',
@@ -246,10 +246,10 @@ export async function chargerBilan({ groupeId, debut, fin }) {
     ;[...entrainements, ...matchs].forEach(t => { (jours[t.date] ||= []).push({ kind: t.type, ...t }) })
     semaines.push({
       cle: a, libelle: libelleSemaine(lundi, dimanche), debut: a, fin: b,
-      muscu: { seances: mus.length, presents: arrondi1(moyenne(mus.map(m => m.presents))) },
+      muscu: { seances: mus.length, presents: arrondi1(moyenne(mus.map(m => m.presents).filter(v => v != null))) },
       entrainements: {
         nombre: entrainements.length,
-        presents: arrondi1(moyenne(entrainements.map(t => t.presents))),
+        presents: arrondi1(moyenne(entrainements.map(t => t.presents).filter(v => v != null))),
         jeuSec: entrainements.reduce((a2, t) => a2 + t.jeuSec, 0),
         rpe: arrondi1(moyenne(entrainements.map(t => t.rpe).filter(v => v != null))),
       },
@@ -264,7 +264,7 @@ export async function chargerBilan({ groupeId, debut, fin }) {
     identite, effectif, debut, fin, semaines,
     synthese: {
       seancesMuscu: muscu.length,
-      presentsMuscu: arrondi1(moyenne(muscu.map(m => m.presents))),
+      presentsMuscu: arrondi1(moyenne(muscu.map(m => m.presents).filter(v => v != null))),
       rpeMoyen: arrondi1(moyenne(avecRpe.map(t => t.rpe))),
       blesses,
       courbeRpe: avecRpe.map(t => ({ date: t.date, rpe: t.rpe, type: t.type })),
