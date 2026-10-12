@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import Calendrier from '../components/Calendrier'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { ChargePanel } from './ChargeEntrainement'
+import BilanClient from '../components/BilanClient'
 import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
@@ -805,6 +806,11 @@ export default function FicheClient() {
               <path d="M9 7 Q10 5 9 3"/><path d="M12 7 Q13 5 12 3"/><path d="M15 7 Q16 5 15 3"/>
             </svg>
           )},
+          { k: 'bilan', l: 'Bilan', icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>
+            </svg>
+          )},
           { k: 'photos', l: 'Photos', icon: (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
@@ -943,6 +949,9 @@ export default function FicheClient() {
           </div>
         </div>
       )}
+
+      {/* Onglet Bilan : notes de semaine + journal des modifications (coach uniquement) */}
+      {activeTab === 'bilan' && client && <BilanClient key={id} clientId={id} />}
 
       {/* Onglet Photos d'évolution (privé — coach uniquement) */}
       {activeTab === 'photos' && client && (
