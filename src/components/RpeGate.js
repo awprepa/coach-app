@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { getCoachId, sendNotif } from '../notifs'
 import BlessureButton from './BlessureButton'
+import { isoLocal } from '../utils/dates'
 
 // ── Session-RPE différencié (échelle CR-10, 0-10) — 3 dimensions rugby ────────
 const DIMS = [
@@ -248,8 +249,8 @@ export default function RpeGate({ children }) {
         if (!groupeIds.length) return
 
         // Séances terrain récentes (3 derniers jours), passées ou du jour
-        const today = new Date().toISOString().slice(0, 10)
-        const from3 = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
+        const today = isoLocal()
+        const from3 = isoLocal(new Date(Date.now() - 3 * 86400000))
         const { data: evsBruts } = await supabase
           .from('groupe_evenements')
           .select('id, titre, date, type, heure, duree_min, groupe_id, adversaire')

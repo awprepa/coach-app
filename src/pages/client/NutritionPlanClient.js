@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
+import { isoLocal } from '../../utils/dates'
 
-function toISO(date) { return date.toISOString().slice(0, 10) }
+function toISO(date) { return isoLocal(date) }
 function formatDateCourt(iso) {
   if (!iso) return ''
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })

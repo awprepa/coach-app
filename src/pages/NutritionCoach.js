@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { isoLocal } from '../utils/dates'
 
 const OFFRES = {
   essai:                { label: 'Essai',         bg: '#fff7ed', color: '#c2410c' },
@@ -35,7 +36,7 @@ export default function NutritionCoach() {
       }
       setClients(allClients)
       const ids = allClients.map(c => c.id)
-      const today = new Date().toISOString().slice(0, 10)
+      const today = isoLocal()
 
       // Plans par client (actif + total)
       const { data: allPlans } = await supabase
@@ -55,7 +56,7 @@ export default function NutritionCoach() {
       }
 
       // Adhérence 7 derniers jours (plan logs)
-      const from7 = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
+      const from7 = isoLocal(new Date(Date.now() - 6 * 86400000))
       const { data: recentLogs } = await supabase
         .from('nutrition_plan_logs')
         .select('client_id, statut, meal_id')

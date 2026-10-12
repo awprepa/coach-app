@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
 import Icon from '../../components/Icon'
+import { isoLocal } from '../../utils/dates'
 
 const MEAL_TYPES = [
   { key: 'petit_dej', label: 'Petit-déj' },
@@ -32,7 +33,7 @@ const MODES = [
   { key: 'historique', label: 'Historique' },
 ]
 
-function todayISO() { return new Date().toISOString().slice(0, 10) }
+function todayISO() { return isoLocal() }
 
 // ── Helpers UI ───────────────────────────────────────────────────────────────
 function MacroPill({ label, value, color }) {

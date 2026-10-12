@@ -108,13 +108,25 @@ export default function ChargesGroupes() {
   // sous-groupe). Un club n'est jamais sélectionné par défaut (type 'club'
   // écarté) — on démarre sur sa première équipe le cas échéant.
   useEffect(() => {
-    supabase.from('groupes').select('id, nom, parent_id, type, logo_url').order('nom').then(({ data }) => {
+    Promise.all([
+      supabase.from('groupes').select('id, nom, parent_id, type, logo_url').order('nom'),
+      supabase.from('groupe_membres').select('groupe_id'),
+    ]).then(([{ data }, { data: membres }]) => {
       const all = data || []
       setGroupes(all)
       if (!groupeId && all.length > 0) {
-        const premiereSelectionnable = all.find(g => g.type === 'equipe' || g.type === 'sous_groupe') || all[0]
-        setGroupeId(premiereSelectionnable.id)
-        setSearchParams({ groupe: premiereSelectionnable.id }, { replace: true })
+        // Dernier groupe consulté, sinon la première équipe qui a des membres
+        // (avant : le premier sous-groupe par ordre alphabétique, souvent vide).
+        const nbMembres = {}
+        ;(membres || []).forEach(m => { nbMembres[m.groupe_id] = (nbMembres[m.groupe_id] || 0) + 1 })
+        let memo = null
+        try { memo = localStorage.getItem('aw_charges_groupe') } catch {}
+        const choix = all.find(g => g.id === memo)
+          || all.find(g => g.type === 'equipe' && nbMembres[g.id])
+          || all.find(g => (g.type === 'equipe' || g.type === 'sous_groupe') && nbMembres[g.id])
+          || all[0]
+        setGroupeId(choix.id)
+        setSearchParams({ groupe: choix.id }, { replace: true })
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,6 +142,7 @@ export default function ChargesGroupes() {
   }, [])
 
   const changerGroupe = (id) => {
+    try { localStorage.setItem('aw_charges_groupe', id) } catch {}
     setGroupeId(id)
     setSearchParams({ groupe: id }, { replace: true })
     setPickerOpen(false)

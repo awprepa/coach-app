@@ -15,6 +15,7 @@ import XpBulle, { useXpBulle } from '../../components/XpBulle'
 import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 import SeanceTerrainClient from './SeanceTerrainClient'
+import { isoLocal } from '../../utils/dates'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -204,7 +205,7 @@ export default function SeanceClient() {
     if (!clientId || xpEnabledRef.current) return
     ;(async () => {
       try {
-        const { data: membres } = await supabase.from('groupe_membres').select('id').eq('client_id', clientId).limit(1)
+        const { data: membres } = await supabase.from('groupe_membres').select('groupe_id').eq('client_id', clientId).limit(1)
         if ((membres || []).length > 0) return // membre d'un groupe → pas d'animation XP
         const [{ data: profile }, { data: lastWellness }, byName] = await Promise.all([
           supabase.from('nutrition_profile').select('poids_kg').eq('client_id', clientId).maybeSingle(),
@@ -320,7 +321,7 @@ export default function SeanceClient() {
     ;(async () => {
       try {
         const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
-        const ydate = yesterday.toISOString().slice(0, 10)
+        const ydate = isoLocal(yesterday)
         const { data: ev } = await supabase.from('evenements').select('id, terminee')
           .eq('seance_id', id).gte('date', ydate)
           .order('date', { ascending: true }).limit(1).maybeSingle()
@@ -688,7 +689,7 @@ export default function SeanceClient() {
     if (!hasData) return
     try {
       const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
-      const ydate = yesterday.toISOString().slice(0, 10)
+      const ydate = isoLocal(yesterday)
       const { data: ev } = await supabase.from('evenements').select('id, terminee, notif_incomplete_envoyee')
         .eq('seance_id', id).gte('date', ydate)
         .order('date', { ascending: true }).limit(1).maybeSingle()
@@ -906,7 +907,7 @@ export default function SeanceClient() {
                 testType = newType
               }
               if (testType?.id) {
-                const today = new Date().toISOString().slice(0, 10)
+                const today = isoLocal()
                 await supabase.from('tests_resultats').insert({
                   test_type_id: testType.id,
                   client_id: clientId,

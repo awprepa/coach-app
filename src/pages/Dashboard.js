@@ -7,6 +7,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 import NotifIcon from '../components/NotifIcon'
 import Icon from '../components/Icon'
+import { isoLocal } from '../utils/dates'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -75,7 +76,7 @@ function getWeekBounds() {
   monday.setHours(0, 0, 0, 0)
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
-  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) }
+  return { start: isoLocal(monday), end: isoLocal(sunday) }
 }
 
 function formatNotifTime(isoStr) {
@@ -152,7 +153,7 @@ export default function Dashboard() {
   }, [])
 
   async function fetchAll() {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     const { start, end } = getWeekBounds()
 
     const [
@@ -296,7 +297,7 @@ export default function Dashboard() {
 
   if (loading) return <div style={S.centered}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = isoLocal()
   const dateLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   // Exclure les clients inactifs de tous les calculs du dashboard
@@ -341,7 +342,7 @@ export default function Dashboard() {
 
   // Clients sans wellness depuis 3+ jours (actifs uniquement)
   const trois = new Date(todayDate); trois.setDate(trois.getDate() - 3)
-  const troisStr = trois.toISOString().slice(0, 10)
+  const troisStr = isoLocal(trois)
   const sansWellness = clientsActifs.filter(c => {
     const lastEntry = c.wellness_week?.sort((a, b) => b.date.localeCompare(a.date))[0]
     return !lastEntry || lastEntry.date < troisStr

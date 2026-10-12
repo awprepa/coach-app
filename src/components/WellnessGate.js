@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { sendNotif, getCoachId } from '../notifs'
 import BlessureButton from './BlessureButton'
+import { isoLocal } from '../utils/dates'
 
 const QUESTIONS = [
   { key: 'sommeil',  label: 'Sommeil',  desc: ['Très mauvais', 'Mauvais', 'Bien', 'Excellent'] },
@@ -20,7 +21,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
   async function submit() {
     if (!allFilled) return
     setSaving(true)
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     const payload = { client_id: clientId, date: today, ...vals }
     if (poids !== '' && !isNaN(parseFloat(poids))) payload.poids = parseFloat(poids)
     await supabase.from('wellness').upsert(payload, { onConflict: 'client_id,date' })
@@ -131,7 +132,7 @@ export default function WellnessGate({ children }) {
       if (!session?.user) return
 
       const userId = session.user.id
-      const today  = new Date().toISOString().slice(0, 10)
+      const today  = isoLocal()
       const key    = `wellness_shown_${userId}_${today}`
 
       if (localStorage.getItem(key)) return

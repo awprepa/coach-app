@@ -19,6 +19,7 @@ import ModaleContratASigner from '../components/ModaleContratASigner'
 import { CURRENT_CONDITIONS_VERSION } from './Conditions'
 import { loadClientAllSets, loadClientBodyweight } from '../data/exerciseHistory'
 import { computeExerciseXp, levelFromXp } from '../data/xpSystem'
+import { isoLocal } from '../utils/dates'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -93,7 +94,7 @@ export default function AccueilClient() {
   }, [client?.id])
 
   async function loadNutritionToday(clientId) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     const { data: plan } = await supabase
       .from('nutrition_plans')
       .select('id, date_debut')
@@ -144,7 +145,7 @@ export default function AccueilClient() {
   // quand le coach ou le client ajoute / modifie / supprime depuis n'importe où
   useEffect(() => {
     if (!client?.id) return
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     const { start, end } = getWeekBounds()
     const channel = supabase
       .channel(`accueil-events-${client.id}`)
@@ -232,7 +233,7 @@ export default function AccueilClient() {
         }
       }
 
-      const today = new Date().toISOString().slice(0, 10)
+      const today = isoLocal()
 
       const { data: evs } = await supabase
         .from('evenements').select('*').eq('client_id', clientData.id)
@@ -300,7 +301,7 @@ export default function AccueilClient() {
   if (!client)  return <div style={styles.centered}><p style={{ color: '#888' }}>Aucun profil trouvé.</p></div>
 
   const initiales = `${client.prenom?.[0] || ''}${client.nom?.[0] || ''}`.toUpperCase()
-  const todayStr  = new Date().toISOString().slice(0, 10)
+  const todayStr  = isoLocal()
 
   return (
     <div style={{ ...styles.page, ...fadeStyle }}>

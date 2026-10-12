@@ -4,6 +4,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
 import { compressImage } from '../../lib/compressImage'
+import { isoLocal } from '../../utils/dates'
 
 const DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 const MOIS_LABELS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -16,7 +17,7 @@ function DatePickerSheet({ value, max, onPick, onClose }) {
   const [y, m, d] = value.split('-').map(Number)
   const [viewY, setViewY] = useState(y)
   const [viewM, setViewM] = useState(m - 1)
-  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayISO = isoLocal()
   const firstDow = (new Date(viewY, viewM, 1).getDay() + 6) % 7 // 0 = lundi
   const nbJours = new Date(viewY, viewM + 1, 0).getDate()
   const cells = []
@@ -95,7 +96,7 @@ export default function PhotosClient() {
   const fadeStyle = usePageFade()
   const fileRef   = useRef(null)
   const [client, setClient]   = useState(null)
-  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate]       = useState(isoLocal())
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [files, setFiles]     = useState([])       // File[]
   const [uploading, setUploading] = useState(false)
@@ -162,7 +163,7 @@ export default function PhotosClient() {
   }
 
   const rappel = client?.photo_reminder_dow != null ? DOW[client.photo_reminder_dow] : null
-  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayISO = isoLocal()
   const fmtDate = iso => {
     const [yy, mm, dd] = iso.split('-').map(Number)
     return new Date(yy, mm - 1, dd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })

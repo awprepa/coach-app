@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import ClientPicker from '../components/ClientPicker'
+import { isoLocal } from '../utils/dates'
 
 const LINE_COLORS = ['#333333', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
 
@@ -16,7 +17,7 @@ export default function Tests() {
   const [newTypeNom, setNewTypeNom]     = useState('')
   const [newTypeUnite, setNewTypeUnite] = useState('')
   const [showAddResult, setShowAddResult] = useState(false)
-  const [newResult, setNewResult] = useState({ client_id: '', valeur: '', date: new Date().toISOString().slice(0, 10), notes: '' })
+  const [newResult, setNewResult] = useState({ client_id: '', valeur: '', date: isoLocal(), notes: '' })
   const [loading, setLoading] = useState(true)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,7 +76,7 @@ export default function Tests() {
     })
     if (error) { alert(error.message); return }
     await fetchResultats(selectedType.id)
-    setNewResult({ client_id: '', valeur: '', date: new Date().toISOString().slice(0, 10), notes: '' })
+    setNewResult({ client_id: '', valeur: '', date: isoLocal(), notes: '' })
     setShowAddResult(false)
   }
 

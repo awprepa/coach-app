@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
+import { isoLocal } from '../../utils/dates'
 
 const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']
 function formatDate(str) {
@@ -8,7 +9,7 @@ function formatDate(str) {
   const d = new Date(str + 'T12:00:00')
   return `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 }
-function todayISO() { return new Date().toISOString().slice(0, 10) }
+function todayISO() { return isoLocal() }
 // Remonte le champ au centre de l'écran une fois le clavier déployé (iOS ne
 // recadre pas le viewport autour du champ actif, et ClientBottomNav étant en
 // position fixed il finit par flotter au-dessus du clavier et cacher la ligne).

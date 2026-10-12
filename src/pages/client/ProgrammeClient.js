@@ -83,7 +83,7 @@ export default function ProgrammeClient() {
     // On laisse la RLS restreindre groupe_membres au client courant
     // (policy: client_id = current_client_id()) → pas de dépendance à un ID.
     const [{ data: gm }, { data: cl }] = await Promise.all([
-      supabase.from('groupe_membres').select('id').limit(1),
+      supabase.from('groupe_membres').select('groupe_id').limit(1),
       supabase.from('clients').select('peut_creer_seances').eq('id', prog.client_id).maybeSingle(),
     ])
     setCanCreate((gm || []).length > 0 || (cl?.peut_creer_seances === true))

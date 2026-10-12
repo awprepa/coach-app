@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { isoLocal } from '../utils/dates'
 
 const TYPE_LABELS = { vmi: 'VMI', vma: 'VMA', '30m': '30m', '50m': '50m', '30-15': '30-15 IFT' }
 const TYPE_UNITS  = { vmi: 'km/h', vma: 'km/h', '30m': 's', '50m': 's', '30-15': '' }
@@ -28,7 +29,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
   const [expandedId, setExpandedId] = useState(null)
   const [sortMode, setSortMode] = useState('valeur') // 'valeur' | 'amelioration'
   const [showAdd, setShowAdd] = useState(false)
-  const [addForm, setAddForm] = useState({ joueur_id: '', type: '', valeur: '', date: new Date().toISOString().slice(0, 10), notes: '' })
+  const [addForm, setAddForm] = useState({ joueur_id: '', type: '', valeur: '', date: isoLocal(), notes: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { load() }, [groupeId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -124,7 +125,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
   }, [joueurs, selectedType, selectedPlayerId])
 
   function openAdd(joueurId) {
-    setAddForm({ joueur_id: joueurId || '', type: selectedType || availableTypes[0] || 'vmi', valeur: '', date: new Date().toISOString().slice(0, 10), notes: '' })
+    setAddForm({ joueur_id: joueurId || '', type: selectedType || availableTypes[0] || 'vmi', valeur: '', date: isoLocal(), notes: '' })
     setShowAdd(true)
   }
 

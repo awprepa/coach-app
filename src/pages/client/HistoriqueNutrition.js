@@ -4,8 +4,9 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContai
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
+import { isoLocal } from '../../utils/dates'
 
-function toISO(date) { return date.toISOString().slice(0, 10) }
+function toISO(date) { return isoLocal(date) }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return toISO(d) }
 
 function getPlanDayNumber(dateISO, plan) {

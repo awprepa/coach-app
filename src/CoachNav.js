@@ -139,9 +139,9 @@ export default function CoachNav() {
       </NavLink>
       <div className={`coachnav-items${menuOpen ? ' open' : ''}`}>
         {NAV.map(item => (
-          <NavLink key={item.to} to={item.to} end={item.end} className="coachnav-link" onClick={() => setMenuOpen(false)}>
+          <NavLink key={item.to} to={item.to} end={item.end} className="coachnav-link" title={item.label} aria-label={item.label} onClick={() => setMenuOpen(false)}>
             <span className="coachnav-ico">{ICONS[item.icon]}</span>
-            {item.label}
+            <span className="coachnav-txt">{item.label}</span>
             {item.to === '/' && <span className="coachnav-badge" style={{visibility: newClients > 0 ? 'visible' : 'hidden'}}>{newClients}</span>}
             {item.to === '/messages' && unreadMsgs > 0 && <span className="coachnav-badge coachnav-badge-msg">{unreadMsgs}</span>}
           </NavLink>
@@ -155,7 +155,7 @@ export default function CoachNav() {
             aria-expanded={plusOpen}
           >
             <span className="coachnav-ico">{ICONS.plus}</span>
-            Plus
+            <span className="coachnav-txt">Plus</span>
           </button>
         </div>
 
@@ -276,6 +276,15 @@ const CSS = `
 /* Hamburger + déconnexion mobile : inexistants sur desktop */
 .coachnav-burger{display:none;}
 .coachnav-logout-m{display:none;}
+
+/* Écrans moyens (821–1240px) : la barre ne tient plus en entier. Les entrées
+   n'affichent que leur icône (infobulle au survol), sauf la page active.
+   Avant, les dernières entrées étaient coupées (« Messa… ») ou invisibles. */
+@media (min-width: 821px) and (max-width: 1240px){
+  .coachnav{gap:12px;padding:0 16px;}
+  .coachnav-link:not(.active) .coachnav-txt{display:none;}
+  .coachnav-link{padding:8px 9px;}
+}
 
 /* ── Mobile uniquement (≤820px) — le desktop au-dessus est strictement inchangé ── */
 @media (max-width: 820px){

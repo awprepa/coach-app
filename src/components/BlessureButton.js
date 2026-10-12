@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { getCoachId, sendNotif } from '../notifs'
+import { isoLocal } from '../utils/dates'
 
 export const ZONES = [
   { v: 'haut',    label: 'Haut du corps' },
@@ -27,7 +28,7 @@ export function parseDureeToDate(text) {
   else if (unit.startsWith('an')) days = n * 365
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return isoLocal(d)
 }
 
 export function formatRetour(dateRetour) {
@@ -115,7 +116,7 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
         await supabase.from('joueur_blessures').update(payload).eq('id', activeEpisodeId)
       } else {
         const { data } = await supabase.from('joueur_blessures')
-          .insert({ joueur_id: joueurId, date_debut: new Date().toISOString().slice(0, 10), ...payload })
+          .insert({ joueur_id: joueurId, date_debut: isoLocal(), ...payload })
           .select('id').maybeSingle()
         if (data) setActiveEpisodeId(data.id)
       }
@@ -125,7 +126,7 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
       // "Je suis apte" referme l'épisode sans effacer son historique (zone,
       // description, etc. restent visibles dans le suivi des blessures).
       await supabase.from('joueur_blessures')
-        .update({ statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), updated_at: new Date().toISOString() })
+        .update({ statut: 'ok', date_fin_reelle: isoLocal(), updated_at: new Date().toISOString() })
         .eq('id', activeEpisodeId)
       setActiveEpisodeId(null)
     }

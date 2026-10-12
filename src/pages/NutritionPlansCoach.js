@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { isoLocal } from '../utils/dates'
 
 const STATUT_CONFIG = {
   brouillon: { label: 'Brouillon', bg: '#fef9c3', color: '#854d0e' },
@@ -16,7 +17,7 @@ const MEAL_LABELS = {
   collation_2: { label: 'Collation 2', color: '#f97316' },
 }
 
-function toISO(date) { return date.toISOString().slice(0, 10) }
+function toISO(date) { return isoLocal(date) }
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -383,7 +384,7 @@ function DayAdherenceCard({ day }) {
   const { iso, label, total, fait, horsplan, saute, nonLog, kcalMange, kcalPrevu, mealStats } = day
   const loggued = fait + horsplan + saute
   const adherPct = total > 0 ? Math.round((fait + horsplan) / total * 100) : null
-  const isToday = iso === new Date().toISOString().slice(0, 10)
+  const isToday = iso === isoLocal()
 
   const dotColor = adherPct === null ? '#e5e7eb'
     : adherPct >= 80 ? '#16a34a'

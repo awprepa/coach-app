@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { sendNotif } from '../notifs'
 import ClientPicker from '../components/ClientPicker'
+import { isoLocal } from '../utils/dates'
 
 // Références scientifiques :
 // - ACWR (Acute:Chronic Workload Ratio) — Gabbett TJ (2016) : zone optimale 0.8–1.3
@@ -158,7 +159,7 @@ export default function ChargeEntrainement() {
         for (let d = 0; d < 7; d++) {
           const dd = new Date(weekStart)
           dd.setDate(dd.getDate() + d)
-          const dateStr = dd.toISOString().split('T')[0]
+          const dateStr = isoLocal(dd)
           const entry = wellnessMap[dateStr]
           if (entry && (entry.fatigue || entry.douleurs)) {
             const val = ((entry.fatigue || 0) + (entry.douleurs || 0)) / 2
@@ -799,7 +800,7 @@ async function loadExerciseWeights(cid, progId = null) {
     prog = progs.find(p => p.id === progId) || progs[0]
   } else {
     const now = new Date()
-    const today = now.toISOString().slice(0, 10)
+    const today = isoLocal(now)
     prog = progs.find(p => {
       if (!p.date_debut) return false
       if (p.date_debut > today) return false // skip programmes not yet started
@@ -1010,7 +1011,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
     setVideoProgs(progs || [])
     if (!progs?.length) { setVideoProgId(null); return }
     const now = new Date()
-    const today = now.toISOString().slice(0, 10)
+    const today = isoLocal(now)
     const actif = progs.find(p => {
       if (!p.date_debut) return false
       if (p.date_debut > today) return false
@@ -1186,7 +1187,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         for (let d = 0; d < 7; d++) {
           const dd = new Date(weekStart)
           dd.setDate(dd.getDate() + d)
-          const dateStr = dd.toISOString().split('T')[0]
+          const dateStr = isoLocal(dd)
           const entry = wellnessMap[dateStr]
           if (entry && (entry.fatigue || entry.douleurs)) {
             dayScores.push(((entry.fatigue || 0) + (entry.douleurs || 0)) / 2)
@@ -1653,7 +1654,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 </thead>
                 <tbody>
                   {(seancesWithExos || [{ nom: null, exercises }]).map((seance, si) => (
-                    <>
+                    <Fragment key={seance.id ?? si}>
                       {/* En-tête séance */}
                       {seance.nom && (
                         <tr key={`seance-header-${seance.id ?? si}`}>
@@ -1678,7 +1679,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                         })}
                         <td colSpan={nbExtraCols} />
                       </tr>
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

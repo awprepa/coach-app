@@ -246,6 +246,11 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   }, [evenements])
   const matchsList = useMemo(() => evenements.filter(e => e.type === 'match'), [evenements])
   const nbEntrainements = useMemo(() => evenements.filter(e => e.type === 'entrainement').length, [evenements])
+  // Matchs du groupe + matchs FFR synchronisés (un seul par date si les deux existent)
+  const nbMatchs = useMemo(() => new Set([
+    ...matchsList.map(m => m.date),
+    ...matchsFFR.filter(m => m.date_match).map(m => m.date_match),
+  ]).size, [matchsList, matchsFFR])
   const today = new Date(); const todayKey = ymd(today.getFullYear(), today.getMonth(), today.getDate())
   const ffrByDay = useMemo(() => {
     const out = {}
@@ -808,7 +813,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const wrap = gridRef.current
     if (!wrap) return
     const col = wrap.querySelector(`[data-mcol="${today.getFullYear()}-${today.getMonth()}"]`)
-    if (col) wrap.scrollTo({ left: Math.max(0, col.offsetLeft - 24), behavior: smooth ? 'smooth' : 'auto' })
+    if (col) wrap.scrollTo({ left: Math.max(0, col.offsetLeft), behavior: smooth ? 'smooth' : 'auto' })
   }
   useEffect(() => { if (!loading && calTab === 'calendrier') scrollToToday() }, [loading, groupe?.id, startYear, calTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -942,7 +947,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       {calTab === 'calendrier' && (<>
       {/* ── Résumé + légende ── */}
       <div style={{ ...S.summary, borderBottom: `2px solid color-mix(in srgb, ${groupColor} 30%, #e6e8ec)`, paddingBottom: 12 }}>
-        <Stat v={matchsList.length} l="Matchs" color={groupColor} />
+        <Stat v={nbMatchs} l="Matchs" color={groupColor} />
         <span style={S.sep} />
         <Stat v={nbEntrainements} l="Entraînements" color={groupColor} />
         <span style={S.sep} />
@@ -953,7 +958,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
           ))}
           <span style={S.sep} />
           <Leg c={groupColor} t="Entraînement" />
-          <Leg c={groupColor} t="Musculation" />
+          <Leg c={TYPES.muscu.color} t="Musculation" />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { parseDureeToDate, formatRetour } from './BlessureButton'
+import { isoLocal } from '../utils/dates'
 
 const ZONES_PRECISES = ['Cheville', 'Genou', 'Ischio-jambiers', 'Mollet', 'Cuisse', 'Épaule', 'Dos', 'Tête / Cou', 'Poignet / Main', 'Autre']
 const TYPES_LESION = [
@@ -73,7 +74,7 @@ function joursDepuis(dateStr) {
   return Math.max(0, Math.round((new Date() - new Date(dateStr + 'T00:00:00')) / 86400000))
 }
 function dureeEpisode(ep) {
-  const fin = ep.date_fin_reelle || new Date().toISOString().slice(0, 10)
+  const fin = ep.date_fin_reelle || isoLocal()
   return Math.max(0, Math.round((new Date(fin + 'T00:00:00') - new Date(ep.date_debut + 'T00:00:00')) / 86400000))
 }
 function formatDateFull(d) {
@@ -237,7 +238,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       joueurId: joueurId || '', episodeId: null,
       zone_precise, type_lesion, mecanisme: '', gravite: '',
       niveau: 'repos_total', etape_index: 0, description: '', duree_estimee: '', date_retour_prevue: '',
-      date_debut: new Date().toISOString().slice(0, 10),
+      date_debut: isoLocal(),
       protocole_id: guess?.id || '', protocoleTouched: false,
     })
   }
@@ -322,7 +323,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
 
   async function marquerApte(ep, tests_valides) {
     await supabase.from('joueur_blessures')
-      .update({ statut: 'ok', date_fin_reelle: new Date().toISOString().slice(0, 10), tests_valides: tests_valides ?? ep.tests_valides, updated_at: new Date().toISOString() })
+      .update({ statut: 'ok', date_fin_reelle: isoLocal(), tests_valides: tests_valides ?? ep.tests_valides, updated_at: new Date().toISOString() })
       .eq('id', ep.id)
     setTestsPanel(null)
     load()

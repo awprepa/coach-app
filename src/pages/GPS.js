@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, ResponsiveContainer
 } from 'recharts'
+import { isoLocal } from '../utils/dates'
 
 // ── MÉTRIQUES DISPONIBLES ──────────────────────────────────────────────────
 const METRICS = [
@@ -141,7 +142,7 @@ function deriveSessionInfo(sheetName, fileName) {
     }
   }
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: isoLocal(),
     type: '', nom: (fileName || '').replace(/\.[^.]+$/, ''),
     semaine: null, sport: null, categorie: null,
   }
@@ -164,7 +165,7 @@ async function parseFile(file) {
     const ws = wb.Sheets[wb.SheetNames[0]]
     const lignes = parseSheet(ws)
     if (lignes.length) {
-      sessions.push({ date: new Date().toISOString().slice(0, 10), type: '', nom: file.name.replace(/\.[^.]+$/, ''), lignes })
+      sessions.push({ date: isoLocal(), type: '', nom: file.name.replace(/\.[^.]+$/, ''), lignes })
     }
   }
   return sessions

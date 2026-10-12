@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
+import { isoLocal } from '../../utils/dates'
 
 // ── Ajouter un aliment ───────────────────────────────────────────────────────
 // Deux temps : on cherche l'aliment dans CIQUAL (table officielle ANSES), puis
@@ -45,7 +46,7 @@ export default function AjouterAliment() {
   const fadeStyle = usePageFade()
   const [params]  = useSearchParams()
   const [repas, setRepas] = useState(params.get('repas') || 'dejeuner')
-  const date  = params.get('date')  || new Date().toISOString().slice(0, 10)
+  const date  = params.get('date')  || isoLocal()
 
   const [client, setClient]   = useState(null)
   const [terme, setTerme]     = useState('')

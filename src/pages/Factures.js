@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
 import { supabase } from '../supabase'
 import ClientPicker from '../components/ClientPicker'
+import { isoLocal } from '../utils/dates'
 
 /* ── Icônes SVG ─────────────────────────────────────────────────────────── */
 const Ico = {
@@ -33,12 +34,12 @@ const SETTINGS_KEYS = ['facture_nom', 'facture_adresse', 'facture_siret', 'factu
 function newLigne() { return { id: Math.random().toString(36).slice(2), description: '', quantite: 1, prix: 0 } }
 
 const EMPTY_FORM = () => ({
-  client_id: '', date_emission: new Date().toISOString().slice(0, 10),
+  client_id: '', date_emission: isoLocal(),
   date_echeance: '', notes: '', lignes: [newLigne()],
   dest_manuel: false, dest_nom: '', dest_adresse: '', dest_siret: '', dest_email: '',
 })
 
-const EMPTY_MANUAL = () => ({ client_id: '', montant: '', description: '', date_echeance: new Date().toISOString().slice(0, 10) })
+const EMPTY_MANUAL = () => ({ client_id: '', montant: '', description: '', date_echeance: isoLocal() })
 
 function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
 function initials(prenom, nom) { return `${(prenom||'?')[0]}${(nom||'?')[0]}`.toUpperCase() }
@@ -49,7 +50,7 @@ function engagementRestant(contrat) {
   if (!contrat) return null
   if (!contrat.engagement_mois) return 'Sans engagement'
   if (!contrat.date_fin) return null
-  const today = new Date().toISOString().slice(0, 10)
+  const today = isoLocal()
   if (contrat.date_fin < today) return 'Terminé'
   const jours = Math.ceil((new Date(contrat.date_fin) - new Date(today)) / 86400000)
   if (jours < 30) return `${jours} j restant${jours > 1 ? 's' : ''}`
@@ -63,7 +64,7 @@ function engagementRestant(contrat) {
 function buildRows(paiements) {
   const byClient = {}
   paiements.forEach(p => { if (p.client_id) (byClient[p.client_id] ||= []).push(p) })
-  const today = new Date().toISOString().slice(0, 10)
+  const today = isoLocal()
 
   const rows = Object.values(byClient).map(rows => {
     const client = rows[0].clients
@@ -142,7 +143,7 @@ export default function Factures() {
   // en direct depuis la date dans buildRows — ceci ne fait que garder la
   // donnée en base cohérente pour les autres vues qui liraient `statut`).
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     paiements.forEach(async p => {
       if (p.statut === 'en_attente' && p.date_echeance && p.date_echeance < today) {
         await supabase.from('paiements').update({ statut: 'en_retard' }).eq('id', p.id)
@@ -288,7 +289,7 @@ export default function Factures() {
 
   // ── Échéances / paiements ────────────────────────────────────────────────
   async function marquerPaye(p) {
-    await supabase.from('paiements').update({ statut: 'paye', date_paiement: new Date().toISOString().slice(0, 10) }).eq('id', p.id)
+    await supabase.from('paiements').update({ statut: 'paye', date_paiement: isoLocal() }).eq('id', p.id)
     loadPaiements()
   }
 

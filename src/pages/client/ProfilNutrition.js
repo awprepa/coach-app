@@ -5,6 +5,7 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import ScanHistoryCard from '../../components/ScanHistoryCard'
 import usePageFade from '../../hooks/usePageFade'
 import Icon from '../../components/Icon'
+import { isoLocal } from '../../utils/dates'
 
 const OBJECTIFS = [
   { key: 'masse', label: 'Prise de masse',          desc: 'Développer muscle et force' },
@@ -150,7 +151,7 @@ export default function ProfilNutrition() {
     if (!client || !computed) return
     setSaving(true); setError(null)
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = isoLocal()
 
     const { error: profErr } = await supabase.from('nutrition_profile').upsert({
       client_id:         client.id,

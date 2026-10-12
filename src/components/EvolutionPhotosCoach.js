@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { compressImage } from '../lib/compressImage'
+import { isoLocal } from '../utils/dates'
 
 // Poses : comparer une face avec une face. « Toutes » reste possible pour
 // balayer une date, mais le filtre par pose est ce qui rend la comparaison juste.
@@ -28,7 +29,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
   const [photos, setPhotos]     = useState([])     // [{ id, date, storage_path, uploaded_by, url }]
   const [loading, setLoading]   = useState(true)
   const [reminder, setReminder] = useState('')
-  const [addDate, setAddDate]   = useState(new Date().toISOString().slice(0, 10))
+  const [addDate, setAddDate]   = useState(isoLocal())
   const [uploading, setUploading] = useState(false)
   const [compare, setCompare]   = useState([])     // ids sélectionnés pour comparaison (max 2)
   const [viewer, setViewer]     = useState(null)   // url plein écran
@@ -129,7 +130,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
           style={{ flex: '1 1 140px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}>
           {DOW.map(d => <option key={d.v} value={d.v}>{d.l}</option>)}
         </select>
-        <input type="date" value={addDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setAddDate(e.target.value)}
+        <input type="date" value={addDate} max={isoLocal()} onChange={e => setAddDate(e.target.value)}
           style={{ flex: '1 1 130px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', background: 'white' }} />
         <select value={addPose} onChange={e => setAddPose(e.target.value)}
           style={{ flex: '1 1 110px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', padding: '0.5rem 0.6rem', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}
@@ -247,7 +248,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
 
             <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date de la photo</p>
             <div style={{ display: 'flex', gap: 7 }}>
-              <input type="date" value={dateEditVal} max={new Date().toISOString().slice(0, 10)}
+              <input type="date" value={dateEditVal} max={isoLocal()}
                 onChange={e => setDateEditVal(e.target.value)}
                 style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '10px 11px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: '0.85rem', background: 'white', fontFamily: 'inherit' }} />
               <button onClick={() => definirDate(poseEdit, dateEditVal)} disabled={dateEditVal === poseEdit.date}

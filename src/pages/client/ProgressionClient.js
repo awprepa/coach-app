@@ -11,6 +11,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
+import { isoLocal } from '../../utils/dates'
 
 // Palette façon rangs de jeu vidéo (fer → bronze → argent → or → platine → diamant → champion)
 const RANK_COLORS = {
@@ -470,7 +471,7 @@ export default function ProgressionClient() {
             if (!dateDebutStr) return
             const [yy, mm, dd] = dateDebutStr.split('-').map(Number)
             const weekDate = new Date(Date.UTC(yy, mm - 1, dd + (s.semaine - 1) * 7, 12))
-            dateStr = weekDate.toISOString().split('T')[0]
+            dateStr = isoLocal(weekDate)
           }
 
           const nom = ex.nom || 'Exercice'

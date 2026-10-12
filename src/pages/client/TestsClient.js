@@ -5,6 +5,7 @@ import { supabase } from '../../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
+import { isoLocal } from '../../utils/dates'
 
 export default function TestsClient() {
   const navigate = useNavigate()
@@ -14,7 +15,7 @@ export default function TestsClient() {
   const [selectedType, setSelectedType] = useState(null)
   const [showForm, setShowForm]     = useState(false)
   const [newVal, setNewVal]         = useState('')
-  const [newDate, setNewDate]       = useState(new Date().toISOString().slice(0, 10))
+  const [newDate, setNewDate]       = useState(isoLocal())
   const [newNotes, setNewNotes]     = useState('')
   const [saving, setSaving]         = useState(false)
   const [loading, setLoading]       = useState(true)
@@ -66,7 +67,7 @@ export default function TestsClient() {
       ...prev,
       [selectedType.id]: [...(prev[selectedType.id] || []), data].sort((a, b) => a.date.localeCompare(b.date)),
     }))
-    setNewVal(''); setNewNotes(''); setNewDate(new Date().toISOString().slice(0, 10))
+    setNewVal(''); setNewNotes(''); setNewDate(isoLocal())
     setShowForm(false)
     setSaving(false)
   }

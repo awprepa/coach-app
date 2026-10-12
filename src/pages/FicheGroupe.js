@@ -10,6 +10,7 @@ import GroupeTestsView from '../components/GroupeTestsView'
 import GroupeBlessuresView from '../components/GroupeBlessuresView'
 import GroupeClassementView from '../components/GroupeClassementView'
 import Icon from '../components/Icon'
+import { isoLocal } from '../utils/dates'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -49,7 +50,7 @@ function getWeekBounds() {
   monday.setHours(0, 0, 0, 0)
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
-  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) }
+  return { start: isoLocal(monday), end: isoLocal(sunday) }
 }
 
 export default function FicheGroupe() {
@@ -223,7 +224,7 @@ export default function FicheGroupe() {
     }
 
     // Prochain entraînement (le plus proche à venir) + ses blocs/séquences
-    const todayISO = new Date().toISOString().slice(0, 10)
+    const todayISO = isoLocal()
     const { data: nextEvts } = await supabase.from('groupe_evenements')
       .select('*').eq('groupe_id', id).eq('type', 'entrainement')
       .gte('date', todayISO).order('date').order('heure').limit(1)

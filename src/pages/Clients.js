@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { extractColorsFromImage } from '../utils/colorExtract'
 import Icon from '../components/Icon'
+import { isoLocal } from '../utils/dates'
 
 const PALETTE_GROUPES = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
@@ -80,7 +81,7 @@ export default function Clients() {
 
   async function fetchAll() {
     setLoading(true)
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     const [
       { data: clientsData, error },
       { data: wData },

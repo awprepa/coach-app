@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import { isoLocal } from '../../utils/dates'
 
 export default function CompetitionClient() {
   const [loading, setLoading]       = useState(true)
@@ -52,7 +53,7 @@ export default function CompetitionClient() {
     setClassement(c || [])
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = isoLocal()
   const prochains = matchs.filter(m => m.date_match >= today)
   const resultats = matchs.filter(m => m.date_match < today).reverse()
   const prochain  = prochains[0]

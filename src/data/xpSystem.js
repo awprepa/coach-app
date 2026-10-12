@@ -1,3 +1,4 @@
+import { isoLocal } from '../utils/dates'
 // ─── Système de niveaux / XP ────────────────────────────────────────────────
 //
 // Deux niveaux distincts des rangs de force (Fer→Champion, basés sur le 1RM) :
@@ -143,7 +144,7 @@ export async function fetchExerciceSetsByName(supabase, clientId) {
       if (!dateDebutStr) return
       const [yy, mm, dd] = dateDebutStr.split('-').map(Number)
       const weekDate = new Date(Date.UTC(yy, mm - 1, dd + (s.semaine - 1) * 7, 12))
-      dateStr = weekDate.toISOString().split('T')[0]
+      dateStr = isoLocal(weekDate)
     }
 
     const key = `${s.exercice_id}-${s.semaine}-${s.serie}`

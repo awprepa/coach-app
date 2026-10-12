@@ -10,6 +10,7 @@ import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
 import ClientListSidebar from '../components/ClientListSidebar'
 import { ensureJoueurId, getActiveBlessure, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
+import { isoLocal } from '../utils/dates'
 
 
 const OFFRES = {
@@ -178,9 +179,9 @@ export default function FicheClient() {
   }
 
   async function fetchProchaineSeance() {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoLocal()
     const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate() + (7 - weekEnd.getDay()))
-    const weekEndISO = weekEnd.toISOString().slice(0, 10)
+    const weekEndISO = isoLocal(weekEnd)
     const [{ data: next }, { data: week }] = await Promise.all([
       supabase.from('evenements').select('id, date, titre, type')
         .eq('client_id', id).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
@@ -311,8 +312,16 @@ export default function FicheClient() {
     if (!progs?.length) return
     const { data: seancesAll } = await supabase.from('seances').select('id, nom').in('programme_id', progs.map(p => p.id))
     if (!seancesAll?.length) return
-    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id, muscles_primaires, repetitions').in('seance_id', seancesAll.map(s => s.id))
+    const { data: exosAll } = await supabase.from('exercices').select('id, nom, code, seance_id, repetitions, bibliotheque_id').in('seance_id', seancesAll.map(s => s.id))
     if (!exosAll?.length) return
+    // Groupe musculaire : catégorie de l'exercice dans la bibliothèque
+    // (la table des exercices n'a pas de colonne de muscles).
+    const biblioIds = [...new Set(exosAll.map(e => e.bibliotheque_id).filter(Boolean))]
+    const { data: biblio } = biblioIds.length
+      ? await supabase.from('bibliotheque_exercices').select('id, categorie').in('id', biblioIds)
+      : { data: [] }
+    const categorieDe = {}
+    ;(biblio || []).forEach(b => { categorieDe[b.id] = b.categorie || '' })
     const { data: tracking } = await supabase.from('serie_tracking').select('exercice_id, semaine, poids, reps_reelles, valide').in('exercice_id', exosAll.map(e => e.id)).eq('valide', true)
     if (!tracking?.length) return
 
@@ -342,7 +351,7 @@ export default function FicheClient() {
       const key = exo.nom
       if (!byExo[key]) {
         byExo[key] = {}
-        byExoGroupe[key] = exo.muscles_primaires?.[0] || ''
+        byExoGroupe[key] = categorieDe[exo.bibliotheque_id] || ''
       }
       const sem = `S${t.semaine}`
       if (byExo[key][sem] == null || poids > byExo[key][sem]) byExo[key][sem] = poids
@@ -401,8 +410,8 @@ export default function FicheClient() {
   async function fetchNutrition() {
     setNutritionPlan(null)
     setNutritionAdher([])
-    const today = new Date().toISOString().slice(0, 10)
-    const from7  = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
+    const today = isoLocal()
+    const from7  = isoLocal(new Date(Date.now() - 6 * 86400000))
 
     const [planRes, profileRes] = await Promise.all([
       supabase.from('nutrition_plans')
@@ -436,7 +445,7 @@ export default function FicheClient() {
 
     const adher = []
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+      const d = isoLocal(new Date(Date.now() - i * 86400000))
       const dayNum  = getDayNum(d)
       const planDay = dayNum ? (plan.nutrition_plan_days || []).find(pd => pd.jour_numero === dayNum) : null
       const planMeals = planDay?.nutrition_plan_meals || []
@@ -526,10 +535,10 @@ export default function FicheClient() {
             <select value={form.offre} onChange={e => {
               const updated = { ...form, offre: e.target.value, engagement_mois: null }
               if (e.target.value === 'essai') {
-                const base = updated.date_debut || new Date().toISOString().slice(0, 10)
+                const base = updated.date_debut || isoLocal()
                 const fin = new Date(base + 'T00:00:00')
                 fin.setMonth(fin.getMonth() + 1)
-                updated.date_fin = fin.toISOString().slice(0, 10)
+                updated.date_fin = isoLocal(fin)
               }
               setForm(updated)
             }} style={styles.select}>
@@ -553,12 +562,12 @@ export default function FicheClient() {
                   const active = (form.engagement_mois || null) === opt.val
                   return (
                     <button key={String(opt.val)} type="button" onClick={() => {
-                      const base = form.date_debut || new Date().toISOString().slice(0, 10)
+                      const base = form.date_debut || isoLocal()
                       let date_fin = form.date_fin || null
                       if (opt.val) {
                         const fin = new Date(base + 'T00:00:00')
                         fin.setMonth(fin.getMonth() + opt.val)
-                        date_fin = fin.toISOString().slice(0, 10)
+                        date_fin = isoLocal(fin)
                       }
                       setForm({ ...form, engagement_mois: opt.val, date_fin })
                     }} style={{
@@ -979,7 +988,7 @@ export default function FicheClient() {
         const semaineActuelle = cycleActif?.date_debut
           ? Math.min(cycleActif.semaines, Math.max(1, Math.floor((todayD - new Date(cycleActif.date_debut + 'T00:00:00')) / (7 * 86400000)) + 1))
           : null
-        const todayISO = todayD.toISOString().slice(0, 10)
+        const todayISO = isoLocal(todayD)
         const latestW = wellness[0]
         const wellnessToday = latestW?.date === todayISO ? latestW : null
         const wAvg = wellnessToday ? (wellnessToday.sommeil + wellnessToday.fatigue + wellnessToday.douleurs + wellnessToday.stress) / 4 : null
@@ -1205,8 +1214,8 @@ export default function FicheClient() {
         {wellness.length === 0 ? (
           <div style={styles.emptyCard}>Aucune donnée wellness pour ce client.</div>
         ) : (() => {
-          const today = new Date().toISOString().slice(0, 10)
-          const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+          const today = isoLocal()
+          const yesterday = isoLocal(new Date(Date.now() - 86400000))
           const visible = showAllWellness ? wellness : wellness.slice(0, 5)
 
           return (
@@ -1370,7 +1379,7 @@ export default function FicheClient() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                 {nutritionAdher.map(({ date, fait, horsplan, saute, total, kcalPrevu, kcalMange, adherPct }) => {
                   const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
-                  const isToday  = date === new Date().toISOString().slice(0, 10)
+                  const isToday  = date === isoLocal()
                   const noData   = total === 0 || (fait + horsplan + saute) === 0
                   const dotColor = noData ? '#d1d5db' : adherPct >= 80 ? '#16a34a' : adherPct >= 50 ? '#d97706' : '#ef4444'
                   return (

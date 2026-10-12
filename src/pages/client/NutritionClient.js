@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
+import { isoLocal } from '../../utils/dates'
 
 // ── Journal alimentaire ──────────────────────────────────────────────────────
 // Écran d'accueil de l'onglet Nutrition. Il fonctionne SANS plan du coach : le
@@ -63,7 +64,7 @@ export default function NutritionClient() {
       setClient(data)
       if (!data) return
       // Plan actif éventuel (chargé une fois, il ne change pas d'un jour à l'autre)
-      const today = new Date().toISOString().slice(0, 10)
+      const today = isoLocal()
       const { data: p } = await supabase.from('nutrition_plans')
         .select('id, nom, date_debut').eq('client_id', data.id).eq('statut', 'actif')
         .lte('date_debut', today)

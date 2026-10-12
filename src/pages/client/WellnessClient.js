@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { isoLocal } from '../../utils/dates'
 
 const INDICATORS = [
   { key: 'sommeil',  label: 'Sommeil' },
@@ -35,7 +36,7 @@ export default function WellnessClient() {
   const [savingWeight, setSavingWeight] = useState(false)
   const [weightSaved, setWeightSaved] = useState(false)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = isoLocal()
 
   useEffect(() => {
     async function load() {

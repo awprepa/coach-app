@@ -72,6 +72,8 @@ function ContenuJour({ evs, ffr, y, m, d, groupColor, draggingId, h }) {
           return <div role="button" tabIndex={0} key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Tests${e._inherited ? ' (groupe principal)' : ''}`} style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: curseur, overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
         }
         const neutral = T.neutral
+        // la musculation garde sa couleur propre pour se distinguer des entraînements
+        const teinte = e.type === 'muscu' ? T.color : groupColor
         const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
         const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
         return (
@@ -80,8 +82,8 @@ function ContenuJour({ evs, ffr, y, m, d, groupColor, draggingId, h }) {
               fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: curseur,
               overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
               color: styleColor ? '#fff' : neutral ? '#5b626c' : '#3a4049',
-              background: styleColor || (neutral ? '#f0f2f5' : `color-mix(in srgb, ${groupColor} 12%, #fff)`),
-              borderLeft: `3px ${e._inherited ? 'dashed' : 'solid'} ${styleColor || (neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`)}`,
+              background: styleColor || (neutral ? '#f0f2f5' : `color-mix(in srgb, ${teinte} 12%, #fff)`),
+              borderLeft: `3px ${e._inherited ? 'dashed' : 'solid'} ${styleColor || (neutral ? '#c4ccd4' : `color-mix(in srgb, ${teinte} 65%, #fff)`)}`,
             }}>
             {txt}
           </div>

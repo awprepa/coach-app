@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { getCoachId, sendNotif } from '../notifs'
+import { isoLocal } from '../utils/dates'
 
 const EVENT_TYPES = [
   { value: 'seance',       label: 'Séance',        bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
@@ -73,7 +74,7 @@ function generateICS(events) {
   events.forEach(ev => {
     const d = ev.date.replace(/-/g, '')
     const next = new Date(ev.date + 'T00:00:00'); next.setDate(next.getDate() + 1)
-    const nd = next.toISOString().slice(0, 10).replace(/-/g, '')
+    const nd = isoLocal(next).replace(/-/g, '')
     lines.push('BEGIN:VEVENT', `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${nd}`,
       `SUMMARY:${ev.titre}`, `UID:awprepa-${ev.id}@awprepa.com`, 'END:VEVENT')
   })
@@ -122,7 +123,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
       const evs = eventsMap[ds] || []; const inCycle = !!cycleW
       cells.push(
         <div role="button" tabIndex={0} key={ds} onClick={() => onDayClick(day)} style={{
-          height: 46, overflow: 'hidden', boxSizing: 'border-box',
+          minHeight: 46, overflow: 'hidden', boxSizing: 'border-box',
           background: isSel ? 'var(--chip-bg)' : inCycle ? '#fffef5' : 'white',
           borderRadius: 8, padding: '5px 4px', cursor: 'pointer',
           border: isToday ? '2px solid var(--accent)' : inCycle ? '1px solid #f0ead0' : '1px solid #f3f4f6',

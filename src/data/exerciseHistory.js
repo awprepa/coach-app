@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { isoLocal } from '../utils/dates'
 
 // Version "légère" du chargement d'historique d'exercices (pour le calcul d'XP
 // uniquement — pas de formule 1RM, pas de RPE). Utilisée par les widgets qui
@@ -64,7 +65,7 @@ export async function loadClientAllSets(clientId) {
       if (!dateDebutStr) return
       const [yy, mm, dd] = dateDebutStr.split('-').map(Number)
       const weekDate = new Date(Date.UTC(yy, mm - 1, dd + (s.semaine - 1) * 7, 12))
-      dateStr = weekDate.toISOString().split('T')[0]
+      dateStr = isoLocal(weekDate)
     }
 
     const nom = ex.nom || 'Exercice'
