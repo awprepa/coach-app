@@ -5,6 +5,15 @@ const isLocalhost = Boolean(
 )
 
 export function register() {
+  // En développement (npm start), pas de service worker : son cache servait
+  // l'ancien code, et les modifications n'apparaissaient pas dans l'aperçu.
+  if (process.env.NODE_ENV !== 'production') {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {})
+      if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {})
+    }
+    return
+  }
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`
