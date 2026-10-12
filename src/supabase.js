@@ -112,6 +112,7 @@ class OfflineBuilder {
                 type: 'INVALIDATE_API_CACHE', table: this._table,
               })
             } catch {}
+            await _purgeApiCache(this._table)
           }
         }
         return res
@@ -200,6 +201,28 @@ class OfflineBuilder {
 }
 
 // ── Helpers cache ─────────────────────────────────────────────────────────
+// Vide, AVANT de rendre la main, les réponses d'API en cache (service worker)
+// liées à la table modifiée. Avant, la purge passait par un message asynchrone
+// au service worker : la relecture qui suit immédiatement un enregistrement
+// pouvait recevoir l'ancienne liste en cache et écraser la modification
+// affichée (l'entraînement « n'apparaissait » qu'après actualisation).
+// On purge aussi les lectures qui incluent la table dans un select imbriqué, et
+// toute la famille groupe_* (blocs, exercices, séquences, évènements…).
+async function _purgeApiCache(table) {
+  try {
+    if (typeof caches === 'undefined') return
+    const famille = table.startsWith('groupe_') ? 'groupe_' : table
+    const noms = (await caches.keys()).filter(n => n.startsWith('aw-api-'))
+    await Promise.all(noms.map(async nom => {
+      const cache = await caches.open(nom)
+      const requetes = await cache.keys()
+      await Promise.all(requetes
+        .filter(r => r.url.includes(table) || r.url.includes(famille))
+        .map(r => cache.delete(r)))
+    }))
+  } catch { /* le cache est un confort, jamais un blocage */ }
+}
+
 async function _cacheRows(table, rows) {
   try {
     const tbl = localDB.tables.find(t => t.name === table)

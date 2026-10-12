@@ -7,6 +7,7 @@ import { InheritedEventPreview } from './InheritedEventPreview'
 import { Leg, Stat } from './Petits'
 import { SeanceModal } from './SeanceModal'
 import { DayCell } from './DayCell'
+import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { dupliquerBlocs, dupliquerDocuments, loadBlocs, loadBlocsPour } from './blocs'
 import { WeekZoomModal } from './WeekZoomModal'
 import { CREATE_TYPES, DOW, HAS_BLOCS, MATCH_CATEGORIES, STYLE_COLORS, TYPES, buildMonths, iso, isoWeek, localISO, matchCatColor, seasonStartYear, ymd } from './constants'
@@ -153,6 +154,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   }, [groupe, seasonStart, seasonEnd])
 
   useEffect(() => { loadSeason() }, [loadSeason])
+  // Si le cache hors-ligne a servi une version périmée, le service worker prévient
+  // dès que la version fraîche arrive : on se met à jour sans actualiser la page.
+  useAutoRefresh(() => loadSeason(true))
 
   // Accès direct à un évènement précis (ex: clic sur "Prochain entraînement"
   // depuis le tableau de bord du groupe) — ouvre son panneau d'édition dès
