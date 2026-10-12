@@ -41,11 +41,11 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
       })
       // Alerte séparée si une note individuelle est basse (≤ 2/4) — même si
       // la moyenne globale reste correcte, ça peut cacher un signal fort.
-      const basses = QUESTIONS.filter(q => vals[q.key] <= 2).map(q => q.label)
+      const basses = QUESTIONS.filter(q => vals[q.key] <= 2).map(q => `${q.label} ${vals[q.key]}/4`)
       if (basses.length > 0) {
         await sendNotif(coachId, {
           titre: `⚠ Wellness bas — ${clientName || 'Un client'}`,
-          corps: `${basses.join(', ')} à surveiller (≤ 2/4)`,
+          corps: `${basses.join(', ')} (seuil ≤ 2/4)`,
           type: 'wellness_alerte',
           lien: `/client/${clientId}`,
         })

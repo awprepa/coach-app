@@ -358,7 +358,7 @@ export default function AccueilClient() {
       <div style={styles.content}>
         <div style={{ marginBottom: '1.75rem' }}>
           <p style={styles.label}>Bonjour,</p>
-          <h1 style={styles.title}>{client.prenom} 👋</h1>
+          <h1 style={styles.title}>{client.prenom}</h1>
           {client.objectif && <p style={styles.subtitle}>{client.objectif}</p>}
         </div>
 
