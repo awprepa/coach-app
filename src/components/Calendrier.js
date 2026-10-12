@@ -93,7 +93,7 @@ function EventChip({ ev, tiny = false }) {
       display: 'flex', alignItems: 'center', gap: 3,
     }}>
       {ev._isGroupe && !ev._isFFR && ev._groupeLogoUrl && (
-        <img src={ev._groupeLogoUrl} alt="" style={{ width: logoSize, height: logoSize, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
+        <img loading="lazy" src={ev._groupeLogoUrl} alt="" style={{ width: logoSize, height: logoSize, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
       )}
       {ev.titre}
     </span>
@@ -105,7 +105,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
   const cells = []
   cells.push(<div key="corner" />)
   JOURS.forEach(j => cells.push(
-    <div key={`h-${j}`} style={{ textAlign: 'center', fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', padding: '4px 0' }}>{j}</div>
+    <div key={`h-${j}`} style={{ textAlign: 'center', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', padding: '4px 0' }}>{j}</div>
   ))
   for (let row = 0; row < 6; row++) {
     const weekDays = days.slice(row * 7, row * 7 + 7)
@@ -192,7 +192,7 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
     <div style={{ width: '100%', overflowX: 'auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '24px repeat(7,1fr)', gap: 3, marginBottom: 3 }}>
         <div />
-        {JOURS.map(j => <div key={j} style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af' }}>{j}</div>)}
+        {JOURS.map(j => <div key={j} style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: '700', color: '#6b7280' }}>{j}</div>)}
       </div>
       {weeks.map((week, wi) => (
         <div key={wi} style={{ display: 'grid', gridTemplateColumns: '24px repeat(7,1fr)', gap: 3, marginBottom: 4, alignItems: 'stretch' }}>
@@ -458,12 +458,12 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
       return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           <input
-            type="text" placeholder="Titre *"
+            type="text" placeholder="Titre *" aria-label="Titre *"
             value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })}
             style={{ ...S.formInput, width: '100%', boxSizing: 'border-box' }}
           />
           <textarea
-            placeholder="Description (optionnel)..."
+            placeholder="Description (optionnel)..." aria-label="Description (optionnel)..."
             value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
             rows={2}
             style={{ ...S.formInput, width: '100%', boxSizing: 'border-box', resize: 'none', fontFamily: 'inherit', lineHeight: 1.4 }}
@@ -473,7 +473,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     }
     return (
       <input
-        type="text" placeholder="Titre de l'événement"
+        type="text" placeholder="Titre de l'événement" aria-label="Titre de l'événement"
         value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })}
         onKeyDown={e => e.key === 'Enter' && ajouterEvenement()}
         style={{ ...S.formInput, flex: 1, minWidth: 160 }}
@@ -538,7 +538,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                 </span>
               )}
             </p>
-            <button onClick={() => setSelectedDay(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            <button onClick={() => setSelectedDay(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
           </div>
 
           {selectedEvs.length > 0 ? (
@@ -574,7 +574,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                       <div style={{ width: 40, height: 40, borderRadius: 10,
                         background: 'rgba(255,255,255,.18)', border: '1.5px solid rgba(255,255,255,.4)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                        {url ? <img src={url} alt={initials} style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
+                        {url ? <img loading="lazy" src={url} alt={initials} style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
                         <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex', alignItems:'center', justifyContent:'center', fontSize:'.65rem', fontWeight:900 }}>{initials}</div>
                       </div>
                     )
@@ -625,7 +625,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                         <div style={{ minWidth: 0 }}>
                           <span style={{ fontWeight: '700', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             {ev._groupeLogoUrl && (
-                              <img src={ev._groupeLogoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 3, objectFit: 'cover', flexShrink: 0 }} />
+                              <img loading="lazy" src={ev._groupeLogoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 3, objectFit: 'cover', flexShrink: 0 }} />
                             )}
                             {ev.titre}
                           </span>
@@ -666,7 +666,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
               })}
             </div>
           ) : (
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', marginBottom: '0.875rem' }}>Aucun événement ce jour.</p>
+            <p style={{ color: '#6b7280', fontSize: '0.82rem', marginBottom: '0.875rem' }}>Aucun événement ce jour.</p>
           )}
 
           {!readOnly && (

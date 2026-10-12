@@ -83,5 +83,5 @@ const S = {
     maxWidth: 320,
   },
   emptyTitle: { fontWeight: 800, fontSize: '1.05rem', color: '#1a1a1a', margin: '0.5rem 0 0' },
-  emptyText: { fontSize: '0.85rem', color: '#9ca3af', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' },
+  emptyText: { fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' },
 }

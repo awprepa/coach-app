@@ -472,7 +472,7 @@ export default function Factures() {
 
   const facturePrint = factures.find(f => f.id === printId)
 
-  if (loading) return <div style={S.page}><p style={{ color: '#9ca3af' }}>Chargement…</p></div>
+  if (loading) return <div style={S.page}><p style={{ color: '#6b7280' }}>Chargement…</p></div>
 
   const rows = buildRows(paiements)
   const counts = { tous: rows.length, ok: 0, soon: 0, late: 0 }
@@ -585,8 +585,8 @@ export default function Factures() {
       {rows.length === 0 ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
           <p style={{ marginBottom: '0.75rem', color: '#d1d5db' }}>{Ico.invoice(36)}</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucun paiement suivi pour l'instant.</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Les échéances apparaissent ici automatiquement dès qu'un contrat est signé.</p>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucun paiement suivi pour l'instant.</p>
+          <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Les échéances apparaissent ici automatiquement dès qu'un contrat est signé.</p>
         </div>
       ) : (
         <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
@@ -634,14 +634,14 @@ export default function Factures() {
                           <div style={S.detailInner}>
                             <div style={S.caClient}>Total payé par {r.client?.prenom} : <b>{r.caTotal.toFixed(0)} €</b></div>
                             {r.history.length === 0 ? (
-                              <p style={{ fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Pas encore d'historique.</p>
+                              <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>Pas encore d'historique.</p>
                             ) : r.history.map(p => (
                               <div key={p.id} style={S.hist}>
                                 <span>
                                   {p.statut === 'paye'
                                     ? <>Payé <b>{fmtDate(p.date_paiement)}</b></>
                                     : <>Échéance <b>{fmtDate(p.date_echeance)}</b>{p.statut === 'en_retard' && <span style={{ color: PAY_LATE.color, fontWeight: 700 }}> · en retard</span>}</>}
-                                  {p.description && <span style={{ color: '#9ca3af' }}> — {p.description}</span>}
+                                  {p.description && <span style={{ color: '#6b7280' }}> — {p.description}</span>}
                                 </span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                   <span style={{ fontWeight: 700, color: '#111' }}>{parseFloat(p.montant).toFixed(0)} €</span>
@@ -896,9 +896,9 @@ export default function Factures() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
               <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1.25rem', textAlign: 'right' }}>
-                <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.15rem', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Total</p>
+                <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0 0 0.15rem', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Total</p>
                 <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 }}>{totalFacture(form.lignes).toFixed(2)} €</p>
-                <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '0.2rem 0 0' }}>TVA non applicable — Art. 293B CGI</p>
+                <p style={{ fontSize: '0.68rem', color: '#6b7280', margin: '0.2rem 0 0' }}>TVA non applicable — Art. 293B CGI</p>
               </div>
             </div>
 
@@ -931,7 +931,7 @@ export default function Factures() {
             </div>
 
             {caListe.length === 0 ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 0' }}>Aucun paiement reçu pour l'instant.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 0' }}>Aucun paiement reçu pour l'instant.</p>
             ) : caListeParMois.map(groupe => (
               <div key={groupe.moisKey} style={{ marginBottom: '1.25rem' }}>
                 {caView === 'total' && (
@@ -945,7 +945,7 @@ export default function Factures() {
                     <div key={p.id} style={{ ...S.caLigne, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                       <div>
                         <p style={{ margin: 0, fontWeight: 700, color: '#111', fontSize: '0.86rem' }}>{p.clients?.prenom} {p.clients?.nom}</p>
-                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.76rem', color: '#9ca3af' }}>
+                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.76rem', color: '#6b7280' }}>
                           Validé le {fmtDate(p.date_paiement)}{(p.contrats?.formule_label || p.description) && ` — ${p.contrats?.formule_label || p.description}`}
                         </p>
                       </div>
@@ -1016,12 +1016,12 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
 
         <div style={{ background:'#f3f4f6', borderRadius:8, padding:'0.8rem 1.1rem', textAlign:'right', minWidth:185 }}>
-          <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>N° de facture</p>
+          <p style={{ fontSize:'0.68rem', color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>N° de facture</p>
           <p style={{ fontWeight:800, fontSize:'0.92rem', color:'#111', margin:'0 0 10px' }}>{facture.numero}</p>
-          <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Date d'émission</p>
+          <p style={{ fontSize:'0.68rem', color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Date d'émission</p>
           <p style={{ fontWeight:600, fontSize:'0.85rem', color:'#374151', margin:0 }}>{dateEmission}</p>
           {dateEcheance && <>
-            <p style={{ fontSize:'0.68rem', color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.07em', margin:'8px 0 1px' }}>Échéance</p>
+            <p style={{ fontSize:'0.68rem', color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.07em', margin:'8px 0 1px' }}>Échéance</p>
             <p style={{ fontWeight:700, fontSize:'0.85rem', color:'#dc2626', margin:0 }}>{dateEcheance}</p>
           </>}
         </div>
@@ -1038,7 +1038,7 @@ function InvoiceTemplate({ facture, settings, total }) {
         </div>
 
         <div style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'0.875rem 1.1rem', minWidth:200, maxWidth:240 }}>
-          <p style={{ fontSize:'0.62rem', fontWeight:800, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>Facturé à</p>
+          <p style={{ fontSize:'0.62rem', fontWeight:800, color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>Facturé à</p>
           {facture.destinataire
             ? <>
                 <p style={{ fontWeight:700, fontSize:'0.88rem', color:'#111', margin:'0 0 2px' }}>{facture.destinataire.nom}</p>
@@ -1050,7 +1050,7 @@ function InvoiceTemplate({ facture, settings, total }) {
                   <p style={{ fontWeight:700, fontSize:'0.88rem', color:'#111', margin:'0 0 2px' }}>{facture.clients.prenom} {facture.clients.nom}</p>
                   {facture.clients.email && <p style={{ fontSize:'0.82rem', color:'#4b5563', margin:'2px 0 0' }}>{facture.clients.email}</p>}
                 </>
-              : <p style={{ fontSize:'0.82rem', color:'#9ca3af', fontStyle:'italic', margin:0 }}>Non renseigné</p>
+              : <p style={{ fontSize:'0.82rem', color: '#6b7280', fontStyle:'italic', margin:0 }}>Non renseigné</p>
           }
         </div>
       </div>
@@ -1088,13 +1088,13 @@ function InvoiceTemplate({ facture, settings, total }) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '3rem', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>TVA</span>
-            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Non applicable</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Non applicable</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '3rem', borderTop: '2px solid #111', paddingTop: '0.5rem' }}>
             <span style={{ fontWeight: 900, fontSize: '1rem' }}>TOTAL TTC</span>
             <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>{total.toFixed(2)} €</span>
           </div>
-          <p style={{ fontSize: '0.62rem', color: '#9ca3af', marginTop: '0.3rem', textAlign: 'right' }}>
+          <p style={{ fontSize: '0.62rem', color: '#6b7280', marginTop: '0.3rem', textAlign: 'right' }}>
             TVA non applicable — Article 293 B du CGI
           </p>
         </div>
@@ -1137,14 +1137,14 @@ const S = {
   page:        { padding: '1.5rem', maxWidth: 960, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' },
   title:       { fontSize: '1.5rem', fontWeight: '900', color: '#111', margin: 0 },
-  sub:         { fontSize: '0.82rem', color: '#9ca3af', margin: '0.2rem 0 0' },
+  sub:         { fontSize: '0.82rem', color: '#6b7280', margin: '0.2rem 0 0' },
   card:        { background: 'white', borderRadius: 16, padding: '1.25rem 1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
   sectionTitle:{ fontSize: '0.72rem', fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.875rem' },
   label:       { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' },
   input:       { width: '100%', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', color: '#333', outline: 'none', boxSizing: 'border-box', background: 'white' },
   btnPrimary:  { background: '#333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.65rem 1.25rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary:{ background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnClose:    { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem 0.4rem', flexShrink: 0 },
+  btnClose:    { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem 0.4rem', flexShrink: 0 },
   badge:       { padding: '0.15rem 0.55rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: '700' },
 
   // Pastilles filtre
@@ -1158,15 +1158,15 @@ const S = {
   stat:        { flex: 1, minWidth: 140, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '0.85rem 1.1rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
   statActive:  { borderColor: '#111', boxShadow: '0 1px 3px rgba(0,0,0,.08)' },
   statN:       { fontSize: '1.4rem', fontWeight: 900, lineHeight: 1, marginBottom: '0.3rem' },
-  statL:       { fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' },
+  statL:       { fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' },
   dot:         { width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block' },
 
   // Tableau
-  th:          { textAlign: 'left', padding: '0.65rem 1rem', fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: '1px solid #e5e7eb' },
+  th:          { textAlign: 'left', padding: '0.65rem 1rem', fontSize: '0.64rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: '1px solid #e5e7eb' },
   tr:          { borderBottom: '1px solid #f3f4f6', cursor: 'pointer' },
   td:          { padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#374151', verticalAlign: 'middle' },
   who:         { display: 'flex', alignItems: 'center', gap: '0.6rem' },
-  caret:       { display: 'inline-flex', color: '#9ca3af', transition: 'transform .15s' },
+  caret:       { display: 'inline-flex', color: '#6b7280', transition: 'transform .15s' },
   avatar:      { width: 32, height: 32, borderRadius: '50%', background: '#333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 800, flexShrink: 0 },
   name:        { fontWeight: 800, color: '#111', fontSize: '0.86rem' },
   pill:        { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.26rem 0.65rem', borderRadius: 999, fontSize: '0.7rem', fontWeight: 800, whiteSpace: 'nowrap' },
@@ -1182,14 +1182,14 @@ const S = {
   caPageHead:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
   caPageTitle:    { fontSize: '1.1rem', fontWeight: 900, color: '#111', margin: 0 },
   caPageTotal:    { fontSize: '0.85rem', color: '#6b7280', margin: '0.25rem 0 0', fontWeight: 600 },
-  caMoisHead:     { display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '0.4rem', padding: '0 0.2rem' },
+  caMoisHead:     { display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '0.4rem', padding: '0 0.2rem' },
   caLigne:        { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.2rem' },
   hist:        { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#6b7280', padding: '0.3rem 0' },
   histLink:    { background: 'none', border: 'none', color: '#374151', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', padding: 0 },
-  histIconBtn: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '0.2rem', display: 'flex' },
+  histIconBtn: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '0.2rem', display: 'flex' },
   histAddBtn:  { background: 'none', border: '1px dashed #d1d5db', color: '#6b7280', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '0.35rem 0.7rem', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '0.3rem' },
 
-  footnote:     { marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' },
+  footnote:     { marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: '#6b7280' },
   footnoteLink: { color: '#374151', fontWeight: 700, cursor: 'pointer', borderBottom: '1px dashed #9ca3af' },
 
   overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' },
@@ -1208,7 +1208,7 @@ const INV = {
   infoSection:{ borderTop: '1px solid #e5e7eb', paddingTop: '0.875rem', marginBottom: '0.875rem' },
   infoTitle:  { fontSize: '0.68rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' },
   footer:     { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '0', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
-  footerTxt:  { fontSize: '0.68rem', color: '#9ca3af', margin: 0, textAlign: 'center' },
+  footerTxt:  { fontSize: '0.68rem', color: '#6b7280', margin: 0, textAlign: 'center' },
   legal:      { borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem', marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  legalTxt:   { fontSize: '0.62rem', color: '#9ca3af', margin: 0, lineHeight: 1.5 },
+  legalTxt:   { fontSize: '0.62rem', color: '#6b7280', margin: 0, lineHeight: 1.5 },
 }

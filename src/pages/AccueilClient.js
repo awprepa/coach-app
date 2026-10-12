@@ -348,7 +348,7 @@ export default function AccueilClient() {
           </button>
           <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>
             {avatarUrl ? (
-              <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              <img loading="lazy" src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             ) : initiales}
           </div>
         </div>
@@ -397,7 +397,7 @@ export default function AccueilClient() {
                   const initials = adv.split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
                   return (
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                      {logo ? <img src={logo} alt={adv} style={{ width: 36, height: 36, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
+                      {logo ? <img loading="lazy" src={logo} alt={adv} style={{ width: 36, height: 36, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
                       <div style={{ width:'100%', height:'100%', display: logo ? 'none' : 'flex', alignItems:'center', justifyContent:'center', fontSize:'.9rem', fontWeight:900, color:'var(--header-text)' }}>{initials}</div>
                     </div>
                   )
@@ -487,7 +487,7 @@ export default function AccueilClient() {
                     </div>
                     <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'var(--chip-text)' : '#333333', flex: 1 }}>{ev.titre}</span>
                     {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#111111', background: 'var(--accent-stripe)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
-                    {isPast && !isToday && <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: '600' }}>Passé</span>}
+                    {isPast && !isToday && <span style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: '600' }}>Passé</span>}
                   </div>
                 )
               })}
@@ -521,10 +521,10 @@ export default function AccueilClient() {
                     const termine = isCycleTermine(prog)
                     return (
                       <div key={prog.id} onClick={() => navigate(`/client/programme/${prog.id}`)}
-                        style={{ ...styles.card, borderLeft: `4px solid ${termine ? '#d1d5db' : index === 0 ? 'var(--accent)' : '#e5e7eb'}`, opacity: termine ? 0.6 : 1 }}>
+                        style={{ ...styles.card, border: `1.5px solid ${termine ? '#d1d5db' : index === 0 ? 'var(--accent)' : '#e5e7eb'}`, opacity: termine ? 0.6 : 1 }}>
                         <div>
                           <p style={styles.cardTitle}>{prog.nom}</p>
-                          <p style={styles.cardSub}>{prog.semaines} semaines{termine && <span style={{ marginLeft: '0.4rem', color: '#9ca3af' }}>· Terminé</span>}</p>
+                          <p style={styles.cardSub}>{prog.semaines} semaines{termine && <span style={{ marginLeft: '0.4rem', color: '#6b7280' }}>· Terminé</span>}</p>
                         </div>
                         <span style={styles.chevron}>›</span>
                       </div>
@@ -534,7 +534,7 @@ export default function AccueilClient() {
               )}
               {termines.length > 0 && (
                 <button onClick={() => setShowPastCycles(v => !v)}
-                  style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.82rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600', textAlign: 'left' }}>
+                  style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.82rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600', textAlign: 'left' }}>
                   {showPastCycles ? '↑ Masquer les cycles passés' : `↓ Voir les cycles passés (${termines.length})`}
                 </button>
               )}
@@ -615,24 +615,24 @@ const styles = {
   subtitle:    { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.4rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   sectionTitle:  { fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-fg)', textTransform: 'uppercase', letterSpacing: '0.08em', borderLeft: '3px solid var(--accent-stripe)', paddingLeft: '0.5rem' },
-  sectionCount:  { color: '#9ca3af', fontSize: '0.8rem' },
-  emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  sectionCount:  { color: '#6b7280', fontSize: '0.8rem' },
+  emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   card:        { background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle:   { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.2rem' },
-  cardSub:     { color: '#9ca3af', fontSize: '0.8rem', margin: 0 },
+  cardSub:     { color: '#6b7280', fontSize: '0.8rem', margin: 0 },
   chevron:     { color: '#d1d5db', fontSize: '1.5rem', lineHeight: 1 },
-  logoutBtn:   { marginTop: '2.5rem', width: '100%', padding: '0.875rem', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 12, color: '#9ca3af', fontSize: '0.875rem', cursor: 'pointer' },
+  logoutBtn:   { marginTop: '2.5rem', width: '100%', padding: '0.875rem', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 12, color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer' },
   legalRow:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' },
-  legalLink:   { background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
+  legalLink:   { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 0 env(safe-area-inset-bottom)' },
   modalCard:   { background: 'white', borderRadius: '20px 20px 0 0', padding: '1.75rem 1.5rem', width: '100%', maxWidth: 480, textAlign: 'center' },
-  nextCard:    { background: 'var(--header-bg)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-stripe)' },
+  nextCard:    { background: 'var(--header-bg)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', border: '1.5px solid var(--accent-stripe)' },
   nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'var(--header-text)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
   nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-fg-dark)', margin: '0 0 0.2rem' },
   nextDate:    { fontSize: '0.82rem', color: 'var(--header-text)', opacity: 0.7, margin: 0 },
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
-  nutritionWidget: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: '4px solid #16a34a' },
+  nutritionWidget: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1.5px solid #16a34a' },
   levelWidget: {
     position: 'relative',
     borderRadius: 16,

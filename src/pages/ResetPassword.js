@@ -78,7 +78,7 @@ export default function ResetPassword() {
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔐</div>
             <p style={{ fontWeight: 700, color: '#374151' }}>Vérification du lien…</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', marginTop: '0.4rem' }}>Un instant</p>
+            <p style={{ color: '#6b7280', fontSize: '0.82rem', marginTop: '0.4rem' }}>Un instant</p>
           </div>
         )}
 
@@ -89,7 +89,7 @@ export default function ResetPassword() {
             <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.5rem' }}>
               Lien invalide ou expiré
             </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+            <p style={{ color: '#6b7280', fontSize: '0.82rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
               Ce lien de réinitialisation n'est plus valide (déjà utilisé ou expiré). Demande-en un nouveau depuis l'écran de connexion.
             </p>
             <button onClick={() => navigate('/login')} style={S.btn}>
@@ -104,7 +104,7 @@ export default function ResetPassword() {
             <p style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1a1a1a', margin: '0 0 0.3rem' }}>
               Nouveau mot de passe
             </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.5rem' }}>
+            <p style={{ color: '#6b7280', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.5rem' }}>
               Choisis un mot de passe sécurisé d'au moins 8 caractères.
             </p>
 
@@ -121,7 +121,7 @@ export default function ResetPassword() {
                   autoFocus
                 />
                 <button type="button" onClick={() => setShowPwd(v => !v)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.85rem' }}>
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.85rem' }}>
                   {showPwd ? 'Masquer' : 'Voir'}
                 </button>
               </div>
@@ -172,7 +172,7 @@ export default function ResetPassword() {
             <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#065f46', marginBottom: '0.5rem' }}>
               Mot de passe mis à jour !
             </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>
+            <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>
               Redirection vers la connexion…
             </p>
           </div>
@@ -205,7 +205,7 @@ const S = {
   page:    { minHeight: '100vh', background: '#efefef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   brand:   { textAlign: 'center', marginBottom: '2rem' },
   logo:    { fontSize: '2.25rem', fontWeight: '900', color: '#333333', letterSpacing: '-1px' },
-  tagline: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.4rem' },
+  tagline: { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.4rem' },
   card:    { background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '420px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' },
   field:   { marginBottom: '1rem' },
   label:   { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },

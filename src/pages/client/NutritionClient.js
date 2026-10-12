@@ -326,7 +326,7 @@ export default function NutritionClient() {
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800 }}>Hydratation</p>
-            <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#9ca3af', fontWeight: 600 }}>
+            <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#6b7280', fontWeight: 600 }}>
               {(water / 1000).toFixed(2).replace('.', ',')} L
             </p>
           </div>
@@ -362,7 +362,7 @@ export default function NutritionClient() {
           <div style={S.sheet} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 14px' }} />
             <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: '#1a1a1a' }}>{detailPlat.nom}</p>
-            <p style={{ fontSize: '0.74rem', color: '#9ca3af', margin: '0 0 14px' }}>
+            <p style={{ fontSize: '0.74rem', color: '#6b7280', margin: '0 0 14px' }}>
               {[detailPlat.kcal && `${fmt(detailPlat.kcal)} kcal`, detailPlat.prot_g && `P ${fmt(detailPlat.prot_g)}g`, detailPlat.carbs_g && `G ${fmt(detailPlat.carbs_g)}g`, detailPlat.fat_g && `L ${fmt(detailPlat.fat_g)}g`].filter(Boolean).join(' · ')}
             </p>
             {(detailPlat.nutrition_plan_foods || []).length > 0 ? (
@@ -377,7 +377,7 @@ export default function NutritionClient() {
                 ))}
               </div>
             ) : (
-              <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Pas de détail par ingrédient pour ce plat.</p>
+              <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Pas de détail par ingrédient pour ce plat.</p>
             )}
             <button onClick={() => setDetailPlat(null)}
               style={{ marginTop: 16, width: '100%', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -407,23 +407,23 @@ const S = {
   card:       { background: 'white', borderRadius: 16, padding: 15, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 12 },
   ringCenter: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   ringNum:    { fontSize: '1.42rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums' },
-  ringLbl:    { fontSize: '0.53rem', fontWeight: 800, color: '#9ca3af', letterSpacing: '0.04em', marginTop: 3, whiteSpace: 'nowrap' },
+  ringLbl:    { fontSize: '0.53rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.04em', marginTop: 3, whiteSpace: 'nowrap' },
   macTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.74rem' },
   macName:    { fontWeight: 800, color: '#4b5563' },
-  macVal:     { fontWeight: 700, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' },
+  macVal:     { fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
   bar:        { height: 6, background: '#eef1f4', borderRadius: 99, overflow: 'hidden', marginTop: 4 },
-  hintGoal:   { margin: '12px 0 0', fontSize: '0.72rem', color: '#9ca3af', fontWeight: 600, lineHeight: 1.45 },
+  hintGoal:   { margin: '12px 0 0', fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, lineHeight: 1.45 },
   planBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px 14px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', marginBottom: 12, fontFamily: 'inherit' },
   secHead:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 2px 7px' },
-  secTitle:   { fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', letterSpacing: '0.09em', textTransform: 'uppercase', margin: 0 },
+  secTitle:   { fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.09em', textTransform: 'uppercase', margin: 0 },
   secKcal:    { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
   meal:       { background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' },
   item:       { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px 11px 14px', borderBottom: '1px solid #eef0f3' },
   itemName:   { fontSize: '0.85rem', fontWeight: 700, margin: 0, lineHeight: 1.25 },
-  itemQty:    { fontSize: '0.72rem', color: '#9ca3af', margin: '2px 0 0', fontWeight: 600 },
+  itemQty:    { fontSize: '0.72rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 600 },
   itemKcal:   { fontSize: '0.82rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-  del:        { width: 26, height: 26, borderRadius: 8, border: 'none', background: '#f3f4f6', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 },
-  empty:      { padding: '15px 14px', color: '#9ca3af', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
+  del:        { width: 26, height: 26, borderRadius: 8, border: 'none', background: '#f3f4f6', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 },
+  empty:      { padding: '15px 14px', color: '#6b7280', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
   add:        { width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', borderTop: '1px dashed #e2e6ea', padding: 11, fontSize: '0.8rem', fontWeight: 800, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   addIco:     { width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   prescrit:   { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'none', borderBottom: '1px solid #eef0f3', fontFamily: 'inherit' },
@@ -435,7 +435,7 @@ const S = {
   // bouton la touchait presque (2px d'écart mesurés).
   scanCta:    { position: 'fixed', bottom: 'calc(96px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
   scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
-  loading:    { color: '#9ca3af', fontSize: '0.85rem', fontWeight: 600 },
+  loading:    { color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 },
   overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
   sheet:      { background: 'white', borderRadius: '20px 20px 0 0', padding: '14px 18px calc(20px + env(safe-area-inset-bottom, 0px))', width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' },
 }

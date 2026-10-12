@@ -69,7 +69,7 @@ function MusclePicker({ primary, secondary, onChange }) {
 
   return (
     <div>
-      <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
         1 clic = <span style={{ color: '#dc2626', fontWeight: 700 }}>primaire</span> · 2 clics = <span style={{ color: '#f97316', fontWeight: 700 }}>secondaire</span> · 3 clics = retirer
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -122,7 +122,7 @@ function AuthGif({ url, apiKey, style, alt }) {
       <span style={{ fontSize: '1.2rem', opacity: 0.4 }}>⏳</span>
     </div>
   )
-  return <img src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
+  return <img loading="lazy" src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
 }
 
 // ── Traduction FR→EN pour la recherche WorkoutX ───────────────────────────
@@ -600,7 +600,7 @@ export default function BibliothequeExercices() {
                   style={{ position: 'relative', cursor: 'pointer', background: '#111', height: 130, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
                 >
                   {thumb
-                    ? <img src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                    ? <img loading="lazy" src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
                         <span style={{ fontSize: '2rem' }}>🔗</span>
                       </div>
@@ -687,7 +687,7 @@ export default function BibliothequeExercices() {
           <div onClick={e => e.stopPropagation()} style={{ background: '#111', borderRadius: 16, overflow: 'hidden', maxWidth: 720, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#1a1a1a' }}>
               <span style={{ color: '#e4f816', fontWeight: 700, fontSize: '0.9rem' }}>{mediaModal.nom}</span>
-              <button onClick={() => setMediaModal(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+              <button onClick={() => setMediaModal(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
             </div>
             {youtubeId(mediaModal.url)
               ? <iframe
@@ -696,7 +696,7 @@ export default function BibliothequeExercices() {
                   allow="autoplay; fullscreen"
                   title={mediaModal.nom}
                 />
-              : <img src={mediaModal.url} alt={mediaModal.nom} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain' }} />
+              : <img loading="lazy" src={mediaModal.url} alt={mediaModal.nom} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain' }} />
             }
           </div>
         </div>
@@ -712,7 +712,7 @@ export default function BibliothequeExercices() {
               <div style={{ textAlign: 'center', padding: '2rem 0' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔍</div>
                 <p style={{ fontWeight: 700, color: '#333' }}>Analyse en cours…</p>
-                <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Comparaison de tous les exercices sans lien</p>
+                <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Comparaison de tous les exercices sans lien</p>
               </div>
             )}
 
@@ -721,7 +721,7 @@ export default function BibliothequeExercices() {
               <div style={{ textAlign: 'center', padding: '2rem 0' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
                 <p style={{ fontWeight: 700, color: '#333' }}>Liaison en cours…</p>
-                <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Mise à jour de la base de données</p>
+                <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Mise à jour de la base de données</p>
               </div>
             )}
 
@@ -734,7 +734,7 @@ export default function BibliothequeExercices() {
                     ? `${backfillResult.matched.length} exercice${backfillResult.matched.length > 1 ? 's' : ''} lié${backfillResult.matched.length > 1 ? 's' : ''} !`
                     : 'Aucun exercice à lier'}
                 </p>
-                <p style={{ fontSize: '0.82rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
+                <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1.5rem' }}>
                   {backfillResult?.matched?.length
                     ? 'Tes clients verront maintenant les images en séance.'
                     : 'Tous les exercices sont déjà liés ou aucune correspondance trouvée.'}
@@ -751,16 +751,16 @@ export default function BibliothequeExercices() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
                     <p style={{ fontWeight: 800, fontSize: '1rem', color: '#333', margin: 0 }}>🔗 Liaison automatique</p>
-                    <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0.25rem 0 0' }}>
+                    <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
                       {backfillResult.matched.length} correspondance{backfillResult.matched.length !== 1 ? 's' : ''} trouvée{backfillResult.matched.length !== 1 ? 's' : ''}
                       {backfillResult.skipped > 0 && ` · ${backfillResult.skipped} sans correspondance`}
                     </p>
                   </div>
-                  <button onClick={() => { setBackfillState(null); setBackfillResult(null) }} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+                  <button onClick={() => { setBackfillState(null); setBackfillResult(null) }} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#6b7280', cursor: 'pointer' }}>✕</button>
                 </div>
 
                 {backfillResult.matched.length === 0 ? (
-                  <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                  <p style={{ color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0' }}>
                     Aucune correspondance trouvée. Vérifie que tes exercices dans la bibliothèque ont des noms similaires.
                   </p>
                 ) : (
@@ -769,7 +769,7 @@ export default function BibliothequeExercices() {
                       <div key={m.exercice_id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.exercice_nom}</p>
-                          <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>→ {m.biblio_nom}</p>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: '#6b7280' }}>→ {m.biblio_nom}</p>
                         </div>
                         <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 6, padding: '2px 7px' }}>
                           {Math.round(m.score * 100)}%
@@ -777,7 +777,7 @@ export default function BibliothequeExercices() {
                         <button
                           onClick={() => setBackfillResult(r => ({ ...r, matched: r.matched.filter(x => x.exercice_id !== m.exercice_id), skipped: r.skipped + 1 }))}
                           title="Ignorer cette liaison"
-                          style={{ flexShrink: 0, background: 'none', border: '1px solid #e5e7eb', borderRadius: 5, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', lineHeight: 1 }}>
+                          style={{ flexShrink: 0, background: 'none', border: '1px solid #e5e7eb', borderRadius: 5, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', lineHeight: 1 }}>
                           ✕
                         </button>
                       </div>
@@ -807,9 +807,9 @@ export default function BibliothequeExercices() {
             <div style={{ padding: '1.25rem 1.25rem 0.75rem', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontWeight: 800, color: '#333', fontSize: '0.95rem' }}>🎬 Choisir un GIF</p>
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>Clique sur le GIF à utiliser pour cet exercice</p>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Clique sur le GIF à utiliser pour cet exercice</p>
               </div>
-              <button onClick={() => { setGifModal(null); setGifResults([]) }} style={{ background: 'none', border: 'none', fontSize: '1.3rem', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => { setGifModal(null); setGifResults([]) }} style={{ background: 'none', border: 'none', fontSize: '1.3rem', color: '#6b7280', cursor: 'pointer' }}>✕</button>
             </div>
             {/* Barre de recherche */}
             <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #f3f4f6' }}>
@@ -826,7 +826,7 @@ export default function BibliothequeExercices() {
                 </button>
               </div>
               {gifTranslated && gifTranslated !== gifQuery && (
-                <p style={{ margin: '0.4rem 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
+                <p style={{ margin: '0.4rem 0 0', fontSize: '0.7rem', color: '#6b7280' }}>
                   🔤 Recherche en anglais : <strong style={{ color: '#6366f1' }}>{gifTranslated}</strong>
                   <span style={{ marginLeft: 6, color: '#d1d5db' }}>· tape en EN directement pour affiner</span>
                 </p>
@@ -835,7 +835,7 @@ export default function BibliothequeExercices() {
             {/* Résultats */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
               {gifSearching && gifResults.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                   <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</p>
                   <p style={{ fontSize: '0.85rem' }}>Recherche en cours…</p>
                 </div>
@@ -846,7 +846,7 @@ export default function BibliothequeExercices() {
                 </div>
               )}
               {!gifSearching && gifResults.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                   <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🤷</p>
                   <p style={{ fontSize: '0.85rem' }}>Aucun résultat. Essaie en anglais (ex : "bench press", "squat")</p>
                 </div>
@@ -864,7 +864,7 @@ export default function BibliothequeExercices() {
                       title={r.name}
                     >
                       {r._source === 'freedb'
-                        ? <img src={r.imageUrl} alt={r.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                        ? <img loading="lazy" src={r.imageUrl} alt={r.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
                         : <AuthGif url={r.gifUrl} apiKey={workoutxKey} alt={r.name} style={{ width: '100%', aspectRatio: '1' }} />
                       }
                       <p style={{ margin: 0, padding: '0.4rem 0.5rem', fontSize: '0.65rem', fontWeight: 600, color: '#e5e7eb', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#1a1a1a' }}>{r.name}</p>
@@ -974,7 +974,7 @@ export default function BibliothequeExercices() {
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={S.label}>
                 Muscles ciblés
-                <span style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 400, textTransform: 'none', marginLeft: 6 }}>
+                <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 400, textTransform: 'none', marginLeft: 6 }}>
                   (détecté auto · ajuste si besoin)
                 </span>
               </label>
@@ -1028,7 +1028,7 @@ export default function BibliothequeExercices() {
         {/* Filtre par muscle */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Muscles
             </span>
             {muscleFilter.length > 0 && (
@@ -1058,7 +1058,7 @@ export default function BibliothequeExercices() {
 
       {/* Liste */}
       {loading ? (
-        <p style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
+        <p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
       ) : filtered.length === 0 ? (
         <div style={S.empty}>
           <p style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Aucun exercice trouvé.</p>
@@ -1088,7 +1088,7 @@ function MediaField({ value, onChange, onFile, uploading }) {
       {/* Aperçu si URL renseignée */}
       {value && thumb && (
         <div style={{ marginBottom: '0.5rem', borderRadius: 10, overflow: 'hidden', position: 'relative', height: 100, background: '#111' }}>
-          <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+          <img loading="lazy" src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
           {isYt && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1125,7 +1125,7 @@ function MediaField({ value, onChange, onFile, uploading }) {
       {value && !thumb && (
         <p style={{ fontSize: '0.7rem', color: '#6366f1', margin: '0.3rem 0 0', wordBreak: 'break-all' }}>🔗 {value}</p>
       )}
-      <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '0.3rem 0 0' }}>
+      <p style={{ fontSize: '0.65rem', color: '#6b7280', margin: '0.3rem 0 0' }}>
         Lien YouTube · image directe (.jpg .png .gif .webp) · ou upload depuis ton appareil
       </p>
     </div>
@@ -1136,7 +1136,7 @@ const S = {
   page:       { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
   title:      { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
-  subtitle:   { color: '#9ca3af', fontSize: '0.85rem', margin: 0 },
+  subtitle:   { color: '#6b7280', fontSize: '0.85rem', margin: 0 },
   formCard:   { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '1.75rem', border: '2px solid #e4f816' },
   formTitle:  { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1.25rem' },
   formRow:    { display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' },
@@ -1144,7 +1144,7 @@ const S = {
   input:      { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   select:     { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', background: 'white', boxSizing: 'border-box' },
   catPill:    { padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' },
-  empty:      { background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  empty:      { background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' },
   card:       { background: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
   cardName:   { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.35rem' },

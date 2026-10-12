@@ -19,13 +19,13 @@ const TYPE_STYLE = {
   match:       { label: 'Match',        color: '#1e3a8a' },
   combat:      { label: 'Combat',       color: '#dc2626' },
   competition: { label: 'Compétition',  color: '#7c3aed' },
-  repos:       { label: 'Repos',        color: '#9ca3af' },
+  repos:       { label: 'Repos',        color: '#6b7280' },
   collectif:   { label: 'Collectif',    color: '#f97316' },
   muscu:       { label: 'Muscu',        color: '#6366f1' },
   vitesse:     { label: 'Vitesse',      color: '#0891b2' },
   prevention:  { label: 'Prévention',   color: '#16a34a' },
   recup:       { label: 'Récup',        color: '#14b8a6' },
-  vacances:    { label: 'Vacances',     color: '#9ca3af' },
+  vacances:    { label: 'Vacances',     color: '#6b7280' },
   test:        { label: 'Test',         color: '#7c3aed' },
   autre:       { label: 'Autre',        color: '#0f766e' },
 }
@@ -276,7 +276,7 @@ export default function AgendaGlobal() {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     {e.kind === 'groupe' && e.logoUrl
-                      ? <img src={e.logoUrl} alt="" style={S.rowLogo} />
+                      ? <img loading="lazy" src={e.logoUrl} alt="" style={S.rowLogo} />
                       : <span style={{ ...S.rowDot, background: e.whoColor || '#cbd5e1' }} />}
                     <div style={{ minWidth: 0 }}>
                       <p style={S.rowWho}>{e.who}{e.terminee ? ' ✓' : ''}</p>
@@ -308,7 +308,7 @@ function Chip({ e }) {
       opacity: e.terminee ? 0.55 : 1,
     }}>
       {e.kind === 'groupe' && e.logoUrl && (
-        <img src={e.logoUrl} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
+        <img loading="lazy" src={e.logoUrl} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
       )}
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.who}</span>
     </div>
@@ -325,7 +325,7 @@ function Legend() {
           {typeStyle(t).label}
         </span>
       ))}
-      <span style={{ ...S.legendItem, color: '#9ca3af' }}>· fond = client / groupe</span>
+      <span style={{ ...S.legendItem, color: '#6b7280' }}>· fond = client / groupe</span>
     </div>
   )
 }
@@ -334,10 +334,10 @@ const S = {
   page:    { padding: '1.25rem 1.5rem 2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   topbar:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' },
   h1:      { margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#111' },
-  sub:     { margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#9ca3af', fontWeight: 600 },
+  sub:     { margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 },
   controls:{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   seg:     { display: 'inline-flex', background: '#f3f4f6', borderRadius: 9, padding: 3, gap: 3 },
-  segBtn:  { border: 'none', background: 'transparent', borderRadius: 7, padding: '5px 11px', fontSize: '0.8rem', fontWeight: 700, color: '#9ca3af', cursor: 'pointer' },
+  segBtn:  { border: 'none', background: 'transparent', borderRadius: 7, padding: '5px 11px', fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer' },
   segOn:   { background: 'white', color: '#111', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
   select:  { border: '1.5px solid #e5e7eb', borderRadius: 9, padding: '6px 10px', fontSize: '0.8rem', fontWeight: 600, background: 'white', color: '#374151', cursor: 'pointer' },
   navrow:  { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
@@ -348,20 +348,20 @@ const S = {
   legendItem: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.7rem', fontWeight: 700, color: '#6b7280' },
   backdrop:{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.15)', zIndex: 55 },
   weekHead:{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, marginBottom: 6 },
-  weekHeadCell: { textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  weekHeadCell: { textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' },
   gridMonth: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: '1fr', gap: 6 },
   gridWeek:  { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 },
   cellMonth: { minHeight: 118, boxSizing: 'border-box', borderRadius: 10, padding: '6px 6px 5px', cursor: 'pointer', overflow: 'hidden' },
   cellWeek:  { minHeight: 380, boxSizing: 'border-box', borderRadius: 10, padding: '8px', cursor: 'pointer', overflow: 'hidden' },
   dayNum:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5, fontSize: '0.8rem' },
-  dayCount:{ fontSize: '0.6rem', fontWeight: 800, color: '#9ca3af', background: '#f3f4f6', borderRadius: 999, padding: '0 6px', lineHeight: '15px' },
-  more:    { fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, paddingLeft: 2 },
+  dayCount:{ fontSize: '0.6rem', fontWeight: 800, color: '#6b7280', background: '#f3f4f6', borderRadius: 999, padding: '0 6px', lineHeight: '15px' },
+  more:    { fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, paddingLeft: 2 },
   panel:   { position: 'fixed', top: 78, right: 16, width: 340, maxHeight: 'calc(100vh - 96px)', overflowY: 'auto', zIndex: 60, background: 'white', border: '1px solid #eef0f3', borderRadius: 14, padding: '1rem', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' },
   panelHead: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 },
   panelDate: { margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#111', textTransform: 'capitalize' },
-  panelSub:  { margin: '2px 0 0', fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600 },
+  panelSub:  { margin: '2px 0 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 },
   panelClose:{ border: 'none', background: '#f3f4f6', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', color: '#6b7280', fontSize: '0.8rem' },
-  empty:   { fontSize: '0.82rem', color: '#9ca3af', fontWeight: 600, textAlign: 'center', padding: '1.5rem 0' },
+  empty:   { fontSize: '0.82rem', color: '#6b7280', fontWeight: 600, textAlign: 'center', padding: '1.5rem 0' },
   row:     { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid #eef0f3', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', textAlign: 'left' },
   rowLogo: { width: 26, height: 26, borderRadius: 6, objectFit: 'cover', flexShrink: 0 },
   rowDot:  { width: 10, height: 10, borderRadius: '50%', flexShrink: 0 },

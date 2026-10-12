@@ -161,7 +161,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
           <p style={W.subtitle}>{isMatch ? "Intensité du match" : "Intensité de l'entraînement"}</p>
           <h2 style={W.title}>{nomEvenement}</h2>
-          <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0.25rem 0 0', textTransform: 'capitalize' }}>{dateLabel}</p>
+          <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0.25rem 0 0', textTransform: 'capitalize' }}>{dateLabel}</p>
         </div>
 
         <p style={{ fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5, margin: '0 0 1.25rem', textAlign: 'center' }}>
@@ -176,7 +176,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         ))}
 
         <div style={{ marginBottom: '1rem' }}>
-          <p style={W.qLabel}>Commentaire <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.75rem' }}>(optionnel)</span></p>
+          <p style={W.qLabel}>Commentaire <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' }}>(optionnel)</span></p>
           <textarea
             value={commentaire}
             onChange={e => setCommentaire(e.target.value)}
@@ -207,7 +207,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
 const W = {
   overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
   card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380, maxHeight: '88vh', overflowY: 'auto', boxSizing: 'border-box' },
-  subtitle:  { fontSize: '0.68rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
+  subtitle:  { fontSize: '0.68rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
   title:     { fontSize: '1.25rem', fontWeight: '800', color: '#333333', margin: 0 },
   qLabel:    { fontSize: '0.85rem', fontWeight: '700', color: '#374151', margin: '0 0 0.5rem' },
   submitBtn: { width: '100%', padding: '0.875rem', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', marginTop: '0.5rem' },

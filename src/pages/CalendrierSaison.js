@@ -884,7 +884,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
                 padding: '0 4px', overflow: 'hidden', whiteSpace: 'nowrap',
                 borderLeft: '3px solid rgba(255,255,255,0.35)', cursor: 'pointer',
               }}>
-              {logoAdv && <img src={logoAdv} alt="" style={{ width: 13, height: 13, objectFit: 'contain', flexShrink: 0, borderRadius: 2 }} onError={e => e.target.style.display='none'} />}
+              {logoAdv && <img loading="lazy" src={logoAdv} alt="" style={{ width: 13, height: 13, objectFit: 'contain', flexShrink: 0, borderRadius: 2 }} onError={e => e.target.style.display='none'} />}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>vs {adversaire || 'Match'}</span>
               {scoreAff && <small style={{ fontSize: '0.48rem', opacity: 0.9, flexShrink: 0 }}>{scoreAff}</small>}
             </div>
@@ -1734,7 +1734,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
         {/* En-tête */}
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'#1f2937' }}>
           <span style={{ fontSize:'1.3rem', fontWeight:900, color:'#e4f816', minWidth:26 }}>{poste.num}</span>
-          <span style={{ fontSize:'0.7rem', fontWeight:700, color:'#9ca3af' }}>{poste.nom}</span>
+          <span style={{ fontSize:'0.7rem', fontWeight:700, color: '#6b7280' }}>{poste.nom}</span>
         </div>
         {/* Corps */}
         <div style={{ background:'#f9fafb', padding:9, display:'flex', flexDirection:'column', gap:6 }}>
@@ -1797,7 +1797,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
           </span>
         ))}
         <span style={{ color:'#c4ccd4', margin:'0 2px' }}>·</span>
-        <span style={{ color:'#9ca3af', fontSize:'0.66rem' }}>Barre à gauche = statut · chiffre = wellness /4 · ① ② = hiérarchie au poste</span>
+        <span style={{ color: '#6b7280', fontSize:'0.66rem' }}>Barre à gauche = statut · chiffre = wellness /4 · ① ② = hiérarchie au poste</span>
       </div>
 
       {/* Terrain */}
@@ -1836,7 +1836,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
           <div key={lbl} style={{ flex:1, padding:'9px 6px', textAlign:'center',
             borderRight: i < 4 ? '1px solid #f0f2f5' : 'none' }}>
             <div style={{ fontSize:'1.1rem', fontWeight:900, color }}>{val}</div>
-            <div style={{ fontSize:'0.6rem', color:'#9ca3af', fontWeight:600, textTransform:'uppercase', marginTop:1 }}>{lbl}</div>
+            <div style={{ fontSize:'0.6rem', color: '#6b7280', fontWeight:600, textTransform:'uppercase', marginTop:1 }}>{lbl}</div>
           </div>
         ))}
       </div>
@@ -1868,7 +1868,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                   style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
                     background:stBg, borderRadius:9, marginBottom:5,
                     borderLeft:`3px solid ${statutBorderColor(s)}`, cursor:'pointer' }}>
-                  <span style={{ fontSize:'0.66rem', fontWeight:900, color:'#9ca3af', minWidth:14 }}>{RANK_LABELS[i]}</span>
+                  <span style={{ fontSize:'0.66rem', fontWeight:900, color: '#6b7280', minWidth:14 }}>{RANK_LABELS[i]}</span>
                   <span style={{ fontSize:'0.83rem', fontWeight:800, flex:1 }}>{j.prenom} {j.nom}</span>
                   {j.client_id && getWellness(j) !== null && (
                     <span style={{ fontSize:'0.7rem', fontWeight:900, color:wColor(getWellness(j)) }}>
@@ -1891,11 +1891,11 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
 
             {addForm && (
               <div style={{ marginTop:12 }}>
-                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color:'#9ca3af', textTransform:'uppercase', marginBottom:7 }}>Nouveau joueur</div>
-                <input style={inputStyle} placeholder="Prénom" value={newPrenom} onChange={e=>setNewPrenom(e.target.value)} />
-                <input style={inputStyle} placeholder="Nom de famille" value={newNom} onChange={e=>setNewNom(e.target.value)} />
-                <input style={{...inputStyle}} type="number" placeholder="Rang (1 = titulaire)" value={newRang} min={1} onChange={e=>setNewRang(Number(e.target.value))} />
-                <p style={{ fontSize:'0.68rem', color:'#9ca3af', marginBottom:10 }}>
+                <div style={{ fontSize:'0.65rem', fontWeight:800, letterSpacing:'0.08em', color: '#6b7280', textTransform:'uppercase', marginBottom:7 }}>Nouveau joueur</div>
+                <input style={inputStyle} placeholder="Prénom" aria-label="Prénom" value={newPrenom} onChange={e=>setNewPrenom(e.target.value)} />
+                <input style={inputStyle} placeholder="Nom de famille" aria-label="Nom de famille" value={newNom} onChange={e=>setNewNom(e.target.value)} />
+                <input style={{...inputStyle}} type="number" placeholder="Rang (1 = titulaire)" aria-label="Rang (1 = titulaire)" value={newRang} min={1} onChange={e=>setNewRang(Number(e.target.value))} />
+                <p style={{ fontSize:'0.68rem', color: '#6b7280', marginBottom:10 }}>
                   💡 Si ce joueur crée un compte avec ce nom exact, il sera automatiquement lié.
                 </p>
                 <button onClick={addJoueur} disabled={saving}
@@ -1924,7 +1924,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
           return (
             <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px', cursor: editing ? 'default' : 'pointer' }}
               onClick={() => { if (!editing) { setEditingVital(champ); setVitalDraft(valeur ?? '') } }}>
-              <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color:'#9ca3af', textTransform:'uppercase', marginBottom:5 }}>{label}</div>
+              <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color: '#6b7280', textTransform:'uppercase', marginBottom:5 }}>{label}</div>
               {editing ? (
                 <div style={{ display:'flex', gap:4 }} onClick={e => e.stopPropagation()}>
                   <input autoFocus type="number" value={vitalDraft} onChange={e=>setVitalDraft(e.target.value)}
@@ -1934,8 +1934,8 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                 </div>
               ) : valeur != null ? (
                 <>
-                  <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#1a1a1a' }}>{valeur}<span style={{ fontSize:'0.65rem', fontWeight:700, color:'#9ca3af', marginLeft:2 }}>{unite}</span></div>
-                  {sub && <div style={{ fontSize:'0.62rem', color:'#9ca3af', marginTop:2, fontWeight:600 }}>{sub}</div>}
+                  <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#1a1a1a' }}>{valeur}<span style={{ fontSize:'0.65rem', fontWeight:700, color: '#6b7280', marginLeft:2 }}>{unite}</span></div>
+                  {sub && <div style={{ fontSize:'0.62rem', color: '#6b7280', marginTop:2, fontWeight:600 }}>{sub}</div>}
                 </>
               ) : (
                 <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>
@@ -2000,11 +2000,11 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                     : 'saisie manuelle'
                   ) : null} />
                 <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px' }}>
-                  <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color:'#9ca3af', textTransform:'uppercase', marginBottom:5 }}>Dernier wellness</div>
+                  <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color: '#6b7280', textTransform:'uppercase', marginBottom:5 }}>Dernier wellness</div>
                   {wInfo?.score != null ? (
                     <>
-                      <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#16a34a' }}>{wInfo.score.toFixed(1)}<span style={{ fontSize:'0.65rem', fontWeight:700, color:'#9ca3af', marginLeft:2 }}>/4</span></div>
-                      <div style={{ fontSize:'0.62rem', color:'#9ca3af', marginTop:2, fontWeight:600 }}>{new Date(wInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
+                      <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#16a34a' }}>{wInfo.score.toFixed(1)}<span style={{ fontSize:'0.65rem', fontWeight:700, color: '#6b7280', marginLeft:2 }}>/4</span></div>
+                      <div style={{ fontSize:'0.62rem', color: '#6b7280', marginTop:2, fontWeight:600 }}>{new Date(wInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
                     </>
                   ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>}
                 </div>
@@ -2046,7 +2046,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                   </div>
                   <div style={{ flex:1 }}>
                     <label style={{ display:'block', fontSize:'0.62rem', fontWeight:700, color:'#6b7280', marginBottom:3 }}>Postes secondaires</label>
-                    <input style={{ ...inputStyle, marginBottom:0 }} placeholder="ex : 1, 3" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
+                    <input style={{ ...inputStyle, marginBottom:0 }} placeholder="ex : 1, 3" aria-label="ex : 1, 3" value={editSecondaires} onChange={e=>setEditSecondaires(e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -2063,8 +2063,8 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                           <div style={{ fontSize:'0.56rem', fontWeight:800, color:'#6b7280', textTransform:'uppercase' }}>{label}</div>
                           {dernier ? (
                             <>
-                              <div style={{ fontSize:'0.9rem', fontWeight:800, color:'#1a1a1a', marginTop:2 }}>{dernier.valeur}<span style={{ fontSize:'0.55rem', fontWeight:700, color:'#9ca3af' }}>{unite}</span></div>
-                              <div style={{ fontSize:'0.54rem', color:'#9ca3af', marginTop:2 }}>{new Date(dernier.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
+                              <div style={{ fontSize:'0.9rem', fontWeight:800, color:'#1a1a1a', marginTop:2 }}>{dernier.valeur}<span style={{ fontSize:'0.55rem', fontWeight:700, color: '#6b7280' }}>{unite}</span></div>
+                              <div style={{ fontSize:'0.54rem', color: '#6b7280', marginTop:2 }}>{new Date(dernier.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
                             </>
                           ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700, marginTop:2 }}>—</div>}
                         </div>
@@ -2087,7 +2087,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                         <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {ev.type === 'match' ? `Match${ev.adversaire ? ' · ' + ev.adversaire : ''}` : (ev.titre || EVT_LABEL[ev.type] || ev.type)}
                         </span>
-                        <span style={{ fontSize:'0.64rem', color:'#9ca3af', fontWeight:600, flexShrink:0 }}>
+                        <span style={{ fontSize:'0.64rem', color: '#6b7280', fontWeight:600, flexShrink:0 }}>
                           {new Date(ev.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
                         </span>
                       </div>
@@ -2240,7 +2240,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
                 </div>
                 <button onClick={() => supprimerNiveau(niveau.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1 }}>✕</button>
               </div>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                 {niveau.critere.toUpperCase()} de référence
               </div>
               {editingRef === niveau.id ? (
@@ -2254,7 +2254,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
                   <span style={{ fontSize: '1.3rem', fontWeight: 900, color: '#1f2937' }}>
                     {niveau.valeur_ref != null ? `${niveau.valeur_ref}` : '—'}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>km/h</span>
+                  <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>km/h</span>
                   <button onClick={() => { setEditingRef(niveau.id); setRefInput(niveau.valeur_ref || '') }}
                     style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', marginLeft: 'auto' }}>
                     ✎ ajuster
@@ -2262,11 +2262,11 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
                 </div>
               )}
               {!niveau.valeur_ref_auto && (
-                <button onClick={() => reactiverAuto(niveau)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.65rem', cursor: 'pointer', padding: 0, marginBottom: 8, textDecoration: 'underline' }}>
+                <button onClick={() => reactiverAuto(niveau)} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.65rem', cursor: 'pointer', padding: 0, marginBottom: 8, textDecoration: 'underline' }}>
                   ajusté à la main · recalculer auto
                 </button>
               )}
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                 {membres.length} joueur{membres.length > 1 ? 's' : ''}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
@@ -2274,7 +2274,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
                   const j = joueurs.find(x => x.id === id)
                   return j ? <span key={id} style={{ fontSize: '0.68rem', background: '#f3f4f6', borderRadius: 6, padding: '2px 6px', color: '#374151' }}>{j.prenom}</span> : null
                 })}
-                {membres.length > 6 && <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>+{membres.length - 6}</span>}
+                {membres.length > 6 && <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>+{membres.length - 6}</span>}
               </div>
               <button onClick={() => setPickerNiveau(niveau)}
                 style={{ width: '100%', padding: '6px', borderRadius: 8, border: '1.5px dashed #d1d5db', background: 'none', color: '#6b7280', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
@@ -2288,7 +2288,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
         <div style={{ width: 230, background: '#f9fafb', borderRadius: 14, padding: 14, border: '1.5px dashed #d1d5db' }}>
           {creating ? (
             <>
-              <input placeholder="Nom (ex: G3)" value={newNom} onChange={e => setNewNom(e.target.value)}
+              <input placeholder="Nom (ex: G3)" aria-label="Nom (ex: G3)" value={newNom} onChange={e => setNewNom(e.target.value)}
                 style={{ ...inputStyle, marginBottom: 8 }} autoFocus />
               <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                 {['vmi', 'vma'].map(c => (
@@ -2307,7 +2307,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
             </>
           ) : (
             <button onClick={() => setCreating(true)}
-              style={{ width: '100%', height: '100%', minHeight: 90, background: 'none', border: 'none', color: '#9ca3af', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>
+              style={{ width: '100%', height: '100%', minHeight: 90, background: 'none', border: 'none', color: '#6b7280', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>
               ＋ Nouveau groupe de niveau
             </button>
           )}
@@ -2332,7 +2332,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
                   <span style={{ fontSize: '0.85rem', fontWeight: dans ? 800 : 600, color: dans ? '#4338ca' : '#374151' }}>
                     {j.prenom} {j.nom}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>
                     {val != null ? `${val} km/h` : '—'} {dans && '✓'}
                   </span>
                 </div>
@@ -2348,7 +2348,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
       )}
 
       {niveaux.length === 0 && !creating && (
-        <div style={{ fontSize: '0.82rem', color: '#9ca3af', padding: '1.5rem 0' }}>
+        <div style={{ fontSize: '0.82rem', color: '#6b7280', padding: '1.5rem 0' }}>
           Aucun groupe de niveau. Crée-en un pour regrouper des joueurs par VMI/VMA sur un exercice.
         </div>
       )}
@@ -2388,7 +2388,7 @@ function InheritedEventPreview({ evt, blocs, onClose }) {
         </div>
         <div style={{ padding: '16px 18px', overflowY: 'auto' }}>
           {(blocs || []).length === 0 ? (
-            <p style={{ color: '#9ca3af', fontSize: '.85rem', textAlign: 'center', margin: 0 }}>Aucun détail pour cet évènement.</p>
+            <p style={{ color: '#6b7280', fontSize: '.85rem', textAlign: 'center', margin: 0 }}>Aucun détail pour cet évènement.</p>
           ) : blocs.map((bloc, i) => (
             <div key={bloc.id || i} style={{ marginBottom: 14 }}>
               <p style={{ fontSize: '.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', margin: '0 0 6px' }}>
@@ -2563,7 +2563,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
             border: '2px solid rgba(255,255,255,.4)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
             {url
-              ? <img src={url} alt={initials} style={{ width: size - 10, height: size - 10, objectFit: 'contain' }}
+              ? <img loading="lazy" src={url} alt={initials} style={{ width: size - 10, height: size - 10, objectFit: 'contain' }}
                   onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
               : null}
             <div style={{ width: '100%', height: '100%', display: url ? 'none' : 'flex',
@@ -2784,7 +2784,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                                 <div style={{ flex:1, height:1, background:'#b8d8c8' }} />
                               </div>
                             ))}
-                            {bloc.effectif_desc && <span style={{ fontSize:'.55rem', color:'#9ca3af', fontStyle:'italic' }}>{bloc.effectif_desc}</span>}
+                            {bloc.effectif_desc && <span style={{ fontSize:'.55rem', color: '#6b7280', fontStyle:'italic' }}>{bloc.effectif_desc}</span>}
                           </div>
                         )}
                       </div>
@@ -3069,7 +3069,7 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
                           {/* Séquences jeu + récup intercalées */}
                           <div style={{ flex:1, display:'flex', alignItems:'stretch', borderRight:cellBorder }}>
                             {seqs.length === 0
-                              ? <div style={{ flex:1, background:'#f8fafc', display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'.65rem', color:'#9ca3af', fontStyle:'italic' }}>—</span></div>
+                              ? <div style={{ flex:1, background:'#f8fafc', display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'.65rem', color: '#6b7280', fontStyle:'italic' }}>—</span></div>
                               : seqs.map((seq, i) => {
                                 const isJeu = seq.type === 'jeu'
                                 return (
@@ -3128,11 +3128,11 @@ function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
             {serieCounter > 0 && (
               <div style={{ display:'flex', justifyContent:'flex-end', gap:24, paddingTop:8, borderTop:'2px solid #e5e7eb' }}>
                 <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:'.58rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>Jeu effectif</div>
+                  <div style={{ fontSize:'.58rem', fontWeight:700, color: '#6b7280', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>Jeu effectif</div>
                   <div style={{ fontSize:'.95rem', fontWeight:900, color:'#7c2d12' }}>{formatSeqDur(grandJeu)}</div>
                 </div>
                 <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:'.58rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>Temps total</div>
+                  <div style={{ fontSize:'.58rem', fontWeight:700, color: '#6b7280', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>Temps total</div>
                   <div style={{ fontSize:'.95rem', fontWeight:900, color:'#1e3a8a' }}>{formatSeqDur(grandTotal)}</div>
                 </div>
               </div>
@@ -3997,7 +3997,7 @@ function SeanceModal({
                                 {/* Type — masqué pour inter_bloc */}
                                 {!isInterBloc && (
                                 <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Type</span>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>Type</span>
                                   <div style={{ display:'flex', gap:4 }}>
                                     {[['jeu','Séquence'],['recup','Récup.']].map(([v,l]) => (
                                       <button key={v} onClick={() => updateSequence(seq.id, { type:v })}
@@ -4016,7 +4016,7 @@ function SeanceModal({
                                 {/* Thème — masqué pour inter_bloc */}
                                 {!isInterBloc && (
                                 <div style={{ display:'flex', flexDirection:'column', gap:3, flex:1, minWidth:100 }}>
-                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Thème</span>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>Thème</span>
                                   <input
                                     style={seqInpStyle}
                                     defaultValue={seq.theme || ''}
@@ -4027,7 +4027,7 @@ function SeanceModal({
                                 )}
                                 {/* Durée */}
                                 <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.05em' }}>Durée — {formatSeqDur(seq.duree_sec)}</span>
+                                  <span style={{ fontSize:'0.6rem', fontWeight:700, color: '#6b7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>Durée — {formatSeqDur(seq.duree_sec)}</span>
                                   {/* Presets rapides */}
                                   <div style={{ display:'flex', gap:3, flexWrap:'wrap' }}>
                                     {[30,45,60,75,90,105,120,150,180,240,300].map(sec => (
@@ -4045,11 +4045,11 @@ function SeanceModal({
                                     <input
                                       key={seq.duree_sec}
                                       style={{ ...seqInpStyle, width:64, textAlign:'center' }}
-                                      type="number" min={5} placeholder="sec"
+                                      type="number" min={5} placeholder="sec" aria-label="sec"
                                       defaultValue={seq.duree_sec || ''}
                                       onBlur={e => { const v = parseInt(e.target.value); if (v >= 5) updateSequence(seq.id, { duree_sec: v }) }}
                                     />
-                                    <span style={{ fontSize:'0.65rem', color:'#9ca3af' }}>secondes</span>
+                                    <span style={{ fontSize:'0.65rem', color: '#6b7280' }}>secondes</span>
                                   </div>
                                 </div>
                                 {/* Supprimer */}
@@ -4067,14 +4067,14 @@ function SeanceModal({
 
                           {/* Footer infos bloc */}
                           <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:8, fontSize:'0.7rem', alignItems:'center' }}>
-                            <span style={{ color:'#9ca3af' }}>Conditions :</span>
+                            <span style={{ color: '#6b7280' }}>Conditions :</span>
                             <input
                               defaultValue={bloc.conditions_jeu || ''}
                               onBlur={e => updateBloc(bloc.id, { conditions_jeu: e.target.value })}
                               placeholder="Plaqué / Touché…"
                               style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'2px 7px', fontSize:'0.7rem', fontFamily:'inherit', color:'#1f2937', outline:'none', width:140 }}
                             />
-                            <span style={{ color:'#9ca3af', marginLeft:6 }}>Effectif :</span>
+                            <span style={{ color: '#6b7280', marginLeft:6 }}>Effectif :</span>
                             <input
                               defaultValue={bloc.effectif_desc || ''}
                               onBlur={e => updateBloc(bloc.id, { effectif_desc: e.target.value })}
@@ -4316,7 +4316,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
       {/* ── Header sync ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 0' }}>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>
+          <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280' }}>
             {lastSync ? `Dernière sync : ${new Date(lastSync).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Pas encore synchronisé'}
           </p>
         </div>
@@ -4329,7 +4329,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
       </div>
 
       {classement.length === 0 && matchs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
           <p style={{ fontSize: '2rem', marginBottom: 8 }}>📡</p>
           <p style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Aucune donnée chargée</p>
           <p style={{ fontSize: '0.82rem' }}>Clique sur "Synchroniser" pour charger les matchs et le classement depuis monclubhouse.ffr.fr</p>
@@ -4377,7 +4377,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
                           color: isOurs ? groupColor : '#374151' }}>{c.position}</td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', width: 28 }}>
                           {c.logo
-                            ? <img src={c.logo} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => e.target.style.display='none'} />
+                            ? <img loading="lazy" src={c.logo} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => e.target.style.display='none'} />
                             : null}
                         </td>
                         <td style={{ padding: '7px 8px', fontWeight: isOurs ? 800 : 500,
@@ -4417,7 +4417,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
                     <span style={{ fontSize: '0.7rem', color: '#6b7280', minWidth: 60 }}>{fmtDate(m.date_match)}</span>
                     <span style={{ flex: 1, fontWeight: 700, fontSize: '0.78rem', color: '#1f2937' }}>{opponent(m)}</span>
                     {score && <span style={{ fontWeight: 800, fontSize: '0.82rem', color: g === true ? '#16a34a' : g === false ? '#dc2626' : '#374151' }}>{score}</span>}
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af' }}>{m.est_domicile ? 'dom' : m.est_domicile === false ? 'ext' : ''}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280' }}>{m.est_domicile ? 'dom' : m.est_domicile === false ? 'ext' : ''}</span>
                   </div>
                 )
               })}
@@ -4436,7 +4436,7 @@ function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, la
                   <span style={{ fontSize: '0.7rem', color: '#6b7280', minWidth: 60 }}>{fmtDate(m.date_match)}</span>
                   <span style={{ flex: 1, fontWeight: 700, fontSize: '0.78rem', color: '#1f2937' }}>{opponent(m)}</span>
                   {m.heure && <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>{m.heure}</span>}
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af' }}>{m.est_domicile ? '🏠' : m.est_domicile === false ? '✈️' : ''}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280' }}>{m.est_domicile ? '🏠' : m.est_domicile === false ? '✈️' : ''}</span>
                 </div>
               ))}
             </div>

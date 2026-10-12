@@ -534,12 +534,12 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
               <div style={S.histAvatar}>{initiales(joueur.prenom, joueur.nom)}</div>
               <span style={{ fontSize: '0.84rem', fontWeight: 700 }}>{joueur.prenom} {joueur.nom}</span>
-              <span style={{ fontSize: '0.74rem', color: '#9ca3af' }}>{episodes.length} blessure{episodes.length > 1 ? 's' : ''}</span>
+              <span style={{ fontSize: '0.74rem', color: '#6b7280' }}>{episodes.length} blessure{episodes.length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', paddingLeft: '2.5rem' }}>
               {episodes.map(ep => (
                 <div key={ep.id} onClick={() => openEdit(joueur, ep)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.76rem', cursor: 'pointer' }}>
-                  <span style={{ color: '#9ca3af', width: 170, flexShrink: 0 }}>
+                  <span style={{ color: '#6b7280', width: 170, flexShrink: 0 }}>
                     {formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}
                   </span>
                   <span style={{ flex: 1, fontWeight: 600 }}>
@@ -638,7 +638,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                 <input type="date" value={parseDureeToDate(modal.duree_estimee) || modal.date_retour_prevue} onChange={e => setModal(m => ({ ...m, date_retour_prevue: e.target.value }))} style={{ ...S.input, width: '100%' }} />
               </div>
             </div>
-            <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '0 0 1rem' }}>Survenue le {formatDateFull(modal.date_debut)}</p>
+            <p style={{ fontSize: '0.68rem', color: '#6b7280', margin: '0 0 1rem' }}>Survenue le {formatDateFull(modal.date_debut)}</p>
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => setModal(null)} style={S.btnSecondary}>Annuler</button>
@@ -661,7 +661,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
           <div style={S.overlay} onClick={() => setDetailPalier(null)}>
             <div style={S.modal} onClick={e => e.stopPropagation()}>
               <p style={S.modalTitle}>Étape {idx + 1}/{allSteps.length} — {st?.titre}</p>
-              {tl.proto && <p style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 700, margin: '0 0 0.9rem' }}>Protocole : {tl.proto.nom}</p>}
+              {tl.proto && <p style={{ fontSize: '0.74rem', color: '#6b7280', fontWeight: 700, margin: '0 0 0.9rem' }}>Protocole : {tl.proto.nom}</p>}
               {isApte ? (
                 <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: 0 }}>
                   Retour à la compétition : toutes les étapes précédentes validées + aval médical.
@@ -689,7 +689,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                       ))}
                     </div>
                   ) : (
-                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Aucun test défini pour cette étape.</p>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Aucun test défini pour cette étape.</p>
                   )}
                 </>
               )}
@@ -746,7 +746,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                 <div key={p.id} style={S.protoListRow}>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ margin: 0, fontWeight: 800, fontSize: '0.84rem' }}>{p.nom}</p>
-                    {p.description && <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>{p.description}</p>}
+                    {p.description && <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#6b7280' }}>{p.description}</p>}
                   </div>
                   <button onClick={() => setProtoModal({ mode: 'edit', id: p.id, nom: p.nom, paliers: JSON.parse(JSON.stringify(p.paliers || {})) })} style={S.btnGhost}>Modifier</button>
                 </div>
@@ -934,7 +934,7 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
           </span>
         ))}
       </div>
-      <p style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, margin: '0.4rem 0 0' }}>
+      <p style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, margin: '0.4rem 0 0' }}>
         Une couleur par joueur (nom et barres) · opacité pleine = blessure en cours, atténuée = guérie · barres positionnées au jour près
       </p>
     </div>
@@ -955,15 +955,15 @@ const S = {
   testCheckCritere: { display: 'block', fontSize: '0.72rem', color: '#6b7280', marginTop: 2 },
   protoListRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', border: '1px solid #f3f4f6', borderRadius: 10, padding: '0.6rem 0.8rem' },
   protoPalierBlock: { borderTop: '1px solid #f3f4f6', paddingTop: '0.8rem', marginTop: '0.8rem' },
-  protoPalierTitle: { fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.4rem' },
+  protoPalierTitle: { fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.4rem' },
   protoTestRow: { display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' },
   protoTestBtn: { border: '1px solid #e5e7eb', background: 'white', borderRadius: 6, width: 26, height: 26, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', color: '#374151' },
 
   panel: { background: 'white', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' },
   panelHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.9rem 1.1rem 0.7rem' },
-  panelLabel: { fontSize: '0.65rem', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  panelCount: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af' },
-  empty: { fontSize: '0.82rem', color: '#9ca3af', padding: '0.5rem 1.1rem 1.1rem', margin: 0 },
+  panelLabel: { fontSize: '0.65rem', fontWeight: 900, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  panelCount: { fontSize: '0.72rem', fontWeight: 700, color: '#6b7280' },
+  empty: { fontSize: '0.82rem', color: '#6b7280', padding: '0.5rem 1.1rem 1.1rem', margin: 0 },
 
   caseGrid: { display: 'flex', flexDirection: 'column', gap: '0.7rem', padding: '0 1.1rem 1.1rem' },
   case: { border: '1px solid #f3f4f6', borderRadius: 12, padding: '0.85rem 0.9rem 0.9rem' },
@@ -971,17 +971,17 @@ const S = {
   avatar: { width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.66rem', fontWeight: 800, flexShrink: 0, background: '#fee2e2', color: '#dc2626' },
   caseName: { fontSize: '0.86rem', fontWeight: 800, margin: 0 },
   caseMeta: { fontSize: '0.74rem', color: '#6b7280', margin: '0.1rem 0 0' },
-  caseDesc: { fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0', lineHeight: 1.4 },
+  caseDesc: { fontSize: '0.72rem', color: '#6b7280', margin: '0.35rem 0 0', lineHeight: 1.4 },
   sevBadge: { fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.03em', padding: '0.12rem 0.45rem', borderRadius: 999, border: '1px solid', marginLeft: '0.35rem', whiteSpace: 'nowrap' },
   daysOutNum: { fontSize: '1.05rem', fontWeight: 800, lineHeight: 1 },
-  daysOutLbl: { fontSize: '0.56rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' },
+  daysOutLbl: { fontSize: '0.56rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' },
 
   paliers: { display: 'flex', alignItems: 'flex-start', gap: 0, marginTop: '0.6rem' },
   pal: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' },
   palierDesc: { fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.4, margin: '0.6rem 0 0', cursor: 'pointer' },
-  palDot: { width: 18, height: 18, borderRadius: '50%', border: '2px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, zIndex: 1, color: '#9ca3af' },
+  palDot: { width: 18, height: 18, borderRadius: '50%', border: '2px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, zIndex: 1, color: '#6b7280' },
   palLine: { position: 'absolute', top: 8, left: '50%', width: '100%', height: 2, background: '#e5e7eb', zIndex: 0 },
-  palLbl: { fontSize: '0.58rem', color: '#9ca3af', fontWeight: 700, marginTop: 4, textAlign: 'center', lineHeight: 1.15, maxWidth: 58 },
+  palLbl: { fontSize: '0.58rem', color: '#6b7280', fontWeight: 700, marginTop: 4, textAlign: 'center', lineHeight: 1.15, maxWidth: 58 },
 
   caseFoot: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.7rem', flexWrap: 'wrap', gap: '0.4rem' },
   caseReturn: { fontSize: '0.72rem', color: '#6b7280' },
@@ -992,30 +992,30 @@ const S = {
   indispoName: { fontSize: '0.8rem', fontWeight: 800, margin: 0 },
   indispoZone: { fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, margin: '0.1rem 0 0' },
   indispoDaysNum: { fontSize: '1.02rem', fontWeight: 900, color: '#dc2626', lineHeight: 1 },
-  indispoDaysLbl: { fontSize: '0.58rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' },
+  indispoDaysLbl: { fontSize: '0.58rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' },
   indispoRetour: { fontSize: '0.64rem', color: '#059669', fontWeight: 700, margin: '0.15rem 0 0' },
 
   filterBtns: { display: 'flex', gap: 0, border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' },
   filterBtn: { background: 'white', color: '#6b7280', border: 'none', borderRight: '1.5px solid #e5e7eb', font: 'inherit', fontSize: '0.68rem', fontWeight: 700, padding: '0.35rem 0.6rem', cursor: 'pointer', whiteSpace: 'nowrap' },
   zoomCtrl: { display: 'flex', alignItems: 'center', gap: 8 },
   zoomBtn: { width: 24, height: 24, border: '1.5px solid #e5e7eb', borderRadius: 6, background: 'white', color: '#1a1a1a', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  zoomLbl: { fontSize: '0.66rem', color: '#9ca3af', fontWeight: 700, minWidth: 64, textAlign: 'center' },
+  zoomLbl: { fontSize: '0.66rem', color: '#6b7280', fontWeight: 700, minWidth: 64, textAlign: 'center' },
 
   gWrap: { overflowX: 'auto', border: '1px solid #f3f4f6', borderRadius: 6 },
   gHead: { display: 'flex', borderBottom: '1px solid #f3f4f6', background: '#fafafa' },
   gNameCol: { flex: '0 0 190px', display: 'flex', alignItems: 'center', borderRight: '1px solid #f3f4f6', padding: '0 0.6rem' },
-  gColSort: { background: 'none', border: 'none', font: 'inherit', fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.03em', cursor: 'pointer', padding: '0.4rem 0', display: 'flex', alignItems: 'center', gap: 3 },
+  gColSort: { background: 'none', border: 'none', font: 'inherit', fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', cursor: 'pointer', padding: '0.4rem 0', display: 'flex', alignItems: 'center', gap: 3 },
   gSortArrow: { fontSize: '0.56rem', opacity: 0.6 },
   gTimeCol: { flex: 1, position: 'relative', height: 28 },
   gMonthTick: { position: 'absolute', top: 0, bottom: 0, borderLeft: '1px solid #e5e7eb' },
   gMonthLbl: { position: 'absolute', top: 6, fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', whiteSpace: 'nowrap' },
   gWeekTick: { position: 'absolute', top: 17, bottom: 0, borderLeft: '1px dashed #f3f4f6' },
   gTodayLine: { position: 'absolute', top: 0, bottom: 0, borderLeft: '2px solid', zIndex: 2 },
-  gPosGroupLbl: { padding: '0.28rem 0.6rem', fontSize: '0.6rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', background: '#fafafa', borderBottom: '1px solid #f3f4f6' },
+  gPosGroupLbl: { padding: '0.28rem 0.6rem', fontSize: '0.6rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', background: '#fafafa', borderBottom: '1px solid #f3f4f6' },
   gRow: { display: 'flex', alignItems: 'center', height: 30, borderBottom: '1px solid #f3f4f6' },
   gName: { flex: '0 0 190px', padding: '0 0.6rem', borderRight: '1px solid #f3f4f6', height: '100%', display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' },
   gNameTxt: { fontWeight: 800, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  gPoste: { fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, flexShrink: 0, marginLeft: 'auto', paddingLeft: 4 },
+  gPoste: { fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, flexShrink: 0, marginLeft: 'auto', paddingLeft: 4 },
   gTrack: { flex: 1, position: 'relative', height: '100%' },
   gGridline: { position: 'absolute', top: 0, bottom: 0, borderLeft: '1px solid #f3f4f6' },
   gBar: { position: 'absolute', height: 16, top: 7, borderRadius: 2, border: '1px solid rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'pointer' },

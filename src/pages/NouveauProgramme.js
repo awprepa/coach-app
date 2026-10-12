@@ -161,7 +161,7 @@ export default function NouveauProgramme() {
             style={{ ...styles.btnSecondary, width: '100%', justifyContent: 'center', display: 'flex', gap: '0.5rem' }}
           >
             📋 {selectedTemplate ? `Template : ${selectedTemplate.nom}` : 'Partir d\'un template'}
-            <span style={{ marginLeft: 'auto', color: '#9ca3af' }}>{showTemplates ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 'auto', color: '#6b7280' }}>{showTemplates ? '▲' : '▼'}</span>
           </button>
 
           {showTemplates && (
@@ -176,7 +176,7 @@ export default function NouveauProgramme() {
                 >
                   <div>
                     <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#111827' }}>{t.nom}</p>
-                    {t.description && <p style={{ margin: '0.15rem 0 0', fontSize: '0.76rem', color: '#9ca3af' }}>{t.description}</p>}
+                    {t.description && <p style={{ margin: '0.15rem 0 0', fontSize: '0.76rem', color: '#6b7280' }}>{t.description}</p>}
                   </div>
                   <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
                     <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 6, padding: '0.2rem 0.55rem', fontSize: '0.74rem', fontWeight: '600' }}>{t.semaines} sem.</span>
@@ -186,7 +186,7 @@ export default function NouveauProgramme() {
               ))}
               <div
                 onClick={() => { setSelectedTemplate(null); setShowTemplates(false) }}
-                style={{ padding: '0.7rem 1rem', cursor: 'pointer', fontSize: '0.8rem', color: '#9ca3af', textAlign: 'center' }}
+                style={{ padding: '0.7rem 1rem', cursor: 'pointer', fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' }}
               >
                 Commencer sans template
               </div>
@@ -198,7 +198,7 @@ export default function NouveauProgramme() {
               <span style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: '600' }}>
                 ✓ {(selectedTemplate.programme_template_seances || []).length} séance{(selectedTemplate.programme_template_seances || []).length > 1 ? 's' : ''} + exercices seront copiés
               </span>
-              <button onClick={() => setSelectedTemplate(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
+              <button onClick={() => setSelectedTemplate(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
             </div>
           )}
         </div>
@@ -209,7 +209,7 @@ export default function NouveauProgramme() {
           <label style={styles.label}>Nom du cycle *</label>
           <input
             name="nom" value={form.nom} onChange={handleChange}
-            required placeholder="ex: Cycle 1 — Force"
+            required placeholder="ex: Cycle 1 — Force" aria-label="ex: Cycle 1 — Force"
             style={styles.input}
           />
         </div>
@@ -263,7 +263,7 @@ export default function NouveauProgramme() {
           <div style={{ background: 'white', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#111827' }}>📥 Importer un cycle JSON</h2>
-              <button onClick={() => setShowImport(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
+              <button onClick={() => setShowImport(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#6b7280' }}>✕</button>
             </div>
             <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: '0 0 0.75rem' }}>
               Colle ici le JSON généré par Claude. Il sera importé directement dans l'app avec toutes les séances, exercices et progressions.
@@ -306,14 +306,14 @@ const styles = {
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
   header: { marginBottom: '1.5rem' },
   title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  subtitle: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
+  subtitle: { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   field: { marginBottom: '1.25rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' },
   input: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   weeksGrid: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
   weekBtn: { width: '48px', height: '48px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer' },
-  weeksHint: { color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.6rem' },
+  weeksHint: { color: '#6b7280', fontSize: '0.8rem', marginTop: '0.6rem' },
   btnPrimary: { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' },
   btnAI: { background: '#111827', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.35)', borderRadius: '12px', padding: '0.75rem 1.25rem', fontSize: '0.88rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' },

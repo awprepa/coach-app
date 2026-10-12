@@ -123,7 +123,7 @@ export default function HistoriqueScans() {
 
       <div style={S.content}>
         {loading ? (
-          <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem', fontSize: '0.9rem' }}>Chargement…</p>
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem', fontSize: '0.9rem' }}>Chargement…</p>
         ) : (
           <>
             {/* Stats banner */}
@@ -162,7 +162,7 @@ export default function HistoriqueScans() {
 
             {/* Liste */}
             {filtered.length > 0 && (
-              <p style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, margin: '0 2px' }}>
+              <p style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, margin: '0 2px' }}>
                 Touche un aliment pour voir le détail et le réajouter à ta journée
               </p>
             )}
@@ -208,7 +208,7 @@ function StatItem({ val, lbl, color }) {
       <span style={{ fontSize: '1.3rem', fontWeight: 900, color: color || '#1a1a1a', lineHeight: 1 }}>
         {val}
       </span>
-      <span style={{ fontSize: '0.58rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
+      <span style={{ fontSize: '0.58rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
         {lbl}
       </span>
     </div>

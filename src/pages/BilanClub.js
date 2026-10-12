@@ -173,7 +173,7 @@ function Entete({ id, periodeTxt }) {
   return (
     <div className="head">
       <div className="who">
-        {id.logo && <img className="logo" src={id.logo} alt="" />}
+        {id.logo && <img loading="lazy" className="logo" src={id.logo} alt={`Logo ${id.nom}`} />}
         <div>
           <div className="eyebrow">Bilan de préparation physique</div>
           <h1>{id.nom}</h1>
@@ -241,7 +241,7 @@ function Jour({ it, b }) {
       <div className="dayhead"><b>{libelleJour(it.date)}</b><span>Entraînement{it.duree ? ` · ${it.duree} min` : ''}</span></div>
       <div className="sec"><div className="k">Déroulé</div><div>
         {it.documents.length > 0
-          ? it.documents.map((u, i) => <img key={i} className="docimg" src={u} alt="" />)
+          ? it.documents.map((u, i) => <img loading="lazy" key={i} className="docimg" src={u} alt="Déroulé de l'entraînement fourni par l'entraîneur" />)
           : t ? (
             <table>
               <thead><tr><th>Séquence</th><th className="r">Durée</th><th>Contenu</th></tr></thead>

@@ -113,12 +113,12 @@ export default function WellnessClient() {
 
       <div style={S.content}>
         {loading ? (
-          <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>Chargement...</p>
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>Chargement...</p>
         ) : tab === 'bilan' ? (
           bilanEntries.length === 0 ? (
             <div style={S.empty}>
               <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée wellness</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Remplis ton bilan quotidien depuis l'accueil.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Remplis ton bilan quotidien depuis l'accueil.</p>
             </div>
           ) : (
           <>
@@ -206,7 +206,7 @@ export default function WellnessClient() {
                   step="0.1"
                   min="20"
                   max="300"
-                  placeholder="ex : 75.5"
+                  placeholder="ex : 75.5" aria-label="ex : 75.5"
                   value={weightInput}
                   onChange={e => setWeightInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && saveWeight()}
@@ -232,7 +232,7 @@ export default function WellnessClient() {
                 </button>
               </div>
               {entries.find(e => e.date === today)?.poids && !weightSaved && (
-                <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
                   Poids actuel du jour : {entries.find(e => e.date === today).poids} kg
                 </p>
               )}
@@ -241,7 +241,7 @@ export default function WellnessClient() {
             {poidsEntries.length === 0 ? (
             <div style={S.empty}>
               <p style={{ fontWeight: '700', color: '#374151' }}>Aucune donnée de poids</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Enregistre ton premier poids ci-dessus.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Enregistre ton premier poids ci-dessus.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -253,7 +253,7 @@ export default function WellnessClient() {
                   { label: 'Maximum', val: `${Math.max(...poidsEntries.map(e => e.poids))} kg` },
                 ].map(s => (
                   <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: '0.75rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                    <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' }}>{s.label}</p>
+                    <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase' }}>{s.label}</p>
                     <p style={{ margin: '0.25rem 0 0', fontSize: '1rem', fontWeight: '800', color: '#333' }}>{s.val}</p>
                   </div>
                 ))}
@@ -261,7 +261,7 @@ export default function WellnessClient() {
 
               {/* Graphique */}
               <div style={{ background: 'white', borderRadius: 14, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Évolution du poids</p>
+                <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Évolution du poids</p>
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={poidsEntries} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -278,7 +278,7 @@ export default function WellnessClient() {
               {/* Historique poids */}
               <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
+                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
                 </div>
                 {[...poidsEntries].reverse().map(w => (
                   <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 1rem', borderBottom: '1px solid #f9fafb' }}>

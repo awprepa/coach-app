@@ -206,7 +206,7 @@ export default function ProgrammeClient() {
                         </div>
                         <div>
                           <p style={styles.cardTitle}>{ev.titre}</p>
-                          <p style={{ ...styles.cardSub, color: '#9ca3af' }}>Séance libre</p>
+                          <p style={{ ...styles.cardSub, color: '#6b7280' }}>Séance libre</p>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -305,7 +305,7 @@ const styles = {
     margin: 0,
   },
   meta: {
-    color: '#9ca3af',
+    color: '#6b7280',
     fontSize: '0.85rem',
   },
   badge: {
@@ -342,7 +342,7 @@ const styles = {
     letterSpacing: '0.08em',
   },
   sectionCount: {
-    color: '#9ca3af',
+    color: '#6b7280',
     fontSize: '0.8rem',
   },
   emptyCard: {
@@ -350,7 +350,7 @@ const styles = {
     borderRadius: '16px',
     padding: '2rem',
     textAlign: 'center',
-    color: '#9ca3af',
+    color: '#6b7280',
     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
   },
   card: {
@@ -420,7 +420,7 @@ const styles = {
     padding: '0.75rem 1rem',
     width: '100%',
     textAlign: 'center',
-    color: '#9ca3af',
+    color: '#6b7280',
     fontSize: '0.82rem',
     fontWeight: '600',
     cursor: 'pointer',

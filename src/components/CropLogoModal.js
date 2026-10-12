@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import useEscape from '../hooks/useEscape'
 
 /**
  * Modal de recadrage de logo.
@@ -12,6 +13,7 @@ import 'react-image-crop/dist/ReactCrop.css'
  *   onCancel   — () => void
  */
 export default function CropLogoModal({ src, onConfirm, onCancel }) {
+  useEscape(onCancel)
   const imgRef = useRef(null)
   const [crop, setCrop] = useState()
   const [completedCrop, setCompletedCrop] = useState()
@@ -79,6 +81,7 @@ export default function CropLogoModal({ src, onConfirm, onCancel }) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-label="Recadrer le logo"
         style={{
           background: 'white',
           borderRadius: '22px 22px 0 0',
@@ -92,7 +95,7 @@ export default function CropLogoModal({ src, onConfirm, onCancel }) {
         <p style={{ fontWeight: '800', fontSize: '0.95rem', color: '#1a1a1a', margin: '0 0 0.4rem' }}>
           ✂️ Recadrer le logo
         </p>
-        <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 1rem' }}>
+        <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 1rem' }}>
           Déplace et redimensionne la sélection, puis appuie sur Valider.
         </p>
 

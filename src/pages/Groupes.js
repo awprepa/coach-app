@@ -83,7 +83,7 @@ export default function Groupes() {
                 <div style={S.row} onClick={() => navigate(`/groupe/${g.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
                     {g.logo_url
-                      ? <img src={g.logo_url} alt="" style={S.logo} />
+                      ? <img loading="lazy" src={g.logo_url} alt="" style={S.logo} />
                       : <div style={S.logoFallback}>{initialesGroupe(g.nom)}</div>}
                     <div style={{ minWidth: 0 }}>
                       <p style={S.nom}>{g.nom}</p>
@@ -159,7 +159,7 @@ const S = {
 
   sousRow:  { display: 'flex', flexWrap: 'wrap', gap: '0.2rem 1.1rem', padding: '0 1.15rem 0.85rem 3.15rem' },
   sousLink: { border: 'none', background: 'none', padding: 0, fontSize: '0.76rem', fontWeight: 600, color: '#4b5563', cursor: 'pointer' },
-  sousCount:{ color: '#9ca3af', fontWeight: 500 },
+  sousCount:{ color: '#6b7280', fontWeight: 500 },
   sousBless:{ color: '#b91c1c', fontWeight: 700 },
 
   blessLink: { display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, color: '#b91c1c', fontSize: '0.76rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' },

@@ -212,7 +212,7 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
             <div onClick={() => fileRef.current.click()} style={S.dropzone}>
               <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>📂</p>
               <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Clique pour choisir un fichier</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: 0 }}>.xlsx ou .xls</p>
+              <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0 }}>.xlsx ou .xls</p>
             </div>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: 'none' }} />
             <div style={S.hint}>
@@ -236,7 +236,7 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
                     </div>
                     <div>
                       <p style={{ fontWeight: '800', fontSize: '0.95rem', color: '#333333', margin: 0 }}>{s.nom}</p>
-                      <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>{s.exercices.length} exercice{s.exercices.length > 1 ? 's' : ''}</p>
+                      <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0 }}>{s.exercices.length} exercice{s.exercices.length > 1 ? 's' : ''}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '2rem' }}>
@@ -269,7 +269,7 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
             <p style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⏳</p>
             <p style={{ fontWeight: '700', color: '#333333', marginBottom: '0.35rem' }}>Import en cours...</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>{progress}</p>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>{progress}</p>
           </div>
         )}
       </div>
@@ -281,7 +281,7 @@ const S = {
   overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
   modal:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 560, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' },
   title:      { fontSize: '1.25rem', fontWeight: '800', color: '#333333', margin: 0 },
-  sub:        { color: '#9ca3af', fontSize: '0.8rem', margin: '0.2rem 0 0' },
+  sub:        { color: '#6b7280', fontSize: '0.8rem', margin: '0.2rem 0 0' },
   closeBtn:   { background: '#f3f4f6', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '0.9rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   error:      { background: '#fef2f2', color: '#dc2626', borderRadius: 10, padding: '0.65rem 0.875rem', fontSize: '0.85rem', marginBottom: '1rem' },
   dropzone:   { border: '2px dashed #d1d5db', borderRadius: 14, padding: '2.5rem 1rem', textAlign: 'center', cursor: 'pointer', marginBottom: '1rem' },

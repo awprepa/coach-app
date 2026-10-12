@@ -247,7 +247,7 @@ export default function AjouterAliment() {
 
         <div style={S.qTot}>
           <b style={{ fontSize: '1.9rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{fmt(t.kcal)}</b>
-          <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#9ca3af' }}>kcal</span>
+          <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#6b7280' }}>kcal</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           {MACROS.map(m => (
@@ -398,21 +398,21 @@ const S = {
   source:     { fontSize: '0.65rem', color: '#b6bdc4', fontWeight: 700, padding: '2px 2px 8px', margin: 0 },
   row:        { width: '100%', display: 'flex', alignItems: 'center', gap: 11, background: 'white', borderRadius: 13, padding: '11px 13px', marginBottom: 7, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
   rowNom:     { fontSize: '0.85rem', fontWeight: 700, margin: 0, lineHeight: 1.3 },
-  rowSub:     { fontSize: '0.71rem', color: '#9ca3af', margin: '2px 0 0', fontWeight: 600 },
+  rowSub:     { fontSize: '0.71rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 600 },
   rowK:       { marginLeft: 'auto', textAlign: 'right', flexShrink: 0 },
-  vide:       { color: '#9ca3af', fontSize: '0.82rem', fontWeight: 600, textAlign: 'center', padding: '2rem 1rem', lineHeight: 1.5 },
+  vide:       { color: '#6b7280', fontSize: '0.82rem', fontWeight: 600, textAlign: 'center', padding: '2rem 1rem', lineHeight: 1.5 },
   body:       { flex: 1, overflowY: 'auto', padding: '16px 14px 90px' },
   qNom:       { fontSize: '1.12rem', fontWeight: 900, margin: '0 0 2px', lineHeight: 1.25 },
-  qSub:       { fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600, margin: '0 0 15px' },
+  qSub:       { fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, margin: '0 0 15px' },
   qField:     { display: 'flex', alignItems: 'center', gap: 12, background: 'white', borderRadius: 15, padding: '13px 15px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   qInput:     { border: 'none', outline: 'none', fontSize: '2rem', fontWeight: 900, width: '100%', fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums', background: 'none' },
-  qUnit:      { fontSize: '0.9rem', fontWeight: 800, color: '#9ca3af', flexShrink: 0 },
+  qUnit:      { fontSize: '0.9rem', fontWeight: 800, color: '#6b7280', flexShrink: 0 },
   chips:      { display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 11 },
   chip:       { border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 99, padding: '6px 13px', fontSize: '0.75rem', fontWeight: 700, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   qTot:       { display: 'flex', alignItems: 'baseline', gap: 7, margin: '19px 2px 12px' },
   macTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.74rem' },
   macName:    { fontWeight: 800, color: '#4b5563' },
-  macVal:     { fontWeight: 700, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' },
+  macVal:     { fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
   bar:        { height: 6, background: '#eef1f4', borderRadius: 99, overflow: 'hidden', marginTop: 4 },
   cta:        { position: 'sticky', bottom: 0, padding: '12px 14px calc(16px + env(safe-area-inset-bottom, 0px))', background: 'linear-gradient(180deg, rgba(245,245,245,0) 0%, #f5f5f5 26%)' },
   ctaBtn:     { width: '100%', border: 'none', borderRadius: 15, padding: 15, fontSize: '0.95rem', fontWeight: 800, background: '#1a1a1a', color: '#e4f816', cursor: 'pointer', fontFamily: 'inherit' },

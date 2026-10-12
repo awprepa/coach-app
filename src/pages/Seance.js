@@ -37,7 +37,7 @@ function AuthGif({ url, apiKey, style, alt }) {
     }
   }, [url, apiKey])
   if (!src) return <div style={{ ...style, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ opacity: 0.4 }}>…</span></div>
-  return <img src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
+  return <img loading="lazy" src={src} alt={alt} style={{ ...style, objectFit: 'cover', display: 'block' }} />
 }
 
 function frToEnEchauff(nom) {
@@ -1019,8 +1019,8 @@ export default function Seance() {
     persistCardioBlocs(cardioBlocs.filter((_, i) => i !== idx))
   }
 
-  if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
-  if (!seance) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Séance introuvable.</p></div>
+  if (loading) return <div style={styles.loading}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
+  if (!seance) return <div style={styles.loading}><p style={{ color: '#6b7280' }}>Séance introuvable.</p></div>
   if (seance.type === 'terrain') return <SeanceTerrainCoach id={id} seance={seance} />
 
   const colSemaines = Array.from({ length: semaines }, (_, i) => i + 1)
@@ -1185,15 +1185,15 @@ export default function Seance() {
         {showImportEchauff && (
           <div style={{ background: '#f9fafb', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '0.875rem', border: '1.5px solid #e5e7eb' }}>
             {loadingTemplates ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Chargement...</p>
+              <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Chargement...</p>
             ) : echauffTemplates.length === 0 ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Aucun template — crée-en un depuis la page Échauffements.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Aucun template — crée-en un depuis la page Échauffements.</p>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {echauffTemplates.map(t => (
                   <button key={t.id} onClick={() => importEchauffTemplate(t)}
                     style={{ background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.875rem', fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer', color: '#333333' }}>
-                    {t.nom} <span style={{ color: '#9ca3af' }}>· {(t.lignes || []).length} ex.</span>
+                    {t.nom} <span style={{ color: '#6b7280' }}>· {(t.lignes || []).length} ex.</span>
                   </button>
                 ))}
               </div>
@@ -1229,7 +1229,7 @@ export default function Seance() {
                     {/* Image / GIF */}
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                       {editEchauffForm.image_url && (
-                        <img src={editEchauffForm.image_url} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                        <img loading="lazy" src={editEchauffForm.image_url} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
                       )}
                       <input
                         value={editEchauffForm.image_url}
@@ -1265,7 +1265,7 @@ export default function Seance() {
                       </span>
                     ) : <span style={{ width: 0 }} />}
                     {l.image_url && (
-                      <img src={l.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                      <img loading="lazy" src={l.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
                     )}
                     <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
                     <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
@@ -1319,7 +1319,7 @@ export default function Seance() {
       {/* ── Blocs cardio (texte libre) ── */}
       <div style={{ ...styles.card, marginBottom: '1rem' }}>
         <p style={styles.sectionTitle}>Blocs cardio</p>
-        <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0 0 0.75rem' }}>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.75rem' }}>
           Pour une séance 100 % cardio : ajoute un ou plusieurs blocs en texte libre.
         </p>
         {cardioBlocs.length > 0 && (
@@ -1412,13 +1412,13 @@ export default function Seance() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f9fafb', borderRadius: 10, padding: '0.75rem' }}>
                   <div style={styles.editField}>
                     <label style={styles.editLabel}>Type</label>
-                    <input placeholder="ex : Footing, Vélo…" value={cardio.type || ''}
+                    <input placeholder="ex : Footing, Vélo…" aria-label="ex : Footing, Vélo…" value={cardio.type || ''}
                       onChange={e => updateCardioSem(position, sem, { type: e.target.value })}
                       style={styles.editInput} />
                   </div>
                   <div style={styles.editField}>
                     <label style={styles.editLabel}>Durée (min)</label>
-                    <input type="number" placeholder="—" value={cardio.duree_min || ''}
+                    <input type="number" placeholder="—" aria-label="—" value={cardio.duree_min || ''}
                       onChange={e => updateCardioSem(position, sem, { duree_min: e.target.value })}
                       style={styles.editInput} min="1" max="120" />
                   </div>
@@ -1431,7 +1431,7 @@ export default function Seance() {
                   </div>
                   <div style={{ ...styles.editField, flex: 2, minWidth: 160 }}>
                     <label style={styles.editLabel}>Note</label>
-                    <input placeholder="ex : 3×500m récup 1min" value={cardio.note || ''}
+                    <input placeholder="ex : 3×500m récup 1min" aria-label="ex : 3×500m récup 1min" value={cardio.note || ''}
                       onChange={e => updateCardioSem(position, sem, { note: e.target.value })}
                       style={styles.editInput} />
                   </div>
@@ -1443,8 +1443,8 @@ export default function Seance() {
                     {cardio.media_url && (() => {
                       const ytId = youtubeId(cardio.media_url)
                       return ytId
-                        ? <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
-                        : <img src={cardio.media_url} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                        ? <img loading="lazy" src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+                        : <img loading="lazy" src={cardio.media_url} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
                     })()}
                     <input value={cardio.media_url || ''}
                       onChange={e => updateCardioSem(position, sem, { media_url: e.target.value })}
@@ -1495,7 +1495,7 @@ export default function Seance() {
                   ))}
                 </tr>
                 <tr>
-                  <td style={{ ...styles.rpeTdLabel, color: '#9ca3af' }}>Réel</td>
+                  <td style={{ ...styles.rpeTdLabel, color: '#6b7280' }}>Réel</td>
                   {colSemaines.map(s => (
                     <td key={s} style={styles.rpeTd}>
                       <input type="number" min="1" max="10" step="0.5"
@@ -1554,7 +1554,7 @@ export default function Seance() {
               return (
                 <div key={ex.id} style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '1rem 1.25rem', ...blocStyle(ex.code) }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af' }}>#{idx + 1}</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280' }}>#{idx + 1}</span>
                     <span style={styles.codeTag}>{f.code || ex.code}</span>
                     <span style={{ fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>{f.nom || ex.nom}</span>
                   </div>
@@ -1613,7 +1613,7 @@ export default function Seance() {
         )}
 
         {!editAllMode && exercices.length === 0 ? (
-          <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1.5rem 0' }}>Aucun exercice. Ajoutez-en un ci-dessous.</p>
+          <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem 0' }}>Aucun exercice. Ajoutez-en un ci-dessous.</p>
         ) : !editAllMode && (
           <div style={{ overflowX: 'auto', margin: '0 -1.5rem', padding: '0 1.5rem' }}>
           <table style={styles.table}>
@@ -1633,7 +1633,7 @@ export default function Seance() {
                   <th key={s} style={{ ...styles.th, textAlign: 'center' }} colSpan={2}>S{s}</th>
                 ))}
               </tr>
-              <tr style={{ background: '#fafafa', fontSize: '0.7rem', color: '#9ca3af' }}>
+              <tr style={{ background: '#fafafa', fontSize: '0.7rem', color: '#6b7280' }}>
                 <th colSpan={10}></th>
                 {colSemaines.map(s => (
                   <Fragment key={s}>
@@ -1673,7 +1673,7 @@ export default function Seance() {
                                   onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                                   onMouseLeave={e => e.currentTarget.style.background = 'white'}
                                 >
-                                  {ex.image_url && <img src={ex.image_url} alt="" style={styles.suggImg} />}
+                                  {ex.image_url && <img loading="lazy" src={ex.image_url} alt="" style={styles.suggImg} />}
                                   <span>{ex.nom}</span>
                                 </div>
                               ))}
@@ -1833,7 +1833,7 @@ export default function Seance() {
                         </div>
 
                         {(!(progDraft?.length)) ? (
-                          <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                          <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>
                             Clique sur "+ Bloc semaines" pour définir une progression. Ex : S1-2 → 3 séries / RPE 7, S3-4 → 4 séries / RPE 8…
                           </p>
                         ) : (
@@ -1853,7 +1853,7 @@ export default function Seance() {
                                         <button onClick={() => removeProgBloc(p.id)}
                                           style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '.8rem', lineHeight: 1, padding: 0 }}>×</button>
                                       </div>
-                                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 3, fontSize: '.6rem', color: '#9ca3af' }}>
+                                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 3, fontSize: '.6rem', color: '#6b7280' }}>
                                         <span>S</span>
                                         <input type="number" value={p.semaine_debut ?? ''} min={1}
                                           onChange={e => updateDraftField(p.id, 'semaine_debut', parseInt(e.target.value) || '')}
@@ -1913,7 +1913,7 @@ export default function Seance() {
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                             Depuis la bibliothèque
                           </button>
-                          <span style={{ fontSize: '.65rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                          <span style={{ fontSize: '.65rem', color: '#6b7280', marginLeft: 'auto' }}>
                             Visibles côté client, pré-remplies avec le % de la charge
                           </span>
                         </div>
@@ -1927,9 +1927,9 @@ export default function Seance() {
                               placeholder="Chercher un échauffement…"
                               style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.65rem', border: '1.5px solid #fed7aa', borderRadius: 7, fontSize: '.82rem', outline: 'none', marginBottom: '0.5rem', background: 'white' }}
                             />
-                            {biblioEchauffLoading && <p style={{ fontSize: '.72rem', color: '#9ca3af', margin: 0 }}>Chargement…</p>}
+                            {biblioEchauffLoading && <p style={{ fontSize: '.72rem', color: '#6b7280', margin: 0 }}>Chargement…</p>}
                             {!biblioEchauffLoading && biblioEchauffList.length === 0 && (
-                              <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                              <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>
                                 Aucun exercice d'échauffement dans la bibliothèque. Ajoute-en depuis "Bibliothèque d'exercices → Échauffements".
                               </p>
                             )}
@@ -1942,7 +1942,7 @@ export default function Seance() {
                                   onMouseLeave={e => e.currentTarget.style.background = 'white'}
                                 >
                                   {item.image_url && (
-                                    <img src={item.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                                    <img loading="lazy" src={item.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
                                   )}
                                   <span style={{ fontSize: '.82rem', fontWeight: 600, color: '#374151', flex: 1 }}>{item.nom}</span>
                                   <span style={{ fontSize: '.68rem', color: '#ea580c', fontWeight: 700 }}>+ Ajouter</span>
@@ -1953,7 +1953,7 @@ export default function Seance() {
                         )}
 
                         {(!ex.series_echauffement?.length) ? (
-                          <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                          <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>
                             Clique sur "+ Série vierge" ou choisis depuis la bibliothèque. Ex : 10 reps à 40%, puis 8 reps à 70%…
                           </p>
                         ) : (
@@ -1964,7 +1964,7 @@ export default function Seance() {
                                   style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                 </button>
-                                {s.image_url && <img src={s.image_url} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
+                                {s.image_url && <img loading="lazy" src={s.image_url} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
                                 <span style={{ fontSize: '.72rem', fontWeight: 900, color: '#ea580c', flexShrink: 0 }}>É{si + 1}{s.nom ? ` · ${s.nom}` : ''}</span>
                                 <input
                                   type="text"
@@ -1973,7 +1973,7 @@ export default function Seance() {
                                   placeholder="Reps"
                                   style={{ width: 54, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
                                 />
-                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>reps @</span>
+                                <span style={{ fontSize: '.72rem', color: '#6b7280' }}>reps @</span>
                                 <input
                                   type="number"
                                   value={s.pourcentage ?? ''}
@@ -1982,7 +1982,7 @@ export default function Seance() {
                                   min="1" max="100"
                                   style={{ width: 50, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
                                 />
-                                <span style={{ fontSize: '.72rem', color: '#9ca3af' }}>% charge</span>
+                                <span style={{ fontSize: '.72rem', color: '#6b7280' }}>% charge</span>
                               </div>
                             ))}
                           </div>
@@ -2006,7 +2006,7 @@ export default function Seance() {
                             Séries réalisées — {ex.nom}
                           </span>
                           {!trackSemaines.length ? (
-                            <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: '8px 0 0 0' }}>
+                            <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: '8px 0 0 0' }}>
                               Aucune série enregistrée par le client pour cet exercice.
                             </p>
                           ) : (
@@ -2064,7 +2064,7 @@ export default function Seance() {
                               ✓ Déjà lié
                             </span>
                           )}
-                          <span style={{ fontSize: '.62rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                          <span style={{ fontSize: '.62rem', color: '#6b7280', marginLeft: 'auto' }}>
                             Clique pour lier ou cherche ci-dessous
                           </span>
                         </div>
@@ -2077,14 +2077,14 @@ export default function Seance() {
                           style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.65rem', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: '.82rem', outline: 'none', marginBottom: '0.6rem', background: 'white' }}
                         />
 
-                        {librarySearching && <p style={{ fontSize: '.72rem', color: '#9ca3af', margin: 0 }}>Recherche…</p>}
+                        {librarySearching && <p style={{ fontSize: '.72rem', color: '#6b7280', margin: 0 }}>Recherche…</p>}
 
                         {/* Suggestions */}
                         {librarySuggestions.length > 0 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 220, overflowY: 'auto', marginBottom: '0.6rem' }}>
                             {librarySuggestions.map(b => (
                               <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white', border: `1.5px solid ${b.id === ex.bibliotheque_id ? '#a78bfa' : '#ede9fe'}`, borderRadius: 8, padding: '0.35rem 0.65rem' }}>
-                                {b.image_url && <img src={b.image_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
+                                {b.image_url && <img loading="lazy" src={b.image_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
                                 <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, color: '#374151' }}>{b.nom}</span>
                                 {b.id === ex.bibliotheque_id
                                   ? <span style={{ fontSize: '.68rem', color: '#6d28d9', fontWeight: 700 }}>✓ Lié</span>
@@ -2099,7 +2099,7 @@ export default function Seance() {
                         )}
 
                         {librarySuggestions.length === 0 && !librarySearching && (
-                          <p style={{ fontSize: '.72rem', color: '#9ca3af', fontStyle: 'italic', margin: '0 0 0.6rem' }}>
+                          <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: '0 0 0.6rem' }}>
                             Aucun résultat similaire. Crée une nouvelle entrée ci-dessous.
                           </p>
                         )}
@@ -2149,7 +2149,7 @@ export default function Seance() {
               </div>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {allBiblio.filter(ex => ex.nom.toLowerCase().includes(biblioFullSearch.toLowerCase())).length === 0 ? (
-                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>
+                  <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>
                     {allBiblio.length === 0 ? 'La bibliothèque est vide.' : 'Aucun résultat.'}
                   </p>
                 ) : (
@@ -2162,11 +2162,11 @@ export default function Seance() {
                         onMouseLeave={e => e.currentTarget.style.background = 'white'}
                       >
                         {ex.image_url
-                          ? <img src={ex.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                          ? <img loading="lazy" src={ex.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
                           : <div style={{ width: 40, height: 40, background: '#f3f4f6', borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>💪</div>
                         }
                         <span style={{ flex: 1 }}>{ex.nom}</span>
-                        {ex.categorie && <span style={{ color: '#9ca3af', fontSize: '0.75rem', fontWeight: '400' }}>{ex.categorie}</span>}
+                        {ex.categorie && <span style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '400' }}>{ex.categorie}</span>}
                       </div>
                     ))
                 )}
@@ -2195,7 +2195,7 @@ export default function Seance() {
                       onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                       onMouseLeave={e => e.currentTarget.style.background = 'white'}
                     >
-                      {ex.image_url && <img src={ex.image_url} alt="" style={styles.suggImg} />}
+                      {ex.image_url && <img loading="lazy" src={ex.image_url} alt="" style={styles.suggImg} />}
                       <span>{ex.nom}</span>
                     </div>
                   ))}
@@ -2235,7 +2235,7 @@ export default function Seance() {
               </label>
               {saveToLibrary && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                  {libraryImagePreview && <img src={libraryImagePreview} alt="" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb' }} />}
+                  {libraryImagePreview && <img loading="lazy" src={libraryImagePreview} alt="" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb' }} />}
                   <button type="button" onClick={() => libraryFileRef.current.click()}
                     style={{ background: 'white', border: '1.5px dashed #d1d5db', borderRadius: '8px', padding: '0.5rem 0.875rem', fontSize: '0.82rem', cursor: 'pointer', color: '#374151', fontWeight: '600' }}>
                     {libraryImagePreview ? 'Changer la photo' : 'Ajouter une photo (optionnel)'}
@@ -2270,7 +2270,7 @@ export default function Seance() {
           <div style={{ background:'white', borderRadius:20, width:'100%', maxWidth:560, maxHeight:'85vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
             <div style={{ padding:'1rem 1.25rem 0.75rem', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <p style={{ fontWeight:800, fontSize:'0.9rem', margin:0 }}>GIF échauffement — WorkoutX</p>
-              <button onClick={() => setGifEchauffOpen(false)} style={{ background:'none', border:'none', fontSize:'1rem', cursor:'pointer', color:'#9ca3af' }}>✕</button>
+              <button onClick={() => setGifEchauffOpen(false)} style={{ background:'none', border:'none', fontSize:'1rem', cursor:'pointer', color: '#6b7280' }}>✕</button>
             </div>
             <div style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid #f3f4f6' }}>
               <div style={{ display:'flex', gap:'0.5rem' }}>
@@ -2293,8 +2293,8 @@ export default function Seance() {
               )}
             </div>
             <div style={{ flex:1, overflowY:'auto', padding:'0.75rem 1.25rem' }}>
-              {gifSearching && gifResults.length === 0 && <p style={{ textAlign:'center', color:'#9ca3af', fontSize:'0.85rem' }}>Recherche en cours…</p>}
-              {!gifSearching && gifResults.length === 0 && <p style={{ textAlign:'center', color:'#9ca3af', fontSize:'0.85rem' }}>Aucun résultat. Essaie un autre terme (en anglais : "squat", "plank"…)</p>}
+              {gifSearching && gifResults.length === 0 && <p style={{ textAlign:'center', color: '#6b7280', fontSize:'0.85rem' }}>Recherche en cours…</p>}
+              {!gifSearching && gifResults.length === 0 && <p style={{ textAlign:'center', color: '#6b7280', fontSize:'0.85rem' }}>Aucun résultat. Essaie un autre terme (en anglais : "squat", "plank"…)</p>}
               {gifResults.length > 0 && (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.5rem' }}>
                   {gifResults.map(r => (
@@ -2303,7 +2303,7 @@ export default function Seance() {
                       onMouseEnter={e => { if (!gifSearching) e.currentTarget.style.borderColor='#e4f816' }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor='#333' }}>
                       {r._source === 'freedb'
-                        ? <img src={r.imageUrl} alt={r.name} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
+                        ? <img loading="lazy" src={r.imageUrl} alt={r.name} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
                         : <AuthGif url={r.gifUrl} apiKey={wxKey} alt={r.name} style={{ width:'100%', aspectRatio:'1' }} />
                       }
                       <span style={{ color:'white', fontSize:'0.6rem', padding:'0.3rem 0.4rem', textAlign:'center', lineHeight:1.2 }}>{r.name}</span>
@@ -2313,7 +2313,7 @@ export default function Seance() {
               )}
             </div>
             <div style={{ padding:'0.6rem 1.25rem 1rem', borderTop:'1px solid #f3f4f6', display:'flex', alignItems:'center', gap:'0.5rem' }}>
-              <span style={{ fontSize:'0.7rem', color:'#9ca3af', flex:1 }}>GIF par <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ color:'#b45309' }}>WorkoutX</a></span>
+              <span style={{ fontSize:'0.7rem', color: '#6b7280', flex:1 }}>GIF par <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ color:'#b45309' }}>WorkoutX</a></span>
               {!showWxKeyInput ? (
                 <button onClick={() => setShowWxKeyInput(true)}
                   style={{ fontSize:'0.72rem', color: wxKey ? '#16a34a' : '#92400e', background: wxKey ? '#f0fdf4' : '#fffbeb', border:`1.5px solid ${wxKey ? '#bbf7d0':'#fde68a'}`, borderRadius:8, padding:'0.3rem 0.6rem', cursor:'pointer' }}>
@@ -2355,13 +2355,13 @@ const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   page: { padding: '1.25rem', maxWidth: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
-  progLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
+  progLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
   title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   rpeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.25rem 1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1rem' },
   rpeTable: { borderCollapse: 'collapse', width: '100%' },
-  rpeThLabel: { padding: '0.4rem 0.5rem', textAlign: 'left', fontSize: '0.75rem', color: '#9ca3af' },
+  rpeThLabel: { padding: '0.4rem 0.5rem', textAlign: 'left', fontSize: '0.75rem', color: '#6b7280' },
   rpeTh: { padding: '0.4rem 0.5rem', textAlign: 'center', fontSize: '0.8rem', fontWeight: '700', color: '#374151' },
   rpeTdLabel: { padding: '0.4rem 0.5rem', fontWeight: '700', fontSize: '0.8rem', color: '#374151', whiteSpace: 'nowrap' },
   rpeTd: { padding: '0.25rem 0.4rem', textAlign: 'center' },
@@ -2386,6 +2386,6 @@ const styles = {
   suggItem: { padding: '0.45rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: '0.85rem', color: '#333333', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white' },
   suggImg: { width: 32, height: 32, objectFit: 'cover', borderRadius: 6, flexShrink: 0 },
   editField: { display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 80, flex: 1 },
-  editLabel: { fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  editLabel: { fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' },
   editInput: { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' },
 }

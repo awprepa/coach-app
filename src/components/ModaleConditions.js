@@ -42,7 +42,7 @@ export default function ModaleConditions({ clientId, onAccepte }) {
   return (
     <div style={S.overlay}>
       <div style={S.center}>
-        <div style={S.modal}>
+        <div style={S.modal} role="dialog" aria-modal="true" aria-label="Conditions générales d'utilisation">
           <div style={S.header}>
             <AppLogo />
             <p style={S.headerSub}>Conditions générales d'utilisation</p>
@@ -125,5 +125,5 @@ const S = {
   error:        { color: '#dc2626', fontSize: '0.8rem', marginBottom: '0.75rem', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: 8 },
   btn:          { width: '100%', padding: '0.9rem', borderRadius: 12, border: 'none', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', transition: 'opacity 0.15s' },
   btnOn:        { background: '#333333', color: 'var(--accent)', cursor: 'pointer' },
-  btnOff:       { background: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed' },
+  btnOff:       { background: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' },
 }

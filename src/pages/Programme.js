@@ -322,8 +322,8 @@ export default function Programme() {
     return () => { saveOnLeaveRef.current() }
   }, [])
 
-  if (loading) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
-  if (!programme) return <div style={styles.loading}><p style={{ color: '#9ca3af' }}>Programme introuvable.</p></div>
+  if (loading) return <div style={styles.loading}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
+  if (!programme) return <div style={styles.loading}><p style={{ color: '#6b7280' }}>Programme introuvable.</p></div>
 
   if (showImport) return (
     <ImportExcel
@@ -361,7 +361,7 @@ export default function Programme() {
           else navigate(`/client/${programme.client_id}`)
         }} style={styles.backBtn}>← Retour</button>
         {programme.client_id && (
-          <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer' }}>
+          <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer' }}>
             🧪 Test push
           </button>
         )}
@@ -466,7 +466,7 @@ export default function Programme() {
                   placeholder="Niveau, objectifs, particularités…"
                 />
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                 {seances.length} séance{seances.length > 1 ? 's' : ''} · {programme.semaines} semaines — les exercices seront inclus
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -564,10 +564,10 @@ export default function Programme() {
           <div style={{ marginTop: '0.75rem', background: 'white', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
             <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Choisir un modèle</p>
-              <button onClick={() => setShowTemplates(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+              <button onClick={() => setShowTemplates(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
             </div>
             {templates.length === 0 ? (
-              <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>Aucun modèle sauvegardé.</p>
+              <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>Aucun modèle sauvegardé.</p>
             ) : (
               templates.map(t => (
                 <div key={t.id} onClick={() => chargerTemplate(t)}
@@ -577,9 +577,9 @@ export default function Programme() {
                 >
                   <div>
                     <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333333' }}>{t.nom}</p>
-                    <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{t.exercices?.length || 0} exercice{(t.exercices?.length || 0) > 1 ? 's' : ''}</p>
+                    <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{t.exercices?.length || 0} exercice{(t.exercices?.length || 0) > 1 ? 's' : ''}</p>
                   </div>
-                  <span style={{ color: '#9ca3af', fontSize: '1.2rem' }}>›</span>
+                  <span style={{ color: '#6b7280', fontSize: '1.2rem' }}>›</span>
                 </div>
               ))
             )}
@@ -595,15 +595,15 @@ const styles = {
   page: { padding: '2rem', maxWidth: '700px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  clientLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
+  clientLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
   progTitle: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   metaBadge: { background: '#f3f4f6', color: '#374151', padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
-  emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
+  emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
   seanceRow: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
   seanceCard: { flex: 1, display: 'flex', alignItems: 'center', gap: '0.875rem', background: 'white', borderRadius: '12px', padding: '0.875rem 1rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  seanceOrdre: { fontSize: '0.75rem', fontWeight: '800', color: '#9ca3af', minWidth: '20px' },
+  seanceOrdre: { fontSize: '0.75rem', fontWeight: '800', color: '#6b7280', minWidth: '20px' },
   seanceNom: { fontWeight: '600', fontSize: '0.9rem', color: '#333333' },
   addForm: { display: 'flex', gap: '0.75rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },

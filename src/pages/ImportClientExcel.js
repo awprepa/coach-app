@@ -254,7 +254,7 @@ export default function ImportClientExcel() {
               <p style={{ fontWeight: '800', color: '#111827', margin: '0 0 0.35rem', fontSize: '1.05rem' }}>
                 Dépose ton fichier Excel ici
               </p>
-              <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>.xlsx · .xls</p>
+              <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>.xlsx · .xls</p>
             </div>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: 'none' }} />
 
@@ -291,7 +291,7 @@ export default function ImportClientExcel() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: '800', fontSize: '1rem', color: '#111827', margin: 0 }}>{prog.sheetName}</p>
-                        <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>
+                        <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0 }}>
                           {prog.sessions.length} séance{prog.sessions.length > 1 ? 's' : ''} · {nbEx} exercices
                         </p>
                       </div>
@@ -327,7 +327,7 @@ export default function ImportClientExcel() {
                             <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#111827' }}>{j + 1}</span>
                           </div>
                           <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#374151', flex: 1 }}>{s.nom}</span>
-                          <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>{s.exercices.length} ex.</span>
+                          <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>{s.exercices.length} ex.</span>
                         </div>
                       ))}
                     </div>
@@ -340,7 +340,7 @@ export default function ImportClientExcel() {
               <span style={{ fontWeight: '700', color: '#374151' }}>
                 {selected.size} programme{selected.size > 1 ? 's' : ''}
               </span>
-              <span style={{ color: '#9ca3af' }}>·</span>
+              <span style={{ color: '#6b7280' }}>·</span>
               <span style={{ color: '#6b7280' }}>{totalSeanc} séances · {totalEx} exercices</span>
             </div>
 
@@ -387,7 +387,7 @@ const S = {
   page:      { minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boxSizing: 'border-box' },
   container: { maxWidth: 600, margin: '0 auto', padding: '2rem 1.25rem' },
   h1:        { fontSize: '1.5rem', fontWeight: '900', color: '#111827', margin: 0, lineHeight: 1.2 },
-  sub:       { color: '#9ca3af', fontSize: '0.8rem', margin: '0.2rem 0 0', fontWeight: '500' },
+  sub:       { color: '#6b7280', fontSize: '0.8rem', margin: '0.2rem 0 0', fontWeight: '500' },
   backBtn:   { background: '#f3f4f6', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: '1rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   error:     { background: '#fef2f2', color: '#dc2626', borderRadius: 12, padding: '0.75rem 1rem', fontSize: '0.85rem', marginBottom: '1rem', fontWeight: '600' },
   dropzone:  { border: '2.5px dashed #d1d5db', borderRadius: 16, padding: '3rem 1.5rem', textAlign: 'center', cursor: 'pointer', marginBottom: '1.25rem', transition: 'border-color 0.15s', background: 'white' },
@@ -397,7 +397,7 @@ const S = {
   label:     { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.75rem', display: 'block' },
   card:      { borderRadius: 14, padding: '1rem', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   checkbox:  { width: 22, height: 22, borderRadius: 7, border: '2px solid', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  fieldLabel:{ fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '0.3rem' },
+  fieldLabel:{ fontSize: '0.68rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '0.3rem' },
   input:     { width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.45rem 0.65rem', fontSize: '0.9rem', fontWeight: '600', color: '#111827', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fafafa' },
   summary:   { background: '#f3f4f6', borderRadius: 10, padding: '0.65rem 0.875rem', display: 'flex', gap: '0.6rem', alignItems: 'center', fontSize: '0.85rem' },
   btnPrimary:   { flex: 1, background: '#111827', color: '#e4f816', border: 'none', borderRadius: 12, padding: '0.85rem', fontSize: '0.95rem', fontWeight: '800', cursor: 'pointer', fontFamily: 'inherit' },

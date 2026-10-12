@@ -803,7 +803,7 @@ export default function FicheGroupe() {
     const today = new Date(); today.setHours(0,0,0,0)
     const fin = new Date(date_fin + 'T00:00:00')
     const days = Math.ceil((fin - today) / 86400000)
-    if (days < 0)  return { color: '#9ca3af', bg: '#f3f4f6', label: 'Expiré' }
+    if (days < 0)  return { color: '#6b7280', bg: '#f3f4f6', label: 'Expiré' }
     if (days <= 7) return { color: '#dc2626', bg: '#fef2f2', label: `${days}j` }
     if (days <= 30)return { color: '#d97706', bg: '#fffbeb', label: `${days}j` }
     return { color: '#16a34a', bg: '#f0fdf4', label: `${days}j` }
@@ -815,7 +815,7 @@ export default function FicheGroupe() {
 
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p style={{ color: '#9ca3af' }}>Chargement...</p>
+      <p style={{ color: '#6b7280' }}>Chargement...</p>
     </div>
   )
   if (!groupe) return null
@@ -901,7 +901,7 @@ export default function FicheGroupe() {
       <div className="fg-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {groupe.logo_url
-            ? <img src={groupe.logo_url} alt={groupe.nom} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 12 }} />
+            ? <img loading="lazy" src={groupe.logo_url} alt={groupe.nom} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 12 }} />
             : <div style={{ width: 64, height: 64, borderRadius: 12, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.3rem', color: accent }}>
                 {groupe.nom.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
               </div>
@@ -969,7 +969,7 @@ export default function FicheGroupe() {
             <div style={{ maxWidth: 250, margin: '0 auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 4 }}>
                 {['L','M','M','J','V','S','D'].map((d, i) => (
-                  <div key={i} style={{ fontSize: '0.58rem', fontWeight: 800, color: '#9ca3af', textAlign: 'center', textTransform: 'uppercase' }}>{d}</div>
+                  <div key={i} style={{ fontSize: '0.58rem', fontWeight: 800, color: '#6b7280', textAlign: 'center', textTransform: 'uppercase' }}>{d}</div>
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
@@ -1027,7 +1027,7 @@ export default function FicheGroupe() {
                 <tr>
                   {[['nom', 'Nom'], ['poste', 'Poste'], ['wellness', 'Wellness']].map(([k, l]) => (
                     <th key={k} onClick={() => toggleMembreSort(k)}
-                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 0.55rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 0.55rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
                       {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
                     </th>
                   ))}
@@ -1097,7 +1097,7 @@ export default function FicheGroupe() {
                   )
                 })}
                 {membresAffiches.length === 0 && (
-                  <tr><td colSpan={3} style={{ padding: '1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.78rem' }}>Aucun membre trouvé.</td></tr>
+                  <tr><td colSpan={3} style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.78rem' }}>Aucun membre trouvé.</td></tr>
                 )}
               </tbody>
             </table>
@@ -1113,9 +1113,9 @@ export default function FicheGroupe() {
             <span style={S.panelLabel}>Classement</span>
           </div>
           {!groupe.monclubhouse_url ? (
-            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Relie ce groupe à monclubhouse.ffr.fr (bouton Modifier) pour afficher le classement.</p>
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Relie ce groupe à monclubhouse.ffr.fr (bouton Modifier) pour afficher le classement.</p>
           ) : classementFFR.length === 0 ? (
-            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
           ) : (
             <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {classementFFR.filter(c => (c.competition || null) === (groupe.monclubhouse_competition || null)).map(c => {
@@ -1125,11 +1125,11 @@ export default function FicheGroupe() {
                   <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
                     <span style={{ fontSize: '0.68rem', color: isOurs ? accent : '#9ca3af', fontWeight: 800, width: 16, flexShrink: 0 }}>{c.position}</span>
                     {logoAff
-                      ? <img src={logoAff} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
-                      : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#9ca3af', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
+                      ? <img loading="lazy" src={logoAff} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+                      : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#6b7280', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
                     }
                     <span style={{ flex: 1, fontSize: '0.75rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.equipe}</span>
-                    <span style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, width: 14, textAlign: 'right' }}>{c.joues}</span>
+                    <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, width: 14, textAlign: 'right' }}>{c.joues}</span>
                     <span style={{ fontSize: '0.75rem', color: isOurs ? accent : '#1a1a1a', fontWeight: 900, width: 20, textAlign: 'right' }}>{c.pts}</span>
                   </div>
                 )
@@ -1142,10 +1142,10 @@ export default function FicheGroupe() {
           onClick={() => prochain && openCalendrierEvent(prochain.evenement.id)} title={prochain ? "Ouvrir cet entraînement" : undefined}>
           <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
           {!prochain ? (
-            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
           ) : (
             <>
-              <p style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600, padding: '0 1.1rem 0.6rem', margin: 0 }}>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, padding: '0 1.1rem 0.6rem', margin: 0 }}>
                 {new Date(prochain.evenement.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                 {prochain.evenement.heure ? ` · ${prochain.evenement.heure}` : ''}
                 {prochain.evenement.duree_min ? ` · ${prochain.evenement.duree_min} min` : ''}
@@ -1178,7 +1178,7 @@ export default function FicheGroupe() {
           style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
           <div style={S.panelHead}><span style={S.panelLabel}>Blessés · {blesses.length}</span></div>
           {blesses.length === 0 ? (
-            <p style={{ fontSize: '0.76rem', color: '#9ca3af', padding: '0 1.1rem 1.1rem' }}>Aucun joueur blessé actuellement.</p>
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Aucun joueur blessé actuellement.</p>
           ) : (
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {blesses.map((b, i) => (
@@ -1225,7 +1225,7 @@ export default function FicheGroupe() {
               />
               <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 <button onClick={() => setNewSGCouleur('')}
-                  style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                  style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 {PALETTE_SG.map(c => (
                   <button key={c} onClick={() => setNewSGCouleur(c)}
                     style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
@@ -1233,7 +1233,7 @@ export default function FicheGroupe() {
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
-                <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#9ca3af', fontWeight: '600' }}>Annuler</button>
+                <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#6b7280', fontWeight: '600' }}>Annuler</button>
               </div>
             </div>
           ) : (
@@ -1255,7 +1255,7 @@ export default function FicheGroupe() {
                       <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1a1a1a' }}>{prog.nom}</span>
                       <span style={{ background: accent + '18', color: accent, border: `1px solid ${accent}33`, borderRadius: 999, padding: '0.05rem 0.4rem', fontSize: '0.6rem', fontWeight: 800 }}>TEMPLATE</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.74rem', color: '#9ca3af' }}>
+                    <p style={{ margin: 0, fontSize: '0.74rem', color: '#6b7280' }}>
                       {prog.semaines} sem · {nbSeances} séance{nbSeances > 1 ? 's' : ''}
                       {prog.date_debut ? ` · début ${new Date(prog.date_debut).toLocaleDateString('fr-FR')}` : ''}
                     </p>
@@ -1309,7 +1309,7 @@ export default function FicheGroupe() {
         <button onClick={() => setEffectifOpen(o => !o)}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.9rem 1.1rem', font: 'inherit' }}>
           <span style={S.panelLabel}>Effectif</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#9ca3af' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#6b7280' }}>
             <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>{effectifOpen ? 'Réduire' : 'Afficher'}</span>
             <span style={{ transform: effectifOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'flex' }}><IcoChevronDown /></span>
           </span>
@@ -1339,9 +1339,9 @@ export default function FicheGroupe() {
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', marginBottom: (editLogoPreview || groupe?.logo_url) ? '0.65rem' : '1.25rem', background: '#f3f4f6', borderRadius: 9, padding: '0.45rem 0.85rem', border: '1.5px solid #e5e7eb' }}>
             <div style={{ width: 40, height: 40, borderRadius: 8, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
               {editLogoPreview
-                ? <img src={editLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ? <img loading="lazy" src={editLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 : groupe?.logo_url
-                  ? <img src={groupe.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  ? <img loading="lazy" src={groupe.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   : <span style={{ fontSize: '1.1rem' }}>📂</span>}
             </div>
             <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: '600' }}>
@@ -1378,7 +1378,7 @@ export default function FicheGroupe() {
                 />
               </div>
               {editPickingFor && (
-                <button onClick={() => setEditPickingFor(null)} style={{ display: 'block', margin: '0.45rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#9ca3af' }}>Annuler</button>
+                <button onClick={() => setEditPickingFor(null)} style={{ display: 'block', margin: '0.45rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#6b7280' }}>Annuler</button>
               )}
             </div>
           )}
@@ -1392,11 +1392,11 @@ export default function FicheGroupe() {
                     style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
                   <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280' }}>Principale</span>
                   <span style={{ fontSize: '0.7rem', color: '#d1d5db', fontFamily: 'monospace' }}>{editForm.couleur}</span>
-                  <button onClick={() => setEditForm({ ...editForm, couleur: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                  <button onClick={() => setEditForm({ ...editForm, couleur: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
                 </>
               ) : (
                 <button onClick={() => setEditForm({ ...editForm, couleur: '#6366f1' })}
-                  style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                  style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>
                   + Couleur principale
                 </button>
               )}
@@ -1420,7 +1420,7 @@ export default function FicheGroupe() {
                 </button>
               )}
               {editForm.couleur_secondaire && (
-                <button onClick={() => setEditForm({ ...editForm, couleur_secondaire: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                <button onClick={() => setEditForm({ ...editForm, couleur_secondaire: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
               )}
             </div>
           </div>
@@ -1428,7 +1428,7 @@ export default function FicheGroupe() {
           {/* Aperçu live */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.55rem 0.9rem', borderRadius: 11, background: '#f9fafb', borderLeft: `4px solid ${editForm.couleur}`, marginBottom: '1.25rem' }}>
             {(editLogoPreview || groupe?.logo_url)
-              ? <img src={editLogoPreview || groupe.logo_url} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
+              ? <img loading="lazy" src={editLogoPreview || groupe.logo_url} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
               : <div style={{ width: 26, height: 26, borderRadius: 7, background: editForm.couleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
             }
             <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{editForm.nom || groupe?.nom || 'Nom du groupe'}</span>
@@ -1438,7 +1438,7 @@ export default function FicheGroupe() {
           {/* Lien monclubhouse */}
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
-              Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel)</span>
+              Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#6b7280' }}>(optionnel)</span>
             </label>
             <input
               value={editForm.monclubhouse_url}
@@ -1454,7 +1454,7 @@ export default function FicheGroupe() {
           {editForm.monclubhouse_url && (
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
-                Compétition à suivre <span style={{ fontWeight: 400, color: '#9ca3af' }}>(si le club a plusieurs équipes, ex: federale-2)</span>
+                Compétition à suivre <span style={{ fontWeight: 400, color: '#6b7280' }}>(si le club a plusieurs équipes, ex: federale-2)</span>
               </label>
               <input
                 value={editForm.monclubhouse_competition}
@@ -1462,7 +1462,7 @@ export default function FicheGroupe() {
                 placeholder="federale-2"
                 style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.78rem', outline: 'none', color: '#374151', background: '#fff' }}
               />
-              <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#6b7280' }}>
                 Laisse vide si le club n'a qu'une équipe. Sinon, mets l'identifiant visible dans l'URL de la compétition sur monclubhouse.ffr.fr (ex: ".../nationales/federale-2/...").
               </p>
             </div>
@@ -1471,7 +1471,7 @@ export default function FicheGroupe() {
           {editForm.monclubhouse_url && (
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
-                Équipe espoirs <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel — ajoute un onglet Espoirs au classement)</span>
+                Équipe espoirs <span style={{ fontWeight: 400, color: '#6b7280' }}>(optionnel — ajoute un onglet Espoirs au classement)</span>
               </label>
               <input
                 value={editForm.monclubhouse_competition_espoirs}
@@ -1501,7 +1501,7 @@ export default function FicheGroupe() {
           />
           {candidatsFiltres.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                 {selectedCandidats.size > 0 ? `${selectedCandidats.size} sélectionné${selectedCandidats.size > 1 ? 's' : ''}` : `${candidatsFiltres.length} disponible${candidatsFiltres.length > 1 ? 's' : ''}`}
               </span>
               <button onClick={toggleTous} style={{ background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: accent, cursor: 'pointer', padding: 0 }}>
@@ -1510,7 +1510,7 @@ export default function FicheGroupe() {
             </div>
           )}
           {candidatsFiltres.length === 0 ? (
-            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '1rem 0' }}>
+            <p style={{ color: '#6b7280', textAlign: 'center', padding: '1rem 0' }}>
               {searchMembre
                 ? 'Aucun client trouvé.'
                 : groupe.parent_id
@@ -1648,7 +1648,7 @@ function Modal({ title, onClose, children }) {
       <div style={{ background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <h3 style={{ margin: 0, fontWeight: '800', color: '#1a1a1a', fontSize: '1.1rem' }}>{title}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
         </div>
         {children}
       </div>
@@ -1677,7 +1677,7 @@ const S = {
   dashRow: { display: 'grid', gap: '1.25rem', marginBottom: '1.5rem', alignItems: 'start' },
   panel: { background: 'white', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' },
   panelHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.9rem 1.1rem 0.7rem' },
-  panelLabel: { fontSize: '0.65rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  panelLabel: { fontSize: '0.65rem', fontWeight: '900', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
   calNavBtn: { background: '#f3f4f6', border: 'none', borderRadius: 7, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', cursor: 'pointer', flexShrink: 0 },
   btnAdd: { background: 'white', color: '#6b7280', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', width: '100%', textAlign: 'center' },
   btnAction: { border: 'none', borderRadius: 10, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },

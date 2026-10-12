@@ -368,7 +368,7 @@ export default function SciencesNutrition({ coachMode = false }) {
                   <p style={{ fontWeight: 800, fontSize: '0.87rem', color: '#1a1a1a', margin: 0, lineHeight: 1.35 }}>
                     {etude.titre_fr}
                   </p>
-                  <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '3px 0 0', fontWeight: 600 }}>
+                  <p style={{ fontSize: '0.68rem', color: '#6b7280', margin: '3px 0 0', fontWeight: 600 }}>
                     {etude.auteurs.split(',')[0]}{etude.auteurs.includes(',') ? ' et al.' : ''} · {etude.annee} · {etude.journal.length > 35 ? etude.journal.slice(0, 35) + '…' : etude.journal}
                   </p>
                   <span style={{
@@ -437,16 +437,16 @@ export default function SciencesNutrition({ coachMode = false }) {
 
                   {/* Référence complète */}
                   <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <p style={{ fontSize: '0.67rem', color: '#9ca3af', margin: 0, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '0.67rem', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
                       <span style={{ fontWeight: 700 }}>Auteurs : </span>
                       {etude.auteurs}
                     </p>
-                    <p style={{ fontSize: '0.67rem', color: '#9ca3af', margin: 0 }}>
+                    <p style={{ fontSize: '0.67rem', color: '#6b7280', margin: 0 }}>
                       <span style={{ fontWeight: 700 }}>Référence : </span>
                       {etude.journal}, {etude.annee}
                     </p>
                     {coachMode && (
-                      <p style={{ fontSize: '0.67rem', color: '#9ca3af', margin: 0 }}>
+                      <p style={{ fontSize: '0.67rem', color: '#6b7280', margin: 0 }}>
                         <span style={{ fontWeight: 700 }}>DOI : </span>
                         {etude.doi}
                       </p>

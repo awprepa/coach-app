@@ -90,7 +90,7 @@ export default function CompetitionClient() {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         overflow: 'hidden', flexShrink: 0 }}>
         {url
-          ? <img src={url} alt={initials} style={{ width: size - 8, height: size - 8, objectFit: 'contain' }}
+          ? <img loading="lazy" src={url} alt={initials} style={{ width: size - 8, height: size - 8, objectFit: 'contain' }}
               onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
           : null}
         <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex',
@@ -187,7 +187,7 @@ export default function CompetitionClient() {
           <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f3f4f6',
             display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
             {logoG
-              ? <img src={logoG} alt={initG} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+              ? <img loading="lazy" src={logoG} alt={initG} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
               : null}
             <div style={{ width:'100%', height:'100%', display: logoG ? 'none' : 'flex',
               alignItems:'center', justifyContent:'center', fontSize:'.62rem', fontWeight:900, color:'#6b7280' }}>{initG}</div>
@@ -201,7 +201,7 @@ export default function CompetitionClient() {
           <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f3f4f6',
             display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
             {logoD
-              ? <img src={logoD} alt={initD} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+              ? <img loading="lazy" src={logoD} alt={initD} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
               : null}
             <div style={{ width:'100%', height:'100%', display: logoD ? 'none' : 'flex',
               alignItems:'center', justifyContent:'center', fontSize:'.62rem', fontWeight:900, color:'#6b7280' }}>{initD}</div>
@@ -249,13 +249,13 @@ export default function CompetitionClient() {
 
       <div style={{ padding: '16px 16px 0' }}>
         {groupes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
             <p style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏆</p>
             <p style={{ fontWeight: 700, color: '#374151', fontSize: '1rem' }}>Aucune compétition disponible</p>
             <p style={{ fontSize: '.85rem' }}>Ton coach n'a pas encore configuré de lien de compétition.</p>
           </div>
         ) : matchs.length === 0 && classement.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
             <p style={{ fontSize: '2.5rem', marginBottom: 8 }}>📡</p>
             <p style={{ fontWeight: 700, color: '#374151' }}>Pas encore de données</p>
             <p style={{ fontSize: '.85rem' }}>Le coach doit synchroniser les données depuis l'onglet Compétition.</p>
@@ -277,7 +277,7 @@ export default function CompetitionClient() {
                         <tr style={{ background: '#f9fafb' }}>
                           {['#', '', 'Équipe', 'Pts', 'J', 'G', 'N', 'P', '+/-'].map(h => (
                             <th key={h} style={{ padding: '8px 8px', textAlign: h === 'Équipe' ? 'left' : 'center',
-                              fontWeight: 700, color: '#9ca3af', fontSize: '.6rem', textTransform: 'uppercase',
+                              fontWeight: 700, color: '#6b7280', fontSize: '.6rem', textTransform: 'uppercase',
                               letterSpacing: '.05em', whiteSpace: 'nowrap', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
                           ))}
                         </tr>
@@ -292,7 +292,7 @@ export default function CompetitionClient() {
                               <td style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: isOurs ? gc : '#6b7280', fontSize: '.78rem' }}>{c.position}</td>
                               <td style={{ padding: '4px 4px', width: 28, textAlign: 'center' }}>
                                 {logoAff
-                                  ? <img src={logoAff} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
+                                  ? <img loading="lazy" src={logoAff} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
                                   : null}
                                 <div style={{ width: 22, height: 22, borderRadius: 4, background: '#f0f2f5', display: logoAff ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.55rem', fontWeight: 800, color: '#6b7280', margin: '0 auto' }}>{initials}</div>
                               </td>

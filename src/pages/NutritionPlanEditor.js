@@ -340,7 +340,7 @@ export default function NutritionPlanEditor() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', fontFamily: 'system-ui' }}>Chargement…</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280', fontFamily: 'system-ui' }}>Chargement…</div>
 
   const cid = isNew ? clientId : plan?.client_id
   const planStatut = plan?.statut || 'brouillon'
@@ -364,7 +364,7 @@ export default function NutritionPlanEditor() {
                 <h1 style={{ ...S.title, marginBottom: 4 }}>{plan?.nom || 'Plan sans nom'}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   {client && <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 500 }}>{client.prenom} {client.nom}</span>}
-                  {plan?.date_debut && <span style={{ fontSize: '0.73rem', color: '#9ca3af' }}>• {formatDate(plan.date_debut)}{plan.date_fin ? ` → ${formatDate(plan.date_fin)}` : ''}</span>}
+                  {plan?.date_debut && <span style={{ fontSize: '0.73rem', color: '#6b7280' }}>• {formatDate(plan.date_debut)}{plan.date_fin ? ` → ${formatDate(plan.date_fin)}` : ''}</span>}
                 </div>
               </>
             )}
@@ -507,7 +507,7 @@ export default function NutritionPlanEditor() {
                         <div style={{ fontWeight: 700, fontSize: '0.83rem', color: '#1a1a1a', marginBottom: 3 }}>
                           <span style={{ color: TYPE_JOUR_CONFIG[jour.type_jour]?.color || '#374151', marginRight: 6 }}>●</span>
                           J{jour.jour_numero} — {jour.label}
-                          {jour.objectif_kcal && <span style={{ color: '#9ca3af', fontWeight: 500, marginLeft: 6 }}>{jour.objectif_kcal} kcal</span>}
+                          {jour.objectif_kcal && <span style={{ color: '#6b7280', fontWeight: 500, marginLeft: 6 }}>{jour.objectif_kcal} kcal</span>}
                         </div>
                         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                           {jour.repas.map((r, i) => (
@@ -536,9 +536,9 @@ export default function NutritionPlanEditor() {
         {tab === 'edit' && !isNew && (
           <div>
             {loadingDays ? (
-              <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>Chargement…</div>
+              <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem 0' }}>Chargement…</div>
             ) : days.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
+              <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem 0' }}>
                 Aucun jour défini. Importe d'abord un JSON via l'onglet "Import IA".
               </div>
             ) : (
@@ -623,7 +623,7 @@ function DayAccordion({ day, expanded, onToggle, onEditFood, onEditMeal }) {
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0 }} />
           <div>
             <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a1a1a' }}>J{day.jour_numero} — {day.label}</span>
-            <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 1 }}>
+            <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>
               {tc.label} · {(day.nutrition_plan_meals || []).length} repas
               {totalKcal > 0 && ` · ${totalKcal} kcal`}
             </div>
@@ -638,7 +638,7 @@ function DayAccordion({ day, expanded, onToggle, onEditFood, onEditMeal }) {
       {expanded && (
         <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid #f3f4f6' }}>
           {(day.nutrition_plan_meals || []).length === 0 ? (
-            <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0, fontStyle: 'italic' }}>Aucun repas</p>
+            <p style={{ color: '#6b7280', fontSize: '0.78rem', margin: 0, fontStyle: 'italic' }}>Aucun repas</p>
           ) : (
             (day.nutrition_plan_meals || [])
               .sort((a, b) => a.ordre - b.ordre)
@@ -660,7 +660,7 @@ function MealBlock({ meal, onEditFood, onEditMeal }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <div>
           <span style={{ fontWeight: 700, fontSize: '0.83rem', color: '#1a1a1a' }}>{MEAL_LABELS[meal.meal_type]} — {meal.nom}</span>
-          <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
+          <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1 }}>
             {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`, meal.fat_g && `L ${meal.fat_g}g`].filter(Boolean).join(' · ')}
           </div>
         </div>
@@ -691,7 +691,7 @@ function MealBlock({ meal, onEditFood, onEditMeal }) {
       {(meal.nutrition_plan_foods || []).sort((a, b) => a.ordre - b.ordre).map(food => (
         <div key={food.id} style={S.foodRow} onClick={() => onEditFood(meal.id, food)}>
           <span style={{ fontWeight: 600, fontSize: '0.78rem', color: '#374151', flex: 1 }}>{food.nom}</span>
-          <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>
+          <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>
             {food.quantite_g ? `${food.quantite_g}g` : ''}{food.kcal ? ` · ${food.kcal} kcal` : ''}
           </span>
         </div>
@@ -794,7 +794,7 @@ const S = {
   title: { fontSize: '1.4rem', fontWeight: 800, color: '#1a1a1a', margin: 0, letterSpacing: '-0.02em' },
   statutBtn: { fontSize: '0.72rem', fontWeight: 700, padding: '5px 10px', borderRadius: 8, border: 'none', cursor: 'pointer' },
   infoCard: { background: 'white', borderRadius: 16, padding: '1rem 1.25rem', border: '1.5px solid #f0f0f0', marginBottom: '1.25rem' },
-  label: { display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' },
+  label: { display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' },
   input: {
     width: '100%', boxSizing: 'border-box', padding: '0.55rem 0.75rem',
     border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none',

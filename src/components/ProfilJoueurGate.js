@@ -83,19 +83,19 @@ function ProfilOverlay({ clientId, prenom, nom, groupeIds, gjByGroupe, onDone })
 
         <label style={S.label}>Date de naissance</label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input type="text" inputMode="numeric" placeholder="JJ" value={jj} onChange={numField(setJj, 2, mmRef)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
-          <input ref={mmRef} type="text" inputMode="numeric" placeholder="MM" value={mm} onChange={numField(setMm, 2, aaaaRef)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
-          <input ref={aaaaRef} type="text" inputMode="numeric" placeholder="AAAA" value={aaaa} onChange={numField(setAaaa, 4, null)} style={{ ...S.input, flex: 1.6, textAlign: 'center' }} />
+          <input type="text" inputMode="numeric" placeholder="JJ" aria-label="JJ" value={jj} onChange={numField(setJj, 2, mmRef)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
+          <input ref={mmRef} type="text" inputMode="numeric" placeholder="MM" aria-label="MM" value={mm} onChange={numField(setMm, 2, aaaaRef)} style={{ ...S.input, flex: 1, textAlign: 'center' }} />
+          <input ref={aaaaRef} type="text" inputMode="numeric" placeholder="AAAA" aria-label="AAAA" value={aaaa} onChange={numField(setAaaa, 4, null)} style={{ ...S.input, flex: 1.6, textAlign: 'center' }} />
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <label style={S.label}>Taille (cm)</label>
-            <input type="number" inputMode="numeric" placeholder="ex : 180" value={taille} onChange={e => setTaille(e.target.value)} style={S.input} />
+            <input type="number" inputMode="numeric" placeholder="ex : 180" aria-label="ex : 180" value={taille} onChange={e => setTaille(e.target.value)} style={S.input} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <label style={S.label}>Poids (kg)</label>
-            <input type="number" inputMode="decimal" step="0.1" placeholder="ex : 82" value={poids} onChange={e => setPoids(e.target.value)} style={S.input} />
+            <input type="number" inputMode="decimal" step="0.1" placeholder="ex : 82" aria-label="ex : 82" value={poids} onChange={e => setPoids(e.target.value)} style={S.input} />
           </div>
         </div>
 
@@ -187,7 +187,7 @@ export default function ProfilJoueurGate({ children }) {
 const S = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', overflowX: 'hidden' },
   card: { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', minWidth: 0, maxWidth: 400, maxHeight: '90vh', overflowY: 'auto', overflowX: 'hidden', boxSizing: 'border-box' },
-  subtitle: { fontSize: '0.68rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
+  subtitle: { fontSize: '0.68rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
   title: { fontSize: '1.3rem', fontWeight: '800', color: '#333333', margin: '0 0 0.5rem' },
   intro: { fontSize: '0.8rem', color: '#6b7280', lineHeight: 1.5, margin: '0 0 1.1rem' },
   label: { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', margin: '0.9rem 0 0.4rem' },

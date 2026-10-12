@@ -40,7 +40,7 @@ function DatePickerSheet({ value, max, onPick, onClose }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 6 }}>
           {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((dl, i) => (
-            <div key={i} style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9ca3af', textAlign: 'center', textTransform: 'uppercase' }}>{dl}</div>
+            <div key={i} style={{ fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textAlign: 'center', textTransform: 'uppercase' }}>{dl}</div>
           ))}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
@@ -221,7 +221,7 @@ export default function PhotosClient() {
               {files.map((item, i) => (
                 <div key={i} style={S.row}>
                   <div style={S.thumb}>
-                    <img src={item.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img loading="lazy" src={item.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button onClick={() => removeFile(i)} style={S.thumbX} aria-label="Retirer">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                         <path d="M6 6l12 12M18 6L6 18" />
@@ -272,14 +272,14 @@ const S = {
   headerTitle: { color: 'white', fontWeight: 800, fontSize: '1rem', margin: 0 },
   body:        { padding: '1rem' },
   infoCard:    { background: 'white', borderRadius: 14, padding: '1rem 1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1.1rem' },
-  fieldLabel:  { display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.35rem' },
+  fieldLabel:  { display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.35rem' },
   dateInput:   { width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 0.85rem', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', background: 'white', marginBottom: '1rem', fontFamily: 'inherit', cursor: 'pointer' },
   calNavBtn:   { background: '#f3f4f6', border: 'none', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', fontSize: '1.1rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   pickBtn:     { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'white', color: '#374151', border: '2px dashed #c7d2fe', borderRadius: 14, padding: '0.95rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' },
   row:         { display: 'flex', gap: 11, alignItems: 'center', background: 'white', borderRadius: 14, padding: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   thumb:       { position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 10, overflow: 'hidden', background: '#e5e7eb' },
   thumbX:      { position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
-  poseLabel:   { margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af' },
+  poseLabel:   { margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280' },
   poseBtn:     { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', cursor: 'pointer', fontSize: '0.66rem', fontWeight: 700, fontFamily: 'inherit' },
   poseBtnOn:   { borderColor: '#1a1a1a', background: '#1a1a1a', color: 'white' },
   sendBtn:     { width: '100%', marginTop: '1rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '0.95rem', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer' },

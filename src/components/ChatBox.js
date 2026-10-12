@@ -26,7 +26,7 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend, f
     setSending(false)
   }
 
-  if (loading) return <p style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>Chargement…</p>
+  if (loading) return <p style={{ color: '#6b7280', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>Chargement…</p>
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: fullscreen ? 1 : undefined, minHeight: fullscreen ? 0 : 300 }}>

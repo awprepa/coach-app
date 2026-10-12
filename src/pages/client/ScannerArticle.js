@@ -363,7 +363,7 @@ export default function ScannerArticle() {
                 fontSize: '2rem',
               }}>
                 {food.image_url
-                  ? <img src={food.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img loading="lazy" src={food.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : '🛒'}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -371,7 +371,7 @@ export default function ScannerArticle() {
                   {food.name}
                 </p>
                 {food.brand && (
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600, margin: '0 0 8px' }}>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, margin: '0 0 8px' }}>
                     {food.brand}
                   </p>
                 )}

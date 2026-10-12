@@ -77,7 +77,7 @@ export default function ClientListSidebar({ activeId, onSelect }) {
               onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent' }}
             >
               {c.avatar_url
-                ? <img src={c.avatar_url} alt="" style={{ ...S.avatar, objectFit: 'cover' }} />
+                ? <img loading="lazy" src={c.avatar_url} alt="" style={{ ...S.avatar, objectFit: 'cover' }} />
                 : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>}
               <div style={{ minWidth: 0 }}>
                 <p style={S.name}>{c.prenom} {c.nom}</p>
@@ -99,7 +99,7 @@ export default function ClientListSidebar({ activeId, onSelect }) {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               {g.logo_url
-                ? <img src={g.logo_url} alt="" style={{ width: indent ? 22 : 28, height: indent ? 22 : 28, borderRadius: 7, objectFit: 'contain', flexShrink: 0 }} />
+                ? <img loading="lazy" src={g.logo_url} alt="" style={{ width: indent ? 22 : 28, height: indent ? 22 : 28, borderRadius: 7, objectFit: 'contain', flexShrink: 0 }} />
                 : <div style={{ width: indent ? 22 : 28, height: indent ? 22 : 28, borderRadius: 7, background: (g.couleur || '#6366f1') + '22', flexShrink: 0 }} />}
               <p style={S.groupName}>{g.nom}</p>
             </div>
@@ -125,16 +125,16 @@ const S = {
   col: { width: 240, flexShrink: 0, background: 'white', borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0 },
   head: { padding: '1.1rem 1rem 0.85rem', borderBottom: '1px solid #f0f0f0' },
   title: { fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#1a1a1a' },
-  count: { color: '#9ca3af', fontWeight: 600 },
-  gearBtn: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4, display: 'flex' },
+  count: { color: '#6b7280', fontWeight: 600 },
+  gearBtn: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: 4, display: 'flex' },
   search: { width: '100%', boxSizing: 'border-box', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '7px 10px', fontSize: '0.8rem', outline: 'none', fontFamily: 'inherit' },
   scroll: { flex: 1, overflowY: 'auto', padding: '0.5rem' },
-  empty: { fontSize: '0.8rem', color: '#9ca3af', textAlign: 'center', padding: '1.5rem 0.5rem' },
+  empty: { fontSize: '0.8rem', color: '#6b7280', textAlign: 'center', padding: '1.5rem 0.5rem' },
   row: { display: 'flex', alignItems: 'center', gap: 9, padding: '8px 9px', borderRadius: 10, cursor: 'pointer', marginBottom: 2 },
   avatar: { width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 },
   name: { fontSize: '0.8rem', fontWeight: 700, margin: 0, lineHeight: 1.25, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  offre: { fontSize: '0.66rem', color: '#9ca3af', margin: '1px 0 0' },
-  groupsHead: { fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0.9rem 0 0.4rem', padding: '0 9px' },
+  offre: { fontSize: '0.66rem', color: '#6b7280', margin: '1px 0 0' },
+  groupsHead: { fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', margin: '0.9rem 0 0.4rem', padding: '0 9px' },
   groupRow: { display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', borderRadius: 10, cursor: 'pointer', marginBottom: 2 },
   groupName: { fontSize: '0.8rem', fontWeight: 700, margin: 0, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
 }

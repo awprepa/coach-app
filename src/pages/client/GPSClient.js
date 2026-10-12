@@ -98,7 +98,7 @@ export default function GPSClient() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 80, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      <p style={{ color: '#9ca3af' }}>Chargement...</p>
+      <p style={{ color: '#6b7280' }}>Chargement...</p>
       <ClientBottomNav />
     </div>
   )
@@ -147,7 +147,7 @@ export default function GPSClient() {
               </svg>
             </div>
             <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.3rem' }}>Aucune donnée GPS</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Tes données apparaîtront ici dès qu'elles seront importées.</p>
+            <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Tes données apparaîtront ici dès qu'elles seront importées.</p>
           </div>
         ) : selected ? (
           /* ── Détail session ── */
@@ -165,14 +165,14 @@ export default function GPSClient() {
 
                 <div style={S.detailCard}>
                   <p style={{ margin: '0 0 0.2rem', fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{s.nom}</p>
-                  <p style={{ margin: '0 0 1rem', fontSize: '0.78rem', color: '#9ca3af' }}>
+                  <p style={{ margin: '0 0 1rem', fontSize: '0.78rem', color: '#6b7280' }}>
                     {new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     {s.type && ` · ${s.type}`} · {s.totalJoueurs} joueur{s.totalJoueurs > 1 ? 's' : ''}
                   </p>
 
                   {!s.moi ? (
                     <div style={{ background: '#f9fafb', borderRadius: 10, padding: '1rem', textAlign: 'center' }}>
-                      <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Tu n'as pas participé à cette session.</p>
+                      <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Tu n'as pas participé à cette session.</p>
                     </div>
                   ) : (
                     <>
@@ -235,7 +235,7 @@ export default function GPSClient() {
                   </svg>
                 </div>
                 <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.3rem' }}>Aucune donnée GPS</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>Tes données apparaîtront ici dès qu'elles seront importées.</p>
+                <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Tes données apparaîtront ici dès qu'elles seront importées.</p>
               </div>
             )
             return (
@@ -253,7 +253,7 @@ export default function GPSClient() {
                           {info.type      && <span style={{ ...S.badge, background: '#f0fdf4', color: '#15803d' }}>{info.type}</span>}
                           {info.categorie && <span style={{ ...S.badge, background: '#faf5ff', color: '#7c3aed' }}>{info.categorie}</span>}
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af' }}>{dateStr}</p>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>{dateStr}</p>
                       </div>
                       <span style={{ color: '#d1d5db', fontSize: '1.3rem' }}>›</span>
                     </div>

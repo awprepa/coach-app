@@ -422,7 +422,7 @@ export default function ChargeEntrainement() {
         <div style={S.emptyState}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
           <div style={{ fontWeight: '600', color: '#374151' }}>Sélectionne un client</div>
-          <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' }}>pour voir sa charge d'entraînement</div>
+          <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>pour voir sa charge d'entraînement</div>
         </div>
       )}
 
@@ -432,7 +432,7 @@ export default function ChargeEntrainement() {
         <div style={S.emptyState}>
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
           <div style={{ color: '#374151', fontWeight: '600' }}>Aucune donnée RPE</div>
-          <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE après les séances</div>
+          <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE après les séances</div>
         </div>
       )}
 
@@ -440,7 +440,7 @@ export default function ChargeEntrainement() {
       {selectedClient && !loading && (
         <>
           {gpsZLoading && (
-            <div style={{ ...S.indicateursSection, color: '#9ca3af', fontSize: '0.85rem' }}>
+            <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem' }}>
               📡 Chargement des données GPS…
             </div>
           )}
@@ -452,7 +452,7 @@ export default function ChargeEntrainement() {
                   <div style={S.indicateursTitle}>
                     📡 GPS — Analyse individuelle · {gpsZData.clientName}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.1rem' }}>
                     Dernière séance : {gpsZData.lastNom || gpsZData.lastDate} · {gpsZData.nbSessions} séances analysées
                   </div>
                 </div>
@@ -470,7 +470,7 @@ export default function ChargeEntrainement() {
                     return (
                       <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
                         <div style={S.indLabel}>{icon} {label}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.25rem' }}>
                           Données insuffisantes
                         </div>
                         <div style={{ fontSize: '0.62rem', color: '#d1d5db', marginTop: '0.3rem' }}>
@@ -484,7 +484,7 @@ export default function ChargeEntrainement() {
                     return (
                       <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
                         <div style={S.indLabel}>{icon} {label}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Pas de donnée</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pas de donnée</div>
                       </div>
                     )
                   }
@@ -495,12 +495,12 @@ export default function ChargeEntrainement() {
                       <div style={{ ...S.indLabel, color: '#6b7280' }}>{icon} {label}</div>
                       <div style={{ ...S.indValue, color: zone.color }}>
                         {d.z > 0 ? '+' : ''}{d.z}
-                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}> SD</span>
+                        <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 500 }}> SD</span>
                       </div>
                       <div style={{ ...S.indBadge, background: zone.color + '20', color: zone.color }}>
                         {zone.icon} {zone.label}
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.3rem', lineHeight: 1.4 }}>
+                      <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.3rem', lineHeight: 1.4 }}>
                         {formatVal(d.current, unit)} · moy. {formatVal(d.mean, unit)}
                       </div>
                       <div style={S.indRef}>{d.n} séances · ±1SD = {formatVal(d.sd, unit)}</div>
@@ -523,7 +523,7 @@ export default function ChargeEntrainement() {
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.4rem' }}>
+              <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.4rem' }}>
                 Batterham &amp; Hopkins (2006) · Comparaison du joueur à lui-même sur l'ensemble de ses séances GPS
               </div>
             </div>
@@ -547,7 +547,7 @@ export default function ChargeEntrainement() {
                   return <>
                     {lastRow.prog_nom}
                     {currentSem ? <> · <strong>Semaine actuelle : S{currentSem}</strong></> : null}
-                    <span style={{ color: '#9ca3af', fontWeight: 400, marginLeft: 8 }}>(dernier enregistrement : S{lastRow.semaine})</span>
+                    <span style={{ color: '#6b7280', fontWeight: 400, marginLeft: 8 }}>(dernier enregistrement : S{lastRow.semaine})</span>
                   </>
                 })()}
               </div>
@@ -619,7 +619,7 @@ export default function ChargeEntrainement() {
                       <div style={S.indLabel}>Récupération</div>
                       <div style={{ ...S.indValue, color }}>
                         {lastRow.wellnessScore.toFixed(1)}
-                        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>/5</span>
+                        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>/5</span>
                       </div>
                       <div style={{ ...S.indBadge, background: color + '20', color }}>{wellnessLabel(lastRow.wellnessScore)}</div>
                       <div style={S.indRef}>Fatigue + douleurs moy. (wellness)</div>
@@ -662,7 +662,7 @@ export default function ChargeEntrainement() {
                     <div style={S.barValue}>{d.charge.toFixed(0)}</div>
                     <div style={{ ...S.bar, height: `${h}px`, background: color }} title={`ACWR: ${acwr} — ${acwrLabel(acwr)}`} />
                     <div style={S.barLabel}>S{d.semaine}</div>
-                    <div style={{ fontSize: '0.6rem', color: '#9ca3af', maxWidth: '40px', textAlign: 'center', lineHeight: 1.2 }}>{d.prog_nom.substring(0, 8)}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#6b7280', maxWidth: '40px', textAlign: 'center', lineHeight: 1.2 }}>{d.prog_nom.substring(0, 8)}</div>
                   </div>
                 )
               })}
@@ -1365,7 +1365,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       {/* ── Sélecteur de cycle ── */}
       {allProgs.length > 1 && (
         <div style={{ marginBottom: '1rem' }}>
-          <p style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.45rem' }}>Cycle</p>
+          <p style={{ fontSize: '0.68rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.45rem' }}>Cycle</p>
           <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
             {allProgs.map(p => {
               const activePid = selectedProgId || exWeightData?.progId
@@ -1390,7 +1390,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
             onClick={() => setVideoPickerOpen(v => !v)}>
             <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>Demander une vidéo</div>
-            <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{videoPickerOpen ? 'Masquer ▲' : 'Afficher ▼'}</span>
+            <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{videoPickerOpen ? 'Masquer ▲' : 'Afficher ▼'}</span>
           </div>
 
           {videoPickerOpen && (
@@ -1412,13 +1412,13 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', outline: 'none', marginBottom: '0.65rem' }}
               />
               {videoExosLoading ? (
-                <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Chargement…</p>
+                <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Chargement…</p>
               ) : videoExosList.length === 0 ? (
-                <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Aucun exercice dans ce cycle.</p>
+                <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Aucun exercice dans ce cycle.</p>
               ) : (() => {
                 const q = videoSearch.trim().toLowerCase()
                 const filtered = q ? videoExosList.filter(e => e.nom.toLowerCase().includes(q)) : videoExosList
-                if (filtered.length === 0) return <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Aucun résultat.</p>
+                if (filtered.length === 0) return <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Aucun résultat.</p>
                 let prevSeance = null
                 return (
                   <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #f3f4f6', borderRadius: 8 }}>
@@ -1429,7 +1429,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                       return (
                         <div key={exo.id}>
                           {seanceHeader && (
-                            <div style={{ padding: '0.4rem 0.75rem', background: '#f9fafb', fontSize: '0.68rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            <div style={{ padding: '0.4rem 0.75rem', background: '#f9fafb', fontSize: '0.68rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                               {exo.seanceNom || 'Sans séance'}
                             </div>
                           )}
@@ -1460,7 +1460,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
       {/* ── Suivi des charges par exercice ── */}
       {exWeightLoading && (
-        <div style={{ ...S.indicateursSection, color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>
           🏋️ Chargement des charges par exercice…
         </div>
       )}
@@ -1521,7 +1521,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     </button>
                   ) : (
                     <button onClick={() => demanderVideo(exo.id)}
-                      style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                      style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
                       Demander une vidéo
                     </button>
                   )}
@@ -1568,11 +1568,11 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               <tr key={`histo-${exo.id}`} style={{ background: '#f9fafb', borderBottom: '2px solid #f3f4f6' }}>
                 <td colSpan={1 + allWeeks.length + nbExtraCols} style={{ padding: '0.75rem 1rem' }}>
                   {histoLoading[exo.id] ? (
-                    <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>Chargement…</span>
+                    <span style={{ color: '#6b7280', fontSize: '0.78rem' }}>Chargement…</span>
                   ) : (() => {
                     const grouped = histoData[exo.id] || {}
                     const sems = Object.keys(grouped).map(Number).sort((a, b) => a - b)
-                    if (!sems.length) return <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>Aucune série enregistrée.</span>
+                    if (!sems.length) return <span style={{ color: '#6b7280', fontSize: '0.78rem' }}>Aucune série enregistrée.</span>
                     return (
                       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                         {sems.map(sem => {
@@ -1585,7 +1585,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                             <div key={sem} style={{ minWidth: 90 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
                                 <span style={{ background: '#e5e7eb', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 800, color: '#374151' }}>S{sem}</span>
-                                <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{poidsLabel}</span>
+                                <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>{poidsLabel}</span>
                               </div>
                               {rows.map((r, ri) => (
                                 <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.18rem' }}>
@@ -1613,7 +1613,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div>
                 <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>🏋️ Suivi des charges par exercice</div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>{progNom}</div>
+                <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.1rem' }}>{progNom}</div>
               </div>
               <div style={{ padding: '3px 10px', borderRadius: 999, background: '#eff6ff', color: '#3b82f6', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
                 Semaine {lastWeek} / {totalSemaines}
@@ -1672,7 +1672,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                       {seance.exercises.map(exo => renderExoRow(exo))}
                       {/* Mini récap par séance */}
                       <tr key={`recap-${seance.id ?? si}`} style={{ background: '#fafbff' }}>
-                        <td style={{ padding: '0.4rem 0.75rem', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', position: 'sticky', left: 0, background: '#fafbff' }}>moy.</td>
+                        <td style={{ padding: '0.4rem 0.75rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', position: 'sticky', left: 0, background: '#fafbff' }}>moy.</td>
                         {allWeeks.map(w => {
                           const vals = seance.exercises.map(e => e.weeks[w]?.poids).filter(Boolean)
                           if (!vals.length) return <td key={w} style={{ padding: '0.3rem 0.3rem', textAlign: 'center', color: '#d1d5db', fontSize: '0.68rem' }}>—</td>
@@ -1689,7 +1689,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
 
             {/* Légende couleurs */}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.65rem', color: '#9ca3af', marginRight: '0.25rem' }}>% du max :</span>
+              <span style={{ fontSize: '0.65rem', color: '#6b7280', marginRight: '0.25rem' }}>% du max :</span>
               {[
                 { color: '#ef4444', label: '< 84%' },
                 { color: '#f97316', label: '84–88%' },
@@ -1714,20 +1714,20 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         <div style={S.emptyState}>
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
           <div style={{ color: '#374151', fontWeight: '600' }}>Aucune donnée</div>
-          <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE et ses charges après les séances</div>
+          <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>Le client doit renseigner son RPE et ses charges après les séances</div>
         </div>
       )}
 
       {/* GPS */}
       {!loading && (
         <>
-          {gpsZLoading && <div style={{ ...S.indicateursSection, color: '#9ca3af', fontSize: '0.85rem' }}>📡 Chargement des données GPS…</div>}
+          {gpsZLoading && <div style={{ ...S.indicateursSection, color: '#6b7280', fontSize: '0.85rem' }}>📡 Chargement des données GPS…</div>}
           {!gpsZLoading && gpsZData && (
             <div style={S.indicateursSection}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
                   <div style={S.indicateursTitle}>📡 GPS — Analyse individuelle · {gpsZData.clientName}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>Dernière séance : {gpsZData.lastNom || gpsZData.lastDate} · {gpsZData.nbSessions} séances analysées</div>
+                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.1rem' }}>Dernière séance : {gpsZData.lastNom || gpsZData.lastDate} · {gpsZData.nbSessions} séances analysées</div>
                 </div>
                 <div style={{ padding: '3px 10px', borderRadius: 999, background: '#f0fdf4', color: '#22c55e', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bbf7d0', whiteSpace: 'nowrap' }}>Z-score individuel</div>
               </div>
@@ -1738,23 +1738,23 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                   if (d.insufficient) return (
                     <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
                       <div style={S.indLabel}>{icon} {label}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', marginTop: '0.25rem' }}>Données insuffisantes</div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.25rem' }}>Données insuffisantes</div>
                       <div style={{ fontSize: '0.62rem', color: '#d1d5db', marginTop: '0.3rem' }}>{d.n} séance{d.n > 1 ? 's' : ''} · min. 5 requises</div>
                     </div>
                   )
                   if (d.z === null) return (
                     <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
                       <div style={S.indLabel}>{icon} {label}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Pas de donnée</div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pas de donnée</div>
                     </div>
                   )
                   const zone = zZone(d.z)
                   return (
                     <div key={key} style={{ ...S.indCard, background: zone.bg, border: `1px solid ${zone.border}` }}>
                       <div style={{ ...S.indLabel, color: '#6b7280' }}>{icon} {label}</div>
-                      <div style={{ ...S.indValue, color: zone.color }}>{d.z > 0 ? '+' : ''}{d.z}<span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}> SD</span></div>
+                      <div style={{ ...S.indValue, color: zone.color }}>{d.z > 0 ? '+' : ''}{d.z}<span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 500 }}> SD</span></div>
                       <div style={{ ...S.indBadge, background: zone.color + '20', color: zone.color }}>{zone.icon} {zone.label}</div>
-                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.3rem', lineHeight: 1.4 }}>{formatVal(d.current, unit)} · moy. {formatVal(d.mean, unit)}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.3rem', lineHeight: 1.4 }}>{formatVal(d.current, unit)} · moy. {formatVal(d.mean, unit)}</div>
                       <div style={S.indRef}>{d.n} séances · ±1SD = {formatVal(d.sd, unit)}</div>
                     </div>
                   )
@@ -1765,7 +1765,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                   <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', color: '#6b7280' }}><span>{z.icon}</span><span style={{ color: z.color, fontWeight: 600 }}>{z.label}</span></div>
                 ))}
               </div>
-              <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.4rem' }}>Batterham &amp; Hopkins (2006) · Comparaison du joueur à lui-même sur l'ensemble de ses séances GPS</div>
+              <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '0.4rem' }}>Batterham &amp; Hopkins (2006) · Comparaison du joueur à lui-même sur l'ensemble de ses séances GPS</div>
             </div>
           )}
         </>
@@ -1781,7 +1781,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 {(() => { const tACWR = getTonnageACWR(data, lastIdx); if (!tACWR) return null; const color = acwrColor(tACWR); return (<div style={S.indCard}><div style={S.indLabel}>ACWR tonnage</div><div style={{ ...S.indValue, color }}>{tACWR}</div><div style={{ ...S.indBadge, background: color + '20', color }}>{acwrLabel(tACWR)}</div><div style={S.indRef}>Hulin 2016 · {Math.round(lastRow.tonnage).toLocaleString('fr-FR')} kg cette sem.</div></div>) })()}
                 {lastRow.monotonie !== null && (() => { const color = monotonyColor(lastRow.monotonie); return (<div style={S.indCard}><div style={S.indLabel}>Monotonie</div><div style={{ ...S.indValue, color }}>{lastRow.monotonie.toFixed(2)}</div><div style={{ ...S.indBadge, background: color + '20', color }}>{monotonyLabel(lastRow.monotonie)}</div><div style={S.indRef}>Foster 1998 · Risque si &gt; 2.0</div></div>) })()}
                 {lastRow.monotonie !== null && (() => { const strain = getStrain(lastRow); const color = strainColor(strain); return (<div style={S.indCard}><div style={S.indLabel}>Strain</div><div style={{ ...S.indValue, color }}>{strain !== null ? strain.toLocaleString('fr-FR') : '—'}</div><div style={{ ...S.indBadge, background: color + '20', color }}>{strain < 4000 ? 'Faible' : strain < 6000 ? 'Modéré' : 'Élevé'}</div><div style={S.indRef}>Foster 1998 · Charge × Monotonie</div></div>) })()}
-                {lastRow.wellnessScore !== null && lastRow.wellnessScore !== undefined && (() => { const color = wellnessColor(lastRow.wellnessScore); return (<div style={S.indCard}><div style={S.indLabel}>Récupération</div><div style={{ ...S.indValue, color }}>{lastRow.wellnessScore.toFixed(1)}<span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>/5</span></div><div style={{ ...S.indBadge, background: color + '20', color }}>{wellnessLabel(lastRow.wellnessScore)}</div><div style={S.indRef}>Fatigue + douleurs moy. (wellness)</div></div>) })()}
+                {lastRow.wellnessScore !== null && lastRow.wellnessScore !== undefined && (() => { const color = wellnessColor(lastRow.wellnessScore); return (<div style={S.indCard}><div style={S.indLabel}>Récupération</div><div style={{ ...S.indValue, color }}>{lastRow.wellnessScore.toFixed(1)}<span style={{ fontSize: '0.8rem', color: '#6b7280' }}>/5</span></div><div style={{ ...S.indBadge, background: color + '20', color }}>{wellnessLabel(lastRow.wellnessScore)}</div><div style={S.indRef}>Fatigue + douleurs moy. (wellness)</div></div>) })()}
               </div>
               {(() => {
                 const risk = getRiskLevel(lastRow, lastIdx, data)
@@ -1797,7 +1797,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 const h = Math.round((d.charge / maxCharge) * 160)
                 const acwr = getACWR(data, idx)
                 const color = acwrColor(acwr)
-                return (<div key={d.key} style={S.barGroup}><div style={S.barValue}>{d.charge.toFixed(0)}</div><div style={{ ...S.bar, height: `${h}px`, background: color }} title={`ACWR: ${acwr} — ${acwrLabel(acwr)}`} /><div style={S.barLabel}>S{d.semaine}</div><div style={{ fontSize: '0.6rem', color: '#9ca3af', maxWidth: '40px', textAlign: 'center', lineHeight: 1.2 }}>{d.prog_nom.substring(0, 8)}</div></div>)
+                return (<div key={d.key} style={S.barGroup}><div style={S.barValue}>{d.charge.toFixed(0)}</div><div style={{ ...S.bar, height: `${h}px`, background: color }} title={`ACWR: ${acwr} — ${acwrLabel(acwr)}`} /><div style={S.barLabel}>S{d.semaine}</div><div style={{ fontSize: '0.6rem', color: '#6b7280', maxWidth: '40px', textAlign: 'center', lineHeight: 1.2 }}>{d.prog_nom.substring(0, 8)}</div></div>)
               })}
             </div>
             <div style={S.legend}>{[{color:'#3b82f6',label:'Sous-charge (< 0.8)'},{color:'#22c55e',label:'Optimal (0.8–1.3)'},{color:'#f59e0b',label:'Attention (1.3–1.5)'},{color:'#ef4444',label:'Surcharge (> 1.5)'}].map(l=>(<div key={l.label} style={S.legendItem}><div style={{...S.legendDot,background:l.color}}/><span>{l.label}</span></div>))}</div>
@@ -1844,7 +1844,7 @@ const S = {
   clientBar: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' },
   clientBtn: { padding: '0.4rem 1rem', border: '1px solid #e5e7eb', borderRadius: '999px', background: 'white', color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer', fontWeight: '500' },
   clientBtnActive: { background: '#333333', color: '#e4f816', border: '1px solid #333333', fontWeight: '700' },
-  empty: { color: '#9ca3af', textAlign: 'center', padding: '3rem' },
+  empty: { color: '#6b7280', textAlign: 'center', padding: '3rem' },
   emptyState: { textAlign: 'center', padding: '4rem 2rem', background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb' },
 
   // Indicateurs scientifiques
@@ -1855,7 +1855,7 @@ const S = {
   indLabel: { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
   indValue: { fontSize: '1.6rem', fontWeight: '800', color: '#111827', marginBottom: '0.35rem', lineHeight: 1 },
   indBadge: { display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '600', marginBottom: '0.4rem' },
-  indRef: { fontSize: '0.67rem', color: '#9ca3af', lineHeight: 1.4 },
+  indRef: { fontSize: '0.67rem', color: '#6b7280', lineHeight: 1.4 },
 
   // Graphe
   chartCard: { background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem', overflow: 'hidden' },
@@ -1883,5 +1883,5 @@ const S = {
   refsTitle: { fontWeight: '700', color: '#374151', fontSize: '0.85rem', marginBottom: '0.75rem' },
   refsList: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   refItem: { display: 'flex', gap: '0.5rem', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 },
-  refBullet: { color: '#9ca3af', flexShrink: 0 },
+  refBullet: { color: '#6b7280', flexShrink: 0 },
 }

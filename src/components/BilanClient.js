@@ -143,7 +143,7 @@ function LigneNote({ lundi, date, texte, edition, onEdit, onClose, onSave }) {
       <span style={S.date}>{quand(date)}</span>
       <span style={S.cat}>Note</span>
       <span style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginBottom: 3 }}>Semaine du {libelleSemaine(lundi)}</div>
+        <div style={{ fontSize: '0.68rem', color: '#6b7280', marginBottom: 3 }}>Semaine du {libelleSemaine(lundi)}</div>
         {edition ? (
           <>
             <textarea ref={ref} value={valeur} onChange={e => setValeur(e.target.value)} onBlur={fermer} rows={3}
@@ -160,7 +160,7 @@ function LigneNote({ lundi, date, texte, edition, onEdit, onClose, onSave }) {
 
 const S = {
   intro: { fontSize: '0.78rem', color: '#6b7280', margin: '0 0 0.75rem' },
-  vide: { fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic', margin: '4px 0' },
+  vide: { fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic', margin: '4px 0' },
   carte: { background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem', overflow: 'hidden' },
   btnNote: { flexShrink: 0, background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' },
   date: { flexShrink: 0, width: 128, fontSize: '0.72rem', color: '#6b7280', fontVariantNumeric: 'tabular-nums' },

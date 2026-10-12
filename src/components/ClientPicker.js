@@ -44,7 +44,7 @@ export default function ClientPicker({ value, onChange, clientFields, placeholde
         <span style={{ color: selected ? '#1a1a1a' : '#9ca3af', fontWeight: selected ? 600 : 500 }}>
           {selected ? `${selected.prenom} ${selected.nom}` : allowClear && !value ? clearLabel : placeholder}
         </span>
-        <span style={{ color: '#9ca3af' }}>▾</span>
+        <span style={{ color: '#6b7280' }}>▾</span>
       </button>
 
       {open && (
@@ -89,7 +89,7 @@ export default function ClientPicker({ value, onChange, clientFields, placeholde
                       <div key={g.id} onClick={() => setOpenGroupe(g)} style={S.groupRow}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: g.couleur || '#6b7280', flexShrink: 0 }} />
                         <span style={{ flex: 1, fontWeight: 700 }}>{g.nom}</span>
-                        <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} ›</span>
+                        <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} ›</span>
                       </div>
                     ))}
                   </>
@@ -126,5 +126,5 @@ const S = {
   groupRow: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0.85rem', fontSize: '0.85rem', color: '#374151', cursor: 'pointer' },
   backRow: { padding: '0.55rem 0.85rem', fontSize: '0.8rem', color: '#6366f1', fontWeight: 700, cursor: 'pointer', borderBottom: '1px solid #f3f4f6' },
   sep: { height: 1, background: '#f3f4f6', margin: '2px 0' },
-  empty: { padding: '0.75rem', fontSize: '0.8rem', color: '#9ca3af', textAlign: 'center' },
+  empty: { padding: '0.75rem', fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' },
 }

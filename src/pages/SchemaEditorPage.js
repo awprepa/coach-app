@@ -98,7 +98,7 @@ export default function SchemaEditorPage() {
 
   function goBack() { navigate('/bibliotheque?tab=schemas') }
 
-  if (schema === undefined) return <div style={S.page}><p style={{ color: '#9ca3af' }}>Chargement…</p></div>
+  if (schema === undefined) return <div style={S.page}><p style={{ color: '#6b7280' }}>Chargement…</p></div>
 
   return <SchemaEditorForm key={schema?.id || 'nouveau'} schema={schema} isNew={isNew} onClose={goBack} onSaved={goBack} />
 }
@@ -780,7 +780,7 @@ function SchemaEditorForm({ schema, isNew, onClose, onSaved }) {
 
         {selectedSeg && (
           <div style={S.editPanel}>
-            <input type="number" min="0" placeholder="Distance (m)" value={selectedSeg.distance_m ?? ''} onFocus={pushHistory}
+            <input type="number" min="0" placeholder="Distance (m)" aria-label="Distance (m)" value={selectedSeg.distance_m ?? ''} onFocus={pushHistory}
               onChange={e => updateSegmentDistance(selectedSeg.id, e.target.value)}
               style={S.editLabelInput} />
             <div style={S.toolGroup}>
@@ -793,10 +793,10 @@ function SchemaEditorForm({ schema, isNew, onClose, onSaved }) {
 
         {selectedRect && (
           <div style={S.editPanel}>
-            <input type="number" min="0" placeholder="Largeur (m)" value={selectedRect.largeur_m ?? ''} disabled={selectedRect.verrouille} onFocus={pushHistory}
+            <input type="number" min="0" placeholder="Largeur (m)" aria-label="Largeur (m)" value={selectedRect.largeur_m ?? ''} disabled={selectedRect.verrouille} onFocus={pushHistory}
               onChange={e => updateRectDims(selectedRect.id, { largeur_m: e.target.value ? Number(e.target.value) : null })}
               style={{ ...S.editLabelInput, minWidth: 70 }} />
-            <input type="number" min="0" placeholder="Hauteur (m)" value={selectedRect.hauteur_m ?? ''} disabled={selectedRect.verrouille} onFocus={pushHistory}
+            <input type="number" min="0" placeholder="Hauteur (m)" aria-label="Hauteur (m)" value={selectedRect.hauteur_m ?? ''} disabled={selectedRect.verrouille} onFocus={pushHistory}
               onChange={e => updateRectDims(selectedRect.id, { hauteur_m: e.target.value ? Number(e.target.value) : null })}
               style={{ ...S.editLabelInput, minWidth: 70 }} />
             <input type="color" value={selectedRect.couleur} disabled={selectedRect.verrouille} onFocus={pushHistory}
@@ -865,7 +865,7 @@ const S = {
   multiLabel: { fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: 'auto' },
   deleteBtn: { background: 'none', border: 'none', color: '#dc2626', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' },
   descInput: { width: '100%', boxSizing: 'border-box', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '8px 10px', fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', marginBottom: 12, background: '#fff' },
-  hint: { fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600, margin: '0 0 10px' },
+  hint: { fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, margin: '0 0 10px' },
   footer: { display: 'flex', gap: 8, paddingBottom: '1.5rem' },
   btnPrimary: { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' },
   btnSecondary: { flex: 1, background: '#fff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.75rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' },

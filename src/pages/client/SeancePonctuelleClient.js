@@ -55,7 +55,7 @@ function AddExerciceForm({ onAdd, adding, biblio }) {
       <div style={{ position: 'relative' }}>
         <input
           type="text"
-          placeholder="Nom de l'exercice"
+          placeholder="Nom de l'exercice" aria-label="Nom de l'exercice"
           value={nom}
           onChange={e => { setNom(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
@@ -85,7 +85,7 @@ function AddExerciceForm({ onAdd, adding, biblio }) {
         </div>
         <div style={{ flex: 1 }}>
           <label style={S.miniLabel}>Répétitions</label>
-          <input type="number" inputMode="numeric" placeholder="—" value={reps}
+          <input type="number" inputMode="numeric" placeholder="—" aria-label="—" value={reps}
             onChange={e => setReps(e.target.value)} style={{ ...S.input, textAlign: 'center' }} />
         </div>
       </div>
@@ -328,7 +328,7 @@ export default function SeancePonctuelleClient() {
         {/* Nom + date */}
         <div style={{ ...S.exCard, marginBottom: '1rem' }}>
           <label style={S.miniLabel}>Nom de la séance</label>
-          <input type="text" placeholder="ex: Full body, Haut du corps…"
+          <input type="text" placeholder="ex: Full body, Haut du corps…" aria-label="ex: Full body, Haut du corps…"
             value={newTitre} onChange={e => setNewTitre(e.target.value)} style={S.input} autoFocus />
           <div style={{ marginTop: '0.75rem' }}>
             <label style={S.miniLabel}>Date</label>
@@ -347,7 +347,7 @@ export default function SeancePonctuelleClient() {
                 <span style={S.exNum}>{idx + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontWeight: 800, fontSize: '0.92rem', color: '#1a1a1a' }}>{ex.nom}</p>
-                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: '#6b7280' }}>
                     {ex.series} série{ex.series > 1 ? 's' : ''}{ex.reps ? ` × ${ex.reps} reps` : ''}
                   </p>
                 </div>
@@ -396,7 +396,7 @@ export default function SeancePonctuelleClient() {
 
       <div style={S.content}>
         {exercices.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '1.5rem 0 0.5rem', color: '#9ca3af', fontSize: '0.85rem' }}>
+          <div style={{ textAlign: 'center', padding: '1.5rem 0 0.5rem', color: '#6b7280', fontSize: '0.85rem' }}>
             Aucun exercice pour l'instant.
           </div>
         )}
@@ -416,7 +416,7 @@ export default function SeancePonctuelleClient() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                     {ex.image_url && (
                       <div style={{ width: 52, height: 52, borderRadius: 10, overflow: 'hidden', border: '1.5px solid #e5e7eb', flexShrink: 0 }}>
-                        <img src={ex.image_url} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        <img loading="lazy" src={ex.image_url} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       </div>
                     )}
                     <button onClick={() => supprimerExercice(ex.id)} style={S.deleteBtn} title="Supprimer">
@@ -448,10 +448,10 @@ export default function SeancePonctuelleClient() {
                 <div style={S.seriesTracker}>
                   {/* Label colonnes */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', paddingLeft: 24 }}>
-                    <span style={{ width: 52, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
-                    <span style={{ fontSize: '0.62rem', color: '#9ca3af', width: 22, textAlign: 'center' }}>kg</span>
-                    <span style={{ width: 48, fontSize: '0.62rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
-                    <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>reps</span>
+                    <span style={{ width: 52, fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
+                    <span style={{ fontSize: '0.62rem', color: '#6b7280', width: 22, textAlign: 'center' }}>kg</span>
+                    <span style={{ width: 48, fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
+                    <span style={{ fontSize: '0.62rem', color: '#6b7280' }}>reps</span>
                   </div>
 
                   {ex.series.map(serie => {
@@ -459,13 +459,13 @@ export default function SeancePonctuelleClient() {
                     return (
                       <div key={serie.id} style={{ ...S.serieRow, ...(filled ? S.serieRowDone : {}) }}>
                         <span style={S.serieNum}>{serie.num_serie}</span>
-                        <input type="text" inputMode="decimal" placeholder="kg" value={serie.poids}
+                        <input type="text" inputMode="decimal" placeholder="kg" aria-label="kg" value={serie.poids}
                           onChange={e => updateSerie(ex.id, serie.id, 'poids', e.target.value)}
                           onBlur={() => saveSerie(ex.id, serie.id)}
                           onFocus={scrollInputIntoView}
                           style={{ ...S.serieInput, width: 52 }} />
                         <span style={S.serieUnit}>kg</span>
-                        <input type="text" inputMode="numeric" placeholder="reps" value={serie.reps}
+                        <input type="text" inputMode="numeric" placeholder="reps" aria-label="reps" value={serie.reps}
                           onChange={e => updateSerie(ex.id, serie.id, 'reps', e.target.value)}
                           onBlur={() => saveSerie(ex.id, serie.id)}
                           onFocus={scrollInputIntoView}
@@ -494,7 +494,7 @@ export default function SeancePonctuelleClient() {
             <>
               <AddExerciceForm onAdd={ajouterExercice} adding={addingEx} biblio={biblio} />
               <button onClick={() => setShowAddForm(false)}
-                style={{ width: '100%', marginTop: '0.5rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.8rem', cursor: 'pointer', padding: '0.4rem 0' }}>
+                style={{ width: '100%', marginTop: '0.5rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.8rem', cursor: 'pointer', padding: '0.4rem 0' }}>
                 Annuler
               </button>
             </>
@@ -524,18 +524,18 @@ const S = {
   serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
   serieNum:   { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput:  { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
-  serieUnit:  { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
-  addSerieBtn: { marginTop: '0.5rem', background: 'none', border: '1.5px dashed #e5e7eb', borderRadius: 8, padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', cursor: 'pointer', width: '100%' },
+  serieUnit:  { fontSize: '0.65rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
+  addSerieBtn: { marginTop: '0.5rem', background: 'none', border: '1.5px dashed #e5e7eb', borderRadius: 8, padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer', width: '100%' },
   addExBtn:    { background: '#333', color: 'var(--accent-fg)', border: 'none', borderRadius: 10, padding: '0.7rem 1rem', width: '100%', textAlign: 'center', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', boxSizing: 'border-box' },
   input:       { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.88rem', color: '#333', outline: 'none', background: '#fafafa' },
-  miniLabel:   { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' },
+  miniLabel:   { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' },
   bibDropdown: { position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 50 },
   bibItem:     { padding: '0.6rem 0.875rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.85rem', color: '#374151', cursor: 'pointer' },
   createBtn:   { display: 'block', width: '100%', boxSizing: 'border-box', background: '#1a1a1a', color: 'var(--accent-fg)', border: 'none', borderRadius: 12, padding: '0.95rem', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', marginTop: '1.5rem', textAlign: 'center' },
   paramsBar:   { display: 'flex', alignItems: 'center', background: '#f8f9fb', borderRadius: 9, padding: '0.45rem 0.75rem', gap: 0 },
   paramItem:   { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 },
-  paramLabel:  { fontSize: '0.58rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  paramLabel:  { fontSize: '0.58rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' },
   paramValue:  { fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.2 },
   paramDivider:{ width: 1, height: 28, background: '#e5e7eb', flexShrink: 0, margin: '0 0.3rem' },
-  addExerciceToggle: { width: '100%', background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.75rem 1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box' },
+  addExerciceToggle: { width: '100%', background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.75rem 1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box' },
 }

@@ -211,7 +211,7 @@ const S = {
   inner: { maxWidth: 900, margin: '0 auto', padding: '2rem' },
   header: { marginBottom: '1.5rem' },
   title: { fontSize: '1.6rem', fontWeight: 800, color: '#1a1a1a', margin: '0 0 4px', letterSpacing: '-0.02em' },
-  subtitle: { fontSize: '0.875rem', color: '#9ca3af', margin: 0, fontWeight: 500 },
+  subtitle: { fontSize: '0.875rem', color: '#6b7280', margin: 0, fontWeight: 500 },
   searchWrapper: { position: 'relative', marginBottom: '1.25rem', display: 'flex', alignItems: 'center' },
   searchIcon: { position: 'absolute', left: 14, pointerEvents: 'none', display: 'flex', alignItems: 'center', top: 0, bottom: 0 },
   searchInput: {
@@ -219,8 +219,8 @@ const S = {
     borderRadius: 12, fontSize: '0.92rem', color: '#1a1a1a', background: 'white',
     outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   },
-  searchClear: { position: 'absolute', right: 12, background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
-  emptyState: { textAlign: 'center', color: '#9ca3af', padding: '3rem 0', fontSize: '0.95rem' },
+  searchClear: { position: 'absolute', right: 12, background: 'none', border: 'none', color: '#6b7280', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
+  emptyState: { textAlign: 'center', color: '#6b7280', padding: '3rem 0', fontSize: '0.95rem' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 },
   card: {
     background: 'white', borderRadius: 16, padding: '16px 18px',
@@ -233,6 +233,6 @@ const S = {
   offreBadge: { padding: '3px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' },
   planActif: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '8px 10px', marginBottom: 6 },
   planDot: { width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block', flexShrink: 0 },
-  noPlan: { fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', marginBottom: 6 },
+  noPlan: { fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginBottom: 6 },
   arrow: { position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' },
 }

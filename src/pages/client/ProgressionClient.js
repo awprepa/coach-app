@@ -759,7 +759,7 @@ export default function ProgressionClient() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, minHeight: 'calc(100vh - 160px)', padding: '2rem' }}>
         <span style={{ fontSize: '3rem' }}>💪</span>
         <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1a1a1a', margin: 0 }}>Aucune donnée encore</p>
-        <p style={{ fontSize: '0.85rem', color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
+        <p style={{ fontSize: '0.85rem', color: '#6b7280', textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
           Commence ta première séance pour voir ta progression ici 💪
         </p>
       </div>
@@ -1201,7 +1201,7 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
           </span>
           {hasFormula && (
             <span style={{
-              fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af',
+              fontSize: '0.6rem', fontWeight: 700, color: '#6b7280',
               flexShrink: 0,
             }}>1RM</span>
           )}
@@ -1234,7 +1234,7 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
                 <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>
                   Choisir un exercice
                 </span>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.1rem', cursor: 'pointer', padding: 4 }}>✕</button>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '1.1rem', cursor: 'pointer', padding: 4 }}>✕</button>
               </div>
             </div>
 
@@ -1246,7 +1246,7 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
                   <div style={{
                     padding: '10px 20px 4px',
                     fontSize: '0.65rem', fontWeight: 800,
-                    color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em',
+                    color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em',
                   }}>
                     {GROUPE_LABELS[g]}
                   </div>
@@ -1382,7 +1382,7 @@ const S = {
   },
   levelSub: {
     fontSize: '0.66rem',
-    color: '#9ca3af',
+    color: '#6b7280',
     fontWeight: 600,
     margin: '3px 0 0',
   },
@@ -1404,7 +1404,7 @@ const S = {
   totalLabel: {
     fontSize: '0.68rem',
     fontWeight: 600,
-    color: '#9ca3af',
+    color: '#6b7280',
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
     margin: 0,
@@ -1455,7 +1455,7 @@ const S = {
   },
   medalsHint: {
     fontSize: '0.68rem',
-    color: '#9ca3af',
+    color: '#6b7280',
     margin: '2px 0 10px',
     lineHeight: 1.4,
   },
@@ -1605,7 +1605,7 @@ const S = {
   medalChipLevel: {
     fontSize: '0.6rem',
     fontWeight: 800,
-    color: '#9ca3af',
+    color: '#6b7280',
     margin: '0 0 3px',
     textAlign: 'center',
   },
@@ -1649,7 +1649,7 @@ const S = {
   },
   percentileSub: {
     fontSize: '0.68rem',
-    color: '#9ca3af',
+    color: '#6b7280',
     margin: '3px 0 0',
     lineHeight: 1.4,
   },
@@ -1675,7 +1675,7 @@ const S = {
   percentileRankLabel: {
     fontSize: '0.62rem',
     fontWeight: 600,
-    color: '#9ca3af',
+    color: '#6b7280',
   },
   baremeTable: {
     marginTop: 10,
@@ -1687,7 +1687,7 @@ const S = {
     fontWeight: 800,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    color: '#9ca3af',
+    color: '#6b7280',
     margin: '0 0 6px',
   },
   baremeRow: {
@@ -1750,7 +1750,7 @@ const S = {
   groupLabel: {
     fontSize: '0.62rem',
     fontWeight: 800,
-    color: '#9ca3af',
+    color: '#6b7280',
     textTransform: 'uppercase',
     letterSpacing: '0.07em',
     whiteSpace: 'nowrap',
@@ -1797,7 +1797,7 @@ const S = {
   metricLabel: {
     fontSize: '0.68rem',
     fontWeight: 600,
-    color: '#9ca3af',
+    color: '#6b7280',
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
   },
@@ -1830,7 +1830,7 @@ const S = {
   sciNote: {
     margin: '8px 12px 0',
     fontSize: '0.7rem',
-    color: '#9ca3af',
+    color: '#6b7280',
     fontStyle: 'italic',
   },
 

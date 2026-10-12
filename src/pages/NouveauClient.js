@@ -106,7 +106,7 @@ export default function NouveauClient() {
                 <option value="3">3 mois — 69€/mois</option>
                 <option value="6">6 mois — 69€/mois</option>
               </select>
-              <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.4rem 0 0' }}>
+              <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0.4rem 0 0' }}>
                 Le tarif dégressif sans engagement (89€/79€/69€) ne s'applique qu'au renouvellement, depuis la fiche client.
               </p>
             </div>
@@ -126,11 +126,11 @@ export default function NouveauClient() {
           </div>
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Objectif</label>
-            <textarea name="objectif" value={form.objectif} onChange={handleChange} rows={3} style={styles.textarea} placeholder="Ex: Prise de masse, performance rugby..." />
+            <textarea name="objectif" value={form.objectif} onChange={handleChange} rows={3} style={styles.textarea} placeholder="Ex: Prise de masse, performance rugby..." aria-label="Ex: Prise de masse, performance rugby..." />
           </div>
           <div style={{ marginBottom: '1rem' }}>
             <label style={styles.label}>Notes</label>
-            <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} style={styles.textarea} placeholder="Informations complémentaires..." />
+            <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} style={styles.textarea} placeholder="Informations complémentaires..." aria-label="Informations complémentaires..." />
           </div>
         </div>
 
@@ -165,7 +165,7 @@ const styles = {
   },
   header: { marginBottom: '1.5rem' },
   title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  subtitle: { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
+  subtitle: { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
   form: {},
   section: {
     background: 'white',
@@ -226,5 +226,5 @@ const styles = {
     fontSize: '1.5rem', fontWeight: '900', margin: '0 auto 1rem',
   },
   successTitle: { fontSize: '1.25rem', fontWeight: '800', color: '#333333', margin: '0 0 0.5rem' },
-  successSub: { color: '#9ca3af', marginBottom: '1.5rem' },
+  successSub: { color: '#6b7280', marginBottom: '1.5rem' },
 }

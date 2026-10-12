@@ -71,7 +71,7 @@ export default function SeanceTerrainClient({ id, seance }) {
     autoPlacerSeanceSurCalendrier(clientId, id, semaineActuelle)
   }
 
-  if (loading) return <div style={S.page}><p style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem' }}>Chargement…</p></div>
+  if (loading) return <div style={S.page}><p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement…</p></div>
 
   return (
     <div style={S.page}>
@@ -143,7 +143,7 @@ const S = {
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '1rem 1.1rem', background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)' },
   iconBtn: { width: 32, height: 32, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' },
   headerTitle: { color: 'white', fontWeight: 800, fontSize: '0.95rem', textAlign: 'center' },
-  headerSub: { color: '#9ca3af', fontSize: '0.72rem', textAlign: 'center', marginTop: 2 },
+  headerSub: { color: '#6b7280', fontSize: '0.72rem', textAlign: 'center', marginTop: 2 },
 
   content: { padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' },
 

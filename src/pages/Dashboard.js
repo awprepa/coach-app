@@ -60,7 +60,7 @@ function getSubInfo(date_fin) {
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const fin = new Date(date_fin + 'T00:00:00')
   const days = Math.ceil((fin - today) / (1000 * 60 * 60 * 24))
-  if (days < 0)  return { color: '#9ca3af', bg: '#f3f4f6', label: 'Expiré' }
+  if (days < 0)  return { color: '#6b7280', bg: '#f3f4f6', label: 'Expiré' }
   if (days <= 7) return { color: '#dc2626', bg: '#fef2f2', label: `${days}j` }
   if (days <= 30) return { color: '#d97706', bg: '#fffbeb', label: `${days}j` }
   return { color: '#16a34a', bg: '#f0fdf4', label: `${days}j` }
@@ -293,7 +293,7 @@ export default function Dashboard() {
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, coach_notifie: true } : c))
   }
 
-  if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
+  if (loading) return <div style={S.centered}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
 
   const today = new Date().toISOString().slice(0, 10)
   const dateLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -596,13 +596,13 @@ export default function Dashboard() {
               <div style={S.card}>
                 <div style={S.cardHead}>
                   <span style={S.sectionTitle}>Bilan de la semaine</span>
-                  <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>
                     {new Date(wStart + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {new Date(wEnd + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
                 <div className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
                   {['Client', 'Wellness moy.', 'Séances', 'Statut'].map(h => (
-                    <span key={h} style={{ fontSize: '0.6rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                    <span key={h} style={{ fontSize: '0.6rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                   ))}
                 </div>
                 {bilanRows.map((c) => {
@@ -616,12 +616,12 @@ export default function Dashboard() {
                       className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 1rem', borderTop: '1px solid #f6f7f8', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
                         {c.avatar_url
-                          ? <img src={c.avatar_url} alt={c.prenom} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                          ? <img loading="lazy" src={c.avatar_url} alt={c.prenom} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                           : <div style={{ width: 28, height: 28, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
                         }
                         <div style={{ minWidth: 0 }}>
                           <p style={{ ...S.miniName, margin: 0 }}>{c.prenom} {c.nom}</p>
-                          <p style={{ margin: '1px 0 0', fontSize: '0.68rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatDerniereActivite(c.derniere_activite)}</p>
+                          <p style={{ margin: '1px 0 0', fontSize: '0.68rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatDerniereActivite(c.derniere_activite)}</p>
                         </div>
                       </div>
                       <div>
@@ -638,7 +638,7 @@ export default function Dashboard() {
                         {c.eventsCount > 0 ? c.eventsCount : '—'}
                       </span>
                       {inactif ? (
-                        <span style={{ ...S.pill, background: '#f3f4f6', color: '#9ca3af' }}>Inactif</span>
+                        <span style={{ ...S.pill, background: '#f3f4f6', color: '#6b7280' }}>Inactif</span>
                       ) : avg !== null && avg <= 2 ? (
                         <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>⚠ Bas</span>
                       ) : (
@@ -653,7 +653,7 @@ export default function Dashboard() {
               <div style={S.card}>
                 <div style={S.cardHead}>
                   <span style={S.sectionTitle}>Cette semaine</span>
-                  <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>{weekEvents.length} évènement{weekEvents.length !== 1 ? 's' : ''}</span>
+                  <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>{weekEvents.length} évènement{weekEvents.length !== 1 ? 's' : ''}</span>
                 </div>
                 {weekEvents.length === 0 ? (
                   <p style={S.empty}>Aucun évènement cette semaine.</p>
@@ -699,7 +699,7 @@ export default function Dashboard() {
                     <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: highlighted ? '700' : '500', color: '#1a1a1a' }}>{n.titre}</p>
                     {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
+                  <span style={{ fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
                   {highlighted && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
                 </div>
                 )
@@ -712,12 +712,12 @@ export default function Dashboard() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <p style={S.sectionTitle}>Clients individuels</p>
-                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsIndividuels.length} client{clientsIndividuels.length !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{clientsIndividuels.length} client{clientsIndividuels.length !== 1 ? 's' : ''}</span>
               </div>
 
               <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>🔍</span>
-                <input type="text" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
+                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }}>🔍</span>
+                <input type="text" placeholder="Rechercher..." aria-label="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem 0.875rem 0.65rem 2.4rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', background: 'white' }}
                 />
               </div>
@@ -747,10 +747,10 @@ export default function Dashboard() {
                       ))}
                     </div>
                     <button onClick={ajouterCategorie} style={{ ...S.btnPrimary, padding: '0.3rem 0.65rem', fontSize: '0.78rem', borderRadius: '8px' }}>OK</button>
-                    <button onClick={() => setShowCatForm(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+                    <button onClick={() => setShowCatForm(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}>✕</button>
                   </div>
                 ) : (
-                  <button onClick={() => setShowCatForm(true)} style={{ ...S.catTab, background: 'white', color: '#9ca3af', border: '1.5px dashed #d1d5db' }}>+ Catégorie</button>
+                  <button onClick={() => setShowCatForm(true)} style={{ ...S.catTab, background: 'white', color: '#6b7280', border: '1.5px dashed #d1d5db' }}>+ Catégorie</button>
                 )}
               </div>
 
@@ -770,7 +770,7 @@ export default function Dashboard() {
 
               <div style={S.listCard}>
                 {filtered.length === 0 ? (
-                  <p style={{ color: '#9ca3af', padding: '2rem', textAlign: 'center', fontSize: '0.875rem' }}>
+                  <p style={{ color: '#6b7280', padding: '2rem', textAlign: 'center', fontSize: '0.875rem' }}>
                     {search || activeCat ? 'Aucun client trouvé.' : 'Aucun client pour l\'instant.'}
                   </p>
                 ) : (
@@ -786,7 +786,7 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                           <div style={{ position: 'relative' }}>
                             {client.avatar_url
-                              ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
+                              ? <img loading="lazy" src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
                               : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>
                             }
                             {cat && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 11, height: 11, borderRadius: '50%', background: cat.couleur, border: '2px solid white' }} />}
@@ -794,9 +794,9 @@ export default function Dashboard() {
                           <div>
                             <p style={S.clientName}>{client.prenom} {client.nom}</p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
+                              {client.objectif && <p style={{ color: '#6b7280', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
                               {cat && <span style={{ fontSize: '0.7rem', color: cat.couleur, fontWeight: '700' }}>· {cat.nom}</span>}
-                              <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>· {formatDerniereActivite(client.derniere_activite)}</span>
+                              <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>· {formatDerniereActivite(client.derniere_activite)}</span>
                             </div>
                           </div>
                         </div>
@@ -822,7 +822,7 @@ export default function Dashboard() {
               {/* ── Membres de groupes ── */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.75rem 0 0.75rem' }}>
                 <p style={S.sectionTitle}>Membres de groupes</p>
-                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{clientsMembres.length} membre{clientsMembres.length !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{clientsMembres.length} membre{clientsMembres.length !== 1 ? 's' : ''}</span>
               </div>
 
               {clientsMembres.length === 0 ? (
@@ -836,10 +836,10 @@ export default function Dashboard() {
                     <div onClick={() => g && navigate(`/groupe/${g.id}`)}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.25rem', cursor: g ? 'pointer' : 'default' }}>
                       {g?.logo_url
-                        ? <img src={g.logo_url} alt={g.nom} style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
+                        ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
                         : <span style={{ width: 12, height: 12, borderRadius: 4, background: g?.couleur || '#9ca3af', flexShrink: 0 }} />}
                       <span style={{ fontWeight: '800', fontSize: '0.82rem', color: '#333333' }}>{g?.nom || 'Sans groupe'}</span>
-                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>· {membres.length}</span>
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>· {membres.length}</span>
                       <div style={{ flex: 1, height: 1, background: (g?.couleur || '#e5e7eb') + '33' }} />
                     </div>
 
@@ -854,13 +854,13 @@ export default function Dashboard() {
                             style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                               {client.avatar_url
-                                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
+                                ? <img loading="lazy" src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
                                 : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>}
                               <div>
                                 <p style={S.clientName}>{client.prenom} {client.nom}</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
-                                  <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{client.objectif ? '· ' : ''}{formatDerniereActivite(client.derniere_activite)}</span>
+                                  {client.objectif && <p style={{ color: '#6b7280', fontSize: '0.78rem', margin: 0 }}>{client.objectif}</p>}
+                                  <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>{client.objectif ? '· ' : ''}{formatDerniereActivite(client.derniere_activite)}</span>
                                 </div>
                               </div>
                             </div>
@@ -898,7 +898,7 @@ export default function Dashboard() {
                   <div key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
                     style={{ ...S.miniRow, borderLeft: `3px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                     {g.logo_url
-                      ? <img src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                      ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
                       : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🏆</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={S.miniName}>{g.nom}</p>
@@ -924,7 +924,7 @@ export default function Dashboard() {
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', borderLeft: `4px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {g.logo_url
-                            ? <img src={g.logo_url} alt={g.nom} style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                            ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
                             : <div style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🏆</div>
                           }
                           <span style={{ fontWeight: '700', fontSize: g.parent_id ? '0.84rem' : '0.92rem', color: g.parent_id ? '#374151' : '#1a1a1a' }}>{g.nom}</span>
@@ -958,7 +958,7 @@ export default function Dashboard() {
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: 9, padding: '0.45rem 0.85rem', border: '1.5px solid #e5e7eb' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
                   {newGroupeLogoPreview
-                    ? <img src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     : <span style={{ fontSize: '1rem' }}>📂</span>}
                 </div>
                 <span style={{ fontSize: '0.82rem', color: newGroupeLogoFile ? '#374151' : '#9ca3af', fontWeight: '600' }}>
@@ -996,7 +996,7 @@ export default function Dashboard() {
                   />
                 </div>
                 {pickingFor && (
-                  <button onClick={() => setPickingFor(null)} style={{ display: 'block', margin: '0.45rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#9ca3af' }}>Annuler</button>
+                  <button onClick={() => setPickingFor(null)} style={{ display: 'block', margin: '0.45rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#6b7280' }}>Annuler</button>
                 )}
               </div>
             )}
@@ -1009,11 +1009,11 @@ export default function Dashboard() {
                     <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)}
                       style={{ width: 32, height: 28, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Principale</span>
-                    <button onClick={() => setNewGroupeCouleur('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                    <button onClick={() => setNewGroupeCouleur('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
                   </>
                 ) : (
                   <button onClick={() => setNewGroupeCouleur('#6366f1')}
-                    style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                    style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>
                     + Couleur principale
                   </button>
                 )}
@@ -1031,11 +1031,11 @@ export default function Dashboard() {
                     <input type="color" value={newGroupeCouleur2} onChange={e => setNewGroupeCouleur2(e.target.value)}
                       style={{ width: 32, height: 28, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Secondaire</span>
-                    <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                    <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
                   </>
                 ) : (
                   <button onClick={() => setNewGroupeCouleur2('#e5e7eb')}
-                    style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                    style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>
                     + Couleur secondaire
                   </button>
                 )}
@@ -1052,7 +1052,7 @@ export default function Dashboard() {
             {/* Aperçu live */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.6rem 0.9rem', borderRadius: 11, background: '#f9fafb', borderLeft: `4px solid ${newGroupeCouleur}` }}>
               {newGroupeLogoPreview
-                ? <img src={newGroupeLogoPreview} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
+                ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
                 : <div style={{ width: 26, height: 26, borderRadius: 7, background: newGroupeCouleur + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏆</div>
               }
               <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a', flex: 1 }}>{newGroupeNom || 'Nom du groupe'}</span>
@@ -1062,7 +1062,7 @@ export default function Dashboard() {
             {/* Lien monclubhouse */}
             <div>
               <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
-                Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel)</span>
+                Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#6b7280' }}>(optionnel)</span>
               </label>
               <input
                 value={newGroupeUrl}
@@ -1140,15 +1140,15 @@ const S = {
   bentoGrid:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', alignItems: 'start' },
   card:        { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', paddingBottom: '0.35rem' },
   cardHead:    { padding: '0.8rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  empty:       { color: '#9ca3af', fontSize: '0.82rem', padding: '0.5rem 1rem 0.9rem', margin: 0 },
+  empty:       { color: '#6b7280', fontSize: '0.82rem', padding: '0.5rem 1rem 0.9rem', margin: 0 },
   miniRow:     { display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1rem', cursor: 'pointer', borderTop: '1px solid #f6f7f8' },
   miniIco:     { width: 28, height: 28, borderRadius: 7, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 },
   miniAva:     { width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.66rem', fontWeight: '800', flexShrink: 0 },
   miniName:    { margin: 0, fontSize: '0.82rem', fontWeight: '700', color: '#333333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  miniSub:     { margin: 0, fontSize: '0.7rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  miniSub:     { margin: 0, fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   pill:        { borderRadius: 999, fontSize: '0.68rem', fontWeight: '800', padding: '0.15rem 0.5rem', whiteSpace: 'nowrap', flexShrink: 0 },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
-  dateLabel:   { fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.2rem', textTransform: 'capitalize' },
+  dateLabel:   { fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.2rem', textTransform: 'capitalize' },
   title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
   alertBadge:  { background: '#fef2f2', color: '#dc2626', padding: '0.3rem 0.75rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: '800' },
   btnPrimary:  { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },

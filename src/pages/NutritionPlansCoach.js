@@ -336,7 +336,7 @@ export default function NutritionPlansCoach() {
             <>
               {/* Résumé global */}
               <div style={S.summaryCard}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                   Résumé — 14 derniers jours · {daysWithLogs.length} jour{daysWithLogs.length > 1 ? 's' : ''} loggué{daysWithLogs.length > 1 ? 's' : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -400,10 +400,10 @@ function DayAdherenceCard({ day }) {
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a1a1a' }}>
             {isToday ? "Aujourd'hui" : formatShort(iso)}
-            <span style={{ fontWeight: 500, color: '#9ca3af', marginLeft: 6, fontSize: '0.75rem' }}>{label}</span>
+            <span style={{ fontWeight: 500, color: '#6b7280', marginLeft: 6, fontSize: '0.75rem' }}>{label}</span>
           </div>
           {loggued > 0 && (
-            <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
+            <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1 }}>
               {loggued}/{total} repas loggués · {Math.round(kcalMange)} kcal
               {kcalPrevu > 0 && ` / ${kcalPrevu} prescrits`}
             </div>
@@ -440,19 +440,19 @@ function DayAdherenceCard({ day }) {
       {open && mealStats.length > 0 && (
         <div style={{ borderTop: '1px solid #f5f5f5', padding: '10px 14px 12px' }}>
           {mealStats.map(({ meal, statut, log }) => {
-            const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#9ca3af' }
+            const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#6b7280' }
             const statusColors = { fait: '#16a34a', hors_plan: '#d97706', saute: '#ef4444', non_loggé: '#d1d5db' }
             const statusLabels = { fait: 'Fait', hors_plan: 'Autre chose', saute: 'Sauté', non_loggé: 'Non loggé' }
             return (
               <div key={meal.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #fafafa' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', flex: 1 }}>{ml.label} — {meal.nom}</span>
-                {meal.kcal > 0 && <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>{meal.kcal} kcal</span>}
+                {meal.kcal > 0 && <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>{meal.kcal} kcal</span>}
                 <span style={{ fontSize: '0.65rem', fontWeight: 700, color: statusColors[statut], background: statusColors[statut] + '18', padding: '2px 7px', borderRadius: 20 }}>
                   {statusLabels[statut]}
                 </span>
                 {statut === 'hors_plan' && log?.hors_plan_nom && (
-                  <span style={{ fontSize: '0.62rem', color: '#9ca3af', fontStyle: 'italic' }}>({log.hors_plan_nom})</span>
+                  <span style={{ fontSize: '0.62rem', color: '#6b7280', fontStyle: 'italic' }}>({log.hors_plan_nom})</span>
                 )}
               </div>
             )
@@ -479,7 +479,7 @@ function PlanCard({ plan, navigate, onDelete, onToggle, onCopy }) {
           {plan.description && (
             <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 6, lineHeight: 1.4 }}>{plan.description}</div>
           )}
-          <div style={{ fontSize: '0.73rem', color: '#9ca3af', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.73rem', color: '#6b7280', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {plan.date_debut && <span>Du {formatDate(plan.date_debut)}</span>}
             {plan.date_fin   && <span>au {formatDate(plan.date_fin)}</span>}
             {!plan.date_debut && !plan.date_fin && <span>Pas de dates définies</span>}
@@ -510,12 +510,12 @@ const S = {
   inner:      { maxWidth: 700, margin: '0 auto', padding: '2rem 1.25rem' },
   backBtn:    { width: 36, height: 36, borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', flexShrink: 0 },
   title:      { fontSize: '1.4rem', fontWeight: 800, color: '#1a1a1a', margin: 0, letterSpacing: '-0.02em' },
-  subtitle:   { fontSize: '0.83rem', color: '#9ca3af', margin: '2px 0 0', fontWeight: 500 },
+  subtitle:   { fontSize: '0.83rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 500 },
   newBtn:     { padding: '0.6rem 1rem', background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' },
   tabBar:     { display: 'flex', borderBottom: '1.5px solid #f0f0f0', marginBottom: '1.25rem' },
-  empty:      { textAlign: 'center', color: '#9ca3af', padding: '3rem 0' },
+  empty:      { textAlign: 'center', color: '#6b7280', padding: '3rem 0' },
   emptyCard:  { background: 'white', borderRadius: 18, padding: '2rem', textAlign: 'center', border: '1.5px dashed #e5e7eb' },
-  sectionLabel: { fontSize: '0.7rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' },
+  sectionLabel: { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' },
   summaryCard: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 12, border: '1.5px solid #f0f0f0' },
   card:       { background: 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 10, border: '1.5px solid #f0f0f0', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   badge:      { fontSize: '0.7rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: 'none', cursor: 'pointer' },

@@ -313,7 +313,7 @@ export default function ChargesGroupes() {
         <div style={S.picker} ref={pickerRef}>
           <button onClick={() => setPickerOpen(o => !o)} style={S.pickerBtn}>
             {groupeActuel?.logo_url
-              ? <img src={groupeActuel.logo_url} alt="" style={S.pickerLogo} />
+              ? <img loading="lazy" src={groupeActuel.logo_url} alt="" style={S.pickerLogo} />
               : <span style={S.pickerLogoFallback}>{initialesGroupe(groupeActuel?.nom)}</span>}
             <span style={S.pickerLabel}>{cheminLabel || 'Choisir un groupe'}</span>
             <IcoChevronDown />
@@ -325,7 +325,7 @@ export default function ChargesGroupes() {
                 <div key={club.id} style={S.pickerClubBlock}>
                   <div style={S.pickerClubHead}>
                     {club.logo_url
-                      ? <img src={club.logo_url} alt="" style={S.pickerClubLogo} />
+                      ? <img loading="lazy" src={club.logo_url} alt="" style={S.pickerClubLogo} />
                       : <span style={S.pickerClubLogoFallback}>{initialesGroupe(club.nom)}</span>}
                     <span style={S.pickerClubNom}>{club.nom}</span>
                   </div>
@@ -525,14 +525,14 @@ const S = {
   pickerClubHead: { display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.5rem' },
   pickerClubLogo: { width: 22, height: 22, borderRadius: 6, objectFit: 'contain', border: '1px solid #eceef1', flexShrink: 0 },
   pickerClubLogoFallback: { width: 22, height: 22, borderRadius: 6, background: '#f2f3f5', color: '#6b7280', fontSize: '0.58rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  pickerClubNom: { fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  pickerClubNom: { fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' },
   pickerVide: { fontSize: '0.76rem', color: '#c7cbd1', padding: '0.2rem 0.8rem 0.5rem' },
   pickerEquipe: { display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.8rem', borderRadius: 8, border: 'none', background: 'none', fontSize: '0.86rem', fontWeight: 700, color: '#1a1a1a', cursor: 'pointer', fontFamily: 'inherit' },
   pickerSousGroupe: { display: 'block', width: '100%', textAlign: 'left', padding: '0.45rem 0.8rem 0.45rem 1.6rem', borderRadius: 8, border: 'none', background: 'none', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' },
   pickerOptionOn: { background: '#e4f816', color: '#1f2937' },
 
   cycleRow: { display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.2rem', marginBottom: '0.6rem' },
-  cycleChip: { flexShrink: 0, padding: '5px 12px', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, background: 'none', color: '#9ca3af', border: '1.5px solid transparent', whiteSpace: 'nowrap', cursor: 'pointer' },
+  cycleChip: { flexShrink: 0, padding: '5px 12px', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, background: 'none', color: '#6b7280', border: '1.5px solid transparent', whiteSpace: 'nowrap', cursor: 'pointer' },
   cycleChipOn: { background: '#f3f4f6', color: '#1a1a1a', borderColor: '#e5e7eb' },
 
   exRow: { display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.2rem', marginBottom: '1rem' },
@@ -541,11 +541,11 @@ const S = {
 
   contentHead: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.6rem' },
   h2: { margin: 0, fontSize: '1rem', fontWeight: 800, color: '#111' },
-  weekInfo: { fontSize: '0.78rem', color: '#9ca3af', fontWeight: 600 },
+  weekInfo: { fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 },
 
   tableWrap: { overflowX: 'auto', borderRadius: 12, border: '1px solid #e5e7eb', background: 'white' },
   table: { borderCollapse: 'collapse', width: '100%', minWidth: 480 },
-  th: { background: '#f9fafb', fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0.7rem 0.85rem', textAlign: 'center', whiteSpace: 'nowrap', borderBottom: '1px solid #e5e7eb' },
+  th: { background: '#f9fafb', fontSize: '0.64rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0.7rem 0.85rem', textAlign: 'center', whiteSpace: 'nowrap', borderBottom: '1px solid #e5e7eb' },
   thLast: { color: '#111' },
   td: { padding: '0.7rem 0.85rem', textAlign: 'center', borderBottom: '1px solid #f1f2f4', fontVariantNumeric: 'tabular-nums' },
 
@@ -556,13 +556,13 @@ const S = {
   cellWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
   cell: { display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.25 },
   cellPoids: { fontSize: '0.86rem', fontWeight: 800, color: '#111' },
-  cellReps: { fontSize: '0.66rem', color: '#9ca3af' },
+  cellReps: { fontSize: '0.66rem', color: '#6b7280' },
   cellDate: { fontSize: '0.6rem', color: '#c7cbd1', fontWeight: 500, marginTop: 1 },
   cellEmpty: { fontSize: '0.86rem', color: '#d1d5db', fontWeight: 600 },
 
   delta: { display: 'inline-flex', alignItems: 'center', fontSize: '0.66rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 },
   deltaUp: { background: '#ecfdf3', color: '#16a34a' },
-  deltaFlat: { background: '#f3f4f6', color: '#9ca3af' },
+  deltaFlat: { background: '#f3f4f6', color: '#6b7280' },
 
-  legend: { marginTop: '0.9rem', fontSize: '0.76rem', color: '#9ca3af', lineHeight: 1.5 },
+  legend: { marginTop: '0.9rem', fontSize: '0.76rem', color: '#6b7280', lineHeight: 1.5 },
 }

@@ -433,7 +433,7 @@ export default function SeanceProjection() {
                                 cursor: thumb ? 'pointer' : 'default',
                               }}>
                               {thumb
-                                ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                ? <img loading="lazy" src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                 : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={blockColor} strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M4 4l3 3M20 20l-3-3M7 17l-3 3M17 7l3-3" /></svg>
                               }
                             </div>
@@ -572,7 +572,7 @@ export default function SeanceProjection() {
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
                   />
                 </div>
-              : <img src={mediaModal.url} alt={mediaModal.nom} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block', background: '#000' }} />
+              : <img loading="lazy" src={mediaModal.url} alt={mediaModal.nom} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block', background: '#000' }} />
             }
           </div>
         </div>

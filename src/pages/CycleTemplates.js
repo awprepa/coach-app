@@ -303,7 +303,7 @@ export default function CycleTemplates() {
                       </div>
                     ))}
                     <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
-                      <input autoFocus placeholder="Nouveau dossier…"
+                      <input autoFocus placeholder="Nouveau dossier…" aria-label="Nouveau dossier…"
                         style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.3rem 0.5rem', fontSize: '0.78rem', outline: 'none', boxSizing: 'border-box' }}
                         onKeyDown={e => {
                           if (e.key === 'Enter' && e.target.value.trim()) {
@@ -332,7 +332,7 @@ export default function CycleTemplates() {
             return (
               <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa' }}>
                 {seances.length === 0 ? (
-                  <p style={{ color: '#9ca3af', fontSize: '0.78rem', textAlign: 'center', padding: '0.75rem' }}>Aucune séance dans ce cycle</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.78rem', textAlign: 'center', padding: '0.75rem' }}>Aucune séance dans ce cycle</p>
                 ) : seances.map((s, idx) => {
                   const key = s.id || idx
                   const seanceOpen = openPreviewSeances.has(key)
@@ -345,13 +345,13 @@ export default function CycleTemplates() {
                       >
                         <span style={{ background: '#e5e7eb', color: '#374151', fontSize: '0.63rem', fontWeight: 700, borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>J{s.jour}</span>
                         <span style={{ flex: 1, fontWeight: 600, fontSize: '0.8rem', color: '#374151' }}>{s.nom || `Séance ${idx + 1}`}</span>
-                        <span style={{ color: '#9ca3af', fontSize: '0.7rem', flexShrink: 0 }}>{exs.length} ex.</span>
+                        <span style={{ color: '#6b7280', fontSize: '0.7rem', flexShrink: 0 }}>{exs.length} ex.</span>
                         <span style={{ color: '#d1d5db', fontSize: '1rem', transform: seanceOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>›</span>
                       </div>
                       {seanceOpen && (
                         <div style={{ padding: '0.25rem 0.875rem 0.6rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                           {exs.length === 0 ? (
-                            <p style={{ color: '#9ca3af', fontSize: '0.72rem', padding: '0.25rem 0' }}>Séance vide</p>
+                            <p style={{ color: '#6b7280', fontSize: '0.72rem', padding: '0.25rem 0' }}>Séance vide</p>
                           ) : (() => {
                             const items = []
                             let prevBloc = null
@@ -448,7 +448,7 @@ export default function CycleTemplates() {
           <div style={S.emptyState}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
             <div style={{ fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Aucun template</div>
-            <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Crée un template de cycle pour l'appliquer rapidement à tes clients</div>
+            <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Crée un template de cycle pour l'appliquer rapidement à tes clients</div>
             <button style={{ ...S.btnPrimary, marginTop: '1.25rem' }} onClick={creerTemplate}>Créer un template</button>
           </div>
         ) : (
@@ -475,7 +475,7 @@ export default function CycleTemplates() {
                       ) : (
                         <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#111827' }}>{folderName}</span>
                       )}
-                      <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{items.length} template{items.length > 1 ? 's' : ''}</span>
+                      <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} template{items.length > 1 ? 's' : ''}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
                       <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.btnIcon} title="Renommer">
@@ -491,7 +491,7 @@ export default function CycleTemplates() {
                   {isOpen && (
                     <div style={{ padding: '0.75rem', background: 'white' }}>
                       {items.length === 0 ? (
-                        <p style={{ color: '#9ca3af', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un template ici via l'icône dossier</p>
+                        <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un template ici via l'icône dossier</p>
                       ) : (
                         <div style={S.grid}>{items.map(t => renderCard(t))}</div>
                       )}
@@ -505,7 +505,7 @@ export default function CycleTemplates() {
             {sansDossier.length > 0 && (
               <div>
                 {allFolders.length > 0 && (
-                  <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
+                  <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
                 )}
                 <div style={S.grid}>{sansDossier.map(t => renderCard(t))}</div>
               </div>
@@ -528,7 +528,7 @@ export default function CycleTemplates() {
                 <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
                   « {sendModal.nom} » {sendMode === 'ecraser' ? 'a été appliqué à' : 'a été créé pour'} <strong>{sendSuccess}</strong>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
                   Redirection vers le programme…
                 </div>
               </div>
@@ -541,7 +541,7 @@ export default function CycleTemplates() {
                       Template : <strong>{sendModal.nom}</strong> · {sendModal.semaines} sem.
                     </div>
                   </div>
-                  <button onClick={() => setSendModal(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }}>✕</button>
+                  <button onClick={() => setSendModal(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }}>✕</button>
                 </div>
 
                 {/* Nom du programme */}
@@ -557,7 +557,7 @@ export default function CycleTemplates() {
 
                 {/* Date de début */}
                 <div style={S.formGroup}>
-                  <label style={S.label}>Date de début <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optionnel)</span></label>
+                  <label style={S.label}>Date de début <span style={{ color: '#6b7280', fontWeight: 400 }}>(optionnel)</span></label>
                   <input
                     style={S.input}
                     type="date"
@@ -607,7 +607,7 @@ export default function CycleTemplates() {
                   <div style={S.formGroup}>
                     <label style={S.label}>Cycle à remplacer *</label>
                     {loadingProgrammes ? (
-                      <div style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.4rem 0' }}>Chargement…</div>
+                      <div style={{ color: '#6b7280', fontSize: '0.85rem', padding: '0.4rem 0' }}>Chargement…</div>
                     ) : clientProgrammes.length === 0 ? (
                       <div style={{ color: '#ef4444', fontSize: '0.82rem', padding: '0.4rem 0' }}>Ce client n'a pas encore de cycle.</div>
                     ) : (
@@ -671,7 +671,7 @@ const S = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
   title: { fontSize: '1.4rem', fontWeight: '700', color: '#111827' },
   subtitle: { fontSize: '0.875rem', color: '#6b7280', marginTop: '0.2rem' },
-  empty: { color: '#9ca3af', padding: '2rem', textAlign: 'center' },
+  empty: { color: '#6b7280', padding: '2rem', textAlign: 'center' },
   emptyState: { textAlign: 'center', padding: '4rem 2rem', background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' },
   card: { background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem' },
@@ -694,9 +694,9 @@ const S = {
   btnSecondary: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' },
   btnGhost: { background: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
   btnDanger: { background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
-  btnRemove: { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' },
+  btnRemove: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' },
   btnBack: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem 0' },
-  btnIcon: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.3rem', color: '#9ca3af' },
+  btnIcon: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.3rem', color: '#6b7280' },
   folderBlock: { background: '#f9fafb', borderRadius: 14, overflow: 'visible', border: '1px solid #e5e7eb' },
   folderHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.1rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: '14px 14px 0 0', borderBottom: '1px solid #e5e7eb' },
   moveDropdown: { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },

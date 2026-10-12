@@ -4,6 +4,7 @@ import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import * as pdfjs from 'pdfjs-dist'
 import { supabase } from '../supabase'
+import useEscape from '../hooks/useEscape'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString()
 
@@ -55,7 +56,7 @@ export default function DocumentsEvenement({ evenementId }) {
     setErreur('')
     try {
       if (file.type === 'application/pdf') {
-        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise
         if (pdf.numPages === 1) {
           setARecadrer([await rendrePage(pdf, 1, 2)])
           return
@@ -124,7 +125,7 @@ export default function DocumentsEvenement({ evenementId }) {
       <div style={S.liste}>
         {docs.map(d => (
           <div key={d.id} style={S.vignette}>
-            <img src={d.image_url} alt="" style={S.img} />
+            <img loading="lazy" src={d.image_url} alt="Document joint" style={S.img} />
             <button onClick={() => supprimer(d)} style={S.suppr}>Retirer</button>
           </div>
         ))}
@@ -141,7 +142,7 @@ export default function DocumentsEvenement({ evenementId }) {
               const on = flux.choisies.has(i)
               return (
                 <button key={i} onClick={() => basculerPage(i)} style={{ ...S.page, borderColor: on ? '#222222' : '#e3e3e3', boxShadow: on ? '0 0 0 2px #222222' : 'none' }}>
-                  <img src={m} alt="" style={{ width: '100%', display: 'block' }} />
+                  <img loading="lazy" src={m} alt={`Page ${i + 1} du document`} style={{ width: '100%', display: 'block' }} />
                   <span style={{ ...S.pastille, background: on ? '#222222' : 'rgba(255,255,255,.9)', color: on ? '#fff' : '#6b7280' }}>{on ? 'Page ' + (i + 1) + ' (choisie)' : 'Page ' + (i + 1)}</span>
                 </button>
               )
@@ -187,7 +188,7 @@ function Recadrage({ src, reste, envoi, onValide, onCancel }) {
       <p style={S.aide}>Tire le cadre sur la partie à garder. Sans cadre, la page entière est gardée.</p>
       <div style={{ maxHeight: '58vh', overflow: 'auto', display: 'flex', justifyContent: 'center', background: '#f3f4f6', borderRadius: 12, marginBottom: '1rem' }}>
         <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setFait(c)} minWidth={30} minHeight={30}>
-          <img ref={imgRef} src={src} alt="" onLoad={auChargement} style={{ maxWidth: '100%', display: 'block' }} />
+          <img ref={imgRef} src={src} alt="Page à recadrer" onLoad={auChargement} style={{ maxWidth: '100%', display: 'block' }} />
         </ReactCrop>
       </div>
       <Actions onCancel={onCancel} onOk={valider} okLabel={envoi ? 'Envoi…' : 'Valider ce recadrage'} okDisabled={envoi} />
@@ -197,9 +198,10 @@ function Recadrage({ src, reste, envoi, onValide, onCancel }) {
 }
 
 function Modale({ titre, onClose, children }) {
+  useEscape(onClose)
   return (
     <div onClick={onClose} style={S.fond}>
-      <div onClick={e => e.stopPropagation()} style={S.boite}>
+      <div onClick={e => e.stopPropagation()} style={S.boite} role="dialog" aria-modal="true" aria-label={titre}>
         <p style={S.titre}>{titre}</p>
         {children}
       </div>
@@ -221,13 +223,13 @@ const S = {
   liste: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   vignette: { width: 96, display: 'flex', flexDirection: 'column', gap: 4 },
   img: { width: '100%', borderRadius: 6, border: '1px solid #e0e3e8', display: 'block' },
-  suppr: { background: 'none', border: 'none', color: '#b42318', fontSize: '.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' },
+  suppr: { background: 'none', border: 'none', color: '#b42318', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', padding: '10px 0', minHeight: 44, textAlign: 'left' },
   btn: { background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: '.7rem', fontWeight: 800, cursor: 'pointer' },
   err: { fontSize: '.7rem', color: '#b42318', margin: '6px 0 0' },
   fond: { position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
   boite: { background: '#fff', borderRadius: 16, padding: '1.25rem', width: '100%', maxWidth: 640, maxHeight: '92vh', overflow: 'auto', boxSizing: 'border-box' },
   titre: { fontWeight: 800, fontSize: '.95rem', color: '#1a1a1a', margin: '0 0 .4rem' },
-  aide: { fontSize: '.78rem', color: '#9ca3af', margin: '0 0 1rem' },
+  aide: { fontSize: '.78rem', color: '#6b7280', margin: '0 0 1rem' },
   grille: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10, marginBottom: '1rem' },
   page: { position: 'relative', padding: 0, border: '2px solid', borderRadius: 8, overflow: 'hidden', background: '#fff', cursor: 'pointer' },
   pastille: { position: 'absolute', left: 6, bottom: 6, fontSize: '.65rem', fontWeight: 800, borderRadius: 5, padding: '2px 7px' },

@@ -96,8 +96,8 @@ function CardioCard({ cardio, label, youtubeId, S }) {
           <button onClick={() => setMediaOpen(true)}
             style={{ flexShrink: 0, width: 64, height: 56, borderRadius: 10, overflow: 'hidden', border: '2px solid #bfdbfe', cursor: 'pointer', background: '#1a1a1a', padding: 0, position: 'relative' }}>
             {ytId
-              ? <><img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
-              : <img src={cardio.media_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ? <><img loading="lazy" src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
+              : <img loading="lazy" src={cardio.media_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             }
           </button>
         )}
@@ -117,7 +117,7 @@ function CardioCard({ cardio, label, youtubeId, S }) {
             style={{ background: 'white', borderRadius: 20, overflow: 'hidden', width: '100%', maxWidth: 480 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{cardio.type}</span>
-              <button onClick={() => setMediaOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#9ca3af', cursor: 'pointer' }}>×</button>
+              <button onClick={() => setMediaOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#6b7280', cursor: 'pointer' }}>×</button>
             </div>
             {ytId
               ? <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000' }}>
@@ -125,7 +125,7 @@ function CardioCard({ cardio, label, youtubeId, S }) {
                     frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
                 </div>
-              : <img src={cardio.media_url} alt="" style={{ width: '100%', display: 'block', maxHeight: '70vh', objectFit: 'contain' }} />
+              : <img loading="lazy" src={cardio.media_url} alt="" style={{ width: '100%', display: 'block', maxHeight: '70vh', objectFit: 'contain' }} />
             }
           </div>
         </div>
@@ -1286,7 +1286,7 @@ export default function SeanceClient() {
 
   const labelStyle = {
     width: COL_LABEL, flexShrink: 0,
-    fontSize: '0.68rem', fontWeight: '700', color: '#9ca3af',
+    fontSize: '0.68rem', fontWeight: '700', color: '#6b7280',
     textTransform: 'uppercase', letterSpacing: '0.05em',
     display: 'flex', alignItems: 'center',
   }
@@ -1342,13 +1342,13 @@ export default function SeanceClient() {
                 >
                   {ytId ? (
                     <>
-                      <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <img loading="lazy" src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.38)' }}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                       </div>
                     </>
                   ) : (
-                    <img src={mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <img loading="lazy" src={mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   )}
                 </button>
               )}
@@ -1410,7 +1410,7 @@ export default function SeanceClient() {
             {isHistoOpen && (
               <div style={{ marginBottom: '0.75rem', background: 'white', borderRadius: 10, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
                 {histoLoading[ex.id] ? (
-                  <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Chargement…</p>
+                  <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Chargement…</p>
                 ) : (() => {
                   const grouped = histoTracking[ex.id] || {}
                   const semsPrev = Object.keys(grouped)
@@ -1418,7 +1418,7 @@ export default function SeanceClient() {
                     .filter(s => s < semaineActuelle)
                     .sort((a, b) => b - a) // plus récente en premier
                   if (!semsPrev.length) return (
-                    <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Aucune donnée enregistrée pour les semaines précédentes.</p>
+                    <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Aucune donnée enregistrée pour les semaines précédentes.</p>
                   )
                   return semsPrev.map((sem, si) => {
                     const rows = grouped[sem] || []
@@ -1434,7 +1434,7 @@ export default function SeanceClient() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.75rem', background: sem === semaineActuelle - 1 ? '#fffef5' : 'white' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ background: sem === semaineActuelle - 1 ? '#333333' : '#f3f4f6', color: sem === semaineActuelle - 1 ? 'var(--chip-text)' : '#6b7280', borderRadius: 6, padding: '0.1rem 0.45rem', fontSize: '0.68rem', fontWeight: '900' }}>S{sem}</span>
-                            {sem === semaineActuelle - 1 && <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600 }}>sem. précédente</span>}
+                            {sem === semaineActuelle - 1 && <span style={{ fontSize: '0.6rem', color: '#6b7280', fontWeight: 600 }}>sem. précédente</span>}
                           </div>
                           <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#374151' }}>{poidsLabel}</span>
                         </div>
@@ -1468,12 +1468,12 @@ export default function SeanceClient() {
               return (
                 <div style={{ marginBottom: '0.6rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                       Échauffement {warmups.length > 0 ? `· ${warmups.length} série${warmups.length > 1 ? 's' : ''}` : ''}
                     </span>
                     <button onClick={() => addWarmupSet(ex.id)} style={{
                       background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 6,
-                      color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', padding: '2px 8px',
+                      color: '#6b7280', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', padding: '2px 8px',
                     }}>+ Série</button>
                   </div>
                   {warmups.map((ws, wi) => (
@@ -1487,14 +1487,14 @@ export default function SeanceClient() {
                         onFocus={scrollInputIntoView}
                         placeholder="kg"
                         style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>kg</span>
+                      <span style={{ fontSize: '0.62rem', color: '#6b7280' }}>kg</span>
                       <input type="text" inputMode="numeric" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         onFocus={scrollInputIntoView}
                         placeholder={tempsMode ? 'sec' : 'reps'}
                         style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>{tempsMode ? 's' : 'reps'}</span>
+                      <span style={{ fontSize: '0.62rem', color: '#6b7280' }}>{tempsMode ? 's' : 'reps'}</span>
                       <button onClick={() => removeWarmupSet(ex.id, wi)} style={{
                         marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
                       }}>×</button>
@@ -1536,7 +1536,7 @@ export default function SeanceClient() {
                     style={{
                       background: '#f3f4f6', border: 'none', borderRadius: 6,
                       padding: '0.28rem 0.45rem', cursor: 'pointer', flexShrink: 0,
-                      fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700,
+                      fontSize: '0.7rem', color: '#6b7280', fontWeight: 700,
                       lineHeight: 1,
                     }}
                   >
@@ -1591,7 +1591,7 @@ export default function SeanceClient() {
                   {warmupCount > 0 && (
                     <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{warmupCount}+{workCount}</span>
-                      <span style={{ fontSize: '0.55rem', color: '#9ca3af', marginTop: 1 }}>ÉCH+TRAV</span>
+                      <span style={{ fontSize: '0.55rem', color: '#6b7280', marginTop: 1 }}>ÉCH+TRAV</span>
                     </div>
                   )}
                 </div>
@@ -1739,7 +1739,7 @@ export default function SeanceClient() {
         {totalBlocs > 0 && !nonEffectuee && (
           <div style={S.progressCard}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
               <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#333333' }}>{doneBlocs} / {totalBlocs} blocs {doneBlocs === totalBlocs && doneBlocs > 0 ? '✓' : ''}</span>
             </div>
             <div style={S.progressTrack}>
@@ -1767,8 +1767,8 @@ export default function SeanceClient() {
                         {l.image_url && (
                           <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0 }}>
                             {youtubeId(l.image_url)
-                              ? <><img src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
-                              : <img src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                              ? <><img loading="lazy" src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
+                              : <img loading="lazy" src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             }
                           </button>
                         )}
@@ -1786,8 +1786,8 @@ export default function SeanceClient() {
                             {l.image_url && (
                               <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative' }}>
                                 {youtubeId(l.image_url)
-                                  ? <><img src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
-                                  : <img src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                  ? <><img loading="lazy" src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
+                                  : <img loading="lazy" src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                 }
                               </button>
                             )}
@@ -1834,7 +1834,7 @@ export default function SeanceClient() {
           <div style={S.nonEffectueeCard}>
             <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>😴</p>
             <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Séance non effectuée</p>
-            <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>Semaine {semaineActuelle} — Appuie sur le bouton ci-dessus pour annuler</p>
+            <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0 }}>Semaine {semaineActuelle} — Appuie sur le bouton ci-dessus pour annuler</p>
           </div>
         ) : exercices.length === 0 ? (
           <div style={S.emptyCard}>Aucun exercice.</div>
@@ -1858,7 +1858,7 @@ export default function SeanceClient() {
                     style={{ ...S.collapsedRow, borderColor: '#e5e7eb', background: '#f9fafb' }}>
                     <span style={{ ...S.collapsedCheck, background: '#9ca3af' }}>⊘</span>
                     <span style={S.collapsedCode}>{group.letter}</span>
-                    <span style={{ ...S.collapsedNom, color: '#9ca3af' }}>{label}</span>
+                    <span style={{ ...S.collapsedNom, color: '#6b7280' }}>{label}</span>
                     <span style={{ ...S.collapsedStats, color: '#d1d5db' }}>Passé</span>
                     <span style={{ color: '#d1d5db', fontSize: '0.85rem' }}>›</span>
                   </div>
@@ -1915,7 +1915,7 @@ export default function SeanceClient() {
                     {(isDone || isSkipped) && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         {isSkipped
-                          ? <div style={{ ...S.blocDoneBadge, background: '#f3f4f6', color: '#9ca3af' }}>⊘ Bloc passé</div>
+                          ? <div style={{ ...S.blocDoneBadge, background: '#f3f4f6', color: '#6b7280' }}>⊘ Bloc passé</div>
                           : <div style={S.blocDoneBadge}>✓ Bloc terminé</div>
                         }
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -1959,10 +1959,10 @@ export default function SeanceClient() {
                     <span style={S.supersetBadge}>SUPERSET · {group.letter}</span>
                     {isSkipped
                       ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                          <span style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700' }}>⊘ Passé</span>
-                          <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#9ca3af', borderColor: '#d1d5db' }}>Annuler</button>
+                          <span style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>⊘ Passé</span>
+                          <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db' }}>Annuler</button>
                           <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
-                            style={{ ...S.collapseBtn, color: '#9ca3af', borderColor: '#d1d5db' }}>Replier ↑</button>
+                            style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db' }}>Replier ↑</button>
                         </div>
                       : isDone
                         ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -1972,7 +1972,7 @@ export default function SeanceClient() {
                           </div>
                         : <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                             <span style={S.supersetHint}>Enchaîner sans récupération</span>
-                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#9ca3af', borderColor: '#d1d5db', fontSize: '0.65rem' }}>Passer</button>
+                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db', fontSize: '0.65rem' }}>Passer</button>
                           </div>
                     }
                   </div>
@@ -2055,7 +2055,7 @@ export default function SeanceClient() {
           <button onClick={() => setRpeOpen(v => !v)}
             style={S.rpeToggle}>
             <span>📊 Intensité de la séance</span>
-            <span style={{ transform: rpeOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '1rem', color: '#9ca3af' }}>›</span>
+            <span style={{ transform: rpeOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '1rem', color: '#6b7280' }}>›</span>
           </button>
           {rpeOpen && (
             <div style={S.card}>
@@ -2132,10 +2132,10 @@ export default function SeanceClient() {
           </div>
           {commentaires.filter(c => c.semaine !== semaineActuelle).length > 0 && (
             <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <p style={{ fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Semaines précédentes</p>
+              <p style={{ fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Semaines précédentes</p>
               {commentaires.filter(c => c.semaine !== semaineActuelle).map(c => (
                 <div key={c.semaine} style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>S{c.semaine}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>S{c.semaine}</span>
                   <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{c.texte}</p>
                 </div>
               ))}
@@ -2157,7 +2157,7 @@ export default function SeanceClient() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{mediaModal.nom}</span>
               <button onClick={() => setMediaModal(null)}
-                style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
+                style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#6b7280', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
             </div>
             {/* Contenu */}
             {youtubeId(mediaModal.url)
@@ -2193,14 +2193,14 @@ const S = {
   backBtn:     { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '1.5rem', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.5px' },
   content:     { padding: '1.25rem 1.25rem', maxWidth: '480px', margin: '0 auto' },
-  programmeNom:{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' },
+  programmeNom:{ color: '#6b7280', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' },
   title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   curBadge:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
   rattrapageHint: { fontSize: '0.72rem', fontWeight: '700', color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 999, padding: '0.2rem 0.6rem' },
   videoBanner: { display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 10, padding: '0.6rem 0.75rem', marginBottom: '0.6rem', fontSize: '0.78rem', color: '#5b21b6', fontWeight: 600, lineHeight: 1.4 },
   videoBannerBtn: { alignSelf: 'flex-start', background: '#5b21b6', color: 'white', border: 'none', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
   weekSelect: { fontSize: '0.85rem', fontWeight: '700', color: '#333333', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.45rem 0.6rem', background: 'white' },
-  weekSelectHint: { fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0', lineHeight: 1.4 },
+  weekSelectHint: { fontSize: '0.72rem', color: '#6b7280', margin: '0.35rem 0 0', lineHeight: 1.4 },
   // Progress bar
   progressCard:{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   progressTrack:{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' },
@@ -2208,7 +2208,7 @@ const S = {
   // Cards
   card:        { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   sectionLabel:{ fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' },
-  emptyCard:       { background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  emptyCard:       { background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   nonEffectueeBtn: { width: '100%', marginBottom: '0.75rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1rem', fontSize: '0.85rem', fontWeight: '700', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   nonEffectueeBtnActive: { background: '#fef2f2', border: '1.5px solid #fca5a5', color: '#dc2626' },
   nonEffectueeCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
@@ -2220,29 +2220,29 @@ const S = {
   semBadge:    { background: '#f3f4f6', color: '#6b7280', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', flexShrink: 0 },
   // Bloc en attente (non actif, non terminé)
   pendingRow: { background: '#f9fafb', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', border: '1.5px dashed #e5e7eb' },
-  pendingCode: { width: 26, height: 26, borderRadius: 8, background: '#e5e7eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.78rem', color: '#9ca3af', flexShrink: 0 },
-  pendingNom:  { flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  pendingCode: { width: 26, height: 26, borderRadius: 8, background: '#e5e7eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.78rem', color: '#6b7280', flexShrink: 0 },
+  pendingNom:  { flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   // Exercice collapsé (terminé)
   collapsedRow:{ background: 'white', borderRadius: 12, padding: '0.7rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1.5px solid #86efac' },
   collapsedCheck:{ color: '#16a34a', fontWeight: '900', fontSize: '0.9rem', flexShrink: 0 },
   collapsedCode:{ background: '#16a34a', color: 'white', padding: '0.1rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 },
   collapsedNom:{ fontWeight: '700', fontSize: '0.88rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  collapsedStats:{ fontSize: '0.78rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
+  collapsedStats:{ fontSize: '0.78rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
   blocDoneBadge:{ background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block' },
   collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '700', cursor: 'pointer' },
   // Boutons "Passer ce bloc"
-  skipBlocBtn:      { background: 'none', border: '1px solid #d1d5db', color: '#9ca3af', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
-  skipBlocBtnInline:{ background: 'none', border: '1px solid #d1d5db', color: '#9ca3af', borderRadius: 6, padding: '0.2rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' },
+  skipBlocBtn:      { background: 'none', border: '1px solid #d1d5db', color: '#6b7280', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  skipBlocBtnInline:{ background: 'none', border: '1px solid #d1d5db', color: '#6b7280', borderRadius: 6, padding: '0.2rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' },
   terminerBlocBtn:  { width: '100%', marginTop: '0.75rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: '800', cursor: 'pointer', letterSpacing: '0.02em' },
   // Paramètres
   paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
   paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
   paramDivider: { width: 1, height: 26, background: '#e5e7eb', flexShrink: 0 },
-  paramLabel:   { fontSize: '0.52rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
+  paramLabel:   { fontSize: '0.52rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
   paramValue:   { fontSize: '0.95rem', fontWeight: '800', color: '#111827', lineHeight: 1.3, whiteSpace: 'nowrap' },
   // Séries tracker
   seriesTracker:{ background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.6rem' },
-  seriesTrackerLabel:{ fontSize: '0.62rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  seriesTrackerLabel:{ fontSize: '0.62rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
   histoBtn:    { background: 'none', border: 'none', color: '#6366f1', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', padding: 0 },
   serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
@@ -2250,7 +2250,7 @@ const S = {
   serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput:     { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
   serieInputDone: { background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' },
-  serieUnit:   { fontSize: '0.65rem', fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
+  serieUnit:   { fontSize: '0.65rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
   serieValBtn: { marginLeft: 'auto', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
   serieDoneBadge:  { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
   serieDoneWarnBadge: { marginLeft: 'auto', background: '#f59e0b', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },

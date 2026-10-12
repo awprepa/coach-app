@@ -427,7 +427,7 @@ export default function ProfilClient() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Chargement…</span>
+      <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>Chargement…</span>
     </div>
   )
 
@@ -447,7 +447,7 @@ export default function ProfilClient() {
       <div style={S.avatarSection}>
         <div style={S.avatarWrap} onClick={() => fileRef.current?.click()}>
           {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" style={S.avatarImg} />
+            <img loading="lazy" src={avatarUrl} alt="avatar" style={S.avatarImg} />
           ) : (
             <div style={S.avatarInitials}>{initiales}</div>
           )}
@@ -456,7 +456,7 @@ export default function ProfilClient() {
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
-        <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '6px 0 0', textAlign: 'center' }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: '6px 0 0', textAlign: 'center' }}>
           {uploading ? 'Envoi en cours…' : 'Appuie pour changer ta photo'}
         </p>
       </div>
@@ -545,7 +545,7 @@ export default function ProfilClient() {
       {/* Profil nutritionnel */}
       <div style={S.card}>
         <h2 style={S.cardTitle}>Profil nutritionnel</h2>
-        <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 14px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 14px', lineHeight: 1.5 }}>
           Ces données servent à calculer tes objectifs caloriques et macros.
         </p>
 
@@ -694,7 +694,7 @@ const S = {
     padding: '10px 0', borderBottom: '1px solid #f3f4f6',
   },
   infoLabel: {
-    fontSize: '0.8rem', color: '#9ca3af', fontWeight: 600,
+    fontSize: '0.8rem', color: '#6b7280', fontWeight: 600,
   },
   infoVal: {
     fontSize: '0.85rem', color: '#1a1a1a', fontWeight: 700,

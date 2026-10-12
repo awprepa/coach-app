@@ -170,10 +170,10 @@ export default function EvolutionPhotosCoach({ clientId }) {
           <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
             {cmpPhotos.map(p => (
               <div key={p.id} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-                <img src={p.url} alt="" onClick={() => setViewer(p.url)}
+                <img loading="lazy" src={p.url} alt="" onClick={() => setViewer(p.url)}
                   style={{ width: '100%', maxHeight: '62vh', objectFit: 'contain', borderRadius: 10, cursor: 'zoom-in', background: '#f3f4f6' }} />
                 <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0.3rem 0 0', fontWeight: 700 }}>{fmtDate(p.date)}</p>
-                <p style={{ fontSize: '0.66rem', color: '#9ca3af', margin: 0, fontWeight: 700 }}>{POSE_LABEL[p.pose] || 'Pose ?'}</p>
+                <p style={{ fontSize: '0.66rem', color: '#6b7280', margin: 0, fontWeight: 700 }}>{POSE_LABEL[p.pose] || 'Pose ?'}</p>
               </div>
             ))}
           </div>
@@ -182,21 +182,21 @@ export default function EvolutionPhotosCoach({ clientId }) {
               Ces photos ne sont pas toutes prises sous le même angle — la comparaison peut induire en erreur.
             </p>
           )}
-          <button onClick={() => setCompare([])} style={{ marginTop: '0.5rem', background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', padding: '0.2rem' }}>
+          <button onClick={() => setCompare([])} style={{ marginTop: '0.5rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', padding: '0.2rem' }}>
             Fermer la comparaison
           </button>
         </div>
       )}
 
       {loading ? (
-        <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Chargement…</p>
+        <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Chargement…</p>
       ) : !photos.length ? (
-        <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0' }}>
+        <p style={{ color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0' }}>
           Aucune photo pour l'instant. Le client peut en envoyer depuis son profil, ou ajoute-en toi-même ci-dessus.
         </p>
       ) : (
         <>
-          <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0 0 0.6rem' }}>
+          <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0 0 0.6rem' }}>
             Touche jusqu'à 3 photos pour les comparer. Touche l'étiquette de pose pour la définir.
           </p>
           {dates.map(d => (
@@ -208,7 +208,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
                   return (
                     <div key={p.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', outline: sel ? '3px solid #1d4ed8' : 'none' }}>
                       {p.url
-                        ? <img src={p.url} alt="" onClick={() => toggleCompare(p.id)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
+                        ? <img loading="lazy" src={p.url} alt="" onClick={() => toggleCompare(p.id)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
                         : <div style={{ width: '100%', height: '100%', background: '#f3f4f6' }} />}
                       <button onClick={(e) => { e.stopPropagation(); setPoseEdit(p); setDateEditVal(p.date) }}
                         title="Définir la pose"
@@ -232,7 +232,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 16, padding: '1.1rem', width: '100%', maxWidth: 320 }}>
             <p style={{ margin: '0 0 0.9rem', fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>Photo du {fmtDate(poseEdit.date)}</p>
 
-            <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pose</p>
+            <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pose</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: '1.1rem' }}>
               {POSES.map(po => {
                 const on = poseEdit.pose === po.v
@@ -245,7 +245,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
               })}
             </div>
 
-            <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date de la photo</p>
+            <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date de la photo</p>
             <div style={{ display: 'flex', gap: 7 }}>
               <input type="date" value={dateEditVal} max={new Date().toISOString().slice(0, 10)}
                 onChange={e => setDateEditVal(e.target.value)}
@@ -262,7 +262,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
       {/* Visionneuse plein écran */}
       {viewer && (
         <div onClick={() => setViewer(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <img src={viewer} alt="" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8 }} />
+          <img loading="lazy" src={viewer} alt="" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8 }} />
         </div>
       )}
     </div>

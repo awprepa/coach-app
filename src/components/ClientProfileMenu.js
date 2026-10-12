@@ -49,7 +49,7 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
         <div style={{ padding: '1.1rem 1.1rem 0.85rem', borderBottom: '1px solid #f3f4f6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {avatarUrl ? (
-              <img src={avatarUrl} alt="avatar" style={{
+              <img loading="lazy" src={avatarUrl} alt="avatar" style={{
                 width: 42, height: 42, borderRadius: '50%',
                 objectFit: 'cover', flexShrink: 0,
                 border: '2px solid var(--accent-stripe)',
@@ -67,7 +67,7 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
                 {client?.prenom} {client?.nom}
               </p>
               {client?.offre && (
-                <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#9ca3af', fontWeight: '600' }}>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>
                   {OFFRES[client.offre] || client.offre}
                 </p>
               )}

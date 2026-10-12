@@ -244,7 +244,7 @@ export default function ProfilNutrition() {
           <span style={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>Mon profil nutritionnel</span>
           <div style={{ width: 34 }} />
         </div>
-        <p style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>Chargement…</p>
+        <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>Chargement…</p>
       </div>
     )
   }
@@ -552,7 +552,7 @@ export default function ProfilNutrition() {
         {activeTab === 'historique' && (
           <>
             {scansLoading ? (
-              <p style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>Chargement…</p>
+              <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>Chargement…</p>
             ) : scans.length === 0 ? (
               <div style={S.emptyCard}>
                 <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1rem', margin: '0 0 8px' }}>Aucun scan pour l'instant</h3>
@@ -625,7 +625,7 @@ function StatCard({ label, val, color }) {
   return (
     <div style={{ background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <p style={{ fontSize: '1.6rem', fontWeight: 900, color: color || '#1a1a1a', margin: 0, lineHeight: 1 }}>{val}</p>
-      <p style={{ fontSize: '0.62rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
+      <p style={{ fontSize: '0.62rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
     </div>
   )
 }
@@ -658,7 +658,7 @@ function PhysRow({ icon, label, val }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9fafb', borderRadius: 10, padding: '8px 10px' }}>
       <span style={{ fontSize: '0.9rem' }}>{icon}</span>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>{label}</p>
+        <p style={{ fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>{label}</p>
         <p style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1a1a1a', margin: '1px 0 0' }}>{val}</p>
       </div>
     </div>
@@ -688,7 +688,7 @@ const S = {
   header: { background: 'var(--header-bg)', padding: '52px 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 60 },
   iconBtn: { width: 34, height: 34, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 },
   wizTitle: { fontSize: '1.4rem', fontWeight: 900, color: '#1a1a1a', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' },
-  wizSub:   { fontSize: '0.82rem', color: '#9ca3af', margin: '6px 0 0', lineHeight: 1.5 },
+  wizSub:   { fontSize: '0.82rem', color: '#6b7280', margin: '6px 0 0', lineHeight: 1.5 },
   bigCard: { display: 'flex', alignItems: 'center', gap: 14, background: 'white', borderRadius: 16, padding: '16px', border: '2px solid #f3f4f6', cursor: 'pointer', textAlign: 'left', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'border-color 0.15s, background 0.15s', width: '100%' },
   bigCardActive: { background: '#1a1a1a', borderColor: '#1a1a1a', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' },
   nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
@@ -699,10 +699,10 @@ const S = {
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
   tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 88, zIndex: 50 },
-  tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
+  tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
   tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid var(--accent)' },
   card: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   inputLabel: { fontSize: '0.82rem', fontWeight: 700, color: '#374151', display: 'block' },
   numberInput: { flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', fontSize: '1.1rem', fontWeight: 700, color: '#1a1a1a', background: '#f9fafb', outline: 'none' },
-  unit: { fontSize: '0.88rem', fontWeight: 700, color: '#9ca3af', minWidth: 30 },
+  unit: { fontSize: '0.88rem', fontWeight: 700, color: '#6b7280', minWidth: 30 },
 }

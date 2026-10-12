@@ -101,7 +101,7 @@ export default function CoachMessages() {
 
   if (loading) return (
     <div style={S.page}>
-      <p style={{ textAlign: 'center', color: '#9ca3af', padding: '4rem' }}>Chargement…</p>
+      <p style={{ textAlign: 'center', color: '#6b7280', padding: '4rem' }}>Chargement…</p>
     </div>
   )
 
@@ -136,7 +136,7 @@ export default function CoachMessages() {
           )}
 
           {conversations.length === 0 && !showNew && (
-            <p style={{ padding: '1rem', color: '#9ca3af', fontSize: '0.82rem', textAlign: 'center' }}>Aucune conversation.<br />Cliquez sur ＋ pour en démarrer une.</p>
+            <p style={{ padding: '1rem', color: '#6b7280', fontSize: '0.82rem', textAlign: 'center' }}>Aucune conversation.<br />Cliquez sur ＋ pour en démarrer une.</p>
           )}
 
           {conversations.map(c => (
@@ -170,7 +170,7 @@ export default function CoachMessages() {
             <div style={S.emptyState}>
               <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>💬</p>
               <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Sélectionnez une conversation</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Ou cliquez sur ＋ pour en démarrer une nouvelle.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Ou cliquez sur ＋ pour en démarrer une nouvelle.</p>
             </div>
           ) : (
             <>
@@ -318,7 +318,7 @@ const S = {
   convLast: {
     margin: '0.1rem 0 0',
     fontSize: '0.76rem',
-    color: '#9ca3af',
+    color: '#6b7280',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -352,7 +352,7 @@ const S = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#9ca3af',
+    color: '#6b7280',
   },
   chatHeader: {
     display: 'flex',

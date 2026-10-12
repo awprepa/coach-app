@@ -204,11 +204,11 @@ const S = {
   ligneRow: { display: 'flex', gap: '0.4rem', alignItems: 'center' },
   ligneTexteInput: { flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.4rem 0.6rem', fontSize: '0.82rem', color: '#1a1a1a' },
   ligneReposInput: { width: 90, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.4rem 0.6rem', fontSize: '0.82rem', color: '#1a1a1a' },
-  btnAddLigne: { alignSelf: 'flex-start', border: 'none', background: 'none', color: '#9ca3af', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', padding: '0.2rem 0' },
+  btnAddLigne: { alignSelf: 'flex-start', border: 'none', background: 'none', color: '#6b7280', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', padding: '0.2rem 0' },
 
   btnSchemaToggle: { border: 'none', background: 'none', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: '0.3rem 0', marginBottom: '0.5rem' },
 
-  btnAddBloc: { border: '1.5px dashed #d1d5db', background: 'none', color: '#9ca3af', fontSize: '0.85rem', fontWeight: 700, padding: '0.75rem', borderRadius: 12, cursor: 'pointer' },
+  btnAddBloc: { border: '1.5px dashed #d1d5db', background: 'none', color: '#6b7280', fontSize: '0.85rem', fontWeight: 700, padding: '0.75rem', borderRadius: 12, cursor: 'pointer' },
 
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' },
   modal: { width: 480, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'white', borderRadius: 16, padding: '1.25rem' },
@@ -219,7 +219,7 @@ const S = {
   btnGhost: { border: '1px solid #e5e7eb', background: 'none', color: '#6b7280', fontSize: '0.82rem', fontWeight: 700, padding: '0.5rem 0.9rem', borderRadius: 9, cursor: 'pointer' },
   btnPrimarySm: { border: 'none', background: '#e4f816', color: '#1f2937', fontSize: '0.82rem', fontWeight: 800, padding: '0.5rem 1rem', borderRadius: 9, cursor: 'pointer' },
   previewBlock: { marginTop: '1rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem' },
-  previewTitle: { fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.5rem' },
+  previewTitle: { fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.5rem' },
   previewLine: { display: 'flex', gap: '0.5rem', fontSize: '0.8rem', padding: '0.4rem 0', borderBottom: '1px solid #e5e7eb', color: '#1a1a1a' },
   previewRepos: { color: '#65a30d', fontWeight: 700, whiteSpace: 'nowrap' },
 }

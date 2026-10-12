@@ -90,11 +90,11 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
   const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   const selectedSession = sessions.find(s => s.evId === selected)
 
-  if (loading) return <p style={{ color: '#9ca3af', fontSize: '0.85rem', padding: '0.5rem 0' }}>Chargement…</p>
+  if (loading) return <p style={{ color: '#6b7280', fontSize: '0.85rem', padding: '0.5rem 0' }}>Chargement…</p>
 
   if (!sessions.length) return (
     <div style={{ background: 'white', borderRadius: 14, padding: '1.5rem', textAlign: 'center', border: '1px solid #f3f4f6' }}>
-      <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
         Aucune note d'intensité pour l'instant.<br />Les notes des joueurs apparaîtront ici après leurs entraînements terrain.
       </p>
     </div>
@@ -165,13 +165,13 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
             <div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1a1a1a' }}>{selectedSession.titre}</p>
-              <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>
+              <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6b7280' }}>
                 {fmtDate(selectedSession.date)} · {selectedSession.nbNotes} noté{selectedSession.nbNotes > 1 ? 's' : ''}
                 {selectedSession.moyenne != null && ` · moyenne ${selectedSession.moyenne}/10`}
                 {selectedSession.nbAbsents > 0 && ` · ${selectedSession.nbAbsents} absent${selectedSession.nbAbsents > 1 ? 's' : ''}`}
               </p>
             </div>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1rem', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '1rem', cursor: 'pointer' }}>✕</button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -213,7 +213,7 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
             if (!membres.length || !manquants.length) return null
             return (
               <div style={{ marginTop: '0.7rem', borderTop: '1px dashed #e5e7eb', paddingTop: '0.6rem' }}>
-                <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Pas encore répondu ({manquants.length})
                 </p>
                 <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>

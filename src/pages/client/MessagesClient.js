@@ -112,7 +112,7 @@ function ChatInner({ clientId, coachId, inputInset }) {
         WebkitOverflowScrolling: 'touch',
       }}>
         {loading ? (
-          <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', padding: '2rem' }}>
+          <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.85rem', padding: '2rem' }}>
             Chargement…
           </p>
         ) : messages.length === 0 ? (
@@ -129,7 +129,7 @@ function ChatInner({ clientId, coachId, inputInset }) {
           return (
             <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.45rem' }}>
               {!isMe && (
-                <img src="/coach-avatar.png" alt="Coach" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #e5e7eb' }} />
+                <img loading="lazy" src="/coach-avatar.png" alt="Coach" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #e5e7eb' }} />
               )}
               <div style={{
                 maxWidth: '78%',
@@ -325,7 +325,7 @@ export default function MessagesClient() {
           </svg>
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <img src="/coach-avatar.png" alt="Coach" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
+          <img loading="lazy" src="/coach-avatar.png" alt="Coach" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
           <span style={{ color: 'white', fontWeight: '700', fontSize: '0.95rem' }}>Arthur</span>
         </div>
         <div style={{ width: 32 }} />
@@ -342,7 +342,7 @@ export default function MessagesClient() {
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           <p style={{ fontWeight: '700', color: '#374151', margin: 0 }}>Messagerie indisponible</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0, textAlign: 'center', padding: '0 2rem' }}>
+          <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0, textAlign: 'center', padding: '0 2rem' }}>
             Contacte ton coach pour activer la messagerie.
           </p>
         </div>
@@ -352,7 +352,7 @@ export default function MessagesClient() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: '#f5f5f5',
         }}>
-          <p style={{ color: '#9ca3af', fontSize: '0.88rem' }}>Chargement…</p>
+          <p style={{ color: '#6b7280', fontSize: '0.88rem' }}>Chargement…</p>
         </div>
       ) : (
         <ChatInner clientId={clientId} coachId={coachId} inputInset={inputInset} />

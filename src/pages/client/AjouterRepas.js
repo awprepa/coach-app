@@ -39,7 +39,7 @@ function MacroPill({ label, value, color }) {
   return (
     <div style={{ textAlign: 'center', flex: 1 }}>
       <div style={{ fontSize: '0.85rem', fontWeight: 800, color }}>{Math.round(value * 10) / 10}g</div>
-      <div style={{ fontSize: '0.6rem', color: '#9ca3af', marginTop: 1 }}>{label}</div>
+      <div style={{ fontSize: '0.6rem', color: '#6b7280', marginTop: 1 }}>{label}</div>
     </div>
   )
 }
@@ -97,7 +97,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
         </p>
         <button onClick={onReset} style={{
           background: 'none', border: '1px solid #e5e7eb', borderRadius: 8,
-          padding: '3px 8px', fontSize: '0.68rem', color: '#9ca3af', cursor: 'pointer',
+          padding: '3px 8px', fontSize: '0.68rem', color: '#6b7280', cursor: 'pointer',
         }}>
           Recommencer
         </button>
@@ -111,7 +111,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
       )}
 
       {analysis.confiance && (
-        <p style={{ fontSize: '0.66rem', color: '#9ca3af', margin: '0 0 0.5rem' }}>
+        <p style={{ fontSize: '0.66rem', color: '#6b7280', margin: '0 0 0.5rem' }}>
           Confiance IA : {analysis.confiance}
         </p>
       )}
@@ -139,8 +139,8 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
                   fontSize: '0.82rem', textAlign: 'center', outline: 'none', background: 'white',
                 }}
               />
-              <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{item.unit || 'g'}</span>
-              <span style={{ fontSize: '0.68rem', color: '#9ca3af', marginLeft: 'auto' }}>
+              <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>{item.unit || 'g'}</span>
+              <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 'auto' }}>
                 P {Math.round((item.prot_g || 0) * 10) / 10}g ·
                 G {Math.round((item.carbs_g || 0) * 10) / 10}g ·
                 L {Math.round((item.fat_g || 0) * 10) / 10}g
@@ -205,7 +205,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
                   style={{
                     flex: 1, background: 'none', border: '1px solid #e5e7eb',
                     borderRadius: 10, padding: '0.5rem', fontSize: '0.78rem',
-                    color: '#9ca3af', cursor: 'pointer',
+                    color: '#6b7280', cursor: 'pointer',
                   }}
                 >
                   Annuler
@@ -237,7 +237,7 @@ function AILoading({ label }) {
     <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
       <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤖</div>
       <p style={{ fontWeight: 700, color: '#374151', margin: 0 }}>{label}</p>
-      <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>Groq IA analyse…</p>
+      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>Groq IA analyse…</p>
     </div>
   )
 }
@@ -247,7 +247,7 @@ function AIError({ error, onRetry }) {
     <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
       <div style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>⚠️</div>
       <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>Analyse échouée</p>
-      <p style={{ color: '#9ca3af', fontSize: '0.78rem', marginBottom: '1rem' }}>{error}</p>
+      <p style={{ color: '#6b7280', fontSize: '0.78rem', marginBottom: '1rem' }}>{error}</p>
       <button onClick={onRetry} style={S.btnSecondary}>Réessayer</button>
     </div>
   )
@@ -858,7 +858,7 @@ export default function AjouterRepas() {
                 <div style={{ position: 'relative' }}>
                   <input value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setSelectedCat(null); setCatFoods([]) }}
                     placeholder="Ex : yaourt nature, poulet…" style={S.input} />
-                  {searching && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.75rem' }}>…</span>}
+                  {searching && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#6b7280', fontSize: '0.75rem' }}>…</span>}
                 </div>
 
                 {/* Résultats de recherche */}
@@ -870,13 +870,13 @@ export default function AjouterRepas() {
                   </div>
                 )}
                 {searchTerm.length >= 2 && !searchResults.length && !searching && (
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center', margin: '0.5rem 0 0' }}>Aucun résultat — saisie libre ci-dessous</p>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: '0.5rem 0 0' }}>Aucun résultat — saisie libre ci-dessous</p>
                 )}
 
                 {/* ── Navigation par catégories (visible quand pas de saisie) ── */}
                 {searchTerm.length < 2 && (
                   <div style={{ marginTop: '0.75rem' }}>
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 0.5rem' }}>Parcourir par catégorie</p>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 0.5rem' }}>Parcourir par catégorie</p>
                     <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                       {CATEGORIES.map(cat => (
                         <button key={cat.key} onClick={() => loadCategory(cat.key)} style={{
@@ -895,7 +895,7 @@ export default function AjouterRepas() {
                     {selectedCat && (
                       <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                         {loadingCat ? (
-                          <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', padding: '0.75rem' }}>Chargement…</p>
+                          <p style={{ fontSize: '0.78rem', color: '#6b7280', textAlign: 'center', padding: '0.75rem' }}>Chargement…</p>
                         ) : catFoods.map(f => (
                           <FoodRow key={f.id} f={f} onPick={pickFood} />
                         ))}
@@ -914,7 +914,7 @@ export default function AjouterRepas() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   {[['kcal','Calories (kcal)','numeric'],['prot','Protéines (g)','decimal'],['carbs','Glucides (g)','decimal'],['fat','Lipides (g)','decimal']].map(([k, l, im]) => (
                     <div key={k}>
-                      <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '0 0 3px', fontWeight: 600 }}>{l}</p>
+                      <p style={{ fontSize: '0.65rem', color: '#6b7280', margin: '0 0 3px', fontWeight: 600 }}>{l}</p>
                       <input value={manualForm[k]} onChange={e => setManualForm(f => ({ ...f, [k]: e.target.value }))}
                         type="number" inputMode={im} placeholder="0" style={{ ...S.input, padding: '0.5rem 0.7rem' }} />
                     </div>
@@ -932,7 +932,7 @@ export default function AjouterRepas() {
               <div style={{ textAlign: 'center', padding: '1.5rem' }}>
                 <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>⭐</p>
                 <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Aucun favori</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Sauvegarde un repas depuis l'onglet Nutrition pour le retrouver ici.</p>
+                <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>Sauvegarde un repas depuis l'onglet Nutrition pour le retrouver ici.</p>
               </div>
             ) : (
               <>
@@ -947,7 +947,7 @@ export default function AjouterRepas() {
                     }}>
                       <div>
                         <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1a1a' }}>{t.name}</div>
-                        {t.meal_type && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
+                        {t.meal_type && <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1 }}>
                           {MEAL_TYPES.find(m => m.key === t.meal_type)?.label || t.meal_type}
                           {t.use_count > 0 && ` · ${t.use_count}× utilisé`}
                         </div>}
@@ -956,7 +956,7 @@ export default function AjouterRepas() {
                         <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-fg-dark)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
                           {t.kcal || '—'} kcal
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
+                        <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: 2 }}>
                           {[t.prot_g && `P ${t.prot_g}g`, t.carbs_g && `G ${t.carbs_g}g`, t.fat_g && `L ${t.fat_g}g`].filter(Boolean).join(' · ')}
                         </div>
                       </div>
@@ -974,12 +974,12 @@ export default function AjouterRepas() {
             {food && <FoodCard food={food} quantity={quantity} setQuantity={setQuantity} macros={macros} onClear={clearFood} />}
             {!food && (
               loadingScanHistory ? (
-                <p style={{ fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center', padding: '1.5rem' }}>Chargement…</p>
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', textAlign: 'center', padding: '1.5rem' }}>Chargement…</p>
               ) : scanHistory.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '1.5rem' }}>
                   <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🕘</p>
                   <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Aucun scan pour l'instant</p>
-                  <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Scanne un article pour le retrouver ici plus tard.</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>Scanne un article pour le retrouver ici plus tard.</p>
                 </div>
               ) : (
                 <>
@@ -997,11 +997,11 @@ export default function AjouterRepas() {
                           background: '#f3f4f6', overflow: 'hidden',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
                         }}>
-                          {scan.image_url ? <img src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🛒'}
+                          {scan.image_url ? <img loading="lazy" src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🛒'}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scan.product_name}</div>
-                          {scan.brand && <div style={{ fontSize: '0.66rem', color: '#9ca3af', marginTop: 1 }}>{scan.brand}</div>}
+                          {scan.brand && <div style={{ fontSize: '0.66rem', color: '#6b7280', marginTop: 1 }}>{scan.brand}</div>}
                         </div>
                         <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-fg-dark)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px', flexShrink: 0 }}>
                           {scan.kcal_100g != null ? Math.round(scan.kcal_100g) : '—'} kcal
@@ -1029,7 +1029,7 @@ export default function AjouterRepas() {
               <div style={{ textAlign: 'center', padding: '1.25rem 1rem' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '0.6rem' }}>📷</div>
                 <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.4rem' }}>Analyse photo IA</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.2rem' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.82rem', lineHeight: 1.5, margin: '0 0 1.2rem' }}>
                   Prends en photo ton repas ou sélectionne une image — l'IA identifie les aliments et calcule les macros.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -1058,7 +1058,7 @@ export default function AjouterRepas() {
               <div style={{ textAlign: 'center', padding: '1.5rem' }}>
                 <p style={{ fontSize: '2rem', margin: '0 0 0.4rem' }}>🎤</p>
                 <p style={{ fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Micro non disponible</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Utilise la saisie texte ci-dessous.</p>
+                <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>Utilise la saisie texte ci-dessous.</p>
                 <textarea
                   value={transcript} onChange={e => setTranscript(e.target.value)}
                   placeholder="Ex : poulet grillé 180g, riz basmati 120g, salade verte…" rows={3}
@@ -1076,7 +1076,7 @@ export default function AjouterRepas() {
             {voiceSupported && !aiAnalysis && !analyzingAI && (
               <div style={{ padding: '0.25rem 0' }}>
                 <p style={{ fontWeight: 800, color: '#1a1a1a', margin: '0 0 0.3rem', fontSize: '0.95rem' }}>Saisie vocale IA</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
                   Parle ou tape ton repas — l'IA identifie les aliments et calcule les macros.
                 </p>
 
@@ -1283,7 +1283,7 @@ function FoodRow({ f, onPick }) {
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
-        {f.brand && <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{f.brand}</div>}
+        {f.brand && <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{f.brand}</div>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginLeft: '0.5rem' }}>
         {f.nutri_score && <NutriScoreBadge score={f.nutri_score} />}
@@ -1305,14 +1305,14 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
             <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a' }}>{food.name}</span>
             {food.nutri_score && <NutriScoreBadge score={food.nutri_score} />}
           </div>
-          {food.brand && <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>{food.brand}</p>}
+          {food.brand && <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0 }}>{food.brand}</p>}
         </div>
         <button onClick={onClear} style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#6b7280' }}>×</button>
       </div>
 
       {/* Sélecteur de quantité */}
       <div style={{ background: '#f9fafb', borderRadius: 12, padding: '0.8rem', marginBottom: '0.85rem' }}>
-        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Quantité</p>
+        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Quantité</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <input type="number" inputMode="decimal" value={quantity} onChange={e => setQuantity(e.target.value)}
             style={{ width: 80, padding: '0.45rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '1rem', fontWeight: 800, textAlign: 'center', outline: 'none', background: 'white' }} />
@@ -1363,7 +1363,7 @@ const S = {
   iconBtn: { width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   content: { padding: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
   card: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  cardLabel: { fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  cardLabel: { fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', margin: '0 0 0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', background: '#f9fafb', color: '#1a1a1a' },
   btnPrimary: { padding: '0.75rem 1.5rem', border: 'none', borderRadius: 12, background: '#1a1a1a', color: '#e4f816', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' },
   btnSecondary: { padding: '0.55rem 1.2rem', border: '1.5px solid #e5e7eb', borderRadius: 10, background: 'white', color: '#374151', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' },

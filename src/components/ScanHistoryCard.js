@@ -72,7 +72,7 @@ function DetailTable({ scan }) {
           ))}
         </div>
         <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 600 }}>Portion consommée</span>
+          <span style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 600 }}>Portion consommée</span>
           <input
             value={portion}
             onChange={e => setPortion(e.target.value)}
@@ -80,16 +80,16 @@ function DetailTable({ scan }) {
             inputMode="decimal"
             style={{ width: 48, padding: '3px 6px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: '0.72rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'right' }}
           />
-          <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 600 }}>{unit}</span>
+          <span style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 600 }}>{unit}</span>
         </div>
       </div>
 
       <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
         <div style={{ display: 'flex', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ flex: 1, padding: '5px 10px', fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }} />
-          <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour 100 {unit}</div>
+          <div style={{ flex: 1, padding: '5px 10px', fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }} />
+          <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour 100 {unit}</div>
           {hasPortion && (
-            <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour {portion} {unit}</div>
+            <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour {portion} {unit}</div>
           )}
         </div>
         {rows.map((row, i) => (
@@ -111,7 +111,7 @@ function DetailTable({ scan }) {
             {row.sub && (
               <div style={{ display: 'flex', alignItems: 'center', background: i % 2 ? '#fbfbfc' : 'white' }}>
                 <div style={{ flex: 1, padding: '2px 10px 6px 18px', minWidth: 0 }}>
-                  <span style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 600 }}>{row.sub.label}</span>
+                  <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>{row.sub.label}</span>
                 </div>
                 <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>
                   {fmtVal(row.sub.val, unit)}
@@ -144,7 +144,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c4ccd4',
         }}>
           {scan.image_url
-            ? <img src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img loading="lazy" src={scan.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <IconBox />}
         </div>
 
@@ -154,7 +154,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
               <p style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a', margin: '0 0 2px', lineHeight: 1.2 }}>
                 {scan.product_name || 'Produit inconnu'}
               </p>
-              {scan.brand && <p style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600, margin: 0 }}>{scan.brand}</p>}
+              {scan.brand && <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, margin: 0 }}>{scan.brand}</p>}
             </div>
             {scan.quality_grade && (
               <div style={{ width: 34, height: 34, borderRadius: 10, background: gc, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '1rem' }}>

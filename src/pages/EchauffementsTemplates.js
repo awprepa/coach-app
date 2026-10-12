@@ -388,11 +388,11 @@ export default function EchauffementsTemplates() {
 
       {/* ── Liste des templates ── */}
       {loading ? (
-        <p style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
+        <p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
       ) : templates.length === 0 && !creating ? (
         <div style={S.empty}>
           <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.35rem' }}>Aucun template</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Crée ton premier template d'échauffement pour le réutiliser dans tes séances.</p>
+          <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Crée ton premier template d'échauffement pour le réutiliser dans tes séances.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
@@ -401,7 +401,7 @@ export default function EchauffementsTemplates() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
                 <div>
                   <p style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a', margin: '0 0 0.2rem' }}>{t.nom}</p>
-                  <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: 0 }}>{(t.lignes || []).length} exercice{(t.lignes || []).length !== 1 ? 's' : ''}</p>
+                  <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>{(t.lignes || []).length} exercice{(t.lignes || []).length !== 1 ? 's' : ''}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
                   <button onClick={() => startEdit(t)} style={S.iconBtn}>✏️</button>
@@ -424,7 +424,7 @@ export default function EchauffementsTemplates() {
 const S = {
   page:         { padding: '2rem', maxWidth: '1000px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   title:        { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
-  subtitle:     { color: '#9ca3af', fontSize: '0.875rem', margin: '0.25rem 0 0' },
+  subtitle:     { color: '#6b7280', fontSize: '0.875rem', margin: '0.25rem 0 0' },
   sectionLabel: { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.875rem' },
   btnPrimary:   { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },

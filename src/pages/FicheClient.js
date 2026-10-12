@@ -465,7 +465,7 @@ export default function FicheClient() {
     <div style={styles.shell}>
       <ClientListSidebar activeId={id} onSelect={cid => navigate(`/client/${cid}`)} />
       <div style={{ ...styles.loading, flex: 1 }}>
-        <p style={{ color: '#9ca3af' }}>
+        <p style={{ color: '#6b7280' }}>
           {!id ? 'Choisis un client dans la liste.' : loading ? 'Chargement...' : 'Client introuvable.'}
         </p>
       </div>
@@ -616,7 +616,7 @@ export default function FicheClient() {
                 Peut créer des séances
               </span>
             </button>
-            <p style={{ margin: '0.35rem 0 0', fontSize: '0.75rem', color: '#9ca3af', paddingLeft: 54 }}>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.75rem', color: '#6b7280', paddingLeft: 54 }}>
               Accès au créateur de séances (hors groupe)
             </p>
           </div>
@@ -631,7 +631,7 @@ export default function FicheClient() {
           <div style={styles.profileCard}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.85rem' }}>
               {client.avatar_url
-                ? <img src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatarCentered, objectFit: 'cover', marginBottom: 0 }} />
+                ? <img loading="lazy" src={client.avatar_url} alt={client.prenom} style={{ ...styles.avatarCentered, objectFit: 'cover', marginBottom: 0 }} />
                 : <div style={{ ...styles.avatarCentered, marginBottom: 0 }}>{av.initiales}</div>
               }
               <div style={{ minWidth: 0 }}>
@@ -667,7 +667,7 @@ export default function FicheClient() {
                   <p style={{ fontSize: '0.8rem', color: '#374151', margin: '0 0 4px', lineHeight: 1.4 }}>{blessure.description}</p>
                 )}
                 {blessure.date_retour_prevue && (
-                  <p style={{ fontSize: '0.74rem', color: '#9ca3af', margin: 0 }}>{formatRetour(blessure.date_retour_prevue)}</p>
+                  <p style={{ fontSize: '0.74rem', color: '#6b7280', margin: 0 }}>{formatRetour(blessure.date_retour_prevue)}</p>
                 )}
               </div>
             )}
@@ -717,7 +717,7 @@ export default function FicheClient() {
                   <button onClick={() => setShowContratModal('envoyer')} style={{ background: 'none', border: 'none', color: '#6d28d9', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', padding: 0 }}>+ Envoyer</button>
                 </div>
                 {contrats.length === 0 ? (
-                  <p style={{ fontSize: '0.76rem', color: '#9ca3af', margin: 0 }}>Aucun contrat envoyé.</p>
+                  <p style={{ fontSize: '0.76rem', color: '#6b7280', margin: 0 }}>Aucun contrat envoyé.</p>
                 ) : (() => {
                   const c = contrats[0]
                   return (
@@ -880,9 +880,9 @@ export default function FicheClient() {
                       </LineChart>
                     </ResponsiveContainer>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Début : <strong style={{ color: '#333' }}>{data[0]?.poids} kg</strong></span>
-                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>→</span>
-                      <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Actuel : <strong style={{ color: data[data.length-1]?.poids > data[0]?.poids ? '#16a34a' : '#dc2626' }}>{data[data.length-1]?.poids} kg</strong></span>
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Début : <strong style={{ color: '#333' }}>{data[0]?.poids} kg</strong></span>
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>→</span>
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Actuel : <strong style={{ color: data[data.length-1]?.poids > data[0]?.poids ? '#16a34a' : '#dc2626' }}>{data[data.length-1]?.poids} kg</strong></span>
                       {data[data.length-1]?.poids > data[0]?.poids && (
                         <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700' }}>+{(data[data.length-1]?.poids - data[0]?.poids).toFixed(1)} kg ↑</span>
                       )}
@@ -937,11 +937,11 @@ export default function FicheClient() {
                   <div key={r.id} style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                     <div>
                       <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: '#1a1a1a' }}>{r.exercice_nom}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: '#6b7280' }}>
                         Bronze {r.seuil_bronze_kg} · Argent {r.seuil_argent_kg} · Or {r.seuil_or_kg} · Platine {r.seuil_platine_kg} · Diamant {r.seuil_diamant_kg} · Champion {r.seuil_champion_kg} kg
                       </p>
                     </div>
-                    <button onClick={() => supprimerRangPersonnalise(r.id)} title="Supprimer" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.9rem', flexShrink: 0 }}>✕</button>
+                    <button onClick={() => supprimerRangPersonnalise(r.id)} title="Supprimer" style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.9rem', flexShrink: 0 }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -994,7 +994,7 @@ export default function FicheClient() {
                   <p style={styles.statCycleSub}>Semaine {semaineActuelle} / {cycleActif.semaines}</p>
                   <div style={styles.barTrack}><div style={{ ...styles.barFill, width: `${Math.min(100, (semaineActuelle / cycleActif.semaines) * 100)}%` }} /></div>
                 </>
-              ) : <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Aucun cycle en cours</p>}
+              ) : <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Aucun cycle en cours</p>}
             </div>
 
             <div style={styles.statCard}>
@@ -1015,7 +1015,7 @@ export default function FicheClient() {
                     ))}
                   </div>
                 </div>
-              ) : <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Pas encore renseigné</p>}
+              ) : <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Pas encore renseigné</p>}
             </div>
 
             <div style={styles.statCard}>
@@ -1025,7 +1025,7 @@ export default function FicheClient() {
                   <p style={styles.statCycleName}>{nextEvent.titre || 'Séance'}</p>
                   <p style={styles.statCycleSub}>{new Date(nextEvent.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                 </>
-              ) : <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Rien de prévu</p>}
+              ) : <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Rien de prévu</p>}
               {weekEventsCount > 0 && <span style={styles.weekPill}>{weekEventsCount} événement{weekEventsCount > 1 ? 's' : ''} cette semaine</span>}
             </div>
           </div>
@@ -1116,7 +1116,7 @@ export default function FicheClient() {
       <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>👤 Séances ajoutées par {client.prenom}</p>
-          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
+          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
             {seancesClient.length} séance{seancesClient.length > 1 ? 's' : ''}
           </span>
         </div>
@@ -1149,7 +1149,7 @@ export default function FicheClient() {
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#1a1a1a' }}>{ev.titre}</p>
-                        <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{dateLabel}</p>
+                        <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{dateLabel}</p>
                         {ev.description && (
                           <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{ev.description}</p>
                         )}
@@ -1183,7 +1183,7 @@ export default function FicheClient() {
               {seancesClient.length > 5 && (
                 <button
                   onClick={() => setShowAllSeancesClient(v => !v)}
-                  style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.82rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600' }}
+                  style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.82rem', cursor: 'pointer', padding: '0.25rem 0', fontWeight: '600' }}
                 >
                   {showAllSeancesClient ? '↑ Réduire' : `↓ Voir toutes (${seancesClient.length})`}
                 </button>
@@ -1197,7 +1197,7 @@ export default function FicheClient() {
       <div style={styles.gridCard}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionTitle}>Historique wellness</p>
-          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
+          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>
             {wellness.length} entrée{wellness.length > 1 ? 's' : ''}
           </span>
         </div>
@@ -1240,7 +1240,7 @@ export default function FicheClient() {
               </table>
               {wellness.length > 5 && (
                 <button onClick={() => setShowAllWellness(v => !v)}
-                  style={{ width: '100%', background: 'none', border: 'none', padding: '0.4rem 0 0', fontSize: '0.76rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>
+                  style={{ width: '100%', background: 'none', border: 'none', padding: '0.4rem 0 0', fontSize: '0.76rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>
                   {showAllWellness ? '↑ Voir moins' : `↓ Voir tout (${wellness.length} entrées)`}
                 </button>
               )}
@@ -1323,14 +1323,14 @@ export default function FicheClient() {
                                 return (
                                   <div key={meal.id}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.74rem' }}>
-                                      <span style={{ color: '#9ca3af', fontWeight: 700, flexShrink: 0, width: 78 }}>{MEAL_LABELS[meal.meal_type] || meal.meal_type}</span>
+                                      <span style={{ color: '#6b7280', fontWeight: 700, flexShrink: 0, width: 78 }}>{MEAL_LABELS[meal.meal_type] || meal.meal_type}</span>
                                       <span style={{ flex: 1, color: '#374151', fontWeight: 600 }}>{meal.nom}</span>
                                       <span style={{ color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{meal.kcal} kcal</span>
                                     </div>
                                     {foods.length > 0 && (
                                       <div style={{ paddingLeft: 86, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                                         {foods.map(f => (
-                                          <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.7rem', color: '#9ca3af' }}>
+                                          <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', fontSize: '0.7rem', color: '#6b7280' }}>
                                             <span>{f.nom}</span>
                                             <span style={{ flexShrink: 0, fontWeight: 700 }}>{f.quantite_g ? `${Math.round(f.quantite_g)} g` : '—'}</span>
                                           </div>
@@ -1389,7 +1389,7 @@ export default function FicheClient() {
                         {noData ? '—' : `${adherPct}%`}
                       </span>
                       {kcalPrevu > 0 && (
-                        <span style={{ fontSize: '0.65rem', color: '#9ca3af', width: 70, textAlign: 'right', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.65rem', color: '#6b7280', width: 70, textAlign: 'right', flexShrink: 0 }}>
                           {kcalMange > 0 ? `${Math.round(kcalMange)} kcal` : '—'}
                         </span>
                       )}
@@ -1412,7 +1412,7 @@ export default function FicheClient() {
             <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>Profil nutritionnel</p>
               <div style={{ marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
                   Données physiques
                 </p>
                 {(nutritionProfile.poids_kg || nutritionProfile.taille_cm || nutritionProfile.age_ans) ? (
@@ -1425,7 +1425,7 @@ export default function FicheClient() {
                       ].filter(([, v]) => v).map(([l, v]) => (
                         <div key={l} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem', textAlign: 'center' }}>
                           <div style={{ fontSize: '1rem', fontWeight: 900, color: '#1a1a1a' }}>{v}</div>
-                          <div style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', marginTop: 2 }}>{l}</div>
+                          <div style={{ fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', marginTop: 2 }}>{l}</div>
                         </div>
                       ))}
                     </div>
@@ -1436,12 +1436,12 @@ export default function FicheClient() {
                     </div>
                   </>
                 ) : (
-                  <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>Questionnaire physique non renseigné.</p>
+                  <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0 }}>Questionnaire physique non renseigné.</p>
                 )}
               </div>
               {(nutritionProfile.regime || nutritionProfile.allergenes?.length > 0 || nutritionProfile.exclusions?.length > 0 || nutritionProfile.notes) && (
                 <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.6rem' }}>
                     Préférences alimentaires
                   </p>
                   <div style={styles.infoGrid}>
@@ -1476,14 +1476,14 @@ export default function FicheClient() {
 
 function IconMail() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#9ca3af' }}>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#6b7280' }}>
       <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 6 10-6" />
     </svg>
   )
 }
 function IconPhone() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#9ca3af' }}>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#6b7280' }}>
       <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .7 3a2 2 0 0 1-.4 2.1L8 10.3a16 16 0 0 0 6 6l1.5-1.5a2 2 0 0 1 2-.4c1 .3 2 .5 3 .7a2 2 0 0 1 1.6 2z" />
     </svg>
   )
@@ -1492,7 +1492,7 @@ function IconPhone() {
 function InfoItem({ label, value, full, valueStyle }) {
   return (
     <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
-      <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>{label}</p>
+      <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ fontSize: '0.9rem', color: '#333333', margin: 0, ...valueStyle }}>{value}</p>
     </div>
   )
@@ -1512,7 +1512,7 @@ const styles = {
   shell: { display: 'flex', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f5f5' },
   sideCol: { width: 290, flexShrink: 0, borderRight: '1px solid #eee', background: '#f5f5f5', padding: '1.1rem 1rem', overflowY: 'auto', height: '100vh', position: 'sticky', top: 0 },
   mainCol: { flex: 1, minWidth: 0, padding: '1.5rem 2rem 3rem' },
-  listToggleBtn: { position: 'sticky', top: '50%', marginTop: -14, marginBottom: -28, zIndex: 40, width: 22, height: 28, borderRadius: '0 8px 8px 0', background: 'white', border: '1px solid #eee', borderLeft: 'none', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '1px 0 4px rgba(0,0,0,0.05)', flexShrink: 0 },
+  listToggleBtn: { position: 'sticky', top: '50%', marginTop: -14, marginBottom: -28, zIndex: 40, width: 22, height: 28, borderRadius: '0 8px 8px 0', background: 'white', border: '1px solid #eee', borderLeft: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '1px 0 4px rgba(0,0,0,0.05)', flexShrink: 0 },
   backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.85rem', cursor: 'pointer', padding: 0, marginBottom: '0.85rem' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
   profileCard: { background: 'white', borderRadius: '16px', padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
@@ -1528,26 +1528,26 @@ const styles = {
   gridCard: { background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   statsRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginTop: '1rem' },
   statCard: { background: 'white', borderRadius: 14, padding: '0.9rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  statCardLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.4rem' },
+  statCardLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', margin: '0 0 0.4rem' },
   statCycleName: { fontSize: '0.85rem', fontWeight: 800, margin: '0 0 2px', color: '#1a1a1a' },
-  statCycleSub: { fontSize: '0.7rem', color: '#9ca3af', margin: '0 0 6px' },
+  statCycleSub: { fontSize: '0.7rem', color: '#6b7280', margin: '0 0 6px' },
   barTrack: { height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' },
   barFill: { height: '100%', background: '#1a1a1a', borderRadius: 99 },
   weekPill: { display: 'inline-flex', alignItems: 'center', fontSize: '0.62rem', fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: '#dcfce7', color: '#15803d', marginTop: 6 },
   cyclesStrip: { display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 },
   cycleChip: { position: 'relative', flexShrink: 0, background: '#f9fafb', border: '1px solid #eee', borderRadius: 11, padding: '8px 28px 8px 12px', minWidth: 140, cursor: 'default' },
   cycleChipActive: { background: '#1a1a1a', borderColor: '#1a1a1a' },
-  sideLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', margin: '0 0 0.35rem' },
+  sideLabel: { fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', margin: '0 0 0.35rem' },
   sideRow: { display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.78rem', marginBottom: '0.3rem', color: '#374151' },
   statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.3rem', gap: 8 },
   statLabel: { fontSize: '0.74rem', color: '#6b7280', flexShrink: 0 },
   statVal: { fontSize: '0.76rem', fontWeight: 700, color: '#1a1a1a', textAlign: 'right' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
-  emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   progCard: { background: 'white', borderRadius: '14px', padding: '1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   progNom: { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.2rem' },
-  progMeta: { color: '#9ca3af', fontSize: '0.8rem', margin: 0 },
+  progMeta: { color: '#6b7280', fontSize: '0.8rem', margin: 0 },
   chevron: { color: '#d1d5db', fontSize: '1.25rem' },
   calendarCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   row2: { display: 'flex', gap: '1rem' },
@@ -1558,9 +1558,9 @@ const styles = {
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
   btnDanger: { background: '#fef2f2', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
-  colLabel:  { fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  colLabel:  { fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6' },
   liTitle: { fontSize: '0.8rem', fontWeight: '700', margin: 0, color: '#1a1a1a' },
-  liSub: { fontSize: '0.68rem', color: '#9ca3af', margin: '1px 0 0' },
+  liSub: { fontSize: '0.68rem', color: '#6b7280', margin: '1px 0 0' },
   liVal: { fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', flexShrink: 0 },
 }

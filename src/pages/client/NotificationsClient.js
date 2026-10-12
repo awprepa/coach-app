@@ -47,7 +47,7 @@ export default function NotificationsClient() {
         {notifs.length === 0 ? (
           <div style={S.empty}>
             <span style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔔</span>
-            <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Aucune notification</p>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Aucune notification</p>
           </div>
         ) : (
           notifs.map(notif => (
@@ -82,6 +82,6 @@ const S = {
   itemContent: { flex: 1, minWidth: 0 },
   itemTitle:   { fontSize: '0.9rem', color: '#333', margin: '0 0 0.2rem' },
   itemBody:    { fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.3rem', lineHeight: 1.4 },
-  itemDate:    { fontSize: '0.72rem', color: '#9ca3af', margin: 0 },
+  itemDate:    { fontSize: '0.72rem', color: '#6b7280', margin: 0 },
   dot:         { width: 8, height: 8, borderRadius: '50%', background: '#6366f1', flexShrink: 0, marginTop: 6 },
 }

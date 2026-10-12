@@ -267,7 +267,7 @@ export default function SeanceTemplates() {
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
-  if (loading) return <div style={S.centered}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
+  if (loading) return <div style={S.centered}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
 
   const BLOC_COLORS = ['#6366f1','#16a34a','#ea580c','#2563eb','#dc2626','#ca8a04','#0891b2','#9333ea']
   function blocColor(letter) {
@@ -370,7 +370,7 @@ export default function SeanceTemplates() {
                         </div>
                       ))}
                       <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
-                        <input autoFocus placeholder="Nouveau dossier..."
+                        <input autoFocus placeholder="Nouveau dossier..." aria-label="Nouveau dossier..."
                           style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.3rem 0.5rem', fontSize: '0.78rem', outline: 'none', boxSizing: 'border-box' }}
                           onKeyDown={e => {
                             if (e.key === 'Enter' && e.target.value.trim()) {
@@ -398,7 +398,7 @@ export default function SeanceTemplates() {
               /* ── Mode édition ────────────────────────────── */
               <div onClick={e => e.stopPropagation()}>
                 {editExercices.length === 0 && (
-                  <p style={{ color: '#9ca3af', fontSize: '0.82rem', marginBottom: '0.5rem' }}>Aucun exercice — ajoutez-en ci-dessous.</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.82rem', marginBottom: '0.5rem' }}>Aucun exercice — ajoutez-en ci-dessous.</p>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {editExercices.map((ex, i) => (
@@ -458,7 +458,7 @@ export default function SeanceTemplates() {
               <>
                 <div style={S.clientList}>
                   {individuels.length === 0 && groupes.length === 0 ? (
-                    <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem', fontSize: '0.85rem' }}>Aucun client.</p>
+                    <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem', fontSize: '0.85rem' }}>Aucun client.</p>
                   ) : (
                     <>
                       {individuels.map(c => renderAssignRow(c))}
@@ -476,7 +476,7 @@ export default function SeanceTemplates() {
                                 <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>{g.nom}</p>
                                 {nbCoches > 0 && <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 700 }}>{nbCoches} coché{nbCoches > 1 ? 's' : ''}</span>}
                               </div>
-                              <span style={{ marginLeft: 'auto', color: '#9ca3af', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} {isOpen ? '▲' : '▼'}</span>
+                              <span style={{ marginLeft: 'auto', color: '#6b7280', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} {isOpen ? '▲' : '▼'}</span>
                             </div>
                             {isOpen && (
                               <div style={{ paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
@@ -535,7 +535,7 @@ export default function SeanceTemplates() {
       {/* ── Brouillons ── */}
       {drafts.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>
             Brouillons ({drafts.length})
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -565,7 +565,7 @@ export default function SeanceTemplates() {
         <div style={S.empty}>
           <p style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>📋</p>
           <p style={{ fontWeight: '700', color: '#374151', marginBottom: '0.35rem' }}>Aucun modèle</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée ta première séance ou importe depuis Excel.</p>
+          <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée ta première séance ou importe depuis Excel.</p>
           <button onClick={nouvelleSeance} style={S.importBtn}>+ Nouvelle séance</button>
         </div>
       ) : (
@@ -590,7 +590,7 @@ export default function SeanceTemplates() {
                     ) : (
                       <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#333333' }}>{folderName}</span>
                     )}
-                    <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{items.length} modèle{items.length > 1 ? 's' : ''}</span>
+                    <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} modèle{items.length > 1 ? 's' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.folderActionBtn}>✏️</button>
@@ -602,7 +602,7 @@ export default function SeanceTemplates() {
                 {isOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem 0.75rem 0.75rem' }}>
                     {items.length === 0 ? (
-                      <p style={{ color: '#9ca3af', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un modèle ici via 📁</p>
+                      <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un modèle ici via 📁</p>
                     ) : (
                       items.map(t => renderTemplate(t))
                     )}
@@ -616,7 +616,7 @@ export default function SeanceTemplates() {
           {sansDossier.length > 0 && (
             <div>
               {allFolders.length > 0 && (
-                <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
+                <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {sansDossier.map(t => renderTemplate(t))}
@@ -634,7 +634,7 @@ const S = {
   centered:       { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:         { marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
   title:          { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  subtitle:       { color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
+  subtitle:       { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
   importBtn:      { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   secondaryBtn:   { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.875rem', fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   folderInput:    { padding: '0.45rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
@@ -644,7 +644,7 @@ const S = {
   folderActionBtn:{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem' },
   card:           { background: '#f9fafb', borderRadius: 10, padding: '0.875rem 1rem', border: '1px solid #f0f0f0' },
   nom:            { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: 0 },
-  meta:           { color: '#9ca3af', fontSize: '0.75rem', margin: '0.15rem 0 0' },
+  meta:           { color: '#6b7280', fontSize: '0.75rem', margin: '0.15rem 0 0' },
   actionBtn:      { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.3rem' },
   actionBtnSolid: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.65rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   moveDropdown:   { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },
@@ -658,9 +658,9 @@ const S = {
   overlay:        { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
   modal:          { background: 'white', borderRadius: 18, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
   modalHeader:    { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid #f3f4f6' },
-  modalLabel:     { fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.2rem' },
+  modalLabel:     { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.2rem' },
   modalTitle:     { fontSize: '1rem', fontWeight: '800', color: '#333333', margin: 0 },
-  closeBtn:       { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.1rem', padding: '0.1rem', lineHeight: 1 },
+  closeBtn:       { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1.1rem', padding: '0.1rem', lineHeight: 1 },
   clientList:     { flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   clientRow:      { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: 10, border: '1.5px solid #f3f4f6', transition: 'all 0.15s' },
   modalFooter:    { padding: '1rem 1.25rem', borderTop: '1px solid #f3f4f6', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' },

@@ -123,11 +123,11 @@ export default function TestsClient() {
                   <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                     <div style={S.statCard}>
                       <p style={S.statLabel}>Dernier</p>
-                      <p style={S.statVal}>{last?.valeur}<span style={{ fontSize: '0.72rem', color: '#9ca3af', marginLeft: 2 }}>{selectedType.unite}</span></p>
+                      <p style={S.statVal}>{last?.valeur}<span style={{ fontSize: '0.72rem', color: '#6b7280', marginLeft: 2 }}>{selectedType.unite}</span></p>
                     </div>
                     <div style={S.statCard}>
                       <p style={S.statLabel}>Meilleur</p>
-                      <p style={S.statVal}>{best}<span style={{ fontSize: '0.72rem', color: '#9ca3af', marginLeft: 2 }}>{selectedType.unite}</span></p>
+                      <p style={S.statVal}>{best}<span style={{ fontSize: '0.72rem', color: '#6b7280', marginLeft: 2 }}>{selectedType.unite}</span></p>
                     </div>
                     <div style={S.statCard}>
                       <p style={S.statLabel}>Tests</p>
@@ -190,10 +190,10 @@ export default function TestsClient() {
                     {[...currentResults].reverse().map((r, i) => (
                       <div key={r.id} style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                         <div>
-                          <p style={S.rowVal}>{r.valeur} <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontWeight: '600' }}>{selectedType.unite}</span></p>
+                          <p style={S.rowVal}>{r.valeur} <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: '600' }}>{selectedType.unite}</span></p>
                           <p style={S.rowDate}>
                             {new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            {r.notes && <span style={{ color: '#9ca3af' }}> · {r.notes}</span>}
+                            {r.notes && <span style={{ color: '#6b7280' }}> · {r.notes}</span>}
                           </p>
                         </div>
                         <button onClick={() => deleteResult(r.id)} style={S.deleteBtn}>✕</button>
@@ -222,20 +222,20 @@ const S = {
   backBtn:  { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '1.5rem', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   logo:     { color: 'white', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.5px' },
   content:  { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
-  sup:      { color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' },
+  sup:      { color: '#6b7280', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' },
   title:    { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   typeTab:  { padding: '0.45rem 1rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer' },
   statCard: { flex: 1, background: 'white', borderRadius: 12, padding: '0.875rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', textAlign: 'center' },
-  statLabel:{ fontSize: '0.62rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
+  statLabel:{ fontSize: '0.62rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
   statVal:  { fontSize: '1.4rem', fontWeight: '900', color: '#333333', margin: 0 },
   card:     { background: 'white', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   cardLabel:{ fontSize: '0.7rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
   listCard: { background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
-  listHeader:{ fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em', padding: '0.875rem 1.1rem 0.4rem', margin: 0 },
+  listHeader:{ fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', letterSpacing: '0.1em', padding: '0.875rem 1.1rem 0.4rem', margin: 0 },
   listRow:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem' },
   rowVal:   { fontSize: '1.1rem', fontWeight: '800', color: '#333333', margin: '0 0 0.1rem' },
   rowDate:  { fontSize: '0.75rem', color: '#6b7280', margin: 0 },
-  emptyCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
+  emptyCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
   label:    { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' },
   input:    { width: '100%', padding: '0.65rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   btn:      { background: '#333333', color: 'var(--accent-fg)', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },

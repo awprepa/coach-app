@@ -204,7 +204,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
                   <thead>
                     <tr>
                       {['Joueur', 'Dernier résultat', 'Évolution', 'Date', ''].map((h, i) => (
-                        <th key={i} style={{ textAlign: (i === 1 || i === 2) ? 'center' : 'left', padding: '0.5rem 1rem', fontSize: '0.65rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f3f4f6' }}>{h}</th>
+                        <th key={i} style={{ textAlign: (i === 1 || i === 2) ? 'center' : 'left', padding: '0.5rem 1rem', fontSize: '0.65rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f3f4f6' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -228,16 +228,16 @@ export default function GroupeTestsView({ groupeId, accent }) {
                               {formatDateFull(r.latest.date)}
                             </td>
                             <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              {r.tests.length > 1 && <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: 700, marginRight: '0.6rem' }}>{r.tests.length} résultats {isOpen ? '▲' : '▼'}</span>}
+                              {r.tests.length > 1 && <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 700, marginRight: '0.6rem' }}>{r.tests.length} résultats {isOpen ? '▲' : '▼'}</span>}
                               <button onClick={e => { e.stopPropagation(); openAdd(r.joueur.id) }} style={S.btnMini}>+ Résultat</button>
                             </td>
                           </tr>
                           {isOpen && r.tests.map(t => (
                             <tr key={t.id} style={{ background: '#fafafa' }}>
-                              <td style={{ padding: '0.4rem 1rem 0.4rem 2.25rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.78rem', color: '#9ca3af' }}>Historique</td>
+                              <td style={{ padding: '0.4rem 1rem 0.4rem 2.25rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.78rem', color: '#6b7280' }}>Historique</td>
                               <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>{t.valeur}{unit ? ` ${unit}` : ''}</td>
                               <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}></td>
-                              <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.78rem', color: '#9ca3af' }}>{formatDateFull(t.date)}</td>
+                              <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.78rem', color: '#6b7280' }}>{formatDateFull(t.date)}</td>
                               <td style={{ padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6', textAlign: 'right' }}>
                                 <button onClick={e => { e.stopPropagation(); supprimerTest(t.id) }} style={S.btnDeleteMini}>Supprimer</button>
                               </td>
@@ -361,9 +361,9 @@ const S = {
   btnDeleteMini: { border: 'none', background: 'transparent', color: '#dc2626', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' },
   panel: { background: 'white', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' },
   panelHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.9rem 1.1rem 0.7rem' },
-  panelLabel: { fontSize: '0.65rem', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  panelLabel: { fontSize: '0.65rem', fontWeight: 900, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
   selectSmall: { border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.3rem 0.5rem', fontSize: '0.76rem', fontWeight: 700, color: '#374151', background: 'white', outline: 'none' },
-  empty: { fontSize: '0.82rem', color: '#9ca3af', padding: '1rem 1.1rem', margin: 0, textAlign: 'center' },
+  empty: { fontSize: '0.82rem', color: '#6b7280', padding: '1rem 1.1rem', margin: 0, textAlign: 'center' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' },
   modal: { background: 'white', borderRadius: 16, padding: '1.5rem', width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
   modalTitle: { fontSize: '1.05rem', fontWeight: 800, color: '#1a1a1a', margin: '0 0 1.1rem' },

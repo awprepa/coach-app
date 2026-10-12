@@ -20,7 +20,7 @@ function IlluAccueil() {
       <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {/* Carte séance */}
         <div style={{ background: 'white', borderRadius: 10, padding: '8px 10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: '0.55rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>Prochaine séance</div>
+          <div style={{ fontSize: '0.55rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>Prochaine séance</div>
           <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1a1a1a' }}>💪 Séance A — Haut du corps</div>
         </div>
         {/* Carte nutrition */}
@@ -54,7 +54,7 @@ function IlluProgramme() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1a1a1a' }}>{ex.name}</div>
-              <div style={{ fontSize: '0.52rem', color: '#9ca3af' }}>{ex.sets} · {ex.weight}</div>
+              <div style={{ fontSize: '0.52rem', color: '#6b7280' }}>{ex.sets} · {ex.weight}</div>
             </div>
           </div>
         ))}

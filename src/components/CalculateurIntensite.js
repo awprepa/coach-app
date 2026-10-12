@@ -153,7 +153,7 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
                   style={{ ...S.toggleBtn, ...(critere === c ? { background: groupColor, color: isLight(groupColor) ? '#1a1a1a' : '#fff', borderColor: groupColor } : {}) }}>
                   {c.toUpperCase()}
                 </button>
-              )) : <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Aucun groupe de niveau</span>}
+              )) : <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Aucun groupe de niveau</span>}
             </div>
           </label>
 
@@ -255,7 +255,7 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
           <div style={S.baroWrap}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#1f2937' }}>Difficulté estimée : {difficulteGlobale.niveau}</span>
-              <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>indicatif — à confirmer sur le terrain</span>
+              <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>indicatif — à confirmer sur le terrain</span>
             </div>
             <div style={S.baroBarBg}>
               <div style={{ ...S.baroBarFill, width: `${(difficulteGlobale.score / difficulteGlobale.max) * 100}%`, background: difficulteGlobale.couleur }} />
@@ -268,7 +268,7 @@ export default function CalculateurIntensite({ niveaux, groupColor, onClose, onA
 
         <div style={S.resultsWrap}>
           {niveauxFiltres.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: '#9ca3af', padding: '1rem 0' }}>
+            <p style={{ fontSize: '0.85rem', color: '#6b7280', padding: '1rem 0' }}>
               Aucun groupe de niveau avec le critère {critere.toUpperCase()}.
             </p>
           ) : (
@@ -335,7 +335,7 @@ const S = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
   modal: { background: '#fff', borderRadius: 18, width: '100%', maxWidth: 900, maxHeight: '92vh', overflowY: 'auto', padding: '1.25rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  closeBtn: { background: 'none', border: 'none', fontSize: '1.5rem', color: '#9ca3af', cursor: 'pointer', lineHeight: 1 },
+  closeBtn: { background: 'none', border: 'none', fontSize: '1.5rem', color: '#6b7280', cursor: 'pointer', lineHeight: 1 },
   paramsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px 12px', marginBottom: 10, background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: 12 },
   field: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
   label: { fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '2.1em', display: 'flex', alignItems: 'flex-end' },
@@ -353,7 +353,7 @@ const S = {
   resultsRow: { display: 'flex', gap: 12, minWidth: 'min-content' },
   resultCard: { minWidth: 220, flex: '0 0 auto', background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: 12 },
   applyBtn: { width: '100%', marginTop: 10, padding: '7px', borderRadius: 8, border: 'none', background: '#333333', color: '#e4f816', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' },
-  resultSub: { fontSize: '0.72rem', color: '#9ca3af', marginBottom: 8 },
+  resultSub: { fontSize: '0.72rem', color: '#6b7280', marginBottom: 8 },
   resultList: { display: 'flex', flexDirection: 'column' },
   infoBtn: { width: 16, height: 16, borderRadius: '50%', background: '#e5e7eb', color: '#4b5563', fontSize: '0.65rem', fontWeight: 800, fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 },
   infoTooltip: { position: 'absolute', top: '130%', left: 0, zIndex: 20, width: 300, maxWidth: '80vw', background: '#1f2937', color: '#f3f4f6', fontSize: '0.72rem', fontWeight: 400, lineHeight: 1.5, borderRadius: 10, padding: '10px 12px', whiteSpace: 'pre-line', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' },

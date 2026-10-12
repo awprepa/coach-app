@@ -389,7 +389,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
                 ))}
               </div>
               <label style={S.fieldLabel}>Distance (m)</label>
-              <input type="number" min="0" step="0.5" value={selectedArrow.distance ?? ''} placeholder="Non renseignée"
+              <input type="number" min="0" step="0.5" value={selectedArrow.distance ?? ''} placeholder="Non renseignée" aria-label="Non renseignée"
                 onChange={e => patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, distance: e.target.value ? Number(e.target.value) : null } : a) })}
                 style={S.fieldInput} />
               <button onClick={deleteSelected} style={S.btnDelete}>Supprimer la flèche</button>

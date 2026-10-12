@@ -516,7 +516,7 @@ const S = {
     margin: '0 0 4px', lineHeight: 1.3, letterSpacing: '-0.01em',
   },
   cardMeta: {
-    fontSize: '0.67rem', color: '#9ca3af', fontWeight: 500,
+    fontSize: '0.67rem', color: '#6b7280', fontWeight: 500,
     margin: '0 0 10px', lineHeight: 1.5,
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
@@ -579,12 +579,12 @@ const S = {
     display: 'flex', gap: 7, alignItems: 'flex-start',
   },
   doiTag: {
-    fontSize: '0.58rem', fontWeight: 800, color: '#9ca3af',
+    fontSize: '0.58rem', fontWeight: 800, color: '#6b7280',
     letterSpacing: '0.08em', padding: '2px 6px',
     background: '#f3f4f6', borderRadius: 4, flexShrink: 0,
   },
   doiVal: {
-    fontSize: '0.67rem', color: '#9ca3af',
+    fontSize: '0.67rem', color: '#6b7280',
     fontFamily: 'ui-monospace, monospace',
     lineHeight: 1.5, wordBreak: 'break-all',
   },
@@ -594,7 +594,7 @@ const S = {
     padding: '4px 14px 16px',
   },
   footerText: {
-    fontSize: '0.72rem', color: '#9ca3af', lineHeight: 1.65,
+    fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.65,
     textAlign: 'center', fontStyle: 'italic', margin: 0,
     background: 'white', borderRadius: 12, padding: '14px 16px',
     border: '1px solid #eaecf0',

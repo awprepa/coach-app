@@ -76,7 +76,7 @@ export default function EnvoyerContratModal({ client, estPremierContrat, onClose
           <option value="6">6 mois — {estPremierContrat ? PREMIER_TARIF : tarif.m6}€/mois</option>
         </select>
         {estPremierContrat && (
-          <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.35rem 0 0' }}>
+          <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0.35rem 0 0' }}>
             Premier engagement : {PREMIER_TARIF}€/mois, 3 mois minimum. La formule sans engagement n'est proposée qu'au renouvellement.
           </p>
         )}
@@ -120,7 +120,7 @@ const S = {
   label:    { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0.75rem 0 0.35rem' },
   select:   { width: '100%', padding: '0.65rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', color: '#333333', outline: 'none', background: 'white', boxSizing: 'border-box' },
   recap:    { marginTop: '1.1rem', background: '#f9fafb', borderRadius: 10, padding: '0.75rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' },
-  recapLabel: { fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  recapLabel: { fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' },
   recapValue: { fontSize: '0.85rem', fontWeight: 700, color: '#333333' },
   error:    { color: '#dc2626', fontSize: '0.8rem', marginTop: '0.75rem' },
   btnPrimary:   { flex: 1, background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.7rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' },

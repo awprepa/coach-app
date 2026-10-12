@@ -89,11 +89,11 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
           <p style={W.qLabel}>Poids <span style={{ fontWeight: '400', color: '#9a9a9a', fontSize: '0.75rem' }}>(optionnel)</span></p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <input
-              type="number" placeholder="ex : 75.5" value={poids}
+              type="number" placeholder="ex : 75.5" aria-label="ex : 75.5" value={poids}
               onChange={e => setPoids(e.target.value)}
               style={{ flex: 1, padding: '0.6rem 0.75rem', border: '1px solid #e3e3e3', borderRadius: 10, fontSize: '1rem', fontWeight: '700', outline: 'none', textAlign: 'center' }}
             />
-            <span style={{ fontWeight: '700', color: '#9ca3af', fontSize: '0.9rem' }}>kg</span>
+            <span style={{ fontWeight: '700', color: '#6b7280', fontSize: '0.9rem' }}>kg</span>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 1rem' }}>

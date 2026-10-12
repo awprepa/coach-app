@@ -181,12 +181,12 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
               <button onClick={() => setPopup(false)} style={{ background: '#f3f4f6', border: 'none', color: '#6b7280', width: 28, height: 28, borderRadius: 8, fontSize: '1rem', cursor: 'pointer' }}>×</button>
             </div>
             {!joueurId ? (
-              <p style={{ fontSize: '0.82rem', color: '#9ca3af', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5 }}>
                 Rejoins d'abord un groupe pour pouvoir déclarer une blessure.
               </p>
             ) : (
               <>
-                <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 14px', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 14px', lineHeight: 1.5 }}>
                   Préviens ton coach si tu es blessé et indisponible.
                 </p>
 
@@ -235,7 +235,7 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
                     <FieldLabel>Durée d'indisponibilité estimée</FieldLabel>
                     <input value={duree} onChange={e => setDuree(e.target.value)}
                       placeholder="Ex : 2 semaines, 10 jours, 3 mois…" style={{ ...inputStyle, marginBottom: 4 }} />
-                    <p style={{ fontSize: '0.68rem', color: '#9ca3af', margin: '0 0 12px' }}>
+                    <p style={{ fontSize: '0.68rem', color: '#6b7280', margin: '0 0 12px' }}>
                       {parseDureeToDate(duree)
                         ? `→ retour estimé le ${new Date(parseDureeToDate(duree) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}. Modifiable à tout moment si ça évolue.`
                         : 'Écris par exemple "2 semaines" ou "10 jours" — la date de retour se calcule automatiquement.'}

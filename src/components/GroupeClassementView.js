@@ -27,7 +27,7 @@ export default function GroupeClassementView({ groupe, classementFFR, accent }) 
   }
 
   if (groups.length === 0) {
-    return <p style={{ fontSize: '0.85rem', color: '#9ca3af', padding: '2rem 0', textAlign: 'center' }}>Pas encore de classement synchronisé.</p>
+    return <p style={{ fontSize: '0.85rem', color: '#6b7280', padding: '2rem 0', textAlign: 'center' }}>Pas encore de classement synchronisé.</p>
   }
   const current = groups[Math.min(activeIdx, groups.length - 1)]
 
@@ -54,7 +54,7 @@ export default function GroupeClassementView({ groupe, classementFFR, accent }) 
           <thead>
             <tr style={{ background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
               {['#', 'Équipe', 'J', 'G', 'N', 'P', 'Diff', 'Bo', 'Bd', 'Pts'].map((h, i) => (
-                <th key={i} style={{ padding: '0.65rem 0.6rem', fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: i === 1 ? 'left' : 'center' }}>{h}</th>
+                <th key={i} style={{ padding: '0.65rem 0.6rem', fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: i === 1 ? 'left' : 'center' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -68,8 +68,8 @@ export default function GroupeClassementView({ groupe, classementFFR, accent }) 
                   <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: isOurs ? accent : '#9ca3af' }}>{c.position}</td>
                   <td style={{ padding: '0.55rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {logoAff
-                      ? <img src={logoAff} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
-                      : <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#f3f4f6', color: '#9ca3af', fontSize: '0.55rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
+                      ? <img loading="lazy" src={logoAff} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+                      : <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#f3f4f6', color: '#6b7280', fontSize: '0.55rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
                     }
                     <span style={{ fontSize: '0.82rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333' }}>{c.equipe}</span>
                   </td>

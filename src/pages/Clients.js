@@ -40,7 +40,7 @@ function getSubInfo(date_fin) {
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const fin = new Date(date_fin + 'T00:00:00')
   const days = Math.ceil((fin - today) / (1000 * 60 * 60 * 24))
-  if (days < 0)  return { color: '#9ca3af', bg: '#f3f4f6', label: 'Expiré' }
+  if (days < 0)  return { color: '#6b7280', bg: '#f3f4f6', label: 'Expiré' }
   if (days <= 7) return { color: '#dc2626', bg: '#fef2f2', label: `${days}j` }
   if (days <= 30) return { color: '#d97706', bg: '#fffbeb', label: `${days}j` }
   return { color: '#16a34a', bg: '#f0fdf4', label: `${days}j` }
@@ -198,7 +198,7 @@ export default function Clients() {
     return matchSearch && matchCat && matchOffre
   })
 
-  if (loading) return <div style={S.loading}><p style={{ color: '#9ca3af' }}>Chargement...</p></div>
+  if (loading) return <div style={S.loading}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
 
   return (
     <div style={S.page}>
@@ -221,8 +221,8 @@ export default function Clients() {
 
       {/* Recherche */}
       <div style={{ marginBottom: '1rem', position: 'relative' }}>
-        <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>🔍</span>
-        <input type="text" placeholder="Rechercher un client..."
+        <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }}>🔍</span>
+        <input type="text" placeholder="Rechercher un client..." aria-label="Rechercher un client..."
           value={search} onChange={e => setSearch(e.target.value)}
           style={{ width: '100%', padding: '0.7rem 0.875rem 0.7rem 2.5rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', background: 'white' }}
         />
@@ -276,10 +276,10 @@ export default function Clients() {
               ))}
             </div>
             <button onClick={ajouterCategorie} style={{ ...S.btnPrimary, padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderRadius: '8px' }}>OK</button>
-            <button onClick={() => setShowCatForm(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.85rem' }}>✕</button>
+            <button onClick={() => setShowCatForm(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.85rem' }}>✕</button>
           </div>
         ) : (
-          <button onClick={() => setShowCatForm(true)} style={{ ...S.catTab, background: 'white', color: '#9ca3af', border: '1.5px dashed #d1d5db' }}>+ Catégorie</button>
+          <button onClick={() => setShowCatForm(true)} style={{ ...S.catTab, background: 'white', color: '#6b7280', border: '1.5px dashed #d1d5db' }}>+ Catégorie</button>
         )}
       </div>
 
@@ -302,11 +302,11 @@ export default function Clients() {
                       onClick={() => navigate(`/groupe/${g.id}`)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                         {g.logo_url
-                          ? <img src={g.logo_url} alt={g.nom} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
+                          ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
                           : <div style={{ width: 38, height: 38, borderRadius: 10, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🏆</div>}
                         <div>
                           <p style={{ margin: 0, fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{g.nom}</p>
-                          <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af' }}>Groupe{sousGroupes.length > 0 ? ` · ${sousGroupes.length} sous-groupe${sousGroupes.length > 1 ? 's' : ''}` : ''}</p>
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>Groupe{sousGroupes.length > 0 ? ` · ${sousGroupes.length} sous-groupe${sousGroupes.length > 1 ? 's' : ''}` : ''}</p>
                         </div>
                       </div>
                       <span style={S.chevron}>›</span>
@@ -321,7 +321,7 @@ export default function Clients() {
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
                               {sg.logo_url
-                                ? <img src={sg.logo_url} alt={sg.nom} style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+                                ? <img loading="lazy" src={sg.logo_url} alt={sg.nom} style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
                                 : <div style={{ width: 26, height: 26, borderRadius: 7, background: (sg.couleur || g.couleur) + '20', flexShrink: 0 }} />}
                               <p style={{ margin: 0, fontWeight: '700', fontSize: '0.85rem', color: '#374151' }}>{sg.nom}</p>
                             </div>
@@ -348,7 +348,7 @@ export default function Clients() {
             {/* Logo */}
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: 9, padding: '0.45rem 0.85rem', border: '1.5px solid #e5e7eb', alignSelf: 'flex-start' }}>
               <div style={{ width: 32, height: 32, borderRadius: 7, border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, background: 'white' }}>
-                {newGroupeLogoPreview ? <img src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.9rem' }}>📂</span>}
+                {newGroupeLogoPreview ? <img loading="lazy" src={newGroupeLogoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.9rem' }}>📂</span>}
               </div>
               <span style={{ fontSize: '0.82rem', color: newGroupeLogoFile ? '#374151' : '#9ca3af', fontWeight: '600' }}>
                 {extractingColors ? '⏳ Analyse...' : newGroupeLogoFile ? newGroupeLogoFile.name : 'Choisir un logo...'}
@@ -360,10 +360,10 @@ export default function Clients() {
               <div style={{ background: pickingFor ? '#fffbeb' : '#f9fafb', borderRadius: 10, padding: '0.6rem', border: `1.5px solid ${pickingFor ? '#f59e0b' : '#e5e7eb'}` }}>
                 {pickingFor && <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', fontWeight: '700', color: '#d97706', textAlign: 'center' }}>🎨 Cliquez sur le logo pour choisir la couleur {pickingFor === 'primary' ? 'principale' : 'secondaire'}</p>}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <img ref={logoPickRef} src={newGroupeLogoPreview} alt="logo" onClick={pickingFor ? handleLogoColorPickGroupe : undefined} crossOrigin="anonymous"
+                  <img loading="lazy" ref={logoPickRef} src={newGroupeLogoPreview} alt="logo" onClick={pickingFor ? handleLogoColorPickGroupe : undefined} crossOrigin="anonymous"
                     style={{ height: pickingFor ? 90 : 48, maxWidth: '100%', objectFit: 'contain', borderRadius: 7, cursor: pickingFor ? 'crosshair' : 'default', outline: pickingFor ? '2px solid #f59e0b' : 'none' }} />
                 </div>
-                {pickingFor && <button onClick={() => setPickingFor(null)} style={{ display: 'block', margin: '0.4rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#9ca3af' }}>Annuler</button>}
+                {pickingFor && <button onClick={() => setPickingFor(null)} style={{ display: 'block', margin: '0.4rem auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#6b7280' }}>Annuler</button>}
               </div>
             )}
             {/* Couleurs */}
@@ -373,10 +373,10 @@ export default function Clients() {
                   <>
                     <input type="color" value={newGroupeCouleur} onChange={e => setNewGroupeCouleur(e.target.value)} style={{ width: 30, height: 26, border: '1.5px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', padding: '2px', background: 'white' }} />
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Principale</span>
-                    <button onClick={() => setNewGroupeCouleur('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                    <button onClick={() => setNewGroupeCouleur('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
                   </>
                 ) : (
-                  <button onClick={() => setNewGroupeCouleur('#6366f1')} style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 7, padding: '0.2rem 0.65rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>+ Couleur principale</button>
+                  <button onClick={() => setNewGroupeCouleur('#6366f1')} style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 7, padding: '0.2rem 0.65rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>+ Couleur principale</button>
                 )}
                 {newGroupeLogoPreview && newGroupeCouleur && (
                   <button onClick={() => setPickingFor(pickingFor === 'primary' ? null : 'primary')} style={{ background: pickingFor === 'primary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'primary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}>🎨</button>
@@ -387,10 +387,10 @@ export default function Clients() {
                   <>
                     <input type="color" value={newGroupeCouleur2} onChange={e => setNewGroupeCouleur2(e.target.value)} style={{ width: 30, height: 26, border: '1.5px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', padding: '2px', background: 'white' }} />
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700' }}>Secondaire</span>
-                    <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0 }}>✕</button>
+                    <button onClick={() => setNewGroupeCouleur2('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
                   </>
                 ) : (
-                  <button onClick={() => setNewGroupeCouleur2('#e5e7eb')} style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 7, padding: '0.2rem 0.65rem', fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', fontWeight: '600' }}>+ Couleur secondaire</button>
+                  <button onClick={() => setNewGroupeCouleur2('#e5e7eb')} style={{ background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: 7, padding: '0.2rem 0.65rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer', fontWeight: '600' }}>+ Couleur secondaire</button>
                 )}
                 {newGroupeLogoPreview && newGroupeCouleur2 && (
                   <button onClick={() => setPickingFor(pickingFor === 'secondary' ? null : 'secondary')} style={{ background: pickingFor === 'secondary' ? '#fef3c7' : '#f3f4f6', border: `1.5px solid ${pickingFor === 'secondary' ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, cursor: 'pointer', padding: '2px 6px', fontSize: '0.82rem' }}>🎨</button>
@@ -400,7 +400,7 @@ export default function Clients() {
             {/* Lien classement */}
             <div>
               <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.3rem' }}>
-                Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optionnel)</span>
+                Lien monclubhouse.ffr.fr <span style={{ fontWeight: 400, color: '#6b7280' }}>(optionnel)</span>
               </label>
               <input value={newGroupeUrl} onChange={e => setNewGroupeUrl(e.target.value)}
                 placeholder="https://monclubhouse.ffr.fr/clubs/..."
@@ -428,7 +428,7 @@ export default function Clients() {
       <div style={S.listCard}>
         <p style={S.listHeader}>CLIENTS ACTIFS — {filtered.length}</p>
         {filtered.length === 0 ? (
-          <p style={{ color: '#9ca3af', padding: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
+          <p style={{ color: '#6b7280', padding: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
             {search || activeCat || activeOffre !== 'tous' ? 'Aucun client pour ce filtre.' : "Aucun client pour l'instant."}
           </p>
         ) : (
@@ -440,10 +440,10 @@ export default function Clients() {
       {inactifs.length > 0 && (
         <div style={{ marginTop: '1.5rem' }}>
           <button onClick={() => setShowInactifs(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               CLIENTS INACTIFS — {inactifs.length}
             </span>
-            <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>{showInactifs ? '▲' : '▼'}</span>
+            <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>{showInactifs ? '▲' : '▼'}</span>
           </button>
           {showInactifs && (
             <div style={{ ...S.listCard, opacity: 0.75 }}>
@@ -467,14 +467,14 @@ function ClientRow({ client, i, navigate, onToggleActif, actif }) {
         onClick={() => navigate(`/client/${client.id}`)}>
         <div style={{ position: 'relative' }}>
           {client.avatar_url
-            ? <img src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
+            ? <img loading="lazy" src={client.avatar_url} alt={client.prenom} style={{ ...S.avatar, objectFit: 'cover' }} />
             : <div style={{ ...S.avatar, background: av.bg, color: av.text }}>{av.initiales}</div>}
           {cat && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 11, height: 11, borderRadius: '50%', background: cat.couleur, border: '2px solid white' }} />}
         </div>
         <div>
           <p style={{ ...S.clientName, color: actif ? '#333333' : '#9ca3af' }}>{client.prenom} {client.nom}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            {client.objectif && <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: 0 }}>{client.objectif}</p>}
+            {client.objectif && <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0 }}>{client.objectif}</p>}
             {cat && <span style={{ fontSize: '0.7rem', color: cat.couleur, fontWeight: '700' }}>· {cat.nom}</span>}
           </div>
         </div>
@@ -512,11 +512,11 @@ const S = {
   page:        { padding: '2rem', maxWidth: '900px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
   pageTitle:   { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
-  pageSubtitle:{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
+  pageSubtitle:{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
   btnPrimary:  { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '12px', padding: '0.7rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' },
   catTab:      { padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   listCard:    { background: 'white', borderRadius: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' },
-  listHeader:  { fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em', padding: '1rem 1.5rem 0.5rem', margin: 0 },
+  listHeader:  { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', letterSpacing: '0.1em', padding: '1rem 1.5rem 0.5rem', margin: 0 },
   listRow:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.25rem' },
   avatar:      { width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.875rem', flexShrink: 0 },
   clientName:  { fontWeight: '700', fontSize: '0.95rem', margin: '0 0 0.15rem' },

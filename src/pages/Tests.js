@@ -96,7 +96,7 @@ export default function Tests() {
     return point
   })
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Chargement...</div>
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Chargement...</div>
 
   return (
     <div style={S.page}>
@@ -117,7 +117,7 @@ export default function Tests() {
               {t.nom}{t.unite ? ` (${t.unite})` : ''}
             </button>
             <button onClick={() => deleteType(t.id)}
-              style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#9ca3af', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
+              style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
           </div>
         ))}
 
@@ -129,7 +129,7 @@ export default function Tests() {
             <input value={newTypeUnite} onChange={e => setNewTypeUnite(e.target.value)}
               placeholder="Unité (kg, s, m…)" style={{ padding: '0.4rem 0.7rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', outline: 'none', width: 130 }} />
             <button onClick={addType} style={S.btnSm}>OK</button>
-            <button onClick={() => setShowAddType(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setShowAddType(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}>✕</button>
           </div>
         ) : (
           <button onClick={() => setShowAddType(true)} style={S.addTypeBtn}>+ Nouveau test</button>
@@ -196,7 +196,7 @@ export default function Tests() {
           <div style={S.listCard}>
             <p style={S.listHeader}>RÉSULTATS · {resultats.length}</p>
             {resultats.length === 0 ? (
-              <p style={{ color: '#9ca3af', padding: '1.5rem', textAlign: 'center' }}>Aucun résultat pour ce test.</p>
+              <p style={{ color: '#6b7280', padding: '1.5rem', textAlign: 'center' }}>Aucun résultat pour ce test.</p>
             ) : (
               [...resultats].reverse().map((r, i) => (
                 <div key={r.id} style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
@@ -204,13 +204,13 @@ export default function Tests() {
                     <p style={S.clientName}>{r.clients?.prenom} {r.clients?.nom}</p>
                     <p style={S.clientSub}>
                       {new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      {r.notes && <span style={{ color: '#9ca3af' }}> · {r.notes}</span>}
+                      {r.notes && <span style={{ color: '#6b7280' }}> · {r.notes}</span>}
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={S.valeur}>
                       {r.valeur}
-                      {selectedType.unite && <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginLeft: 2 }}>{selectedType.unite}</span>}
+                      {selectedType.unite && <span style={{ fontSize: '0.72rem', color: '#6b7280', marginLeft: 2 }}>{selectedType.unite}</span>}
                     </span>
                     <button onClick={() => deleteResult(r.id)} style={S.deleteBtn}>✕</button>
                   </div>
@@ -228,18 +228,18 @@ const S = {
   page:        { padding: '2rem', maxWidth: '900px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' },
   pageTitle:   { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
-  pageSubtitle:{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.25rem' },
+  pageSubtitle:{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
   typeTab:     { padding: '0.45rem 1rem', borderRadius: '999px', border: 'none', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer' },
-  addTypeBtn:  { padding: '0.45rem 1rem', borderRadius: '999px', border: '1.5px dashed #d1d5db', background: 'white', color: '#9ca3af', fontWeight: '600', fontSize: '0.82rem', cursor: 'pointer' },
+  addTypeBtn:  { padding: '0.45rem 1rem', borderRadius: '999px', border: '1.5px dashed #d1d5db', background: 'white', color: '#6b7280', fontWeight: '600', fontSize: '0.82rem', cursor: 'pointer' },
   card:        { background: 'white', borderRadius: 16, padding: '1.25rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   cardLabel:   { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
   listCard:    { background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' },
-  listHeader:  { fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em', padding: '1rem 1.5rem 0.5rem', margin: 0 },
+  listHeader:  { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', letterSpacing: '0.1em', padding: '1rem 1.5rem 0.5rem', margin: 0 },
   listRow:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.5rem' },
   clientName:  { fontWeight: '700', fontSize: '0.9rem', color: '#333333', margin: '0 0 0.1rem' },
   clientSub:   { fontSize: '0.78rem', color: '#6b7280', margin: 0 },
   valeur:      { fontSize: '1.2rem', fontWeight: '800', color: '#333333' },
-  emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   btnPrimary:  { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.7rem', width: '100%', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' },
   btnSm:       { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },
   deleteBtn:   { background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' },

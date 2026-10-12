@@ -36,7 +36,7 @@ function CustomTooltip({ active, payload, label }) {
     <div style={{ background: '#1a1a1a', color: 'white', borderRadius: 10, padding: '0.5rem 0.75rem', fontSize: '0.78rem', lineHeight: 1.6, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
       <div style={{ fontWeight: 800, color: '#e4f816', marginBottom: 2 }}>{label}</div>
       <div>{Math.round(d?.kcalMange || 0)} kcal mangés</div>
-      {d?.kcalPrevu > 0 && <div style={{ color: '#9ca3af' }}>objectif : {d.kcalPrevu} kcal</div>}
+      {d?.kcalPrevu > 0 && <div style={{ color: '#6b7280' }}>objectif : {d.kcalPrevu} kcal</div>}
       {d?.adherPct !== null && <div style={{ color: adherenceColor(d.adherPct) }}>adhérence : {d.adherPct}%</div>}
     </div>
   )
@@ -162,7 +162,7 @@ export default function HistoriqueNutrition() {
         <span style={S.headerTitle}>Historique</span>
         <div style={{ width: 32 }} />
       </div>
-      <div style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>Chargement…</div>
+      <div style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>Chargement…</div>
       <ClientBottomNav />
     </div>
   )
@@ -196,7 +196,7 @@ export default function HistoriqueNutrition() {
             </div>
 
             {datesLoggued.length === 0 ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.83rem', textAlign: 'center', margin: '0.5rem 0 0', lineHeight: 1.5 }}>
+              <p style={{ color: '#6b7280', fontSize: '0.83rem', textAlign: 'center', margin: '0.5rem 0 0', lineHeight: 1.5 }}>
                 Commence à cocher tes repas depuis la page plan pour voir tes stats ici.
               </p>
             ) : (
@@ -259,7 +259,7 @@ export default function HistoriqueNutrition() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: 6 }}>
               {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                <span key={i} style={{ textAlign: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>{d}</span>
+                <span key={i} style={{ textAlign: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>{d}</span>
               ))}
             </div>
             <CalendarGrid dayStats={dayStats} />
@@ -325,5 +325,5 @@ const S = {
   card:       { background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' },
   cardTitle:  { fontSize: '0.92rem', fontWeight: 800, color: '#1a1a1a' },
-  cardSub:    { fontSize: '0.74rem', fontWeight: 600, color: '#9ca3af' },
+  cardSub:    { fontSize: '0.74rem', fontWeight: 600, color: '#6b7280' },
 }

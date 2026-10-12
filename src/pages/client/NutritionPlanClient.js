@@ -42,7 +42,7 @@ const MEAL_LABELS = {
   collation:   { label: 'Collation',   color: '#22c55e' },
   diner:       { label: 'Dîner',       color: '#8b5cf6' },
   collation_2: { label: 'Collation 2', color: '#f97316' },
-  autre:       { label: 'Autre',       color: '#9ca3af' },
+  autre:       { label: 'Autre',       color: '#6b7280' },
 }
 
 const TYPE_JOUR_LABELS = {
@@ -65,7 +65,7 @@ function getPlanDayNumber(dateISO, plan) {
 // ─── Composant carte repas (hooks autorisés ici) ──────────────────────────────
 function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
   const [expanded, setExpanded] = useState(false)
-  const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#9ca3af' }
+  const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#6b7280' }
   const statut = log?.statut || null
   const foods = (meal.nutrition_plan_foods || []).sort((a, b) => a.ordre - b.ordre)
 
@@ -78,7 +78,7 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
         <div style={{ flex: 1, textAlign: 'left' }}>
           <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</div>
-          <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
+          <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1 }}>
             {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`, meal.fat_g && `L ${meal.fat_g}g`].filter(Boolean).join(' · ')}
           </div>
         </div>
@@ -105,7 +105,7 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
               {foods.map(food => (
                 <div key={food.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f9fafb' }}>
                   <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{food.nom}</span>
-                  <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>
                     {food.quantite_g ? `${food.quantite_g}g` : ''}{food.kcal ? ` · ${food.kcal} kcal` : ''}
                   </span>
                 </div>
@@ -153,7 +153,7 @@ function ExtraCard({ log, onDelete }) {
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366f1', display: 'inline-block', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>{log.hors_plan_nom || 'Repas ajouté'}</div>
-          <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 1 }}>
+          <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1 }}>
             {[log.hors_plan_kcal && `${log.hors_plan_kcal} kcal`, log.hors_plan_prot && `P ${log.hors_plan_prot}g`, log.hors_plan_carbs && `G ${log.hors_plan_carbs}g`, log.hors_plan_fat && `L ${log.hors_plan_fat}g`].filter(Boolean).join(' · ') || 'Sans info nutritionnelle'}
           </div>
         </div>
@@ -472,7 +472,7 @@ export default function NutritionPlanClient() {
         <span style={{ color: 'white', fontWeight: 800, fontSize: '1rem' }}>Nutrition</span>
         <div style={{ width: 32 }} />
       </div>
-      <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>Chargement…</div>
+      <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>Chargement…</div>
       <ClientBottomNav />
     </div>
   )
@@ -600,14 +600,14 @@ export default function NutritionPlanClient() {
                 <div style={{ fontWeight: 800, fontSize: '0.83rem', color: '#1a1a1a', marginBottom: 4 }}>
                   Jour {day.jour_numero} — {day.label}
                   {(day.objectif_kcal || plan.objectif_kcal) && (
-                    <span style={{ color: '#9ca3af', fontWeight: 500, marginLeft: 6 }}>
+                    <span style={{ color: '#6b7280', fontWeight: 500, marginLeft: 6 }}>
                       {day.objectif_kcal || plan.objectif_kcal} kcal
                     </span>
                   )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {(day.nutrition_plan_meals || []).sort((a, b) => a.ordre - b.ordre).map(meal => {
-                    const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#9ca3af' }
+                    const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#6b7280' }
                     const foods = (meal.nutrition_plan_foods || []).sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
                     return (
                       <div key={meal.id} style={S.weekMealCard}>
@@ -615,7 +615,7 @@ export default function NutritionPlanClient() {
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0, transform: 'translateY(-1px)' }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</span>
-                            <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#6b7280' }}>
                               {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`, meal.fat_g && `L ${meal.fat_g}g`].filter(Boolean).join(' · ')}
                             </div>
                           </div>
@@ -666,12 +666,12 @@ export default function NutritionPlanClient() {
                 : 'Liste complète pour les 7 jours. Les quantités sont cumulées.'}
             </p>
             {shoppingList.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>Aucun aliment dans le plan.</div>
+              <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem 0' }}>Aucun aliment dans le plan.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {shoppingList.map(groupe => (
                   <div key={groupe.rayon}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{groupe.rayon}</div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{groupe.rayon}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {groupe.items.map((item, i) => <ShoppingItem key={i} item={item} />)}
                     </div>
@@ -817,7 +817,7 @@ function ShoppingItem({ item }) {
       </div>
       <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a1a1a', flex: 1, textDecoration: checked ? 'line-through' : 'none' }}>{item.nom}</span>
       {item.quantite > 0 && (
-        <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: 600 }}>
+        <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
           {item.count > 1 ? `${Math.round(item.quantite)}g / sem.` : `${Math.round(item.quantite)}g`}
         </span>
       )}
@@ -833,7 +833,7 @@ const S = {
   tabBar:  { background: 'var(--header-bg)', display: 'flex', borderTop: '1px solid rgba(255,255,255,0.1)', position: 'sticky', top: 56, zIndex: 59 },
   content: { padding: '14px 14px 150px', display: 'flex', flexDirection: 'column', gap: '10px' },
   dateNav: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', borderRadius: 14, padding: '10px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  dateArrow: { background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.3rem', cursor: 'pointer', padding: '0 4px' },
+  dateArrow: { background: 'none', border: 'none', color: '#6b7280', fontSize: '1.3rem', cursor: 'pointer', padding: '0 4px' },
   kcalCard: { background: 'var(--header-bg)', borderRadius: 18, padding: '16px 18px' },
   macrosCard: { background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   mealCard: { background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
@@ -861,7 +861,7 @@ const S = {
   },
   overlay: { position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end' },
   sheet: { background: 'white', borderRadius: '22px 22px 0 0', padding: '1rem 1.25rem 2.5rem', width: '100%', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' },
-  fieldLabel: { display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '0.3rem' },
+  fieldLabel: { display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '0.3rem' },
   fieldInput: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit' },
   cancelBtn: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280', fontFamily: 'inherit' },
   saveBtn:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit' },

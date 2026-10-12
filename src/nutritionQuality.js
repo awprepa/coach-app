@@ -9,7 +9,7 @@ export function noteMatieresGrasses(g) {
 }
 export function noteProteines(g) {
   if (g == null) return null
-  if (g < 5) return { label: 'Faible', color: '#9ca3af' }
+  if (g < 5) return { label: 'Faible', color: '#6b7280' }
   if (g < 15) return { label: 'Correct', color: '#ca8a04' }
   return { label: 'Riche', color: '#16a34a' }
 }

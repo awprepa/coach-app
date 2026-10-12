@@ -79,7 +79,7 @@ const S = {
   backBtn:      { background: 'none', border: 'none', color: 'white', fontSize: '1.6rem', cursor: 'pointer', width: 32, lineHeight: 1 },
   headerTitle:  { fontSize: '0.95rem', fontWeight: 800, color: 'white' },
   content:      { padding: '1.5rem 1.25rem', maxWidth: 600, margin: '0 auto', paddingBottom: '3rem' },
-  version:      { fontSize: '0.75rem', color: '#9ca3af', marginBottom: '1.5rem' },
+  version:      { fontSize: '0.75rem', color: '#6b7280', marginBottom: '1.5rem' },
   article:      { background: 'white', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   articleTitre: { fontWeight: 800, fontSize: '0.85rem', color: '#333333', margin: '0 0 0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
   articleTexte: { fontSize: '0.85rem', color: '#4b5563', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' },

@@ -388,7 +388,7 @@ export default function GPS() {
             {preview.map((s, i) => (
               <div key={i} style={S.previewRow}>
                 <div style={{ fontWeight: '700', fontSize: '0.8rem' }}>{s.nom}</div>
-                <div style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{s.date} · {s.lignes.length} lignes</div>
+                <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>{s.date} · {s.lignes.length} lignes</div>
               </div>
             ))}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
@@ -497,7 +497,7 @@ export default function GPS() {
           <div style={S.empty}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📡</div>
             <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#374151' }}>Données GPS</div>
-            <div style={{ color: '#9ca3af', marginTop: '0.5rem' }}>Importez un rapport Catapult ou sélectionnez une session</div>
+            <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>Importez un rapport Catapult ou sélectionnez une session</div>
           </div>
         ) : (
           <>
@@ -784,16 +784,16 @@ const S = {
   btnCancel:     { flex: 1, background: '#374151', color: 'white', border: 'none', borderRadius: '7px', padding: '0.4rem', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' },
   dimText:       { color: '#6b7280', fontSize: '0.8rem', padding: '1rem', textAlign: 'center' },
   main:          { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  empty:         { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' },
+  empty:         { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#6b7280' },
   mainHeader:    { background: 'linear-gradient(135deg,#333333,#1f2937)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' },
   mainTitle:     { color: 'white', fontWeight: '800', fontSize: '1.1rem', marginBottom: '0.2rem' },
-  mainMeta:      { color: '#9ca3af', fontSize: '0.8rem' },
+  mainMeta:      { color: '#6b7280', fontSize: '0.8rem' },
   toggle:        { display: 'flex', background: 'rgba(255,255,255,0.07)', borderRadius: '8px', padding: '3px' },
   toggleBtn:     { background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', padding: '0.3rem 0.8rem', borderRadius: '6px', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' },
   toggleActive:  { background: '#e4f816', color: '#333333' },
   cfgBtn:        { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '8px', padding: '0.4rem 0.9rem', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' },
   metaCfg:       { background: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.5rem' },
-  metaGroup:     { fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  metaGroup:     { fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
   metaChip:      { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', border: '1.5px solid #e5e7eb', fontSize: '0.78rem', fontWeight: '600', color: '#374151', cursor: 'pointer', userSelect: 'none' },
   metaChipOn:    { background: '#333333', color: '#e4f816', borderColor: '#333333' },
   tabs:          { display: 'flex', background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 1.5rem' },
