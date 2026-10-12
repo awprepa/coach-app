@@ -689,7 +689,7 @@ function MealBlock({ meal, onEditFood, onEditMeal }) {
       )}
 
       {(meal.nutrition_plan_foods || []).sort((a, b) => a.ordre - b.ordre).map(food => (
-        <div key={food.id} style={S.foodRow} onClick={() => onEditFood(meal.id, food)}>
+        <div role="button" tabIndex={0} key={food.id} style={S.foodRow} onClick={() => onEditFood(meal.id, food)}>
           <span style={{ fontWeight: 600, fontSize: '0.78rem', color: '#374151', flex: 1 }}>{food.nom}</span>
           <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>
             {food.quantite_g ? `${food.quantite_g}g` : ''}{food.kcal ? ` · ${food.kcal} kcal` : ''}

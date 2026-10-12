@@ -80,7 +80,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.68rem', color: '#9a9a9a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.7rem', color: '#9a9a9a' }}>
               <span>{q.desc[0]}</span><span>{q.desc[3]}</span>
             </div>
           </div>
@@ -112,7 +112,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
 const W = {
   overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
   card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380, maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box' },
-  subtitle:  { fontSize: '0.68rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
+  subtitle:  { fontSize: '0.7rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
   title:     { fontSize: '1.35rem', fontWeight: '700', color: '#222222', margin: 0 },
   qLabel:    { fontSize: '0.88rem', fontWeight: '700', color: '#222222', margin: 0 },
   qBtn:      { height: 42, borderRadius: 10, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' },

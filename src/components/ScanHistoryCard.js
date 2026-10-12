@@ -135,7 +135,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
   const gc = GRADE_COLOR[scan.quality_grade] || '#9ca3af'
 
   return (
-    <div style={{ background: 'white', borderRadius: 16, padding: '0.95rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', cursor: 'pointer' }}
+    <div role="button" tabIndex={0} style={{ background: 'white', borderRadius: 16, padding: '0.95rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', cursor: 'pointer' }}
       onClick={() => setExpanded(e => !e)}>
       <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
         <div style={{
@@ -170,7 +170,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
             {scan.fat_100g   != null && <Chip label={`L ${Math.round(scan.fat_100g)}g`}   bg="#fee2e2" color="#991b1b" />}
           </div>
 
-          <p style={{ fontSize: '0.62rem', color: '#d1d5db', fontWeight: 600, margin: '0.45rem 0 0' }}>
+          <p style={{ fontSize: '0.62rem', color: '#6b7280', fontWeight: 600, margin: '0.45rem 0 0' }}>
             {formatDate(scan.scanned_at)}
           </p>
         </div>

@@ -57,9 +57,9 @@ function parseExcelForClient(file) {
                 intensite: row.findIndex(c => /intensit[eé]/i.test(c)),
                 poids: [],
               }
-              row.forEach((c, idx) => {
-                if (/poids\s*s?\d+/i.test(c)) colMap.poids.push({ idx, sem: colMap.poids.length + 1 })
-              })
+              for (let idx = 0; idx < row.length; idx++) {
+                if (/poids\s*s?\d+/i.test(row[idx])) colMap.poids.push({ idx, sem: colMap.poids.length + 1 })
+              }
 
               // Session name: look back up to 4 rows, keep furthest valid title
               let sessionName = sheetName
@@ -244,7 +244,7 @@ export default function ImportClientExcel() {
         {/* ── Étape 1 : Upload ── */}
         {step === 'upload' && (
           <div>
-            <div
+            <div role="button" tabIndex={0}
               onClick={() => fileRef.current.click()}
               onDragOver={ev => ev.preventDefault()}
               onDrop={ev => { ev.preventDefault(); const f = ev.dataTransfer.files[0]; if (f) { fileRef.current.files = ev.dataTransfer.files; handleFile({ target: { files: [f] } }) } }}
@@ -283,7 +283,7 @@ export default function ImportClientExcel() {
                 return (
                   <div key={i} style={{ ...S.card, border: `1.5px solid ${isSelected ? '#111827' : '#e5e7eb'}` }}>
                     {/* En-tête de la carte */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', cursor: 'pointer' }}
+                    <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', cursor: 'pointer' }}
                       onClick={() => setSelected(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })}>
                       <div style={{ ...S.checkbox, background: isSelected ? '#111827' : 'white', borderColor: isSelected ? '#111827' : '#d1d5db' }}>
                         {isSelected && <span style={{ color: '#e4f816', fontSize: '0.65rem', fontWeight: '900' }}>✓</span>}

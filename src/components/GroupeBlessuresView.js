@@ -400,7 +400,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                       })}
                     </div>
                     {allSteps[idx]?.description && (
-                      <p style={S.palierDesc} onClick={() => setDetailPalier({ ep, idx })}>{allSteps[idx].description}</p>
+                      <p role="button" tabIndex={0} style={S.palierDesc} onClick={() => setDetailPalier({ ep, idx })}>{allSteps[idx].description}</p>
                     )}
 
                     <div style={S.caseFoot}>
@@ -424,7 +424,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
           ) : (
             <div style={S.indispoList}>
               {currentCases.map(({ joueur, ep }) => (
-                <div key={ep.id} style={S.indispoRow} onClick={() => openEdit(joueur, ep)}>
+                <div role="button" tabIndex={0} key={ep.id} style={S.indispoRow} onClick={() => openEdit(joueur, ep)}>
                   <div style={S.avatarSmall}>{initiales(joueur.prenom, joueur.nom)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={S.indispoName}>{joueur.prenom} {joueur.nom}</p>
@@ -492,7 +492,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             <div style={S.statLine}><span style={S.statLbl}>Retour prévu sous 7 jours</span><span style={S.statVal}>{saisonStats.retourProche}</span></div>
             <div style={S.statLine}><span style={S.statLbl}>Jours d'indispo cumulés</span><span style={S.statVal}>{saisonStats.joursCumules}</span></div>
             <div style={S.statLine}><span style={S.statLbl}>Durée moyenne d'arrêt</span><span style={S.statVal}>{saisonStats.dureeMoyenne} jour{saisonStats.dureeMoyenne > 1 ? 's' : ''}</span></div>
-            <div style={{ ...S.statLine, cursor: saisonStats.recidives > 0 ? 'pointer' : 'default' }} onClick={() => saisonStats.recidives > 0 && setShowRecidives(v => !v)}>
+            <div role="button" tabIndex={0} style={{ ...S.statLine, cursor: saisonStats.recidives > 0 ? 'pointer' : 'default' }} onClick={() => saisonStats.recidives > 0 && setShowRecidives(v => !v)}>
               <span style={S.statLbl}>Blessures avec récidive</span>
               <span style={{ ...S.statVal, color: saisonStats.recidives > 0 ? accent : undefined, textDecoration: saisonStats.recidives > 0 ? 'underline' : 'none' }}>
                 {saisonStats.recidives}{saisonStats.recidives > 0 ? (showRecidives ? ' ▲' : ' ▾') : ''}
@@ -504,7 +504,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                   <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
                     <p style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', fontWeight: 800 }}>{g.joueur.prenom} {g.joueur.nom} <span style={{ fontWeight: 600, color: '#6b7280' }}>· {g.zone}</span></p>
                     {g.episodes.map(ep => (
-                      <div key={ep.id} onClick={() => openEdit(g.joueur, ep)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#6b7280', padding: '0.15rem 0', cursor: 'pointer' }}>
+                      <div role="button" tabIndex={0} key={ep.id} onClick={() => openEdit(g.joueur, ep)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#6b7280', padding: '0.15rem 0', cursor: 'pointer' }}>
                         <span>{formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}</span>
                         <span>{dureeEpisode(ep)} j</span>
                       </div>
@@ -538,7 +538,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', paddingLeft: '2.5rem' }}>
               {episodes.map(ep => (
-                <div key={ep.id} onClick={() => openEdit(joueur, ep)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.76rem', cursor: 'pointer' }}>
+                <div role="button" tabIndex={0} key={ep.id} onClick={() => openEdit(joueur, ep)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.76rem', cursor: 'pointer' }}>
                   <span style={{ color: '#6b7280', width: 170, flexShrink: 0 }}>
                     {formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}
                   </span>
@@ -885,7 +885,7 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
             const enCours = ep.statut !== 'ok'
             const dates = `${fmtShort(d0)} → ${ep.date_fin_reelle ? fmtShort(new Date(ep.date_fin_reelle + 'T00:00:00')) : fmtShort(today) + ' (en cours)'}`
             return (
-              <div key={ep.id} onClick={() => onEdit(joueur, ep)}
+              <div role="button" tabIndex={0} key={ep.id} onClick={() => onEdit(joueur, ep)}
                 style={{ ...S.gBar, left: `${left}%`, width: `${width}%`, background: color, opacity: enCours ? 1 : 0.45 }}
                 title={`${joueur.prenom} ${joueur.nom} — ${labelLesion(ep)} : ${dates}`}>
                 {width > 7 && <span style={S.gBarLbl}>{labelLesion(ep)} · {dates}</span>}

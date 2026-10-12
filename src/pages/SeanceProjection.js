@@ -425,7 +425,7 @@ export default function SeanceProjection() {
                           const media = resolveExerciseMedia(ex, variantImageMap, eff.progActif)
                           const thumb = thumbFromMedia(media)
                           return (
-                            <div onClick={() => thumb && setMediaModal({ nom: eff.nom, url: media })}
+                            <div role="button" tabIndex={0} onClick={() => thumb && setMediaModal({ nom: eff.nom, url: media })}
                               style={{
                                 width: 44, height: 44, borderRadius: 7, overflow: 'hidden', flexShrink: 0,
                                 background: blockColor + '22',

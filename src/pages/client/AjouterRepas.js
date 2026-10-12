@@ -40,7 +40,7 @@ function MacroPill({ label, value, color }) {
   return (
     <div style={{ textAlign: 'center', flex: 1 }}>
       <div style={{ fontSize: '0.85rem', fontWeight: 800, color }}>{Math.round(value * 10) / 10}g</div>
-      <div style={{ fontSize: '0.6rem', color: '#6b7280', marginTop: 1 }}>{label}</div>
+      <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>{label}</div>
     </div>
   )
 }
@@ -98,7 +98,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
         </p>
         <button onClick={onReset} style={{
           background: 'none', border: '1px solid #e5e7eb', borderRadius: 8,
-          padding: '3px 8px', fontSize: '0.68rem', color: '#6b7280', cursor: 'pointer',
+          padding: '3px 8px', fontSize: '0.7rem', color: '#6b7280', cursor: 'pointer',
         }}>
           Recommencer
         </button>
@@ -112,7 +112,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
       )}
 
       {analysis.confiance && (
-        <p style={{ fontSize: '0.66rem', color: '#6b7280', margin: '0 0 0.5rem' }}>
+        <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.5rem' }}>
           Confiance IA : {analysis.confiance}
         </p>
       )}
@@ -141,7 +141,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
                 }}
               />
               <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>{item.unit || 'g'}</span>
-              <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 'auto' }}>
+              <span style={{ fontSize: '0.7rem', color: '#6b7280', marginLeft: 'auto' }}>
                 P {Math.round((item.prot_g || 0) * 10) / 10}g ·
                 G {Math.round((item.carbs_g || 0) * 10) / 10}g ·
                 L {Math.round((item.fat_g || 0) * 10) / 10}g
@@ -159,7 +159,7 @@ function AIResults({ analysis, items, onUpdateQty, onReset, onRefine }) {
         <span style={{ fontSize: '1rem', fontWeight: 900, color: '#e4f816', flexShrink: 0 }}>
           {Math.round(totalKcal)} kcal
         </span>
-        <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
+        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>
           P {Math.round(totalProt * 10) / 10}g ·
           G {Math.round(totalCarbs * 10) / 10}g ·
           L {Math.round(totalFat * 10) / 10}g
@@ -873,7 +873,7 @@ export default function AjouterRepas() {
                 {/* ── Navigation par catégories (visible quand pas de saisie) ── */}
                 {searchTerm.length < 2 && (
                   <div style={{ marginTop: '0.75rem' }}>
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 0.5rem' }}>Parcourir par catégorie</p>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 0.5rem' }}>Parcourir par catégorie</p>
                     <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                       {CATEGORIES.map(cat => (
                         <button key={cat.key} onClick={() => loadCategory(cat.key)} style={{
@@ -911,7 +911,7 @@ export default function AjouterRepas() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   {[['kcal','Calories (kcal)','numeric'],['prot','Protéines (g)','decimal'],['carbs','Glucides (g)','decimal'],['fat','Lipides (g)','decimal']].map(([k, l, im]) => (
                     <div key={k}>
-                      <p style={{ fontSize: '0.65rem', color: '#6b7280', margin: '0 0 3px', fontWeight: 600 }}>{l}</p>
+                      <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 3px', fontWeight: 600 }}>{l}</p>
                       <input value={manualForm[k]} onChange={e => setManualForm(f => ({ ...f, [k]: e.target.value }))}
                         type="number" inputMode={im} placeholder="0" style={{ ...S.input, padding: '0.5rem 0.7rem' }} />
                     </div>
@@ -943,7 +943,7 @@ export default function AjouterRepas() {
                     }}>
                       <div>
                         <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1a1a' }}>{t.name}</div>
-                        {t.meal_type && <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1 }}>
+                        {t.meal_type && <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>
                           {MEAL_TYPES.find(m => m.key === t.meal_type)?.label || t.meal_type}
                           {t.use_count > 0 && ` · ${t.use_count}× utilisé`}
                         </div>}
@@ -952,7 +952,7 @@ export default function AjouterRepas() {
                         <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-fg-dark)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px' }}>
                           {t.kcal || '—'} kcal
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: 2 }}>
+                        <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 2 }}>
                           {[t.prot_g && `P ${t.prot_g}g`, t.carbs_g && `G ${t.carbs_g}g`, t.fat_g && `L ${t.fat_g}g`].filter(Boolean).join(' · ')}
                         </div>
                       </div>
@@ -996,7 +996,7 @@ export default function AjouterRepas() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scan.product_name}</div>
-                          {scan.brand && <div style={{ fontSize: '0.66rem', color: '#6b7280', marginTop: 1 }}>{scan.brand}</div>}
+                          {scan.brand && <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>{scan.brand}</div>}
                         </div>
                         <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-fg-dark)', background: '#1a1a1a', borderRadius: 8, padding: '2px 8px', flexShrink: 0 }}>
                           {scan.kcal_100g != null ? Math.round(scan.kcal_100g) : '—'} kcal
@@ -1304,7 +1304,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
 
       {/* Sélecteur de quantité */}
       <div style={{ background: '#f9fafb', borderRadius: 12, padding: '0.8rem', marginBottom: '0.85rem' }}>
-        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Quantité</p>
+        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Quantité</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <input type="number" inputMode="decimal" value={quantity} onChange={e => setQuantity(e.target.value)}
             style={{ width: 80, padding: '0.45rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '1rem', fontWeight: 800, textAlign: 'center', outline: 'none', background: 'white' }} />
@@ -1328,7 +1328,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
       {/* Valeurs pour la quantité choisie */}
       {macros && (
         <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '0.75rem 0.9rem' }}>
-          <p style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.45rem' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.45rem' }}>
             Valeurs pour {quantity}{unit}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1338,7 +1338,7 @@ function FoodCard({ food, quantity, setQuantity, macros, onClear }) {
             <MacroPill label="Lip"   value={macros.fat}   color="#f87171" />
           </div>
           {food.kcal_100 != null && parseFloat(quantity) !== 100 && (
-            <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.3)', margin: '0.35rem 0 0' }}>
+            <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', margin: '0.35rem 0 0' }}>
               Réf. 100{unit} : {Math.round(food.kcal_100)} kcal · P {food.prot_100 ?? '—'}g · G {food.carbs_100 ?? '—'}g · L {food.fat_100 ?? '—'}g
             </p>
           )}

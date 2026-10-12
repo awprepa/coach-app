@@ -283,7 +283,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
     const joueursPoste = joueursAuPoste(poste.num)
 
     return (
-      <div
+      <div role="button" tabIndex={0}
         onClick={() => openPanelPos(poste.num)}
         style={{ flex:1, maxWidth:300, borderRadius:11, overflow:'hidden',
           border:'2px solid #e5e7eb', cursor:'pointer',
@@ -424,7 +424,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
               const stBadgeBg = { ok:'#dcfce7', cond:'#fef3c7', out:'#fee2e2' }[s]
               const stBadgeColor = { ok:'#15803d', cond:'#b45309', out:'#b91c1c' }[s]
               return (
-                <div key={j.id}
+                <div role="button" tabIndex={0} key={j.id}
                   onClick={() => openPanelJoueur(j, panelPos)}
                   style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
                     background:stBg, borderRadius:9, marginBottom:5,
@@ -483,7 +483,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
         function VitalTile({ champ, label, valeur, unite, sub }) {
           const editing = editingVital === champ
           return (
-            <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px', cursor: editing ? 'default' : 'pointer' }}
+            <div role="button" tabIndex={0} style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:12, padding:'10px 12px', cursor: editing ? 'default' : 'pointer' }}
               onClick={() => { if (!editing) { setEditingVital(champ); setVitalDraft(valeur ?? '') } }}>
               <div style={{ fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em', color: '#6b7280', textTransform:'uppercase', marginBottom:5 }}>{label}</div>
               {editing ? (
@@ -499,7 +499,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                   {sub && <div style={{ fontSize:'0.62rem', color: '#6b7280', marginTop:2, fontWeight:600 }}>{sub}</div>}
                 </>
               ) : (
-                <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>
+                <div style={{ fontSize:'0.85rem', color: '#6b7280', fontWeight:700 }}>—</div>
               )}
             </div>
           )
@@ -567,7 +567,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                       <div style={{ fontSize:'1.05rem', fontWeight:900, color:'#16a34a' }}>{wInfo.score.toFixed(1)}<span style={{ fontSize:'0.65rem', fontWeight:700, color: '#6b7280', marginLeft:2 }}>/4</span></div>
                       <div style={{ fontSize:'0.62rem', color: '#6b7280', marginTop:2, fontWeight:600 }}>{new Date(wInfo.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
                     </>
-                  ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700 }}>—</div>}
+                  ) : <div style={{ fontSize:'0.85rem', color: '#6b7280', fontWeight:700 }}>—</div>}
                 </div>
               </div>
               </div>
@@ -627,7 +627,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
                               <div style={{ fontSize:'0.9rem', fontWeight:800, color:'#1a1a1a', marginTop:2 }}>{dernier.valeur}<span style={{ fontSize:'0.55rem', fontWeight:700, color: '#6b7280' }}>{unite}</span></div>
                               <div style={{ fontSize:'0.54rem', color: '#6b7280', marginTop:2 }}>{new Date(dernier.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
                             </>
-                          ) : <div style={{ fontSize:'0.85rem', color:'#d1d5db', fontWeight:700, marginTop:2 }}>—</div>}
+                          ) : <div style={{ fontSize:'0.85rem', color: '#6b7280', fontWeight:700, marginTop:2 }}>—</div>}
                         </div>
                       )
                     })}

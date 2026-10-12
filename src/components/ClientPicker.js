@@ -61,11 +61,11 @@ export default function ClientPicker({ value, onChange, clientFields, placeholde
               <p style={S.empty}>Chargement…</p>
             ) : openGroupe ? (
               <>
-                <div onClick={() => setOpenGroupe(null)} style={S.backRow}>← {openGroupe.nom}</div>
+                <div role="button" tabIndex={0} onClick={() => setOpenGroupe(null)} style={S.backRow}>← {openGroupe.nom}</div>
                 {membresFiltres.length === 0 ? (
                   <p style={S.empty}>Aucun membre trouvé.</p>
                 ) : membresFiltres.map(c => (
-                  <div key={c.id} onClick={() => select(c)} style={{ ...S.row, background: value === c.id ? '#f9fafb' : 'transparent' }}>
+                  <div role="button" tabIndex={0} key={c.id} onClick={() => select(c)} style={{ ...S.row, background: value === c.id ? '#f9fafb' : 'transparent' }}>
                     {c.prenom} {c.nom}
                   </div>
                 ))}
@@ -73,12 +73,12 @@ export default function ClientPicker({ value, onChange, clientFields, placeholde
             ) : (
               <>
                 {allowClear && !q && (
-                  <div onClick={() => { onChange(null, null); setOpen(false) }} style={{ ...S.row, fontWeight: 700, color: !value ? '#1a1a1a' : '#6b7280', borderBottom: '1px solid #f3f4f6' }}>
+                  <div role="button" tabIndex={0} onClick={() => { onChange(null, null); setOpen(false) }} style={{ ...S.row, fontWeight: 700, color: !value ? '#1a1a1a' : '#6b7280', borderBottom: '1px solid #f3f4f6' }}>
                     {clearLabel}
                   </div>
                 )}
                 {indivFiltres.map(c => (
-                  <div key={c.id} onClick={() => select(c)} style={{ ...S.row, background: value === c.id ? '#f9fafb' : 'transparent' }}>
+                  <div role="button" tabIndex={0} key={c.id} onClick={() => select(c)} style={{ ...S.row, background: value === c.id ? '#f9fafb' : 'transparent' }}>
                     {c.prenom} {c.nom}
                   </div>
                 ))}
@@ -86,7 +86,7 @@ export default function ClientPicker({ value, onChange, clientFields, placeholde
                   <>
                     {indivFiltres.length > 0 && <div style={S.sep} />}
                     {groupesFiltres.map(g => (
-                      <div key={g.id} onClick={() => setOpenGroupe(g)} style={S.groupRow}>
+                      <div role="button" tabIndex={0} key={g.id} onClick={() => setOpenGroupe(g)} style={S.groupRow}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: g.couleur || '#6b7280', flexShrink: 0 }} />
                         <span style={{ flex: 1, fontWeight: 700 }}>{g.nom}</span>
                         <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} ›</span>

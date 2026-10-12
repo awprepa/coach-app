@@ -83,5 +83,5 @@ const S = {
   article:      { background: 'white', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   articleTitre: { fontWeight: 800, fontSize: '0.85rem', color: '#333333', margin: '0 0 0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' },
   articleTexte: { fontSize: '0.85rem', color: '#4b5563', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' },
-  footer:       { fontSize: '0.75rem', color: '#d1d5db', textAlign: 'center', marginTop: '2rem' },
+  footer:       { fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', marginTop: '2rem' },
 }

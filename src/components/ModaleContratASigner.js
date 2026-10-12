@@ -1,7 +1,6 @@
 import AppLogo from './AppLogo'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { jsPDF } from 'jspdf'
 import { supabase } from '../supabase'
 import { sendNotif, getCoachId } from '../notifs'
 
@@ -11,7 +10,9 @@ function formatDate(d) {
 
 // Génère le PDF archivé du contrat signé — snapshot figé, jamais régénéré
 // après coup (c'est ce document, pas la page live, qui fait foi en cas de litige).
-function genererPdf(contrat, client, { ip, mention, dateSignature }) {
+async function genererPdf(contrat, client, { ip, mention, dateSignature }) {
+  // chargée à la demande : la bibliothèque PDF pèse ~1 Mo et ne sert qu'ici
+  const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const marge = 48
   let y = 60
@@ -88,7 +89,7 @@ export default function ModaleContratASigner({ contrat, clientId, onSigne }) {
       const dateSignature = new Date()
       const mentionTexte = mention.trim()
 
-      const pdfBase64 = genererPdf(contrat, client, { ip, mention: mentionTexte, dateSignature })
+      const pdfBase64 = await genererPdf(contrat, client, { ip, mention: mentionTexte, dateSignature })
       const pdfBytes = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0))
       const pdfPath = `${clientId}/${contrat.id}.pdf`
       const { error: upErr } = await supabase.storage.from('contrats-pdf')
@@ -161,7 +162,7 @@ export default function ModaleContratASigner({ contrat, clientId, onSigne }) {
           </button>
 
           <label style={S.checkLabel}>
-            <div style={{ ...S.checkbox, ...(checkedCgv ? S.checkboxOn : {}) }}
+            <div role="button" tabIndex={0} style={{ ...S.checkbox, ...(checkedCgv ? S.checkboxOn : {}) }}
               onClick={() => setCheckedCgv(v => !v)}>
               {checkedCgv && <span style={S.checkmark}>✓</span>}
             </div>
@@ -171,7 +172,7 @@ export default function ModaleContratASigner({ contrat, clientId, onSigne }) {
           </label>
 
           <label style={{ ...S.checkLabel, marginBottom: '1.1rem' }}>
-            <div style={{ ...S.checkbox, ...(checkedRetro ? S.checkboxOn : {}) }}
+            <div role="button" tabIndex={0} style={{ ...S.checkbox, ...(checkedRetro ? S.checkboxOn : {}) }}
               onClick={() => setCheckedRetro(v => !v)}>
               {checkedRetro && <span style={S.checkmark}>✓</span>}
             </div>

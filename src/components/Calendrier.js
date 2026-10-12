@@ -121,7 +121,7 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
       const ds = formatDate(day); const isToday = ds === todayStr; const isSel = ds === selectedStr
       const evs = eventsMap[ds] || []; const inCycle = !!cycleW
       cells.push(
-        <div key={ds} onClick={() => onDayClick(day)} style={{
+        <div role="button" tabIndex={0} key={ds} onClick={() => onDayClick(day)} style={{
           height: 46, overflow: 'hidden', boxSizing: 'border-box',
           background: isSel ? 'var(--chip-bg)' : inCycle ? '#fffef5' : 'white',
           borderRadius: 8, padding: '5px 4px', cursor: 'pointer',
@@ -164,7 +164,7 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
           const ds = formatDate(day); const isToday = ds === todayStr; const isSel = ds === selectedStr
           const evs = eventsMap[ds] || []
           return (
-            <div key={i} onClick={() => onDayClick(day)} style={{
+            <div role="button" tabIndex={0} key={i} onClick={() => onDayClick(day)} style={{
               height: 150, overflow: 'hidden', boxSizing: 'border-box',
               background: isSel ? 'var(--chip-bg)' : cycleW ? '#fffef5' : 'white',
               borderRadius: 12, padding: '10px 6px', cursor: 'pointer',
@@ -203,7 +203,7 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
             const ds = formatDate(day); const isToday = ds === todayStr; const isSel = ds === selectedStr
             const evs = eventsMap[ds] || []
             return (
-              <div key={di} onClick={() => onDayClick(day)} style={{
+              <div role="button" tabIndex={0} key={di} onClick={() => onDayClick(day)} style={{
                 height: 64, overflow: 'hidden', boxSizing: 'border-box',
                 background: isSel ? 'var(--chip-bg)' : '#fffef5', borderRadius: 7, padding: '5px',
                 cursor: 'pointer', border: isToday ? '2px solid var(--accent)' : '1px solid #f0ead0',

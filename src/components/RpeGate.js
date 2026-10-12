@@ -85,7 +85,7 @@ function Jauge({ value, onChange }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
         {[0, 5, 10].map(n => (
-          <span key={n} style={{ fontSize: '0.63rem', fontWeight: 700, color: '#b8bfc7' }}>{n}</span>
+          <span key={n} style={{ fontSize: '0.7rem', fontWeight: 700, color: '#b8bfc7' }}>{n}</span>
         ))}
       </div>
     </div>
@@ -207,7 +207,7 @@ function RpeOverlay({ clientId, evenement, onDone }) {
 const W = {
   overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
   card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380, maxHeight: '88vh', overflowY: 'auto', boxSizing: 'border-box' },
-  subtitle:  { fontSize: '0.68rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
+  subtitle:  { fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
   title:     { fontSize: '1.25rem', fontWeight: '800', color: '#333333', margin: 0 },
   qLabel:    { fontSize: '0.85rem', fontWeight: '700', color: '#374151', margin: '0 0 0.5rem' },
   submitBtn: { width: '100%', padding: '0.875rem', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', marginTop: '0.5rem' },

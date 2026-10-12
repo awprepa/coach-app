@@ -52,7 +52,7 @@ export default function Icon({ name, size = 16, style, title }) {
     <svg
       width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : true}
+      data-icon={name} role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : true}
       style={{ flexShrink: 0, verticalAlign: '-0.15em', ...style }}
     >
       {content}

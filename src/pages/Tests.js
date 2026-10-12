@@ -242,5 +242,5 @@ const S = {
   emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   btnPrimary:  { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.7rem', width: '100%', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' },
   btnSm:       { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0.35rem 0.85rem', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' },
-  deleteBtn:   { background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' },
+  deleteBtn:   { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' },
 }

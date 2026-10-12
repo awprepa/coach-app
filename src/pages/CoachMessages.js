@@ -326,7 +326,7 @@ const S = {
   convTime: {
     margin: '0.15rem 0 0',
     fontSize: '0.7rem',
-    color: '#d1d5db',
+    color: '#6b7280',
   },
   badge: {
     background: '#e4f816',

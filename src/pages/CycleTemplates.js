@@ -275,13 +275,13 @@ export default function CycleTemplates() {
       const isPreviewed = previewCycleId === t.id
       return (
         <div key={t.id} style={S.card}>
-          <div style={{ ...S.cardHeader, cursor: 'pointer' }} onClick={() => togglePreview(t.id)}>
+          <div role="button" tabIndex={0} style={{ ...S.cardHeader, cursor: 'pointer' }} onClick={() => togglePreview(t.id)}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={S.cardTitle}>{t.nom}</div>
               {t.description && <div style={S.cardDesc}>{t.description}</div>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-              <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isPreviewed ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+              <span style={{ color: '#9ca3af', fontSize: '1.1rem', transform: isPreviewed ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
               <div style={S.badge}>{t.semaines} sem.</div>
               {/* Bouton déplacer */}
               <div style={{ position: 'relative' }}>
@@ -294,11 +294,11 @@ export default function CycleTemplates() {
                 </button>
                 {movingId === t.id && (
                   <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
-                    <div style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
+                    <div role="button" tabIndex={0} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
                       <span style={{ opacity: 0.5 }}>— Sans dossier</span>
                     </div>
                     {allFolders.map(f => (
-                      <div key={f} style={{ ...S.moveItem, fontWeight: t.dossier === f ? '700' : '500' }} onClick={() => deplacerDansFolder(t.id, f)}>
+                      <div role="button" tabIndex={0} key={f} style={{ ...S.moveItem, fontWeight: t.dossier === f ? '700' : '500' }} onClick={() => deplacerDansFolder(t.id, f)}>
                         {t.dossier === f ? '✓ ' : ''}{f}
                       </div>
                     ))}
@@ -346,7 +346,7 @@ export default function CycleTemplates() {
                         <span style={{ background: '#e5e7eb', color: '#374151', fontSize: '0.63rem', fontWeight: 700, borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>J{s.jour}</span>
                         <span style={{ flex: 1, fontWeight: 600, fontSize: '0.8rem', color: '#374151' }}>{s.nom || `Séance ${idx + 1}`}</span>
                         <span style={{ color: '#6b7280', fontSize: '0.7rem', flexShrink: 0 }}>{exs.length} ex.</span>
-                        <span style={{ color: '#d1d5db', fontSize: '1rem', transform: seanceOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>›</span>
+                        <span style={{ color: '#9ca3af', fontSize: '1rem', transform: seanceOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>›</span>
                       </div>
                       {seanceOpen && (
                         <div style={{ padding: '0.25rem 0.875rem 0.6rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -408,7 +408,7 @@ export default function CycleTemplates() {
     }
 
     return (
-      <div style={S.page} onClick={() => setMovingId(null)}>
+      <div role="button" tabIndex={0} style={S.page} onClick={() => setMovingId(null)}>
         <div style={S.header}>
           <div>
             <div style={S.title}>Templates de cycles</div>
@@ -459,7 +459,7 @@ export default function CycleTemplates() {
               const isOpen = openFolders.has(folderName)
               return (
                 <div key={folderName} style={S.folderBlock}>
-                  <div style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
+                  <div role="button" tabIndex={0} style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill={isOpen ? '#e4f816' : 'none'} stroke={isOpen ? '#333' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -483,7 +483,7 @@ export default function CycleTemplates() {
                       <button onClick={() => supprimerDossier(folderName)} style={S.btnIcon} title="Supprimer le dossier">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                       </button>
-                      <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
+                      <span role="button" tabIndex={0} style={{ color: '#6b7280', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
                         onClick={() => toggleFolder(folderName)}>›</span>
                     </div>
                   </div>

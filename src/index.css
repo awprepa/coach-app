@@ -61,3 +61,20 @@ input[type=number] {
   outline: 2px solid #1d4ed8 !important;
   outline-offset: 2px;
 }
+
+/* Tactile : champs à 16 px minimum (sinon iOS zoome la page au focus, ce qui
+   obligeait à bloquer le zoom pour tout le monde) et zones de toucher des
+   boutons élargies à ~44 px sans modifier la mise en page. */
+@media (pointer: coarse) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+  button:not([style*="position"]) { position: relative; }
+  button:not([style*="position"])::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}

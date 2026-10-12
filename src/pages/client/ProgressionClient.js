@@ -1185,7 +1185,7 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           {groupeLabel && (
             <span style={{
-              fontSize: '0.62rem', fontWeight: 800, color: 'var(--chip-text)',
+              fontSize: '0.7rem', fontWeight: 800, color: 'var(--chip-text)',
               background: 'var(--chip-bg)', borderRadius: 6,
               padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -1199,7 +1199,7 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
           </span>
           {hasFormula && (
             <span style={{
-              fontSize: '0.6rem', fontWeight: 700, color: '#6b7280',
+              fontSize: '0.7rem', fontWeight: 700, color: '#6b7280',
               flexShrink: 0,
             }}>1RM</span>
           )}
@@ -1243,7 +1243,7 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
                   {/* Label groupe */}
                   <div style={{
                     padding: '10px 20px 4px',
-                    fontSize: '0.65rem', fontWeight: 800,
+                    fontSize: '0.7rem', fontWeight: 800,
                     color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em',
                   }}>
                     {GROUPE_LABELS[g]}
@@ -1266,8 +1266,8 @@ function ExercicePicker({ exNames, exercicesData, selected, open, onOpen, onClos
                           color: isSelected ? '#1a1a1a' : '#374151',
                         }}>{nom}</span>
                         {hasF
-                          ? <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--accent-fg)', background: '#f0fdf4', borderRadius: 5, padding: '1px 6px' }}>1RM</span>
-                          : <span style={{ fontSize: '0.62rem', color: '#d1d5db' }}>poids</span>
+                          ? <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-fg)', background: '#f0fdf4', borderRadius: 5, padding: '1px 6px' }}>1RM</span>
+                          : <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>poids</span>
                         }
                       </button>
                     )
@@ -1362,7 +1362,7 @@ const S = {
     background: 'linear-gradient(90deg, #7cb8ff, #a7d1ff)',
   },
   statusSub: {
-    fontSize: '0.66rem',
+    fontSize: '0.7rem',
     color: 'rgba(255,255,255,0.62)',
     fontWeight: 700,
     margin: '7px 0 0',
@@ -1379,7 +1379,7 @@ const S = {
     borderRadius: 99,
   },
   levelSub: {
-    fontSize: '0.66rem',
+    fontSize: '0.7rem',
     color: '#6b7280',
     fontWeight: 600,
     margin: '3px 0 0',
@@ -1400,7 +1400,7 @@ const S = {
     gap: 4,
   },
   totalLabel: {
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     fontWeight: 600,
     color: '#6b7280',
     textTransform: 'uppercase',
@@ -1452,7 +1452,7 @@ const S = {
     margin: '14px 16px 4px',
   },
   medalsHint: {
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     color: '#6b7280',
     margin: '2px 0 10px',
     lineHeight: 1.4,
@@ -1474,7 +1474,7 @@ const S = {
     textAlign: 'center',
   },
   medalLabel: {
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     fontWeight: 700,
     color: '#6b7280',
     margin: 0,
@@ -1511,7 +1511,7 @@ const S = {
     margin: '2px 0 0',
   },
   exStatusNextTxt: {
-    fontSize: '0.64rem',
+    fontSize: '0.7rem',
     color: 'rgba(255,255,255,0.62)',
     fontWeight: 700,
     margin: '8px 0 0',
@@ -1534,13 +1534,13 @@ const S = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '0.64rem',
+    fontSize: '0.7rem',
     fontWeight: 900,
     color: 'white',
     background: 'rgba(255,255,255,0.16)',
   },
   exStatusLevelTitle: {
-    fontSize: '0.66rem',
+    fontSize: '0.7rem',
     fontWeight: 800,
     color: 'white',
     margin: '0 0 4px',
@@ -1557,8 +1557,8 @@ const S = {
     background: '#e4f816',
   },
   medalNoData: {
-    fontSize: '0.68rem',
-    color: '#d1d5db',
+    fontSize: '0.7rem',
+    color: '#6b7280',
     margin: '10px 0',
   },
   medalsMissing: {
@@ -1601,14 +1601,14 @@ const S = {
     cursor: 'default',
   },
   medalChipLevel: {
-    fontSize: '0.6rem',
+    fontSize: '0.7rem',
     fontWeight: 800,
     color: '#6b7280',
     margin: '0 0 3px',
     textAlign: 'center',
   },
   medalChipLabel: {
-    fontSize: '0.66rem',
+    fontSize: '0.7rem',
     fontWeight: 700,
     color: '#6b7280',
     margin: 0,
@@ -1646,7 +1646,7 @@ const S = {
     margin: 0,
   },
   percentileSub: {
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     color: '#6b7280',
     margin: '3px 0 0',
     lineHeight: 1.4,
@@ -1671,7 +1671,7 @@ const S = {
     color: '#1a1a1a',
   },
   percentileRankLabel: {
-    fontSize: '0.62rem',
+    fontSize: '0.7rem',
     fontWeight: 600,
     color: '#6b7280',
   },
@@ -1681,7 +1681,7 @@ const S = {
     paddingTop: 10,
   },
   baremeTitle: {
-    fontSize: '0.62rem',
+    fontSize: '0.7rem',
     fontWeight: 800,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -1707,7 +1707,7 @@ const S = {
     color: '#1a1a1a',
   },
   wrBadge: {
-    fontSize: '0.66rem',
+    fontSize: '0.7rem',
     fontWeight: 900,
     color: '#1e3a8a',
     background: '#fbbf24',
@@ -1728,7 +1728,7 @@ const S = {
   },
   wrGlobalSub: {
     flex: 1,
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     fontWeight: 700,
     color: '#c7d7fb',
     margin: 0,
@@ -1746,7 +1746,7 @@ const S = {
     alignItems: 'center',
   },
   groupLabel: {
-    fontSize: '0.62rem',
+    fontSize: '0.7rem',
     fontWeight: 800,
     color: '#6b7280',
     textTransform: 'uppercase',
@@ -1793,7 +1793,7 @@ const S = {
     gap: 4,
   },
   metricLabel: {
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     fontWeight: 600,
     color: '#6b7280',
     textTransform: 'uppercase',
@@ -1893,7 +1893,7 @@ const S = {
     color: 'var(--accent-fg-dark)',
   },
   absRecordLabel: {
-    fontSize: '0.68rem',
+    fontSize: '0.7rem',
     color: 'rgba(255,255,255,0.6)',
   },
 

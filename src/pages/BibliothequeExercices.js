@@ -596,7 +596,7 @@ export default function BibliothequeExercices() {
               const thumb = mediaThumbnail(ex.image_url)
               const isYt  = !!youtubeId(ex.image_url)
               return (
-                <div
+                <div role="button" tabIndex={0}
                   onClick={() => setMediaModal({ nom: ex.nom, url: ex.image_url })}
                   style={{ position: 'relative', cursor: 'pointer', background: '#111', height: 130, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
                 >
@@ -825,7 +825,7 @@ export default function BibliothequeExercices() {
               {gifTranslated && gifTranslated !== gifQuery && (
                 <p style={{ margin: '0.4rem 0 0', fontSize: '0.7rem', color: '#6b7280' }}>
                   Recherche en anglais : <strong style={{ color: '#6366f1' }}>{gifTranslated}</strong>
-                  <span style={{ marginLeft: 6, color: '#d1d5db' }}>· tape en EN directement pour affiner</span>
+                  <span style={{ marginLeft: 6, color: '#6b7280' }}>· tape en EN directement pour affiner</span>
                 </p>
               )}
             </div>

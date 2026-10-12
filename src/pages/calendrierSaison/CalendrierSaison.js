@@ -1033,7 +1033,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
           <div style={{ ...S.popover, left: pop.x, top: pop.y }} onClick={e => e.stopPropagation()}>
             <div style={S.popHead}>
               <span style={S.popDate}>{formatPopDate(pop.form.date)}</span>
-              <span style={{ color: '#9aa1ac', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }} onClick={() => setPop(null)}>×</span>
+              <span role="button" tabIndex={0} style={{ color: '#9aa1ac', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1 }} onClick={() => setPop(null)}>×</span>
             </div>
 
             {/* choix du type */}

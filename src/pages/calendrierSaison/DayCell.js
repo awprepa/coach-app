@@ -24,7 +24,7 @@ function ContenuJour({ evs, ffr, y, m, d, groupColor, draggingId, h }) {
         const bg = joue ? (gagne ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : '#1e40af'
         const logoAdv = fm.est_domicile ? fm.logo_ext : fm.est_domicile === false ? fm.logo_dom : (fm.logo_ext || fm.logo_dom)
         return (
-          <div key={fm.id}
+          <div role="button" tabIndex={0} key={fm.id}
             title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext} — Cliquer pour détails`}
             onClick={() => h.weekZoom(iso(y, m, d))}
             style={{
@@ -58,7 +58,7 @@ function ContenuJour({ evs, ffr, y, m, d, groupColor, draggingId, h }) {
         if (e.type === 'match') {
           const mc = matchCatColor(e.categorie, groupColor)
           return (
-            <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}${e._inherited ? ' (groupe principal)' : ''}`}
+            <div role="button" tabIndex={0} key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}${e._inherited ? ' (groupe principal)' : ''}`}
               style={{ background: mc, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: curseur, overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
               {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
@@ -66,16 +66,16 @@ function ContenuJour({ evs, ffr, y, m, d, groupColor, draggingId, h }) {
           )
         }
         if (e.type === 'recup') {
-          return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: curseur, opacity: dragOpacity }} />
+          return <div role="button" tabIndex={0} key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: curseur, opacity: dragOpacity }} />
         }
         if (e.type === 'test') {
-          return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Tests${e._inherited ? ' (groupe principal)' : ''}`} style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: curseur, overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
+          return <div role="button" tabIndex={0} key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Tests${e._inherited ? ' (groupe principal)' : ''}`} style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: curseur, overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
         }
         const neutral = T.neutral
         const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
         const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
         return (
-          <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`${T.label}${e._inherited ? ' (groupe principal)' : ''}`}
+          <div role="button" tabIndex={0} key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`${T.label}${e._inherited ? ' (groupe principal)' : ''}`}
             style={{
               fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: curseur,
               overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,

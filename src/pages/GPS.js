@@ -471,7 +471,7 @@ export default function GPS() {
               const nbJoueurs = r.lignes?.filter(l => l.periode_num === 0).length || 0
               const dateStr = r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''
               return (
-                <div key={r.id} onClick={() => { setSelected(r); setMode('tableau') }}
+                <div role="button" tabIndex={0} key={r.id} onClick={() => { setSelected(r); setMode('tableau') }}
                   style={{ ...S.sideItem, ...(selected?.id === r.id ? S.sideItemActive : {}) }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 3 }}>
                     {gpsInfo.semaine && <span style={S.sideBadge}>S{gpsInfo.semaine}</span>}
@@ -628,7 +628,7 @@ export default function GPS() {
                           {showPeriodes && <td style={S.td}>{l.periode_nom}</td>}
                           {visibleMetrics.map(k => (
                             <td key={k} style={{ ...S.td, textAlign: 'right' }}>
-                              {l[k] != null ? l[k] : <span style={{ color: '#d1d5db' }}>—</span>}
+                              {l[k] != null ? l[k] : <span style={{ color: '#6b7280' }}>—</span>}
                             </td>
                           ))}
                         </tr>

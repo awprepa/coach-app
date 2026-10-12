@@ -80,7 +80,7 @@ export default function Groupes() {
             const enfants = sousGroupes[g.id] || []
             return (
               <div key={g.id} style={{ borderTop: i > 0 ? '1px solid #eceef1' : 'none' }}>
-                <div style={S.row} onClick={() => navigate(`/groupe/${g.id}`)}>
+                <div role="button" tabIndex={0} style={S.row} onClick={() => navigate(`/groupe/${g.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
                     {g.logo_url
                       ? <img loading="lazy" src={g.logo_url} alt="" style={S.logo} />

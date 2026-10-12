@@ -157,7 +157,7 @@ export default function ProgrammeClient() {
             {seances.map((seance, i) => {
               const renseignee = seancesRenseignees[seance.id]
               return (
-                <div
+                <div role="button" tabIndex={0}
                   key={seance.id}
                   onClick={() => navigate(`/client/seance/${seance.id}`)}
                   style={styles.card}
@@ -197,7 +197,7 @@ export default function ProgrammeClient() {
                   const monthLabel = d.toLocaleString('fr-FR', { month: 'short' }).replace('.', '').toUpperCase()
                   const dayNum = d.getDate()
                   return (
-                    <div key={ev.id} style={styles.card}
+                    <div role="button" tabIndex={0} key={ev.id} style={styles.card}
                       onClick={() => navigate(`/client/seance-ponctuelle/${ev.id}`)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                         <div style={styles.jourBadge}>
@@ -213,7 +213,7 @@ export default function ProgrammeClient() {
                         <span style={styles.chevron}>›</span>
                         <button
                           onClick={e => { e.stopPropagation(); supprimerSeanceLibre(ev.id) }}
-                          style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 4px', lineHeight: 1 }}
+                          style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 4px', lineHeight: 1 }}
                         >✕</button>
                       </div>
                     </div>
@@ -374,7 +374,7 @@ const styles = {
     minWidth: '40px',
   },
   jourLabel: {
-    fontSize: '0.5rem',
+    fontSize: '0.7rem',
     fontWeight: '800',
     color: 'var(--chip-text)',
     opacity: 0.65,
@@ -400,7 +400,7 @@ const styles = {
     margin: 0,
   },
   chevron: {
-    color: '#d1d5db',
+    color: '#6b7280',
     fontSize: '1.5rem',
     lineHeight: 1,
   },

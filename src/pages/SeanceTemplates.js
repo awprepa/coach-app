@@ -202,7 +202,7 @@ export default function SeanceTemplates() {
     const isChecked = selectedAssign[c.id] !== undefined
     return (
       <div key={c.id} style={{ ...S.clientRow, background: isChecked ? '#f0fdf4' : 'white', borderColor: isChecked ? '#bbf7d0' : '#f3f4f6' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: progs.length > 0 ? 'pointer' : 'default' }}
+        <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: progs.length > 0 ? 'pointer' : 'default' }}
           onClick={() => progs.length > 0 && toggleClient(c.id)}>
           <div style={{
             width: 20, height: 20, borderRadius: 6, border: `2px solid ${isChecked ? '#22c55e' : '#d1d5db'}`,
@@ -322,7 +322,7 @@ export default function SeanceTemplates() {
     return (
       <div key={t.id} style={S.card}>
         {/* En-tête de la carte */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
           onClick={() => !isEditing && setExpanded(isExpanded ? null : t.id)}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {isEditing ? (
@@ -362,11 +362,11 @@ export default function SeanceTemplates() {
                     style={S.actionBtn} title="Déplacer dans un dossier"><Icon name="folder" size={14} /></button>
                   {movingId === t.id && (
                     <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
-                      <div style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
+                      <div role="button" tabIndex={0} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
                         <span style={{ opacity: 0.5 }}>— Sans dossier</span>
                       </div>
                       {allFolders.map(f => (
-                        <div key={f} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, f)}>
+                        <div role="button" tabIndex={0} key={f} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, f)}>
                           {f}
                         </div>
                       ))}
@@ -386,7 +386,7 @@ export default function SeanceTemplates() {
                   )}
                 </div>
                 <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={S.actionBtn}><Icon name="trash" size={14} /></button>
-                <span style={{ color: '#d1d5db', fontSize: '1.2rem', transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+                <span style={{ color: '#9ca3af', fontSize: '1.2rem', transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
               </>
             )}
           </div>
@@ -436,7 +436,7 @@ export default function SeanceTemplates() {
   }
 
   return (
-    <div style={S.page} onClick={() => setMovingId(null)}>
+    <div role="button" tabIndex={0} style={S.page} onClick={() => setMovingId(null)}>
 
       {/* Modal assignation */}
       {sendingTemplate && (
@@ -467,7 +467,7 @@ export default function SeanceTemplates() {
                         const nbCoches = g.membres.filter(m => selectedAssign[m.id] !== undefined).length
                         return (
                           <div key={g.id}>
-                            <div
+                            <div role="button" tabIndex={0}
                               onClick={() => setOpenGroupIds(prev => { const n = new Set(prev); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n })}
                               style={{ ...S.clientRow, cursor: 'pointer', background: '#f9fafb' }}
                             >
@@ -576,7 +576,7 @@ export default function SeanceTemplates() {
             const isOpen = openFolders.has(folderName)
             return (
               <div key={folderName} style={S.folderBlock}>
-                <div style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
+                <div role="button" tabIndex={0} style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
                     <span style={{ fontSize: '1rem' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
                     {renamingFolder === folderName ? (
@@ -594,7 +594,7 @@ export default function SeanceTemplates() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.folderActionBtn}><Icon name="edit" size={14} /></button>
                     <button onClick={() => supprimerDossier(folderName)} style={S.folderActionBtn}><Icon name="trash" size={14} /></button>
-                    <span style={{ color: '#d1d5db', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
+                    <span role="button" tabIndex={0} style={{ color: '#6b7280', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
                       onClick={() => toggleFolder(folderName)}>›</span>
                   </div>
                 </div>

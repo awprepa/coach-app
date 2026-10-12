@@ -128,7 +128,7 @@ export default function WellnessClient() {
               return (
               <div style={{ background: 'white', borderRadius: 14, padding: '1.1rem', marginBottom: '1rem', border: '1px solid #e8e8e8' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {latest.date === today ? "Score d'aujourd'hui" : new Date(latest.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                   {latest.poids && <span style={{ fontSize: '0.78rem', fontWeight: '600', color: '#6b6b6b' }}>{latest.poids} kg</span>}
@@ -161,12 +161,12 @@ export default function WellnessClient() {
             {/* Historique */}
             {bilanEntries.length > 1 && (
               <div style={{ background: 'white', borderRadius: 14, padding: '1rem', border: '1px solid #e8e8e8' }}>
-                <p style={{ margin: '0 0 0.6rem', fontSize: '0.68rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Historique</p>
+                <p style={{ margin: '0 0 0.6rem', fontSize: '0.7rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Historique</p>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', fontVariantNumeric: 'tabular-nums' }}>
                   <thead>
                     <tr>
                       {['Date', 'Som.', 'Fat.', 'Dou.', 'Str.', 'Moy.'].map((h, i) => (
-                        <th key={h} style={{ textAlign: i === 0 ? 'left' : 'right', fontSize: '0.62rem', fontWeight: '700', color: '#9a9a9a', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: 8 }}>{h}</th>
+                        <th key={h} style={{ textAlign: i === 0 ? 'left' : 'right', fontSize: '0.7rem', fontWeight: '700', color: '#9a9a9a', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: 8 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -253,7 +253,7 @@ export default function WellnessClient() {
                   { label: 'Maximum', val: `${Math.max(...poidsEntries.map(e => e.poids))} kg` },
                 ].map(s => (
                   <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: '0.75rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                    <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase' }}>{s.label}</p>
+                    <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase' }}>{s.label}</p>
                     <p style={{ margin: '0.25rem 0 0', fontSize: '1rem', fontWeight: '800', color: '#333' }}>{s.val}</p>
                   </div>
                 ))}
@@ -278,7 +278,7 @@ export default function WellnessClient() {
               {/* Historique poids */}
               <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div style={{ padding: '0.65rem 1rem', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Historique</p>
                 </div>
                 {[...poidsEntries].reverse().map(w => (
                   <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 1rem', borderBottom: '1px solid #f9fafb' }}>

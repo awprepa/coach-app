@@ -51,7 +51,7 @@ export default function NotificationsClient() {
           </div>
         ) : (
           notifs.map(notif => (
-            <div key={notif.id} onClick={() => handleClick(notif)} style={{ ...S.item, background: notif.lu ? '#f9fafb' : 'white' }}>
+            <div role="button" tabIndex={0} key={notif.id} onClick={() => handleClick(notif)} style={{ ...S.item, background: notif.lu ? '#f9fafb' : 'white' }}>
               <span style={S.icon}><Icon name={typeIcon(notif.type)} size={22} /></span>
               <div style={S.itemContent}>
                 <p style={{ ...S.itemTitle, fontWeight: notif.lu ? '500' : '700' }}>{notif.titre}</p>

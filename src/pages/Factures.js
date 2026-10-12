@@ -584,7 +584,7 @@ export default function Factures() {
       {/* ── Tableau ── */}
       {rows.length === 0 ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '3rem' }}>
-          <p style={{ marginBottom: '0.75rem', color: '#d1d5db' }}>{Ico.invoice(36)}</p>
+          <p style={{ marginBottom: '0.75rem', color: '#6b7280' }}>{Ico.invoice(36)}</p>
           <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Aucun paiement suivi pour l'instant.</p>
           <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>Les échéances apparaissent ici automatiquement dès qu'un contrat est signé.</p>
         </div>
@@ -604,7 +604,7 @@ export default function Factures() {
                 const isOpen = expanded === r.clientId
                 return (
                   <Fragment key={r.clientId}>
-                    <tr onClick={() => setExpanded(isOpen ? null : r.clientId)} style={S.tr}>
+                    <tr role="button" tabIndex={0} onClick={() => setExpanded(isOpen ? null : r.clientId)} style={S.tr}>
                       <td style={S.td}>
                         <div style={S.who}>
                           <span style={{ ...S.caret, transform: isOpen ? 'rotate(90deg)' : 'none' }}>{Ico.chevron()}</span>
@@ -669,7 +669,7 @@ export default function Factures() {
         </div>
       )}
 
-      <p style={S.footnote}>Besoin d'un document officiel pour un client sans contrat dans l'app ? <a onClick={() => openCreate(null)} style={S.footnoteLink}>Générer une facture PDF</a></p>
+      <p style={S.footnote}>Besoin d'un document officiel pour un client sans contrat dans l'app ? <button type="button" onClick={() => openCreate(null)} style={{ ...S.footnoteLink, background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}>Générer une facture PDF</button></p>
 
       {/* ── Modal paiement manuel ── */}
       {showManual && (

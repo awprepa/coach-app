@@ -63,7 +63,7 @@ export default function ModaleConditions({ clientId, onAccepte }) {
           </button>
 
           <label style={{ ...S.checkLabel, marginBottom: '1.1rem' }}>
-            <div style={{ ...S.checkbox, ...(checked ? S.checkboxOn : {}) }}
+            <div role="button" tabIndex={0} style={{ ...S.checkbox, ...(checked ? S.checkboxOn : {}) }}
               onClick={() => setChecked(v => !v)}>
               {checked && <span style={S.checkmark}>✓</span>}
             </div>

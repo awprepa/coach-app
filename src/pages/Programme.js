@@ -514,7 +514,7 @@ export default function Programme() {
                       <button onClick={() => deplacerSeance(i, -1)} disabled={i === 0} style={{ ...styles.orderBtn, opacity: i === 0 ? 0.2 : 1 }}>↑</button>
                       <button onClick={() => deplacerSeance(i, 1)} disabled={i === seances.length - 1} style={{ ...styles.orderBtn, opacity: i === seances.length - 1 ? 0.2 : 1 }}>↓</button>
                     </div>
-                    <div
+                    <div role="button" tabIndex={0}
                       onClick={() => navigate(`/seance/${seance.id}`)}
                       style={{ ...styles.seanceCard, border: `1.5px solid ${i === 0 ? '#e4f816' : '#e5e7eb'}` }}
                     >
@@ -571,7 +571,7 @@ export default function Programme() {
               <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>Aucun modèle sauvegardé.</p>
             ) : (
               templates.map(t => (
-                <div key={t.id} onClick={() => chargerTemplate(t)}
+                <div role="button" tabIndex={0} key={t.id} onClick={() => chargerTemplate(t)}
                   style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                   onMouseLeave={e => e.currentTarget.style.background = 'white'}

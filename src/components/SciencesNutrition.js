@@ -365,7 +365,7 @@ export default function SciencesNutrition({ coachMode = false }) {
                   </span>
                 </div>
                 <span style={{
-                  color: '#d1d5db', fontSize: '0.9rem', flexShrink: 0, marginTop: 4,
+                  color: '#6b7280', fontSize: '0.9rem', flexShrink: 0, marginTop: 4,
                   transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s',
                 }}>
                   ▾

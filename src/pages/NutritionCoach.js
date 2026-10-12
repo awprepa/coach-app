@@ -139,7 +139,7 @@ export default function NutritionCoach() {
             {displayed.map(client => {
               const { actif, total } = client.plans
               return (
-                <div
+                <div role="button" tabIndex={0}
                   key={client.id}
                   onClick={() => navigate(`/nutrition/${client.id}`)}
                   style={S.card}

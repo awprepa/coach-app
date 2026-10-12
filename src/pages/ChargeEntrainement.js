@@ -471,7 +471,7 @@ export default function ChargeEntrainement() {
                         <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.25rem' }}>
                           Données insuffisantes
                         </div>
-                        <div style={{ fontSize: '0.62rem', color: '#d1d5db', marginTop: '0.3rem' }}>
+                        <div style={{ fontSize: '0.62rem', color: '#6b7280', marginTop: '0.3rem' }}>
                           {d.n} séance{d.n > 1 ? 's' : ''} · min. 5 requises
                         </div>
                       </div>
@@ -1384,7 +1384,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       {/* ── Demander une vidéo — indépendant du suivi, marche même sans historique ── */}
       {videoProgs.length > 0 && (
         <div style={{ ...S.indicateursSection, marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
             onClick={() => setVideoPickerOpen(v => !v)}>
             <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>Demander une vidéo</div>
             <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{videoPickerOpen ? 'Masquer ▲' : 'Afficher ▼'}</span>
@@ -1526,7 +1526,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               </td>
               {allWeeks.map(w => {
                 const wd = exo.weeks[w]
-                if (!wd) return <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}><span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span></td>
+                if (!wd) return <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}><span style={{ color: '#6b7280', fontSize: '0.7rem' }}>—</span></td>
                 const level = weightLevel(wd.poids, exo.allTimeMax)
                 const isCellPR = wd.poids >= exo.allTimeMax
                 const isCellPRFirst = isCellPR && w === prWeek // étoile uniquement sur la 1re semaine du PR
@@ -1543,7 +1543,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap' }}>{exo.allTimeMax} kg</td>
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center', color: '#6b7280', whiteSpace: 'nowrap' }}>{currentW?.reps ? `×${currentW.reps}` : '—'}</td>
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
-                {evo === null ? <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>
+                {evo === null ? <span style={{ color: '#6b7280', fontSize: '0.7rem' }}>—</span>
                   : evo > 0 ? <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>+{evo} kg</span>
                   : evo < 0 ? <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>{evo} kg</span>
                   : <span style={{ background: '#f5f5f5', color: '#aaa', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>= 0</span>}
@@ -1551,14 +1551,14 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
                 {progPct !== null
                   ? <span style={{ fontWeight: 700, color: parseFloat(progPct) >= 0 ? '#15803d' : '#991b1b', fontSize: '0.78rem' }}>{parseFloat(progPct) >= 0 ? '+' : ''}{progPct}%</span>
-                  : <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>}
+                  : <span style={{ color: '#6b7280', fontSize: '0.7rem' }}>—</span>}
               </td>
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
                 {isPR
                   ? myLastWeek === prWeek
                     ? <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>PR</span>
                     : <span style={{ background: PR_COLOR, color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.72rem' }}>PR</span>
-                  : <span style={{ color: '#d1d5db', fontSize: '0.7rem' }}>—</span>}
+                  : <span style={{ color: '#6b7280', fontSize: '0.7rem' }}>—</span>}
               </td>
             </tr>,
             isHistoOpen && (
@@ -1586,7 +1586,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                               </div>
                               {rows.map((r, ri) => (
                                 <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.18rem' }}>
-                                  <span style={{ fontSize: '0.6rem', color: '#d1d5db', width: 14, flexShrink: 0 }}>{r.serie}</span>
+                                  <span style={{ fontSize: '0.6rem', color: '#6b7280', width: 14, flexShrink: 0 }}>{r.serie}</span>
                                   <span style={{ fontWeight: 700, color: '#1a1a1a', fontSize: '0.78rem' }}>{r.poids ? `${r.poids} kg` : '—'}</span>
                                   <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>{r.reps_reelles ? `×${r.reps_reelles}` : ''}</span>
                                   <span style={{ marginLeft: 'auto', color: r.valide ? '#22c55e' : '#d1d5db', fontSize: '0.65rem', flexShrink: 0 }}>{r.valide ? '✓' : ''}</span>
@@ -1672,7 +1672,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                         <td style={{ padding: '0.4rem 0.75rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', position: 'sticky', left: 0, background: '#fafbff' }}>moy.</td>
                         {allWeeks.map(w => {
                           const vals = seance.exercises.map(e => e.weeks[w]?.poids).filter(Boolean)
-                          if (!vals.length) return <td key={w} style={{ padding: '0.3rem 0.3rem', textAlign: 'center', color: '#d1d5db', fontSize: '0.68rem' }}>—</td>
+                          if (!vals.length) return <td key={w} style={{ padding: '0.3rem 0.3rem', textAlign: 'center', color: '#6b7280', fontSize: '0.68rem' }}>—</td>
                           const moy = (vals.reduce((s, v) => s + parseFloat(v), 0) / vals.length).toFixed(1)
                           return <td key={w} style={{ padding: '0.3rem 0.3rem', textAlign: 'center', fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>{moy}</td>
                         })}
@@ -1735,7 +1735,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     <div key={key} style={{ ...S.indCard, opacity: 0.65 }}>
                       <div style={S.indLabel}>{label}</div>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.25rem' }}>Données insuffisantes</div>
-                      <div style={{ fontSize: '0.62rem', color: '#d1d5db', marginTop: '0.3rem' }}>{d.n} séance{d.n > 1 ? 's' : ''} · min. 5 requises</div>
+                      <div style={{ fontSize: '0.62rem', color: '#6b7280', marginTop: '0.3rem' }}>{d.n} séance{d.n > 1 ? 's' : ''} · min. 5 requises</div>
                     </div>
                   )
                   if (d.z === null) return (

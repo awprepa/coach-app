@@ -558,7 +558,7 @@ const S = {
   cellPoids: { fontSize: '0.86rem', fontWeight: 800, color: '#111' },
   cellReps: { fontSize: '0.66rem', color: '#6b7280' },
   cellDate: { fontSize: '0.6rem', color: '#c7cbd1', fontWeight: 500, marginTop: 1 },
-  cellEmpty: { fontSize: '0.86rem', color: '#d1d5db', fontWeight: 600 },
+  cellEmpty: { fontSize: '0.86rem', color: '#6b7280', fontWeight: 600 },
 
   delta: { display: 'inline-flex', alignItems: 'center', fontSize: '0.66rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 },
   deltaUp: { background: '#ecfdf3', color: '#16a34a' },

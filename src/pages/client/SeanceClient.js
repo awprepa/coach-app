@@ -1286,7 +1286,7 @@ export default function SeanceClient() {
 
   const labelStyle = {
     width: COL_LABEL, flexShrink: 0,
-    fontSize: '0.68rem', fontWeight: '700', color: '#6b7280',
+    fontSize: '0.7rem', fontWeight: '700', color: '#6b7280',
     textTransform: 'uppercase', letterSpacing: '0.05em',
     display: 'flex', alignItems: 'center',
   }
@@ -1326,7 +1326,7 @@ export default function SeanceClient() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: '0.3rem', flexWrap: 'wrap' }}>
                   {progActif && (
-                    <span style={{ fontSize: '.6rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
                       {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
                     </span>
                   )}
@@ -1433,8 +1433,8 @@ export default function SeanceClient() {
                         {/* En-tête semaine */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.75rem', background: sem === semaineActuelle - 1 ? '#fffef5' : 'white' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ background: sem === semaineActuelle - 1 ? '#333333' : '#f3f4f6', color: sem === semaineActuelle - 1 ? 'var(--chip-text)' : '#6b7280', borderRadius: 6, padding: '0.1rem 0.45rem', fontSize: '0.68rem', fontWeight: '900' }}>S{sem}</span>
-                            {sem === semaineActuelle - 1 && <span style={{ fontSize: '0.6rem', color: '#6b7280', fontWeight: 600 }}>sem. précédente</span>}
+                            <span style={{ background: sem === semaineActuelle - 1 ? '#333333' : '#f3f4f6', color: sem === semaineActuelle - 1 ? 'var(--chip-text)' : '#6b7280', borderRadius: 6, padding: '0.1rem 0.45rem', fontSize: '0.7rem', fontWeight: '900' }}>S{sem}</span>
+                            {sem === semaineActuelle - 1 && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600 }}>sem. précédente</span>}
                           </div>
                           <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#374151' }}>{poidsLabel}</span>
                         </div>
@@ -1442,9 +1442,9 @@ export default function SeanceClient() {
                         <div style={{ padding: '0 0.75rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           {rows.map((r, ri) => (
                             <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#d1d5db', width: 16, textAlign: 'center', flexShrink: 0 }}>{r.serie}</span>
+                              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', width: 16, textAlign: 'center', flexShrink: 0 }}>{r.serie}</span>
                               <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1a1a1a', minWidth: 52 }}>
-                                {r.poids ? `${r.poids} kg` : <span style={{ color: '#d1d5db' }}>— kg</span>}
+                                {r.poids ? `${r.poids} kg` : <span style={{ color: '#6b7280' }}>— kg</span>}
                               </span>
                               <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
                                 {r.reps_reelles ? `× ${r.reps_reelles} ${tempsMode ? 's' : 'reps'}` : ''}
@@ -1468,7 +1468,7 @@ export default function SeanceClient() {
               return (
                 <div style={{ marginBottom: '0.6rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                       Échauffement {warmups.length > 0 ? `· ${warmups.length} série${warmups.length > 1 ? 's' : ''}` : ''}
                     </span>
                     <button onClick={() => addWarmupSet(ex.id)} style={{
@@ -1478,7 +1478,7 @@ export default function SeanceClient() {
                   </div>
                   {warmups.map((ws, wi) => (
                     <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: ws.fromCoach ? '#fff7ed' : '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: `1.5px solid ${ws.fromCoach ? '#fed7aa' : '#e5e7eb'}` }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: ws.fromCoach ? '#ea580c' : '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '800', color: ws.fromCoach ? '#ea580c' : '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap' }}>
                         É{wi + 1}{ws.fromCoach && ws.pourcentage ? ` · ${ws.pourcentage}%` : ''}
                       </span>
                       <input type="text" inputMode="decimal" value={ws.poids}
@@ -1487,16 +1487,16 @@ export default function SeanceClient() {
                         onFocus={scrollInputIntoView}
                         placeholder="kg"
                         style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.62rem', color: '#6b7280' }}>kg</span>
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>kg</span>
                       <input type="text" inputMode="numeric" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         onFocus={scrollInputIntoView}
                         placeholder={tempsMode ? 'sec' : 'reps'}
                         style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.62rem', color: '#6b7280' }}>{tempsMode ? 's' : 'reps'}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>{tempsMode ? 's' : 'reps'}</span>
                       <button onClick={() => removeWarmupSet(ex.id, wi)} style={{
-                        marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
+                        marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
                       }}>×</button>
                     </div>
                   ))}
@@ -1580,18 +1580,18 @@ export default function SeanceClient() {
                 <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
                   <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{totalReps}</span>
-                    <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>{tempsMode ? 'VOLUME (sec)' : 'VOLUME (reps)'}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>{tempsMode ? 'VOLUME (sec)' : 'VOLUME (reps)'}</span>
                   </div>
                   {tonnage > 0 && (
                     <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnage)} kg</span>
-                      <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>TONNAGE</span>
+                      <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>TONNAGE</span>
                     </div>
                   )}
                   {warmupCount > 0 && (
                     <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{warmupCount}+{workCount}</span>
-                      <span style={{ fontSize: '0.55rem', color: '#6b7280', marginTop: 1 }}>ÉCH+TRAV</span>
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>ÉCH+TRAV</span>
                     </div>
                   )}
                 </div>
@@ -1681,7 +1681,7 @@ export default function SeanceClient() {
           <p style={S.programmeNom}>{seance.programmes.nom}</p>
           <h1 style={S.title}>{seance.nom}</h1>
           <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span
+            <span role="button" tabIndex={0}
               style={{ ...S.curBadge, cursor: 'pointer' }}
               onClick={() => setShowWeekPicker(v => !v)}
             >
@@ -1739,7 +1739,7 @@ export default function SeanceClient() {
         {totalBlocs > 0 && !nonEffectuee && (
           <div style={S.progressCard}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
               <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#333333' }}>{doneBlocs} / {totalBlocs} blocs {doneBlocs === totalBlocs && doneBlocs > 0 ? '✓' : ''}</span>
             </div>
             <div style={S.progressTrack}>
@@ -1851,15 +1851,15 @@ export default function SeanceClient() {
                   ? group.items[0].nom
                   : `Superset ${group.letter} (${group.items.length} exos)`
                 return (
-                  <div key={gi}
+                  <div role="button" tabIndex={0} key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
                     style={{ ...S.collapsedRow, borderColor: '#e5e7eb', background: '#f9fafb' }}>
                     <span style={{ ...S.collapsedCheck, background: '#9ca3af' }}>⊘</span>
                     <span style={S.collapsedCode}>{group.letter}</span>
                     <span style={{ ...S.collapsedNom, color: '#6b7280' }}>{label}</span>
-                    <span style={{ ...S.collapsedStats, color: '#d1d5db' }}>Passé</span>
-                    <span style={{ color: '#d1d5db', fontSize: '0.85rem' }}>›</span>
+                    <span style={{ ...S.collapsedStats, color: '#6b7280' }}>Passé</span>
+                    <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>›</span>
                   </div>
                 )
               }
@@ -1873,14 +1873,14 @@ export default function SeanceClient() {
                   <div key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     style={{ ...S.pendingRow, alignItems: 'center' }}>
-                    <span style={S.pendingCode} onClick={() => setActiveBloc(group.letter)}>{group.letter}</span>
-                    <span style={{ ...S.pendingNom, flex: 1 }} onClick={() => setActiveBloc(group.letter)}>{label}</span>
+                    <span role="button" tabIndex={0} style={S.pendingCode} onClick={() => setActiveBloc(group.letter)}>{group.letter}</span>
+                    <span role="button" tabIndex={0} style={{ ...S.pendingNom, flex: 1 }} onClick={() => setActiveBloc(group.letter)}>{label}</span>
                     <button
                       onClick={e => { e.stopPropagation(); skipBloc(group.letter) }}
                       style={S.skipBlocBtn}>
                       Passer
                     </button>
-                    <span style={{ color: '#d1d5db', fontSize: '0.85rem' }} onClick={() => setActiveBloc(group.letter)}>›</span>
+                    <span role="button" tabIndex={0} style={{ color: '#9ca3af', fontSize: '0.85rem' }} onClick={() => setActiveBloc(group.letter)}>›</span>
                   </div>
                 )
               }
@@ -1892,7 +1892,7 @@ export default function SeanceClient() {
                   ? group.items[0].nom
                   : `Superset ${group.letter} (${group.items.length} exos)`
                 return (
-                  <div key={gi}
+                  <div role="button" tabIndex={0} key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
                     style={S.collapsedRow}>
@@ -1900,7 +1900,7 @@ export default function SeanceClient() {
                     <span style={S.collapsedCode}>{group.letter}</span>
                     <span style={S.collapsedNom}>{label}</span>
                     <span style={S.collapsedStats}>{summary}</span>
-                    <span style={{ color: '#d1d5db', fontSize: '0.85rem' }}>›</span>
+                    <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>›</span>
                   </div>
                 )
               }
@@ -1971,7 +1971,7 @@ export default function SeanceClient() {
                           </div>
                         : <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                             <span style={S.supersetHint}>Enchaîner sans récupération</span>
-                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db', fontSize: '0.65rem' }}>Passer</button>
+                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db', fontSize: '0.7rem' }}>Passer</button>
                           </div>
                     }
                   </div>
@@ -2032,18 +2032,18 @@ export default function SeanceClient() {
               {tonnageTotal > 0 && (
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
-                  <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tonnage total</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tonnage total</div>
                 </div>
               )}
               {repsTotal > 0 && (
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{repsTotal}</div>
-                  <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Volume (reps)</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Volume (reps)</div>
                 </div>
               )}
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{exosDone}<span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/{exercices.length}</span></div>
-                <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exos lancés</div>
+                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exos lancés</div>
               </div>
             </div>
           )
@@ -2131,10 +2131,10 @@ export default function SeanceClient() {
           </div>
           {commentaires.filter(c => c.semaine !== semaineActuelle).length > 0 && (
             <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <p style={{ fontSize: '0.65rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Semaines précédentes</p>
+              <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Semaines précédentes</p>
               {commentaires.filter(c => c.semaine !== semaineActuelle).map(c => (
                 <div key={c.semaine} style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>S{c.semaine}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>S{c.semaine}</span>
                   <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{c.texte}</p>
                 </div>
               ))}
@@ -2228,7 +2228,7 @@ const S = {
   collapsedNom:{ fontWeight: '700', fontSize: '0.88rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   collapsedStats:{ fontSize: '0.78rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
   blocDoneBadge:{ background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block' },
-  collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '700', cursor: 'pointer' },
+  collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' },
   // Boutons "Passer ce bloc"
   skipBlocBtn:      { background: 'none', border: '1px solid #d1d5db', color: '#6b7280', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
   skipBlocBtnInline:{ background: 'none', border: '1px solid #d1d5db', color: '#6b7280', borderRadius: 6, padding: '0.2rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' },
@@ -2237,11 +2237,11 @@ const S = {
   paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
   paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
   paramDivider: { width: 1, height: 26, background: '#e5e7eb', flexShrink: 0 },
-  paramLabel:   { fontSize: '0.52rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
+  paramLabel:   { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
   paramValue:   { fontSize: '0.95rem', fontWeight: '800', color: '#111827', lineHeight: 1.3, whiteSpace: 'nowrap' },
   // Séries tracker
   seriesTracker:{ background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.6rem' },
-  seriesTrackerLabel:{ fontSize: '0.62rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  seriesTrackerLabel:{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
   histoBtn:    { background: 'none', border: 'none', color: '#6366f1', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', padding: 0 },
   serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
@@ -2249,7 +2249,7 @@ const S = {
   serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput:     { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
   serieInputDone: { background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' },
-  serieUnit:   { fontSize: '0.65rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
+  serieUnit:   { fontSize: '0.7rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
   serieValBtn: { marginLeft: 'auto', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
   serieDoneBadge:  { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
   serieDoneWarnBadge: { marginLeft: 'auto', background: '#f59e0b', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
@@ -2261,10 +2261,10 @@ const S = {
   // Superset
   supersetWrapper:{ borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--accent)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   supersetHeader: { background: 'var(--accent-dark)', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  supersetBadge:  { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.05em' },
+  supersetBadge:  { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' },
   supersetHint:   { color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '600' },
   supersetConnector:{ background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
   supersetLine:   { flex: 1, height: '1px', background: 'var(--chip-bg)', opacity: 0.4 },
-  supersetTag:    { fontSize: '0.68rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
+  supersetTag:    { fontSize: '0.7rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
   // Timer (styles inlinés directement dans le JSX)
 }

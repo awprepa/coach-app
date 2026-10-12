@@ -299,7 +299,7 @@ export default function Clients() {
                 const sousGroupes = sousGroupesByParent[g.id] || []
                 return (
                   <div key={g.id} style={{ background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', border: `1.5px solid ${g.couleur}22` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer', border: `1.5px solid ${g.couleur}` }}
+                    <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', cursor: 'pointer', border: `1.5px solid ${g.couleur}` }}
                       onClick={() => navigate(`/groupe/${g.id}`)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                         {g.logo_url
@@ -315,7 +315,7 @@ export default function Clients() {
                     {sousGroupes.length > 0 && (
                       <div style={{ borderTop: `1px solid ${g.couleur}18` }}>
                         {sousGroupes.map(sg => (
-                          <div key={sg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.25rem 0.7rem 2.75rem', cursor: 'pointer' }}
+                          <div role="button" tabIndex={0} key={sg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.25rem 0.7rem 2.75rem', cursor: 'pointer' }}
                             onClick={() => navigate(`/groupe/${sg.id}`)}
                             onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -464,7 +464,7 @@ function ClientRow({ client, i, navigate, onToggleActif, actif }) {
   return (
     <div key={client.id} className="cl-row" style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
       {/* Cliquable → fiche */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, cursor: 'pointer' }}
+      <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, cursor: 'pointer' }}
         onClick={() => navigate(`/client/${client.id}`)}>
         <div style={{ position: 'relative' }}>
           {client.avatar_url
@@ -502,7 +502,7 @@ function ClientRow({ client, i, navigate, onToggleActif, actif }) {
           style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.25rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: actif ? '#9ca3af' : '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>
           {actif ? 'Archiver' : '↩ Réactiver'}
         </button>
-        <span style={S.chevron} onClick={() => navigate(`/client/${client.id}`)}>›</span>
+        <span role="button" tabIndex={0} style={S.chevron} onClick={() => navigate(`/client/${client.id}`)}>›</span>
       </div>
     </div>
   )
@@ -522,5 +522,5 @@ const S = {
   avatar:      { width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.875rem', flexShrink: 0 },
   clientName:  { fontWeight: '700', fontSize: '0.95rem', margin: '0 0 0.15rem' },
   badge:       { padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700', whiteSpace: 'nowrap' },
-  chevron:     { color: '#d1d5db', fontSize: '1.25rem', cursor: 'pointer' },
+  chevron:     { color: '#9ca3af', fontSize: '1.25rem', cursor: 'pointer' },
 }

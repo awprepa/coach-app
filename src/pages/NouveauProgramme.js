@@ -167,7 +167,7 @@ export default function NouveauProgramme() {
           {showTemplates && (
             <div style={{ background: 'white', borderRadius: 12, border: '1.5px solid #e5e7eb', marginTop: '0.5rem', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
               {templates.map(t => (
-                <div
+                <div role="button" tabIndex={0}
                   key={t.id}
                   onClick={() => choisirTemplate(t)}
                   style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
@@ -184,7 +184,7 @@ export default function NouveauProgramme() {
                   </div>
                 </div>
               ))}
-              <div
+              <div role="button" tabIndex={0}
                 onClick={() => { setSelectedTemplate(null); setShowTemplates(false) }}
                 style={{ padding: '0.7rem 1rem', cursor: 'pointer', fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' }}
               >

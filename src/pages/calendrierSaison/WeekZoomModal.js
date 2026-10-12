@@ -97,8 +97,8 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
       // la même valeur via les replis ci-dessous).
       const notreLogoUrl    = groupe?.logo_url || (evt.est_domicile === true ? evt.logo_dom : evt.est_domicile === false ? evt.logo_ext : (evt.logo_dom || evt.logo_ext))
       const advLogoUrl      = evt.est_domicile === true  ? evt.logo_ext   : evt.est_domicile === false ? evt.logo_dom   : (evt.logo_ext || evt.logo_dom)
-      const notreInitials   = (notreEquipeNom || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-      const advInitials     = (advEquipeNom || '?').split(/[\s\-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+      const notreInitials   = (notreEquipeNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+      const advInitials     = (advEquipeNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
       // Disposition : domicile → notre logo gauche / adverse droite ; extérieur → adverse gauche / notre logo droite
       const logoGauche  = evt.est_domicile !== false ? notreLogoUrl  : advLogoUrl

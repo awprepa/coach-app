@@ -43,7 +43,7 @@ function evaluerDifficulte({ recupIntraPct, repsTotal, dureeTotaleMin }) {
 function InfoTooltip({ text }) {
   const [open, setOpen] = useState(false)
   return (
-    <span style={{ position: 'relative', display: 'inline-flex' }}
+    <span role="button" tabIndex={0} style={{ position: 'relative', display: 'inline-flex' }}
       onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
       onClick={() => setOpen(v => !v)}>
       <span style={S.infoBtn}>i</span>

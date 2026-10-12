@@ -1073,7 +1073,7 @@ export default function FicheClient() {
                     const actif = !termine && i === 0
                     return (
                       <div key={prog.id} style={{ ...styles.cycleChip, ...(actif ? styles.cycleChipActive : {}), opacity: termine ? 0.6 : 1 }}>
-                        <div onClick={() => navigate(`/programme/${prog.id}`)} style={{ cursor: 'pointer' }}>
+                        <div role="button" tabIndex={0} onClick={() => navigate(`/programme/${prog.id}`)} style={{ cursor: 'pointer' }}>
                           <p style={{ ...styles.progNom, ...(actif ? { color: 'var(--accent-fg-dark)' } : {}), fontSize: '0.8rem', margin: '0 0 2px' }}>{prog.nom}</p>
                           <p style={{ ...styles.progMeta, ...(actif ? { color: 'rgba(228,248,22,0.6)' } : {}), fontSize: '0.68rem', margin: 0 }}>
                             {prog.semaines} semaines{termine && ' · Terminé'}
@@ -1548,7 +1548,7 @@ const styles = {
   progCard: { background: 'white', borderRadius: '14px', padding: '1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   progNom: { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.2rem' },
   progMeta: { color: '#6b7280', fontSize: '0.8rem', margin: 0 },
-  chevron: { color: '#d1d5db', fontSize: '1.25rem' },
+  chevron: { color: '#9ca3af', fontSize: '1.25rem' },
   calendarCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   row2: { display: 'flex', gap: '1rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },

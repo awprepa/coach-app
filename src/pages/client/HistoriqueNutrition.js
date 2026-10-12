@@ -210,7 +210,7 @@ export default function HistoriqueNutrition() {
                   ].map(stat => (
                     <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: stat.color + '15', borderRadius: 10, padding: '8px 4px' }}>
                       <div style={{ fontSize: '1.2rem', fontWeight: 900, color: stat.color, lineHeight: 1 }}>{stat.val}</div>
-                      <div style={{ fontSize: '0.58rem', fontWeight: 700, color: stat.color, opacity: 0.8, marginTop: 3, textTransform: 'uppercase' }}>{stat.label}</div>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: stat.color, opacity: 0.8, marginTop: 3, textTransform: 'uppercase' }}>{stat.label}</div>
                     </div>
                   ))}
                 </div>
@@ -259,7 +259,7 @@ export default function HistoriqueNutrition() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: 6 }}>
               {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                <span key={i} style={{ textAlign: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>{d}</span>
+                <span key={i} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>{d}</span>
               ))}
             </div>
             <CalendarGrid dayStats={dayStats} />
@@ -306,7 +306,7 @@ function CalendarGrid({ dayStats }) {
               outline: cell.isToday ? '2.5px solid #1a1a1a' : 'none',
               outlineOffset: 1,
             }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: cell.hasData ? 'white' : '#9ca3af', lineHeight: 1 }}>{cell.dayNum}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: cell.hasData ? 'white' : '#9ca3af', lineHeight: 1 }}>{cell.dayNum}</span>
             </div>
           </div>
         )

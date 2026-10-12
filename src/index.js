@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { register } from './serviceWorkerRegistration';
+import { installerAccessibilite } from './utils/a11y';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -14,3 +15,4 @@ root.render(
 
 register();
 reportWebVitals();
+installerAccessibilite();

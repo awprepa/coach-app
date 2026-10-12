@@ -108,7 +108,7 @@ export default function HistoriqueScans() {
           <p style={{ color: 'white', fontWeight: 800, fontSize: '1.05rem', margin: 0, lineHeight: 1.2 }}>
             Mes scans
           </p>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.68rem', fontWeight: 600, margin: 0 }}>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 600, margin: 0 }}>
             Notes nutritionnelles
           </p>
         </div>
@@ -162,7 +162,7 @@ export default function HistoriqueScans() {
 
             {/* Liste */}
             {filtered.length > 0 && (
-              <p style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, margin: '0 2px' }}>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, margin: '0 2px' }}>
                 Touche un aliment pour voir le détail et le réajouter à ta journée
               </p>
             )}
@@ -208,7 +208,7 @@ function StatItem({ val, lbl, color }) {
       <span style={{ fontSize: '1.3rem', fontWeight: 900, color: color || '#1a1a1a', lineHeight: 1 }}>
         {val}
       </span>
-      <span style={{ fontSize: '0.58rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
+      <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
         {lbl}
       </span>
     </div>

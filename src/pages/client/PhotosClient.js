@@ -40,7 +40,7 @@ function DatePickerSheet({ value, max, onPick, onClose }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 6 }}>
           {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((dl, i) => (
-            <div key={i} style={{ fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textAlign: 'center', textTransform: 'uppercase' }}>{dl}</div>
+            <div key={i} style={{ fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', textAlign: 'center', textTransform: 'uppercase' }}>{dl}</div>
           ))}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
@@ -280,7 +280,7 @@ const S = {
   thumb:       { position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 10, overflow: 'hidden', background: '#e5e7eb' },
   thumbX:      { position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   poseLabel:   { margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280' },
-  poseBtn:     { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', cursor: 'pointer', fontSize: '0.66rem', fontWeight: 700, fontFamily: 'inherit' },
+  poseBtn:     { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, fontFamily: 'inherit' },
   poseBtnOn:   { borderColor: '#1a1a1a', background: '#1a1a1a', color: 'white' },
   sendBtn:     { width: '100%', marginTop: '1rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '0.95rem', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer' },
   successCard: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '0.9rem 1rem', color: '#15803d', fontSize: '0.88rem', fontWeight: 700, marginTop: '1rem' },

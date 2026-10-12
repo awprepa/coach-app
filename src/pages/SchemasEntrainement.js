@@ -111,7 +111,7 @@ export default function SchemasEntrainement() {
         <div style={S.grid}>
           {filtres.map(s => (
             <div key={s.id} style={S.card}>
-              <div style={S.thumb} onClick={() => navigate(`/bibliotheque/schemas/${s.id}`)}>
+              <div role="button" tabIndex={0} style={S.thumb} onClick={() => navigate(`/bibliotheque/schemas/${s.id}`)}>
                 <SchemaSVG donnees={s.donnees} />
               </div>
               <div style={S.cardBody}>

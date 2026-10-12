@@ -229,7 +229,7 @@ export default function ScannerArticle() {
         </button>
         <span style={S.headerTitle}>Scanner un article</span>
         {phase === 'result' ? (
-          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.65rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
+          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
             Historique
           </button>
         ) : (
@@ -373,7 +373,7 @@ export default function ScannerArticle() {
                     {food.brand}
                   </p>
                 )}
-                <p style={{ fontSize: '0.65rem', color: '#d1d5db', margin: 0 }}>Pour 100g</p>
+                <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: 0 }}>Pour 100g</p>
               </div>
               {/* Grade badge */}
               <div style={{

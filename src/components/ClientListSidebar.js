@@ -71,7 +71,7 @@ export default function ClientListSidebar({ activeId, onSelect }) {
           const av = getAvatar(c.prenom, c.nom)
           const on = c.id === activeId
           return (
-            <div key={c.id} onClick={() => onSelect(c.id)}
+            <div role="button" tabIndex={0} key={c.id} onClick={() => onSelect(c.id)}
               style={{ ...S.row, background: on ? '#eef2f2' : 'transparent' }}
               onMouseEnter={e => { if (!on) e.currentTarget.style.background = '#f7f7f8' }}
               onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent' }}
@@ -94,7 +94,7 @@ export default function ClientListSidebar({ activeId, onSelect }) {
             ;(sousGroupesByParent[g.parent_id] ||= []).push(g)
           })
           const GroupRow = ({ g, indent }) => (
-            <div key={g.id} onClick={() => navigate(`/groupe/${g.id}`)} style={{ ...S.groupRow, ...(indent ? { paddingLeft: 9 + indent } : {}) }}
+            <div role="button" tabIndex={0} key={g.id} onClick={() => navigate(`/groupe/${g.id}`)} style={{ ...S.groupRow, ...(indent ? { paddingLeft: 9 + indent } : {}) }}
               onMouseEnter={e => e.currentTarget.style.background = '#f7f7f8'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >

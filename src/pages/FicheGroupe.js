@@ -958,7 +958,7 @@ export default function FicheGroupe() {
           </div>
         </div>
 
-        <div style={{ ...S.panel, cursor: 'pointer' }} onClick={() => setTab('calendrier')} title="Ouvrir le calendrier">
+        <div role="button" tabIndex={0} style={{ ...S.panel, cursor: 'pointer' }} onClick={() => setTab('calendrier')} title="Ouvrir le calendrier">
           <div style={S.panelHead}>
             <button onClick={e => { e.stopPropagation(); setCalMonth(new Date(calY, calM - 1, 1)) }} style={S.calNavBtn}><IcoChevronL /></button>
             <span style={{ ...S.panelLabel, textTransform: 'capitalize', fontSize: '0.78rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1108,7 +1108,7 @@ export default function FicheGroupe() {
           </button>
         </div>
 
-        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: classementFFR.length > 0 ? 'pointer' : 'default' }}
+        <div role="button" tabIndex={0} style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: classementFFR.length > 0 ? 'pointer' : 'default' }}
           onClick={() => classementFFR.length > 0 && setTab('classement')} title={classementFFR.length > 0 ? 'Ouvrir le classement complet' : undefined}>
           <div style={S.panelHead}>
             <span style={S.panelLabel}>Classement</span>
@@ -1139,7 +1139,7 @@ export default function FicheGroupe() {
           )}
         </div>
 
-        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: prochain ? 'pointer' : 'default' }}
+        <div role="button" tabIndex={0} style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: prochain ? 'pointer' : 'default' }}
           onClick={() => prochain && openCalendrierEvent(prochain.evenement.id)} title={prochain ? "Ouvrir cet entraînement" : undefined}>
           <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
           {!prochain ? (
@@ -1175,7 +1175,7 @@ export default function FicheGroupe() {
           )}
         </div>
 
-        <div onClick={() => setTab('blessures')} title="Ouvrir le suivi blessures du groupe"
+        <div role="button" tabIndex={0} onClick={() => setTab('blessures')} title="Ouvrir le suivi blessures du groupe"
           style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
           <div style={S.panelHead}><span style={S.panelLabel}>Blessés · {blesses.length}</span></div>
           {blesses.length === 0 ? (
@@ -1205,7 +1205,7 @@ export default function FicheGroupe() {
         <div style={S.panel}>
           <div style={S.panelHead}><span style={S.panelLabel}>Sous-groupes · {sousGroupes.length}</span></div>
           {sousGroupes.map(sg => (
-            <div key={sg.id} onClick={() => navigate(`/groupe/${sg.id}`)}
+            <div role="button" tabIndex={0} key={sg.id} onClick={() => navigate(`/groupe/${sg.id}`)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.1rem', borderTop: '1px solid #f3f4f6', cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: sg.couleur }} />
@@ -1213,7 +1213,7 @@ export default function FicheGroupe() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <button onClick={e => { e.stopPropagation(); supprimerSousGroupe(sg.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }}>✕</button>
-                <span style={{ color: '#d1d5db', fontSize: '1.15rem' }}>›</span>
+                <span style={{ color: '#9ca3af', fontSize: '1.15rem' }}>›</span>
               </div>
             </div>
           ))}
@@ -1249,7 +1249,7 @@ export default function FicheGroupe() {
             const isPushing = pushLoading === prog.id
             return (
               <div key={prog.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.1rem', cursor: 'pointer' }}
+                <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.1rem', cursor: 'pointer' }}
                   onClick={() => navigate(`/programme/${prog.id}`)}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
@@ -1261,7 +1261,7 @@ export default function FicheGroupe() {
                       {prog.date_debut ? ` · début ${new Date(prog.date_debut).toLocaleDateString('fr-FR')}` : ''}
                     </p>
                   </div>
-                  <span style={{ color: '#d1d5db', fontSize: '1.15rem' }}>›</span>
+                  <span style={{ color: '#9ca3af', fontSize: '1.15rem' }}>›</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
                   <button
@@ -1392,7 +1392,7 @@ export default function FicheGroupe() {
                   <input type="color" value={editForm.couleur} onChange={e => setEditForm({ ...editForm, couleur: e.target.value })}
                     style={{ width: 36, height: 30, border: '1.5px solid #e5e7eb', borderRadius: 7, cursor: 'pointer', padding: '2px', background: 'white' }} />
                   <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280' }}>Principale</span>
-                  <span style={{ fontSize: '0.7rem', color: '#d1d5db', fontFamily: 'monospace' }}>{editForm.couleur}</span>
+                  <span style={{ fontSize: '0.7rem', color: '#6b7280', fontFamily: 'monospace' }}>{editForm.couleur}</span>
                   <button onClick={() => setEditForm({ ...editForm, couleur: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.75rem', padding: 0 }}>✕</button>
                 </>
               ) : (
@@ -1524,7 +1524,7 @@ export default function FicheGroupe() {
                 const offre = OFFRES[c.offre]
                 const checked = selectedCandidats.has(c.id)
                 return (
-                  <div key={c.id}
+                  <div role="button" tabIndex={0} key={c.id}
                     onClick={() => toggleCandidat(c.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', background: checked ? accent + '15' : '#f9fafb', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${checked ? accent : 'transparent'}`, transition: 'all .1s' }}
                   >

@@ -131,7 +131,7 @@ export default function CompetitionClient() {
     if (big) return (
       <div style={{ background: `linear-gradient(155deg, ${bg}, color-mix(in srgb, ${bg} 60%, #000))`,
         borderRadius: 16, padding: '16px 14px', color: '#fff', marginBottom: 16 }}>
-        <div style={{ fontSize: '.6rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>
           Prochain match{m.journee ? ` · Journée ${m.journee}` : ''}
         </div>
 
@@ -140,7 +140,7 @@ export default function CompetitionClient() {
           {/* Logo gauche */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
             <LogoBadge url={logoG} initials={initG} size={60} />
-            <div style={{ fontSize: '.58rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
               maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomG}</div>
           </div>
           {/* Score / VS */}
@@ -149,28 +149,28 @@ export default function CompetitionClient() {
               ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{scoreStr}</div>
               : <>
                   <div style={{ fontSize: '.82rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>
-                  {m.heure && <div style={{ fontSize: '.65rem', opacity: .75 }}>{m.heure}</div>}
+                  {m.heure && <div style={{ fontSize: '0.7rem', opacity: .75 }}>{m.heure}</div>}
                 </>
             }
           </div>
           {/* Logo droite */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
             <LogoBadge url={logoD} initials={initD} size={60} />
-            <div style={{ fontSize: '.58rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
               maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomD}</div>
           </div>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-          <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>
+          <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700 }}>
             {fmtDate(m.date_match)}
           </span>
           {m.est_domicile != null && (
-            <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 800 }}>
+            <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
               {m.est_domicile ? 'Domicile' : 'Extérieur'}
             </span>
           )}
-          {joue && <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '.65rem', fontWeight: 700 }}>
+          {joue && <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700 }}>
             {win ? 'Victoire' : lose ? 'Défaite' : 'Nul'}
           </span>}
         </div>
@@ -190,7 +190,7 @@ export default function CompetitionClient() {
               ? <img loading="lazy" src={logoG} alt={initG} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
               : null}
             <div style={{ width:'100%', height:'100%', display: logoG ? 'none' : 'flex',
-              alignItems:'center', justifyContent:'center', fontSize:'.62rem', fontWeight:900, color:'#6b7280' }}>{initG}</div>
+              alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:900, color:'#6b7280' }}>{initG}</div>
           </div>
           {/* Score ou VS */}
           <div style={{ fontSize: '.75rem', fontWeight: 800, color: scoreStr ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : '#9ca3af',
@@ -204,12 +204,12 @@ export default function CompetitionClient() {
               ? <img loading="lazy" src={logoD} alt={initD} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
               : null}
             <div style={{ width:'100%', height:'100%', display: logoD ? 'none' : 'flex',
-              alignItems:'center', justifyContent:'center', fontSize:'.62rem', fontWeight:900, color:'#6b7280' }}>{initD}</div>
+              alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:900, color:'#6b7280' }}>{initD}</div>
           </div>
           {/* Infos texte */}
           <div style={{ flex: 1, minWidth: 0, marginLeft: 4 }}>
             <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{advNom}</div>
-            <div style={{ fontSize: '.68rem', color: '#6b7280', marginTop: 1 }}>
+            <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>
               {m.journee ? `J${m.journee} · ` : ''}{fmtDate(m.date_match)}
               {m.est_domicile != null ? ` · ${m.est_domicile ? 'Dom.' : 'Ext.'}` : ''}
             </div>
@@ -233,7 +233,7 @@ export default function CompetitionClient() {
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, #333333 0%, #1f2937 100%)`,
         padding: '18px 18px 16px', color: '#fff', position: 'sticky', top: 0, zIndex: 40 }}>
-        <div style={{ fontSize: '.62rem', fontWeight: 800, color: '#e4f816', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Compétition</div>
+        <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#e4f816', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Compétition</div>
         {groupes.length > 1 ? (
           <select value={activeGroupe?.id || ''} onChange={async e => {
             const g = groupes.find(x => x.id === e.target.value)
@@ -275,7 +275,7 @@ export default function CompetitionClient() {
                         <tr style={{ background: '#f9fafb' }}>
                           {['#', '', 'Équipe', 'Pts', 'J', 'G', 'N', 'P', '+/-'].map(h => (
                             <th key={h} style={{ padding: '8px 8px', textAlign: h === 'Équipe' ? 'left' : 'center',
-                              fontWeight: 700, color: '#6b7280', fontSize: '.6rem', textTransform: 'uppercase',
+                              fontWeight: 700, color: '#6b7280', fontSize: '0.7rem', textTransform: 'uppercase',
                               letterSpacing: '.05em', whiteSpace: 'nowrap', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
                           ))}
                         </tr>
@@ -292,7 +292,7 @@ export default function CompetitionClient() {
                                 {logoAff
                                   ? <img loading="lazy" src={logoAff} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
                                   : null}
-                                <div style={{ width: 22, height: 22, borderRadius: 4, background: '#f0f2f5', display: logoAff ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.55rem', fontWeight: 800, color: '#6b7280', margin: '0 auto' }}>{initials}</div>
+                                <div style={{ width: 22, height: 22, borderRadius: 4, background: '#f0f2f5', display: logoAff ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', margin: '0 auto' }}>{initials}</div>
                               </td>
                               <td style={{ padding: '8px 8px', fontWeight: isOurs ? 800 : 500, color: isOurs ? gc : '#1f2937',
                                 borderLeft: isOurs ? `3px solid ${gc}` : '3px solid transparent',

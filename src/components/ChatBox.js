@@ -33,7 +33,7 @@ export default function ChatBox({ myId, otherId, myLabel = 'Moi', onAfterSend, f
       {/* Zone messages */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: fullscreen ? undefined : 380 }}>
         {messages.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#d1d5db', fontSize: '0.82rem', padding: '2rem' }}>Aucun message. Commencez la conversation !</p>
+          <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.82rem', padding: '2rem' }}>Aucun message. Commencez la conversation !</p>
         ) : (
           messages.map(m => {
             const isMe = m.from_id === myId

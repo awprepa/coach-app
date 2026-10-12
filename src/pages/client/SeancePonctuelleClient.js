@@ -390,7 +390,7 @@ export default function SeancePonctuelleClient() {
           <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>{formatDate(evenement?.date)}</p>
         </div>
         <div style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          {saved && <span style={{ fontSize: '0.65rem', color: 'var(--accent-fg)', fontWeight: 700 }}>✓</span>}
+          {saved && <span style={{ fontSize: '0.7rem', color: 'var(--accent-fg)', fontWeight: 700 }}>✓</span>}
         </div>
       </div>
 
@@ -448,10 +448,10 @@ export default function SeancePonctuelleClient() {
                 <div style={S.seriesTracker}>
                   {/* Label colonnes */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', paddingLeft: 24 }}>
-                    <span style={{ width: 52, fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
-                    <span style={{ fontSize: '0.62rem', color: '#6b7280', width: 22, textAlign: 'center' }}>kg</span>
-                    <span style={{ width: 48, fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
-                    <span style={{ fontSize: '0.62rem', color: '#6b7280' }}>reps</span>
+                    <span style={{ width: 52, fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Poids</span>
+                    <span style={{ fontSize: '0.7rem', color: '#6b7280', width: 22, textAlign: 'center' }}>kg</span>
+                    <span style={{ width: 48, fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Reps</span>
+                    <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>reps</span>
                   </div>
 
                   {ex.series.map(serie => {
@@ -472,7 +472,7 @@ export default function SeancePonctuelleClient() {
                           style={{ ...S.serieInput, width: 48 }} />
                         <span style={S.serieUnit}>reps</span>
                         <button onClick={() => supprimerSerie(ex.id, serie.id)}
-                          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '1rem', padding: '0 2px', flexShrink: 0 }}>×</button>
+                          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem', padding: '0 2px', flexShrink: 0 }}>×</button>
                       </div>
                     )
                   })}
@@ -518,13 +518,13 @@ const S = {
   addCard: { background: 'white', borderRadius: 16, padding: '1rem 1.25rem', border: '1.5px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   summaryCard: { background: 'white', borderRadius: 14, padding: '0.75rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '0.6rem' },
   exNum:      { width: 24, height: 24, borderRadius: '50%', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontSize: '0.72rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  deleteBtn:  { background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  deleteBtn:  { background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   seriesTracker: { background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginTop: '0.65rem' },
   serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
   serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
   serieNum:   { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   serieInput:  { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
-  serieUnit:  { fontSize: '0.65rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
+  serieUnit:  { fontSize: '0.7rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
   addSerieBtn: { marginTop: '0.5rem', background: 'none', border: '1.5px dashed #e5e7eb', borderRadius: 8, padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer', width: '100%' },
   addExBtn:    { background: '#333', color: 'var(--accent-fg)', border: 'none', borderRadius: 10, padding: '0.7rem 1rem', width: '100%', textAlign: 'center', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', boxSizing: 'border-box' },
   input:       { width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: '0.88rem', color: '#333', outline: 'none', background: '#fafafa' },
@@ -534,7 +534,7 @@ const S = {
   createBtn:   { display: 'block', width: '100%', boxSizing: 'border-box', background: '#1a1a1a', color: 'var(--accent-fg)', border: 'none', borderRadius: 12, padding: '0.95rem', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', marginTop: '1.5rem', textAlign: 'center' },
   paramsBar:   { display: 'flex', alignItems: 'center', background: '#f8f9fb', borderRadius: 9, padding: '0.45rem 0.75rem', gap: 0 },
   paramItem:   { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 },
-  paramLabel:  { fontSize: '0.58rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  paramLabel:  { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' },
   paramValue:  { fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.2 },
   paramDivider:{ width: 1, height: 28, background: '#e5e7eb', flexShrink: 0, margin: '0 0.3rem' },
   addExerciceToggle: { width: '100%', background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.75rem 1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box' },

@@ -32,7 +32,7 @@ export function InheritedEventPreview({ evt, blocs, onClose }) {
                 {bloc.nom || `Bloc ${i + 1}`}{bloc.duree ? ` · ${bloc.duree}` : ''}
               </p>
               {(bloc.exos || []).length === 0 ? (
-                <p style={{ fontSize: '.8rem', color: '#d1d5db', margin: 0 }}>—</p>
+                <p style={{ fontSize: '.8rem', color: '#6b7280', margin: 0 }}>—</p>
               ) : bloc.exos.map((ex, j) => (
                 <div key={ex.id || j} style={{ fontSize: '.85rem', color: '#1f2937', padding: '4px 0', borderBottom: j < bloc.exos.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                   {ex.nom}{ex.series ? ` — ${ex.series}×${ex.repetitions || ''}` : ''}

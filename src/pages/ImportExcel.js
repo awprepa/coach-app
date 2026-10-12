@@ -45,9 +45,9 @@ function parseExcelFile(file) {
                 charge: row.findIndex(c => /^charge$/i.test(c)),
                 poids:  [],
               }
-              row.forEach((c, idx) => {
-                if (/poids\s*s?\d+/i.test(c)) colMap.poids.push({ idx, sem: colMap.poids.length + 1 })
-              })
+              for (let idx = 0; idx < row.length; idx++) {
+                if (/poids\s*s?\d+/i.test(row[idx])) colMap.poids.push({ idx, sem: colMap.poids.length + 1 })
+              }
 
               // Session name: look back up to 4 rows, keep the FURTHEST match
               // (title "HDC 1" is 2 rows before header, subtitle "Activation et Mobilité" is 1 row before)
@@ -209,7 +209,7 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
         {/* Étape 1 : Upload */}
         {step === 'upload' && (
           <div>
-            <div onClick={() => fileRef.current.click()} style={S.dropzone}>
+            <div role="button" tabIndex={0} onClick={() => fileRef.current.click()} style={S.dropzone}>
               <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Clique pour choisir un fichier</p>
               <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0 }}>.xlsx ou .xls</p>
             </div>
@@ -228,7 +228,7 @@ export default function ImportExcel({ programmeId, semaines, onClose, onImported
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.25rem', maxHeight: '55vh', overflowY: 'auto' }}>
               {sessions.map((s, i) => (
                 <div key={i} style={{ ...S.sessionCard, border: `1.5px solid ${selected.has(i) ? '#333333' : '#e5e7eb'}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem', cursor: 'pointer' }}
+                  <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem', cursor: 'pointer' }}
                     onClick={() => setSelected(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })}>
                     <div style={{ ...S.checkbox, background: selected.has(i) ? '#333333' : 'white', borderColor: selected.has(i) ? '#333333' : '#d1d5db' }}>
                       {selected.has(i) && <span style={{ color: '#e4f816', fontSize: '0.7rem', fontWeight: '900' }}>✓</span>}

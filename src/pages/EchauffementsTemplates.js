@@ -130,7 +130,7 @@ export default function EchauffementsTemplates() {
     if (!raw) return
 
     function splitNomReps(str) {
-      const m = str.match(/^(.*?)\s+(\d*[xX]\d+(?:[\/\.]\w)?|\d+\s*(?:s|min|sec|reps?))\s*$/i)
+      const m = str.match(/^(.*?)\s+(\d*[xX]\d+(?:[/.]\w)?|\d+\s*(?:s|min|sec|reps?))\s*$/i)
       return m ? { nom: m[1].trim(), reps: m[2].trim() } : { nom: str.trim(), reps: '' }
     }
 
@@ -410,7 +410,7 @@ export default function EchauffementsTemplates() {
                 </div>
               </div>
               {(t.lignes || []).length === 0 ? (
-                <p style={{ color: '#d1d5db', fontSize: '0.82rem', margin: 0 }}>Aucune ligne</p>
+                <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Aucune ligne</p>
               ) : (
                 <WarmupDisplay lignes={t.lignes} />
               )}

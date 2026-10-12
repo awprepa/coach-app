@@ -111,7 +111,7 @@ export default function MentionsLegales() {
           </p>
         </div>
 
-        <p style={{ fontSize: '0.75rem', color: '#d1d5db', textAlign: 'center', marginTop: '2rem', marginBottom: '1rem' }}>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', marginTop: '2rem', marginBottom: '1rem' }}>
           AWprepa · wehrey.arthur@gmail.com · Toulouse, France
         </p>
       </div>

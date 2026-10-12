@@ -235,7 +235,7 @@ export default function AgendaGlobal() {
               const dim = vue === 'mois' && day.getMonth() !== anchor.getMonth()
               const max = vue === 'mois' ? 4 : 8
               return (
-                <div key={ds} onClick={() => setSelDay(ds)} style={{
+                <div role="button" tabIndex={0} key={ds} onClick={() => setSelDay(ds)} style={{
                   ...(vue === 'mois' ? S.cellMonth : S.cellWeek),
                   opacity: dim ? 0.4 : 1,
                   border: isSel ? '2px solid #1a1a1a' : isToday ? '2px solid var(--accent, #e4f816)' : '1px solid #eef0f3',

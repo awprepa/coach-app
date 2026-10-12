@@ -447,7 +447,7 @@ export default function ProfilClient() {
 
       {/* Avatar */}
       <div style={S.avatarSection}>
-        <div style={S.avatarWrap} onClick={() => fileRef.current?.click()}>
+        <div role="button" tabIndex={0} style={S.avatarWrap} onClick={() => fileRef.current?.click()}>
           {avatarUrl ? (
             <img loading="lazy" src={avatarUrl} alt="avatar" style={S.avatarImg} />
           ) : (

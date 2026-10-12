@@ -194,7 +194,7 @@ export default function ClientBottomNav() {
             <div style={{
               width: 36, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 9, position: 'relative',
-              background: active ? 'var(--accent-stripe)' + '28' : 'transparent',
+              background: active ? 'color-mix(in srgb, var(--accent-stripe) 16%, transparent)' : 'transparent',
               transition: 'background 0.15s',
             }}>
               <Icon active={active} />
@@ -202,14 +202,14 @@ export default function ClientBottomNav() {
                 <span style={{
                   position: 'absolute', top: 2, right: 2,
                   background: '#ef4444', color: 'white',
-                  borderRadius: 999, fontSize: '0.52rem', fontWeight: '800',
+                  borderRadius: 999, fontSize: '0.7rem', fontWeight: '800',
                   minWidth: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   padding: '0 3px', lineHeight: 1,
                 }}>{badge > 9 ? '9+' : badge}</span>
               )}
             </div>
             <span style={{
-              fontSize: '0.58rem', fontWeight: active ? '700' : '500',
+              fontSize: '0.7rem', fontWeight: active ? '700' : '500',
               color: active ? 'var(--accent2-fg)' : '#b0b8c1',
               letterSpacing: '0.01em', whiteSpace: 'nowrap',
               overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',

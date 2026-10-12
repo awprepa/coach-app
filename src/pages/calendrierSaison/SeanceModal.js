@@ -375,7 +375,7 @@ export function SeanceModal({
                       {(form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean).map(t => (
                         <span key={t} style={{ background: '#1a1a1a', color: '#e4f816', fontSize: '.66rem', fontWeight: 800, borderRadius: 5, padding: '2px 7px', display: 'flex', alignItems: 'center', gap: 5 }}>
                           {t}
-                          <span onClick={() => {
+                          <span role="button" tabIndex={0} onClick={() => {
                             const cur = (form.themes_seance || '').split(',').map(s => s.trim()).filter(Boolean)
                             setForm({ themes_seance: cur.filter(x => x !== t).join(', ') })
                           }} style={{ cursor: 'pointer', opacity: .7 }}>×</span>
@@ -644,7 +644,7 @@ export function SeanceModal({
                                         const isSelected = selectedSeqId === seq.id
                                         return (
                                           <React.Fragment key={seq.id}>
-                                            <div
+                                            <div role="button" tabIndex={0}
                                               draggable
                                               onDragStart={e => { dragSeqId.current = seq.id; e.dataTransfer.effectAllowed='move' }}
                                               onDragOver={e => e.preventDefault()}
@@ -659,12 +659,12 @@ export function SeanceModal({
                                                 {seq.theme}
                                               </span>}
                                             </div>
-                                            {si < seqs.length-1 && <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 1px', flexShrink:0 }}>›</span>}
+                                            {si < seqs.length-1 && <span style={{ color: '#9ca3af', fontSize:'0.7rem', padding:'0 1px', flexShrink:0 }}>›</span>}
                                           </React.Fragment>
                                         )
                                       })}
                                       {/* Boutons + pour cette série */}
-                                      {seqs.length > 0 && <span style={{ color:'#d1d5db', fontSize:'0.7rem', padding:'0 3px' }}>›</span>}
+                                      {seqs.length > 0 && <span style={{ color: '#9ca3af', fontSize:'0.7rem', padding:'0 3px' }}>›</span>}
                                       <button
                                         onClick={() => interAfter ? addSeqBeforeInterBloc?.(bloc.id,'jeu',interAfter.id) : addSequence(bloc.id,'jeu')}
                                         style={{ padding:'3px 7px', minHeight:46, borderRadius:7, border:'1.5px dashed #93c5fd', background:'transparent', color:'#60a5fa', fontSize:'0.6rem', fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
@@ -678,7 +678,7 @@ export function SeanceModal({
                                     </div>
                                     {/* Séparateur inter_bloc (cliquable pour éditer) */}
                                     {interAfter && (
-                                      <div
+                                      <div role="button" tabIndex={0}
                                         onClick={() => setSelectedSeqId(selectedSeqId === interAfter.id ? null : interAfter.id)}
                                         style={{ display:'flex', alignItems:'center', gap:8, background: selectedSeqId===interAfter.id?'#fcd34d':'#fef3c7', border:`1.5px solid ${selectedSeqId===interAfter.id?'#f59e0b':'#fde68a'}`, borderRadius:7, padding:'5px 12px', cursor:'pointer', marginTop:2, userSelect:'none' }}>
                                         <span style={{ fontSize:'0.68rem', fontWeight:900, color:'#78350f' }}>÷ Récup inter-série</span>

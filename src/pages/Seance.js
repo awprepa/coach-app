@@ -760,7 +760,7 @@ export default function Seance() {
     if (!raw) return
 
     function splitNomReps(str) {
-      const m = str.match(/^(.*?)\s+(\d*[xX]\d+(?:[\/\.]\w)?|\d+\s*(?:s|min|sec|reps?))\s*$/i)
+      const m = str.match(/^(.*?)\s+(\d*[xX]\d+(?:[/.]\w)?|\d+\s*(?:s|min|sec|reps?))\s*$/i)
       return m ? { nom: m[1].trim(), reps: m[2].trim() } : { nom: str.trim(), reps: '' }
     }
 
@@ -1668,7 +1668,7 @@ export default function Seance() {
                           {editNomSuggestions.length > 0 && (
                             <div style={styles.suggDropdown}>
                               {editNomSuggestions.map(ex => (
-                                <div key={ex.id}
+                                <div role="button" tabIndex={0} key={ex.id}
                                   onClick={() => { setFormEdition(f => ({ ...f, nom: ex.nom, bibliotheque_id: ex.id })); setEditNomSuggestions([]) }}
                                   style={styles.suggItem}
                                   onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
@@ -1783,7 +1783,7 @@ export default function Seance() {
                           ? <span title={ex.media_url} style={{ fontSize: '0.8rem', cursor: 'default' }}>
                               {/youtube|youtu\.be/i.test(ex.media_url) ? '▶' : <Icon name="image" size={14} />}
                             </span>
-                          : <span style={{ color: '#e5e7eb', fontSize: '0.75rem' }}>—</span>
+                          : <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>—</span>
                         }
                       </td>
                       {colSemaines.map(s => (
@@ -1852,7 +1852,7 @@ export default function Seance() {
                                           style={{ width: 52, textAlign: 'center', fontWeight: 800, color: '#1d4ed8', border: '1.5px solid #bfdbfe', borderRadius: 6, padding: '2px 4px', fontSize: '.72rem', outline: 'none', background: '#eff6ff' }}
                                         />
                                         <button onClick={() => removeProgBloc(p.id)}
-                                          style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '.8rem', lineHeight: 1, padding: 0 }}>×</button>
+                                          style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '.8rem', lineHeight: 1, padding: 0 }}>×</button>
                                       </div>
                                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 3, fontSize: '.6rem', color: '#6b7280' }}>
                                         <span>S</span>
@@ -1936,7 +1936,7 @@ export default function Seance() {
                             )}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 200, overflowY: 'auto' }}>
                               {biblioEchauffList.map(item => (
-                                <div key={item.id}
+                                <div role="button" tabIndex={0} key={item.id}
                                   onClick={() => choisirDepuisBiblioEchauff(ex.id, item)}
                                   style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white', border: '1.5px solid #fed7aa', borderRadius: 8, padding: '0.35rem 0.65rem', cursor: 'pointer' }}
                                   onMouseEnter={e => e.currentTarget.style.background = '#fff7ed'}
@@ -2027,7 +2027,7 @@ export default function Seance() {
                                       <td style={{ padding: '5px 10px', fontWeight: 700, color: '#374151', background: '#f8fcff', whiteSpace: 'nowrap' }}>S{i + 1}</td>
                                       {trackSemaines.map(s => {
                                         const row = exData[s]?.[i]
-                                        if (!row) return <td key={s} style={{ padding: '5px 14px', textAlign: 'center', color: '#d1d5db' }}>—</td>
+                                        if (!row) return <td key={s} style={{ padding: '5px 14px', textAlign: 'center', color: '#6b7280' }}>—</td>
                                         const kg = row.poids ? `${row.poids} kg` : null
                                         const reps = row.reps_reelles != null ? `× ${row.reps_reelles}` : null
                                         const ok = row.valide
@@ -2157,7 +2157,7 @@ export default function Seance() {
                   allBiblio
                     .filter(ex => ex.nom.toLowerCase().includes(biblioFullSearch.toLowerCase()))
                     .map(ex => (
-                      <div key={ex.id} onClick={() => selectFromBiblio(ex)}
+                      <div role="button" tabIndex={0} key={ex.id} onClick={() => selectFromBiblio(ex)}
                         style={{ padding: '0.55rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid #f9fafb', fontSize: '0.875rem', color: '#333333', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                         onMouseLeave={e => e.currentTarget.style.background = 'white'}
@@ -2190,7 +2190,7 @@ export default function Seance() {
               {nomSuggestions.length > 0 && (
                 <div style={styles.suggDropdown}>
                   {nomSuggestions.map(ex => (
-                    <div key={ex.id}
+                    <div role="button" tabIndex={0} key={ex.id}
                       onClick={() => { setForm(f => ({ ...f, nom: ex.nom, bibliotheque_id: ex.id })); setNomSuggestions([]) }}
                       style={styles.suggItem}
                       onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}

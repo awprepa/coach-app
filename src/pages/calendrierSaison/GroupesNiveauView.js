@@ -120,7 +120,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: niveau.couleur, flexShrink: 0 }} />
                   <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1f2937' }}>{niveau.nom}</span>
                 </div>
-                <button onClick={() => supprimerNiveau(niveau.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1 }}>✕</button>
+                <button onClick={() => supprimerNiveau(niveau.id)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1 }}>✕</button>
               </div>
               <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                 {niveau.critere.toUpperCase()} de référence
@@ -208,7 +208,7 @@ export function GroupesNiveauView({ groupeId, groupColor }) {
               const dans = membresDe(pickerNiveau).includes(j.id)
               const val = dernierTest(j.id, pickerNiveau.critere)
               return (
-                <div key={j.id} onClick={() => toggleMembre(pickerNiveau, j.id)}
+                <div role="button" tabIndex={0} key={j.id} onClick={() => toggleMembre(pickerNiveau, j.id)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 10px', borderRadius: 10,
                     background: dans ? '#eef2ff' : 'transparent', cursor: 'pointer', marginBottom: 2 }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: dans ? 800 : 600, color: dans ? '#4338ca' : '#374151' }}>

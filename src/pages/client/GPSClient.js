@@ -28,7 +28,7 @@ const METRICS = [
 ]
 
 function ScoreBar({ value, max, color }) {
-  if (value == null) return <span style={{ color: '#d1d5db', fontSize: '0.82rem' }}>—</span>
+  if (value == null) return <span style={{ color: '#6b7280', fontSize: '0.82rem' }}>—</span>
   const pct = Math.min((value / max) * 100, 100)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -244,7 +244,7 @@ export default function GPSClient() {
                   const info = parseGpsNom(s.nom)
                   const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
                   return (
-                    <div key={s.id} onClick={() => setSelected(s.id)} style={S.sessionCard}>
+                    <div role="button" tabIndex={0} key={s.id} onClick={() => setSelected(s.id)} style={S.sessionCard}>
                       <div style={{ flex: 1 }}>
                         {/* Badges semaine / sport / type / catégorie */}
                         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
@@ -255,7 +255,7 @@ export default function GPSClient() {
                         </div>
                         <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>{dateStr}</p>
                       </div>
-                      <span style={{ color: '#d1d5db', fontSize: '1.3rem' }}>›</span>
+                      <span style={{ color: '#9ca3af', fontSize: '1.3rem' }}>›</span>
                     </div>
                   )
                 })}
@@ -278,7 +278,7 @@ const S = {
   content:     { padding: '1rem' },
   empty:       { background: 'white', borderRadius: 16, padding: '3rem 1.5rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   sessionCard: { background: 'white', borderRadius: 14, padding: '0.9rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  badge:       { fontSize: '0.65rem', fontWeight: '700', padding: '2px 8px', borderRadius: 20, background: '#f3f4f6', color: '#374151' },
+  badge:       { fontSize: '0.7rem', fontWeight: '700', padding: '2px 8px', borderRadius: 20, background: '#f3f4f6', color: '#374151' },
   detailCard:  { background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   backBtn:     { display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', padding: '0 0 0.85rem', marginLeft: '-0.1rem' },
 }

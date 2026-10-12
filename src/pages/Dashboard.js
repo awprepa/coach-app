@@ -547,7 +547,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {progFinBientot.map(p => (
-                        <div key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, border: '1.5px solid #0ea5e9' }}>
+                        <div role="button" tabIndex={0} key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={{ ...S.miniRow, border: '1.5px solid #0ea5e9' }}>
                           <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}><Icon name="clipboard" size={14} /></div>
                           <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
                           <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
@@ -564,7 +564,7 @@ export default function Dashboard() {
                     <p style={S.empty}>Aucune séance planifiée aujourd'hui.</p>
                   ) : (
                     seancesAujourdhui.map(ev => (
-                      <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)} style={S.miniRow}>
+                      <div role="button" tabIndex={0} key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)} style={S.miniRow}>
                         <div style={S.miniIco}><Icon name="calendar" size={14} /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={S.miniName}>{ev.titre}</p>
@@ -613,7 +613,7 @@ export default function Dashboard() {
                   const wColor = avg === null ? '#9ca3af' : avg <= 2 ? '#dc2626' : avg <= 3 ? '#d97706' : '#16a34a'
                   const av = getAvatar(c.prenom, c.nom)
                   return (
-                    <div key={c.id} onClick={() => navigate(`/client/${c.id}`)}
+                    <div role="button" tabIndex={0} key={c.id} onClick={() => navigate(`/client/${c.id}`)}
                       className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 1rem', borderTop: '1px solid #f6f7f8', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
                         {c.avatar_url
@@ -633,7 +633,7 @@ export default function Dashboard() {
                             </div>
                             <span style={{ fontSize: '0.78rem', fontWeight: '700', color: wColor, minWidth: 26 }}>{avg.toFixed(1)}</span>
                           </div>
-                        ) : <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>}
+                        ) : <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>—</span>}
                       </div>
                       <span style={{ fontSize: '0.82rem', fontWeight: '700', color: c.eventsCount > 0 ? '#333333' : '#d1d5db' }}>
                         {c.eventsCount > 0 ? c.eventsCount : '—'}
@@ -664,7 +664,7 @@ export default function Dashboard() {
                     const isToday = ev.date === today
                     const isPast  = ev.date < today
                     return (
-                      <div key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)}
+                      <div role="button" tabIndex={0} key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)}
                         style={{ ...S.miniRow, opacity: isPast && !isToday ? 0.55 : 1 }}>
                         <div style={{ ...S.dayBadge, background: isToday ? '#333333' : '#f3f4f6', color: isToday ? '#e4f816' : '#6b7280' }}>
                           <span style={{ fontSize: '0.5rem', fontWeight: '800', textTransform: 'uppercase', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
@@ -693,7 +693,7 @@ export default function Dashboard() {
               {notifs.slice(0, 50).map(n => {
                 const highlighted = stillHighlighted.has(n.id)
                 return (
-                <div key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/')) navigate(n.lien) }}
+                <div role="button" tabIndex={0} key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/')) navigate(n.lien) }}
                   style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: highlighted ? '#fafff0' : 'white', cursor: n.lien ? 'pointer' : 'default' }}>
                   <NotifIcon type={n.type} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -782,7 +782,7 @@ export default function Dashboard() {
                     const w   = client.wellness_today
                     const wAvg = w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
                     return (
-                      <div key={client.id} onClick={() => navigate(`/client/${client.id}`)}
+                      <div role="button" tabIndex={0} key={client.id} onClick={() => navigate(`/client/${client.id}`)}
                         style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                           <div style={{ position: 'relative' }}>
@@ -834,7 +834,7 @@ export default function Dashboard() {
                 groupesAvecMembres.map(({ groupe: g, membres }) => (
                   <div key={g?.id || 'autres'} style={{ marginBottom: '1rem' }}>
                     {/* En-tête groupe */}
-                    <div onClick={() => g && navigate(`/groupe/${g.id}`)}
+                    <div role="button" tabIndex={0} onClick={() => g && navigate(`/groupe/${g.id}`)}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.25rem', cursor: g ? 'pointer' : 'default' }}>
                       {g?.logo_url
                         ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 5, flexShrink: 0 }} />
@@ -851,7 +851,7 @@ export default function Dashboard() {
                         const w   = client.wellness_today
                         const wAvg = w ? (w.sommeil + w.fatigue + w.douleurs + w.stress) / 4 : null
                         return (
-                          <div key={client.id} onClick={() => navigate(`/client/${client.id}`)}
+                          <div role="button" tabIndex={0} key={client.id} onClick={() => navigate(`/client/${client.id}`)}
                             style={{ ...S.listRow, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                               {client.avatar_url
@@ -896,7 +896,7 @@ export default function Dashboard() {
                 <p style={S.empty}>Crée un groupe pour accéder à son calendrier de saison.</p>
               ) : (
                 topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
-                  <div key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
+                  <div role="button" tabIndex={0} key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
                     style={{ ...S.miniRow, border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                     {g.logo_url
                       ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
@@ -920,7 +920,7 @@ export default function Dashboard() {
                   <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                     {topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
-                      <div key={g.id}
+                      <div role="button" tabIndex={0} key={g.id}
                         onClick={() => navigate(`/groupe/${g.id}`)}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1169,5 +1169,5 @@ const S = {
   avatar:      { width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.875rem', flexShrink: 0 },
   clientName:  { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.1rem' },
   badge:       { padding: '0.2rem 0.6rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: '600' },
-  chevron:     { color: '#d1d5db', fontSize: '1.25rem' },
+  chevron:     { color: '#9ca3af', fontSize: '1.25rem' },
 }

@@ -151,7 +151,7 @@ function LigneNote({ lundi, date, texte, edition, onEdit, onClose, onSave }) {
             {erreur && <div style={{ fontSize: '0.7rem', color: '#b42318', marginTop: 3 }}>Enregistrement impossible</div>}
           </>
         ) : (
-          <div onClick={onEdit} style={{ whiteSpace: 'pre-wrap', cursor: 'text', lineHeight: 1.5 }}>{texte}</div>
+          <div role="button" tabIndex={0} onClick={onEdit} style={{ whiteSpace: 'pre-wrap', cursor: 'text', lineHeight: 1.5 }}>{texte}</div>
         )}
       </span>
     </div>

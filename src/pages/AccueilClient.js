@@ -341,13 +341,13 @@ export default function AccueilClient() {
               <span style={{
                 position: 'absolute', top: 2, right: 2,
                 background: '#ef4444', color: 'white',
-                borderRadius: 999, fontSize: '0.6rem', fontWeight: '800',
+                borderRadius: 999, fontSize: '0.7rem', fontWeight: '800',
                 minWidth: 16, height: 16, padding: '0 4px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               }}>{unread > 9 ? '9+' : unread}</span>
             )}
           </button>
-          <div style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>
+          <div role="button" tabIndex={0} style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>
             {avatarUrl ? (
               <img loading="lazy" src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             ) : initiales}
@@ -364,7 +364,7 @@ export default function AccueilClient() {
         </div>
 
         {levelWidget && (
-          <div onClick={() => navigate('/client/progression')} style={styles.levelWidget}>
+          <div role="button" tabIndex={0} onClick={() => navigate('/client/progression')} style={styles.levelWidget}>
             <div style={styles.levelWidgetTop}>
               <p style={styles.levelWidgetTitle}>Niveau {levelWidget.level} <span style={styles.levelWidgetSuffix}>de compte</span></p>
               <span style={styles.levelWidgetChevron}>›</span>
@@ -383,7 +383,7 @@ export default function AccueilClient() {
         )}
 
         {prochaineSeance && (
-          <div
+          <div role="button" tabIndex={0}
             onClick={() => prochaineSeance._isFFR ? navigate('/client/competition') : (prochaineSeance.seance_id && navigate(`/client/seance/${prochaineSeance.seance_id}`))}
             style={{ ...styles.nextCard, cursor: (prochaineSeance._isFFR || prochaineSeance.seance_id) ? 'pointer' : 'default' }}
           >
@@ -407,7 +407,7 @@ export default function AccueilClient() {
                   <p style={{ ...styles.nextTitle, marginBottom: 2 }}>{prochaineSeance.titre}</p>
                   {prochaineSeance.heure && <span style={{ fontSize: '0.72rem', color: 'var(--header-text)', opacity: 0.8, fontWeight: 700 }}>{prochaineSeance.heure}</span>}
                 </div>
-                <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>
+                <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}>
                   {prochaineSeance.est_domicile ? 'Dom.' : prochaineSeance.est_domicile === false ? 'Ext.' : 'Match'}
                 </span>
               </div>
@@ -427,7 +427,7 @@ export default function AccueilClient() {
 
         {/* Rappel photos d'évolution (jour choisi par le coach) */}
         {client?.photo_reminder_dow != null && new Date().getDay() === client.photo_reminder_dow && (
-          <div onClick={() => navigate('/client/photos')}
+          <div role="button" tabIndex={0} onClick={() => navigate('/client/photos')}
             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', color: 'white', borderRadius: 16, padding: '0.9rem 1rem', marginBottom: '0.85rem', cursor: 'pointer', boxShadow: '0 3px 12px rgba(29,78,216,0.3)' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
@@ -442,7 +442,7 @@ export default function AccueilClient() {
 
         {/* Widget nutrition aujourd'hui */}
         {nutritionToday && (
-          <div onClick={() => navigate('/client/nutrition')} style={styles.nutritionWidget}>
+          <div role="button" tabIndex={0} onClick={() => navigate('/client/nutrition')} style={styles.nutritionWidget}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={styles.sectionTitle}>Nutrition aujourd'hui</span>
               <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
@@ -483,12 +483,12 @@ export default function AccueilClient() {
                 return (
                   <div key={ev.id} style={{ ...styles.weekRow, background: isToday ? 'var(--chip-bg)' : 'white', opacity: isPast && !isToday ? 0.55 : 1 }}>
                     <div style={{ ...styles.weekDay, background: isToday ? 'rgba(255,255,255,0.12)' : '#f3f4f6', color: isToday ? 'var(--chip-text)' : '#6b7280' }}>
-                      <span style={{ fontSize: '0.58rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
                       <span style={{ fontSize: '1rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
                     </div>
                     <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isToday ? 'var(--chip-text)' : '#333333', flex: 1 }}>{ev.titre}</span>
-                    {isToday && <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#111111', background: 'var(--accent-stripe)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
-                    {isPast && !isToday && <span style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: '600' }}>Passé</span>}
+                    {isToday && <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#111111', background: 'var(--accent-stripe)', padding: '0.2rem 0.55rem', borderRadius: 999 }}>Aujourd'hui</span>}
+                    {isPast && !isToday && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600' }}>Passé</span>}
                   </div>
                 )
               })}
@@ -521,7 +521,7 @@ export default function AccueilClient() {
                   {visibles.map((prog, index) => {
                     const termine = isCycleTermine(prog)
                     return (
-                      <div key={prog.id} onClick={() => navigate(`/client/programme/${prog.id}`)}
+                      <div role="button" tabIndex={0} key={prog.id} onClick={() => navigate(`/client/programme/${prog.id}`)}
                         style={{ ...styles.card, border: `1.5px solid ${termine ? '#d1d5db' : index === 0 ? 'var(--accent)' : '#e5e7eb'}`, opacity: termine ? 0.6 : 1 }}>
                         <div>
                           <p style={styles.cardTitle}>{prog.nom}</p>
@@ -562,7 +562,7 @@ export default function AccueilClient() {
         </div>
 
         <button onClick={handleLogout} style={styles.logoutBtn}>Se déconnecter</button>
-        <p style={{ textAlign: 'center', fontSize: '0.68rem', color: '#d1d5db', marginTop: '0.75rem', marginBottom: 0 }}>v{APP_VERSION}</p>
+        <p style={{ textAlign: 'center', fontSize: '0.7rem', color: '#6b7280', marginTop: '0.75rem', marginBottom: 0 }}>v{APP_VERSION}</p>
 
         {/* ── Confidentialité & compte ───────────────────────── */}
         <div style={styles.legalRow}>
@@ -621,7 +621,7 @@ const styles = {
   card:        { background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle:   { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.2rem' },
   cardSub:     { color: '#6b7280', fontSize: '0.8rem', margin: 0 },
-  chevron:     { color: '#d1d5db', fontSize: '1.5rem', lineHeight: 1 },
+  chevron:     { color: '#9ca3af', fontSize: '1.5rem', lineHeight: 1 },
   logoutBtn:   { marginTop: '2.5rem', width: '100%', padding: '0.875rem', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 12, color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer' },
   legalRow:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' },
   legalLink:   { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
@@ -649,7 +649,7 @@ const styles = {
   levelWidgetSuffix: { fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)' },
   levelWidgetBarTrack: { height: 6, background: 'rgba(255,255,255,0.16)', borderRadius: 99, overflow: 'hidden' },
   levelWidgetBarFill: { height: '100%', background: 'linear-gradient(90deg, #7cb8ff, #a7d1ff)', borderRadius: 99 },
-  levelWidgetSub: { fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', fontWeight: 700, margin: '0.4rem 0 0' },
+  levelWidgetSub: { fontSize: '0.7rem', color: 'rgba(255,255,255,0.62)', fontWeight: 700, margin: '0.4rem 0 0' },
   levelWidgetChevron: { color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', flexShrink: 0 },
   weekRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 12, padding: '0.65rem 1rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
   weekDay:     { width: 40, height: 40, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

@@ -149,7 +149,7 @@ function ChatInner({ clientId, coachId, inputInset }) {
                   {m.corps}
                 </p>
                 <p style={{
-                  margin: '0.25rem 0 0', fontSize: '0.62rem',
+                  margin: '0.25rem 0 0', fontSize: '0.7rem',
                   opacity: 0.45, textAlign: isMe ? 'right' : 'left',
                 }}>
                   {new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}

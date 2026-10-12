@@ -395,7 +395,7 @@ const S = {
   tab:        { border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 99, padding: '6px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   tabOn:      { background: '#1a1a1a', borderColor: '#1a1a1a', color: 'white' },
   list:       { flex: 1, overflowY: 'auto', padding: '8px 14px 20px' },
-  source:     { fontSize: '0.65rem', color: '#b6bdc4', fontWeight: 700, padding: '2px 2px 8px', margin: 0 },
+  source:     { fontSize: '0.7rem', color: '#b6bdc4', fontWeight: 700, padding: '2px 2px 8px', margin: 0 },
   row:        { width: '100%', display: 'flex', alignItems: 'center', gap: 11, background: 'white', borderRadius: 13, padding: '11px 13px', marginBottom: 7, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
   rowNom:     { fontSize: '0.85rem', fontWeight: 700, margin: 0, lineHeight: 1.3 },
   rowSub:     { fontSize: '0.71rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 600 },

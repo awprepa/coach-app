@@ -213,7 +213,7 @@ export default function GroupeTestsView({ groupeId, accent }) {
                       const isOpen = expandedId === r.joueur.id
                       return (
                         <Fragment key={r.joueur.id}>
-                          <tr onClick={() => setExpandedId(isOpen ? null : r.joueur.id)} style={{ cursor: r.tests.length > 1 ? 'pointer' : 'default' }}
+                          <tr role="button" tabIndex={0} onClick={() => setExpandedId(isOpen ? null : r.joueur.id)} style={{ cursor: r.tests.length > 1 ? 'pointer' : 'default' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
                             <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #f3f4f6', fontWeight: 700, color: '#1a1a1a' }}>
                               {r.joueur.prenom} {r.joueur.nom}

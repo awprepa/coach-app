@@ -408,7 +408,7 @@ function Ctr({ n, label }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{n}</span>
-      <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{label}</span>
+      <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{label}</span>
     </div>
   )
 }
@@ -438,7 +438,7 @@ const S = {
     padding: '14px 20px 28px',
   },
   eyebrow: {
-    fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.16em',
+    fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.16em',
     color: 'var(--accent-fg)', margin: '0 0 10px',
   },
   h1: {
@@ -505,18 +505,18 @@ const S = {
     marginBottom: 6,
   },
   cardNum: {
-    fontSize: '0.6rem', fontWeight: 800, color: '#c8cdd4', letterSpacing: '0.06em',
+    fontSize: '0.7rem', fontWeight: 800, color: '#c8cdd4', letterSpacing: '0.06em',
   },
   catChip: {
     padding: '2px 8px', borderRadius: 999,
-    fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.03em',
+    fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.03em',
   },
   cardTitle: {
     fontWeight: 800, fontSize: '0.9rem', color: '#111827',
     margin: '0 0 4px', lineHeight: 1.3, letterSpacing: '-0.01em',
   },
   cardMeta: {
-    fontSize: '0.67rem', color: '#6b7280', fontWeight: 500,
+    fontSize: '0.7rem', color: '#6b7280', fontWeight: 500,
     margin: '0 0 10px', lineHeight: 1.5,
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
@@ -528,7 +528,7 @@ const S = {
     fontSize: '1rem', fontWeight: 900, lineHeight: 1.1, flexShrink: 0,
   },
   statLabel: {
-    fontSize: '0.68rem', color: '#6b7280', fontWeight: 500,
+    fontSize: '0.7rem', color: '#6b7280', fontWeight: 500,
     lineHeight: 1.35, paddingTop: 1,
   },
   chevron: {
@@ -554,7 +554,7 @@ const S = {
     overflow: 'hidden',
   },
   formulaLabel: {
-    fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)',
+    fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)',
     textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px',
   },
   formulaLine: {
@@ -579,12 +579,12 @@ const S = {
     display: 'flex', gap: 7, alignItems: 'flex-start',
   },
   doiTag: {
-    fontSize: '0.58rem', fontWeight: 800, color: '#6b7280',
+    fontSize: '0.7rem', fontWeight: 800, color: '#6b7280',
     letterSpacing: '0.08em', padding: '2px 6px',
     background: '#f3f4f6', borderRadius: 4, flexShrink: 0,
   },
   doiVal: {
-    fontSize: '0.67rem', color: '#6b7280',
+    fontSize: '0.7rem', color: '#6b7280',
     fontFamily: 'ui-monospace, monospace',
     lineHeight: 1.5, wordBreak: 'break-all',
   },

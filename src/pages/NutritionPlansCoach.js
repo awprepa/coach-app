@@ -409,7 +409,7 @@ function DayAdherenceCard({ day }) {
             </div>
           )}
           {loggued === 0 && (
-            <div style={{ fontSize: '0.68rem', color: '#d1d5db', marginTop: 1, fontStyle: 'italic' }}>Aucun log</div>
+            <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 1, fontStyle: 'italic' }}>Aucun log</div>
           )}
         </div>
 
@@ -472,7 +472,7 @@ function DayAdherenceCard({ day }) {
 function PlanCard({ plan, navigate, onDelete, onToggle, onCopy }) {
   const sc = STATUT_CONFIG[plan.statut] || STATUT_CONFIG.brouillon
   return (
-    <div onClick={() => navigate(`/nutrition/plan/${plan.id}`)} style={S.card}>
+    <div role="button" tabIndex={0} onClick={() => navigate(`/nutrition/plan/${plan.id}`)} style={S.card}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: '0.97rem', color: '#1a1a1a', marginBottom: 4 }}>{plan.nom}</div>
