@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { supabase } from '../../supabase'
 import { CompetitionTab } from './CompetitionTab'
 import { EffectifView } from './EffectifView'
@@ -6,11 +6,15 @@ import { GroupesNiveauView } from './GroupesNiveauView'
 import { InheritedEventPreview } from './InheritedEventPreview'
 import { Leg, Stat } from './Petits'
 import { SeanceModal } from './SeanceModal'
+import { DayCell } from './DayCell'
+import { dupliquerBlocs, dupliquerDocuments, loadBlocs, loadBlocsPour } from './blocs'
 import { WeekZoomModal } from './WeekZoomModal'
-import { CREATE_TYPES, DOW, HAS_BLOCS, MATCH_CATEGORIES, STYLE_COLORS, TYPES, buildMonths, iso, isoWeek, matchCatColor, seasonStartYear, ymd } from './constants'
+import { CREATE_TYPES, DOW, HAS_BLOCS, MATCH_CATEGORIES, STYLE_COLORS, TYPES, buildMonths, iso, isoWeek, localISO, matchCatColor, seasonStartYear, ymd } from './constants'
 import { isLight } from './couleurs'
 import { clipLabel, formatPopDate } from './seqHelpers'
 import { S } from './styles'
+
+const EMPTY_LIST = []
 
 export default function CalendrierSaison({ groupeId = null, embedded = false, openEventId = null }) {
   const [groupes, setGroupes]   = useState([])
@@ -68,7 +72,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   const kbRef = useRef(null)
 
   const groupColor = groupe?.couleur || '#2f6f76'
-  const months = buildMonths(startYear)
+  const months = useMemo(() => buildMonths(startYear), [startYear])
   const seasonStart = iso(startYear, 6, 1)
   const seasonEnd   = iso(startYear + 1, 5, 30)
 
@@ -94,49 +98,58 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   // Remonte la chaîne de groupes parents (sous-sous-groupe → sous-groupe → groupe
   // principal…) pour hériter de leurs évènements dans le calendrier.
   async function getAncestorIds(startParentId) {
+    // une seule requête (la table des groupes est petite) au lieu d'un aller-retour par niveau
+    const { data } = await supabase.from('groupes').select('id, parent_id')
+    const parent = {}
+    ;(data || []).forEach(g => { parent[g.id] = g.parent_id })
     const ids = []
     let pid = startParentId
-    let guard = 0
-    while (pid && guard < 10) {
-      ids.push(pid)
-      const { data } = await supabase.from('groupes').select('parent_id').eq('id', pid).maybeSingle()
-      pid = data?.parent_id || null
-      guard++
-    }
+    let garde = 0
+    while (pid && garde < 10) { ids.push(pid); pid = parent[pid] || null; garde++ }
     return ids
   }
 
+  const loadSeq = useRef(0)
   const loadSeason = useCallback(async (silent = false) => {
     if (!groupe) return
+    const mine = ++loadSeq.current            // numéro de cette demande
     const scrollY = window.scrollY
     if (!silent) setLoading(true)
-    const ancestorIds = groupe.parent_id ? await getAncestorIds(groupe.parent_id) : []
-    const [{ data: evs }, { data: phs }] = await Promise.all([
-      supabase.from('groupe_evenements').select('*')
-        .in('groupe_id', [groupe.id, ...ancestorIds]).gte('date', seasonStart).lte('date', seasonEnd).order('date'),
-      supabase.from('groupe_phases').select('*')
-        .eq('groupe_id', groupe.id).order('ordre'),
-    ])
-    // Évènements hérités d'un groupe parent (entraînements communs à toute
-    // l'équipe) : affichés partout, mais modifiables seulement depuis le
-    // groupe qui les a créés — sinon un joueur de "Avants" pourrait supprimer
-    // l'entraînement de tout "Juniors U18".
-    setEvenements((evs || []).map(e => ({ ...e, _inherited: e.groupe_id !== groupe.id })))
-    setPhases(phs || [])
-    // Charger les données FFR si le groupe a un lien monclubhouse
-    if (groupe.monclubhouse_url) {
-      const [{ data: ffr }, { data: cls }] = await Promise.all([
-        supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
-        supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
+    try {
+      const ancestorIds = groupe.parent_id ? await getAncestorIds(groupe.parent_id) : []
+      const [{ data: evs, error: errEv }, { data: phs }] = await Promise.all([
+        supabase.from('groupe_evenements').select('*')
+          .in('groupe_id', [groupe.id, ...ancestorIds]).gte('date', seasonStart).lte('date', seasonEnd).order('date'),
+        supabase.from('groupe_phases').select('*')
+          .eq('groupe_id', groupe.id).order('ordre'),
       ])
-      setMatchsFFR(ffr || [])
-      setClassementFFR(cls || [])
-      if (ffr?.length) setLastSyncFFR(ffr[0].synced_at)
-    } else {
-      setMatchsFFR([]); setClassementFFR([])
+      if (mine !== loadSeq.current) return    // le groupe ou la saison a changé entre-temps
+      if (errEv) { console.error('[CalendrierSaison] chargement', errEv.message); return }
+      // Évènements hérités d'un groupe parent (entraînements communs à toute
+      // l'équipe) : affichés partout, mais modifiables seulement depuis le
+      // groupe qui les a créés.
+      setEvenements((evs || []).map(e => ({ ...e, _inherited: e.groupe_id !== groupe.id })))
+      setPhases(phs || [])
+      if (groupe.monclubhouse_url) {
+        const [{ data: ffr }, { data: cls }] = await Promise.all([
+          supabase.from('matchs_ffr').select('*').eq('groupe_id', groupe.id).order('date_match'),
+          supabase.from('classements_ffr').select('*').eq('groupe_id', groupe.id).order('position'),
+        ])
+        if (mine !== loadSeq.current) return
+        setMatchsFFR(ffr || [])
+        setClassementFFR(cls || [])
+        if (ffr?.length) setLastSyncFFR(ffr[0].synced_at)
+      } else {
+        setMatchsFFR([]); setClassementFFR([])
+      }
+    } catch (e) {
+      console.error('[CalendrierSaison] chargement', e)
+    } finally {
+      if (mine === loadSeq.current) {
+        if (!silent) setLoading(false)
+        else requestAnimationFrame(() => window.scrollTo(0, scrollY))
+      }
     }
-    if (!silent) setLoading(false)
-    else requestAnimationFrame(() => window.scrollTo(0, scrollY))
   }, [groupe, seasonStart, seasonEnd])
 
   useEffect(() => { loadSeason() }, [loadSeason])
@@ -218,24 +231,27 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     return () => window.removeEventListener('keydown', onKey)
   }, [])                // inscrit une seule fois, kbRef.current est toujours à jour
 
-  // ── Index par jour ──────────────────────────────────────────────────────────
-  const evByDay = {}
-  for (const e of evenements) {
-    const [Y, M, D] = e.date.split('-').map(Number)
-    const k = ymd(Y, M - 1, D)
-    ;(evByDay[k] ||= []).push(e)
-  }
-  const matchsList = evenements.filter(e => e.type === 'match')
+  // ── Index par jour (recalculés seulement quand les données changent) ───────
+  const evByDay = useMemo(() => {
+    const out = {}
+    for (const e of evenements) {
+      const [Y, M, D] = e.date.split('-').map(Number)
+      ;(out[ymd(Y, M - 1, D)] ||= []).push(e)
+    }
+    return out
+  }, [evenements])
+  const matchsList = useMemo(() => evenements.filter(e => e.type === 'match'), [evenements])
+  const nbEntrainements = useMemo(() => evenements.filter(e => e.type === 'entrainement').length, [evenements])
   const today = new Date(); const todayKey = ymd(today.getFullYear(), today.getMonth(), today.getDate())
-
-  // ── Index FFR par jour ─────────────────────────────────────────────────────
-  const ffrByDay = {}
-  for (const m of matchsFFR) {
-    if (!m.date_match) continue
-    const [Y, M, D] = m.date_match.split('-').map(Number)
-    const k = ymd(Y, M - 1, D)
-    ;(ffrByDay[k] ||= []).push(m)
-  }
+  const ffrByDay = useMemo(() => {
+    const out = {}
+    for (const m of matchsFFR) {
+      if (!m.date_match) continue
+      const [Y, M, D] = m.date_match.split('-').map(Number)
+      ;(out[ymd(Y, M - 1, D)] ||= []).push(m)
+    }
+    return out
+  }, [matchsFFR])
 
   // Sync FFR depuis l'Edge Function
   async function syncFFR() {
@@ -307,17 +323,6 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       || (todayISO >= seasonStart && todayISO <= seasonEnd ? todayISO : null)
     setPanel({ mode: 'create', evt: null, form: emptyForm(d), blocs: [] })
   }
-  async function loadBlocs(evtId) {
-    const { data } = await supabase.from('groupe_seance_blocs')
-      .select('*, groupe_seance_exercices(*), groupe_seance_sequences(*)')
-      .eq('evenement_id', evtId).order('ordre')
-    return (data || []).map(b => ({
-      ...b,
-      exos: (b.groupe_seance_exercices || []).sort((a, z) => a.ordre - z.ordre),
-      sequences: (b.groupe_seance_sequences || []).sort((a, z) => a.ordre - z.ordre),
-    }))
-  }
-
   // ── Zoom semaine ─────────────────────────────────────────────────────────────
   async function openWeekZoom(dateISO) {
     const [y, m, d] = dateISO.split('-').map(Number)
@@ -340,12 +345,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     }
 
     // Charger les blocs de toutes les séances de la semaine
-    const blocsMap = {}
-    for (const day of days) {
-      for (const ev of day.events) {
-        if (HAS_BLOCS.includes(ev.type)) blocsMap[ev.id] = await loadBlocs(ev.id)
-      }
-    }
+    const blocsMap = await loadBlocsPour(
+      days.flatMap(day => day.events.filter(ev => HAS_BLOCS.includes(ev.type)).map(ev => ev.id))
+    )
 
     const startISO = monday.toISOString().slice(0, 10)
     const [sy, sm, sd] = startISO.split('-').map(Number)
@@ -387,14 +389,14 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     setAiLoading(true)
     const today = new Date()
     const cutoff = new Date(today); cutoff.setDate(today.getDate() - 28)
-    const cutoffISO = cutoff.toISOString().slice(0, 10)
+    const cutoffISO = localISO(cutoff)
     const context = {
       groupe: { nom: groupe.nom },
       phases: seasonPhases.map(p => ({ label: p.label, debut: p.date_debut, fin: p.date_fin })),
       recentEvents: evenements
         .filter(e => e.date >= cutoffISO)
         .map(e => ({ date: e.date, type: e.type, titre: e.titre, charge: e.charge })),
-      currentDate: today.toISOString().slice(0, 10),
+      currentDate: localISO(today),
     }
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -493,6 +495,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
   }
   async function deleteEvent() {
     if (!panel?.evt) return
+    if (!window.confirm(`Supprimer « ${clipLabel(panel.evt)} » du ${formatPopDate(panel.evt.date)} ?`)) return
     const delId = panel.evt.id
     setSaving(true)
     const { error } = await supabase.from('groupe_evenements').delete().eq('id', delId)
@@ -503,6 +506,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     loadSeason(true)
   }
   async function deleteEventDirect(e) {
+    if (!window.confirm(`Supprimer « ${clipLabel(e)} » du ${formatPopDate(e.date)} ?`)) return
     const { error } = await supabase.from('groupe_evenements').delete().eq('id', e.id)
     if (error) { alert('Erreur : ' + error.message); return }
     setEvenements(prev => prev.filter(x => x.id !== e.id))
@@ -529,16 +533,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     }
     const { data, error } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
     if (error) { alert('Erreur : ' + error.message); return }
-    // dupliquer blocs + exercices
-    for (const b of clip.blocs) {
-      const { data: nb } = await supabase.from('groupe_seance_blocs')
-        .insert([{ evenement_id: data.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre, contact_intensite: b.contact_intensite ?? null, course_volume: b.course_volume || null, course_intensite: b.course_intensite || null, intervenant: b.intervenant || null }]).select('id').single()
-      if (nb && b.exos?.length) {
-        await supabase.from('groupe_seance_exercices').insert(
-          b.exos.map(x => ({ bloc_id: nb.id, nom: x.nom, prescription: x.prescription || '', detail: x.detail || '', ordre: x.ordre }))
-        )
-      }
-    }
+    // déroulé complet (blocs, exercices, séquences de jeu) et documents joints
+    await dupliquerBlocs(data.id, clip.blocs)
+    await dupliquerDocuments(s.id, data.id)
     setCtx(null)
     await loadSeason(true)
   }
@@ -665,9 +662,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     // multiple depuis un sous-groupe supprimerait l'entraînement de tout le monde.
     const toDelete = evenements.filter(ev => ev.date >= start && ev.date <= end && !ev._inherited)
     if (!toDelete.length) return
-    for (const ev of toDelete) {
-      await supabase.from('groupe_evenements').delete().eq('id', ev.id)
-    }
+    if (!window.confirm(`Supprimer ${toDelete.length} évènement${toDelete.length > 1 ? 's' : ''} (du ${formatPopDate(start)} au ${formatPopDate(end)}) ?`)) return
+    const { error } = await supabase.from('groupe_evenements').delete().in('id', toDelete.map(ev => ev.id))
+    if (error) { alert('Erreur : ' + error.message); return }
     setSel(null)
     await loadSeason(true)
   }
@@ -676,10 +673,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     if (!sel || !groupe) return
     const [s, e] = [sel.start, sel.end].sort()
     const rangeEvts = evenements.filter(ev => ev.date >= s && ev.date <= e)
-    const blocsMap = {}
-    for (const ev of rangeEvts) {
-      if (HAS_BLOCS.includes(ev.type)) blocsMap[ev.id] = await loadBlocs(ev.id)
-    }
+    const blocsMap = await loadBlocsPour(rangeEvts.filter(ev => HAS_BLOCS.includes(ev.type)).map(ev => ev.id))
     setPeriodClip({ start: s, end: e, events: rangeEvts, blocsMap })
     setSelMenu(null); setSel(null)
   }
@@ -697,20 +691,14 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
         groupe_id: groupe.id, date: newDate, heure: ev.heure || null, type: ev.type,
         titre: ev.titre || null, lieu: ev.lieu || null, duree_min: ev.duree_min || null,
         charge: ev.charge || null, note: ev.note || null, style: ev.style || null,
+        themes_seance: ev.themes_seance || null,
         adversaire: ev.adversaire || null, categorie: ev.categorie || null,
         domicile: ev.domicile, journee: ev.journee || null,
       }
       const { data: nev } = await supabase.from('groupe_evenements').insert([payload]).select('id').single()
-      if (nev && periodClip.blocsMap[ev.id]) {
-        for (const b of periodClip.blocsMap[ev.id]) {
-          const { data: nb } = await supabase.from('groupe_seance_blocs')
-            .insert([{ evenement_id: nev.id, nom: b.nom, duree: b.duree || '', ordre: b.ordre }]).select('id').single()
-          if (nb && b.exos?.length) {
-            await supabase.from('groupe_seance_exercices').insert(
-              b.exos.map(x => ({ bloc_id: nb.id, nom: x.nom, prescription: x.prescription || '', detail: x.detail || '', ordre: x.ordre }))
-            )
-          }
-        }
+      if (nev) {
+        await dupliquerBlocs(nev.id, periodClip.blocsMap[ev.id])
+        await dupliquerDocuments(ev.id, nev.id)
       }
     }
     await loadSeason(true)
@@ -774,97 +762,55 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     if (openDetails && data) openEdit(data)
   }
 
-  // ── Rendu cellule jour ────────────────────────────────────────────────────────
-  function renderCell(y, m, d) {
-    const evs = evByDay[ymd(y, m, d)] || []
-    const ffr = ffrByDay[ymd(y, m, d)] || []
-    if (!evs.length && !ffr.length) return <div style={{ flex: 1 }} />
-    return (
-      /* position:relative ici → les overlays absolus FFR sont relatifs à ce wrapper */
-      <div style={{ flex: 1, minWidth: 0, position: 'relative', overflow: 'hidden' }}>
-        {/* ── Matchs FFR : position:absolute → ZÉRO impact sur la hauteur de la cellule ── */}
-        {ffr.map(fm => {
-          const adversaire = fm.est_domicile ? fm.equipe_ext : fm.est_domicile === false ? fm.equipe_dom : (fm.equipe_ext || fm.equipe_dom)
-          const joue = fm.score_dom != null && fm.score_ext != null
-          const scoreAff = joue
-            ? (fm.est_domicile ? `${fm.score_dom}-${fm.score_ext}` : fm.est_domicile === false ? `${fm.score_ext}-${fm.score_dom}` : `${fm.score_dom}-${fm.score_ext}`)
-            : fm.heure || ''
-          const gagné = joue && (fm.est_domicile ? fm.score_dom > fm.score_ext : fm.est_domicile === false ? fm.score_ext > fm.score_dom : false)
-          const perdu = joue && (fm.est_domicile ? fm.score_dom < fm.score_ext : fm.est_domicile === false ? fm.score_ext < fm.score_dom : false)
-          const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : '#1e40af'
-          const logoAdv = fm.est_domicile ? fm.logo_ext : fm.est_domicile === false ? fm.logo_dom : (fm.logo_ext || fm.logo_dom)
-          return (
-            <div key={fm.id}
-              title={`Match FFR${fm.journee ? ' · J' + fm.journee : ''} · ${fm.equipe_dom} vs ${fm.equipe_ext} — Cliquer pour détails`}
-              onClick={() => openWeekZoom(iso(y, m, d))}
-              style={{
-                position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 1,
-                background: bg, color: '#fff', fontWeight: 800, fontSize: '0.55rem',
-                display: 'flex', alignItems: 'center', gap: 3,
-                padding: '0 4px', overflow: 'hidden', whiteSpace: 'nowrap',
-                borderLeft: '3px solid rgba(255,255,255,0.35)', cursor: 'pointer',
-              }}>
-              {logoAdv && <img loading="lazy" src={logoAdv} alt="" style={{ width: 13, height: 13, objectFit: 'contain', flexShrink: 0, borderRadius: 2 }} onError={e => e.target.style.display='none'} />}
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>vs {adversaire || 'Match'}</span>
-              {scoreAff && <small style={{ fontSize: '0.48rem', opacity: 0.9, flexShrink: 0 }}>{scoreAff}</small>}
-            </div>
-          )
-        })}
-        {/* ── Évènements normaux (flux normal, derrière l'overlay FFR si présent) ── */}
-        {evs.map(e => {
-          const T = TYPES[e.type] || TYPES.autre
-          // Évènement hérité d'un groupe parent : lecture seule (aperçu), pas de
-          // menu contextuel ni de déplacement — à modifier depuis son groupe d'origine.
-          const onCtx = e._inherited ? undefined : ev => openCtx(ev, e.date, e)
-          const onEvtClick = e._inherited
-            ? async () => { const blocs = await loadBlocs(e.id); setDayPreview({ evt: e, blocs }) }
-            : () => { lastEvtRef.current = e; openEdit(e) }
-          const dragProps = e._inherited ? {} : {
-            draggable: true,
-            onMouseDown: ev => { ev.stopPropagation(); lastEvtRef.current = e; lastDateRef.current = e.date },
-            onDragStart: ev => { ev.stopPropagation(); setDragEvt(e); ev.dataTransfer.effectAllowed = 'move' },
-            onDragEnd: () => { setDragEvt(null); setDragOver(null) },
-          }
-          const dragOpacity = dragEvt?.id === e.id ? 0.4 : 1
-          if (e.type === 'match') {
-            const mc = matchCatColor(e.categorie, groupColor)
-            return (
-              <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Match${e.categorie ? ' · ' + e.categorie : ''}${e._inherited ? ' (groupe principal)' : ''}`}
-                style={{ background: mc, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', display: 'flex', justifyContent: 'space-between', gap: 4, cursor: e._inherited ? 'pointer' : 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.adversaire || e.titre || 'Match'}</span>
-                {e.domicile != null && <small style={{ fontSize: '0.5rem', fontWeight: 700, opacity: 0.9 }}>{e.domicile ? 'dom' : 'ext'}</small>}
-              </div>
-            )
-          }
-          if (e.type === 'recup') {
-            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title="Récup" style={{ flex: 1, minHeight: 20, cursor: e._inherited ? 'pointer' : 'grab', opacity: dragOpacity }} />
-          }
-          if (e.type === 'test') {
-            return <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`Tests${e._inherited ? ' (groupe principal)' : ''}`} style={{ background: groupColor, color: '#fff', fontWeight: 800, fontSize: '0.6rem', padding: '0 5px', lineHeight: '20px', cursor: e._inherited ? 'pointer' : 'grab', overflow: 'hidden', whiteSpace: 'nowrap', opacity: dragOpacity }}>{e.titre || T.label}</div>
-          }
-          const neutral = T.neutral
-          const txt = e.type === 'entrainement' ? (e.style || e.titre || T.label) : (e.titre || T.short || T.label)
-          const styleColor = e.type === 'entrainement' ? STYLE_COLORS[e.style] : null
-          return (
-            <div key={e.id} {...dragProps} onClick={onEvtClick} onContextMenu={onCtx} title={`${T.label}${e._inherited ? ' (groupe principal)' : ''}`}
-              style={{
-                fontSize: '0.6rem', fontWeight: 700, padding: '0 5px', lineHeight: '20px', cursor: e._inherited ? 'pointer' : 'grab',
-                overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: dragOpacity,
-                color: styleColor ? '#fff' : neutral ? '#5b626c' : '#3a4049',
-                background: styleColor || (neutral ? '#f0f2f5' : `color-mix(in srgb, ${groupColor} 12%, #fff)`),
-                borderLeft: `3px ${e._inherited ? 'dashed' : 'solid'} ${styleColor || (neutral ? '#c4ccd4' : `color-mix(in srgb, ${groupColor} 65%, #fff)`)}`,
-              }}>
-              {txt}
-            </div>
-          )
-        })}
-      </div>
-    )
+  // ── Actions de la grille, regroupées dans un objet stable ───────────────────
+  // (les cases sont mémoïsées : elles ne doivent pas changer à chaque rendu)
+  const act = useRef({})
+  act.current = {
+    weekZoom: dISO => openWeekZoom(dISO),
+    dayMouseDown: onDayMouseDown,
+    dayMouseEnter: onDayMouseEnter,
+    dayDoubleClick: (e, dISO) => { setSel(null); if (!selMenu) openPop(e, dISO) },
+    dayContext: (e, dISO) => {
+      e.preventDefault(); e.stopPropagation()
+      if (selDrag) return
+      setSel(null)  // efface la sélection avant d'ouvrir la bulle
+      lastDateRef.current = dISO
+      openPop(e, dISO)
+    },
+    evtContext: (ev, e) => openCtx(ev, e.date, e),
+    evtClick: async e => {
+      if (e._inherited) { const blocs = await loadBlocs(e.id); setDayPreview({ evt: e, blocs }) }
+      else { lastEvtRef.current = e; openEdit(e) }
+    },
+    evtMouseDown: (ev, e) => { ev.stopPropagation(); lastEvtRef.current = e; lastDateRef.current = e.date },
+    dragStart: e => setDragEvt(e),
+    dragEnd: () => { setDragEvt(null); setDragOver(null) },
+    dragOver: dISO => setDragOver(prev => prev === dISO ? prev : dISO),
+    drop: dISO => { if (dragEvtRef.current) moveEvent(dragEvtRef.current, dISO); setDragEvt(null); setDragOver(null) },
   }
+  const dragEvtRef = useRef(null)
+  dragEvtRef.current = dragEvt
+  const h = useMemo(() => {
+    const out = {}
+    for (const k of ['weekZoom', 'dayMouseDown', 'dayMouseEnter', 'dayDoubleClick', 'dayContext', 'evtContext', 'evtClick', 'evtMouseDown', 'dragStart', 'dragEnd', 'dragOver', 'drop']) {
+      out[k] = (...args) => act.current[k](...args)
+    }
+    return out
+  }, [])
+
+  // Aller au mois en cours (à l'ouverture et via le bouton « Aujourd'hui »)
+  const gridRef = useRef(null)
+  function scrollToToday(smooth = false) {
+    const wrap = gridRef.current
+    if (!wrap) return
+    const col = wrap.querySelector(`[data-mcol="${today.getFullYear()}-${today.getMonth()}"]`)
+    if (col) wrap.scrollTo({ left: Math.max(0, col.offsetLeft - 24), behavior: smooth ? 'smooth' : 'auto' })
+  }
+  useEffect(() => { if (!loading && calTab === 'calendrier') scrollToToday() }, [loading, groupe?.id, startYear, calTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const seasonOpts = [seasonStartYear() - 1, seasonStartYear(), seasonStartYear() + 1]
   const pageStyle = embedded ? S.pageEmbed : S.page
-  const todayISO = iso(today.getFullYear(), today.getMonth(), today.getDate())
+  const todayISO = localISO(today)
 
   // Handler clavier mis à jour à chaque render (lu via kbRef)
   kbRef.current = (e) => {
@@ -956,6 +902,9 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
           <select value={startYear} onChange={e => setStartYear(Number(e.target.value))} style={S.select}>
             {seasonOpts.map(y => <option key={y} value={y}>Saison {y} / {y + 1}</option>)}
           </select>
+          <button style={S.btn} onClick={() => { if (startYear !== seasonStartYear()) setStartYear(seasonStartYear()); else scrollToToday(true) }}>
+            Aujourd'hui
+          </button>
           <button style={{ ...S.btnDark, background: groupColor, borderColor: groupColor, color: btnColor }}
             onClick={() => openCreate()}>
             <span style={{ fontWeight: 900 }}>+</span> Ajouter
@@ -991,7 +940,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       <div style={{ ...S.summary, borderBottom: `2px solid color-mix(in srgb, ${groupColor} 30%, #e6e8ec)`, paddingBottom: 12 }}>
         <Stat v={matchsList.length} l="Matchs" color={groupColor} />
         <span style={S.sep} />
-        <Stat v={evenements.filter(e => e.type === 'entrainement').length} l="Entraînements" color={groupColor} />
+        <Stat v={nbEntrainements} l="Entraînements" color={groupColor} />
         <span style={S.sep} />
         <Stat v={evenements.length} l="Évènements" color={groupColor} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 13, flexWrap: 'wrap' }}>
@@ -1018,12 +967,12 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
           </div>
 
           {/* ── Grille saison ── */}
-          <div style={S.gridwrap}>
+          <div style={S.gridwrap} ref={gridRef}>
             <div style={S.grid}>
               {months.map(M => {
                 const ph = phaseOfMonth(M.y, M.m)
                 return (
-                  <div key={`${M.y}-${M.m}`} style={S.mcol}>
+                  <div key={`${M.y}-${M.m}`} data-mcol={`${M.y}-${M.m}`} style={S.mcol}>
                     <div style={{ ...S.mch, borderTop: `3px solid ${ph?.couleur || groupColor}`, background: `color-mix(in srgb, ${groupColor} 4%, #fbfcfd)` }}>
                       <div style={{ ...S.mm, color: `color-mix(in srgb, ${groupColor} 60%, #15181d)` }}>{M.label}</div>
                       <div style={S.my}>{M.y}</div>
@@ -1032,49 +981,20 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
                       if (d > M.days) return <div key={d} style={S.blank}><div style={S.dnum} /><div style={S.ddow} /><div style={{ flex: 1 }} /></div>
                       const dow = new Date(M.y, M.m, d).getDay()
                       const vac = vacInfo(M.y, M.m, d)
-                      const isToday = ymd(M.y, M.m, d) === todayKey
                       const dISO = iso(M.y, M.m, d)
                       const weekStart = dow === 1 || d === 1   // lundi, ou 1er jour visible du mois
-                      const wkNum = weekStart ? isoWeek(M.y, M.m, d) : null
-                      const selected  = inSel(dISO)
-                      const isPastDay = dISO < todayISO
+                      const evs = evByDay[ymd(M.y, M.m, d)] || EMPTY_LIST
                       return (
-                        <div key={d} style={weekStart && d !== 1 ? S.weekSep : null}>
-                          {weekStart && (
-                        <div
-                          style={{ ...S.weekTag, ...(isPastDay ? S.weekTagPast : null), cursor: 'pointer' }}
-                          onClick={e => { e.stopPropagation(); openWeekZoom(dISO) }}
-                          title="Voir le détail de cette semaine"
-                        >S{wkNum}</div>
-                      )}
-                          {vac.in && vac.start && <div style={S.vacband}>{vac.label}</div>}
-                          <div
-                            onMouseDown={e => onDayMouseDown(e, dISO)}
-                            onMouseEnter={() => onDayMouseEnter(dISO)}
-                            onDoubleClick={e => { setSel(null); if (!selMenu) openPop(e, dISO) }}
-                            onContextMenu={e => {
-                              e.preventDefault(); e.stopPropagation()
-                              if (selDrag) return
-                              setSel(null)  // efface la sélection avant d'ouvrir la bulle
-                              lastDateRef.current = dISO
-                              openPop(e, dISO)
-                            }}
-                            onDragOver={dragEvt ? (e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== dISO) setDragOver(dISO) }) : undefined}
-                            onDrop={dragEvt ? (e => { e.preventDefault(); moveEvent(dragEvt, dISO); setDragEvt(null); setDragOver(null) }) : undefined}
-                            style={{
-                              ...S.drow,
-                              ...(isPastDay ? S.drowPast : null),
-                              ...(vac.in ? S.drowVac : null),
-                              ...(isToday ? S.drowToday : null),
-                              ...(dragOver === dISO ? S.drowDrop : null),
-                              ...(selected ? S.drowSel : null),
-                              userSelect: 'none',
-                            }}>
-                            <div style={{ ...S.dnum, ...(isPastDay ? S.dnumPast : null) }}>{d}</div>
-                            <div style={S.ddow}>{DOW[dow]}</div>
-                            {renderCell(M.y, M.m, d)}
-                          </div>
-                        </div>
+                        <DayCell key={d}
+                          y={M.y} m={M.m} d={d} dISO={dISO} dow={dow}
+                          evs={evs} ffr={ffrByDay[ymd(M.y, M.m, d)] || EMPTY_LIST}
+                          groupColor={groupColor} h={h}
+                          vacIn={vac.in} vacStart={!!vac.start} vacLabel={vac.label || ''}
+                          isToday={ymd(M.y, M.m, d) === todayKey} isPastDay={dISO < todayISO}
+                          weekStart={weekStart} wkNum={weekStart ? isoWeek(M.y, M.m, d) : null}
+                          selected={inSel(dISO)} dropOver={dragOver === dISO}
+                          dragActive={!!dragEvt} draggingId={dragEvt && evs.some(e => e.id === dragEvt.id) ? dragEvt.id : null}
+                        />
                       )
                     })}
                   </div>

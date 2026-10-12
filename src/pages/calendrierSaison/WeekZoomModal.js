@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { FitScale } from './FitScale'
-import { COURSE_INTENSITES, COURSE_VOLUMES, GROUP_COLORS, STYLE_COLORS, TYPES, matchCatColor } from './constants'
+import { COURSE_INTENSITES, COURSE_VOLUMES, GROUP_COLORS, STYLE_COLORS, TYPES, localISO, matchCatColor } from './constants'
 import { generateBlocPalette } from './couleurs'
 import { calcDureeBloc, calcJeuEffectif, formatSeqDur, parseDurMin } from './seqHelpers'
 import { S } from './styles'
@@ -8,7 +8,7 @@ import { S } from './styles'
 export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const groupColor = groupe?.couleur || '#2f6f76'
   const { wkNum, startISO, days, blocsMap } = weekZoom
-  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayISO = localISO()
   const DOW_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
   const [dayPreview, setDayPreview] = useState(null) // { evt, blocs, dateLabel }
   const [dayFull, setDayFull] = useState(null) // { day }

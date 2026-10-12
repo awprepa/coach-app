@@ -77,3 +77,11 @@ export function seasonStartYear(date = new Date()) {
 
 // Palette pour distinguer les groupes (ex: "Avants"/"3/4") dans les blocs à colonnes
 export const GROUP_COLORS = ['#0f766e', '#7c3aed', '#be123c', '#0369a1', '#a16207', '#4d7c0f']
+
+// Date locale AAAA-MM-JJ (jamais toISOString : entre 0h et 2h en France, l'UTC
+// donne encore la veille).
+export const localISO = (date = new Date()) => iso(date.getFullYear(), date.getMonth(), date.getDate())
+export function addDaysISO(isoDate, n) {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  return localISO(new Date(y, m - 1, d + n))
+}

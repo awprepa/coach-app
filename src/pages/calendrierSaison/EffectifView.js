@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { formatRetour, getActiveBlessure } from '../../components/BlessureButton'
 import { isLight } from './couleurs'
+import { localISO } from './constants'
 
 /* ── Effectif du groupe — organigramme rugby ── */
 export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
@@ -87,7 +88,7 @@ export function EffectifView({ groupeId, groupColor, openClientId, onOpened }) {
       .from('groupe_evenements')
       .select('id, date, type, titre, adversaire')
       .eq('groupe_id', groupeId)
-      .lte('date', new Date().toISOString().slice(0, 10))
+      .lte('date', localISO())
       .order('date', { ascending: false })
       .limit(6)
     setRecentEvents(evData || [])

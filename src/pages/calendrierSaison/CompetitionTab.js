@@ -1,9 +1,9 @@
 import React from 'react'
-import { iso } from './constants'
+import { iso, localISO } from './constants'
 
 // ── CompetitionTab ─────────────────────────────────────────────────────────────
 export function CompetitionTab({ matchs, classement, groupColor, groupeNom, syncing, lastSync, onSync }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localISO()
 
   // Identifier notre équipe depuis les matchs (est_domicile → equipe_dom/ext)
   // Méthode fiable : prend le nom le plus fréquent parmi "notre côté" dans chaque match
