@@ -1473,9 +1473,9 @@ export default function SeanceClient() {
                       Échauffement {warmups.length > 0 ? `· ${warmups.length} série${warmups.length > 1 ? 's' : ''}` : ''}
                     </span>
                     <button onClick={() => addWarmupSet(ex.id)} style={{
-                      background: 'white', border: '1.5px solid #333333', borderRadius: 8,
-                      color: '#333333', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', padding: '0.35rem 0.75rem',
-                    }}>+ Ajouter une série</button>
+                      background: 'none', border: '1px dashed #9ca3af', borderRadius: 6,
+                      color: '#4b5563', fontSize: '0.72rem', fontWeight: '500', cursor: 'pointer', padding: '0.3rem 0.65rem',
+                    }}>+ Série</button>
                   </div>
                   {warmups.map((ws, wi) => (
                     <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: ws.fromCoach ? '#fff7ed' : '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: `1.5px solid ${ws.fromCoach ? '#fed7aa' : '#e5e7eb'}` }}>
