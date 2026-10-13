@@ -16,8 +16,6 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 import SeanceTerrainClient from './SeanceTerrainClient'
 import { isoLocal } from '../../utils/dates'
-import Icon from '../../components/Icon'
-import T from '../../theme/tokens'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -92,12 +90,12 @@ function CardioCard({ cardio, label, youtubeId, S }) {
   const [mediaOpen, setMediaOpen] = useState(false)
   const ytId = cardio.media_url ? youtubeId(cardio.media_url) : null
   return (
-    <div style={{ ...S.card, marginBottom: '0.75rem' }}>
-      <p style={{ ...S.sectionLabel, marginBottom: '0.5rem' }}>{label}</p>
+    <div style={{ ...S.card, marginBottom: '0.75rem', border: '1.5px solid #3b82f6' }}>
+      <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>{label}</p>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
         {cardio.media_url && (
           <button onClick={() => setMediaOpen(true)}
-            aria-label="Voir la vidéo" style={{ flexShrink: 0, width: 64, height: 56, borderRadius: T.radius.control, overflow: 'hidden', border: `1px solid ${T.color.line}`, cursor: 'pointer', background: T.color.ink, padding: 0, position: 'relative' }}>
+            style={{ flexShrink: 0, width: 64, height: 56, borderRadius: 10, overflow: 'hidden', border: '2px solid #bfdbfe', cursor: 'pointer', background: '#1a1a1a', padding: 0, position: 'relative' }}>
             {ytId
               ? <><img loading="lazy" src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
               : <img loading="lazy" src={cardio.media_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -106,22 +104,21 @@ function CardioCard({ cardio, label, youtubeId, S }) {
         )}
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.xl, color: T.color.ink }}>{cardio.type}</span>
-            {cardio.duree_min && <span style={{ background: T.color.ink, color: T.color.signal, borderRadius: 8, padding: '2px 8px', fontSize: T.size.sm, fontWeight: 700 }}>{cardio.duree_min} min</span>}
-            {cardio.intensite && <span style={{ background: T.color.soft, color: T.color.ink, borderRadius: 8, padding: '2px 8px', fontSize: T.size.sm, fontWeight: 600 }}>{cardio.intensite}</span>}
+            <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardio.type}</span>
+            {cardio.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardio.duree_min} min</span>}
+            {cardio.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardio.intensite}</span>}
           </div>
-          {cardio.note && <p style={{ margin: '0.35rem 0 0', fontSize: T.size.md, color: T.color.muted }}>{cardio.note}</p>}
+          {cardio.note && <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardio.note}</p>}
         </div>
       </div>
       {mediaOpen && cardio.media_url && (
         <div onClick={() => setMediaOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
           <div onClick={e => e.stopPropagation()}
-            role="dialog" aria-modal="true" aria-label={cardio.type}
-            style={{ background: T.color.card, borderRadius: T.radius.card, overflow: 'hidden', width: '100%', maxWidth: 480 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.5rem 0.5rem 1rem', borderBottom: `1px solid ${T.color.line}` }}>
-              <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.lg, color: T.color.ink }}>{cardio.type}</span>
-              <button onClick={() => setMediaOpen(false)} aria-label="Fermer" style={S.iconBtn}><Icon name="x" size={20} /></button>
+            style={{ background: 'white', borderRadius: 20, overflow: 'hidden', width: '100%', maxWidth: 480 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{cardio.type}</span>
+              <button onClick={() => setMediaOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#6b7280', cursor: 'pointer' }}>×</button>
             </div>
             {ytId
               ? <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000' }}>
@@ -1262,9 +1259,9 @@ export default function SeanceClient() {
     return (
       <div style={{
         width: COL, flexShrink: 0, textAlign: 'center',
-        background: isCur ? 'var(--chip-bg)' : T.color.soft,
-        color: isCur ? 'var(--chip-text)' : T.color.muted,
-        borderRadius: 8, padding: '5px 0', fontSize: T.size.xs, fontWeight: 700,
+        background: isCur ? '#333333' : '#f3f4f6',
+        color: isCur ? 'var(--chip-text)' : '#9ca3af',
+        borderRadius: 8, padding: '5px 0', fontSize: '0.7rem', fontWeight: '900',
       }}>S{s}</div>
     )
   }
@@ -1273,24 +1270,25 @@ export default function SeanceClient() {
     return (
       <div style={{
         width: COL, flexShrink: 0, textAlign: 'center',
-        background: isCur ? T.color.card : T.color.page,
-        border: `1.5px solid ${isCur ? T.color.ink : T.color.line}`,
-        borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44,
+        background: isCur ? '#fffef5' : '#fafafa',
+        border: `1.5px solid ${isCur ? 'var(--accent)' : '#f0f0f0'}`,
+        borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 36,
       }}>{children}</div>
     )
   }
 
   const inputStyle = (isCur) => ({
-    width: COL, height: 44, textAlign: 'center',
-    border: `1.5px solid ${isCur ? T.color.ink : T.color.line}`,
-    borderRadius: 8, fontFamily: T.font.display, fontSize: T.size.lg, fontWeight: 700,
-    color: T.color.ink, boxSizing: 'border-box',
-    background: T.color.card, flexShrink: 0,
+    width: COL, height: 36, textAlign: 'center',
+    border: `1.5px solid ${isCur ? '#333333' : '#e5e7eb'}`,
+    borderRadius: 8, fontSize: '0.88rem', fontWeight: '700',
+    color: '#333333', outline: 'none', boxSizing: 'border-box',
+    background: isCur ? '#fffef5' : 'white', flexShrink: 0,
   })
 
   const labelStyle = {
     width: COL_LABEL, flexShrink: 0,
-    fontSize: T.size.xs, fontWeight: 600, color: T.color.muted,
+    fontSize: '0.7rem', fontWeight: '700', color: '#6b7280',
+    textTransform: 'uppercase', letterSpacing: '0.05em',
     display: 'flex', alignItems: 'center',
   }
 
@@ -1329,7 +1327,7 @@ export default function SeanceClient() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: '0.3rem', flexWrap: 'wrap' }}>
                   {progActif && (
-                    <span style={{ fontSize: T.size.xs, fontWeight: 600, background: T.color.soft, color: T.color.ink, borderRadius: 6, padding: '2px 7px' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
                       {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
                     </span>
                   )}
@@ -1340,8 +1338,8 @@ export default function SeanceClient() {
               {mediaUrl && (
                 <button
                   onClick={() => setMediaModal({ nom: progActif?.nom_variante || ex.nom, url: mediaUrl })}
-                  style={{ flexShrink: 0, width: 64, height: 64, borderRadius: T.radius.control, overflow: 'hidden', border: `1px solid ${T.color.line}`, cursor: 'pointer', background: T.color.ink, padding: 0, position: 'relative', display: 'block' }}
-                  title="Voir le mouvement" aria-label="Voir le mouvement"
+                  style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative', display: 'block' }}
+                  title="Voir le mouvement"
                 >
                   {ytId ? (
                     <>
@@ -1362,14 +1360,14 @@ export default function SeanceClient() {
         {/* Demande de vidéo de correction par le coach */}
         {videoDemandes[ex.id] && (
           <div style={S.videoBanner}>
-            <span>Ton coach veut une vidéo de ce mouvement : filme-toi et envoie-la lui sur WhatsApp.</span>
+            <span>Ton coach veut une vidéo de ce mouvement — filme-toi et envoie-la lui sur WhatsApp.</span>
             <button onClick={() => marquerVideoEnvoyee(ex.id)} style={S.videoBannerBtn}>J'ai envoyé la vidéo</button>
           </div>
         )}
 
         {/* Détail libre de la progression (ex: variante, charge max…) */}
         {progActif?.detail && (
-          <div style={{ background: T.color.soft, borderRadius: 8, padding: '8px 10px', marginBottom: '0.5rem', fontSize: T.size.sm, color: T.color.ink, fontWeight: 500, lineHeight: 1.5 }}>
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 10px', marginBottom: '0.5rem', fontSize: '.75rem', color: '#1e40af', fontWeight: 600, lineHeight: 1.5 }}>
             {progActif.detail}
           </div>
         )}
@@ -1403,7 +1401,7 @@ export default function SeanceClient() {
         {seriesList.length > 0 && (
           <div style={S.seriesTracker}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={S.seriesTrackerLabel}>Séries · semaine {semaineActuelle}</span>
+              <span style={S.seriesTrackerLabel}>SÉRIES · SEMAINE {semaineActuelle}</span>
               <button onClick={() => toggleHisto(ex.id)} style={S.histoBtn}>
                 {isHistoOpen ? 'Masquer' : 'Historique'}
               </button>
@@ -1411,9 +1409,9 @@ export default function SeanceClient() {
 
             {/* Historique performances réelles (accordéon) */}
             {isHistoOpen && (
-              <div style={{ marginBottom: '0.75rem', background: T.color.card, borderRadius: T.radius.control, border: `1px solid ${T.color.line}`, overflow: 'hidden' }}>
+              <div style={{ marginBottom: '0.75rem', background: 'white', borderRadius: 10, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
                 {histoLoading[ex.id] ? (
-                  <p style={{ textAlign: 'center', color: T.color.muted, fontSize: T.size.sm, padding: '0.75rem', margin: 0 }}>Chargement…</p>
+                  <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Chargement…</p>
                 ) : (() => {
                   const grouped = histoTracking[ex.id] || {}
                   const semsPrev = Object.keys(grouped)
@@ -1421,7 +1419,7 @@ export default function SeanceClient() {
                     .filter(s => s < semaineActuelle)
                     .sort((a, b) => b - a) // plus récente en premier
                   if (!semsPrev.length) return (
-                    <p style={{ textAlign: 'center', color: T.color.muted, fontSize: T.size.sm, padding: '0.75rem', margin: 0 }}>Aucune donnée enregistrée pour les semaines précédentes.</p>
+                    <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.78rem', padding: '0.75rem', margin: 0 }}>Aucune donnée enregistrée pour les semaines précédentes.</p>
                   )
                   return semsPrev.map((sem, si) => {
                     const rows = grouped[sem] || []
@@ -1432,28 +1430,28 @@ export default function SeanceClient() {
                       : poids.every(p => p === poids[0]) ? `${poids[0]} kg`
                       : `${Math.min(...poids)}–${Math.max(...poids)} kg`
                     return (
-                      <div key={sem} style={{ borderBottom: si < semsPrev.length - 1 ? `1px solid ${T.color.soft}` : 'none' }}>
+                      <div key={sem} style={{ borderBottom: si < semsPrev.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                         {/* En-tête semaine */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.75rem', background: T.color.card }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.75rem', background: sem === semaineActuelle - 1 ? '#fffef5' : 'white' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ background: sem === semaineActuelle - 1 ? 'var(--chip-bg)' : T.color.soft, color: sem === semaineActuelle - 1 ? 'var(--chip-text)' : T.color.muted, borderRadius: 6, padding: '0.1rem 0.45rem', fontSize: T.size.xs, fontWeight: 700 }}>S{sem}</span>
-                            {sem === semaineActuelle - 1 && <span style={{ fontSize: T.size.xs, color: T.color.muted, fontWeight: 600 }}>sem. précédente</span>}
+                            <span style={{ background: sem === semaineActuelle - 1 ? '#333333' : '#f3f4f6', color: sem === semaineActuelle - 1 ? 'var(--chip-text)' : '#6b7280', borderRadius: 6, padding: '0.1rem 0.45rem', fontSize: '0.7rem', fontWeight: '900' }}>S{sem}</span>
+                            {sem === semaineActuelle - 1 && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600 }}>sem. précédente</span>}
                           </div>
-                          <span style={{ ...T.num, fontSize: T.size.md, fontWeight: 700, color: T.color.ink }}>{poidsLabel}</span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#374151' }}>{poidsLabel}</span>
                         </div>
                         {/* Détail séries */}
                         <div style={{ padding: '0 0.75rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           {rows.map((r, ri) => (
                             <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: T.size.xs, fontWeight: 700, color: T.color.muted, width: 16, textAlign: 'center', flexShrink: 0 }}>{r.serie}</span>
-                              <span style={{ ...T.num, fontSize: T.size.md, fontWeight: 700, color: T.color.ink, minWidth: 52 }}>
-                                {r.poids ? `${r.poids} kg` : <span style={{ color: T.color.muted }}>– kg</span>}
+                              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', width: 16, textAlign: 'center', flexShrink: 0 }}>{r.serie}</span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1a1a1a', minWidth: 52 }}>
+                                {r.poids ? `${r.poids} kg` : <span style={{ color: '#6b7280' }}>— kg</span>}
                               </span>
-                              <span style={{ fontSize: T.size.sm, color: T.color.muted, fontWeight: 600 }}>
+                              <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
                                 {r.reps_reelles ? `× ${r.reps_reelles} ${tempsMode ? 's' : 'reps'}` : ''}
                               </span>
-                              <span style={{ marginLeft: 'auto', display: 'flex', color: r.valide ? T.color.success : T.color.warning }} aria-label={r.valide ? 'Validée' : 'Objectif non atteint'}>
-                                <Icon name={r.valide ? 'check' : 'alert'} size={14} />
+                              <span style={{ marginLeft: 'auto', fontSize: '0.72rem' }}>
+                                {r.valide ? '✓' : '⚠'}
                               </span>
                             </div>
                           ))}
@@ -1471,17 +1469,17 @@ export default function SeanceClient() {
               return (
                 <div style={{ marginBottom: '0.6rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ fontSize: T.size.sm, fontWeight: 600, color: T.color.muted }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                       Échauffement {warmups.length > 0 ? `· ${warmups.length} série${warmups.length > 1 ? 's' : ''}` : ''}
                     </span>
                     <button onClick={() => addWarmupSet(ex.id)} style={{
-                      minHeight: 36, display: 'inline-flex', alignItems: 'center', gap: 4, background: T.color.card, border: `1.5px solid ${T.color.line}`, borderRadius: 8,
-                      color: T.color.ink, fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600, cursor: 'pointer', padding: '0 10px',
-                    }}><Icon name="plus" size={14} />Série</button>
+                      background: 'white', border: '1.5px solid #333333', borderRadius: 8,
+                      color: '#333333', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', padding: '0.35rem 0.75rem',
+                    }}>+ Ajouter une série</button>
                   </div>
                   {warmups.map((ws, wi) => (
-                    <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, background: T.color.card, borderRadius: T.radius.control, padding: '4px 4px 4px 8px', border: `1.5px solid ${T.color.line}` }}>
-                      <span style={{ fontSize: T.size.xs, fontWeight: 700, color: T.color.muted, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: ws.fromCoach ? '#fff7ed' : '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: `1.5px solid ${ws.fromCoach ? '#fed7aa' : '#e5e7eb'}` }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '800', color: ws.fromCoach ? '#ea580c' : '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap' }}>
                         É{wi + 1}{ws.fromCoach && ws.pourcentage ? ` · ${ws.pourcentage}%` : ''}
                       </span>
                       <input type="text" inputMode="decimal" value={ws.poids}
@@ -1489,16 +1487,18 @@ export default function SeanceClient() {
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         onFocus={scrollInputIntoView}
                         placeholder="kg"
-                        style={{ ...S.serieInput, flex: 1 }} />
-                      <span style={S.serieUnit}>kg</span>
+                        style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>kg</span>
                       <input type="text" inputMode="numeric" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         onFocus={scrollInputIntoView}
                         placeholder={tempsMode ? 'sec' : 'reps'}
-                        style={{ ...S.serieInput, flex: 1 }} />
-                      <span style={S.serieUnit}>{tempsMode ? 's' : 'rép.'}</span>
-                      <button onClick={() => removeWarmupSet(ex.id, wi)} aria-label="Supprimer la série d'échauffement" style={S.iconBtn}><Icon name="x" size={16} /></button>
+                        style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>{tempsMode ? 's' : 'reps'}</span>
+                      <button onClick={() => removeWarmupSet(ex.id, wi)} style={{
+                        marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
+                      }}>×</button>
                     </div>
                   ))}
                 </div>
@@ -1517,7 +1517,7 @@ export default function SeanceClient() {
                   onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len); scrollInputIntoView(e) }}
                   placeholder="kg"
                   readOnly={serie.is_done}
-                  style={{ ...S.serieInput, flex: 1, ...(serie.is_done ? S.serieInputDone : {}) }} />
+                  style={{ ...S.serieInput, width: 52, ...(serie.is_done ? S.serieInputDone : {}) }} />
                 <span style={S.serieUnit}>kg</span>
                 <input type="text" inputMode="numeric" value={serie.reps_reelles}
                   onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
@@ -1525,8 +1525,9 @@ export default function SeanceClient() {
                   onFocus={scrollInputIntoView}
                   placeholder={tempsMode ? (effReps ? String(effReps).replace('"', '') : 'sec') : (effReps ? String(effReps) : 'reps')}
                   readOnly={serie.is_done}
-                  style={{ ...S.serieInput, flex: 1, ...(serie.is_done ? S.serieInputDone : {}) }} />
-                <span style={S.serieUnit}>{tempsMode ? 's' : 'rép.'}</span>
+                  style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />
+                <span style={S.serieUnit}>{tempsMode ? 's' : 'reps'}</span>
+                {!serie.is_done && !canCopy && <span style={{ width: 26, flexShrink: 0 }} />}
                 {canCopy && (
                   <button
                     onClick={() => {
@@ -1534,10 +1535,14 @@ export default function SeanceClient() {
                       if (prevSerie.reps_reelles) updateTrackingField(ex.id, si, 'reps_reelles', prevSerie.reps_reelles)
                     }}
                     title="Reprendre les valeurs de la série précédente"
-                    aria-label="Reprendre les valeurs de la série précédente"
-                    style={S.iconBtn}
+                    style={{
+                      background: '#f3f4f6', border: 'none', borderRadius: 6,
+                      width: 26, padding: '0.28rem 0', cursor: 'pointer', flexShrink: 0,
+                      fontSize: '0.7rem', color: '#6b7280', fontWeight: 700,
+                      lineHeight: 1,
+                    }}
                   >
-                    <Icon name="undo" size={16} />
+                    ↩
                   </button>
                 )}
                 {serie.is_done
@@ -1547,16 +1552,14 @@ export default function SeanceClient() {
                         <button onClick={() => devaliderSerie(ex.id, si, groupLetter)} style={S.unvalConfirmBtn}>Oui</button>
                       </>
                     : <button onClick={() => setPendingUnvalidate({ exId: ex.id, serieIdx: si })}
-                        aria-label={serie.valide ? 'Série validée, toucher pour annuler' : "Série validée sous l'objectif, toucher pour annuler"}
                         style={serie.valide ? S.serieDoneBadge : S.serieDoneWarnBadge}>
-                        <Icon name={serie.valide ? 'check' : 'alert'} size={20} />
+                        {serie.valide ? '✓' : '⚠'}
                       </button>
                   : <button
                       onClick={e => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions, e.currentTarget)}
                       disabled={validatingSet.has(`${ex.id}-${si}`)}
-                      aria-label={`Valider la série ${si + 1}`}
                       style={{ ...S.serieValBtn, opacity: validatingSet.has(`${ex.id}-${si}`) ? 0.5 : 1 }}
-                    >{validatingSet.has(`${ex.id}-${si}`) ? '…' : <Icon name="check" size={22} />}</button>
+                    >{validatingSet.has(`${ex.id}-${si}`) ? '…' : 'Valider'}</button>
                 }
               </div>
               )
@@ -1577,20 +1580,20 @@ export default function SeanceClient() {
               const workCount = doneSeries.length
               return (
                 <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                  <div style={S.statChip}>
-                    <span style={S.statVal}>{totalReps}</span>
-                    <span style={S.statLbl}>{tempsMode ? 'Volume (s)' : 'Volume (rép.)'}</span>
+                  <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{totalReps}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>{tempsMode ? 'VOLUME (sec)' : 'VOLUME (reps)'}</span>
                   </div>
                   {tonnage > 0 && (
-                    <div style={S.statChip}>
-                      <span style={S.statVal}>{Math.round(tonnage)} kg</span>
-                      <span style={S.statLbl}>Tonnage</span>
+                    <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnage)} kg</span>
+                      <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>TONNAGE</span>
                     </div>
                   )}
                   {warmupCount > 0 && (
-                    <div style={S.statChip}>
-                      <span style={S.statVal}>{warmupCount}+{workCount}</span>
-                      <span style={S.statLbl}>Échauf. + travail</span>
+                    <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{warmupCount}+{workCount}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>ÉCH+TRAV</span>
                     </div>
                   )}
                 </div>
@@ -1602,7 +1605,7 @@ export default function SeanceClient() {
               const recupSecs = parseRecup(ex.recuperation)
               return recupSecs > 0 ? (
                 <button onClick={() => lancerTimer(recupSecs)} style={S.recupBtn}>
-                  <Icon name="clock" size={18} />Lancer la récup · {ex.recuperation}
+                  Lancer la récup · {ex.recuperation}
                 </button>
               ) : null
             })()}
@@ -1610,7 +1613,7 @@ export default function SeanceClient() {
         )}
 
         {/* Table charges toutes semaines (compact) */}
-        <div style={{ overflowX: 'auto', borderTop: `1px solid ${T.color.line}`, paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+        <div style={{ overflowX: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '0.6rem' }}>
           <div style={{ minWidth: COL_LABEL + cols.length * (COL + 4) }}>
             <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
               <div style={{ width: COL_LABEL, flexShrink: 0 }} />
@@ -1651,29 +1654,27 @@ export default function SeanceClient() {
       <XpBulle />
       {/* Bandeau hors ligne */}
       {offlineMode && (
-        <div style={{ background: T.color.warning, color: T.color.card, textAlign: 'center', fontSize: T.size.sm, fontWeight: 600, padding: '8px 12px', position: 'sticky', top: 0, zIndex: 200 }}>
+        <div style={{ background: '#f59e0b', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', position: 'sticky', top: 0, zIndex: 200 }}>
           Mode hors ligne · données locales {localSavedAt ? `(${formatSavedAt(localSavedAt)})` : ''}
         </div>
       )}
       {/* Badge charges en attente (visible si online + items en queue) */}
       {navigator.onLine && pendingSync > 0 && (
-        <div style={{ background: T.color.success, color: T.color.card, textAlign: 'center', fontSize: T.size.sm, fontWeight: 600, padding: '8px 12px' }}>
-          Synchronisation de {pendingSync} charge{pendingSync > 1 ? 's' : ''} en cours…
+        <div style={{ background: '#22c55e', color: 'white', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px' }}>
+          ↑ Synchronisation de {pendingSync} charge{pendingSync > 1 ? 's' : ''} en cours…
         </div>
       )}
 
       {/* Toast */}
-      <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: T.color.ink, color: T.color.signal, padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: 700, fontSize: T.size.md, opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100, display: 'flex', alignItems: 'center', gap: 6, fontFamily: T.font.body }} role="status">
-        <Icon name="check" size={16} />Enregistré
+      <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.6rem 1.4rem', borderRadius: '999px', fontWeight: '700', fontSize: '0.875rem', opacity: saved ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 100 }}>
+        ✓ Enregistré
       </div>
 
       {/* Header */}
       <div style={S.header}>
-        <button onClick={() => navigate(`/client/programme/${seance.programmes.id}`)} style={S.backBtn} aria-label="Retour au programme">
-          <Icon name="chevron-right" size={20} style={{ transform: 'rotate(180deg)' }} />
-        </button>
-        <AppLogo size={32} />
-        <div style={{ width: T.touch }} />
+        <button onClick={() => navigate(`/client/programme/${seance.programmes.id}`)} style={S.backBtn}>‹</button>
+        <AppLogo />
+        <div style={{ width: 32 }} />
       </div>
 
       <div style={S.content}>
@@ -1682,13 +1683,12 @@ export default function SeanceClient() {
           <p style={S.programmeNom}>{seance.programmes.nom}</p>
           <h1 style={S.title}>{seance.nom}</h1>
           <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              style={S.curBadge}
+            <span role="button" tabIndex={0}
+              style={{ ...S.curBadge, cursor: 'pointer' }}
               onClick={() => setShowWeekPicker(v => !v)}
-              aria-expanded={showWeekPicker}
             >
-              <Icon name="edit" size={13} />Semaine {semaineActuelle} {rattrapageDeSemaine != null ? '(rattrapage)' : 'en cours'}
-            </button>
+              S{semaineActuelle} {rattrapageDeSemaine != null ? '(rattrapage)' : 'en cours'} ✎
+            </span>
             {rattrapageDeSemaine != null && (
               <span style={S.rattrapageHint}>compte pour S{semaineActuelle}, pas S{rattrapageDeSemaine}</span>
             )}
@@ -1717,23 +1717,23 @@ export default function SeanceClient() {
         {nonEffectuee ? (
           <button onClick={toggleNonEffectuee} disabled={nonEffectueeSaving}
             style={{ ...S.nonEffectueeBtn, ...S.nonEffectueeBtnActive }}>
-            Séance non effectuée · Annuler
+            ✓ Séance non effectuée · Annuler
           </button>
         ) : nonEffectueeConfirm ? (
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
             <button onClick={() => setNonEffectueeConfirm(false)}
-              style={{ ...T.btnSecondary, flex: 1, background: T.color.card }}>
+              style={{ flex: 1, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem', fontSize: '0.85rem', fontWeight: '700', color: '#6b7280', cursor: 'pointer' }}>
               Annuler
             </button>
             <button onClick={() => { setNonEffectueeConfirm(false); toggleNonEffectuee() }} disabled={nonEffectueeSaving}
-              style={{ ...T.btnSecondary, flex: 1, background: T.color.card, color: T.color.danger }}>
+              style={{ flex: 1, background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: '0.75rem', fontSize: '0.85rem', fontWeight: '700', color: '#dc2626', cursor: 'pointer' }}>
               Confirmer
             </button>
           </div>
         ) : (
           <button onClick={() => setNonEffectueeConfirm(true)}
             style={S.nonEffectueeBtn}>
-            Marquer comme non effectuée
+            ✕ Marquer comme non effectuée
           </button>
         )}
 
@@ -1741,8 +1741,8 @@ export default function SeanceClient() {
         {totalBlocs > 0 && !nonEffectuee && (
           <div style={S.progressCard}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={T.label}>Progression de la séance</span>
-              <span style={{ ...T.num, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink }}>{doneBlocs} / {totalBlocs} blocs</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#333333' }}>{doneBlocs} / {totalBlocs} blocs {doneBlocs === totalBlocs && doneBlocs > 0 ? '✓' : ''}</span>
             </div>
             <div style={S.progressTrack}>
               <div style={{ ...S.progressFill, width: `${(doneBlocs / totalBlocs) * 100}%` }} />
@@ -1765,7 +1765,7 @@ export default function SeanceClient() {
                 {warmGroups.map((g, gi) => {
                   if (!g.groupe) {
                     return g.items.map((l, i) => (
-                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem', background: T.color.page, borderRadius: T.radius.control }}>
+                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
                         {l.image_url && (
                           <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0 }}>
                             {youtubeId(l.image_url)
@@ -1774,17 +1774,17 @@ export default function SeanceClient() {
                             }
                           </button>
                         )}
-                        <span style={{ flex: 1, fontSize: T.size.base, fontWeight: 600, color: T.color.ink }}>{l.nom}</span>
-                        <span style={{ ...T.num, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink }}>{l.reps}</span>
+                        <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
+                        <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
                       </div>
                     ))
                   }
                   const tours = g.items[0]?.tours
                   return (
-                    <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: `1.5px solid ${T.color.line}`, background: T.color.page, borderRadius: T.radius.control, padding: '0.5rem 0.75rem' }}>
+                    <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid var(--accent)', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem' }}>
                       <div style={{ flex: 1 }}>
                         {g.items.map((l, i) => (
-                          <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? `1px solid ${T.color.line}` : 'none' }}>
+                          <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                             {l.image_url && (
                               <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative' }}>
                                 {youtubeId(l.image_url)
@@ -1793,15 +1793,15 @@ export default function SeanceClient() {
                                 }
                               </button>
                             )}
-                            <span style={{ flex: 1, fontSize: T.size.base, fontWeight: 600, color: T.color.ink }}>{l.nom}</span>
-                            <span style={{ ...T.num, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink }}>{l.reps}</span>
+                            <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
                           </div>
                         ))}
                       </div>
                       {tours && (
                         <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
-                          <div style={{ borderTop: `2px solid ${T.color.ink}`, borderRight: `2px solid ${T.color.ink}`, borderBottom: `2px solid ${T.color.ink}`, borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
-                          <span style={{ fontSize: T.size.sm, fontWeight: 700, color: T.color.ink, paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
+                          <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
                         </div>
                       )}
                     </div>
@@ -1813,17 +1813,17 @@ export default function SeanceClient() {
         })()}
 
         {/* Cardio — traité comme un bloc de la séance, juste après l'échauffement */}
-        {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio avant la séance" youtubeId={youtubeId} S={S} />}
-        {cardioFinAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioFinAll[semaineActuelle]} label="Cardio après la séance" youtubeId={youtubeId} S={S} />}
+        {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
+        {cardioFinAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioFinAll[semaineActuelle]} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
         {cardioBlocs.length > 0 && (
           <div style={{ ...S.card, marginBottom: '0.75rem' }}>
             <p style={S.sectionLabel}>Cardio</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {cardioBlocs.map((b, i) => (
                 (b.titre || b.texte) ? (
-                  <div key={i} style={{ background: T.color.page, borderRadius: T.radius.control, padding: '0.7rem 0.8rem', border: `1px solid ${T.color.line}` }}>
-                    {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 700, fontSize: T.size.base, color: T.color.ink }}>{b.titre}</p>}
-                    {b.texte && <p style={{ margin: 0, fontSize: T.size.base, color: T.color.ink, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
+                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', border: '1.5px solid #0ea5e9' }}>
+                    {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 800, fontSize: '0.9rem', color: '#0c4a6e' }}>{b.titre}</p>}
+                    {b.texte && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
                   </div>
                 ) : null
               ))}
@@ -1834,8 +1834,8 @@ export default function SeanceClient() {
         {/* Exercices */}
         {nonEffectuee ? (
           <div style={S.nonEffectueeCard}>
-            <p style={{ fontWeight: 700, color: T.color.ink, margin: '0 0 0.25rem' }}>Séance non effectuée</p>
-            <p style={{ fontSize: T.size.md, color: T.color.muted, margin: 0 }}>Semaine {semaineActuelle}. Appuie sur le bouton ci-dessus pour annuler.</p>
+            <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.25rem' }}>Séance non effectuée</p>
+            <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0 }}>Semaine {semaineActuelle} — Appuie sur le bouton ci-dessus pour annuler</p>
           </div>
         ) : exercices.length === 0 ? (
           <div style={S.emptyCard}>Aucun exercice.</div>
@@ -1856,12 +1856,12 @@ export default function SeanceClient() {
                   <div role="button" tabIndex={0} key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
-                    style={{ ...S.collapsedRow, background: T.color.page }}>
-                    <span style={{ ...S.collapsedCheck, color: T.color.muted }}><Icon name="skip" size={18} /></span>
+                    style={{ ...S.collapsedRow, borderColor: '#e5e7eb', background: '#f9fafb' }}>
+                    <span style={{ ...S.collapsedCheck, background: '#9ca3af' }}>⊘</span>
                     <span style={S.collapsedCode}>{group.letter}</span>
-                    <span style={{ ...S.collapsedNom, color: T.color.muted }}>{label}</span>
-                    <span style={S.collapsedStats}>Passé</span>
-                    <Icon name="chevron-right" size={18} style={{ color: T.color.muted }} />
+                    <span style={{ ...S.collapsedNom, color: '#6b7280' }}>{label}</span>
+                    <span style={{ ...S.collapsedStats, color: '#6b7280' }}>Passé</span>
+                    <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>›</span>
                   </div>
                 )
               }
@@ -1882,7 +1882,7 @@ export default function SeanceClient() {
                       style={S.skipBlocBtn}>
                       Passer
                     </button>
-                    <button aria-label={`Ouvrir ${label}`} style={S.iconBtn} onClick={() => setActiveBloc(group.letter)}><Icon name="chevron-right" size={18} /></button>
+                    <span role="button" tabIndex={0} style={{ color: '#9ca3af', fontSize: '0.85rem' }} onClick={() => setActiveBloc(group.letter)}>›</span>
                   </div>
                 )
               }
@@ -1898,11 +1898,11 @@ export default function SeanceClient() {
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
                     style={S.collapsedRow}>
-                    <span style={S.collapsedCheck}><Icon name="check" size={18} /></span>
+                    <span style={S.collapsedCheck}>✓</span>
                     <span style={S.collapsedCode}>{group.letter}</span>
                     <span style={S.collapsedNom}>{label}</span>
                     <span style={S.collapsedStats}>{summary}</span>
-                    <Icon name="chevron-right" size={18} style={{ color: T.color.muted }} />
+                    <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>›</span>
                   </div>
                 )
               }
@@ -1912,21 +1912,21 @@ export default function SeanceClient() {
                 return (
                   <div key={gi}
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
-                    style={{ ...S.exCard, ...(isDone ? S.exCardDone : {}), ...(isSkipped ? { background: T.color.page } : {}) }}>
+                    style={{ ...S.exCard, ...(isDone ? S.exCardDone : {}), ...(isSkipped ? { borderColor: '#e5e7eb', background: '#f9fafb' } : {}) }}>
                     {(isDone || isSkipped) && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         {isSkipped
-                          ? <div style={{ ...S.blocDoneBadge, background: T.color.soft, color: T.color.muted }}><Icon name="skip" size={14} />Bloc passé</div>
-                          : <div style={S.blocDoneBadge}><Icon name="check" size={14} />Bloc terminé</div>
+                          ? <div style={{ ...S.blocDoneBadge, background: '#f3f4f6', color: '#6b7280' }}>⊘ Bloc passé</div>
+                          : <div style={S.blocDoneBadge}>✓ Bloc terminé</div>
                         }
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                           {isSkipped && (
-                            <button onClick={() => unskipBloc(group.letter)} style={S.collapseBtn}>
+                            <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280' }}>
                               Annuler
                             </button>
                           )}
                           <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
-                            style={S.collapseBtn}>Replier</button>
+                            style={S.collapseBtn}>Replier ↑</button>
                         </div>
                       </div>
                     )}
@@ -1944,7 +1944,7 @@ export default function SeanceClient() {
                         return t.length > 0 && t.every(s => s.is_done)
                       })
                       return allSeriesDone
-                        ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={S.terminerBlocBtn}><Icon name="check" size={18} />Terminer le bloc</button>
+                        ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={S.terminerBlocBtn}>✓ Terminer le bloc</button>
                         : null
                     })()}
                   </div>
@@ -1955,25 +1955,25 @@ export default function SeanceClient() {
               return (
                 <div key={gi}
                   ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
-                  style={{ ...S.supersetWrapper, ...(isDone ? { borderColor: T.color.success } : {}), ...(isSkipped ? { borderColor: T.color.line } : {}) }}>
-                  <div style={{ ...S.supersetHeader, ...(isDone ? { background: T.color.success } : {}), ...(isSkipped ? { background: T.color.soft } : {}) }}>
-                    <span style={S.supersetBadge}>Superset {group.letter}</span>
+                  style={{ ...S.supersetWrapper, ...(isDone ? { borderColor: '#16a34a' } : {}), ...(isSkipped ? { borderColor: '#e5e7eb' } : {}) }}>
+                  <div style={{ ...S.supersetHeader, ...(isDone ? { background: '#14532d' } : {}), ...(isSkipped ? { background: '#f3f4f6' } : {}) }}>
+                    <span style={S.supersetBadge}>SUPERSET · {group.letter}</span>
                     {isSkipped
                       ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                          <span style={{ color: T.color.muted, fontSize: T.size.sm, fontWeight: 600 }}>Passé</span>
-                          <button onClick={() => unskipBloc(group.letter)} style={S.collapseBtn}>Annuler</button>
+                          <span style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>⊘ Passé</span>
+                          <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db' }}>Annuler</button>
                           <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
-                            style={S.collapseBtn}>Replier</button>
+                            style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db' }}>Replier ↑</button>
                         </div>
                       : isDone
                         ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                            <span style={{ color: T.color.card, fontSize: T.size.sm, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={14} />Terminé</span>
+                            <span style={{ color: '#86efac', fontSize: '0.7rem', fontWeight: '700' }}>✓ Terminé</span>
                             <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
-                              style={{ ...S.collapseBtn, color: T.color.card, borderColor: 'rgb(255 255 255 / .5)', background: 'transparent' }}>Replier</button>
+                              style={{ ...S.collapseBtn, color: '#86efac', borderColor: '#16a34a' }}>Replier ↑</button>
                           </div>
                         : <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                             <span style={S.supersetHint}>Enchaîner sans récupération</span>
-                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, background: 'transparent', color: T.color.onDark, borderColor: 'rgb(255 255 255 / .3)' }}>Passer</button>
+                            <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db', fontSize: '0.7rem' }}>Passer</button>
                           </div>
                     }
                   </div>
@@ -1988,7 +1988,7 @@ export default function SeanceClient() {
                         {!isLast && (
                           <div style={S.supersetConnector}>
                             <div style={S.supersetLine} />
-                            <span style={S.supersetTag}><Icon name="arrow-down" size={14} />Enchaîner</span>
+                            <span style={S.supersetTag}>↓ Enchaîner</span>
                             <div style={S.supersetLine} />
                           </div>
                         )}
@@ -2001,7 +2001,7 @@ export default function SeanceClient() {
                       return t.length > 0 && t.every(s => s.is_done)
                     })
                     return allSeriesDone
-                      ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={{ ...S.terminerBlocBtn, borderRadius: 0, marginTop: 0 }}><Icon name="check" size={18} />Terminer le bloc</button>
+                      ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={{ ...S.terminerBlocBtn, borderRadius: '0 0 12px 12px', marginTop: 0 }}>✓ Terminer le bloc</button>
                       : null
                   })()}
                 </div>
@@ -2027,25 +2027,25 @@ export default function SeanceClient() {
           if (tonnageTotal === 0 && repsTotal === 0) return null
           return (
             <div style={{
-              background: T.color.anthracite,
-              borderRadius: T.radius.card, padding: '1rem 1.25rem', marginTop: '0.75rem', marginBottom: '0.25rem',
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #333333 100%)',
+              borderRadius: 16, padding: '1rem 1.25rem', marginTop: '0.75rem', marginBottom: '0.25rem',
               display: 'flex', gap: '0.5rem', justifyContent: 'space-around', alignItems: 'center',
             }}>
               {tonnageTotal > 0 && (
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, color: T.color.signal, lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
-                  <div style={{ fontSize: T.size.xs, color: T.color.onDarkMuted, marginTop: 4 }}>Tonnage total</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tonnage total</div>
                 </div>
               )}
               {repsTotal > 0 && (
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, color: T.color.signal, lineHeight: 1 }}>{repsTotal}</div>
-                  <div style={{ fontSize: T.size.xs, color: T.color.onDarkMuted, marginTop: 4 }}>Volume (rép.)</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{repsTotal}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Volume (reps)</div>
                 </div>
               )}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, color: T.color.signal, lineHeight: 1 }}>{exosDone}<span style={{ fontSize: T.size.md, color: T.color.onDarkMuted }}>/{exercices.length}</span></div>
-                <div style={{ fontSize: T.size.xs, color: T.color.onDarkMuted, marginTop: 4 }}>Exos lancés</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{exosDone}<span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/{exercices.length}</span></div>
+                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exos lancés</div>
               </div>
             </div>
           )
@@ -2056,7 +2056,7 @@ export default function SeanceClient() {
           <button onClick={() => setRpeOpen(v => !v)}
             style={S.rpeToggle}>
             <span>Intensité de la séance</span>
-            <Icon name="chevron-right" size={18} style={{ transform: rpeOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', color: T.color.muted }} />
+            <span style={{ transform: rpeOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '1rem', color: '#6b7280' }}>›</span>
           </button>
           {rpeOpen && (
             <div style={S.card}>
@@ -2087,7 +2087,7 @@ export default function SeanceClient() {
                     <div style={labelStyle}>Cible</div>
                     {cols.map(s => (
                       <TableCell key={s} isCur={s === semaineActuelle}>
-                        <span style={{ ...T.num, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink }}>{rpeSeances[s]?.rpe_cible ?? '–'}</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151' }}>{rpeSeances[s]?.rpe_cible ?? '—'}</span>
                       </TableCell>
                     ))}
                   </div>
@@ -2110,34 +2110,34 @@ export default function SeanceClient() {
         <div style={{ marginTop: '1rem' }}>
           <p style={{ ...S.sectionLabel, marginBottom: '0.6rem' }}>Notes · S{semaineActuelle}</p>
           <div style={{
-            background: T.color.card, borderRadius: T.radius.card, padding: '1rem 1.1rem',
-            boxShadow: commentSaved ? `0 0 0 2px ${T.color.success}` : T.shadow.card,
+            background: 'white', borderRadius: 14, padding: '1rem 1.1rem',
+            boxShadow: commentSaved ? '0 0 0 2px #16a34a' : '0 1px 3px rgba(0,0,0,0.06)',
             transition: 'box-shadow 0.35s ease',
           }}>
             <textarea value={commentaire} onChange={e => setCommentaire(e.target.value)}
               onBlur={saveCommentaire} rows={3} placeholder="Laisse une note sur cette séance..."
-              style={{ width: '100%', border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, padding: '0.65rem 0.75rem', fontSize: T.size.lg, color: T.color.ink, resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.88rem', color: '#333333', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button onClick={saveCommentaire}
                 style={{
-                  background: commentSaved ? T.color.success : 'var(--chip-bg)',
-                  color: commentSaved ? T.color.card : 'var(--chip-text)',
-                  border: 'none', borderRadius: T.radius.control, padding: '0 1rem', minHeight: T.touch,
-                  fontFamily: T.font.body, fontSize: T.size.md, fontWeight: 700, cursor: 'pointer',
+                  background: commentSaved ? '#16a34a' : 'var(--chip-bg)',
+                  color: commentSaved ? 'white' : 'var(--chip-text)',
+                  border: 'none', borderRadius: 8, padding: '0.4rem 1rem',
+                  fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer',
                   transition: 'all 0.3s',
                   transform: commentSaved ? 'scale(1.06)' : 'scale(1)',
                 }}>
-                {commentSaved ? 'Enregistré' : 'Enregistrer'}
+                {commentSaved ? '✓ Enregistré' : 'Enregistrer'}
               </button>
             </div>
           </div>
           {commentaires.filter(c => c.semaine !== semaineActuelle).length > 0 && (
             <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <p style={{ ...T.label, padding: '0 4px' }}>Semaines précédentes</p>
+              <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Semaines précédentes</p>
               {commentaires.filter(c => c.semaine !== semaineActuelle).map(c => (
-                <div key={c.semaine} style={{ ...T.card, padding: '0.75rem 1rem' }}>
-                  <span style={{ fontSize: T.size.xs, fontWeight: 700, color: T.color.muted }}>Semaine {c.semaine}</span>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: T.size.base, color: T.color.ink, lineHeight: 1.5 }}>{c.texte}</p>
+                <div key={c.semaine} style={{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>S{c.semaine}</span>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{c.texte}</p>
                 </div>
               ))}
             </div>
@@ -2153,13 +2153,12 @@ export default function SeanceClient() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
           <div
             onClick={e => e.stopPropagation()}
-            role="dialog" aria-modal="true" aria-label={mediaModal.nom}
-            style={{ background: T.color.card, borderRadius: T.radius.card, overflow: 'hidden', width: '100%', maxWidth: 480, boxShadow: T.shadow.float }}>
+            style={{ background: 'white', borderRadius: 20, overflow: 'hidden', width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.5rem 0.5rem 1rem', borderBottom: `1px solid ${T.color.line}` }}>
-              <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.lg, color: T.color.ink }}>{mediaModal.nom}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{mediaModal.nom}</span>
               <button onClick={() => setMediaModal(null)}
-                aria-label="Fermer" style={S.iconBtn}><Icon name="x" size={20} /></button>
+                style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#6b7280', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
             </div>
             {/* Contenu */}
             {youtubeId(mediaModal.url)
@@ -2189,89 +2188,85 @@ export default function SeanceClient() {
 }
 
 const S = {
-  page:        { minHeight: '100vh', background: T.color.page, fontFamily: T.font.body, color: T.color.ink, paddingBottom: 110 },
-  centered:    { minHeight: '100vh', background: T.color.page, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font.body },
-  header:      { background: T.color.headerBg, height: 64, padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  backBtn:     { background: 'rgb(255 255 255 / .09)', border: 'none', color: T.color.onDark, width: T.touch, height: T.touch, borderRadius: T.radius.control, cursor: 'pointer', display: 'grid', placeItems: 'center' },
-  logo:        { color: T.color.onDark, fontWeight: 700, fontSize: T.size.lg },
-  content:     { padding: T.space.lg, maxWidth: '480px', margin: '0 auto' },
-  programmeNom:{ color: T.color.muted, fontSize: T.size.sm, fontWeight: 600, margin: '0 0 0.2rem' },
-  title:       { fontFamily: T.font.display, fontSize: T.size.h1, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.01em', color: T.color.ink, margin: 0 },
-  curBadge:    { display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0 12px', borderRadius: T.radius.pill, border: 'none', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer' },
-  rattrapageHint: { fontSize: T.size.xs, fontWeight: 600, color: T.color.warning, background: '#fdf3e1', borderRadius: 999, padding: '0.25rem 0.6rem' },
-  videoBanner: { display: 'flex', flexDirection: 'column', gap: '0.5rem', background: T.color.soft, borderRadius: T.radius.control, padding: '0.75rem', marginBottom: '0.6rem', fontSize: T.size.md, color: T.color.ink, fontWeight: 500, lineHeight: 1.4 },
-  videoBannerBtn: { alignSelf: 'flex-start', minHeight: T.touch, background: T.color.ink, color: T.color.signal, border: 'none', borderRadius: T.radius.control, padding: '0 1rem', fontFamily: T.font.body, fontSize: T.size.md, fontWeight: 700, cursor: 'pointer' },
-  weekSelect: { minHeight: T.touch, fontFamily: T.font.body, fontSize: T.size.lg, fontWeight: 600, color: T.color.ink, border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, padding: '0 0.75rem', background: T.color.card },
-  weekSelectHint: { fontSize: T.size.sm, color: T.color.muted, margin: '0.35rem 0 0', lineHeight: 1.4 },
+  page:        { minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
+  centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  header:      { background: 'var(--header-bg)', height: 70, padding: '0 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  backBtn:     { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '1.5rem', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  logo:        { color: 'white', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.5px' },
+  content:     { padding: '1.25rem 1.25rem', maxWidth: '480px', margin: '0 auto' },
+  programmeNom:{ color: '#6b7280', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' },
+  title:       { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
+  curBadge:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+  rattrapageHint: { fontSize: '0.72rem', fontWeight: '700', color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 999, padding: '0.2rem 0.6rem' },
+  videoBanner: { display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 10, padding: '0.6rem 0.75rem', marginBottom: '0.6rem', fontSize: '0.78rem', color: '#5b21b6', fontWeight: 600, lineHeight: 1.4 },
+  videoBannerBtn: { alignSelf: 'flex-start', background: '#5b21b6', color: 'white', border: 'none', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
+  weekSelect: { fontSize: '0.85rem', fontWeight: '700', color: '#333333', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.45rem 0.6rem', background: 'white' },
+  weekSelectHint: { fontSize: '0.72rem', color: '#6b7280', margin: '0.35rem 0 0', lineHeight: 1.4 },
   // Progress bar
-  progressCard:{ ...T.card, padding: '0.85rem 1rem', marginBottom: '0.75rem' },
-  progressTrack:{ height: 8, background: T.color.soft, borderRadius: 999, overflow: 'hidden' },
+  progressCard:{ background: 'white', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  progressTrack:{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' },
   progressFill: { height: '100%', background: 'var(--chip-bg)', borderRadius: 999, transition: 'width 0.5s ease' },
   // Cards
-  card:        { ...T.card, marginBottom: '0.75rem' },
-  sectionLabel:{ ...T.label, margin: '0 0 0.75rem' },
-  emptyCard:       { ...T.card, padding: '2rem', textAlign: 'center', color: T.color.muted },
-  nonEffectueeBtn: { ...T.btnSecondary, marginBottom: '0.75rem', background: T.color.card, color: T.color.muted, fontSize: T.size.md },
-  nonEffectueeBtnActive: { color: T.color.danger, borderColor: T.color.danger },
-  nonEffectueeCard:{ ...T.card, padding: '2rem', textAlign: 'center', marginBottom: '0.75rem' },
+  card:        { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  sectionLabel:{ fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' },
+  emptyCard:       { background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  nonEffectueeBtn: { width: '100%', marginBottom: '0.75rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1rem', fontSize: '0.85rem', fontWeight: '700', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  nonEffectueeBtnActive: { background: '#fef2f2', border: '1.5px solid #fca5a5', color: '#dc2626' },
+  nonEffectueeCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
   // Exercice actif
-  exCard:      { ...T.card },
-  exCardDone:  { boxShadow: `0 0 0 2px ${T.color.success}` },
-  exCode:      { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: T.size.sm, fontWeight: 700 },
-  exNom:       { fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.xl, lineHeight: 1.2, color: T.color.ink },
-  semBadge:    { background: T.color.soft, color: T.color.muted, padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: T.size.xs, fontWeight: 600, flexShrink: 0 },
+  exCard:      { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  exCardDone:  { border: '2px solid #86efac', background: '#f0fdf4' },
+  exCode:      { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
+  exNom:       { fontWeight: '700', fontSize: '0.92rem', color: '#333333' },
+  semBadge:    { background: '#f3f4f6', color: '#6b7280', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', flexShrink: 0 },
   // Bloc en attente (non actif, non terminé)
-  pendingRow: { background: T.color.card, borderRadius: T.radius.control, padding: '0.35rem 0.35rem 0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.6rem', border: `1.5px dashed ${T.color.line}`, minHeight: 56 },
-  pendingCode: { width: 32, height: 32, borderRadius: 8, background: T.color.soft, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: T.size.md, color: T.color.muted, flexShrink: 0, cursor: 'pointer' },
-  pendingNom:  { flex: 1, fontSize: T.size.base, fontWeight: 600, color: T.color.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', minHeight: T.touch, display: 'flex', alignItems: 'center' },
+  pendingRow: { background: '#f9fafb', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', border: '1.5px dashed #e5e7eb' },
+  pendingCode: { width: 26, height: 26, borderRadius: 8, background: '#e5e7eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.78rem', color: '#6b7280', flexShrink: 0 },
+  pendingNom:  { flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   // Exercice collapsé (terminé)
-  collapsedRow:{ ...T.card, padding: '0 0.75rem', minHeight: 56, display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' },
-  collapsedCheck:{ color: T.color.success, display: 'flex', flexShrink: 0 },
-  collapsedCode:{ background: T.color.soft, color: T.color.ink, padding: '0.1rem 0.45rem', borderRadius: 6, fontSize: T.size.sm, fontWeight: 700, flexShrink: 0 },
-  collapsedNom:{ fontWeight: 600, fontSize: T.size.base, color: T.color.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  collapsedStats:{ ...T.num, fontSize: T.size.md, fontWeight: 600, color: T.color.muted, flexShrink: 0 },
-  blocDoneBadge:{ background: T.color.success, color: T.color.card, borderRadius: 6, padding: '0.25rem 0.6rem', fontSize: T.size.xs, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 },
-  collapseBtn: { minHeight: 36, background: T.color.card, border: `1.5px solid ${T.color.line}`, color: T.color.ink, borderRadius: 8, padding: '0 0.75rem', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600, cursor: 'pointer' },
+  collapsedRow:{ background: 'white', borderRadius: 12, padding: '0.7rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1.5px solid #86efac' },
+  collapsedCheck:{ color: '#16a34a', fontWeight: '900', fontSize: '0.9rem', flexShrink: 0 },
+  collapsedCode:{ background: '#16a34a', color: 'white', padding: '0.1rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 },
+  collapsedNom:{ fontWeight: '700', fontSize: '0.88rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  collapsedStats:{ fontSize: '0.78rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
+  blocDoneBadge:{ background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block' },
+  collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' },
   // Boutons "Passer ce bloc"
-  skipBlocBtn:      { minHeight: 36, background: T.color.card, border: `1.5px solid ${T.color.line}`, color: T.color.ink, borderRadius: 8, padding: '0 0.75rem', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600, cursor: 'pointer', flexShrink: 0 },
-  skipBlocBtnInline:{ minHeight: 36, background: T.color.card, border: `1.5px solid ${T.color.line}`, color: T.color.ink, borderRadius: 8, padding: '0 0.75rem', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600, cursor: 'pointer' },
-  terminerBlocBtn:  { ...T.btnPrimary, marginTop: '0.75rem', background: T.color.success, color: T.color.card },
+  skipBlocBtn:      { background: 'white', border: '1.5px solid #333333', color: '#333333', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  skipBlocBtnInline:{ background: 'white', border: '1.5px solid #333333', color: '#333333', borderRadius: 8, padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer' },
+  terminerBlocBtn:  { width: '100%', marginTop: '0.75rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: '800', cursor: 'pointer', letterSpacing: '0.02em' },
   // Paramètres
-  paramsBar:    { display: 'flex', alignItems: 'center', background: T.color.page, borderRadius: T.radius.control, padding: '0.5rem 0.25rem', marginBottom: '0.75rem', overflowX: 'auto' },
+  paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
   paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
-  paramDivider: { width: 1, height: 28, background: T.color.line, flexShrink: 0 },
-  paramLabel:   { fontSize: T.size.xs, fontWeight: 600, color: T.color.muted, lineHeight: 1.2 },
-  paramValue:   { fontFamily: T.font.display, fontSize: T.size.xl, fontWeight: 700, color: T.color.ink, lineHeight: 1.2, whiteSpace: 'nowrap' },
+  paramDivider: { width: 1, height: 26, background: '#e5e7eb', flexShrink: 0 },
+  paramLabel:   { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
+  paramValue:   { fontSize: '0.95rem', fontWeight: '800', color: '#111827', lineHeight: 1.3, whiteSpace: 'nowrap' },
   // Séries tracker
-  seriesTracker:{ background: T.color.page, borderRadius: T.radius.control, padding: '0.75rem 0.6rem', marginBottom: '0.6rem' },
-  seriesTrackerLabel:{ fontSize: T.size.sm, fontWeight: 600, color: T.color.muted },
-  histoBtn:    { minHeight: 36, background: 'none', border: 'none', color: T.color.ink, fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600, cursor: 'pointer', padding: '0 4px', textDecoration: 'underline', textUnderlineOffset: 3 },
-  serieRow:    { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, background: T.color.card, borderRadius: T.radius.control, padding: '4px 4px 4px 6px', border: `1.5px solid ${T.color.line}` },
-  serieRowDone:{ borderColor: T.color.success },
-  serieRowWarn: { borderColor: T.color.warning },
-  serieNum:    { fontSize: T.size.sm, fontWeight: 700, color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  serieInput:     { minWidth: 0, height: T.touch, padding: '0 4px', border: `1.5px solid ${T.color.line}`, borderRadius: 8, fontFamily: T.font.display, fontSize: T.size.xl, fontWeight: 700, color: T.color.ink, textAlign: 'center', background: T.color.card, boxSizing: 'border-box' },
-  serieInputDone: { background: T.color.page, borderColor: 'transparent', color: T.color.ink },
-  serieUnit:   { fontSize: T.size.xs, fontWeight: 600, color: T.color.muted, flexShrink: 0 },
-  serieValBtn: { width: T.touch, height: T.touch, background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: T.radius.control, display: 'grid', placeItems: 'center', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
-  serieDoneBadge:  { width: T.touch, height: T.touch, background: T.color.success, color: T.color.card, borderRadius: T.radius.control, display: 'grid', placeItems: 'center', flexShrink: 0, border: 'none', cursor: 'pointer' },
-  serieDoneWarnBadge: { width: T.touch, height: T.touch, background: T.color.warning, color: T.color.card, borderRadius: T.radius.control, display: 'grid', placeItems: 'center', flexShrink: 0, border: 'none', cursor: 'pointer' },
-  unvalCancelBtn:  { height: T.touch, background: T.color.soft, color: T.color.ink, border: 'none', borderRadius: 8, padding: '0 0.7rem', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
-  unvalConfirmBtn: { height: T.touch, background: T.color.card, color: T.color.danger, border: `1.5px solid ${T.color.danger}`, borderRadius: 8, padding: '0 0.7rem', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
-  iconBtn:     { width: 36, height: T.touch, display: 'grid', placeItems: 'center', background: 'none', border: 'none', color: T.color.muted, cursor: 'pointer', flexShrink: 0, padding: 0, borderRadius: 8 },
-  recupBtn:    { ...T.btnPrimary, height: 48, marginTop: '0.5rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontSize: T.size.base },
-  statChip:    { background: T.color.card, border: `1px solid ${T.color.line}`, borderRadius: 8, padding: '0.35rem 0.7rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  statVal:     { fontFamily: T.font.display, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink, lineHeight: 1.1 },
-  statLbl:     { fontSize: T.size.xs, color: T.color.muted, marginTop: 1 },
+  seriesTracker:{ background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.6rem' },
+  seriesTrackerLabel:{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  histoBtn:    { background: 'none', border: 'none', color: '#333333', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', padding: '0.35rem 0', textDecoration: 'underline', textUnderlineOffset: 3 },
+  serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
+  serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
+  serieRowWarn: { background: '#fffbeb', border: '1.5px solid #fbbf24' },
+  serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  serieInput:     { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
+  serieInputDone: { background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' },
+  serieUnit:   { fontSize: '0.7rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
+  serieValBtn: { marginLeft: 'auto', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  serieDoneBadge:  { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
+  serieDoneWarnBadge: { marginLeft: 'auto', background: '#f59e0b', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
+  unvalCancelBtn:  { marginLeft: 'auto', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  unvalConfirmBtn: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  recupBtn:    { width: '100%', marginTop: '0.5rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
   // RPE toggle
-  rpeToggle:   { ...T.card, width: '100%', border: 'none', minHeight: 52, padding: '0 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: T.font.body, fontSize: T.size.base, fontWeight: 600, color: T.color.ink, cursor: 'pointer', marginBottom: '0.5rem' },
+  rpeToggle:   { width: '100%', background: 'white', border: 'none', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '700', color: '#374151', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.5rem' },
   // Superset
-  supersetWrapper:{ borderRadius: T.radius.card, overflow: 'hidden', border: `1.5px solid ${T.color.ink}`, background: T.color.card },
-  supersetHeader: { background: T.color.anthracite, padding: '0.4rem 0.6rem 0.4rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
-  supersetBadge:  { background: T.color.signal, color: T.color.ink, padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: T.size.xs, fontWeight: 700 },
-  supersetHint:   { color: T.color.onDarkMuted, fontSize: T.size.xs, fontWeight: 500 },
-  supersetConnector:{ background: T.color.page, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
-  supersetLine:   { flex: 1, height: '1px', background: T.color.line },
-  supersetTag:    { display: 'flex', alignItems: 'center', gap: 4, fontSize: T.size.xs, fontWeight: 700, color: T.color.ink, whiteSpace: 'nowrap' },
+  supersetWrapper:{ borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--accent)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  supersetHeader: { background: 'var(--accent-dark)', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  supersetBadge:  { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' },
+  supersetHint:   { color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '600' },
+  supersetConnector:{ background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
+  supersetLine:   { flex: 1, height: '1px', background: 'var(--chip-bg)', opacity: 0.4 },
+  supersetTag:    { fontSize: '0.7rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
   // Timer (styles inlinés directement dans le JSX)
 }
