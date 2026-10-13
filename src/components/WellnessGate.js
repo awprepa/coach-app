@@ -60,13 +60,13 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
   return (
     <div style={W.overlay}>
       <div style={W.card}>
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '0.6rem' }}>
           <p style={W.subtitle}>Bilan du jour</p>
           <h2 style={W.title}>Comment vas-tu ?</h2>
         </div>
         {QUESTIONS.map((q, i) => (
-          <div key={q.key} style={{ padding: '0.95rem 0', borderTop: i === 0 ? 'none' : '1px solid #ececec' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.55rem' }}>
+          <div key={q.key} style={{ padding: '0.55rem 0', borderTop: i === 0 ? 'none' : '1px solid #ececec' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.35rem' }}>
               <span style={W.qLabel}>{q.label}</span>
               <span style={{ fontSize: '0.74rem', color: '#8a8a8a' }}>{vals[q.key] > 0 ? q.desc[vals[q.key] - 1] : ''}</span>
             </div>
@@ -81,23 +81,21 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.7rem', color: '#9a9a9a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: '0.7rem', color: '#9a9a9a' }}>
               <span>{q.desc[0]}</span><span>{q.desc[3]}</span>
             </div>
           </div>
         ))}
-        <div style={{ marginBottom: '1.1rem' }}>
-          <p style={W.qLabel}>Poids <span style={{ fontWeight: '400', color: '#9a9a9a', fontSize: '0.75rem' }}>(optionnel)</span></p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              type="number" placeholder="ex : 75.5" aria-label="ex : 75.5" value={poids}
-              onChange={e => setPoids(e.target.value)}
-              style={{ flex: 1, padding: '0.6rem 0.75rem', border: '1px solid #e3e3e3', borderRadius: 10, fontSize: '1rem', fontWeight: '700', outline: 'none', textAlign: 'center' }}
-            />
-            <span style={{ fontWeight: '700', color: '#6b7280', fontSize: '0.9rem' }}>kg</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0', borderTop: '1px solid #ececec', marginBottom: '0.6rem' }}>
+          <p style={{ ...W.qLabel, flex: 1 }}>Poids <span style={{ fontWeight: '400', color: '#9a9a9a', fontSize: '0.75rem' }}>(optionnel)</span></p>
+          <input
+            type="number" placeholder="75.5" aria-label="Poids en kg" value={poids}
+            onChange={e => setPoids(e.target.value)}
+            style={{ width: 96, padding: '0.45rem 0.6rem', border: '1px solid #e3e3e3', borderRadius: 10, fontSize: '1rem', fontWeight: '700', outline: 'none', textAlign: 'center' }}
+          />
+          <span style={{ fontWeight: '700', color: '#6b7280', fontSize: '0.9rem' }}>kg</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 0.6rem' }}>
           <BlessureButton clientId={clientId} compact visible />
         </div>
 
@@ -111,13 +109,13 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
 }
 
 const W = {
-  overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
-  card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380, maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box' },
+  overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
+  card:      { background: 'white', borderRadius: 20, padding: '1.1rem 1.25rem', width: '100%', maxWidth: 380, maxHeight: 'calc(100dvh - 2rem)', overflowY: 'auto', boxSizing: 'border-box' },
   subtitle:  { fontSize: '0.7rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
-  title:     { fontSize: '1.35rem', fontWeight: '700', color: '#222222', margin: 0 },
+  title:     { fontSize: '1.2rem', fontWeight: '700', color: '#222222', margin: 0 },
   qLabel:    { fontSize: '0.88rem', fontWeight: '700', color: '#222222', margin: 0 },
-  qBtn:      { height: 42, borderRadius: 10, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' },
-  submitBtn: { width: '100%', padding: '0.875rem', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', marginTop: '0.75rem' },
+  qBtn:      { height: 36, borderRadius: 10, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' },
+  submitBtn: { width: '100%', padding: '0.75rem', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', marginTop: 0 },
 }
 
 export default function WellnessGate({ children }) {
