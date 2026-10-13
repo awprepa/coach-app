@@ -1,0 +1,197 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-10-13T10:26:58.637784",
+ "title": "Design System: AWprepa",
+ "extensions": {
+  "colorMeta": {
+   "accent-signal": {
+    "role": "primary",
+    "displayName": "Jaune signal",
+    "canonical": "#e4f816",
+    "tonalRamp": [
+     "#2c3003",
+     "#4d5506",
+     "#727a0b",
+     "#a3ad10",
+     "#c9d413",
+     "#e4f816",
+     "#eefa6e",
+     "#f8fdc4"
+    ]
+   },
+   "anthracite": {
+    "role": "neutral",
+    "displayName": "Anthracite",
+    "canonical": "#333333",
+    "tonalRamp": [
+     "#141414",
+     "#1a1a1a",
+     "#262626",
+     "#333333",
+     "#4d4d4d",
+     "#808080",
+     "#b3b3b3",
+     "#ededed"
+    ]
+   },
+   "text-muted": {
+    "role": "neutral",
+    "displayName": "Texte secondaire",
+    "canonical": "#6b7280",
+    "tonalRamp": [
+     "#1f2937",
+     "#374151",
+     "#4b5563",
+     "#6b7280",
+     "#9ca3af",
+     "#d1d5db",
+     "#e5e7eb",
+     "#f3f4f6"
+    ]
+   }
+  },
+  "typographyMeta": {
+   "title": {
+    "displayName": "Titre",
+    "purpose": "Titres de page et de carte principale."
+   },
+   "body": {
+    "displayName": "Corps",
+    "purpose": "Contenu des cartes, listes, tableaux."
+   },
+   "label": {
+    "displayName": "Libellé",
+    "purpose": "Titres de section en petites majuscules espacées."
+   }
+  },
+  "shadows": [
+   {
+    "name": "carte",
+    "value": "0 1px 4px rgba(0,0,0,0.06)",
+    "purpose": "Cartes posées sur le fond."
+   },
+   {
+    "name": "flottant",
+    "value": "0 10px 30px rgba(0,0,0,0.14)",
+    "purpose": "Menus déroulants."
+   },
+   {
+    "name": "modale",
+    "value": "0 20px 60px rgba(0,0,0,0.15)",
+    "purpose": "Fenêtres modales."
+   }
+  ],
+  "motion": [
+   {
+    "name": "fondu-page",
+    "value": "220ms ease-out",
+    "purpose": "Apparition des pages athlète."
+   }
+  ],
+  "breakpoints": [
+   {
+    "name": "mobile-coach",
+    "value": "820px"
+   },
+   {
+    "name": "nav-compacte",
+    "value": "1240px"
+   }
+  ]
+ },
+ "components": [
+  {
+   "name": "Bouton principal",
+   "kind": "button",
+   "refersTo": "button-primary",
+   "description": "Action principale, signature de la marque.",
+   "html": "<button class=\"ds-btn-primary\">Valider</button>",
+   "css": ".ds-btn-primary{background:#1a1a1a;color:#e4f816;border:none;border-radius:10px;padding:10px 18px;font-weight:800;font-size:.88rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-btn-primary:hover{background:#333}.ds-btn-primary:focus-visible{outline:2px solid #1d4ed8;outline-offset:2px}"
+  },
+  {
+   "name": "Bouton secondaire",
+   "kind": "button",
+   "refersTo": "button-secondary",
+   "description": "Action secondaire.",
+   "html": "<button class=\"ds-btn-secondary\">Annuler</button>",
+   "css": ".ds-btn-secondary{background:#fff;color:#374151;border:1.5px solid #e5e7eb;border-radius:10px;padding:8px 14px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-btn-secondary:hover{background:#f3f4f6}.ds-btn-secondary:focus-visible{outline:2px solid #1d4ed8;outline-offset:2px}"
+  },
+  {
+   "name": "Puce de filtre",
+   "kind": "chip",
+   "refersTo": "chip-active",
+   "description": "Filtre actif / inactif.",
+   "html": "<span class=\"ds-chip ds-chip-on\">Musculation</span> <span class=\"ds-chip\">Cardio</span>",
+   "css": ".ds-chip{display:inline-block;border-radius:999px;padding:4px 12px;font-size:.75rem;font-weight:700;border:1.5px solid #e5e7eb;color:#6b7280;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-chip-on{background:#333;color:#e4f816;border-color:#333}"
+  },
+  {
+   "name": "Carte",
+   "kind": "card",
+   "refersTo": "card",
+   "description": "Bloc de contenu.",
+   "html": "<div class=\"ds-card\"><p class=\"ds-label\">Séances du jour</p><p class=\"ds-title\">Séance cycle 1 FullBody</p></div>",
+   "css": ".ds-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-label{margin:0 0 6px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#374151}.ds-title{margin:0;font-size:1rem;font-weight:800;color:#1a1a1a}"
+  },
+  {
+   "name": "Champ",
+   "kind": "input",
+   "refersTo": "input",
+   "description": "Champ de saisie.",
+   "html": "<input class=\"ds-input\" placeholder=\"Rechercher un client…\">",
+   "css": ".ds-input{border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.88rem;background:#fff;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-input:focus-visible{outline:2px solid #1d4ed8;outline-offset:2px}"
+  },
+  {
+   "name": "Navigation coach",
+   "kind": "nav",
+   "refersTo": "",
+   "description": "Barre du haut, lien actif anthracite.",
+   "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-a ds-on\">Tableau de bord</a><a class=\"ds-nav-a\">Clients</a><a class=\"ds-nav-a\">Groupes</a></nav>",
+   "css": ".ds-nav{display:flex;gap:2px;background:#fff;padding:10px;border-bottom:1px solid #e6e8ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-nav-a{padding:8px 10px;border-radius:8px;color:#5b626c;font-size:.82rem;font-weight:600;cursor:pointer}.ds-nav-a:hover{background:#f3f4f6}.ds-on{background:#333;color:#fff}"
+  }
+ ],
+ "narrative": {
+  "northStar": "Le marquage de terrain",
+  "overview": "AWprepa est un outil de travail : base neutre et claire, anthracite pour la structure, une seule couleur vive (jaune-vert fluo) comme un marquage de terrain pour l'actif et le prioritaire. Densité forte côté coach, pensé pour le pouce côté athlète. Identité cohérente mais application hétérogène (30+ gris, 13 tailles de texte, 12 arrondis).",
+  "keyCharacteristics": [
+   "Une seule couleur vive, réservée à l'actif et à l'action principale.",
+   "Anthracite et noir pour la structure.",
+   "Cartes blanches arrondies sur fond gris pâle, ombre à peine perceptible.",
+   "Typographie système, graisses appuyées.",
+   "Pas d'emojis : icônes SVG au trait ou pastilles."
+  ],
+  "rules": [
+   {
+    "name": "La règle du marquage unique",
+    "body": "Le jaune signal marque l'actif, le sélectionné ou l'action principale, jamais une surface décorative.",
+    "section": "colors"
+   },
+   {
+    "name": "La règle des couleurs de club",
+    "body": "Sur les écrans de groupe, les couleurs du club remplacent l'accent pour les graphiques et repères.",
+    "section": "colors"
+   },
+   {
+    "name": "La règle de la graisse",
+    "body": "La hiérarchie se fait par la graisse avant la taille.",
+    "section": "typography"
+   },
+   {
+    "name": "La règle du papier posé",
+    "body": "Une carte repose à plat ; une ombre franche signale un élément flottant.",
+    "section": "elevation"
+   }
+  ],
+  "dos": [
+   "Do réserver le jaune signal à l'actif, au sélectionné et à l'action principale.",
+   "Do utiliser le texte secondaire (#6b7280) pour l'information de second rang.",
+   "Do employer les icônes SVG de Icon.js ou des pastilles de couleur.",
+   "Do reprendre les couleurs du club sur les écrans de groupe."
+  ],
+  "donts": [
+   "Don't utiliser d'emojis.",
+   "Don't poser une bordure colorée épaisse sur un seul côté d'une carte.",
+   "Don't utiliser le jaune signal en fond de grande surface ni en texte sur blanc.",
+   "Don't créer une nouvelle nuance de gris, taille de texte ou arrondi."
+  ]
+ }
+}

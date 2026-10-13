@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWprepa, direction Tableau d'affichage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+/* ===== Jetons de la direction (primitifs puis sémantiques) ===== */
+:root{--signal:#e4f816;--ok:#13753a;--bad:#b42318;--r-pill:999px;--board:#d6d6d2;--board-ink:#111111;--board-muted:#4b4f55;--f-display:'Barlow Condensed',sans-serif;--f-body:'Barlow',sans-serif;--f-num:'Barlow Condensed',sans-serif;--w-title:700;--w-num:700;--ls-title:0;--ls-label:0.06em;--tt-label:uppercase;--ink:#111111;--a-page:#0f0f10;--a-head:#0f0f10;--a-head-ink:#f2f2f0;--a-head-muted:#a3a8ae;--a-head-btn:#1b1c1e;--a-card:#1b1c1e;--card-border:0;--card-shadow:none;--a-ink:#f2f2f0;--a-muted:#a3a8ae;--a-soft:#26272a;--a-line:#2c2d31;--a-tab:#0f0f10;--a-tab-muted:#a3a8ae;--a-tab-on:#e4f816;--tabmark:#e4f816;--btn-bg:#e4f816;--btn-ink:#141414;--day-on-bg:#e4f816;--day-on-ink:#141414;--bar:#e4f816;--r-btn:8px;--r-card:10px;--r-chip:8px;--glass-ground:#0f0f10;--c-page:#f3f3f1;--c-nav:#111111;--c-nav-ink:#f2f2f0;--c-nav-muted:#a3a8ae;--c-nav-on-bg:#e4f816;--c-nav-on-ink:#111111;--c-line:#e2e2dd;--c-line-soft:#ececE8;--c-card:#ffffff;--c-card-border:1px solid #e2e2dd;--c-card-shadow:none;--c-ink:#111111;--c-muted:#55595f;--c-soft:#efefeb;--alert-bg:#fdecea;--alert-ink:#8f1d14;--tab-mark:#111111;--cur-col:rgb(228 248 22 / .25);}
+/* ===== Base ===== */
+*{box-sizing:border-box}
+body{margin:0;background:var(--board);font-family:var(--f-body);color:var(--ink);-webkit-font-smoothing:antialiased}
+.board{max-width:1180px;margin:0 auto;padding:28px 24px 48px}
+.board h1{font:var(--w-title) 22px/1.2 var(--f-display);margin:0 0 4px;color:var(--board-ink)}
+.board .note{font-size:13px;color:var(--board-muted);margin:0 0 22px}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px}
+.cap{font-size:13px;font-weight:600;color:var(--board-muted);margin:0 0 8px}
+.num{font-variant-numeric:tabular-nums;font-family:var(--f-num)}
+i.ph,i.ph-fill{font-size:20px;line-height:1}
+
+/* ===== Téléphone ===== */
+.phone{width:390px;height:844px;border-radius:44px;overflow:hidden;position:relative;background:var(--a-page);box-shadow:0 0 0 10px #0d0d0e,0 24px 60px rgb(0 0 0 / .28);display:flex;flex-direction:column}
+.status{height:44px;flex:none;background:var(--a-head);color:var(--a-head-ink);display:flex;align-items:center;justify-content:space-between;padding:0 26px;font:600 14px var(--f-body)}
+.ahead{background:var(--a-head);color:var(--a-head-ink);padding:6px 20px 18px;display:flex;align-items:center;gap:12px;flex:none}
+.ahead .t{flex:1}
+.ahead .t small{display:block;font-size:13px;color:var(--a-head-muted);font-weight:500}
+.ahead .t b{font:var(--w-title) 22px/1.15 var(--f-display);letter-spacing:var(--ls-title)}
+.iconbtn{width:44px;height:44px;border-radius:var(--r-btn);display:grid;place-items:center;background:var(--a-head-btn);color:var(--a-head-ink);position:relative;border:0}
+.badge{position:absolute;top:6px;right:6px;min-width:18px;height:18px;border-radius:9px;background:var(--signal);color:#141414;font:700 11px/18px var(--f-body);text-align:center;padding:0 4px}
+.avatar{width:44px;height:44px;border-radius:50%;background:#3b3c40 url(https://picsum.photos/seed/awprepa-arthur-rugby/96/96) center/cover;border:2px solid var(--a-head-btn)}
+.scroll{flex:1;overflow:hidden;padding:16px 16px 0;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--a-card);border-radius:var(--r-card);padding:16px;border:var(--card-border);box-shadow:var(--card-shadow)}
+.label{font:600 13px var(--f-body);color:var(--a-muted);margin:0 0 10px;letter-spacing:var(--ls-label);text-transform:var(--tt-label)}
+.today h2{font:var(--w-title) 24px/1.15 var(--f-display);margin:0 0 6px;letter-spacing:var(--ls-title);color:var(--a-ink)}
+.today p{margin:0 0 14px;font-size:15px;color:var(--a-muted)}
+.meta{display:flex;gap:14px;font-size:14px;color:var(--a-muted);margin-bottom:16px}
+.meta span{display:flex;align-items:center;gap:6px}
+.btn{height:52px;border-radius:var(--r-btn);border:0;width:100%;font:700 16px var(--f-body);display:flex;align-items:center;justify-content:center;gap:10px;background:var(--btn-bg);color:var(--btn-ink)}
+.btn.sec{background:transparent;color:var(--a-ink);border:1.5px solid var(--a-line);height:48px;font-size:15px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{height:64px;border-radius:var(--r-chip);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;color:var(--a-muted);background:var(--a-soft)}
+.day b{font:700 16px var(--f-num);color:var(--a-ink)}
+.day.on{background:var(--day-on-bg);color:var(--day-on-ink)}
+.day.on b{color:var(--day-on-ink)}
+.day .mk{font-size:14px;line-height:1}
+.well{display:flex;align-items:center;gap:16px}
+.score{font:var(--w-num) 44px/1 var(--f-num);color:var(--a-ink)}
+.score small{font-size:18px;color:var(--a-muted);font-weight:600}
+.wl{flex:1;display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:14px;color:var(--a-muted)}
+.wl b{color:var(--a-ink);font-family:var(--f-num)}
+.cyc{display:flex;justify-content:space-between;align-items:center;font-size:15px;color:var(--a-ink);font-weight:600}
+.bar{height:8px;border-radius:4px;background:var(--a-soft);margin-top:12px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--bar)}
+.tabs{height:84px;flex:none;background:var(--a-tab);border-top:1px solid var(--a-line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 4px 18px}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--f-body);color:var(--a-tab-muted);position:relative}
+.tab i{font-size:24px;line-height:1}
+.tab.on{color:var(--a-tab-on)}
+.tab.on::before{content:"";position:absolute;top:-6px;width:28px;height:3px;border-radius:2px;background:var(--tabmark)}
+
+/* ===== Progression en verre (approximation web de Liquid Glass, pas l'API Apple) ===== */
+.glass-scene{flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:14px;background:
+ radial-gradient(120% 60% at 85% 10%, rgb(228 248 22 / .20), transparent 60%),
+ radial-gradient(90% 50% at 0% 80%, rgb(228 248 22 / .08), transparent 60%), var(--glass-ground)}
+.glass{position:relative;border-radius:var(--r-card);padding:16px;color:#f2f2f0;
+ background:linear-gradient(135deg,rgb(255 255 255 / .12),rgb(255 255 255 / .04)),rgb(255 255 255 / .05);
+ border:1px solid rgb(255 255 255 / .16);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+ box-shadow:inset 0 1px 0 rgb(255 255 255 / .22),0 12px 40px rgb(0 0 0 / .35)}
+@media (prefers-reduced-transparency: reduce){.glass{background:#26272a;backdrop-filter:none}}
+.glass .label{color:#b9bdc3}
+.big{font:var(--w-num) 48px/1 var(--f-num);letter-spacing:-.01em}
+.big small{font-size:20px;color:#b9bdc3;font-weight:600}
+.delta{display:inline-flex;align-items:center;gap:6px;font:700 14px var(--f-body);color:#4ade80;margin-left:10px}
+.pr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.pr div{border-radius:var(--r-chip);padding:10px;background:rgb(255 255 255 / .06);border:1px solid rgb(255 255 255 / .10)}
+.pr span{display:block;font-size:12px;color:#b9bdc3;margin-bottom:4px}
+.pr b{font:700 18px var(--f-num)}
+.gauge{display:flex;justify-content:space-between;font-size:13px;color:#b9bdc3;margin-top:10px}
+.gbar{height:8px;border-radius:4px;background:rgb(255 255 255 / .10);overflow:hidden;margin-top:8px}
+.gbar i{display:block;height:100%;width:72%;background:var(--signal)}
+
+/* ===== Coach (bureau) ===== */
+.desk{width:1100px;border-radius:14px;overflow:hidden;background:var(--c-page);box-shadow:0 20px 60px rgb(0 0 0 / .18);font-size:14px}
+.cnav{height:60px;background:var(--c-nav);display:flex;align-items:center;gap:6px;padding:0 22px;border-bottom:1px solid var(--c-line)}
+.logo{font:800 20px var(--f-display);color:var(--c-nav-ink);letter-spacing:-.02em;margin-right:8px}
+.cnav a{white-space:nowrap;display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:var(--r-btn);color:var(--c-nav-muted);font-weight:600;font-size:14px;text-decoration:none}
+.cnav a.on{background:var(--c-nav-on-bg);color:var(--c-nav-on-ink)}
+.cnav .sp{flex:1}
+.search{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:var(--r-btn);border:1px solid var(--c-line);color:var(--c-muted);width:180px;background:var(--c-card)}
+.cbody{display:grid;grid-template-columns:270px 1fr;gap:20px;padding:20px 22px 24px}
+.ccard{background:var(--c-card);border-radius:var(--r-card);padding:18px;border:var(--c-card-border);box-shadow:var(--c-card-shadow)}
+.who{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.who .avatar{width:52px;height:52px;border-color:transparent}
+.who b{display:block;font:var(--w-title) 18px/1.2 var(--f-display);color:var(--c-ink)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:var(--r-pill);font-size:12.5px;font-weight:600;background:var(--c-soft);color:var(--c-ink);margin-top:5px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 10px;font-size:13.5px;color:var(--c-muted);margin:0}
+.kv b{color:var(--c-ink);font-weight:600}
+.sec-t{font:600 13px var(--f-body);color:var(--c-muted);margin:16px 0 8px;letter-spacing:var(--ls-label);text-transform:var(--tt-label)}
+.alertbox{margin-top:14px;padding:12px;border-radius:var(--r-chip);background:var(--alert-bg);color:var(--alert-ink);font-size:13.5px;display:flex;gap:8px;align-items:flex-start}
+.ctabs{display:flex;gap:4px;border-bottom:1px solid var(--c-line);margin-bottom:16px}
+.ctabs button{border:0;background:none;padding:10px 14px;font:600 14px var(--f-body);color:var(--c-muted);position:relative;cursor:pointer}
+.ctabs button[aria-selected=true]{color:var(--c-ink)}
+.ctabs button[aria-selected=true]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:3px;border-radius:2px;background:var(--tab-mark)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.kpi span{display:block;font-size:13px;color:var(--c-muted);margin-bottom:6px}
+.kpi b{font:var(--w-num) 28px/1.1 var(--f-num);color:var(--c-ink)}
+.kpi b small{font-size:15px;color:var(--c-muted);font-weight:600}
+.kpi em{display:block;font-style:normal;font-size:13px;color:var(--c-muted);margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font:600 12.5px var(--f-body);color:var(--c-muted);text-align:right;padding:8px 6px;border-bottom:1px solid var(--c-line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:9px 6px;border-bottom:1px solid var(--c-line-soft);text-align:right;color:var(--c-ink);font-family:var(--f-num)}
+td:first-child{font-family:var(--f-body);font-weight:600}
+td.cur{background:var(--cur-col)}
+.chg{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;margin-left:4px}
+.up{color:var(--ok)}.dn{color:var(--bad)}.eq{color:var(--c-muted)}
+.legend{display:flex;gap:16px;font-size:12.5px;color:var(--c-muted);margin-top:10px}
+.legend span{display:flex;align-items:center;gap:4px}
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
+.lowv{color:var(--bad);font-weight:700}
+.lowv::after{content:" bas";font:600 11.5px var(--f-body)}
+[data-dir=B] .today h2{font-size:32px;text-transform:uppercase}[data-dir=B] .score{font-size:58px}[data-dir=B] .big{font-size:60px}[data-dir=B] .kpi b{font-size:34px}[data-dir=B] .who b{font-size:22px;text-transform:uppercase}
+</style>
+</head>
+<body data-dir="B">
+<div class="board">
+<h1>Direction B : Tableau d'affichage</h1>
+<p class="note">Le stade la nuit : joueur en sombre, gros chiffres, coach en clair. Contenu issu de l'app (compte Arthur). Les valeurs du graphique de progression sont un exemple.</p>
+
+<div class="row">
+ <div>
+  <p class="cap">Accueil athlète, 390 px</p>
+  <div class="phone">
+   <div class="status"><span class="num">9:41</span><span><i class="ph ph-cell-signal-full"></i> <i class="ph ph-battery-high"></i></span></div>
+   <div class="ahead">
+    <div class="t"><small>Mardi 13 octobre</small><b>Bonjour Arthur</b></div>
+    <button class="iconbtn" aria-label="Notifications, 6 non lues"><i class="ph ph-bell"></i><span class="badge num">6</span></button>
+    <div class="avatar" role="button" aria-label="Mon profil"></div>
+   </div>
+   <div class="scroll">
+    <div class="card today">
+     <p class="label">Aujourd'hui</p>
+     <h2>Séance HDC 2</h2>
+     <div class="meta"><span><i class="ph ph-barbell"></i>6 exercices</span><span><i class="ph ph-timer"></i>50 min</span><span><i class="ph ph-calendar-blank"></i>Jour 2 sur 3</span></div>
+     <button class="btn"><i class="ph ph-play"></i>Commencer la séance</button>
+    </div>
+    <div class="card">
+     <p class="label">Cette semaine</p>
+     <div class="week">
+      <div class="day"><span>L</span><b>12</b><i class="ph ph-check mk" aria-label="faite"></i></div>
+      <div class="day on"><span>M</span><b>13</b><i class="ph ph-barbell mk" aria-label="séance"></i></div>
+      <div class="day"><span>M</span><b>14</b><span class="mk">&nbsp;</span></div>
+      <div class="day"><span>J</span><b>15</b><i class="ph ph-barbell mk" aria-label="séance"></i></div>
+      <div class="day"><span>V</span><b>16</b><span class="mk">&nbsp;</span></div>
+      <div class="day"><span>S</span><b>17</b><span class="mk">&nbsp;</span></div>
+      <div class="day"><span>D</span><b>18</b><span class="mk">&nbsp;</span></div>
+     </div>
+    </div>
+    <div class="card">
+     <p class="label">Wellness du jour</p>
+     <div class="well">
+      <div class="score num">3,8<small> / 4</small></div>
+      <div class="wl"><span>Sommeil</span><b>4</b><span>Fatigue</span><b>4</b><span>Douleurs</span><b>4</b><span>Stress</span><b>3</b></div>
+     </div>
+    </div>
+    <div class="card">
+     <div class="cyc"><span>Cycle Arthur N°3</span><span class="num" style="color:var(--a-muted);font-weight:500">Semaine 8 sur 8</span></div>
+     <div class="bar"><i></i></div>
+    </div>
+   </div>
+   <nav class="tabs" aria-label="Navigation">
+    <a class="tab on" aria-current="page"><i class="ph-fill ph-house"></i>Accueil</a>
+    <a class="tab"><i class="ph ph-clipboard-text"></i>Programme</a>
+    <a class="tab"><i class="ph ph-bowl-food"></i>Nutrition</a>
+    <a class="tab"><i class="ph ph-chat-circle"></i>Messages</a>
+    <a class="tab"><i class="ph ph-trophy"></i>Compét.</a>
+   </nav>
+  </div>
+ </div>
+
+ <div>
+  <p class="cap">Progression en verre dépoli, 390 px</p>
+  <div class="phone" style="background:var(--glass-ground)">
+   <div class="status" style="background:var(--glass-ground);color:#f2f2f0"><span class="num">9:41</span><span><i class="ph ph-cell-signal-full"></i> <i class="ph ph-battery-high"></i></span></div>
+   <div class="ahead" style="background:var(--glass-ground)"><div class="t"><small style="color:#b9bdc3">Développé couché (B)</small><b style="color:#f2f2f0">Progression</b></div></div>
+   <div class="glass-scene">
+    <div class="glass">
+     <p class="label">1RM estimé</p>
+     <div><span class="big num">120<small> kg</small></span><span class="delta"><i class="ph ph-arrow-up-right"></i>+10 kg en 7 semaines</span></div>
+     <svg viewBox="0 0 330 150" width="100%" height="150" role="img" aria-label="1RM estimé par semaine, de 110 à 120 kg" style="margin-top:12px;overflow:visible">
+      <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e4f816" stop-opacity=".45"/><stop offset="1" stop-color="#e4f816" stop-opacity="0"/></linearGradient></defs>
+      <g stroke="rgb(255 255 255 / .10)"><line x1="0" x2="330" y1="20" y2="20"/><line x1="0" x2="330" y1="70" y2="70"/><line x1="0" x2="330" y1="120" y2="120"/></g>
+      <g fill="#b9bdc3" font-size="11" font-family="inherit"><text x="0" y="16">120</text><text x="0" y="66">115</text><text x="0" y="116">110</text></g>
+      <path d="M20,120 L68,95 L116,70 L164,95 L212,70 L260,45 L308,20 L308,140 L20,140 Z" fill="url(#g)"/>
+      <path d="M20,120 L68,95 L116,70 L164,95 L212,70 L260,45 L308,20" fill="none" stroke="#e4f816" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="308" cy="20" r="6" fill="#e4f816" stroke="#141414" stroke-width="2"/>
+      <g fill="#b9bdc3" font-size="11" text-anchor="middle"><text x="20" y="146">S1</text><text x="68" y="146">S2</text><text x="116" y="146">S3</text><text x="164" y="146">S4</text><text x="212" y="146">S5</text><text x="260" y="146">S6</text><text x="308" y="146">S7</text></g>
+     </svg>
+    </div>
+    <div class="glass">
+     <p class="label">Records</p>
+     <div class="pr"><div><span>1 rép.</span><b class="num">120 kg</b></div><div><span>3 rép.</span><b class="num">110 kg</b></div><div><span>6 rép.</span><b class="num">100 kg</b></div></div>
+    </div>
+    <div class="glass">
+     <p class="label">Niveau sur cet exercice</p>
+     <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:var(--w-num) 26px var(--f-num)">7</b><span style="font-size:13px;color:#b9bdc3">+30 kg avant le niveau 8</span></div>
+     <div class="gbar"><i></i></div>
+    </div>
+   </div>
+   <nav class="tabs" aria-label="Navigation" style="background:#141416;border-top-color:rgb(255 255 255 / .08)">
+    <a class="tab" style="color:#a3a8ae"><i class="ph ph-house"></i>Accueil</a>
+    <a class="tab on" style="color:#f2f2f0" aria-current="page"><i class="ph-fill ph-clipboard-text"></i>Programme</a>
+    <a class="tab" style="color:#a3a8ae"><i class="ph ph-bowl-food"></i>Nutrition</a>
+    <a class="tab" style="color:#a3a8ae"><i class="ph ph-chat-circle"></i>Messages</a>
+    <a class="tab" style="color:#a3a8ae"><i class="ph ph-trophy"></i>Compét.</a>
+   </nav>
+  </div>
+ </div>
+</div>
+
+<p class="cap">Fiche client coach, 1100 px</p>
+<div class="desk">
+ <nav class="cnav" aria-label="Navigation coach">
+  <span class="logo">AW</span>
+  <a><i class="ph ph-squares-four"></i>Tableau de bord</a>
+  <a class="on"><i class="ph ph-users"></i>Clients</a>
+  <a><i class="ph ph-users-three"></i>Groupes</a>
+  <a><i class="ph ph-calendar-blank"></i>Calendrier</a>
+  <a><i class="ph ph-books"></i>Bibliothèque</a>
+  <a><i class="ph ph-chat-circle"></i>Messages</a>
+  <span class="sp"></span>
+  <div class="search"><i class="ph ph-magnifying-glass"></i>Rechercher</div>
+ </nav>
+ <div class="cbody">
+  <aside class="ccard">
+   <div class="who"><div class="avatar"></div><div><b>Arthur Wehrey</b><span class="pill">Prépa physique</span></div></div>
+   <dl class="kv"><dt>Début</dt><dd><b class="num">9 mai 2026</b></dd><dt>Fin</dt><dd><b class="num">8 juil. 2029</b></dd><dt>Conditions</dt><dd><b>Signées</b></dd><dt>Contrat</dt><dd><b>Signé 28/07</b></dd></dl>
+   <p class="sec-t">Notes</p>
+   <p style="margin:0;font-size:13.5px;color:var(--c-ink)">Compte perso</p>
+   <div class="alertbox"><i class="ph ph-warning" style="font-size:18px"></i><span><b>Fatigue 2/4</b> le 8 oct. Revenu à 4/4 depuis.</span></div>
+  </aside>
+  <main>
+   <div class="ctabs" role="tablist">
+    <button role="tab" aria-selected="false">Suivi</button>
+    <button role="tab" aria-selected="true">Entraînement</button>
+    <button role="tab" aria-selected="false">Nutrition</button>
+    <button role="tab" aria-selected="false">Journal</button>
+    <button role="tab" aria-selected="false">Photos</button>
+   </div>
+   <div class="kpis">
+    <div class="ccard kpi"><span>Cycle actif</span><b>Cycle N°3</b><em>Semaine 8 sur 8</em></div>
+    <div class="ccard kpi"><span>Wellness aujourd'hui</span><b class="num">3,8<small> / 4</small></b><em>Moyenne 7 jours 3,7</em></div>
+    <div class="ccard kpi"><span>Tonnage semaine</span><b class="num">4 358<small> kg</small></b><em><span class="up">+6 %</span> vs semaine 6</em></div>
+   </div>
+   <div class="grid2">
+    <div class="ccard">
+     <p class="sec-t" style="margin-top:0">Charges par semaine, séance HDC 1</p>
+     <table>
+      <thead><tr><th>Exercice</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th><th>S7</th></tr></thead>
+      <tbody>
+       <tr><td>Développé couché</td><td>115</td><td>112,5<span class="chg dn" aria-label="baisse"><i class="ph ph-arrow-down"></i></span></td><td>115<span class="chg up" aria-label="hausse"><i class="ph ph-arrow-up"></i></span></td><td>115<span class="chg eq" aria-label="stable">=</span></td><td class="cur">115<span class="chg eq">=</span></td></tr>
+       <tr><td>Tirage vertical</td><td>95</td><td>95<span class="chg eq">=</span></td><td>100<span class="chg up"><i class="ph ph-arrow-up"></i></span></td><td>100<span class="chg eq">=</span></td><td class="cur">100<span class="chg eq">=</span></td></tr>
+       <tr><td>Oiseau peck-deck</td><td>20</td><td>25<span class="chg up"><i class="ph ph-arrow-up"></i></span></td><td>25<span class="chg eq">=</span></td><td>25<span class="chg eq">=</span></td><td class="cur">25<span class="chg eq">=</span></td></tr>
+       <tr><td>Spider curl</td><td>22</td><td>22<span class="chg eq">=</span></td><td>22<span class="chg eq">=</span></td><td>22<span class="chg eq">=</span></td><td class="cur">22<span class="chg eq">=</span></td></tr>
+      </tbody>
+     </table>
+     <div class="legend"><span><i class="ph ph-arrow-up up"></i>hausse</span><span><i class="ph ph-arrow-down dn"></i>baisse</span><span>= stable</span><span>Charges en kg</span></div>
+    </div>
+    <div class="ccard">
+     <p class="sec-t" style="margin-top:0">Wellness, 5 derniers jours</p>
+     <table>
+      <thead><tr><th>Date</th><th>Som.</th><th>Fat.</th><th>Dou.</th><th>Str.</th><th>Moy.</th></tr></thead>
+      <tbody>
+       <tr><td>12 oct.</td><td>4</td><td>4</td><td>4</td><td>3</td><td><b>3,8</b></td></tr>
+       <tr><td>11 oct.</td><td class="lowv">2</td><td>4</td><td>4</td><td>4</td><td><b>3,5</b></td></tr>
+       <tr><td>10 oct.</td><td>4</td><td>4</td><td>4</td><td>3</td><td><b>3,8</b></td></tr>
+       <tr><td>9 oct.</td><td>4</td><td>3</td><td>4</td><td>4</td><td><b>3,8</b></td></tr>
+       <tr><td>8 oct.</td><td>4</td><td class="lowv">2</td><td>4</td><td>4</td><td><b>3,5</b></td></tr>
+      </tbody>
+     </table>
+    </div>
+   </div>
+  </main>
+ </div>
+</div>
+</div>
+</body>
+</html>

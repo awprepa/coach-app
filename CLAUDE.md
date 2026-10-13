@@ -24,8 +24,10 @@ App PWA mobile-first pour Arthur (préparateur physique unique). Site coach + ap
 ## Conventions de code
 
 - **Styles inline** dans un objet `S` ou `styles` en bas de chaque page (pas de CSS modules ni Tailwind)
-- Header client : gradient `linear-gradient(135deg, #333333 0%, #1f2937 100%)` + accent `#e4f816`
-- UI mobile-first, libellés FR, emojis fréquents, border-radius 12-16
+- **Identité visuelle : direction « Ligne de touche »** (voir `DESIGN.md`). Jetons dans `src/theme/tokens.js` : importer `T` et l'utiliser dans les objets de styles inline (couleurs, polices, tailles, arrondis, ombres) au lieu de valeurs en dur
+- Couleurs : encre `#141414`, page `#f4f4f1`, cartes blanches, texte secondaire `#55595f`, jaune signal `#e4f816` (jamais en texte sur fond clair). Polices : Archivo Narrow (titres, chiffres) + Public Sans (texte). Arrondis 10 (contrôles) / 16 (cartes)
+- Header client : `var(--header-bg)` (anthracite par défaut, couleurs du club si le joueur a un groupe) — ne pas remplacer ces variables CSS
+- UI mobile-first côté client, desktop côté coach, libellés FR, pas d'emojis (icônes SVG au trait ou pastilles), texte ≥ 12 px, cibles tactiles ≥ 44 px
 - Pattern d'auth : `supabase.auth.getSession()` → lookup `clients` via `user_id` (fallback par email si user_id vide)
 - ClientBottomNav rendu en bas de chaque page client
 - Realtime via NotifProvider (`src/context/NotifContext.js`) — un seul channel global
@@ -91,3 +93,10 @@ Ajout d'un onglet Nutrition côté client : log repas, photo IA, scan code-barre
 - Français pour l'UI et les échanges
 - Arthur n'est pas développeur pro — expliquer les trade-offs plutôt que d'imposer un choix
 - Sécurité : ne jamais committer de clés API ; utiliser Supabase secrets pour les Edge Functions
+
+## Outils de design (plugins/skills installés)
+
+- **Par défaut** : cohérence stricte avec `DESIGN.md` et les jetons `src/theme/tokens.js`. `frontend-design` s'applique automatiquement.
+- **Retouche d'un écran existant** : `/impeccable audit`, `/impeccable polish`, `/impeccable critique` — corrigent sans changer de direction visuelle.
+- **Nouveau design demandé explicitement par Arthur** : `taste-skill`, `redesign-skill`, `ui-ux-pro-max`. Toujours proposer une maquette et attendre validation avant de l'appliquer à l'app.
+- **Doc à jour** des bibliothèques (React, Supabase, Recharts…) : MCP `context7`.
