@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { getCoachId, sendNotif } from '../notifs'
 import { isoLocal } from '../utils/dates'
+import Icon from './Icon'
+import T from '../theme/tokens'
 
 const EVENT_TYPES = [
   { value: 'seance',       label: 'Séance',        bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
@@ -10,15 +12,15 @@ const EVENT_TYPES = [
   { value: 'match',        label: 'Match',         bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
   { value: 'combat',       label: 'Combat',        bg: '#dc2626', text: 'white'   },
   { value: 'competition',  label: 'Compétition',   bg: '#7c3aed', text: 'white'   },
-  { value: 'repos',        label: 'Repos',         bg: '#e5e7eb', text: '#6b7280' },
-  { value: 'autre',        label: 'Autre',         bg: '#f0fdfa', text: '#0f766e' },
+  { value: 'repos',        label: 'Repos',         bg: T.color.soft, text: T.color.muted },
+  { value: 'autre',        label: 'Autre',         bg: '#ccfbf1', text: '#115e59' },
 ]
 
 // Types supplémentaires utilisés dans les groupes (groupe_evenements)
 const GROUP_EXTRA_TYPES = {
   collectif:   { label: 'Collectif',    bg: '#f97316', text: 'white'   },
   muscu:       { label: 'Muscu',        bg: '#6366f1', text: 'white'   },
-  vacances:    { label: 'Vacances',     bg: '#e5e7eb', text: '#6b7280' },
+  vacances:    { label: 'Vacances',     bg: T.color.soft, text: T.color.muted },
   competition: { label: 'Compétition',  bg: '#7c3aed', text: 'white'   },
   ffr_match:   { label: 'Match FFR',    bg: '#1e3a8a', text: 'white'   },
 }
@@ -88,8 +90,8 @@ function EventChip({ ev, tiny = false }) {
   return (
     <span style={{
       background: ts.bg, color: ts.text,
-      fontSize: tiny ? '0.6rem' : '0.7rem', fontWeight: '700',
-      padding: tiny ? '1px 4px' : '2px 6px', borderRadius: '4px',
+      fontSize: tiny ? 11 : T.size.xs, fontWeight: 600, lineHeight: 1.3,
+      padding: tiny ? '1px 4px' : '2px 6px', borderRadius: 4,
       overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
       display: 'flex', alignItems: 'center', gap: 3,
     }}>
@@ -106,16 +108,16 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
   const cells = []
   cells.push(<div key="corner" />)
   JOURS.forEach(j => cells.push(
-    <div key={`h-${j}`} style={{ textAlign: 'center', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', padding: '4px 0' }}>{j}</div>
+    <div key={`h-${j}`} style={{ textAlign: 'center', fontSize: T.size.xs, fontWeight: 600, color: T.color.muted, padding: '4px 0' }}>{j}</div>
   ))
   for (let row = 0; row < 6; row++) {
     const weekDays = days.slice(row * 7, row * 7 + 7)
     const cycleW = getCycleWeek(weekDays[0], programmeDebut, programmeSemaines)
     cells.push(
-      <div key={`sw-${row}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: cycleW ? 'var(--chip-bg)' : '#f9fafb', borderRadius: 7 }}>
+      <div key={`sw-${row}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: cycleW ? 'var(--chip-bg)' : 'transparent', borderRadius: 6 }}>
         {cycleW
-          ? <span style={{ fontSize: '0.6rem', fontWeight: '900', color: 'var(--chip-text)', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.05em' }}>S{cycleW}</span>
-          : <span style={{ width: 2, height: '60%', background: '#e5e7eb', borderRadius: 2 }} />}
+          ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--chip-text)', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.04em' }}>S{cycleW}</span>
+          : null}
       </div>
     )
     weekDays.forEach(day => {
@@ -123,16 +125,16 @@ function MonthView({ year, month, todayStr, selectedStr, eventsMap, onDayClick, 
       const evs = eventsMap[ds] || []; const inCycle = !!cycleW
       cells.push(
         <div role="button" tabIndex={0} key={ds} onClick={() => onDayClick(day)} style={{
-          minHeight: 46, overflow: 'hidden', boxSizing: 'border-box',
-          background: isSel ? 'var(--chip-bg)' : inCycle ? '#fffef5' : 'white',
+          minHeight: 48, overflow: 'hidden', boxSizing: 'border-box',
+          background: isSel ? 'var(--chip-bg)' : inCycle ? T.color.card : T.color.page,
           borderRadius: 8, padding: '5px 4px', cursor: 'pointer',
-          border: isToday ? '2px solid var(--accent)' : inCycle ? '1px solid #f0ead0' : '1px solid #f3f4f6',
-          opacity: day.getMonth() === month ? 1 : 0.35,
+          border: isToday ? `2px solid ${T.color.ink}` : `1px solid ${inCycle ? T.color.line : 'transparent'}`,
+          opacity: day.getMonth() === month ? 1 : 0.4,
         }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: isToday ? '800' : '500', color: isSel ? 'var(--chip-text)' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}</span>
+          <span style={{ ...T.num, fontSize: T.size.sm, fontWeight: isToday ? 700 : 500, color: isSel ? 'var(--chip-text)' : T.color.ink, display: 'block', marginBottom: 3 }}>{day.getDate()}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
             {evs.slice(0, 2).map(ev => <EventChip key={ev.id} ev={ev} tiny />)}
-            {evs.length > 2 && <span style={{ fontSize: '0.55rem', color: isSel ? 'var(--chip-text)' : '#9ca3af', opacity: isSel ? 0.7 : 1, fontWeight: '700' }}>+{evs.length - 2} →</span>}
+            {evs.length > 2 && <span style={{ fontSize: 11, color: isSel ? 'var(--chip-text)' : T.color.muted, fontWeight: 600 }}>+{evs.length - 2}</span>}
           </div>
         </div>
       )
@@ -147,16 +149,16 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
   return (
     <div>
       {cycleW ? (
-        <div style={{ background: 'var(--header-bg)', borderRadius: 12, padding: '0.875rem 1.25rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ background: 'var(--header-bg)', borderRadius: T.radius.control, padding: '0.875rem 1.25rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div>
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.62rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cycle en cours</p>
-            <p style={{ color: 'var(--accent-text)', fontSize: '1.05rem', fontWeight: '900', margin: '0.2rem 0 0' }}>Semaine {cycleW} <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: '400' }}>/ {programmeSemaines}</span></p>
+            <p style={{ color: T.color.onDarkMuted, fontSize: T.size.xs, fontWeight: 600, margin: 0 }}>Cycle en cours</p>
+            <p style={{ color: 'var(--header-text)', fontFamily: T.font.display, fontSize: T.size.xl, fontWeight: 700, margin: '0.2rem 0 0' }}>Semaine {cycleW} <span style={{ color: T.color.onDarkMuted, fontWeight: 500 }}>/ {programmeSemaines}</span></p>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: 'var(--chip-bg)', borderRadius: 999, width: `${Math.round((cycleW / programmeSemaines) * 100)}%` }} />
+            <div style={{ height: 6, background: 'rgb(255 255 255 / .14)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: 'var(--accent)', borderRadius: 999, width: `${Math.round((cycleW / programmeSemaines) * 100)}%` }} />
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', margin: '0.3rem 0 0', textAlign: 'right' }}>{Math.round((cycleW / programmeSemaines) * 100)}%</p>
+            <p style={{ color: T.color.onDarkMuted, fontSize: T.size.xs, margin: '0.3rem 0 0', textAlign: 'right' }}>{Math.round((cycleW / programmeSemaines) * 100)}%</p>
           </div>
         </div>
       ) : <div style={{ height: 8 }} />}
@@ -167,17 +169,17 @@ function WeekView({ date, todayStr, selectedStr, eventsMap, onDayClick, programm
           return (
             <div role="button" tabIndex={0} key={i} onClick={() => onDayClick(day)} style={{
               height: 150, overflow: 'hidden', boxSizing: 'border-box',
-              background: isSel ? 'var(--chip-bg)' : cycleW ? '#fffef5' : 'white',
-              borderRadius: 12, padding: '10px 6px', cursor: 'pointer',
-              border: isToday ? '2px solid var(--accent)' : cycleW ? '1px solid #f0ead0' : '1px solid #f3f4f6',
+              background: isSel ? 'var(--chip-bg)' : cycleW ? T.color.card : T.color.page,
+              borderRadius: T.radius.control, padding: '10px 6px', cursor: 'pointer',
+              border: isToday ? `2px solid ${T.color.ink}` : `1px solid ${cycleW ? T.color.line : 'transparent'}`,
             }}>
               <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                <p style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? 'var(--chip-text)' : '#9ca3af', margin: '0 0 2px', textTransform: 'uppercase' }}>{JOURS[i]}</p>
-                <span style={{ fontSize: '1.2rem', fontWeight: '800', color: isSel ? 'var(--chip-text)' : isToday ? 'var(--accent)' : '#374151' }}>{day.getDate()}</span>
+                <p style={{ fontSize: T.size.xs, fontWeight: 600, color: isSel ? 'var(--chip-text)' : T.color.muted, margin: '0 0 2px' }}>{JOURS[i]}</p>
+                <span style={{ ...T.num, fontSize: T.size.xl, fontWeight: 700, color: isSel ? 'var(--chip-text)' : T.color.ink }}>{day.getDate()}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
                 {evs.slice(0, 3).map(ev => <EventChip key={ev.id} ev={ev} />)}
-                {evs.length > 3 && <span style={{ fontSize: '0.65rem', color: isSel ? 'var(--chip-text)' : '#9ca3af', opacity: isSel ? 0.7 : 1, fontWeight: '700', textAlign: 'center' }}>+{evs.length - 3} →</span>}
+                {evs.length > 3 && <span style={{ fontSize: T.size.xs, color: isSel ? 'var(--chip-text)' : T.color.muted, fontWeight: 600, textAlign: 'center' }}>+{evs.length - 3}</span>}
               </div>
             </div>
           )
@@ -193,12 +195,12 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
     <div style={{ width: '100%', overflowX: 'auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '24px repeat(7,1fr)', gap: 3, marginBottom: 3 }}>
         <div />
-        {JOURS.map(j => <div key={j} style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: '700', color: '#6b7280' }}>{j}</div>)}
+        {JOURS.map(j => <div key={j} style={{ textAlign: 'center', fontSize: T.size.xs, fontWeight: 600, color: T.color.muted }}>{j}</div>)}
       </div>
       {weeks.map((week, wi) => (
         <div key={wi} style={{ display: 'grid', gridTemplateColumns: '24px repeat(7,1fr)', gap: 3, marginBottom: 4, alignItems: 'stretch' }}>
-          <div style={{ background: 'var(--chip-bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.62rem', fontWeight: '900', color: 'var(--chip-text)', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>S{wi + 1}</span>
+          <div style={{ background: 'var(--chip-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--chip-text)', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>S{wi + 1}</span>
           </div>
           {week.map((day, di) => {
             const ds = formatDate(day); const isToday = ds === todayStr; const isSel = ds === selectedStr
@@ -206,13 +208,13 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
             return (
               <div role="button" tabIndex={0} key={di} onClick={() => onDayClick(day)} style={{
                 height: 64, overflow: 'hidden', boxSizing: 'border-box',
-                background: isSel ? 'var(--chip-bg)' : '#fffef5', borderRadius: 7, padding: '5px',
-                cursor: 'pointer', border: isToday ? '2px solid var(--accent)' : '1px solid #f0ead0',
+                background: isSel ? 'var(--chip-bg)' : T.color.card, borderRadius: 8, padding: '5px',
+                cursor: 'pointer', border: isToday ? `2px solid ${T.color.ink}` : `1px solid ${T.color.line}`,
               }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: '700', color: isSel ? 'var(--chip-text)' : '#374151', display: 'block', marginBottom: 3 }}>{day.getDate()}/{day.getMonth()+1}</span>
+                <span style={{ ...T.num, fontSize: T.size.xs, fontWeight: 600, color: isSel ? 'var(--chip-text)' : T.color.ink, display: 'block', marginBottom: 3 }}>{day.getDate()}/{day.getMonth()+1}</span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
                   {evs.slice(0, 2).map(ev => <EventChip key={ev.id} ev={ev} tiny />)}
-                  {evs.length > 2 && <span style={{ fontSize: '0.55rem', color: isSel ? 'var(--chip-text)' : '#9ca3af', opacity: isSel ? 0.7 : 1, fontWeight: '700' }}>+{evs.length-2} →</span>}
+                  {evs.length > 2 && <span style={{ fontSize: 11, color: isSel ? 'var(--chip-text)' : T.color.muted, fontWeight: 600 }}>+{evs.length-2}</span>}
                 </div>
               </div>
             )
@@ -404,7 +406,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     headerLabel = `${MOIS[currentDate.getMonth()]} ${currentDate.getFullYear()}`
   } else if (vue === 'semaine') {
     const w = getWeekDays(currentDate)
-    headerLabel = `${w[0].getDate()} — ${w[6].getDate()} ${MOIS[w[6].getMonth()]} ${w[6].getFullYear()}`
+    headerLabel = `${w[0].getDate()} au ${w[6].getDate()} ${MOIS[w[6].getMonth()]} ${w[6].getFullYear()}`
   } else {
     const debut = programmeDebut ? new Date(programmeDebut + 'T00:00:00') : currentDate
     headerLabel = `${debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} · ${programmeSemaines} sem.`
@@ -450,7 +452,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     if (form.type === 'seance' && seances.length > 0) {
       return (
         <select value={form.seanceId} onChange={e => setForm({ ...form, seanceId: e.target.value })} style={{ ...S.formInput, flex: 1 }}>
-          <option value="">— Choisir une séance —</option>
+          <option value="">Choisir une séance</option>
           {seances.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
         </select>
       )
@@ -483,42 +485,42 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   }
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+    <div style={{ fontFamily: T.font.body, color: T.color.ink }}>
 
       {/* Barre de contrôle — ligne 1 : vue + sync */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-        <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3, gap: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+        <div role="tablist" aria-label="Vue du calendrier" style={{ display: 'flex', background: T.color.soft, borderRadius: T.radius.control, padding: 3, gap: 2 }}>
           {[{ k: 'mois', l: 'Mois' }, { k: 'semaine', l: 'Semaine' }, { k: 'periode', l: 'Cycle' }].map(v => (
-            <button key={v.k} onClick={() => setVue(v.k)} style={{
-              padding: '0.3rem 0.8rem', borderRadius: 7, border: 'none', fontSize: '0.78rem', fontWeight: '600',
-              cursor: 'pointer', background: vue === v.k ? 'white' : 'transparent',
-              color: vue === v.k ? '#333333' : '#9ca3af',
-              boxShadow: vue === v.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            <button key={v.k} role="tab" aria-selected={vue === v.k} onClick={() => setVue(v.k)} style={{
+              minHeight: 38, padding: '0 0.65rem', borderRadius: 8, border: 'none', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600,
+              cursor: 'pointer', background: vue === v.k ? T.color.card : 'transparent',
+              color: vue === v.k ? T.color.ink : T.color.muted,
+              boxShadow: vue === v.k ? T.shadow.card : 'none',
             }}>{v.l}</button>
           ))}
         </div>
 
         {clientId && (
-          <button onClick={() => setShowSyncModal(true)} style={{
-            padding: '0.3rem 0.9rem', borderRadius: 8, border: 'none', fontSize: '0.78rem', fontWeight: '700',
-            cursor: 'pointer', background: 'var(--chip-bg)', color: 'var(--chip-text)',
-          }}>Sync. Agenda</button>
+          <button onClick={() => setShowSyncModal(true)} aria-label="Synchroniser avec mon agenda" style={{
+            minHeight: T.touch, padding: '0 0.75rem', borderRadius: T.radius.control, border: 'none', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700,
+            cursor: 'pointer', background: 'var(--chip-bg)', color: 'var(--chip-text)', display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}><Icon name="refresh" size={16} />Agenda</button>
         )}
       </div>
 
       {/* Barre de contrôle — ligne 2 : navigation date + export */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <button onClick={prev} style={S.navBtn}>‹</button>
-        <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#333333', flex: 1, textAlign: 'center' }}>{headerLabel}</span>
-        <button onClick={next} style={S.navBtn}>›</button>
-        <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, fontSize: '0.72rem' }}>Auj.</button>
-        <button onClick={exportICS} style={{ ...S.navBtn, fontSize: '0.72rem', fontWeight: '700' }}>↓ .ics</button>
+        <button onClick={prev} style={S.navBtn} aria-label="Période précédente"><Icon name="chevron-right" size={18} style={{ transform: 'rotate(180deg)' }} /></button>
+        <span style={{ fontFamily: T.font.display, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink, flex: 1, textAlign: 'center' }}>{headerLabel}</span>
+        <button onClick={next} style={S.navBtn} aria-label="Période suivante"><Icon name="chevron-right" size={18} /></button>
+        <button onClick={() => { setCurrentDate(new Date()); setVue('semaine') }} style={{ ...S.navBtn, padding: '0 10px' }} aria-label="Revenir à aujourd'hui">Auj.</button>
+        <button onClick={exportICS} style={{ ...S.navBtn, padding: '0 10px', gap: 4 }} aria-label="Télécharger le fichier .ics"><Icon name="download" size={16} />.ics</button>
       </div>
 
       {/* Légende */}
       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.875rem' }}>
         {EVENT_TYPES.map(t => (
-          <span key={t.value} style={{ background: t.bg, color: t.text, padding: '2px 8px', borderRadius: 999, fontSize: '0.68rem', fontWeight: '700', border: t.value === 'autre' ? '1px solid #99f6e4' : 'none' }}>{t.label}</span>
+          <span key={t.value} style={{ background: t.bg, color: t.text, padding: '2px 8px', borderRadius: 999, fontSize: T.size.xs, fontWeight: 600 }}>{t.label}</span>
         ))}
       </div>
 
@@ -531,15 +533,15 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
       {selectedDay && (
         <div style={S.panel}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <p style={{ fontWeight: '800', fontSize: '0.9rem', color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <p style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.lg, color: T.color.ink, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {selectedDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {getCycleWeek(selectedDay, programmeDebut, programmeSemaines) && (
-                <span style={{ fontSize: '0.72rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '2px 8px', borderRadius: 6, fontWeight: '800' }}>
+                <span style={{ fontFamily: T.font.body, fontSize: T.size.xs, background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>
                   S{getCycleWeek(selectedDay, programmeDebut, programmeSemaines)}
                 </span>
               )}
             </p>
-            <button onClick={() => setSelectedDay(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            <button onClick={() => setSelectedDay(null)} aria-label="Fermer" style={{ width: T.touch, height: T.touch, margin: '-10px -12px -10px 0', display: 'grid', placeItems: 'center', background: 'none', border: 'none', color: T.color.muted, cursor: 'pointer', flexShrink: 0 }}><Icon name="x" size={18} /></button>
           </div>
 
           {selectedEvs.length > 0 ? (
@@ -553,7 +555,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                   const joue = m.score_dom != null && m.score_ext != null
                   const win  = joue && (m.est_domicile ? m.score_dom > m.score_ext : m.est_domicile === false ? m.score_ext > m.score_dom : null)
                   const lose = joue && (m.est_domicile ? m.score_dom < m.score_ext : m.est_domicile === false ? m.score_ext < m.score_dom : null)
-                  const bg = joue ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : '#1e3a8a'
+                  const bg = joue ? (win ? T.color.success : lose ? T.color.danger : T.color.muted) : T.color.anthracite
                   const notreNom  = m.est_domicile === true  ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : (m.equipe_dom || m.equipe_ext)
                   const advNom    = m.est_domicile === true  ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
                   const notreLogo = m.est_domicile === true  ? m.logo_dom   : m.est_domicile === false ? m.logo_ext   : (m.logo_dom || m.logo_ext)
@@ -572,45 +574,45 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
 
                   function LogoBadgeSmall({ url, initials }) {
                     return (
-                      <div style={{ width: 40, height: 40, borderRadius: 10,
-                        background: 'rgba(255,255,255,.18)', border: '1.5px solid rgba(255,255,255,.4)',
+                      <div style={{ width: 40, height: 40, borderRadius: T.radius.control,
+                        background: 'rgb(255 255 255 / .9)', color: T.color.ink,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
                         {url ? <img loading="lazy" src={url} alt={initials} style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} /> : null}
-                        <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex', alignItems:'center', justifyContent:'center', fontSize:'.65rem', fontWeight:900 }}>{initials}</div>
+                        <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex', alignItems:'center', justifyContent:'center', fontSize: T.size.xs, fontWeight: 700 }}>{initials}</div>
                       </div>
                     )
                   }
 
                   return (
-                    <div key={ev.id} style={{ background: `linear-gradient(135deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))`, borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
-                      <div style={{ fontSize: '.58rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>
+                    <div key={ev.id} style={{ background: bg, borderRadius: T.radius.control, padding: '10px 12px', color: '#fff' }}>
+                      <div style={{ fontSize: T.size.xs, fontWeight: 600, opacity: .85, marginBottom: 8 }}>
                         Match FFR{m.journee ? ` · J${m.journee}` : ''}
                       </div>
                       {/* Logos + VS */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
                           <LogoBadgeSmall url={logoG} initials={initG} />
-                          <div style={{ fontSize: '.55rem', fontWeight: 700, opacity: .85, textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomG}</div>
+                          <div style={{ fontSize: T.size.xs, fontWeight: 600, textAlign: 'center', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomG}</div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
                           {scoreStr
-                            ? <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>{scoreStr}</span>
-                            : <span style={{ fontSize: '.72rem', fontWeight: 900, opacity: .9, letterSpacing: '.04em' }}>VS</span>
+                            ? <span style={{ ...T.num, fontSize: T.size.xl, fontWeight: 700 }}>{scoreStr}</span>
+                            : <span style={{ fontSize: T.size.sm, fontWeight: 700 }}>VS</span>
                           }
-                          {!scoreStr && m.heure && <span style={{ fontSize: '.6rem', opacity: .7 }}>{m.heure}</span>}
+                          {!scoreStr && m.heure && <span style={{ fontSize: T.size.xs, opacity: .85 }}>{m.heure}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
                           <LogoBadgeSmall url={logoD} initials={initD} />
-                          <div style={{ fontSize: '.55rem', fontWeight: 700, opacity: .85, textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomD}</div>
+                          <div style={{ fontSize: T.size.xs, fontWeight: 600, textAlign: 'center', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomD}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
                         {m.est_domicile != null && (
-                          <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 6, padding: '2px 8px', fontSize: '.6rem', fontWeight: 800 }}>
+                          <span style={{ background: T.color.signal, color: T.color.ink, borderRadius: 6, padding: '2px 8px', fontSize: T.size.xs, fontWeight: 700 }}>
                             {m.est_domicile ? 'Domicile' : 'Extérieur'}
                           </span>
                         )}
-                        {joue && <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 6, padding: '2px 8px', fontSize: '.6rem', fontWeight: 700 }}>
+                        {joue && <span style={{ background: 'rgb(255 255 255 / .2)', borderRadius: 6, padding: '2px 8px', fontSize: T.size.xs, fontWeight: 700 }}>
                           {win ? 'Victoire' : lose ? 'Défaite' : 'Nul'}
                         </span>}
                       </div>
@@ -621,16 +623,16 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                 // ── Événement groupe ───────────────────────────────────────────
                 if (ev._isGroupe) {
                   return (
-                    <div key={`g-${ev.id}`} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8 }}>
+                    <div key={`g-${ev.id}`} style={{ background: ts.bg, color: ts.text, padding: '0.6rem 0.75rem', borderRadius: T.radius.control }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                         <div style={{ minWidth: 0 }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: T.size.md, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             {ev._groupeLogoUrl && (
                               <img loading="lazy" src={ev._groupeLogoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 3, objectFit: 'cover', flexShrink: 0 }} />
                             )}
                             {ev.titre}
                           </span>
-                          {ev.heure && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>· {ev.heure.slice(0,5)}</span>}
+                          {ev.heure && <span style={{ fontSize: T.size.xs, opacity: 0.85, marginLeft: '0.5rem' }}>· {ev.heure.slice(0,5)}</span>}
                         </div>
                       </div>
                     </div>
@@ -639,35 +641,35 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
 
                 // ── Événement personnel ────────────────────────────────────────
                 return (
-                  <div key={ev.id} style={{ background: ts.bg, color: ts.text, padding: '0.55rem 0.75rem', borderRadius: 8, border: ev.type === 'autre' ? '1px solid #99f6e4' : 'none' }}>
+                  <div key={ev.id} style={{ background: ts.bg, color: ts.text, padding: '0.6rem 0.75rem', borderRadius: T.radius.control }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                       <div style={{ minWidth: 0 }}>
-                        <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>{ev.titre}</span>
-                        <span style={{ fontSize: '0.7rem', opacity: 0.65, marginLeft: '0.4rem' }}>{EVENT_TYPES.find(t => t.value === ev.type)?.label}</span>
+                        <span style={{ fontWeight: 600, fontSize: T.size.md }}>{ev.titre}</span>
+                        <span style={{ fontSize: T.size.xs, opacity: 0.85, marginLeft: '0.4rem' }}>{EVENT_TYPES.find(t => t.value === ev.type)?.label}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
                         {ev.type === 'seance' && ev.seance_id && onViewSeance && (
                           <button
                             onClick={() => onViewSeance(ev.seance_id, ev.semaine_override ?? getCycleWeek(selectedDay, programmeDebut, programmeSemaines))}
-                            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', color: ts.text, whiteSpace: 'nowrap' }}
+                            style={{ minHeight: 36, background: 'rgb(255 255 255 / .18)', border: 'none', borderRadius: 8, padding: '0 10px', fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer', color: ts.text, whiteSpace: 'nowrap' }}
                           >
-                            Voir →
+                            Voir
                           </button>
                         )}
                         {!readOnly && (
-                          <button onClick={() => supprimerEvenement(ev.id)} style={{ background: 'none', border: 'none', color: ts.text, cursor: 'pointer', opacity: 0.5, padding: '0 2px', fontSize: '0.9rem' }}>✕</button>
+                          <button onClick={() => supprimerEvenement(ev.id)} aria-label="Supprimer l'événement" style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', background: 'none', border: 'none', color: ts.text, cursor: 'pointer', opacity: 0.75 }}><Icon name="x" size={16} /></button>
                         )}
                       </div>
                     </div>
                     {ev.description && (
-                      <p style={{ fontSize: '0.78rem', margin: '0.35rem 0 0', opacity: 0.8, lineHeight: 1.4 }}>{ev.description}</p>
+                      <p style={{ fontSize: T.size.sm, margin: '0.35rem 0 0', opacity: 0.9, lineHeight: 1.4 }}>{ev.description}</p>
                     )}
                   </div>
                 )
               })}
             </div>
           ) : (
-            <p style={{ color: '#6b7280', fontSize: '0.82rem', marginBottom: '0.875rem' }}>Aucun événement ce jour.</p>
+            <p style={{ color: T.color.muted, fontSize: T.size.md, marginBottom: '0.875rem' }}>Aucun événement ce jour.</p>
           )}
 
           {!readOnly && (
@@ -676,7 +678,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                 {visibleTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
               {renderForm()}
-              <button onClick={ajouterEvenement} disabled={saving} style={{ ...S.addBtn, alignSelf: 'flex-start' }}>{saving ? '...' : '+ Ajouter'}</button>
+              <button onClick={ajouterEvenement} disabled={saving} style={{ ...S.addBtn, alignSelf: 'flex-start' }}>{saving ? '…' : <><Icon name="plus" size={16} />Ajouter</>}</button>
             </div>
           )}
         </div>
@@ -690,23 +692,24 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
 
         return (
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgb(20 20 20 / .5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: T.font.body }}
             onClick={() => setShowSyncModal(false)}
           >
             <div
-              style={{ background: 'white', borderRadius: '22px 22px 0 0', padding: '1.25rem 1.25rem calc(1.75rem + env(safe-area-inset-bottom))', width: '100%', boxSizing: 'border-box' }}
+              role="dialog" aria-modal="true" aria-label="Synchroniser avec ton agenda"
+              style={{ background: T.color.card, borderRadius: `${T.radius.card}px ${T.radius.card}px 0 0`, padding: '1.25rem 1.25rem calc(1.75rem + env(safe-area-inset-bottom))', width: '100%', maxWidth: 520, boxSizing: 'border-box' }}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 1.1rem' }} />
-              <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 0.4rem', color: '#1a1a1a' }}>Synchroniser avec ton agenda</p>
-              <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
-                Les événements se mettent à jour automatiquement — ajouts et suppressions compris.
+              <div style={{ width: 36, height: 4, background: T.color.line, borderRadius: 999, margin: '0 auto 1.1rem' }} />
+              <p style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.xl, margin: '0 0 0.4rem', color: T.color.ink }}>Synchroniser avec ton agenda</p>
+              <p style={{ fontSize: T.size.md, color: T.color.muted, margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+                Les événements se mettent à jour automatiquement, ajouts et suppressions compris.
               </p>
 
               {/* Apple Calendar — vrai <a> cliqué par l'utilisateur */}
               <a
                 href={webcalUrl}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', width: '100%', minHeight: 52, padding: '0 1rem', marginBottom: '0.6rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: T.radius.control, fontSize: T.size.lg, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
                 onClick={() => setShowSyncModal(false)}
               >
                 <span>Apple Calendrier</span>
@@ -715,7 +718,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
               {/* Google Calendar */}
               <a
                 href={googleUrl} target="_blank" rel="noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', padding: '0.85rem 1rem', marginBottom: '0.6rem', background: '#f8f9fa', color: '#1a1a1a', border: '1.5px solid #e5e7eb', borderRadius: 14, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', width: '100%', minHeight: 52, padding: '0 1rem', marginBottom: '0.6rem', background: T.color.card, color: T.color.ink, border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, fontSize: T.size.lg, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', boxSizing: 'border-box' }}
                 onClick={() => setShowSyncModal(false)}
               >
                 <span>Google Agenda</span>
@@ -724,7 +727,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
               {/* Copier le lien */}
               <button
                 onClick={() => { navigator.clipboard?.writeText(httpsUrl); setShowSyncModal(false) }}
-                style={{ width: '100%', padding: '0.75rem 1rem', background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 14, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: '#6b7280' }}
+                style={{ width: '100%', minHeight: T.touch, padding: '0 1rem', background: 'none', border: 'none', borderRadius: T.radius.control, fontFamily: T.font.body, fontSize: T.size.md, fontWeight: 600, cursor: 'pointer', color: T.color.ink, textDecoration: 'underline', textUnderlineOffset: 3 }}
               >
                 Copier le lien (autres agendas)
               </button>
@@ -738,8 +741,8 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
 }
 
 const S = {
-  navBtn:    { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '4px 10px', fontSize: '1rem', cursor: 'pointer', color: '#374151' },
-  panel:     { marginTop: '1rem', background: '#f9fafb', borderRadius: 14, padding: '1rem 1.25rem', border: '1px solid #e5e7eb' },
-  formInput: { padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.82rem', color: '#333333', outline: 'none', background: 'white' },
-  addBtn:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
+  navBtn:    { minWidth: 40, minHeight: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: T.color.card, border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, padding: 0, fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 600, cursor: 'pointer', color: T.color.ink },
+  panel:     { marginTop: '1rem', background: T.color.page, borderRadius: T.radius.card, padding: '1rem 1.25rem', border: `1px solid ${T.color.line}` },
+  formInput: { minHeight: T.touch, padding: '0.5rem 0.75rem', border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, fontFamily: T.font.body, fontSize: T.size.lg, color: T.color.ink, background: T.color.card },
+  addBtn:    { minHeight: T.touch, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: T.radius.control, padding: '0 1rem', fontFamily: T.font.body, fontSize: T.size.md, fontWeight: 700, cursor: 'pointer' },
 }

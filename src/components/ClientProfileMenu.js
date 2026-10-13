@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { purgerCachePrive } from '../utils/purgeCachePrive'
 import { canSwitch, switchAccount } from '../accountSwitch'
+import T from '../theme/tokens'
 
 const OFFRES = {
   essai:               'Essai',
@@ -35,48 +36,48 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
     <>
       <div onClick={onClose} style={{
         position: 'fixed', inset: 0, zIndex: 150,
-        background: 'rgba(0,0,0,0.25)',
+        background: 'rgb(20 20 20 / .3)',
       }} />
 
-      <div style={{
-        position: 'fixed', top: 60, right: 14, zIndex: 160,
-        width: 250, background: 'white', borderRadius: 18,
-        boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+      <div role="menu" aria-label="Menu du profil" style={{
+        position: 'fixed', top: 68, right: 12, zIndex: 160,
+        width: 264, maxWidth: 'calc(100vw - 24px)', background: T.color.card, borderRadius: T.radius.card,
+        boxShadow: T.shadow.float,
         overflow: 'hidden',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        fontFamily: T.font.body,
       }}>
 
         {/* Header */}
-        <div style={{ padding: '1.1rem 1.1rem 0.85rem', borderBottom: '1px solid #f3f4f6' }}>
+        <div style={{ padding: '1.1rem 1.1rem 0.85rem', borderBottom: `1px solid ${T.color.line}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {avatarUrl ? (
               <img loading="lazy" src={avatarUrl} alt="avatar" style={{
                 width: 42, height: 42, borderRadius: '50%',
                 objectFit: 'cover', flexShrink: 0,
-                border: '2px solid var(--accent-stripe)',
+                border: `2px solid ${T.color.line}`,
               }} />
             ) : (
               <div style={{
                 width: 42, height: 42, borderRadius: '50%',
-                background: '#333333', color: 'var(--accent)',
+                background: T.color.ink, color: T.color.signal,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: '800', fontSize: '0.95rem', flexShrink: 0,
+                fontWeight: 700, fontSize: T.size.md, flexShrink: 0,
               }}>{initiales}</div>
             )}
             <div>
-              <p style={{ margin: 0, fontWeight: '800', fontSize: '0.9rem', color: '#1a1a1a' }}>
+              <p style={{ margin: 0, fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.lg, color: T.color.ink }}>
                 {client?.prenom} {client?.nom}
               </p>
               {client?.offre && (
-                <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>
+                <p style={{ margin: '0.15rem 0 0', fontSize: T.size.sm, color: T.color.muted, fontWeight: 500 }}>
                   {OFFRES[client.offre] || client.offre}
                 </p>
               )}
             </div>
           </div>
           {client?.objectif && (
-            <p style={{ margin: '0.75rem 0 0', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4, fontStyle: 'italic' }}>
-              "{client.objectif}"
+            <p style={{ margin: '0.75rem 0 0', fontSize: T.size.sm, color: T.color.muted, lineHeight: 1.4 }}>
+              {client.objectif}
             </p>
           )}
         </div>
@@ -90,7 +91,7 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
           <MenuItem icon={<IconSciences />} label="Base scientifique" onClick={() => go('/client/sciences')} />
         </div>
 
-        <div style={{ borderTop: '1px solid #f3f4f6', padding: '0.4rem 0' }}>
+        <div style={{ borderTop: `1px solid ${T.color.line}`, padding: '0.4rem 0' }}>
           {switchEmail && (
             <MenuItem icon={<IconSwitch />} label="Passer sur mon compte coach"
               onClick={() => { onClose(); switchAccount(switchEmail) }} />
@@ -104,16 +105,16 @@ export default function ClientProfileMenu({ client, avatarUrl, onClose }) {
 
 function MenuItem({ icon, label, onClick, danger }) {
   return (
-    <button onClick={onClick} style={{
-      width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
-      padding: '0.65rem 1.1rem', background: 'none', border: 'none',
-      cursor: 'pointer', textAlign: 'left',
+    <button role="menuitem" onClick={onClick} style={{
+      width: '100%', minHeight: T.touch, display: 'flex', alignItems: 'center', gap: '0.75rem',
+      padding: '0 1.1rem', background: 'none', border: 'none',
+      cursor: 'pointer', textAlign: 'left', fontFamily: T.font.body,
     }}
-      onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+      onMouseEnter={e => e.currentTarget.style.background = T.color.page}
       onMouseLeave={e => e.currentTarget.style.background = 'none'}
     >
-      <span style={{ color: danger ? '#ef4444' : '#6b7280', flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: '0.85rem', fontWeight: '600', color: danger ? '#ef4444' : '#1a1a1a' }}>
+      <span style={{ color: danger ? T.color.danger : T.color.muted, flexShrink: 0, display: 'flex' }}>{icon}</span>
+      <span style={{ fontSize: T.size.base, fontWeight: 600, color: danger ? T.color.danger : T.color.ink }}>
         {label}
       </span>
     </button>

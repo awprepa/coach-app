@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
+import Icon from '../../components/Icon'
+import T from '../../theme/tokens'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -100,7 +102,7 @@ export default function ProgrammeClient() {
 
   if (!programme) return (
     <div style={styles.centered}>
-      <p style={{ color: '#888' }}>Cycle introuvable.</p>
+      <p style={{ color: T.color.muted }}>Cycle introuvable.</p>
     </div>
   )
 
@@ -111,135 +113,128 @@ export default function ProgrammeClient() {
   return (
     <div style={styles.page}>
       {/* Header */}
-      <div style={styles.header}>
-        <button onClick={() => navigate('/client/accueil')} style={styles.backBtn}>
-          ‹
-        </button>
-        <AppLogo size={36} />
-        <div style={{ width: 32 }} />
-      </div>
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <button onClick={() => navigate('/client/accueil')} style={styles.backBtn} aria-label="Retour à l'accueil">
+            <Icon name="chevron-right" size={20} style={{ transform: 'rotate(180deg)' }} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={styles.headerSmall}>Mon programme</p>
+            <h1 style={styles.title}>{programme.nom}</h1>
+          </div>
+          <AppLogo size={32} />
+        </div>
+        <div style={styles.headerMeta}>
+          <span>{programme.semaines} semaines</span>
+          {semaineActuelle && <span style={styles.badge}>Semaine {semaineActuelle} en cours</span>}
+        </div>
+      </header>
 
       <div style={styles.content}>
-        {/* Titre programme */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={styles.title}>{programme.nom}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <span style={styles.meta}>{programme.semaines} sem.</span>
-            {semaineActuelle && (
-              <span style={styles.badge}>S{semaineActuelle} en cours</span>
-            )}
-          </div>
-        </div>
-
         {/* Barre de progression */}
         {seances.length > 0 && semaineActuelle && (
-          <div style={{ marginBottom: '1.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <span style={styles.sectionTitle}>Progression semaine {semaineActuelle}</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#333333' }}>{progression}%</span>
+          <section style={T.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: T.space.sm }}>
+              <span style={T.label}>Progression semaine {semaineActuelle}</span>
+              <span style={{ ...T.num, fontSize: T.size.xl, fontWeight: 700 }}>{progression} %</span>
             </div>
             <div style={styles.progressBar}>
               <div style={{ ...styles.progressFill, width: `${progression}%` }} />
             </div>
-          </div>
+          </section>
         )}
 
         {/* Séances */}
-        <div style={styles.sectionHeader}>
-          <span style={styles.sectionTitle}>Séances</span>
-          <span style={styles.sectionCount}>{seances.length} séance{seances.length > 1 ? 's' : ''}</span>
-        </div>
-
-        {seances.length === 0 ? (
-          <div style={styles.emptyCard}>Aucune séance pour l'instant.</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {seances.map((seance, i) => {
-              const renseignee = seancesRenseignees[seance.id]
-              return (
-                <div role="button" tabIndex={0}
-                  key={seance.id}
-                  onClick={() => navigate(`/client/seance/${seance.id}`)}
-                  style={styles.card}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                    <div style={styles.jourBadge}>
-                      <span style={styles.jourLabel}>JOUR</span>
-                      <span style={styles.jourNum}>{i + 1}</span>
-                    </div>
-                    <div>
-                      <p style={styles.cardTitle}>{seance.nom}</p>
-                      {semaineActuelle && (
-                        <p style={{ ...styles.cardSub, color: renseignee ? '#16a34a' : '#f59e0b' }}>
-                          {renseignee ? '✓ Renseignée' : 'À compléter'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <span style={styles.chevron}>›</span>
-                </div>
-              )
-            })}
+        <section>
+          <div style={styles.sectionHeader}>
+            <h2 style={T.label}>Séances</h2>
+            <span style={styles.sectionCount}>{seances.length} séance{seances.length > 1 ? 's' : ''}</span>
           </div>
-        )}
+
+          {seances.length === 0 ? (
+            <div style={styles.emptyCard}>Aucune séance pour l'instant.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.sm }}>
+              {seances.map((seance, i) => {
+                const renseignee = seancesRenseignees[seance.id]
+                return (
+                  <button key={seance.id} onClick={() => navigate(`/client/seance/${seance.id}`)} style={styles.card}>
+                    <span style={styles.jourBadge}>
+                      <span style={styles.jourLabel}>Jour</span>
+                      <span style={styles.jourNum}>{i + 1}</span>
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                      <span style={styles.cardTitle}>{seance.nom}</span>
+                      {semaineActuelle && (
+                        <span style={{ ...styles.cardSub, color: renseignee ? T.color.success : T.color.warning }}>
+                          <Icon name={renseignee ? 'check' : 'clock'} size={14} />
+                          {renseignee ? 'Renseignée' : 'À compléter'}
+                        </span>
+                      )}
+                    </span>
+                    <Icon name="chevron-right" size={18} style={{ color: T.color.muted }} />
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </section>
 
         {/* ── Séances ponctuelles ───────────────────────────────────────────── */}
-        <div style={{ marginTop: '2rem' }}>
-          {seancesLibres.length > 0 && (
-            <>
-              <div style={styles.sectionHeader}>
-                <span style={styles.sectionTitle}>Séances libres</span>
-                <span style={styles.sectionCount}>{seancesLibres.length} séance{seancesLibres.length > 1 ? 's' : ''}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                {seancesLibres.map(ev => {
-                  const d = new Date(ev.date + 'T12:00:00')
-                  const monthLabel = d.toLocaleString('fr-FR', { month: 'short' }).replace('.', '').toUpperCase()
-                  const dayNum = d.getDate()
-                  return (
-                    <div role="button" tabIndex={0} key={ev.id} style={styles.card}
-                      onClick={() => navigate(`/client/seance-ponctuelle/${ev.id}`)}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={styles.jourBadge}>
-                          <span style={styles.jourLabel}>{monthLabel}</span>
-                          <span style={styles.jourNum}>{dayNum}</span>
-                        </div>
-                        <div>
-                          <p style={styles.cardTitle}>{ev.titre}</p>
-                          <p style={{ ...styles.cardSub, color: '#6b7280' }}>Séance libre</p>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span style={styles.chevron}>›</span>
+        {(seancesLibres.length > 0 || canCreate) && (
+          <section>
+            {seancesLibres.length > 0 && (
+              <>
+                <div style={styles.sectionHeader}>
+                  <h2 style={T.label}>Séances libres</h2>
+                  <span style={styles.sectionCount}>{seancesLibres.length} séance{seancesLibres.length > 1 ? 's' : ''}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.sm, marginBottom: T.space.sm }}>
+                  {seancesLibres.map(ev => {
+                    const d = new Date(ev.date + 'T12:00:00')
+                    const monthLabel = d.toLocaleString('fr-FR', { month: 'short' }).replace('.', '')
+                    const dayNum = d.getDate()
+                    return (
+                      <div key={ev.id} style={{ ...styles.card, cursor: 'default', padding: 0 }}>
+                        <button onClick={() => navigate(`/client/seance-ponctuelle/${ev.id}`)} style={styles.libreMain}>
+                          <span style={styles.jourBadge}>
+                            <span style={styles.jourLabel}>{monthLabel}</span>
+                            <span style={styles.jourNum}>{dayNum}</span>
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                            <span style={styles.cardTitle}>{ev.titre}</span>
+                            <span style={{ ...styles.cardSub, color: T.color.muted }}>Séance libre</span>
+                          </span>
+                          <Icon name="chevron-right" size={18} style={{ color: T.color.muted }} />
+                        </button>
                         <button
-                          onClick={e => { e.stopPropagation(); supprimerSeanceLibre(ev.id) }}
-                          style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 4px', lineHeight: 1 }}
-                        >✕</button>
+                          onClick={() => supprimerSeanceLibre(ev.id)}
+                          aria-label={`Supprimer la séance libre ${ev.titre}`}
+                          style={styles.deleteBtn}
+                        ><Icon name="trash" size={18} /></button>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
+                    )
+                  })}
+                </div>
+              </>
+            )}
 
-          {canCreate && (
-            <button
-              onClick={() => navigate('/client/seance-ponctuelle/nouveau', { state: { clientId: programme.client_id } })}
-              style={styles.addBtn}
-            >
-              + Créer une séance
-            </button>
-          )}
-        </div>
+            {canCreate && (
+              <button
+                onClick={() => navigate('/client/seance-ponctuelle/nouveau', { state: { clientId: programme.client_id } })}
+                style={T.btnSecondary}
+              >
+                <Icon name="plus" size={18} /> Créer une séance
+              </button>
+            )}
+          </section>
+        )}
 
         {/* Bouton progression */}
         <button
           onClick={() => navigate('/client/progression')}
-          style={{ width: '100%', padding: '0.85rem', background: 'var(--chip-bg)', color: 'var(--chip-text)',
-                   border: 'none', borderRadius: 14, fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
-                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-          Voir ma progression
+          style={{ ...T.btnPrimary, background: 'var(--chip-bg)', color: 'var(--chip-text)', marginTop: T.space.sm }}>
+          <Icon name="trend" size={18} /> Voir ma progression
         </button>
 
       </div>
@@ -249,180 +244,27 @@ export default function ProgrammeClient() {
 }
 
 const styles = {
-  page: {
-    minHeight: '100vh',
-    background: '#efefef',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    paddingBottom: 110,
-  },
-  centered: {
-    minHeight: '100vh',
-    background: '#efefef',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  },
-  header: {
-    background: 'var(--header-bg)',
-    padding: '0.6rem 1.5rem',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    position: 'sticky',
-    top: 0,
-    zIndex: 40,
-  },
-  backBtn: {
-    background: 'rgba(255,255,255,0.1)',
-    border: 'none',
-    color: 'white',
-    fontSize: '1.5rem',
-    width: '32px',
-    height: '32px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    lineHeight: 1,
-  },
-  logo: {
-    color: 'white',
-    fontWeight: '800',
-    fontSize: '1.1rem',
-    letterSpacing: '-0.5px',
-  },
-  content: {
-    padding: '1.5rem',
-    maxWidth: '480px',
-    margin: '0 auto',
-  },
-  title: {
-    fontSize: '1.5rem',
-    fontWeight: '800',
-    color: '#333333',
-    margin: 0,
-  },
-  meta: {
-    color: '#6b7280',
-    fontSize: '0.85rem',
-  },
-  badge: {
-    background: 'var(--chip-bg)',
-    color: 'var(--chip-text)',
-    padding: '0.2rem 0.65rem',
-    borderRadius: '999px',
-    fontSize: '0.75rem',
-    fontWeight: '700',
-  },
-  progressBar: {
-    height: '6px',
-    background: '#e5e7eb',
-    borderRadius: '999px',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    background: 'var(--chip-bg)',
-    borderRadius: '999px',
-    transition: 'width 0.4s ease',
-  },
-  sectionHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '0.75rem',
-  },
-  sectionTitle: {
-    fontSize: '0.75rem',
-    fontWeight: '700',
-    color: '#374151',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-  },
-  sectionCount: {
-    color: '#6b7280',
-    fontSize: '0.8rem',
-  },
-  emptyCard: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '2rem',
-    textAlign: 'center',
-    color: '#6b7280',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-  },
-  card: {
-    background: 'white',
-    borderRadius: '14px',
-    padding: '1rem 1.25rem',
-    cursor: 'pointer',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  jourBadge: {
-    background: 'var(--chip-bg)',
-    borderRadius: '10px',
-    padding: '0.3rem 0.55rem',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    flexShrink: 0,
-    minWidth: '40px',
-  },
-  jourLabel: {
-    fontSize: '0.7rem',
-    fontWeight: '800',
-    color: 'var(--chip-text)',
-    opacity: 0.65,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    lineHeight: 1.2,
-  },
-  jourNum: {
-    fontSize: '0.95rem',
-    fontWeight: '800',
-    color: 'var(--chip-text)',
-    lineHeight: 1.2,
-  },
-  cardTitle: {
-    fontWeight: '700',
-    fontSize: '0.95rem',
-    color: '#333333',
-    margin: '0 0 0.15rem',
-  },
-  cardSub: {
-    fontSize: '0.75rem',
-    fontWeight: '600',
-    margin: 0,
-  },
-  chevron: {
-    color: '#6b7280',
-    fontSize: '1.5rem',
-    lineHeight: 1,
-  },
-  libreCard: {
-    background: 'white',
-    borderRadius: 12,
-    border: '1.5px dashed #e5e7eb',
-    padding: '0.7rem 0.875rem',
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '0.5rem',
-  },
-  addBtn: {
-    background: 'none',
-    border: '1.5px dashed #d1d5db',
-    borderRadius: 12,
-    padding: '0.75rem 1rem',
-    width: '100%',
-    textAlign: 'center',
-    color: '#6b7280',
-    fontSize: '0.82rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
+  page:        { minHeight: '100vh', background: T.color.page, fontFamily: T.font.body, color: T.color.ink, paddingBottom: 110 },
+  centered:    { minHeight: '100vh', background: T.color.page, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font.body },
+  header:      { background: T.color.headerBg, color: T.color.onDark, padding: '12px 16px 18px', position: 'sticky', top: 0, zIndex: 40 },
+  headerInner: { maxWidth: 480, margin: '0 auto', display: 'flex', alignItems: 'center', gap: T.space.md },
+  headerSmall: { margin: 0, fontSize: T.size.sm, color: T.color.onDarkMuted },
+  headerMeta:  { maxWidth: 480, margin: '10px auto 0', display: 'flex', alignItems: 'center', gap: T.space.md, fontSize: T.size.md, color: T.color.onDarkMuted },
+  backBtn:     { width: T.touch, height: T.touch, borderRadius: T.radius.control, background: 'rgb(255 255 255 / .09)', border: 'none', color: T.color.onDark, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 },
+  content:     { padding: T.space.lg, maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: T.space.lg },
+  title:       { fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.01em', color: T.color.onDark, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  badge:       { background: 'var(--accent)', color: 'var(--accent-text)', padding: '3px 10px', borderRadius: T.radius.pill, fontSize: T.size.xs, fontWeight: 700 },
+  progressBar: { height: 8, background: T.color.soft, borderRadius: T.radius.pill, overflow: 'hidden' },
+  progressFill:{ height: '100%', background: 'var(--chip-bg)', borderRadius: T.radius.pill, transition: 'width 0.4s ease' },
+  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: T.space.sm, padding: '0 4px' },
+  sectionCount:  { color: T.color.muted, fontSize: T.size.sm },
+  emptyCard:   { ...T.card, textAlign: 'center', color: T.color.muted, fontSize: T.size.md },
+  card:        { ...T.card, width: '100%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: T.space.md, fontFamily: T.font.body, minHeight: 72 },
+  libreMain:   { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: T.space.md, padding: T.space.lg, background: 'none', border: 'none', cursor: 'pointer', fontFamily: T.font.body, color: T.color.ink },
+  deleteBtn:   { width: T.touch, height: T.touch, marginRight: T.space.sm, display: 'grid', placeItems: 'center', background: 'none', border: 'none', color: T.color.muted, cursor: 'pointer', borderRadius: T.radius.control, flexShrink: 0 },
+  jourBadge:   { background: T.color.soft, borderRadius: T.radius.control, width: 48, height: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  jourLabel:   { fontSize: T.size.xs, fontWeight: 600, color: T.color.muted, lineHeight: 1.1 },
+  jourNum:     { ...T.num, fontSize: T.size.xl, fontWeight: 700, color: T.color.ink, lineHeight: 1.1 },
+  cardTitle:   { display: 'block', fontWeight: 600, fontSize: T.size.lg, color: T.color.ink, margin: '0 0 2px' },
+  cardSub:     { display: 'flex', alignItems: 'center', gap: 4, fontSize: T.size.sm, fontWeight: 600, margin: 0 },
 }

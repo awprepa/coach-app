@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import T from '../theme/tokens'
 
 function IconHome({ active }) {
-  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" />
@@ -14,7 +15,7 @@ function IconHome({ active }) {
 }
 
 function IconProgramme({ active }) {
-  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="2" width="14" height="20" rx="2" />
@@ -26,7 +27,7 @@ function IconProgramme({ active }) {
 }
 
 function IconNutrition({ active }) {
-  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       {/* Bol */}
@@ -41,17 +42,17 @@ function IconNutrition({ active }) {
 }
 
 function IconGPS({ active }) {
-  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2C8.5 2 5.5 5 5.5 8.5c0 5 6.5 13.5 6.5 13.5S18.5 13.5 18.5 8.5C18.5 5 15.5 2 12 2z" />
-      <circle cx="12" cy="8.5" r="2.5" fill={active ? 'var(--accent2-fg)' : 'none'} />
+      <circle cx="12" cy="8.5" r="2.5" fill={active ? 'currentColor' : 'none'} />
     </svg>
   )
 }
 
 function IconChat({ active }) {
-  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -60,7 +61,7 @@ function IconChat({ active }) {
 }
 
 function IconTrophy({ active }) {
-  const s = active ? 'var(--accent2-fg)' : '#b0b8c1'
+  const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 9H3V5h3" />
@@ -171,55 +172,55 @@ export default function ClientBottomNav() {
   ]
 
   return createPortal(
-    <div style={{
+    <nav aria-label="Navigation principale" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
-      background: 'var(--accent-muted)',
-      borderTop: '1px solid rgba(0,0,0,0.06)',
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.07)',
+      background: T.color.card,
+      borderTop: `1px solid ${T.color.line}`,
       display: 'flex',
       flexDirection: 'column',
+      fontFamily: T.font.body,
     }}>
       {/* Zone boutons */}
-      <div style={{ display: 'flex', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', overflow: 'hidden', maxWidth: 560, width: '100%', margin: '0 auto' }}>
         {tabs.map(({ label, Icon, active, to, badge }) => (
-          <button key={label} onClick={() => navigate(to)}
+          <button key={label} onClick={() => navigate(to)} aria-current={active ? 'page' : undefined}
+            aria-label={badge > 0 ? `${label}, ${badge} non lus` : undefined}
             style={{
-              flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+              flex: 1, minWidth: 0, minHeight: 56, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              gap: '3px', padding: '10px 2px 8px',
+              gap: 4, padding: '8px 2px 6px',
               background: 'none', border: 'none', cursor: 'pointer',
-              borderTop: active ? '2.5px solid var(--accent-stripe)' : '2.5px solid transparent',
-              transition: 'border-color 0.15s',
+              color: active ? T.color.ink : T.color.muted,
             }}>
             <div style={{
-              width: 36, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 9, position: 'relative',
-              background: active ? 'color-mix(in srgb, var(--accent-stripe) 16%, transparent)' : 'transparent',
+              width: 48, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: T.radius.pill, position: 'relative',
+              background: active ? 'var(--accent)' : 'transparent',
+              color: active ? 'var(--accent-text)' : 'inherit',
               transition: 'background 0.15s',
             }}>
               <Icon active={active} />
               {badge > 0 && (
                 <span style={{
-                  position: 'absolute', top: 2, right: 2,
-                  background: '#ef4444', color: 'white',
-                  borderRadius: 999, fontSize: '0.7rem', fontWeight: '800',
-                  minWidth: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '0 3px', lineHeight: 1,
+                  position: 'absolute', top: -2, right: 2,
+                  background: T.color.danger, color: T.color.card,
+                  borderRadius: T.radius.pill, fontSize: 11, fontWeight: 700,
+                  minWidth: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px', lineHeight: 1,
                 }}>{badge > 9 ? '9+' : badge}</span>
               )}
             </div>
             <span style={{
-              fontSize: '0.7rem', fontWeight: active ? '700' : '500',
-              color: active ? 'var(--accent2-fg)' : '#b0b8c1',
-              letterSpacing: '0.01em', whiteSpace: 'nowrap',
+              fontSize: T.size.xs, fontWeight: active ? 700 : 500,
+              whiteSpace: 'nowrap',
               overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
             }}>{label}</span>
           </button>
         ))}
       </div>
       {/* Zone safe-area iPhone (barre Apple) */}
-      <div style={{ height: 'env(safe-area-inset-bottom)', minHeight: 16, background: 'var(--accent-muted)' }} />
-    </div>,
+      <div style={{ height: 'env(safe-area-inset-bottom)', minHeight: 12, background: T.color.card }} />
+    </nav>,
     document.body
   )
 }

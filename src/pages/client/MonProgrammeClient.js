@@ -4,6 +4,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
+import T from '../../theme/tokens'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -66,21 +67,21 @@ export default function MonProgrammeClient() {
 }
 
 const S = {
-  page: { background: '#f5f5f5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page: { background: T.color.page, minHeight: '100vh', fontFamily: T.font.body, color: T.color.ink },
   header: {
-    background: 'var(--header-bg)',
+    background: T.color.headerBg,
     padding: '1.1rem 1.25rem',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     position: 'sticky', top: 0, zIndex: 60,
   },
-  headerTitle: { fontSize: '1.05rem', fontWeight: 800, color: 'white' },
+  headerTitle: { fontFamily: T.font.display, fontSize: T.size.xl, fontWeight: 700, color: T.color.onDark },
   content: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 130px)', padding: '1.5rem' },
   emptyCard: {
-    background: 'white', borderRadius: 20, padding: '2.5rem 2rem',
-    textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+    ...T.card, padding: '2.5rem 2rem',
+    textAlign: 'center',
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
     maxWidth: 320,
   },
-  emptyTitle: { fontWeight: 800, fontSize: '1.05rem', color: '#1a1a1a', margin: '0.5rem 0 0' },
-  emptyText: { fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' },
+  emptyTitle: { fontFamily: T.font.display, fontWeight: 700, fontSize: T.size.xl, color: T.color.ink, margin: '0.5rem 0 0' },
+  emptyText: { fontSize: T.size.md, color: T.color.muted, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' },
 }
