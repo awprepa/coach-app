@@ -34,7 +34,8 @@ export function parseDureeToDate(text) {
 export function formatRetour(dateRetour) {
   if (!dateRetour) return null
   const j = Math.ceil((new Date(dateRetour + 'T00:00:00') - new Date(new Date().toDateString())) / 86400000)
-  if (j <= 0) return 'Retour prévu aujourd\'hui'
+  if (j < 0) return `Retour prévu dépassé de ${-j} jour${j < -1 ? 's' : ''}`
+  if (j === 0) return 'Retour prévu aujourd\'hui'
   if (j === 1) return 'Reprend demain'
   if (j < 14) return `Reprend dans ${j} jours`
   if (j < 60) return `Reprend dans ${Math.round(j / 7)} semaines`
@@ -116,7 +117,7 @@ export default function BlessureButton({ clientId, prenom, nom, compact, visible
         await supabase.from('joueur_blessures').update(payload).eq('id', activeEpisodeId)
       } else {
         const { data } = await supabase.from('joueur_blessures')
-          .insert({ joueur_id: joueurId, date_debut: isoLocal(), ...payload })
+          .insert({ joueur_id: joueurId, date_debut: isoLocal(), a_confirmer: true, ...payload })
           .select('id').maybeSingle()
         if (data) setActiveEpisodeId(data.id)
       }

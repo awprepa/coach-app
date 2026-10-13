@@ -1,21 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
-import { parseDureeToDate, formatRetour } from './BlessureButton'
+import { formatRetour } from './BlessureButton'
+import BlessureForm, { TYPES_LESION, GRAVITES } from './BlessureForm'
+import Icon from './Icon'
 import { isoLocal } from '../utils/dates'
 
-const ZONES_PRECISES = ['Cheville', 'Genou', 'Ischio-jambiers', 'Mollet', 'Cuisse', 'Épaule', 'Dos', 'Tête / Cou', 'Poignet / Main', 'Autre']
-const TYPES_LESION = [
-  { v: 'entorse', label: 'Entorse' },
-  { v: 'claquage', label: 'Claquage' },
-  { v: 'contracture', label: 'Contracture' },
-  { v: 'dechirure', label: 'Déchirure' },
-  { v: 'tendinite', label: 'Tendinite' },
-  { v: 'fracture', label: 'Fracture' },
-  { v: 'commotion', label: 'Commotion' },
-  { v: 'autre', label: 'Autre' },
-]
-const MECANISMES = [{ v: 'contact', label: 'Contact' }, { v: 'non_contact', label: 'Non-contact' }]
-const GRAVITES = [{ v: 'grade_1', label: 'Grade I' }, { v: 'grade_2', label: 'Grade II' }, { v: 'grade_3', label: 'Grade III' }]
 const GRAVITE_COLOR = { grade_1: '#d97706', grade_2: '#dc2626', grade_3: '#991b1b' }
 const NIVEAUX = [
   { v: 'repos_total', label: 'Repos total' },
@@ -73,8 +62,15 @@ function joursDepuis(dateStr) {
   if (!dateStr) return 0
   return Math.max(0, Math.round((new Date() - new Date(dateStr + 'T00:00:00')) / 86400000))
 }
+// Fin d'un épisode : date de fin réelle ; à défaut, s'il est clôturé (statut ok),
+// le jour de sa dernière mise à jour ; sinon il est toujours en cours.
+function finEpisode(ep) {
+  if (ep.date_fin_reelle) return ep.date_fin_reelle
+  if (ep.statut === 'ok') return (ep.updated_at || '').slice(0, 10) || ep.date_debut
+  return null
+}
 function dureeEpisode(ep) {
-  const fin = ep.date_fin_reelle || isoLocal()
+  const fin = finEpisode(ep) || isoLocal()
   return Math.max(0, Math.round((new Date(fin + 'T00:00:00') - new Date(ep.date_debut + 'T00:00:00')) / 86400000))
 }
 function formatDateFull(d) {
@@ -84,32 +80,23 @@ function formatDateFull(d) {
 function initiales(prenom, nom) {
   return `${(prenom || '?')[0] || ''}${(nom || '?')[0] || ''}`.toUpperCase()
 }
+// Titre d'une blessure : ce que le coach (ou le joueur) a écrit en priorité,
+// sinon type + zone.
 function labelLesion(ep) {
+  if (ep.description) return ep.description
   const t = TYPES_LESION.find(t => t.v === ep.type_lesion)?.label
   const parts = [t, ep.zone_precise].filter(Boolean)
-  if (parts.length) return parts.join(' · ')
-  return ep.description || 'Blessure'
+  return parts.length ? parts.join(' · ') : 'Blessure'
+}
+function metaLesion(ep) {
+  const t = TYPES_LESION.find(t => t.v === ep.type_lesion)?.label
+  return [ep.zone_precise, t].filter(Boolean).join(' · ')
+}
+function joursAvantRetour(ep) {
+  if (!ep.date_retour_prevue) return null
+  return Math.ceil((new Date(ep.date_retour_prevue + 'T00:00:00') - new Date(new Date().toDateString())) / 86400000)
 }
 
-// Suggestion automatique de protocole selon la zone/le type — le coach peut
-// toujours changer manuellement dans le formulaire.
-const ZONE_TO_PROTO_GUESS = {
-  'Cheville': 'entorse_cheville',
-  'Genou': 'genou_lcm',
-  'Ischio-jambiers': 'lesion_musculaire',
-  'Mollet': 'lesion_musculaire',
-  'Cuisse': 'lesion_musculaire',
-  'Épaule': 'epaule',
-  'Dos': 'cotes_lombaires',
-  'Tête / Cou': 'cervical',
-  'Poignet / Main': 'poignet_main',
-  'Autre': null,
-}
-function guessProtocoleSlug(typeLesion, zonePrecise) {
-  if (typeLesion === 'commotion') return 'commotion'
-  if (typeLesion === 'fracture') return 'fracture'
-  return ZONE_TO_PROTO_GUESS[zonePrecise] || null
-}
 // Page "Suivi blessures" d'un groupe : blessés actuels avec palier de reprise,
 // indisponibilités en cours, calendrier historique de tout l'effectif, stats
 // de saison, historique détaillé par joueur, et déclaration/édition d'un
@@ -117,13 +104,14 @@ function guessProtocoleSlug(typeLesion, zonePrecise) {
 export default function GroupeBlessuresView({ groupeId, accent }) {
   const [joueurs, setJoueurs] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // { episode?, joueurId } — présent = modale ouverte
-  const [saving, setSaving] = useState(false)
+  const [modal, setModal] = useState(null) // { joueurId?, episode? } — présent = formulaire ouvert
+  const [repriseConfirm, setRepriseConfirm] = useState(null) // id de l'épisode dont on confirme la reprise
+  const [ignorerConfirm, setIgnorerConfirm] = useState(null) // id du signalement qu'on s'apprête à supprimer
   const [search, setSearch] = useState('')
   const [showRecidives, setShowRecidives] = useState(false)
   const [sortMode, setSortMode] = useState('nom') // 'nom' | 'poste' — tri du calendrier historique
   const [zoomIdx, setZoomIdx] = useState(0)       // index dans ZOOM_LEVELS
-  const [filterMode, setFilterMode] = useState('tous') // 'tous' | 'saison' | 'actuel' — filtre du calendrier historique
+  const [filterMode, setFilterMode] = useState('saison') // 'tous' | 'saison' | 'actuel' — filtre du calendrier historique
   const [protocoles, setProtocoles] = useState([])
   const [protoModal, setProtoModal] = useState(null) // null | {mode:'list'} | {mode:'edit', id, nom, paliers}
   const [testsPanel, setTestsPanel] = useState(null) // { ep, joueur, tests, checked } — checklist avant de changer de palier
@@ -150,9 +138,19 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   const currentCases = useMemo(() => {
     const cases = []
     joueurs.forEach(j => (j.joueur_blessures || []).forEach(ep => {
-      if (ep.statut !== 'ok') cases.push({ joueur: j, ep })
+      if (ep.statut !== 'ok' && !ep.a_confirmer) cases.push({ joueur: j, ep })
     }))
-    return cases.sort((a, b) => joursDepuis(b.ep.date_debut) - joursDepuis(a.ep.date_debut))
+    // Retours dépassés d'abord, puis les plus proches du retour, puis sans date
+    const cle = ep => { const j = joursAvantRetour(ep); return j == null ? 9999 : j }
+    return cases.sort((a, b) => cle(a.ep) - cle(b.ep))
+  }, [joueurs])
+
+  const signalements = useMemo(() => {
+    const list = []
+    joueurs.forEach(j => (j.joueur_blessures || []).forEach(ep => {
+      if (ep.statut !== 'ok' && ep.a_confirmer) list.push({ joueur: j, ep })
+    }))
+    return list.sort((a, b) => (b.ep.date_debut || '').localeCompare(a.ep.date_debut || ''))
   }, [joueurs])
 
   const allEpisodes = useMemo(() => {
@@ -231,65 +229,12 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
       .sort((a, b) => (b.episodes[0]?.date_debut || '').localeCompare(a.episodes[0]?.date_debut || ''))
   }, [joueurs, search])
 
-  function openDeclare(joueurId) {
-    const zone_precise = ZONES_PRECISES[0], type_lesion = 'entorse'
-    const guess = protocoles.find(p => p.slug === guessProtocoleSlug(type_lesion, zone_precise))
-    setModal({
-      joueurId: joueurId || '', episodeId: null,
-      zone_precise, type_lesion, mecanisme: '', gravite: '',
-      niveau: 'repos_total', etape_index: 0, description: '', duree_estimee: '', date_retour_prevue: '',
-      date_debut: isoLocal(),
-      protocole_id: guess?.id || '', protocoleTouched: false,
-    })
-  }
-  function openEdit(joueur, ep) {
-    setModal({
-      joueurId: joueur.id, episodeId: ep.id,
-      zone_precise: ep.zone_precise || '', type_lesion: ep.type_lesion || 'entorse', mecanisme: ep.mecanisme || '', gravite: ep.gravite || '',
-      niveau: ep.niveau || 'repos_total', etape_index: ep.etape_index || 0, description: ep.description || '', duree_estimee: ep.duree_estimee || '',
-      date_retour_prevue: ep.date_retour_prevue || '', date_debut: ep.date_debut,
-      protocole_id: ep.protocole_id || '', protocoleTouched: true,
-    })
-  }
-  // Ré-évalue la suggestion de protocole quand zone/type changent, sauf si le
-  // coach a déjà choisi un protocole manuellement dans le formulaire ouvert.
-  function updateModalZoneType(patch) {
-    setModal(m => {
-      const next = { ...m, ...patch }
-      if (!m.protocoleTouched) {
-        const guess = protocoles.find(p => p.slug === guessProtocoleSlug(next.type_lesion, next.zone_precise))
-        next.protocole_id = guess?.id || ''
-      }
-      return next
-    })
-  }
+  function openDeclare() { setModal({}) }
+  function openEdit(joueur, ep) { setModal({ joueurId: joueur.id, episode: ep }) }
 
-  async function submitModal() {
-    if (!modal.joueurId) return
-    setSaving(true)
-    const parsed = parseDureeToDate(modal.duree_estimee)
-    const payload = {
-      statut: 'out',
-      zone: 'general',
-      zone_precise: modal.zone_precise || null,
-      type_lesion: modal.type_lesion || null,
-      mecanisme: modal.mecanisme || null,
-      gravite: modal.gravite || null,
-      niveau: modal.niveau,
-      etape_index: modal.etape_index || 0,
-      description: modal.description.trim() || null,
-      duree_estimee: modal.duree_estimee.trim() || null,
-      date_retour_prevue: parsed || modal.date_retour_prevue || null,
-      protocole_id: modal.protocole_id || null,
-      updated_at: new Date().toISOString(),
-    }
-    if (modal.episodeId) {
-      await supabase.from('joueur_blessures').update(payload).eq('id', modal.episodeId)
-    } else {
-      await supabase.from('joueur_blessures').insert({ joueur_id: modal.joueurId, date_debut: modal.date_debut, ...payload })
-    }
-    setSaving(false)
-    setModal(null)
+  async function ignorerSignalement(ep) {
+    await supabase.from('joueur_blessures').delete().eq('id', ep.id)
+    setIgnorerConfirm(null)
     load()
   }
 
@@ -322,6 +267,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   }
 
   async function marquerApte(ep, tests_valides) {
+    setRepriseConfirm(null)
     await supabase.from('joueur_blessures')
       .update({ statut: 'ok', date_fin_reelle: isoLocal(), tests_valides: tests_valides ?? ep.tests_valides, updated_at: new Date().toISOString() })
       .eq('id', ep.id)
@@ -332,142 +278,167 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
   return (
     <div>
       <div style={S.head}>
-        <p style={S.headSub}>{loading ? 'Chargement…' : `${currentCases.length} joueur${currentCases.length > 1 ? 's' : ''} blessé${currentCases.length > 1 ? 's' : ''} actuellement`}</p>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <p style={S.headSub}>{loading ? 'Chargement…' : currentCases.length === 0 ? 'Aucun blessé actuellement' : `${currentCases.length} joueur${currentCases.length > 1 ? 's' : ''} blessé${currentCases.length > 1 ? 's' : ''} actuellement`}</p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button onClick={() => setProtoModal({ mode: 'list' })} style={S.btnSecondaryPill}>Protocoles de reprise</button>
-          <button onClick={() => openDeclare(null)} style={{ ...S.btnPrimary, background: accent }}>+ Déclarer une blessure</button>
+          <button onClick={openDeclare} style={S.btnPrimary}><Icon name="plus" size={16} />Déclarer une blessure</button>
         </div>
       </div>
 
-      {/* ── Blessés actuellement + Indisponibilités en cours ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }} className="gbv-stats">
-        <style>{`@media (max-width: 820px){ .gbv-stats{ grid-template-columns:1fr !important; } }`}</style>
+      {/* ── Signalements des joueurs, à confirmer ── */}
+      {signalements.length > 0 && (
+        <div style={{ ...S.panel, ...S.signalPanel, marginBottom: '1.25rem' }}>
+          <div style={S.panelHead}>
+            <span style={S.panelLabel}>Signalements à confirmer</span>
+            <span style={S.panelCount}>{signalements.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 1.1rem 1.1rem' }}>
+            {signalements.map(({ joueur, ep }) => (
+              <div key={ep.id} style={S.signalRow}>
+                <div style={S.avatar}>{initiales(joueur.prenom, joueur.nom)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={S.caseName}>{joueur.prenom} {joueur.nom}</p>
+                  <p style={S.caseMeta}>
+                    {labelLesion(ep)} · signalé le {new Date(ep.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                    {ep.date_retour_prevue ? ` · retour estimé ${new Date(ep.date_retour_prevue + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}` : ''}
+                  </p>
+                </div>
+                {ignorerConfirm === ep.id ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>Supprimer ce signalement ?</span>
+                    <button onClick={() => setIgnorerConfirm(null)} style={S.btnGhost}>Non</button>
+                    <button onClick={() => ignorerSignalement(ep)} style={{ ...S.btnGhost, color: '#dc2626', borderColor: '#fca5a5' }}>Oui, supprimer</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setIgnorerConfirm(ep.id)} style={S.btnGhost}>Ignorer</button>
+                    <button onClick={() => openEdit(joueur, ep)} style={S.btnDark}>Confirmer</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-        <div style={S.panel}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Blessés actuellement</span><span style={S.panelCount}>{currentCases.length} joueur{currentCases.length > 1 ? 's' : ''}</span></div>
-          {currentCases.length === 0 ? (
-            <p style={S.empty}>Personne n'est blessé pour l'instant.</p>
-          ) : (
-            <div style={S.caseGrid}>
-              {currentCases.map(({ joueur, ep }) => {
-                const tl = timelineFor(ep, protocoles)
-                const idx = tl.idx
-                const allSteps = [...tl.steps, { titre: 'Apte match', description: '', tests: [] }]
-                return (
-                  <div key={ep.id} style={S.case}>
-                    <div style={S.caseTop}>
-                      <div style={S.avatar}>{initiales(joueur.prenom, joueur.nom)}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={S.caseName}>{joueur.prenom} {joueur.nom}</p>
+      {/* ── Où en est chaque blessé ? ── */}
+      <div style={{ ...S.panel, marginBottom: '1.25rem' }}>
+        <div style={S.panelHead}>
+          <span style={S.panelLabel}>Où en est chaque blessé ?</span>
+          <span style={S.panelCount}>{currentCases.length} joueur{currentCases.length > 1 ? 's' : ''}</span>
+        </div>
+        {currentCases.length === 0 ? (
+          <p style={S.empty}>Personne n'est blessé pour l'instant.</p>
+        ) : (
+          <div style={S.caseGrid} className="gbv-cases">
+            <style>{`@media (max-width: 900px){ .gbv-cases{ grid-template-columns:1fr !important; } }`}</style>
+            {currentCases.map(({ joueur, ep }) => {
+              const tl = timelineFor(ep, protocoles)
+              const idx = tl.idx
+              const allSteps = [...tl.steps, { titre: 'Apte match', description: '', tests: [] }]
+              const jRetour = joursAvantRetour(ep)
+              const retourCouleur = jRetour == null ? '#6b7280' : jRetour < 0 ? '#b45309' : jRetour <= 7 ? '#15803d' : '#374151'
+              const meta = metaLesion(ep)
+              return (
+                <div key={ep.id} style={S.case}>
+                  <div style={S.caseTop}>
+                    <div style={S.avatar}>{initiales(joueur.prenom, joueur.nom)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={S.caseName}>{joueur.prenom} {joueur.nom}</p>
+                      <p style={S.caseTitle}>{labelLesion(ep)}</p>
+                      {(meta || ep.gravite) && (
                         <p style={S.caseMeta}>
-                          {labelLesion(ep)}
+                          {meta && meta !== labelLesion(ep) ? meta : ''}
                           {ep.gravite && (
                             <span style={{ ...S.sevBadge, background: (GRAVITE_COLOR[ep.gravite] || '#6b7280') + '18', color: GRAVITE_COLOR[ep.gravite] || '#6b7280', borderColor: (GRAVITE_COLOR[ep.gravite] || '#6b7280') + '44' }}>
                               {GRAVITES.find(g => g.v === ep.gravite)?.label}
                             </span>
                           )}
                         </p>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={S.daysOutNum}>{joursDepuis(ep.date_debut)}</div>
-                        <div style={S.daysOutLbl}>jours</div>
-                      </div>
+                      )}
                     </div>
-
-                    {ep.description && labelLesion(ep) !== ep.description && (
-                      <p style={S.caseDesc}>{ep.description}</p>
-                    )}
-                    {tl.proto && <p style={S.protoTag}>Protocole : {tl.proto.nom}</p>}
-                    <div style={S.paliers}>
-                      {allSteps.map((st, i) => {
-                        const aDuContenu = !!(st.description || st.tests?.length)
-                        return (
-                          <button key={i} onClick={() => setDetailPalier({ ep, idx: i })} style={S.pal}>
-                            <div style={{
-                              ...S.palDot,
-                              ...(i < idx ? { background: accent, borderColor: accent, color: 'white' }
-                                : i === idx ? { borderColor: accent, color: accent, boxShadow: `0 0 0 3px ${accent}22` } : {}),
-                            }}>
-                              {i < idx ? '✓' : i + 1}
-                            </div>
-                            {i < allSteps.length - 1 && (
-                              <div style={{ ...S.palLine, ...(i < idx ? { background: accent } : {}) }} />
-                            )}
-                            <span style={{ ...S.palLbl, ...(i === idx ? { color: accent, fontWeight: 800 } : {}) }}>
-                              {st.titre}{aDuContenu ? ' ›' : ''}
-                            </span>
-                          </button>
-                        )
-                      })}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={S.daysOutNum}>{joursDepuis(ep.date_debut)}</div>
+                      <div style={S.daysOutLbl}>jours d'arrêt</div>
                     </div>
-                    {allSteps[idx]?.description && (
-                      <p role="button" tabIndex={0} style={S.palierDesc} onClick={() => setDetailPalier({ ep, idx })}>{allSteps[idx].description}</p>
-                    )}
+                  </div>
 
-                    <div style={S.caseFoot}>
-                      <span style={S.caseReturn}>{formatRetour(ep.date_retour_prevue) || 'Retour non estimé'}</span>
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <p style={S.etapeNow}>
+                    Étape {Math.min(idx + 1, allSteps.length)} sur {allSteps.length} : <strong>{allSteps[idx]?.titre}</strong>
+                    {tl.proto ? <span style={{ color: '#6b7280', fontWeight: 600 }}> · {tl.proto.nom}</span> : null}
+                  </p>
+                  <div style={S.paliers}>
+                    {allSteps.map((st, i) => (
+                      <button key={i} onClick={() => setDetailPalier({ ep, idx: i })} style={S.pal} aria-label={`Étape ${i + 1} : ${st.titre}`}>
+                        <div style={{
+                          ...S.palDot,
+                          ...(i < idx ? { background: '#333333', borderColor: '#333333', color: '#e4f816' }
+                            : i === idx ? { borderColor: '#333333', color: '#333333', boxShadow: '0 0 0 3px rgba(51,51,51,0.15)' } : {}),
+                        }}>
+                          {i < idx ? <Icon name="check" size={11} /> : i + 1}
+                        </div>
+                        {i < allSteps.length - 1 && (
+                          <div style={{ ...S.palLine, ...(i < idx ? { background: '#333333' } : {}) }} />
+                        )}
+                        <span style={{ ...S.palLbl, ...(i === idx ? { color: '#1a1a1a', fontWeight: 800 } : {}) }}>{st.titre}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={S.caseFoot}>
+                    <span style={{ ...S.caseReturn, color: retourCouleur, fontWeight: jRetour != null && jRetour < 0 ? 700 : 600 }}>
+                      {jRetour != null && jRetour < 0 && <Icon name="alert" size={13} style={{ marginRight: 4 }} />}
+                      {formatRetour(ep.date_retour_prevue) || 'Retour non estimé'}
+                    </span>
+                    {repriseConfirm === ep.id ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>Il a repris ?</span>
+                        <button onClick={() => setRepriseConfirm(null)} style={S.btnGhost}>Annuler</button>
+                        <button onClick={() => marquerApte(ep)} style={S.btnDark}>Oui, apte</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <button onClick={() => openEdit(joueur, ep)} style={S.btnGhost}>Modifier</button>
-                        <button onClick={() => demanderPalierSuivant(joueur, ep)} style={S.btnGhost}>{idx >= tl.steps.length - 1 ? 'Marquer apte' : 'Étape suivante'}</button>
+                        {idx < tl.steps.length - 1 && (
+                          <button onClick={() => demanderPalierSuivant(joueur, ep)} style={S.btnGhost}>Étape suivante</button>
+                        )}
+                        <button onClick={() => setRepriseConfirm(ep.id)} style={S.btnDark}>Il a repris</button>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        <div style={S.panel}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Indisponibilités en cours</span><span style={S.panelCount}>{currentCases.length} joueur{currentCases.length > 1 ? 's' : ''}</span></div>
-          {currentCases.length === 0 ? (
-            <p style={S.empty}>Aucune indisponibilité en cours.</p>
-          ) : (
-            <div style={S.indispoList}>
-              {currentCases.map(({ joueur, ep }) => (
-                <div role="button" tabIndex={0} key={ep.id} style={S.indispoRow} onClick={() => openEdit(joueur, ep)}>
-                  <div style={S.avatarSmall}>{initiales(joueur.prenom, joueur.nom)}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={S.indispoName}>{joueur.prenom} {joueur.nom}</p>
-                    <p style={S.indispoZone}>{labelLesion(ep)}</p>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={S.indispoDaysNum}>{joursDepuis(ep.date_debut)}</div>
-                    <div style={S.indispoDaysLbl}>jours</div>
-                    <p style={S.indispoRetour}>{formatRetour(ep.date_retour_prevue) || 'retour indéterminé'}</p>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* ── Calendrier historique : tout l'effectif, précis au jour, saison complète ── */}
-      <div style={{ ...S.panel, marginBottom: '1.25rem' }}>
-        <div style={{ ...S.panelHead, flexWrap: 'wrap' }}>
-          <span style={S.panelLabel}>Historique des blessures</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
-            <div style={S.filterBtns}>
-              {[['tous', 'Tout l’effectif'], ['saison', 'Blessés cette saison'], ['actuel', 'Blessés actuellement']].map(([v, lbl], i, arr) => (
-                <button key={v} onClick={() => setFilterMode(v)}
-                  style={{ ...S.filterBtn, ...(i === arr.length - 1 ? { borderRight: 'none' } : {}), ...(filterMode === v ? { background: accent, color: '#1a1a1a' } : {}) }}>
-                  {lbl}
-                </button>
-              ))}
-            </div>
-            <div style={S.zoomCtrl}>
-              <button onClick={() => setZoomIdx(z => Math.max(0, z - 1))} disabled={zoomIdx === 0} style={S.zoomBtn}>−</button>
-              <span style={S.zoomLbl}>{ZOOM_LEVELS[zoomIdx].label}</span>
-              <button onClick={() => setZoomIdx(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))} disabled={zoomIdx === ZOOM_LEVELS.length - 1} style={S.zoomBtn}>+</button>
-            </div>
+      {/* ── Calendrier historique de la saison (replié) ── */}
+      <details style={{ ...S.panel, marginBottom: '1.25rem' }}>
+        <summary style={S.histSummary}>
+          <span style={S.panelLabel}>Frise de la saison</span>
+          <span style={S.panelCount}>Toutes les blessures, mois par mois · déplier</span>
+        </summary>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.9rem', flexWrap: 'wrap', padding: '0 1.1rem 0.7rem' }}>
+          <div style={S.filterBtns}>
+            {[['saison', 'Blessés cette saison'], ['actuel', 'Blessés actuellement'], ['tous', 'Tout l’effectif']].map(([v, lbl], i, arr) => (
+              <button key={v} onClick={() => setFilterMode(v)}
+                style={{ ...S.filterBtn, ...(i === arr.length - 1 ? { borderRight: 'none' } : {}), ...(filterMode === v ? { background: '#333333', color: '#e4f816' } : {}) }}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+          <div style={S.zoomCtrl}>
+            <button onClick={() => setZoomIdx(z => Math.max(0, z - 1))} disabled={zoomIdx === 0} style={S.zoomBtn} aria-label="Dézoomer">−</button>
+            <span style={S.zoomLbl}>{ZOOM_LEVELS[zoomIdx].label}</span>
+            <button onClick={() => setZoomIdx(z => Math.min(ZOOM_LEVELS.length - 1, z + 1))} disabled={zoomIdx === ZOOM_LEVELS.length - 1} style={S.zoomBtn} aria-label="Zoomer">+</button>
           </div>
         </div>
         <div style={{ padding: '0 1.1rem 1.1rem' }}>
           <GanttHistorique roster={rosterGantt} seasonRange={seasonRange} sortMode={sortMode} setSortMode={setSortMode}
             filterMode={filterMode} zoomPx={ZOOM_LEVELS[zoomIdx].px} accent={accent} onEdit={openEdit} />
         </div>
-      </div>
+      </details>
 
       {/* ── Stats de saison ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }} className="gbv-stats">
@@ -506,7 +477,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                     <p style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', fontWeight: 800 }}>{g.joueur.prenom} {g.joueur.nom} <span style={{ fontWeight: 600, color: '#6b7280' }}>· {g.zone}</span></p>
                     {g.episodes.map(ep => (
                       <div role="button" tabIndex={0} key={ep.id} onClick={() => openEdit(g.joueur, ep)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#6b7280', padding: '0.15rem 0', cursor: 'pointer' }}>
-                        <span>{formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}</span>
+                        <span>{formatDateFull(ep.date_debut)}{finEpisode(ep) ? ` – ${formatDateFull(finEpisode(ep))}` : ' – en cours'}</span>
                         <span>{dureeEpisode(ep)} j</span>
                       </div>
                     ))}
@@ -541,7 +512,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
               {episodes.map(ep => (
                 <div role="button" tabIndex={0} key={ep.id} onClick={() => openEdit(joueur, ep)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.76rem', cursor: 'pointer' }}>
                   <span style={{ color: '#6b7280', width: 170, flexShrink: 0 }}>
-                    {formatDateFull(ep.date_debut)}{ep.date_fin_reelle ? ` – ${formatDateFull(ep.date_fin_reelle)}` : ep.statut !== 'ok' ? ' – en cours' : ''}
+                    {formatDateFull(ep.date_debut)}{finEpisode(ep) ? ` – ${formatDateFull(finEpisode(ep))}` : ' – en cours'}
                   </span>
                   <span style={{ flex: 1, fontWeight: 600 }}>
                     {labelLesion(ep)}{ep.gravite ? ` (${GRAVITES.find(g => g.v === ep.gravite)?.label})` : ''}
@@ -554,101 +525,16 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
         ))}
       </details>
 
-      {/* ── Modale déclarer/modifier ── */}
+      {/* ── Formulaire déclarer / modifier / confirmer ── */}
       {modal && (
-        <div style={S.overlay} onClick={() => setModal(null)}>
-          <div style={S.modal} onClick={e => e.stopPropagation()}>
-            <p style={S.modalTitle}>{modal.episodeId ? 'Modifier la blessure' : 'Déclarer une blessure'}</p>
-
-            {!modal.episodeId && (
-              <>
-                <label style={S.label}>Joueur</label>
-                <select value={modal.joueurId} onChange={e => setModal(m => ({ ...m, joueurId: e.target.value }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
-                  <option value="">— Choisir —</option>
-                  {joueurs.map(j => <option key={j.id} value={j.id}>{j.prenom} {j.nom}</option>)}
-                </select>
-              </>
-            )}
-
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <div style={{ flex: 1 }}>
-                <label style={S.label}>Zone touchée</label>
-                <select value={modal.zone_precise} onChange={e => updateModalZoneType({ zone_precise: e.target.value })} style={{ ...S.input, width: '100%' }}>
-                  {ZONES_PRECISES.map(z => <option key={z} value={z}>{z}</option>)}
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={S.label}>Type de lésion</label>
-                <select value={modal.type_lesion} onChange={e => updateModalZoneType({ type_lesion: e.target.value })} style={{ ...S.input, width: '100%' }}>
-                  {TYPES_LESION.map(t => <option key={t.v} value={t.v}>{t.label}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <label style={S.label}>Protocole de reprise</label>
-            <select value={modal.protocole_id} onChange={e => setModal(m => ({ ...m, protocole_id: e.target.value, protocoleTouched: true }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
-              <option value="">Aucun (protocole générique)</option>
-              {protocoles.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-            </select>
-
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <div style={{ flex: 1 }}>
-                <label style={S.label}>Mécanisme</label>
-                <select value={modal.mecanisme} onChange={e => setModal(m => ({ ...m, mecanisme: e.target.value }))} style={{ ...S.input, width: '100%' }}>
-                  <option value="">—</option>
-                  {MECANISMES.map(m => <option key={m.v} value={m.v}>{m.label}</option>)}
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={S.label}>Gravité</label>
-                <select value={modal.gravite} onChange={e => setModal(m => ({ ...m, gravite: e.target.value }))} style={{ ...S.input, width: '100%' }}>
-                  <option value="">—</option>
-                  {GRAVITES.map(g => <option key={g.v} value={g.v}>{g.label}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <label style={S.label}>Étape de reprise actuelle</label>
-            {(() => {
-              const protoEtapes = protocoles.find(p => p.id === modal.protocole_id)?.paliers?.etapes
-              if (Array.isArray(protoEtapes) && protoEtapes.length) {
-                return (
-                  <select value={modal.etape_index} onChange={e => setModal(m => ({ ...m, etape_index: Number(e.target.value) }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
-                    {protoEtapes.map((et, i) => <option key={i} value={i}>{i + 1}. {et.titre || `Étape ${i + 1}`}</option>)}
-                  </select>
-                )
-              }
-              return (
-                <select value={modal.niveau} onChange={e => setModal(m => ({ ...m, niveau: e.target.value }))} style={{ ...S.input, width: '100%', marginBottom: '0.75rem' }}>
-                  {NIVEAUX.map(n => <option key={n.v} value={n.v}>{n.label}</option>)}
-                </select>
-              )
-            })()}
-
-            <label style={S.label}>Description</label>
-            <textarea value={modal.description} onChange={e => setModal(m => ({ ...m, description: e.target.value }))} rows={2}
-              placeholder="Ex : entorse cheville gauche à l'entraînement" style={{ ...S.input, width: '100%', marginBottom: '0.75rem', resize: 'vertical', fontFamily: 'inherit' }} />
-
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.35rem' }}>
-              <div style={{ flex: 1 }}>
-                <label style={S.label}>Durée estimée</label>
-                <input value={modal.duree_estimee} onChange={e => setModal(m => ({ ...m, duree_estimee: e.target.value }))} placeholder="ex : 3 semaines" style={{ ...S.input, width: '100%' }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={S.label}>Retour prévu le</label>
-                <input type="date" value={parseDureeToDate(modal.duree_estimee) || modal.date_retour_prevue} onChange={e => setModal(m => ({ ...m, date_retour_prevue: e.target.value }))} style={{ ...S.input, width: '100%' }} />
-              </div>
-            </div>
-            <p style={{ fontSize: '0.68rem', color: '#6b7280', margin: '0 0 1rem' }}>Survenue le {formatDateFull(modal.date_debut)}</p>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setModal(null)} style={S.btnSecondary}>Annuler</button>
-              <button onClick={submitModal} disabled={saving || !modal.joueurId} style={{ ...S.btnPrimary, flex: 1, background: accent, opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <BlessureForm
+          joueurs={joueurs}
+          joueurId={modal.joueurId}
+          episode={modal.episode}
+          protocoles={protocoles}
+          onClose={() => setModal(null)}
+          onSaved={() => { setModal(null); load() }}
+        />
       )}
 
       {/* ── Détail d'une étape de la timeline (contenu du protocole) ── */}
@@ -725,7 +611,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => setTestsPanel(null)} style={S.btnSecondary}>Annuler</button>
-              <button onClick={() => avancerPalier(testsPanel.ep, testsPanel.checked)} style={{ ...S.btnPrimary, flex: 1, background: accent }}>
+              <button onClick={() => avancerPalier(testsPanel.ep, testsPanel.checked)} style={{ ...S.btnPrimary, flex: 1, justifyContent: 'center' }}>
                 {tl.idx >= tl.steps.length - 1 ? 'Marquer apte' : "Passer à l'étape suivante"}
               </button>
             </div>
@@ -816,7 +702,7 @@ export default function GroupeBlessuresView({ groupeId, accent }) {
                   await loadProtocoles()
                   setProtoModal({ mode: 'list' })
                 }}
-                style={{ ...S.btnPrimary, flex: 1, background: accent }}
+                style={{ ...S.btnPrimary, flex: 1, justifyContent: 'center' }}
               >
                 Enregistrer
               </button>
@@ -870,24 +756,25 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
   }
 
   function Row({ r }) {
-    const { joueur, poste, color, episodes } = r
+    const { joueur, poste, episodes } = r
     return (
       <div style={S.gRow}>
         <div style={S.gName}>
-          <span style={{ ...S.gNameTxt, color }}>{joueur.prenom} {joueur.nom}</span>
+          <span style={S.gNameTxt}>{joueur.prenom} {joueur.nom}</span>
           <span style={S.gPoste}>{poste}</span>
         </div>
         <div style={S.gTrack}>
           {weekTicks.map((l, i) => <div key={i} style={{ ...S.gGridline, left: `${l}%` }} />)}
           {episodes.map(ep => {
             const d0 = new Date(ep.date_debut + 'T00:00:00')
-            const d1 = ep.date_fin_reelle ? new Date(ep.date_fin_reelle + 'T00:00:00') : today
+            const fin = finEpisode(ep)
+            const d1 = fin ? new Date(fin + 'T00:00:00') : today
             const left = pct(d0), width = Math.max(0.4, pct(d1) - pct(d0))
-            const enCours = ep.statut !== 'ok'
-            const dates = `${fmtShort(d0)} → ${ep.date_fin_reelle ? fmtShort(new Date(ep.date_fin_reelle + 'T00:00:00')) : fmtShort(today) + ' (en cours)'}`
+            const enCours = !fin
+            const dates = `${fmtShort(d0)} → ${fin ? fmtShort(d1) : fmtShort(today) + ' (en cours)'}`
             return (
               <div role="button" tabIndex={0} key={ep.id} onClick={() => onEdit(joueur, ep)}
-                style={{ ...S.gBar, left: `${left}%`, width: `${width}%`, background: color, opacity: enCours ? 1 : 0.45 }}
+                style={{ ...S.gBar, left: `${left}%`, width: `${width}%`, background: enCours ? '#333333' : '#9ca3af' }}
                 title={`${joueur.prenom} ${joueur.nom} — ${labelLesion(ep)} : ${dates}`}>
                 {width > 7 && <span style={S.gBarLbl}>{labelLesion(ep)} · {dates}</span>}
               </div>
@@ -928,15 +815,8 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.9rem', marginTop: '0.6rem' }}>
-        {rosterFiltre.filter(r => r.episodes.length).map(r => (
-          <span key={r.joueur.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: '#6b7280', fontWeight: 700 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color }} />{r.joueur.prenom} {r.joueur.nom}
-          </span>
-        ))}
-      </div>
       <p style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, margin: '0.4rem 0 0' }}>
-        Une couleur par joueur (nom et barres) · opacité pleine = blessure en cours, atténuée = guérie · barres positionnées au jour près
+        Barre foncée = blessure en cours · barre grise = guérie · clique sur une barre pour la modifier
       </p>
     </div>
   )
@@ -945,10 +825,15 @@ function GanttHistorique({ roster, seasonRange, sortMode, setSortMode, filterMod
 const S = {
   head: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.1rem' },
   headSub: { margin: 0, fontSize: '0.82rem', color: '#6b7280', fontWeight: 700 },
-  btnPrimary: { color: '#1a1a1a', border: 'none', borderRadius: 10, padding: '0.6rem 1.05rem', fontSize: '0.84rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnPrimary: { display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 40, background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0 1.05rem', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnDark: { minHeight: 36, background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '0 0.8rem', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' },
+  signalPanel: { border: '1.5px solid #fcd34d', background: '#fffbeb' },
+  signalRow: { display: 'flex', alignItems: 'center', gap: '0.65rem', background: 'white', border: '1px solid #f3f4f6', borderRadius: 12, padding: '0.6rem 0.75rem', flexWrap: 'wrap' },
+  caseTitle: { fontSize: '0.84rem', fontWeight: 700, color: '#374151', margin: '0.1rem 0 0' },
+  etapeNow: { fontSize: '0.8rem', color: '#374151', margin: '0.75rem 0 0' },
   btnSecondary: { flex: 1, background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' },
-  btnGhost: { border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', borderRadius: 8, padding: '0.32rem 0.65rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnSecondaryPill: { border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnGhost: { minHeight: 36, border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', borderRadius: 8, padding: '0 0.75rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnSecondaryPill: { minHeight: 40, border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', borderRadius: 10, padding: '0 1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
 
   protoTag: { fontSize: '0.68rem', color: '#6b7280', fontWeight: 700, margin: '0.35rem 0 0' },
   testCheckRow: { display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.8rem', cursor: 'pointer' },
@@ -966,26 +851,26 @@ const S = {
   panelCount: { fontSize: '0.72rem', fontWeight: 700, color: '#6b7280' },
   empty: { fontSize: '0.82rem', color: '#6b7280', padding: '0.5rem 1.1rem 1.1rem', margin: 0 },
 
-  caseGrid: { display: 'flex', flexDirection: 'column', gap: '0.7rem', padding: '0 1.1rem 1.1rem' },
+  caseGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', padding: '0 1.1rem 1.1rem' },
   case: { border: '1px solid #f3f4f6', borderRadius: 12, padding: '0.85rem 0.9rem 0.9rem' },
   caseTop: { display: 'flex', alignItems: 'flex-start', gap: '0.65rem' },
-  avatar: { width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.66rem', fontWeight: 800, flexShrink: 0, background: '#fee2e2', color: '#dc2626' },
-  caseName: { fontSize: '0.86rem', fontWeight: 800, margin: 0 },
-  caseMeta: { fontSize: '0.74rem', color: '#6b7280', margin: '0.1rem 0 0' },
+  avatar: { width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0, background: '#333333', color: '#e4f816' },
+  caseName: { fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#1a1a1a' },
+  caseMeta: { fontSize: '0.76rem', color: '#6b7280', margin: '0.15rem 0 0' },
   caseDesc: { fontSize: '0.72rem', color: '#6b7280', margin: '0.35rem 0 0', lineHeight: 1.4 },
   sevBadge: { fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.03em', padding: '0.12rem 0.45rem', borderRadius: 999, border: '1px solid', marginLeft: '0.35rem', whiteSpace: 'nowrap' },
-  daysOutNum: { fontSize: '1.05rem', fontWeight: 800, lineHeight: 1 },
-  daysOutLbl: { fontSize: '0.56rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' },
+  daysOutNum: { fontSize: '1.4rem', fontWeight: 900, lineHeight: 1, color: '#1a1a1a' },
+  daysOutLbl: { fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 },
 
   paliers: { display: 'flex', alignItems: 'flex-start', gap: 0, marginTop: '0.6rem' },
   pal: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' },
   palierDesc: { fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.4, margin: '0.6rem 0 0', cursor: 'pointer' },
-  palDot: { width: 18, height: 18, borderRadius: '50%', border: '2px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, zIndex: 1, color: '#6b7280' },
-  palLine: { position: 'absolute', top: 8, left: '50%', width: '100%', height: 2, background: '#e5e7eb', zIndex: 0 },
-  palLbl: { fontSize: '0.58rem', color: '#6b7280', fontWeight: 700, marginTop: 4, textAlign: 'center', lineHeight: 1.15, maxWidth: 58 },
+  palDot: { width: 22, height: 22, borderRadius: '50%', border: '2px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900, zIndex: 1, color: '#6b7280' },
+  palLine: { position: 'absolute', top: 10, left: '50%', width: '100%', height: 2, background: '#e5e7eb', zIndex: 0 },
+  palLbl: { fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, marginTop: 5, textAlign: 'center', lineHeight: 1.2, maxWidth: 70 },
 
-  caseFoot: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.7rem', flexWrap: 'wrap', gap: '0.4rem' },
-  caseReturn: { fontSize: '0.72rem', color: '#6b7280' },
+  caseFoot: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.9rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap', gap: '0.5rem' },
+  caseReturn: { display: 'inline-flex', alignItems: 'center', fontSize: '0.82rem' },
 
   indispoList: { display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 1.1rem 1.1rem' },
   indispoRow: { display: 'flex', alignItems: 'center', gap: '0.65rem', border: '1px solid #f3f4f6', borderRadius: 10, padding: '0.55rem 0.7rem', cursor: 'pointer' },
@@ -996,8 +881,8 @@ const S = {
   indispoDaysLbl: { fontSize: '0.58rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' },
   indispoRetour: { fontSize: '0.64rem', color: '#059669', fontWeight: 700, margin: '0.15rem 0 0' },
 
-  filterBtns: { display: 'flex', gap: 0, border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' },
-  filterBtn: { background: 'white', color: '#6b7280', border: 'none', borderRight: '1.5px solid #e5e7eb', font: 'inherit', fontSize: '0.68rem', fontWeight: 700, padding: '0.35rem 0.6rem', cursor: 'pointer', whiteSpace: 'nowrap' },
+  filterBtns: { display: 'flex', gap: 0, border: '1.5px solid #e5e7eb', borderRadius: 8, overflowX: 'auto', maxWidth: '100%' },
+  filterBtn: { background: 'white', color: '#374151', border: 'none', borderRight: '1.5px solid #e5e7eb', font: 'inherit', fontSize: '0.76rem', fontWeight: 700, padding: '0 0.7rem', minHeight: 34, cursor: 'pointer', whiteSpace: 'nowrap' },
   zoomCtrl: { display: 'flex', alignItems: 'center', gap: 8 },
   zoomBtn: { width: 24, height: 24, border: '1.5px solid #e5e7eb', borderRadius: 6, background: 'white', color: '#1a1a1a', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   zoomLbl: { fontSize: '0.66rem', color: '#6b7280', fontWeight: 700, minWidth: 64, textAlign: 'center' },
@@ -1015,7 +900,7 @@ const S = {
   gPosGroupLbl: { padding: '0.28rem 0.6rem', fontSize: '0.6rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', background: '#fafafa', borderBottom: '1px solid #f3f4f6' },
   gRow: { display: 'flex', alignItems: 'center', height: 30, borderBottom: '1px solid #f3f4f6' },
   gName: { flex: '0 0 190px', padding: '0 0.6rem', borderRight: '1px solid #f3f4f6', height: '100%', display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' },
-  gNameTxt: { fontWeight: 800, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  gNameTxt: { fontWeight: 700, fontSize: '0.74rem', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   gPoste: { fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, flexShrink: 0, marginLeft: 'auto', paddingLeft: 4 },
   gTrack: { flex: 1, position: 'relative', height: '100%' },
   gGridline: { position: 'absolute', top: 0, bottom: 0, borderLeft: '1px solid #f3f4f6' },
