@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { getCoachId, sendNotif } from '../notifs'
 import BlessureButton from './BlessureButton'
 import { isoLocal } from '../utils/dates'
+import T from '../theme/tokens'
 
 // ── Session-RPE différencié (échelle CR-10, 0-10) — 3 dimensions rugby ────────
 const DIMS = [
@@ -47,7 +48,7 @@ const RANGE_CSS = `
   box-shadow:0 1px 5px rgba(0,0,0,0.28); cursor:grab;
 }
 .rpe-range::-moz-range-track{ background:transparent; height:12px; }
-.rpe-range:focus-visible{ outline:2px solid #333; outline-offset:4px; }
+.rpe-range:focus-visible{ outline:2px solid #141414; outline-offset:4px; }
 `
 
 function Jauge({ value, onChange }) {
@@ -63,10 +64,10 @@ function Jauge({ value, onChange }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 7 }}>
-        <span style={{ fontSize: '1.9rem', fontWeight: 900, color: touched ? col : '#9ca3af', lineHeight: 1, minWidth: 40 }}>
+        <span style={{ fontFamily: T.font.display, fontVariantNumeric: 'tabular-nums', fontSize: 36, fontWeight: 700, color: touched ? T.color.ink : T.color.muted, lineHeight: 1, minWidth: 40 }}>
           {touched ? value : '–'}
         </span>
-        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: touched ? col : '#9ca3af' }}>
+        <span style={{ fontSize: T.size.md, fontWeight: 600, color: touched ? T.color.ink : T.color.muted }}>
           {touched ? DESC[value] : 'Fais glisser pour noter'}
         </span>
       </div>
@@ -86,7 +87,7 @@ function Jauge({ value, onChange }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
         {[0, 5, 10].map(n => (
-          <span key={n} style={{ fontSize: '0.7rem', fontWeight: 700, color: '#b8bfc7' }}>{n}</span>
+          <span key={n} style={{ fontSize: T.size.xs, fontWeight: 600, color: T.color.muted }}>{n}</span>
         ))}
       </div>
     </div>
@@ -162,10 +163,10 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
           <p style={W.subtitle}>{isMatch ? "Intensité du match" : "Intensité de l'entraînement"}</p>
           <h2 style={W.title}>{nomEvenement}</h2>
-          <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0.25rem 0 0', textTransform: 'capitalize' }}>{dateLabel}</p>
+          <p style={{ fontSize: T.size.md, color: T.color.muted, margin: '0.25rem 0 0', textTransform: 'capitalize' }}>{dateLabel}</p>
         </div>
 
-        <p style={{ fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5, margin: '0 0 1.25rem', textAlign: 'center' }}>
+        <p style={{ fontSize: T.size.md, color: T.color.muted, lineHeight: 1.5, margin: '0 0 1.25rem', textAlign: 'center' }}>
           Note ton effort ressenti de 0 (repos) à 10 (maximal) pour chaque dimension.
         </p>
 
@@ -177,14 +178,14 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         ))}
 
         <div style={{ marginBottom: '1rem' }}>
-          <p style={W.qLabel}>Commentaire <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' }}>(optionnel)</span></p>
+          <p style={W.qLabel}>Commentaire <span style={{ fontWeight: 400, color: T.color.muted, fontSize: T.size.sm }}>(optionnel)</span></p>
           <textarea
             value={commentaire}
             onChange={e => setCommentaire(e.target.value)}
             placeholder="Une remarque sur la séance ? (facultatif)"
             rows={2}
             maxLength={400}
-            style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', fontFamily: 'inherit', lineHeight: 1.4, resize: 'vertical', outline: 'none' }}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, fontSize: T.size.lg, fontFamily: 'inherit', lineHeight: 1.4, resize: 'vertical' }}
           />
         </div>
 
@@ -193,11 +194,11 @@ function RpeOverlay({ clientId, evenement, onDone }) {
         </div>
 
         <button onClick={submit} disabled={!allFilled || saving}
-          style={{ ...W.submitBtn, background: allFilled ? '#333333' : '#e5e7eb', color: allFilled ? 'var(--accent-fg-dark)' : '#9ca3af', cursor: allFilled ? 'pointer' : 'default' }}>
+          style={{ ...W.submitBtn, background: allFilled ? T.color.ink : T.color.soft, color: allFilled ? T.color.signal : T.color.muted, cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider ma note'}
         </button>
         <button onClick={marquerAbsent} disabled={saving}
-          style={{ width: '100%', marginTop: '0.6rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, color: '#6b7280', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', padding: '0.8rem' }}>
+          style={{ ...T.btnSecondary, marginTop: '0.6rem', color: T.color.ink, fontSize: T.size.md }}>
           {isMatch ? "Je n'ai pas joué ce match" : "Je n'étais pas à cet entraînement"}
         </button>
       </div>
@@ -206,12 +207,12 @@ function RpeOverlay({ clientId, evenement, onDone }) {
 }
 
 const W = {
-  overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
-  card:      { background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 380, maxHeight: '88vh', overflowY: 'auto', boxSizing: 'border-box' },
-  subtitle:  { fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
-  title:     { fontSize: '1.25rem', fontWeight: '800', color: '#333333', margin: 0 },
-  qLabel:    { fontSize: '0.85rem', fontWeight: '700', color: '#374151', margin: '0 0 0.5rem' },
-  submitBtn: { width: '100%', padding: '0.875rem', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', marginTop: '0.5rem' },
+  overlay:   { position: 'fixed', inset: 0, background: 'rgb(20 20 20 / .88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', fontFamily: T.font.body },
+  card:      { background: T.color.card, borderRadius: T.radius.card, padding: '1.5rem 1.25rem', width: '100%', maxWidth: 400, maxHeight: 'calc(100dvh - 2rem)', overflowY: 'auto', boxSizing: 'border-box', color: T.color.ink },
+  subtitle:  { fontSize: T.size.sm, fontWeight: 600, color: T.color.muted, margin: '0 0 0.3rem' },
+  title:     { fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, lineHeight: 1.15, color: T.color.ink, margin: 0 },
+  qLabel:    { fontSize: T.size.base, fontWeight: 600, color: T.color.ink, margin: '0 0 0.5rem' },
+  submitBtn: { ...T.btnPrimary, marginTop: '0.5rem' },
 }
 
 export default function RpeGate({ children }) {

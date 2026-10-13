@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { sendNotif, getCoachId } from '../notifs'
 import BlessureButton from './BlessureButton'
 import { isoLocal } from '../utils/dates'
+import T from '../theme/tokens'
 
 const QUESTIONS = [
   { key: 'sommeil',  label: 'Sommeil',  desc: ['Très mauvais', 'Mauvais', 'Bien', 'Excellent'] },
@@ -65,42 +66,43 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
           <h2 style={W.title}>Comment vas-tu ?</h2>
         </div>
         {QUESTIONS.map((q, i) => (
-          <div key={q.key} style={{ padding: '0.55rem 0', borderTop: i === 0 ? 'none' : '1px solid #ececec' }}>
+          <div key={q.key} style={{ padding: '0.55rem 0', borderTop: i === 0 ? 'none' : `1px solid ${T.color.line}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.35rem' }}>
               <span style={W.qLabel}>{q.label}</span>
-              <span style={{ fontSize: '0.74rem', color: '#8a8a8a' }}>{vals[q.key] > 0 ? q.desc[vals[q.key] - 1] : ''}</span>
+              <span style={{ fontSize: T.size.sm, fontWeight: 600, color: T.color.ink }}>{vals[q.key] > 0 ? q.desc[vals[q.key] - 1] : ''}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem' }}>
               {[1, 2, 3, 4].map(n => {
                 const active = vals[q.key] === n
                 return (
                   <button key={n} onClick={() => setVals(v => ({ ...v, [q.key]: n }))}
-                    style={{ ...W.qBtn, background: active ? '#222222' : 'white', border: `1px solid ${active ? '#222222' : '#e3e3e3'}`, color: active ? 'white' : '#555555' }}>
+                    aria-pressed={active} aria-label={`${q.label} ${n} sur 4, ${q.desc[n - 1]}`}
+                    style={{ ...W.qBtn, background: active ? T.color.ink : T.color.card, border: `1.5px solid ${active ? T.color.ink : T.color.line}`, color: active ? T.color.signal : T.color.ink }}>
                     {n}
                   </button>
                 )
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: '0.7rem', color: '#9a9a9a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, fontSize: T.size.xs, color: T.color.muted }}>
               <span>{q.desc[0]}</span><span>{q.desc[3]}</span>
             </div>
           </div>
         ))}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0', borderTop: '1px solid #ececec', marginBottom: '0.6rem' }}>
-          <p style={{ ...W.qLabel, flex: 1 }}>Poids <span style={{ fontWeight: '400', color: '#9a9a9a', fontSize: '0.75rem' }}>(optionnel)</span></p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0', borderTop: `1px solid ${T.color.line}`, marginBottom: '0.6rem' }}>
+          <p style={{ ...W.qLabel, flex: 1 }}>Poids <span style={{ fontWeight: 400, color: T.color.muted, fontSize: T.size.sm }}>(optionnel)</span></p>
           <input
             type="number" placeholder="75.5" aria-label="Poids en kg" value={poids}
             onChange={e => setPoids(e.target.value)}
-            style={{ width: 96, padding: '0.45rem 0.6rem', border: '1px solid #e3e3e3', borderRadius: 10, fontSize: '1rem', fontWeight: '700', outline: 'none', textAlign: 'center' }}
+            style={{ width: 96, height: T.touch, padding: '0 0.6rem', border: `1.5px solid ${T.color.line}`, borderRadius: T.radius.control, fontFamily: T.font.display, fontSize: T.size.xl, fontWeight: 700, textAlign: 'center', boxSizing: 'border-box' }}
           />
-          <span style={{ fontWeight: '700', color: '#6b7280', fontSize: '0.9rem' }}>kg</span>
+          <span style={{ fontWeight: 600, color: T.color.muted, fontSize: T.size.md }}>kg</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 0.6rem' }}>
           <BlessureButton clientId={clientId} compact visible />
         </div>
 
         <button onClick={submit} disabled={!allFilled || saving}
-          style={{ ...W.submitBtn, background: allFilled ? '#222222' : '#ececec', color: allFilled ? 'white' : '#9a9a9a', cursor: allFilled ? 'pointer' : 'default' }}>
+          style={{ ...W.submitBtn, background: allFilled ? T.color.ink : T.color.soft, color: allFilled ? T.color.signal : T.color.muted, cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider mon bilan'}
         </button>
       </div>
@@ -109,13 +111,13 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
 }
 
 const W = {
-  overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
-  card:      { background: 'white', borderRadius: 20, padding: '1.1rem 1.25rem', width: '100%', maxWidth: 380, maxHeight: 'calc(100dvh - 2rem)', overflowY: 'auto', boxSizing: 'border-box' },
-  subtitle:  { fontSize: '0.7rem', fontWeight: '700', color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.3rem' },
-  title:     { fontSize: '1.2rem', fontWeight: '700', color: '#222222', margin: 0 },
-  qLabel:    { fontSize: '0.88rem', fontWeight: '700', color: '#222222', margin: 0 },
-  qBtn:      { height: 36, borderRadius: 10, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' },
-  submitBtn: { width: '100%', padding: '0.75rem', border: 'none', borderRadius: 12, fontSize: '0.95rem', fontWeight: '700', marginTop: 0 },
+  overlay:   { position: 'fixed', inset: 0, background: 'rgb(20 20 20 / .88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', fontFamily: T.font.body },
+  card:      { background: T.color.card, borderRadius: T.radius.card, padding: '1.1rem 1.25rem', width: '100%', maxWidth: 380, maxHeight: 'calc(100dvh - 2rem)', overflowY: 'auto', boxSizing: 'border-box', color: T.color.ink },
+  subtitle:  { fontSize: T.size.sm, fontWeight: 600, color: T.color.muted, margin: '0 0 0.2rem' },
+  title:     { fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, lineHeight: 1.15, color: T.color.ink, margin: 0 },
+  qLabel:    { fontSize: T.size.base, fontWeight: 600, color: T.color.ink, margin: 0 },
+  qBtn:      { height: 40, borderRadius: T.radius.control, fontFamily: T.font.display, fontSize: T.size.lg, fontWeight: 700, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' },
+  submitBtn: { ...T.btnPrimary, height: 48, marginTop: 0 },
 }
 
 export default function WellnessGate({ children }) {
