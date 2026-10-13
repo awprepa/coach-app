@@ -1019,17 +1019,17 @@ export default function ProgressionClient() {
               <XAxis
                 dataKey="date"
                 tickFormatter={formatDateShort}
-                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tick={{ fontSize: 11, fill: '#6b7280' }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tick={{ fontSize: 11, fill: '#6b7280' }}
                 tickLine={false}
                 axisLine={false}
                 unit=" kg"
-                width={46}
+                width={58}
               />
               <Tooltip content={<CustomTooltip hasFormula={!!cfg} />} />
 

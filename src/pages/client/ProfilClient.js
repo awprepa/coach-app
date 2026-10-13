@@ -643,9 +643,9 @@ const S = {
     borderLeft: '4px solid var(--accent-stripe)',
   },
   backBtn: {
-    background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)',
-    fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer',
-    padding: 0, marginBottom: 8, display: 'block',
+    background: 'none', border: 'none', color: 'rgba(255,255,255,0.85)',
+    fontSize: '0.88rem', fontWeight: '600', cursor: 'pointer',
+    minHeight: 44, padding: '0 12px 0 0', margin: '-8px 0 0', display: 'block',
   },
   headerTitle: {
     color: 'var(--accent-fg-dark)',
