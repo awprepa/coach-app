@@ -64,7 +64,7 @@ export async function ensureJoueurId(clientId, prenom, nom) {
 
 // Bouton compact "Signaler une blessure" + popup de déclaration détaillée.
 // Réutilisable depuis le profil, le wellness et le RPE post-entraînement.
-export default function BlessureButton({ clientId, prenom, nom, compact }) {
+export default function BlessureButton({ clientId, prenom, nom, compact, visible }) {
   const [joueurId, setJoueurId] = useState(null)
   const [activeEpisodeId, setActiveEpisodeId] = useState(null)
   const [statutActif, setStatutActif] = useState(false)
@@ -160,14 +160,25 @@ export default function BlessureButton({ clientId, prenom, nom, compact }) {
 
   return (
     <>
-      <button onClick={() => setPopup(true)} style={{
+      <button onClick={() => setPopup(true)} style={visible ? {
+        // Variante des questionnaires (wellness, RPE) : visible sans voler la
+        // vedette au bouton de validation.
+        display: 'flex', alignItems: 'center', gap: 7,
+        borderRadius: 999, cursor: 'pointer',
+        padding: '9px 16px', fontSize: '0.82rem', fontWeight: 800,
+        background: statutActif ? '#fee2e2' : '#fff',
+        border: `1.5px solid ${statutActif ? '#fca5a5' : '#f1c4c4'}`,
+        color: '#b42318',
+      } : {
         display: 'flex', alignItems: 'center', gap: 5,
         border: 'none', borderRadius: 999, cursor: 'pointer',
         padding: compact ? '5px 11px' : '7px 13px', fontSize: compact ? '0.7rem' : '0.76rem', fontWeight: 800,
         background: statutActif ? '#fee2e2' : '#f3f4f6',
         color: statutActif ? '#dc2626' : '#6b7280',
       }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: statutActif ? '#dc2626' : '#16a34a', flexShrink: 0 }} />
+        {visible
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>
+          : <span style={{ width: 7, height: 7, borderRadius: '50%', background: statutActif ? '#dc2626' : '#16a34a', flexShrink: 0 }} />}
         {statutActif ? (retourLabel || 'Blessé') : 'Signaler une blessure'}
       </button>
 

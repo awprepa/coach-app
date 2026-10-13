@@ -98,7 +98,7 @@ function WellnessOverlay({ clientId, clientName, onDone }) {
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 1rem' }}>
-          <BlessureButton clientId={clientId} compact />
+          <BlessureButton clientId={clientId} compact visible />
         </div>
 
         <button onClick={submit} disabled={!allFilled || saving}

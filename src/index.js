@@ -16,3 +16,11 @@ root.render(
 register();
 reportWebVitals();
 installerAccessibilite();
+
+// iPhone : à la fermeture du clavier, les éléments fixes (barre du bas) peuvent
+// rester décalés jusqu'au prochain défilement. On force un recalcul.
+document.addEventListener('focusout', e => {
+  if (e.target instanceof HTMLElement && e.target.matches('input, textarea, select')) {
+    setTimeout(() => window.scrollTo(window.scrollX, window.scrollY), 60)
+  }
+});

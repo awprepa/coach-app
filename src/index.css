@@ -78,3 +78,8 @@ input[type=number] {
     inset: -8px;
   }
 }
+
+/* iPhone : pas de zoom au double appui (deux appuis rapides sur « Valider »
+   zoomaient la page, et la barre du bas, fixe, se retrouvait au milieu de
+   l'écran et suivait le défilement). Le zoom à deux doigts reste possible. */
+html { touch-action: manipulation; }
