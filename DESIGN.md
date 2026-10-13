@@ -1,36 +1,42 @@
 ---
 name: AWprepa
-description: Application de préparation physique et de coaching (coach desktop, athlètes mobile). Direction « Ligne de touche », validée le 13/10/2026.
+description: Application de préparation physique et de coaching (coach desktop, athlètes mobile). Thème d'origine, conservé par Arthur le 13/10/2026.
 colors:
-  signal: "#e4f816"
-  signal-ink: "#5c6300"
-  ink: "#141414"
-  anthracite: "#1c1d1f"
-  text-muted: "#55595f"
-  page: "#f4f4f1"
-  card: "#ffffff"
-  soft: "#efefeb"
-  line: "#e3e3de"
-  success: "#13753a"
-  danger: "#b42318"
-  warning: "#a15c00"
+  accent-signal: "#e4f816"
+  accent-signal-ink: "#727a0b"
+  anthracite: "#333333"
+  ink-black: "#1a1a1a"
+  ink-deep: "#1f2937"
+  text-strong: "#374151"
+  text-muted: "#6b7280"
+  text-faint: "#9ca3af"
+  line: "#e5e7eb"
+  surface-soft: "#f3f4f6"
+  surface-page: "#f5f5f5"
+  surface-card: "#ffffff"
+  success: "#16a34a"
+  danger: "#dc2626"
+  warning: "#f59e0b"
 typography:
-  display:
-    fontFamily: "Archivo Narrow, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontWeight: 700
-    lineHeight: 1.15
-    letterSpacing: "-0.01em"
+  title:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+    fontSize: "1.1rem"
+    fontWeight: 800
+    lineHeight: 1.2
   body:
-    fontFamily: "Public Sans, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "15px"
-    fontWeight: 400
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+    fontSize: "0.85rem"
+    fontWeight: 600
     lineHeight: 1.5
   label:
-    fontFamily: "Public Sans, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "13px"
-    fontWeight: 600
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+    fontSize: "0.7rem"
+    fontWeight: 700
+    letterSpacing: "0.08em"
 rounded:
-  control: "10px"
+  sm: "8px"
+  md: "10px"
+  lg: "12px"
   card: "16px"
   pill: "999px"
 spacing:
@@ -41,131 +47,108 @@ spacing:
   xl: "24px"
 components:
   button-primary:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.signal}"
-    rounded: "{rounded.control}"
-    height: "52px"
+    backgroundColor: "{colors.anthracite}"
+    textColor: "{colors.accent-signal}"
+    rounded: "{rounded.md}"
+    padding: "10px 18px"
   button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    border: "1.5px solid {colors.line}"
-    rounded: "{rounded.control}"
-    height: "44px"
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.text-strong}"
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
   chip-active:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.signal}"
-    rounded: "{rounded.control}"
+    backgroundColor: "{colors.anthracite}"
+    textColor: "{colors.accent-signal}"
+    rounded: "{rounded.pill}"
+    padding: "4px 12px"
   card:
-    backgroundColor: "{colors.card}"
+    backgroundColor: "{colors.surface-card}"
     rounded: "{rounded.card}"
-    padding: "16px"
-    shadow: "0 1px 2px rgb(20 20 20 / .07)"
+    padding: "24px"
   input:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
-    border: "1.5px solid {colors.line}"
-    rounded: "{rounded.control}"
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink-black}"
+    rounded: "{rounded.md}"
+    padding: "10px 12px"
 ---
 
 # Design System: AWprepa
 
 ## Overview
 
-**Creative North Star : « Ligne de touche »**
+**Creative North Star : « Le marquage de terrain »**
 
-L'affinage direct de l'identité historique : même monde (anthracite et jaune signal), enfin discipliné. Le ton est calme, précis et professionnel, celui d'un staff sûr de lui. Côté joueur, l'écran est pensé pour le pouce et la lecture rapide en salle ; côté coach, il est clair et dense pour analyser longtemps.
+AWprepa est un outil de travail : un coach pilote ses groupes et ses clients depuis un ordinateur, des joueurs de rugby saisissent leurs charges et leur ressenti sur leur téléphone. Le système visuel s'y tient : une base neutre et claire (fond gris très pâle, cartes blanches), de l'anthracite pour la structure, et une seule couleur vive, le jaune-vert fluo (#e4f816), utilisée comme un marquage de terrain : elle signale ce qui est actif, sélectionné ou prioritaire.
 
-Source de vérité dans le code : `src/theme/tokens.js` (jetons à trois couches : primitifs, sémantiques, composants), utilisés depuis les objets de styles inline des pages. Maquette de référence : `docs/refonte/maquettes/direction-A.html`.
+Côté coach, la densité est forte : beaucoup d'informations par écran, des libellés courts en petites majuscules espacées, des chiffres en gras. Côté athlète, l'écran est pensé pour le pouce : en-tête sombre en dégradé, barre d'onglets en bas, cartes empilées.
 
-**Caractéristiques clés :**
-- Une seule couleur de marque, le jaune signal, qui marque l'actif, le sélectionné et l'action principale.
-- Encre quasi noire pour la structure ; fond de page gris légèrement chaud, cartes blanches posées à plat.
-- Deux polices : Archivo Narrow pour les titres et les chiffres, Public Sans pour le texte.
-- Deux arrondis seulement : 10 px (contrôles) et 16 px (cartes).
-- Lisibilité d'abord : texte de 12 px minimum, contraste de 4,5:1 minimum, cibles tactiles de 44 px, information jamais portée par la seule couleur.
+**Décision du 13/10/2026.** Une nouvelle identité (« Ligne de touche » : Archivo Narrow + Public Sans, encre #141414) a été maquettée puis écartée par Arthur, qui préfère ce thème d'origine. On garde ce thème et on corrige les défauts écran par écran, sans restructurer les mises en page qui fonctionnent. Les jetons `src/theme/tokens.js` reprennent les valeurs de ce thème pour les écrans nouveaux ou refaits (messagerie, nutrition).
+
+**Key Characteristics:**
+- Une seule couleur vive, le jaune-vert fluo, réservée à l'état actif et aux actions principales.
+- Anthracite et noir pour la structure : en-têtes, boutons principaux, puces actives.
+- Cartes blanches arrondies sur fond gris pâle, ombre à peine perceptible.
+- Typographie système (San Francisco sur iPhone), graisses appuyées (700 à 900).
+- Pas d'emojis : icônes SVG au trait (`src/components/Icon.js`) ou pastilles de couleur.
 
 ## Colors
 
-### Marque
-- **Jaune signal** (`#e4f816`) : texte des boutons principaux noirs, jour ou onglet sélectionné, barres de progression sur fond sombre. Sur fond clair, il marque par un fond, un trait ou un surlignage, jamais comme couleur de texte (1,15:1). Le texte posé dessus est l'encre (15,6:1).
-- **Jaune lisible** (`#5c6300`, 6,5:1 sur blanc) : rare texte d'accent sur fond clair.
+### Primary
+- **Jaune signal** (accent-signal) : texte des boutons principaux anthracite, puce active, onglet actif. Jamais en texte sur fond blanc (illisible) ni en grand fond décoratif.
+- **Jaune signal lisible** (accent-signal-ink) : version assombrie pour du texte sur fond clair.
 
-### Neutres
-- **Encre** (`#141414`) : texte principal, bouton principal, puce et onglet actifs.
-- **Anthracite** (`#1c1d1f`) : en-tête athlète, cartes sombres (niveau de compte).
-- **Texte secondaire** (`#55595f`, 7:1 sur blanc) : toute information de second rang. Aucun gris plus clair pour du texte.
-- **Page** (`#f4f4f1`), **Carte** (`#ffffff`), **Fond doux** (`#efefeb`), **Filet** (`#e3e3de`).
+### Neutral
+- **Anthracite** (#333333) : boutons forts, puces actives, titres.
+- **Noir encre** (#1a1a1a) et **ardoise** (#1f2937) : en-tête athlète en dégradé.
+- **Texte secondaire** (#6b7280) : toute information de second rang ; aucun gris plus clair pour du texte.
+- **Filet** (#e5e7eb), **fond doux** (#f3f4f6), **fond de page** (#f5f5f5), **carte** (blanc).
 
-### États
-Réussite `#13753a`, alerte `#b42318`, vigilance `#a15c00` sur fond clair (tous au-dessus de 5:1). Sur fond sombre : `#4ade80`, `#f87171`, `#fbbf24`. Toujours doublés d'un symbole, d'un chiffre ou d'un mot (flèche, « bas », pictogramme).
+### Tertiary
+Vert réussite, rouge alerte, orange vigilance : états uniquement, toujours doublés d'un symbole ou d'un mot.
 
 ### Named Rules
-**La règle du marquage unique.** Le jaune signal est la seule couleur de marque. Il ne sert jamais de fond décoratif large.
+**La règle du marquage unique.** Le jaune signal marque l'actif, le sélectionné ou l'action principale, jamais une surface décorative.
 
-**La règle des couleurs de club.** Les variables CSS `--header-bg`, `--accent`, `--chip-bg`… restent surchargées par `ClientThemeContext` pour les joueurs d'un club. Les composants qui les utilisaient continuent de les utiliser ; les jetons neutres ne les remplacent pas.
-
-**La règle des rangs.** Les couleurs de rang de la Progression (Fer, Bronze, Argent, Or, Platine, Diamant, Champion) sont un univers de jeu assumé et restent telles quelles. Elles ne servent nulle part ailleurs.
+**La règle des couleurs de club.** Les variables CSS `--header-bg`, `--accent`, `--chip-bg`… sont surchargées par `ClientThemeContext` pour les joueurs d'un club : ne pas les remplacer par des valeurs en dur.
 
 ## Typography
 
-**Titres et chiffres :** Archivo Narrow (700), chiffres tabulaires.
-**Texte :** Public Sans (400 et 600).
-Chargées depuis Google Fonts dans `public/index.html`, avec la police système en repli.
-
-### Hiérarchie
-- Côté athlète : 12 / 14 / 16 / 20 / 28 / 40 px. Corps à 15–16 px.
-- Côté coach : 12 / 13 / 14 / 18 / 24 px.
-- Libellés de section : Public Sans 600, 13 px, texte secondaire, sans majuscules forcées.
-
-### Named Rules
-**La règle du chiffre héros.** Charges, scores et totaux sont en Archivo Narrow, plus gros que leur libellé, avec l'unité en plus petit et en texte secondaire.
+Police système uniquement, travaillée par la graisse plutôt que par la taille.
+- **Titre** (800, 1.1 à 1.75rem) : titres de page et de carte principale.
+- **Corps** (600, 0.82 à 0.95rem) : contenu des cartes, listes, tableaux.
+- **Libellé** (700, 0.7 à 0.75rem, majuscules espacées) : titres de section, en-têtes de colonnes.
+- **Chiffres clés** (800 à 900, chiffres tabulaires) : indicateurs, scores, charges.
 
 ## Layout
 
-Côté coach (ordinateur) : barre de navigation blanche en haut, libellés sur une seule ligne, contenu en grille de cartes. Côté athlète : en-tête anthracite avec la date et le prénom, une colonne de cartes espacées de 12 px, marges latérales de 16 px, barre d'onglets en bas avec la zone de sécurité de l'iPhone.
-
-Espacements : 4, 8, 12, 16, 24 px.
+Coach (ordinateur) : barre de navigation horizontale en haut, contenu en colonnes de cartes. Athlète (téléphone) : en-tête sombre, une colonne de cartes, barre d'onglets en bas avec la zone de sécurité de l'iPhone. Espacements 4, 8, 12, 16, 24 px.
 
 ## Elevation & Depth
 
-À plat. Ombre de carte `0 1px 2px rgb(20 20 20 / .07)` ; les sous-blocs sont séparés par un filet. Une ombre franche est réservée à ce qui flotte (menu, modale).
-
-La Progression utilise un verre dépoli clair (approximation web de « liquid glass ») : cartes blanches translucides, `backdrop-filter: blur`, reflet interne en haut, sur le fond de page avec un léger halo jaune. Repli opaque si `prefers-reduced-transparency`.
+Presque plat : ombre de carte `0 1px 3px rgba(0,0,0,0.06)`. Ombre franche réservée à ce qui flotte (menu, modale).
 
 ## Shapes
 
-10 px pour les boutons, champs, puces et jours ; 16 px pour les cartes ; gélule (999 px) pour les badges ; cercle pour les avatars. Rien d'autre.
+10 px pour boutons et champs, 12 à 16 px pour les cartes, gélule pour badges et puces, cercle pour les avatars.
 
 ## Components
 
-### Boutons
-- **Principal :** fond encre, texte jaune signal, Public Sans 700 16 px, 52 px de haut côté athlète (44 px minimum côté coach).
-- **Secondaire :** transparent, bordure filet 1,5 px, texte encre, 44 à 48 px.
-- **Danger :** texte alerte, fond blanc ou rouge très pâle, jamais en évidence.
-
-### Puces et jours
-Inactifs en fond doux avec texte secondaire ; actifs en encre avec texte jaune.
-
-### Cartes
-Blanches, 16 px d'arrondi, 16 px de marge interne, libellé de section en haut.
-
-### Navigation
-- **Athlète :** barre blanche en bas, icônes au trait, libellés de 12 px ; l'onglet actif a son icône pleine posée sur une gélule jaune et son libellé en encre.
-- **Coach :** barre blanche en haut ; lien actif en encre avec texte jaune.
-
-### En-tête athlète
-Anthracite (ou couleurs du club), date en petit au-dessus de « Bonjour Prénom », cloche et avatar en boutons de 44 px.
+- **Bouton principal** : fond anthracite, texte jaune signal, graisse 700 à 800.
+- **Bouton secondaire** : fond blanc ou gris doux, bordure filet, texte foncé.
+- **Puces** : inactives blanches à bordure filet, actives anthracite à texte jaune.
+- **Cartes** : blanches, arrondi 14 à 16 px, ombre de carte.
+- **Champs** : fond blanc, bordure filet 1,5 px, arrondi 10 px ; 16 px de texte sur téléphone (pas de zoom iPhone).
+- **Navigation athlète** : barre d'onglets en bas, onglet actif marqué en jaune.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** prendre couleurs, tailles, arrondis et ombres dans `src/theme/tokens.js`.
+- **Do** réutiliser les styles existants de l'écran (objets `S` / `styles`) et les jetons `src/theme/tokens.js`.
+- **Do** garder 44 px minimum pour ce qui se touche au doigt.
 - **Do** doubler toute couleur d'état d'un symbole ou d'un mot.
-- **Do** garder 44 px minimum pour tout ce qui se touche.
 
 ### Don't:
 - **Don't** utiliser d'emojis.
+- **Don't** introduire une nouvelle police, un nouveau gris ou un nouvel arrondi.
+- **Don't** restructurer un écran qui fonctionne : corriger ses défauts.
 - **Don't** écrire du texte en jaune signal sur fond clair.
-- **Don't** créer un nouveau gris, une nouvelle taille ou un nouvel arrondi hors jetons.
-- **Don't** poser une bordure colorée épaisse sur un seul côté d'une carte, ni de dégradé décoratif.
-- **Don't** modifier la logique, les requêtes Supabase ou les RLS pendant la refonte : uniquement l'interface.

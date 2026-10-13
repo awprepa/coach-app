@@ -20,7 +20,6 @@ import { CURRENT_CONDITIONS_VERSION } from './Conditions'
 import { loadClientAllSets, loadClientBodyweight } from '../data/exerciseHistory'
 import { computeExerciseXp, levelFromXp } from '../data/xpSystem'
 import { isoLocal } from '../utils/dates'
-import T from '../theme/tokens'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -607,21 +606,21 @@ export default function AccueilClient() {
 }
 
 const styles = {
-  page:        { minHeight: '100vh', background: 'var(--accent-muted)', fontFamily: T.font.body, color: T.color.ink, paddingBottom: 110 },
-  centered:    { minHeight: '100vh', background: T.color.page, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font.body },
+  page:        { minHeight: '100vh', background: 'var(--accent-muted)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 110 },
+  centered:    { minHeight: '100vh', background: '#efefef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:      { background: 'var(--header-bg)', height: 70, padding: '0 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 40 },
   logo:        { color: 'white', fontWeight: '800', fontSize: '1.25rem', letterSpacing: '-0.5px' },
   avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'var(--header-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
   content:     { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
-  label:       { color: T.color.muted, fontSize: '0.875rem', margin: '0 0 0.2rem' },
-  title:       { fontFamily: T.font.display, fontSize: '2rem', fontWeight: 700, lineHeight: 1.1, color: T.color.ink, margin: 0 },
-  subtitle:    { color: T.color.muted, fontSize: '0.875rem', marginTop: '0.4rem' },
+  label:       { color: '#888', fontSize: '0.875rem', margin: '0 0 0.2rem' },
+  title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
+  subtitle:    { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.4rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
-  sectionTitle:  { ...T.label },
+  sectionTitle:  { fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-fg)', textTransform: 'uppercase', letterSpacing: '0.08em', borderLeft: '3px solid var(--accent-stripe)', paddingLeft: '0.5rem' },
   sectionCount:  { color: '#6b7280', fontSize: '0.8rem' },
   emptyCard:   { background: 'white', borderRadius: 16, padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   card:        { background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle:   { fontWeight: 600, fontSize: T.size.lg, color: T.color.ink, margin: '0 0 0.2rem' },
+  cardTitle:   { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.2rem' },
   cardSub:     { color: '#6b7280', fontSize: '0.8rem', margin: 0 },
   chevron:     { color: '#9ca3af', fontSize: '1.5rem', lineHeight: 1 },
   logoutBtn:   { marginTop: '2.5rem', width: '100%', padding: '0.875rem', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 12, color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer' },
@@ -631,7 +630,7 @@ const styles = {
   modalCard:   { background: 'white', borderRadius: '20px 20px 0 0', padding: '1.75rem 1.5rem', width: '100%', maxWidth: 480, textAlign: 'center' },
   nextCard:    { background: 'var(--header-bg)', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', border: '1.5px solid var(--accent-stripe)' },
   nextLabel:   { fontSize: '0.7rem', fontWeight: '700', color: 'var(--header-text)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' },
-  nextTitle:   { fontFamily: T.font.display, fontSize: T.size.xl, fontWeight: 700, color: 'var(--accent-fg-dark)', margin: '0 0 0.2rem' },
+  nextTitle:   { fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-fg-dark)', margin: '0 0 0.2rem' },
   nextDate:    { fontSize: '0.82rem', color: 'var(--header-text)', opacity: 0.7, margin: 0 },
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },

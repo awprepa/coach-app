@@ -24,9 +24,8 @@ App PWA mobile-first pour Arthur (préparateur physique unique). Site coach + ap
 ## Conventions de code
 
 - **Styles inline** dans un objet `S` ou `styles` en bas de chaque page (pas de CSS modules ni Tailwind)
-- **Identité visuelle : direction « Ligne de touche »** (voir `DESIGN.md`). Jetons dans `src/theme/tokens.js` : importer `T` et l'utiliser dans les objets de styles inline (couleurs, polices, tailles, arrondis, ombres) au lieu de valeurs en dur
-- Couleurs : encre `#141414`, page `#f4f4f1`, cartes blanches, texte secondaire `#55595f`, jaune signal `#e4f816` (jamais en texte sur fond clair). Polices : Archivo Narrow (titres, chiffres) + Public Sans (texte). Arrondis 10 (contrôles) / 16 (cartes)
-- Header client : `var(--header-bg)` (anthracite par défaut, couleurs du club si le joueur a un groupe) — ne pas remplacer ces variables CSS
+- **Thème visuel d'origine conservé** (Arthur a écarté la nouvelle identité le 13/10/2026) : police système, `#333333` / `#1a1a1a`, jaune `#e4f816`, texte secondaire `#6b7280`, fond `#f5f5f5`, cartes blanches. Voir `DESIGN.md`. Jetons dans `src/theme/tokens.js` (mêmes valeurs) pour les nouveaux écrans
+- Header client : `var(--header-bg)` (gradient `#333333` → `#1f2937` par défaut, couleurs du club si le joueur a un groupe) — ne pas remplacer ces variables CSS
 - UI mobile-first côté client, desktop côté coach, libellés FR, pas d'emojis (icônes SVG au trait ou pastilles), texte ≥ 12 px, cibles tactiles ≥ 44 px
 - Pattern d'auth : `supabase.auth.getSession()` → lookup `clients` via `user_id` (fallback par email si user_id vide)
 - ClientBottomNav rendu en bas de chaque page client
@@ -96,7 +95,7 @@ Ajout d'un onglet Nutrition côté client : log repas, photo IA, scan code-barre
 
 ## Outils de design (plugins/skills installés)
 
-- **Par défaut** : cohérence stricte avec `DESIGN.md` et les jetons `src/theme/tokens.js`. `frontend-design` s'applique automatiquement.
+- **Par défaut** : cohérence stricte avec les styles existants (`DESIGN.md`, objets `S`/`styles`, `#333333` / `#e4f816`). Sur un écran existant : corriger les défauts sans restructurer. `frontend-design` s'applique automatiquement.
 - **Retouche d'un écran existant** : `/impeccable audit`, `/impeccable polish`, `/impeccable critique` — corrigent sans changer de direction visuelle.
 - **Nouveau design demandé explicitement par Arthur** : `taste-skill`, `redesign-skill`, `ui-ux-pro-max`. Toujours proposer une maquette et attendre validation avant de l'appliquer à l'app.
 - **Doc à jour** des bibliothèques (React, Supabase, Recharts…) : MCP `context7`.

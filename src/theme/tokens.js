@@ -1,4 +1,4 @@
-// Jetons de design AWprepa, direction « Ligne de touche » (voir DESIGN.md).
+// Jetons de design AWprepa : thème d'origine de l'app (voir DESIGN.md).
 // Trois couches : primitifs (valeurs brutes) → sémantiques (rôle) → composants.
 // S'utilisent dans les objets de styles inline : `import T from '../theme/tokens'`.
 // Les couleurs de club (--header-bg, --accent, --chip-bg…) restent des variables
@@ -7,17 +7,17 @@
 // ── 1. Primitifs ─────────────────────────────────────────────────────────────
 const P = {
   yellow500: '#e4f816',
-  yellow900: '#5c6300',
-  black:     '#141414',
-  gray950:   '#1c1d1f',
-  gray600:   '#55595f',
-  gray100:   '#efefeb',
-  gray150:   '#e3e3de',
-  gray50:    '#f4f4f1',
+  yellow900: '#727a0b',
+  black:     '#333333',
+  gray950:   '#1a1a1a',
+  gray600:   '#6b7280',
+  gray100:   '#f3f4f6',
+  gray150:   '#e5e7eb',
+  gray50:    '#f5f5f5',
   white:     '#ffffff',
-  green700:  '#13753a',
-  red700:    '#b42318',
-  amber700:  '#a15c00',
+  green700:  '#16a34a',
+  red700:    '#dc2626',
+  amber700:  '#d97706',
 }
 
 // ── 2. Sémantiques ───────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ const color = {
   signalInk:  P.yellow900,   // rare texte d'accent sur fond clair
   ink:        P.black,       // texte principal, bouton principal
   anthracite: P.gray950,     // surfaces sombres
-  muted:      P.gray600,     // texte secondaire (7:1 sur blanc)
+  muted:      P.gray600,     // texte secondaire
   page:       P.gray50,
   card:       P.white,
   soft:       P.gray100,
@@ -34,16 +34,16 @@ const color = {
   success:    P.green700,
   danger:     P.red700,
   warning:    P.amber700,
-  onDark:      '#f4f4f1',
-  onDarkMuted: '#b5b8bd',
+  onDark:      '#ffffff',
+  onDarkMuted: 'rgba(255,255,255,0.6)',
   // Couleurs de club (surchargées par ClientThemeContext)
   headerBg:   'var(--header-bg)',
   headerText: 'var(--header-text)',
 }
 
 const font = {
-  display: '"Archivo Narrow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  body:    '"Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  display: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  body:    '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 }
 
 // Tailles en px : athlète 12/14/16/20/28/40, coach 12/13/14/18/24
@@ -52,8 +52,8 @@ const size = { xs: 12, sm: 13, md: 14, base: 15, lg: 16, xl: 20, xxl: 24, h1: 28
 const radius = { control: 10, card: 16, pill: 999 }
 const space  = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 }
 const shadow = {
-  card:  '0 1px 2px rgb(20 20 20 / .07)',
-  float: '0 10px 30px rgb(20 20 20 / .14)',
+  card:  '0 1px 3px rgba(0,0,0,0.06)',
+  float: '0 10px 30px rgba(0,0,0,0.14)',
 }
 const touch = 44
 
