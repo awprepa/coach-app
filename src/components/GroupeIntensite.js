@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import {
-  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceArea,
+  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 
 // Couleur d'une note 0-10 (vert → rouge)
@@ -14,17 +14,10 @@ function noteColor(n) {
   return '#ef4444'
 }
 
-// Zones d'effort (échelle CR-10) affichées en fond du graphique
-const ZONES = [
-  { y1: 0, y2: 3,  label: 'Facile',         fill: '#f8fafc' },
-  { y1: 3, y2: 5,  label: 'Modéré',         fill: '#f1f5f9' },
-  { y1: 5, y2: 7,  label: 'Difficile',      fill: '#e9edf2' },
-  { y1: 7, y2: 10, label: 'Très difficile', fill: '#e0e5eb' },
-]
 const COUL_MATCH = '#2563eb'
 const TENDANCE_N = 4 // moyenne glissante sur les 4 dernières séances
 
-function InfoBulle({ active, payload, mode }) {
+function InfoBulle({ active, payload, mode, dims = [] }) {
   if (!active || !payload?.length) return null
   const p = payload[0].payload
   const date = new Date(p.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -37,7 +30,7 @@ function InfoBulle({ active, payload, mode }) {
           <p style={{ margin: 0, color: '#374151' }}>Intensité <strong style={{ color: '#1a1a1a' }}>{p.moyenne}/10</strong></p>
           {p.tendance != null && <p style={{ margin: '0.1rem 0 0', color: '#6b7280' }}>Tendance {p.tendance}/10</p>}
         </>
-      ) : DIM_META.map(d => (
+      ) : DIM_META.filter(d => dims.includes(d.key)).map(d => (
         <p key={d.key} style={{ margin: '0.1rem 0 0', color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 8, height: 2, background: d.col, display: 'inline-block' }} />{d.label} <strong style={{ color: '#1a1a1a' }}>{p[d.key] ?? '–'}</strong>
         </p>
@@ -57,6 +50,8 @@ const DIM_META = [
 export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
   const [sessions, setSessions] = useState([])   // [{ evId, date, titre, moyenne, cardio, jambes, contact, notes:[] }]
   const [mode, setMode]         = useState('moyenne') // 'moyenne' | 'separe'
+  const [dims, setDims]         = useState(['cardio', 'jambes', 'contact']) // dimensions affichées en mode 3 dimensions
+  const [tendanceOn, setTendanceOn] = useState(true)
   const [selected, setSelected] = useState(null) // evId
   const [membres, setMembres]   = useState([])   // pour savoir qui n'a pas répondu
   const [loading, setLoading]   = useState(true)
@@ -114,9 +109,13 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         .filter(Boolean)
 
       // Tendance : moyenne des TENDANCE_N dernières séances notées
+      const glissante = (i, cle) => {
+        const fen = rows.slice(Math.max(0, i - TENDANCE_N + 1), i + 1).map(x => x[cle]).filter(v => v != null)
+        return fen.length >= 2 ? Math.round((fen.reduce((a, b) => a + b, 0) / fen.length) * 10) / 10 : null
+      }
       rows.forEach((r, i) => {
-        const fen = rows.slice(Math.max(0, i - TENDANCE_N + 1), i + 1).map(x => x.moyenne).filter(v => v != null)
-        r.tendance = fen.length >= 2 ? Math.round((fen.reduce((a, b) => a + b, 0) / fen.length) * 10) / 10 : null
+        r.tendance = glissante(i, 'moyenne')
+        DIM_META.forEach(d => { r[`tendance_${d.key}`] = glissante(i, d.key) })
       })
       setSessions(rows)
       setLoading(false)
@@ -140,7 +139,7 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
   return (
     <div style={{ background: 'white', borderRadius: 14, padding: '1rem', border: '1px solid #f3f4f6' }}>
       {/* Bascule moyenne / séparé */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         {[{ k: 'moyenne', l: 'Moyenne' }, { k: 'separe', l: '3 dimensions' }].map(t => (
           <button key={t.k} onClick={() => setMode(t.k)}
             style={{
@@ -152,24 +151,45 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
             {t.l}
           </button>
         ))}
+        <button onClick={() => setTendanceOn(v => !v)} aria-pressed={tendanceOn}
+          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            border: '1.5px solid #e5e7eb', background: 'white', color: tendanceOn ? '#1a1a1a' : '#6b7280' }}>
+          <span style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${tendanceOn ? '#333333' : '#cbd5e1'}`, background: tendanceOn ? '#333333' : 'white', display: 'grid', placeItems: 'center' }}>
+            {tendanceOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}
+          </span>
+          Tendance
+        </button>
       </div>
+      {mode === 'separe' && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+          {DIM_META.map(d => {
+            const on = dims.includes(d.key)
+            return (
+              <button key={d.key} aria-pressed={on}
+                onClick={() => setDims(prev => on ? (prev.length > 1 ? prev.filter(k => k !== d.key) : prev) : [...prev, d.key])}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1.5px solid ${on ? d.col : '#e5e7eb'}`, background: on ? d.col + '14' : 'white', color: on ? '#1a1a1a' : '#6b7280' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: on ? d.col : '#cbd5e1' }} />{d.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <ResponsiveContainer width="100%" height={220}>
         <ComposedChart data={sessions} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}
           onClick={e => { const p = e?.activePayload?.[0]?.payload; if (p) setSelected(p.evId) }}>
-          {ZONES.map(z => (
-            <ReferenceArea key={z.label} y1={z.y1} y2={z.y2} fill={z.fill} fillOpacity={1} stroke="none" ifOverflow="hidden"
-              label={{ value: z.label, position: 'insideTopRight', fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
-          ))}
-          <CartesianGrid vertical={false} stroke="#ffffff" strokeWidth={1} />
+          <CartesianGrid vertical={false} stroke="#eef0f3" />
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false}
             axisLine={{ stroke: '#e5e7eb' }} minTickGap={24} />
-          <YAxis domain={[0, 10]} ticks={[0, 3, 5, 7, 10]} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} width={40} />
-          <Tooltip content={<InfoBulle mode={mode} />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }} />
+          <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} width={40} />
+          <Tooltip content={<InfoBulle mode={mode} dims={dims} />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }} />
           {mode === 'moyenne' ? (
             <>
-              <Line type="monotone" dataKey="tendance" name="Tendance" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 4"
-                dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+              {tendanceOn && (
+                <Line type="monotone" dataKey="tendance" name="Tendance" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 4"
+                  dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+              )}
               <Line type="linear" dataKey="moyenne" name="Intensité" stroke="#333333" strokeWidth={1.75} isAnimationActive={false}
                 dot={props => {
                   const { cx, cy, payload, index } = props
@@ -183,10 +203,14 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
                 activeDot={{ r: 4.5, fill: '#333333', stroke: 'white', strokeWidth: 1.5 }} />
             </>
           ) : (
-            DIM_META.map(d => (
+            DIM_META.filter(d => dims.includes(d.key)).flatMap(d => [
               <Line key={d.key} type="linear" dataKey={d.key} name={d.label} stroke={d.col} strokeWidth={1.75}
-                dot={{ r: 2, fill: d.col, strokeWidth: 0 }} activeDot={{ r: 4 }} isAnimationActive={false} />
-            ))
+                dot={{ r: 2, fill: d.col, strokeWidth: 0 }} activeDot={{ r: 4 }} isAnimationActive={false} />,
+              tendanceOn && (
+                <Line key={`t-${d.key}`} type="monotone" dataKey={`tendance_${d.key}`} name={`Tendance ${d.label}`} stroke={d.col}
+                  strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+              ),
+            ].filter(Boolean))
           )}
         </ComposedChart>
       </ResponsiveContainer>
@@ -197,11 +221,16 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
           <>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#333333' }} />Entraînement</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: '50%', border: `2px solid ${COUL_MATCH}`, boxSizing: 'border-box' }} />Match</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, borderTop: '2px dashed #94a3b8' }} />Tendance ({TENDANCE_N} séances)</span>
+            {tendanceOn && <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, borderTop: '2px dashed #94a3b8' }} />Tendance ({TENDANCE_N} séances)</span>}
           </>
-        ) : DIM_META.map(d => (
-          <span key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 2, background: d.col }} />{d.label}</span>
-        ))}
+        ) : (
+          <>
+            {DIM_META.filter(d => dims.includes(d.key)).map(d => (
+              <span key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 2, background: d.col }} />{d.label}</span>
+            ))}
+            {tendanceOn && <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, borderTop: '2px dashed #94a3b8' }} />Tendance ({TENDANCE_N} séances)</span>}
+          </>
+        )}
         <span style={{ marginLeft: 'auto' }}>Effort ressenti sur 10</span>
       </div>
 
