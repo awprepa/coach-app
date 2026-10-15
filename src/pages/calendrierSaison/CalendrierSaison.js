@@ -237,13 +237,18 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
 
   // ── Index par jour (recalculés seulement quand les données changent) ───────
   const evByDay = useMemo(() => {
+    // Un jour de match FFR, la carte FFR recouvre la case : son événement « match »
+    // (créé automatiquement pour le RPE) n'y est pas ajouté, sinon son texte
+    // élargit la colonne du mois et la saison ne tient plus à l'écran.
+    const joursFFR = new Set(matchsFFR.map(m => m.date_match).filter(Boolean))
     const out = {}
     for (const e of evenements) {
+      if (e.type === 'match' && joursFFR.has(e.date)) continue
       const [Y, M, D] = e.date.split('-').map(Number)
       ;(out[ymd(Y, M - 1, D)] ||= []).push(e)
     }
     return out
-  }, [evenements])
+  }, [evenements, matchsFFR])
   const matchsList = useMemo(() => evenements.filter(e => e.type === 'match'), [evenements])
   const nbEntrainements = useMemo(() => evenements.filter(e => e.type === 'entrainement').length, [evenements])
   // Matchs du groupe + matchs FFR synchronisés (un seul par date si les deux existent)

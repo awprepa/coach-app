@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceArea,
 } from 'recharts'
 
 // Couleur d'une note 0-10 (vert → rouge)
@@ -12,6 +12,38 @@ function noteColor(n) {
   if (n <= 6) return '#eab308'
   if (n <= 8) return '#f97316'
   return '#ef4444'
+}
+
+// Zones d'effort (échelle CR-10) affichées en fond du graphique
+const ZONES = [
+  { y1: 0, y2: 3,  label: 'Facile',         fill: '#f8fafc' },
+  { y1: 3, y2: 5,  label: 'Modéré',         fill: '#f1f5f9' },
+  { y1: 5, y2: 7,  label: 'Difficile',      fill: '#e9edf2' },
+  { y1: 7, y2: 10, label: 'Très difficile', fill: '#e0e5eb' },
+]
+const COUL_MATCH = '#2563eb'
+const TENDANCE_N = 4 // moyenne glissante sur les 4 dernières séances
+
+function InfoBulle({ active, payload, mode }) {
+  if (!active || !payload?.length) return null
+  const p = payload[0].payload
+  const date = new Date(p.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+  return (
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.55rem 0.7rem', boxShadow: '0 6px 20px rgba(0,0,0,0.08)', fontSize: '0.76rem', minWidth: 150 }}>
+      <p style={{ margin: 0, fontWeight: 800, color: '#1a1a1a' }}>{p.titre}</p>
+      <p style={{ margin: '0.1rem 0 0.4rem', color: '#6b7280' }}>{date} · {p.nbNotes} note{p.nbNotes > 1 ? 's' : ''}</p>
+      {mode === 'moyenne' ? (
+        <>
+          <p style={{ margin: 0, color: '#374151' }}>Intensité <strong style={{ color: '#1a1a1a' }}>{p.moyenne}/10</strong></p>
+          {p.tendance != null && <p style={{ margin: '0.1rem 0 0', color: '#6b7280' }}>Tendance {p.tendance}/10</p>}
+        </>
+      ) : DIM_META.map(d => (
+        <p key={d.key} style={{ margin: '0.1rem 0 0', color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 2, background: d.col, display: 'inline-block' }} />{d.label} <strong style={{ color: '#1a1a1a' }}>{p[d.key] ?? '–'}</strong>
+        </p>
+      ))}
+    </div>
+  )
 }
 
 const DIM_META = [
@@ -74,13 +106,18 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
           const moyenne = avg(perPlayer.filter(v => v != null))
           const r1 = x => x == null ? null : Math.round(x * 10) / 10
           return {
-            evId: ev.id, date: ev.date, titre: ev.titre || (ev.type === 'match' ? (ev.adversaire ? `Match contre ${ev.adversaire}` : 'Match') : 'Entraînement'),
+            evId: ev.id, date: ev.date, type: ev.type, titre: ev.titre || (ev.type === 'match' ? (ev.adversaire ? `Match contre ${ev.adversaire}` : 'Match') : 'Entraînement'),
             moyenne: r1(moyenne), cardio: r1(cardio), jambes: r1(jambes), contact: r1(contact),
             nbNotes: presents.length, nbAbsents: ns.length - presents.length, notes: ns,
           }
         })
         .filter(Boolean)
 
+      // Tendance : moyenne des TENDANCE_N dernières séances notées
+      rows.forEach((r, i) => {
+        const fen = rows.slice(Math.max(0, i - TENDANCE_N + 1), i + 1).map(x => x.moyenne).filter(v => v != null)
+        r.tendance = fen.length >= 2 ? Math.round((fen.reduce((a, b) => a + b, 0) / fen.length) * 10) / 10 : null
+      })
       setSessions(rows)
       setLoading(false)
     }
@@ -107,38 +144,66 @@ export default function GroupeIntensite({ groupeId, accent = '#333333' }) {
         {[{ k: 'moyenne', l: 'Moyenne' }, { k: 'separe', l: '3 dimensions' }].map(t => (
           <button key={t.k} onClick={() => setMode(t.k)}
             style={{
-              padding: '5px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
-              border: `1.5px solid ${mode === t.k ? accent : '#e5e7eb'}`,
-              background: mode === t.k ? accent : 'white',
-              color: mode === t.k ? '#fff' : '#6b7280',
+              padding: '5px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+              border: `1.5px solid ${mode === t.k ? '#333333' : '#e5e7eb'}`,
+              background: mode === t.k ? '#333333' : 'white',
+              color: mode === t.k ? '#e4f816' : '#6b7280',
             }}>
             {t.l}
           </button>
         ))}
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={sessions} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}
+      <ResponsiveContainer width="100%" height={220}>
+        <ComposedChart data={sessions} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}
           onClick={e => { const p = e?.activePayload?.[0]?.payload; if (p) setSelected(p.evId) }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-          <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-          <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-          <Tooltip
-            labelFormatter={(_, payload) => payload?.[0]?.payload?.titre || ''}
-            formatter={(v, name) => [v, name]}
-            contentStyle={{ fontSize: '0.75rem', borderRadius: 8, border: '1px solid #e5e7eb' }}
-          />
+          {ZONES.map(z => (
+            <ReferenceArea key={z.label} y1={z.y1} y2={z.y2} fill={z.fill} fillOpacity={1} stroke="none" ifOverflow="hidden"
+              label={{ value: z.label, position: 'insideTopRight', fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
+          ))}
+          <CartesianGrid vertical={false} stroke="#ffffff" strokeWidth={1} />
+          <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false}
+            axisLine={{ stroke: '#e5e7eb' }} minTickGap={24} />
+          <YAxis domain={[0, 10]} ticks={[0, 3, 5, 7, 10]} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} width={40} />
+          <Tooltip content={<InfoBulle mode={mode} />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }} />
           {mode === 'moyenne' ? (
-            <Line type="linear" dataKey="moyenne" name="Intensité moy." stroke={accent} strokeWidth={2.5}
-              dot={{ r: 4, fill: accent }} activeDot={{ r: 6 }} />
+            <>
+              <Line type="monotone" dataKey="tendance" name="Tendance" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 4"
+                dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+              <Line type="linear" dataKey="moyenne" name="Intensité" stroke="#333333" strokeWidth={1.75} isAnimationActive={false}
+                dot={props => {
+                  const { cx, cy, payload, index } = props
+                  if (cx == null || cy == null) return <g key={index} />
+                  const sel = payload.evId === selected
+                  if (payload.type === 'match') {
+                    return <circle key={index} cx={cx} cy={cy} r={sel ? 5 : 3.5} fill="white" stroke={COUL_MATCH} strokeWidth={2} />
+                  }
+                  return <circle key={index} cx={cx} cy={cy} r={sel ? 4.5 : 2.5} fill={sel ? accent : '#333333'} stroke={sel ? 'white' : 'none'} strokeWidth={sel ? 1.5 : 0} />
+                }}
+                activeDot={{ r: 4.5, fill: '#333333', stroke: 'white', strokeWidth: 1.5 }} />
+            </>
           ) : (
             DIM_META.map(d => (
-              <Line key={d.key} type="linear" dataKey={d.key} name={d.label} stroke={d.col} strokeWidth={2}
-                dot={{ r: 3, fill: d.col }} activeDot={{ r: 5 }} />
+              <Line key={d.key} type="linear" dataKey={d.key} name={d.label} stroke={d.col} strokeWidth={1.75}
+                dot={{ r: 2, fill: d.col, strokeWidth: 0 }} activeDot={{ r: 4 }} isAnimationActive={false} />
             ))
           )}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
+
+      {/* Légende */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.9rem', margin: '0.35rem 0 0', fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
+        {mode === 'moyenne' ? (
+          <>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#333333' }} />Entraînement</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: '50%', border: `2px solid ${COUL_MATCH}`, boxSizing: 'border-box' }} />Match</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, borderTop: '2px dashed #94a3b8' }} />Tendance ({TENDANCE_N} séances)</span>
+          </>
+        ) : DIM_META.map(d => (
+          <span key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 2, background: d.col }} />{d.label}</span>
+        ))}
+        <span style={{ marginLeft: 'auto' }}>Effort ressenti sur 10</span>
+      </div>
 
       {/* Sélecteur d'entraînement — plus simple que viser un point du graphique */}
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '0.7rem 0 0.2rem', scrollbarWidth: 'none' }}>

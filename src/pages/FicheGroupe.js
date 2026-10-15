@@ -69,6 +69,7 @@ export default function FicheGroupe() {
   const [membres, setMembres]             = useState([])
   const [wellnessMap, setWellnessMap]     = useState({})  // { client_id: dernier wellness }
   const [wellnessDetail, setWellnessDetail] = useState(false) // détail des wellness du jour
+  const [manquantsOuverts, setManquantsOuverts] = useState(false) // liste « pas encore rempli » dépliée
   const [eventsCountMap, setEventsCountMap] = useState({}) // { client_id: nb événements cette semaine }
   const [programmes, setProgrammes]       = useState([])
   const [loading, setLoading]             = useState(true)
@@ -1423,12 +1424,18 @@ export default function FicheGroupe() {
           )}
           {wellnessManquants.length > 0 && (
             <>
-              <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pas encore rempli · {wellnessManquants.length}</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {wellnessManquants.map(m => (
-                  <span key={m.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', background: '#f3f4f6', borderRadius: 999, padding: '0.25rem 0.65rem' }}>{m.prenom} {m.nom}</span>
-                ))}
-              </div>
+              <button onClick={() => setManquantsOuverts(v => !v)} aria-expanded={manquantsOuverts}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minHeight: 40, padding: 0, margin: '0 0 0.5rem', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: manquantsOuverts ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><path d="M9 6l6 6-6 6" /></svg>
+                Pas encore rempli · {wellnessManquants.length}
+              </button>
+              {manquantsOuverts && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {wellnessManquants.map(m => (
+                    <span key={m.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', background: '#f3f4f6', borderRadius: 999, padding: '0.25rem 0.65rem' }}>{m.prenom} {m.nom}</span>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </Modal>

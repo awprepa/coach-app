@@ -61,6 +61,12 @@ input[type=number] {
   outline: 2px solid #1d4ed8 !important;
   outline-offset: 2px;
 }
+/* Sauf dans les zones de saisie : le curseur suffit, et le contour bleu
+   encadrait les champs sans bordure (recherche d'aliment, de client…). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+textarea:focus-visible {
+  outline: none !important;
+}
 
 /* Tactile : champs à 16 px minimum (sinon iOS zoome la page au focus, ce qui
    obligeait à bloquer le zoom pour tout le monde) et zones de toucher des

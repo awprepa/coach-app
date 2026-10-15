@@ -114,23 +114,23 @@ export default function ProgrammeClient() {
     <div style={styles.page}>
       {/* Header */}
       <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <button onClick={() => navigate('/client/accueil')} style={styles.backBtn} aria-label="Retour à l'accueil">
-            <Icon name="chevron-right" size={20} style={{ transform: 'rotate(180deg)' }} />
-          </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={styles.headerSmall}>Mon programme</p>
-            <h1 style={styles.title}>{programme.nom}</h1>
-          </div>
-          <AppLogo size={32} />
-        </div>
-        <div style={styles.headerMeta}>
-          <span>{programme.semaines} semaines</span>
-          {semaineActuelle && <span style={styles.badge}>Semaine {semaineActuelle} en cours</span>}
-        </div>
+        <button onClick={() => navigate('/client/accueil')} style={styles.backBtn} aria-label="Retour à l'accueil">
+          <Icon name="chevron-right" size={20} style={{ transform: 'rotate(180deg)' }} />
+        </button>
+        <AppLogo size={36} />
+        <div style={{ width: T.touch }} />
       </header>
 
       <div style={styles.content}>
+        {/* Titre programme */}
+        <div>
+          <h1 style={styles.title}>{programme.nom}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <span style={styles.meta}>{programme.semaines} semaines</span>
+            {semaineActuelle && <span style={styles.badge}>Semaine {semaineActuelle} en cours</span>}
+          </div>
+        </div>
+
         {/* Barre de progression */}
         {seances.length > 0 && semaineActuelle && (
           <section style={T.card}>
@@ -246,14 +246,12 @@ export default function ProgrammeClient() {
 const styles = {
   page:        { minHeight: '100vh', background: T.color.page, fontFamily: T.font.body, color: T.color.ink, paddingBottom: 110 },
   centered:    { minHeight: '100vh', background: T.color.page, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font.body },
-  header:      { background: T.color.headerBg, color: T.color.onDark, padding: '12px 16px 18px', position: 'sticky', top: 0, zIndex: 40 },
-  headerInner: { maxWidth: 480, margin: '0 auto', display: 'flex', alignItems: 'center', gap: T.space.md },
-  headerSmall: { margin: 0, fontSize: T.size.sm, color: T.color.onDarkMuted },
-  headerMeta:  { maxWidth: 480, margin: '10px auto 0', display: 'flex', alignItems: 'center', gap: T.space.md, fontSize: T.size.md, color: T.color.onDarkMuted },
+  header:      { background: T.color.headerBg, padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 40 },
+  meta:        { color: T.color.muted, fontSize: T.size.md },
   backBtn:     { width: T.touch, height: T.touch, borderRadius: T.radius.control, background: 'rgb(255 255 255 / .09)', border: 'none', color: T.color.onDark, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 },
   content:     { padding: T.space.lg, maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: T.space.lg },
-  title:       { fontFamily: T.font.display, fontSize: T.size.xxl, fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.01em', color: T.color.onDark, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  badge:       { background: 'var(--accent)', color: 'var(--accent-text)', padding: '3px 10px', borderRadius: T.radius.pill, fontSize: T.size.xs, fontWeight: 700 },
+  title:       { fontSize: '1.5rem', fontWeight: 800, color: T.color.ink, margin: 0 },
+  badge:       { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '3px 10px', borderRadius: T.radius.pill, fontSize: T.size.xs, fontWeight: 700 },
   progressBar: { height: 8, background: T.color.soft, borderRadius: T.radius.pill, overflow: 'hidden' },
   progressFill:{ height: '100%', background: 'var(--chip-bg)', borderRadius: T.radius.pill, transition: 'width 0.4s ease' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: T.space.sm, padding: '0 4px' },

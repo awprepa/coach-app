@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "source-code-pro",
+        "createdAt": "2026-10-15T12:29:14.465Z",
+        "reason": "Claude: police monospace par défaut de CRA pour <code>, préexistante, aucun affichage utilisateur"
+      }
+    ]
+  }
+}
