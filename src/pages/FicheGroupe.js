@@ -70,6 +70,8 @@ export default function FicheGroupe() {
   const [wellnessMap, setWellnessMap]     = useState({})  // { client_id: dernier wellness }
   const [wellnessDetail, setWellnessDetail] = useState(false) // détail des wellness du jour
   const [manquantsOuverts, setManquantsOuverts] = useState(false) // liste « pas encore rempli » dépliée
+  const [sgMembres, setSgMembres] = useState(new Set()) // client_id présents dans au moins un sous-groupe
+  const [sansSGOuvert, setSansSGOuvert] = useState(false)
   const [eventsCountMap, setEventsCountMap] = useState({}) // { client_id: nb événements cette semaine }
   const [programmes, setProgrammes]       = useState([])
   const [loading, setLoading]             = useState(true)
@@ -145,6 +147,14 @@ export default function FicheGroupe() {
     setSousGroupes(sg || [])
     const membresList = (gm || []).map(r => r.clients).filter(Boolean)
     setMembres(membresList)
+
+    // Membres déjà répartis dans un sous-groupe (pour lister ceux qui ne le sont pas)
+    if (sg?.length) {
+      const { data: sgm } = await supabase.from('groupe_membres').select('client_id').in('groupe_id', sg.map(x => x.id))
+      setSgMembres(new Set((sgm || []).map(r => r.client_id)))
+    } else {
+      setSgMembres(new Set())
+    }
     setProgrammes(progs || [])
 
     // Poste principal de chaque membre — vient de l'effectif (groupe_joueurs
@@ -1276,6 +1286,31 @@ export default function FicheGroupe() {
               </div>
             </div>
           ))}
+          {sousGroupes.length > 0 && (() => {
+            const sansSG = membres.filter(m => !sgMembres.has(m.id)).sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
+            return (
+              <div style={{ borderTop: '1px solid #f3f4f6' }}>
+                <button onClick={() => sansSG.length && setSansSGOuvert(v => !v)} aria-expanded={sansSGOuvert}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.7rem 1.1rem', background: 'none', border: 'none', cursor: sansSG.length ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px dashed #9ca3af', boxSizing: 'border-box' }} />
+                    <span style={{ fontWeight: 700, color: '#374151', fontSize: '0.85rem' }}>Sans sous-groupe</span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: sansSG.length ? '#b45309' : '#6b7280' }}>{sansSG.length}</span>
+                  </span>
+                  {sansSG.length > 0 && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: sansSGOuvert ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><path d="M9 6l6 6-6 6" /></svg>
+                  )}
+                </button>
+                {sansSGOuvert && sansSG.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 1.1rem 0.8rem' }}>
+                    {sansSG.map(m => (
+                      <span key={m.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', background: '#f3f4f6', borderRadius: 999, padding: '0.25rem 0.65rem' }}>{m.prenom} {m.nom}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
           {showAddSG ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.9rem 1.1rem', borderTop: sousGroupes.length ? '1px solid #f3f4f6' : 'none' }}>
               <input
