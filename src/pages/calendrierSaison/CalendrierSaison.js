@@ -345,11 +345,13 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       const cur = new Date(monday)
       cur.setUTCDate(monday.getUTCDate() + i)
       const dISO = cur.toISOString().slice(0, 10)
-      const evs = evenements.filter(e => e.date === dISO)
       // Inclure les matchs FFR comme événements (lecture seule)
       const ffrEvs = matchsFFR
         .filter(m => m.date_match === dISO)
         .map(m => ({ ...m, type: 'ffr_match', date: m.date_match }))
+      // Un match FFR a aussi son événement « match » dans le calendrier (créé
+      // automatiquement, pour le RPE) : on n'affiche que la carte FFR ce jour-là.
+      const evs = evenements.filter(e => e.date === dISO && !(ffrEvs.length && e.type === 'match'))
       days.push({ date: dISO, dow: i, events: [...ffrEvs, ...evs] })
     }
 

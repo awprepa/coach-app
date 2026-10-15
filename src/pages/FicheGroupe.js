@@ -68,6 +68,7 @@ export default function FicheGroupe() {
   const [sousGroupes, setSousGroupes]     = useState([])
   const [membres, setMembres]             = useState([])
   const [wellnessMap, setWellnessMap]     = useState({})  // { client_id: dernier wellness }
+  const [wellnessDetail, setWellnessDetail] = useState(false) // détail des wellness du jour
   const [eventsCountMap, setEventsCountMap] = useState({}) // { client_id: nb événements cette semaine }
   const [programmes, setProgrammes]       = useState([])
   const [loading, setLoading]             = useState(true)
@@ -855,6 +856,19 @@ export default function FicheGroupe() {
     setMembreSort(prev => ({ key, dir: prev.key === key ? -prev.dir : 1 }))
   }
 
+  // ── Wellness du jour ──
+  const todayISOW = isoLocal()
+  const wellnessDuJour = membres
+    .filter(m => wellnessMap[m.id]?.date === todayISOW)
+    .map(m => ({ m, w: wellnessMap[m.id], avg: membreAvg(m), alerte: membreAlerte(m) }))
+    .sort((a, b) => (b.alerte - a.alerte) || (a.avg - b.avg))
+  const wellnessManquants = membres.filter(m => wellnessMap[m.id]?.date !== todayISOW)
+    .sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
+  const wellnessMoyenne = wellnessDuJour.length
+    ? wellnessDuJour.reduce((s, x) => s + x.avg, 0) / wellnessDuJour.length : null
+  const wellnessAlertes = wellnessDuJour.filter(x => x.alerte)
+  const basses = w => WELLNESS_DIMS.filter(([k]) => w[k] <= 2).map(([k, l]) => `${l} ${w[k]}`).join(' · ')
+
   // ── Mini calendrier ──
   const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
   const calY = calMonth.getFullYear(), calM = calMonth.getMonth()
@@ -951,11 +965,49 @@ export default function FicheGroupe() {
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1.5fr 1fr' }} className="fg-row2">
+      <div style={{ ...S.dashRow, gridTemplateColumns: '1.4fr 0.8fr 1fr' }} className="fg-row2">
         <div style={S.panel}>
           <div style={S.panelHead}><span style={S.panelLabel}>Intensité des entraînements</span></div>
           <div style={{ padding: '0 1.1rem 1.1rem' }}>
             <GroupeIntensite groupeId={id} accent={accent} />
+          </div>
+        </div>
+
+        <div role="button" tabIndex={0} style={{ ...S.panel, cursor: 'pointer' }} onClick={() => setWellnessDetail(true)}
+          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setWellnessDetail(true)} title="Voir les wellness du jour">
+          <div style={S.panelHead}><span style={S.panelLabel}>Wellness du jour</span></div>
+          <div style={{ padding: '0 1.1rem 1.1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: '2rem', fontWeight: 900, color: '#1a1a1a', lineHeight: 1 }}>{wellnessDuJour.length}</span>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#6b7280' }}>/ {membres.length} remplis</span>
+            </div>
+            <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', margin: '0.6rem 0 0.8rem' }}>
+              <div style={{ height: '100%', width: `${membres.length ? (wellnessDuJour.length / membres.length) * 100 : 0}%`, background: '#333333', borderRadius: 999 }} />
+            </div>
+            {wellnessMoyenne != null && (
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.82rem', color: '#374151', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: wellnessColor(wellnessMoyenne) }} />
+                Moyenne du groupe <strong style={{ color: '#1a1a1a' }}>{wellnessMoyenne.toFixed(1)} / 4</strong>
+              </p>
+            )}
+            {wellnessAlertes.length > 0 ? (
+              <>
+                <p style={{ margin: '0 0 0.35rem', fontSize: '0.78rem', fontWeight: 800, color: '#dc2626' }}>
+                  {wellnessAlertes.length} à surveiller
+                </p>
+                {wellnessAlertes.slice(0, 3).map(({ m, w }) => (
+                  <p key={m.id} style={{ margin: '0 0 0.2rem', fontSize: '0.78rem', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <strong>{m.prenom} {m.nom?.[0]}.</strong> <span style={{ color: '#dc2626' }}>{basses(w)}</span>
+                  </p>
+                ))}
+                {wellnessAlertes.length > 3 && <p style={{ margin: 0, fontSize: '0.74rem', color: '#6b7280' }}>et {wellnessAlertes.length - 3} autre{wellnessAlertes.length > 4 ? 's' : ''}</p>}
+              </>
+            ) : wellnessDuJour.length > 0 ? (
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Aucune note basse aujourd'hui.</p>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Personne n'a encore rempli son wellness aujourd'hui.</p>
+            )}
+            <p style={{ margin: '0.75rem 0 0', fontSize: '0.78rem', fontWeight: 700, color: '#333333', textDecoration: 'underline', textUnderlineOffset: 3 }}>Voir le détail</p>
           </div>
         </div>
 
@@ -980,15 +1032,20 @@ export default function FicheGroupe() {
                   const iso = `${calY}-${String(calM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                   const evs = monthEvents[iso] || []
                   const isToday = iso === todayISOCal
-                  const evCol = evs[0] ? (CAL_EVENT_COLOR[evs[0]] || '#9ca3af') : null
+                  const types = [...new Set(evs)].slice(0, 3)
+                  const evCol = types[0] ? (CAL_EVENT_COLOR[types[0]] || '#9ca3af') : null
                   return (
                     <div key={i} style={{ position: 'relative', aspectRatio: '1/1', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.72rem', fontWeight: evCol ? 800 : 700, color: isToday ? accent : evCol || '#333', borderRadius: 7,
-                      background: evCol ? evCol + '1c' : (isToday ? '#fff' : '#f9fafb'),
-                      border: isToday ? `1.5px solid ${accent}` : '1px solid transparent',
-                      borderBottom: evCol ? `2.5px solid ${evCol}` : undefined }}>
+                      fontSize: '0.72rem', fontWeight: evCol || isToday ? 800 : 700, color: evCol || '#333', borderRadius: 7,
+                      background: evCol ? evCol + '1c' : '#f9fafb',
+                      boxShadow: isToday ? `inset 0 0 0 2px ${accent}` : 'none' }}
+                      title={evs.length ? evs.map(t => t === 'entrainement' ? 'Entraînement' : t === 'match' ? 'Match' : t).join(', ') : undefined}>
                       {d}
-                      {evs.length > 1 && <span style={{ position: 'absolute', top: 3, right: 3, width: 4, height: 4, borderRadius: '50%', background: evCol }} />}
+                      {types.length > 0 && (
+                        <span style={{ position: 'absolute', bottom: 4, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                          {types.map(t => <span key={t} style={{ width: 4, height: 4, borderRadius: '50%', background: CAL_EVENT_COLOR[t] || '#9ca3af' }} />)}
+                        </span>
+                      )}
                     </div>
                   )
                 })}
@@ -1331,6 +1388,52 @@ export default function FicheGroupe() {
       )}
 
       {/* ── Modal édition groupe ── */}
+      {wellnessDetail && (
+        <Modal title={`Wellness du ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`} onClose={() => setWellnessDetail(false)} maxWidth={620}>
+          <p style={{ margin: '0 0 0.9rem', fontSize: '0.82rem', color: '#6b7280' }}>
+            {wellnessDuJour.length} / {membres.length} remplis{wellnessMoyenne != null ? ` · moyenne ${wellnessMoyenne.toFixed(1)} / 4` : ''}. Notes de 1 (mauvais) à 4 (très bien) ; une note de 2 ou moins est signalée « bas ».
+          </p>
+          {wellnessDuJour.length > 0 && (
+            <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr>
+                    {['Joueur', 'Sommeil', 'Fatigue', 'Douleurs', 'Stress', 'Moy.'].map((h, i) => (
+                      <th key={h} style={{ textAlign: i ? 'center' : 'left', fontSize: '0.68rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0.4rem 0.5rem', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {wellnessDuJour.map(({ m, w, avg }) => (
+                    <tr key={m.id}>
+                      <td style={{ padding: '0.45rem 0.5rem', borderBottom: '1px solid #f3f4f6', fontWeight: 700, color: '#333', whiteSpace: 'nowrap' }}>{m.prenom} {m.nom}</td>
+                      {WELLNESS_DIMS.map(([k]) => (
+                        <td key={k} style={{ padding: '0.45rem 0.5rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: w[k] <= 2 ? 800 : 600, color: w[k] <= 2 ? '#dc2626' : '#374151', whiteSpace: 'nowrap' }}>
+                          {w[k]}{w[k] <= 2 && <span style={{ fontSize: '0.66rem', marginLeft: 3 }}>bas</span>}
+                        </td>
+                      ))}
+                      <td style={{ padding: '0.45rem 0.5rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 800, color: '#1a1a1a', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: wellnessColor(avg), marginRight: 5 }} />{avg.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {wellnessManquants.length > 0 && (
+            <>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pas encore rempli · {wellnessManquants.length}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {wellnessManquants.map(m => (
+                  <span key={m.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', background: '#f3f4f6', borderRadius: 999, padding: '0.25rem 0.65rem' }}>{m.prenom} {m.nom}</span>
+                ))}
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
+
       {editOpen && (
         <Modal title="Modifier le groupe" onClose={() => setEditOpen(false)}>
           <label style={S.label}>Nom du groupe</label>
@@ -1643,11 +1746,11 @@ function Section({ title, accent, children }) {
   )
 }
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, maxWidth = 440 }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: 'white', borderRadius: 20, padding: '1.75rem', width: '100%', maxWidth, maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <h3 style={{ margin: 0, fontWeight: '800', color: '#1a1a1a', fontSize: '1.1rem' }}>{title}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
