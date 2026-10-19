@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SchemaTerrainEditor from '../components/SchemaTerrainEditor'
@@ -20,6 +20,14 @@ export default function SchemaTypePage() {
   const [saving, setSaving] = useState(false)
   const [modifie, setModifie] = useState(false)
   const [erreur, setErreur] = useState(null)
+  // La page occupe tout l'espace sous la barre de navigation
+  const cadreRef = useRef(null)
+  const [haut, setHaut] = useState(0)
+  useLayoutEffect(() => {
+    const maj = () => setHaut(cadreRef.current?.getBoundingClientRect().top + window.scrollY || 0)
+    maj(); window.addEventListener('resize', maj)
+    return () => window.removeEventListener('resize', maj)
+  }, [loading])
 
   useEffect(() => {
     supabase.from('dossiers_schemas').select('*').order('nom').then(({ data }) => setDossiers(data || []))
@@ -70,52 +78,53 @@ export default function SchemaTypePage() {
     navigate('/bibliotheque?tab=schemas')
   }
 
-  if (loading) return <div style={S.page}><p style={{ color: '#6b7280' }}>Chargement…</p></div>
+  if (loading) return <div style={{ padding: '2rem' }}><p style={{ color: '#6b7280' }}>Chargement…</p></div>
+
+  const entete = (
+    <>
+      <button onClick={quitter} style={S.btnBack}>← Bibliothèque</button>
+      <input value={nom} onChange={e => { setNom(e.target.value); setModifie(true) }} placeholder="Nom du schéma" style={S.nom} />
+      <select value={dossierId} onChange={e => { setDossierId(e.target.value); setModifie(true) }} style={S.select}>
+        <option value="">Sans dossier</option>
+        {dossiers.map(d => <option key={d.id} value={d.id}>{d.nom}</option>)}
+      </select>
+      {erreur && <span style={S.erreur}>{erreur}</span>}
+      {!modifie && !nouveau && !erreur && <span style={S.ok}>Enregistré</span>}
+      <button onClick={enregistrer} disabled={saving} style={{ ...S.btnSave, opacity: saving ? 0.6 : 1 }}>
+        {saving ? 'Enregistrement…' : 'Enregistrer'}
+      </button>
+    </>
+  )
+  const infos = (
+    <>
+      <label style={S.label}>Description, consignes</label>
+      <textarea value={description} onChange={e => { setDescription(e.target.value); setModifie(true) }}
+        placeholder="Facultatif" rows={4} style={S.desc} />
+      <p style={S.aide}>Pour l'utiliser avec un joueur : dans sa séance terrain, « + Depuis un schéma type », puis « Adapter les distances » avec sa VMI.</p>
+    </>
+  )
 
   return (
-    <div style={S.page}>
-      <div style={S.head}>
-        <button onClick={quitter} style={S.btnBack}>← Bibliothèque</button>
-        <div style={{ flex: 1 }} />
-        {erreur && <span style={S.erreur}>{erreur}</span>}
-        {!modifie && !nouveau && <span style={S.ok}>Enregistré</span>}
-        <button onClick={enregistrer} disabled={saving} style={{ ...S.btnSave, opacity: saving ? 0.6 : 1 }}>
-          {saving ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-      </div>
-
-      <div style={S.fields}>
-        <input value={nom} onChange={e => { setNom(e.target.value); setModifie(true) }} placeholder="Nom du schéma (ex. Navettes 15-15 avec plaquage)" style={S.nom} />
-        <select value={dossierId} onChange={e => { setDossierId(e.target.value); setModifie(true) }} style={S.select}>
-          <option value="">Sans dossier</option>
-          {dossiers.map(d => <option key={d.id} value={d.id}>{d.nom}</option>)}
-        </select>
-      </div>
-      <textarea value={description} onChange={e => { setDescription(e.target.value); setModifie(true) }}
-        placeholder="Description, consignes (facultatif)" rows={2} style={S.desc} />
-
+    <div ref={cadreRef} style={{ height: `calc(100vh - ${haut}px)`, minHeight: 560, margin: 0 }}>
       <SchemaTerrainEditor
-        hauteur={640}
+        pleinEcran
+        entete={entete}
+        infos={infos}
         value={donnees.schema}
         onChange={next => { setDonnees(d => ({ ...d, schema: next })); setModifie(true) }}
       />
-      <p style={S.aide}>
-        Pour l'utiliser avec un joueur : dans sa séance terrain, « + Depuis un schéma type », puis « Adapter les distances » avec sa VMI.
-      </p>
     </div>
   )
 }
 
 const S = {
-  page: { padding: '1.25rem 1.5rem 3rem', maxWidth: 1100, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  head: { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' },
-  btnBack: { border: 'none', background: 'none', color: '#6b7280', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', padding: 0 },
-  btnSave: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.6rem 1.2rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' },
-  ok: { fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 },
-  erreur: { fontSize: '0.82rem', color: '#dc2626', fontWeight: 600 },
-  fields: { display: 'flex', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' },
-  nom: { flex: 1, minWidth: 220, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.8rem', fontSize: '1rem', fontWeight: 800, color: '#1a1a1a', boxSizing: 'border-box' },
-  select: { border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.55rem 0.7rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151', background: '#fff' },
-  desc: { width: '100%', boxSizing: 'border-box', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.8rem', fontSize: '0.88rem', fontFamily: 'inherit', marginBottom: '0.9rem', resize: 'vertical' },
-  aide: { fontSize: '0.8rem', color: '#6b7280', marginTop: '0.75rem', lineHeight: 1.5 },
+  btnBack: { border: 'none', background: 'none', color: '#374151', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '6px 4px', whiteSpace: 'nowrap' },
+  nom: { flex: '1 1 220px', minWidth: 180, maxWidth: 420, border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 800, color: '#1a1a1a', boxSizing: 'border-box' },
+  select: { border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', fontSize: 13, fontWeight: 600, color: '#374151', background: '#fff' },
+  btnSave: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' },
+  ok: { fontSize: 12.5, color: '#6b7280', fontWeight: 600 },
+  erreur: { fontSize: 12.5, color: '#dc2626', fontWeight: 600 },
+  label: { fontSize: 11.5, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 },
+  desc: { width: '100%', boxSizing: 'border-box', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 9px', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' },
+  aide: { fontSize: 12, color: '#6b7280', margin: '10px 0 0', lineHeight: 1.5 },
 }

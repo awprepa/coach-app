@@ -93,7 +93,7 @@ export function flechesDecalees(arrows) {
 }
 
 // Flèche : la distance est posée au milieu du trait, dans une étiquette.
-export function ArrowShape({ a: brute, selected, surface, decale }) {
+export function ArrowShape({ a: brute, selected, surface, decale, plots = [] }) {
   let a = brute, lx = 0, ly = 0
   if (decale) {
     const l = Math.hypot(brute.x2 - brute.x1, brute.y2 - brute.y1) || 1
@@ -108,11 +108,14 @@ export function ArrowShape({ a: brute, selected, surface, decale }) {
   const label = a.masquerDistance || m < 0.5 ? null : `${String(m).replace('.', ',')} m${mode}`
   const mx = (a.x1 + a.x2) / 2 + lx, my = (a.y1 + a.y2) / 2 + ly
   const w = label ? label.length * 1.15 + 1.8 : 0
-  // Le trait s'arrête un peu avant ses extrémités : la pointe reste visible
-  // quand la flèche part d'un plot ou y arrive.
+  // La flèche va jusqu'à son point d'arrivée. Si elle part d'un plot ou y
+  // arrive, elle s'arrête au bord du plot (la pointe touche le plot).
   const len = Math.hypot(a.x2 - a.x1, a.y2 - a.y1) || 1
   const ux = (a.x2 - a.x1) / len, uy = (a.y2 - a.y1) / len
-  const d0 = len > 6 ? PLOT_R + 0.5 : 0, d1 = len > 6 ? PLOT_R + 0.7 : 0
+  const surPlot = (x, y) => plots.some(p => Math.hypot(p.x - x, p.y - y) < 0.3)
+  const pointe = 0.6 * (selected ? 0.6 : 0.45) // la pointe dépasse le bout du trait
+  const d0 = surPlot(brute.x1, brute.y1) ? PLOT_R : 0
+  const d1 = (surPlot(brute.x2, brute.y2) ? PLOT_R : 0) + pointe
   return (
     <>
       <line x1={a.x1 + ux * d0} y1={a.y1 + uy * d0} x2={a.x2 - ux * d1} y2={a.y2 - uy * d1} stroke={selected ? '#ffffff' : a.color}
@@ -165,6 +168,7 @@ function ColorChoice({ value, onPick, grande }) {
 
 const DEFAULT_SCHEMA = { surface: 'gazon', plots: [], arrows: [], zones: [] }
 const ACCROCHE = 2 // unités : une flèche commencée ou finie près d'un point s'y accroche
+const ALIGNE = 1.2  // unités : un plot déplacé se cale sur l'axe d'un autre plot à cette distance
 
 // Points d'accroche : plots et extrémités des flèches existantes
 function accrocher(schema, p) {
@@ -183,7 +187,7 @@ function translater(schema, dx, dy) {
   }
 }
 
-export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteur = 420 }) {
+export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteur = 420, pleinEcran = false, entete = null, infos = null }) {
   const schema = value || DEFAULT_SCHEMA
   const groupe = !!schema.groupe
   const [tool, setTool] = useState('select')
@@ -254,7 +258,8 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
         return
       }
       if (kind === 'plot' && (tool === 'select' || tool === 'plot')) {
-        dragRef.current = { kind: 'plot-move', id, historyPushed: false }
+        const pl = schema.plots.find(x => x.id === id)
+        dragRef.current = { kind: 'plot-move', id, historyPushed: false, x0: pl.x, y0: pl.y, base: schema.arrows }
         return
       }
       return
@@ -287,8 +292,26 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
       if (!d.historyPushed) { pushHistory(); d.historyPushed = true }
       patch(translater(d.base, p.x - d.x0, p.y - d.y0))
     } else if (dragRef.current && dragRef.current.kind === 'plot-move') {
-      if (!dragRef.current.historyPushed) { pushHistory(); dragRef.current.historyPushed = true }
-      patch({ plots: schema.plots.map(pl => pl.id === dragRef.current.id ? { ...pl, x: p.x, y: p.y } : pl) })
+      const d = dragRef.current
+      if (!d.historyPushed) { pushHistory(); d.historyPushed = true }
+      // Alignement : le point se cale sur l'axe d'un autre plot proche (guide en pointillés)
+      const autres = schema.plots.filter(pl => pl.id !== d.id)
+      let x = p.x, y = p.y, gx = null, gy = null, bx = ALIGNE, by = ALIGNE
+      autres.forEach(o => {
+        if (Math.abs(o.x - p.x) < bx) { bx = Math.abs(o.x - p.x); x = o.x; gx = o.x }
+        if (Math.abs(o.y - p.y) < by) { by = Math.abs(o.y - p.y); y = o.y; gy = o.y }
+      })
+      d.guides = { x: gx, y: gy }
+      // Les flèches accrochées au plot le suivent
+      const ici = (ax, ay) => Math.hypot(ax - d.x0, ay - d.y0) < 0.3
+      patch({
+        plots: schema.plots.map(pl => pl.id === d.id ? { ...pl, x, y } : pl),
+        arrows: d.base.map(a => ({
+          ...a,
+          ...(ici(a.x1, a.y1) ? { x1: x, y1: y } : {}),
+          ...(ici(a.x2, a.y2) ? { x2: x, y2: y } : {}),
+        })),
+      })
     } else if (dragRef.current && dragRef.current.kind === 'zone-draft') {
       dragRef.current.x2 = p.x; dragRef.current.y2 = p.y
       forceTick(t => t + 1)
@@ -301,6 +324,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
   const onPointerUp = useCallback((e) => {
     if (dragRef.current && (dragRef.current.kind === 'plot-move' || dragRef.current.kind === 'group-move')) {
       dragRef.current = null
+      forceTick(t => t + 1)
     } else if (dragRef.current && dragRef.current.kind === 'zone-draft') {
       const d = dragRef.current
       const x = Math.min(d.x1, d.x2), y = Math.min(d.y1, d.y2)
@@ -399,8 +423,9 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
   const zoneDraft = dragRef.current?.kind === 'zone-draft' ? dragRef.current : null
 
   return (
-    <div style={S.wrap}>
+    <div style={{ ...S.wrap, ...(pleinEcran ? S.wrapPlein : {}) }}>
       <div style={S.topbar}>
+        {entete}
         <div style={S.pills}>
           {Object.entries(SURFACES).map(([key, label]) => (
             <button key={key} onClick={() => patch({ surface: key })} style={{ ...S.pill, ...(surfaceOf(schema) === key ? S.pillOn : {}) }}>{label}</button>
@@ -435,7 +460,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
         </div>
       )}
 
-      <div style={{ ...S.body, height: hauteur }}>
+      <div style={{ ...S.body, ...(pleinEcran ? { flex: 1, minHeight: 0, height: 'auto' } : { height: hauteur }) }}>
         <div style={S.rail}>
           {[
             { key: 'select', title: 'Sélection', icon: <path d="M5 3l14 7-6 2-2 6-6-15Z" /> },
@@ -475,7 +500,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
               return (
                 <g key={a.id} data-id={a.id} data-kind="arrow" style={{ cursor: 'pointer' }}>
                   <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="transparent" strokeWidth="3.5" />
-                  <ArrowShape a={a} selected={isSel} surface={surfaceOf(schema)} decale={dec} />
+                  <ArrowShape a={a} selected={isSel} surface={surfaceOf(schema)} decale={dec} plots={schema.plots} />
                 </g>
               )
             })}
@@ -490,6 +515,12 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
               )
             })}
 
+            {dragRef.current?.kind === 'plot-move' && dragRef.current.guides && (
+              <g pointerEvents="none">
+                {dragRef.current.guides.x != null && <line x1={dragRef.current.guides.x} y1="0" x2={dragRef.current.guides.x} y2="100" stroke="#e4f816" strokeWidth="0.35" strokeDasharray="1,0.8" />}
+                {dragRef.current.guides.y != null && <line x1="0" y1={dragRef.current.guides.y} x2="100" y2={dragRef.current.guides.y} stroke="#e4f816" strokeWidth="0.35" strokeDasharray="1,0.8" />}
+              </g>
+            )}
             {drawStart && (
               <line x1={drawStart.x} y1={drawStart.y} x2={drawStart.cur?.x ?? drawStart.x} y2={drawStart.cur?.y ?? drawStart.y}
                 stroke={arrowColor} strokeWidth="0.5" strokeDasharray="1.6,1.2" markerEnd={`url(#${markerId(arrowColor)})`} />
@@ -506,8 +537,9 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
           {groupe && (
             <p style={S.hint}>Exercice verrouillé : fais glisser le schéma pour le placer sur le terrain. Les distances ne changent pas. Déverrouille pour modifier un élément.</p>
           )}
+          {!selection && infos}
           {!groupe && !selection && (
-            <p style={S.hint}>Plot pour poser un point, Flèche pour tracer le parcours dans l'ordre (d'un point au suivant), Zone pour une surface. Les distances sont à l'échelle du terrain. Suppr pour effacer, Ctrl+Z pour annuler.</p>
+            <p style={{ ...S.hint, ...(infos ? { marginTop: 14 } : {}) }}>Plot pour poser un point, Flèche pour tracer le parcours dans l'ordre (d'un point au suivant), Zone pour une surface. Les distances sont à l'échelle du terrain. Suppr pour effacer, Ctrl+Z pour annuler.</p>
           )}
           {selectedPlot && (
             <>
@@ -632,52 +664,54 @@ function IcoRedo() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H10a6 6 0 0 0 0 12h2" /></svg>
 }
 
+// Thème clair de l'app : blanc, gris #333, accent jaune #e4f816
 const S = {
-  wrap: { background: '#14161a', borderRadius: 14, overflow: 'hidden', border: '1px solid #2c3036' },
-  topbar: { height: 48, display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', background: '#1b1e24', borderBottom: '1px solid #2c3036' },
-  pills: { display: 'flex', gap: 2, background: '#21242b', borderRadius: 9, padding: 3 },
-  pill: { border: 'none', background: 'none', color: '#a3a9b1', fontSize: 12, fontWeight: 600, padding: '6px 11px', borderRadius: 7, cursor: 'pointer' },
-  pillOn: { background: '#14161a', color: '#eef0f2' },
-  iconBtn: { width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, color: '#878d96', cursor: 'pointer' },
+  wrap: { background: '#ffffff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' },
+  wrapPlein: { borderRadius: 0, border: 'none', height: '100%' },
+  topbar: { minHeight: 52, display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', background: '#ffffff', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' },
+  pills: { display: 'flex', gap: 2, background: '#f3f4f6', borderRadius: 9, padding: 3 },
+  pill: { border: 'none', background: 'none', color: '#6b7280', fontSize: 12.5, fontWeight: 700, padding: '6px 11px', borderRadius: 7, cursor: 'pointer' },
+  pillOn: { background: '#333333', color: '#e4f816' },
+  iconBtn: { width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, color: '#4b5563', cursor: 'pointer' },
 
-  ctxbar: { height: 42, display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px', background: '#1b1e24', borderBottom: '1px solid #2c3036' },
-  ctxLabel: { fontSize: 11, fontWeight: 700, color: '#5b6067', textTransform: 'uppercase', letterSpacing: '0.06em' },
-  swatchRow: { display: 'flex', gap: 6 },
-  swatch: { width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', border: '2px solid transparent', padding: 0 },
-  swatchOn: { borderColor: '#eef0f2' },
-  styleToggle: { display: 'flex', gap: 4, background: '#21242b', borderRadius: 8, padding: 3 },
-  styleBtn: { border: 'none', background: 'none', color: '#878d96', fontSize: 11, fontWeight: 700, padding: '5px 8px', borderRadius: 6, cursor: 'pointer' },
-  styleBtnOn: { background: '#14161a', color: '#eef0f2' },
+  ctxbar: { minHeight: 44, display: 'flex', alignItems: 'center', gap: 12, padding: '4px 12px', background: '#fafafa', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' },
+  ctxLabel: { fontSize: 11.5, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  swatchRow: { display: 'flex', gap: 6, alignItems: 'center' },
+  swatch: { width: 22, height: 22, borderRadius: '50%', cursor: 'pointer', border: '2px solid transparent', padding: 0, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)' },
+  swatchOn: { borderColor: '#333333' },
+  styleToggle: { display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 8, padding: 3 },
+  styleBtn: { border: 'none', background: 'none', color: '#6b7280', fontSize: 12, fontWeight: 700, padding: '5px 8px', borderRadius: 6, cursor: 'pointer' },
+  styleBtnOn: { background: '#333333', color: '#e4f816' },
 
   body: { display: 'flex', height: 420 },
-  rail: { width: 50, flexShrink: 0, background: '#1b1e24', borderRight: '1px solid #2c3036', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0', gap: 4 },
-  railBtn: { width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 9, color: '#878d96', cursor: 'pointer' },
-  railBtnOn: { background: '#e4f816', color: '#1f2937' },
+  rail: { width: 52, flexShrink: 0, background: '#fafafa', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0', gap: 4 },
+  railBtn: { width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 9, color: '#4b5563', cursor: 'pointer' },
+  railBtnOn: { background: '#333333', color: '#e4f816' },
 
-  canvasWrap: { flex: 1, minWidth: 0, background: '#14161a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 },
+  canvasWrap: { flex: 1, minWidth: 0, background: '#eceeef', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 },
 
-  inspector: { width: 220, flexShrink: 0, background: '#1b1e24', borderLeft: '1px solid #2c3036', padding: 14, overflowY: 'auto' },
-  hint: { fontSize: 12, color: '#878d96', lineHeight: 1.6, margin: 0 },
-  fieldLabel: { fontSize: 11, fontWeight: 700, color: '#5b6067', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', margin: '10px 0 6px' },
-  fieldInput: { width: '100%', background: '#21242b', border: '1px solid #2c3036', color: '#eef0f2', fontSize: 13, fontWeight: 600, padding: '7px 9px', borderRadius: 8, outline: 'none', boxSizing: 'border-box' },
+  inspector: { width: 240, flexShrink: 0, background: '#ffffff', borderLeft: '1px solid #e5e7eb', padding: 14, overflowY: 'auto' },
+  hint: { fontSize: 12.5, color: '#6b7280', lineHeight: 1.6, margin: 0 },
+  fieldLabel: { fontSize: 11.5, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', margin: '12px 0 6px' },
+  fieldInput: { width: '100%', background: '#ffffff', border: '1.5px solid #e5e7eb', color: '#1a1a1a', fontSize: 13, fontWeight: 600, padding: '7px 9px', borderRadius: 8, outline: 'none', boxSizing: 'border-box' },
   swatchGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 },
-  swatchBig: { width: '100%', aspectRatio: '1', borderRadius: '50%', cursor: 'pointer', border: '2px solid transparent' },
-  swatchBigOn: { borderColor: '#eef0f2' },
+  swatchBig: { width: '100%', aspectRatio: '1', borderRadius: '50%', cursor: 'pointer', border: '2px solid transparent', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)' },
+  swatchBigOn: { borderColor: '#333333' },
   swatchLibre: { position: 'relative', overflow: 'hidden', display: 'block', boxSizing: 'border-box' },
   colorInput: { position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 },
-  lockBtn: { display: 'flex', alignItems: 'center', gap: 6, background: '#21242b', border: '1px solid #2c3036', color: '#a3a9b1', fontSize: 12, fontWeight: 700, padding: '6px 10px', borderRadius: 8, cursor: 'pointer' },
-  lockBtnOn: { background: '#e4f816', color: '#1f2937', borderColor: '#e4f816' },
-  checkRow: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#c9cdd3', margin: '12px 0 0', cursor: 'pointer' },
-  course: { borderTop: '1px solid #2c3036', background: '#1b1e24', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 },
+  lockBtn: { display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff', border: '1.5px solid #e5e7eb', color: '#374151', fontSize: 12.5, fontWeight: 700, padding: '6px 10px', borderRadius: 8, cursor: 'pointer' },
+  lockBtnOn: { background: '#333333', color: '#e4f816', borderColor: '#333333' },
+  checkRow: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#374151', margin: '12px 0 0', cursor: 'pointer' },
+  course: { borderTop: '1px solid #e5e7eb', background: '#fafafa', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 },
   courseHead: { display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
-  courseTitre: { fontSize: 13, fontWeight: 800, color: '#eef0f2' },
-  courseSous: { fontSize: 12, color: '#878d96' },
+  courseTitre: { fontSize: 14, fontWeight: 800, color: '#1a1a1a' },
+  courseSous: { fontSize: 12.5, color: '#6b7280' },
   courseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8 },
   courseField: { display: 'flex', flexDirection: 'column', gap: 4 },
-  fieldLabelInline: { fontSize: 11, fontWeight: 700, color: '#878d96' },
-  courseInfo: { margin: 0, fontSize: 12.5, color: '#c9cdd3', lineHeight: 1.5 },
-  courseErreur: { margin: 0, fontSize: 12.5, color: '#f87171', fontWeight: 600, lineHeight: 1.5 },
-  btnAdapter: { background: '#e4f816', color: '#1f2937', border: 'none', fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' },
-  btnLien: { background: 'none', border: 'none', color: '#a3a9b1', fontSize: 12.5, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: 0 },
-  btnDelete: { width: '100%', marginTop: 14, background: 'none', border: '1px solid #2c3036', color: '#ef4444', fontSize: 12.5, fontWeight: 700, padding: 9, borderRadius: 8, cursor: 'pointer' },
+  fieldLabelInline: { fontSize: 12, fontWeight: 700, color: '#6b7280' },
+  courseInfo: { margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.5 },
+  courseErreur: { margin: 0, fontSize: 13, color: '#dc2626', fontWeight: 600, lineHeight: 1.5 },
+  btnAdapter: { background: '#333333', color: '#e4f816', border: 'none', fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' },
+  btnLien: { background: 'none', border: 'none', color: '#374151', fontSize: 13, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: 0 },
+  btnDelete: { width: '100%', marginTop: 14, background: 'none', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 13, fontWeight: 700, padding: 9, borderRadius: 8, cursor: 'pointer' },
 }

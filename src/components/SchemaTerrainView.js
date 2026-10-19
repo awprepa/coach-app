@@ -27,7 +27,7 @@ export default function SchemaTerrainView({ value, style }) {
         <rect key={z.id} x={z.x} y={z.y} width={z.w} height={z.h} fill={z.color} fillOpacity={0.22} stroke={z.color} strokeWidth={0.6} />
       ))}
 
-      {(schema.arrows || []).map(a => <g key={a.id}><ArrowShape a={a} surface={surface} decale={decales.has(a.id)} /></g>)}
+      {(schema.arrows || []).map(a => <g key={a.id}><ArrowShape a={a} surface={surface} decale={decales.has(a.id)} plots={schema.plots || []} /></g>)}
 
       {(schema.plots || []).map(p => <g key={p.id}><PlotShape p={p} /></g>)}
     </svg>
