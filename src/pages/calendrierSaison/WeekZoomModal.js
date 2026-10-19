@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FitScale } from './FitScale'
-import { COURSE_INTENSITES, COURSE_VOLUMES, GROUP_COLORS, STYLE_COLORS, TYPES, localISO, matchCatColor } from './constants'
+import { COURSE_INTENSITES, COURSE_VOLUMES, GROUP_COLORS, TYPES, localISO, matchCatColor } from './constants'
 import { generateBlocPalette } from './couleurs'
-import { calcDureeBloc, calcJeuEffectif, formatSeqDur, parseDurMin } from './seqHelpers'
+import { formatSeqDur, parseDurMin } from './seqHelpers'
 import { S } from './styles'
 import { MatchCardShare, MatchCardWeek } from './matchCards'
 import { exporterImage } from './exportImage'
@@ -66,17 +66,6 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
 
-  function evtColor(evt) {
-    const type = typeof evt === 'string' ? evt : evt?.type
-    if (type === 'match' || type === 'ffr_match') return groupColor
-    if (type === 'muscu') return '#b08769'
-    if (type === 'entrainement') {
-      const s = typeof evt === 'object' ? evt?.style : null
-      return STYLE_COLORS[s] || '#6b94a3'
-    }
-    return '#9aa1ac'
-  }
-
   // Palette dérivée des couleurs du club
   const BLOC_COLORS = generateBlocPalette(groupColor, groupe?.couleur_secondaire)
   function blocColor(idx, intervenant) {
@@ -100,348 +89,6 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     const n = str.match(/^(\d+)$/)
     if (n) return parseInt(n[1])
     return null
-  }
-
-  function EventContent({ evt, wide }) {
-    const color = evtColor(evt)
-    const blocs = blocsMap[evt.id] || []
-    const [openSeqs, setOpenSeqs] = useState(new Set())
-    const toggleSeqs = id => setOpenSeqs(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
-    // En vue "large" (aperçu du jour), les séquences sont toujours dépliées —
-    // assez de place pour les montrer sans avoir à cliquer. On le force ici plutôt
-    // que via l'état initial, car les blocs peuvent arriver après le premier rendu.
-    const isSeqExpanded = id => wide || openSeqs.has(id)
-
-    // ── Match FFR (depuis monclubhouse) ──────────────────────────────────────
-    if (evt.type === 'ffr_match') {
-      const joue = evt.score_dom != null && evt.score_ext != null
-      const gagné = joue && (evt.est_domicile ? evt.score_dom > evt.score_ext : evt.est_domicile === false ? evt.score_ext > evt.score_dom : false)
-      const perdu = joue && (evt.est_domicile ? evt.score_dom < evt.score_ext : evt.est_domicile === false ? evt.score_ext < evt.score_dom : false)
-      const bg = joue ? (gagné ? '#16a34a' : perdu ? '#dc2626' : '#64748b') : groupColor
-
-      // Domicile → notre logo = logo_dom, adverse = logo_ext
-      // Extérieur → notre logo = logo_ext, adverse = logo_dom
-      const notreEquipeNom  = evt.est_domicile === true  ? evt.equipe_dom : evt.est_domicile === false ? evt.equipe_ext : (evt.equipe_dom || evt.equipe_ext)
-      const advEquipeNom    = evt.est_domicile === true  ? evt.equipe_ext : evt.est_domicile === false ? evt.equipe_dom : (evt.equipe_ext || evt.equipe_dom)
-      // Notre logo = celui du groupe dans l'appli (uploadé par le coach), pas celui scrapé sur
-      // monclubhouse — évite aussi que le logo adverse se retrouve dupliqué des deux côtés quand
-      // le domicile/extérieur n'a pas pu être déterminé (logo_dom et logo_ext retombent alors sur
-      // la même valeur via les replis ci-dessous).
-      const notreLogoUrl    = groupe?.logo_url || (evt.est_domicile === true ? evt.logo_dom : evt.est_domicile === false ? evt.logo_ext : (evt.logo_dom || evt.logo_ext))
-      const advLogoUrl      = evt.est_domicile === true  ? evt.logo_ext   : evt.est_domicile === false ? evt.logo_dom   : (evt.logo_ext || evt.logo_dom)
-      const notreInitials   = (notreEquipeNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-      const advInitials     = (advEquipeNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-
-      // Disposition : domicile → notre logo gauche / adverse droite ; extérieur → adverse gauche / notre logo droite
-      const logoGauche  = evt.est_domicile !== false ? notreLogoUrl  : advLogoUrl
-      const logoDroite  = evt.est_domicile !== false ? advLogoUrl    : notreLogoUrl
-      const nomGauche   = evt.est_domicile !== false ? notreEquipeNom : advEquipeNom
-      const nomDroite   = evt.est_domicile !== false ? advEquipeNom   : notreEquipeNom
-      const initGauche  = evt.est_domicile !== false ? notreInitials  : advInitials
-      const initDroite  = evt.est_domicile !== false ? advInitials    : notreInitials
-
-      const score = joue
-        ? (evt.est_domicile ? `${evt.score_dom} – ${evt.score_ext}` : evt.est_domicile === false ? `${evt.score_ext} – ${evt.score_dom}` : `${evt.score_dom} – ${evt.score_ext}`)
-        : null
-
-      function LogoBadge({ url, initials, size = 72 }) {
-        return (
-          <div style={{ width: size, height: size, borderRadius: 16, background: 'rgba(255,255,255,.15)',
-            border: '2px solid rgba(255,255,255,.4)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            {url
-              ? <img loading="lazy" src={url} alt={initials} style={{ width: size - 10, height: size - 10, objectFit: 'contain' }}
-                  onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-              : null}
-            <div style={{ width: '100%', height: '100%', display: url ? 'none' : 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              fontSize: size > 60 ? '1.3rem' : '0.9rem', fontWeight: 900 }}>{initials}</div>
-          </div>
-        )
-      }
-
-      return (
-        /* flex:1 → remplit toute la hauteur de la colonne jour */
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-          background: `linear-gradient(155deg, ${bg} 0%, color-mix(in srgb, ${bg} 60%, #000) 100%)`,
-          borderRadius: 14, padding: '16px 14px', color: '#fff', minHeight: 160 }}>
-
-          {/* Badge compétition */}
-          <div style={{ fontSize: '.6rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>
-            Match FFR{evt.journee ? ` · Journée ${evt.journee}` : ''}
-          </div>
-
-          {/* Corps centré : logos face à face */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'center', paddingBottom: 6 }}>
-            {/* Ligne logos + VS */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'center' }}>
-              {/* Logo gauche */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
-                <LogoBadge url={logoGauche} initials={initGauche} size={68} />
-                <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
-                  maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomGauche}</div>
-              </div>
-              {/* VS central */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                {score
-                  ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{score}</div>
-                  : <div style={{ fontSize: '.78rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>}
-                {!score && evt.heure && <div style={{ fontSize: '.65rem', opacity: .75, fontWeight: 600 }}>{evt.heure}</div>}
-              </div>
-              {/* Logo droite */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
-                <LogoBadge url={logoDroite} initials={initDroite} size={68} />
-                <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
-                  maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomDroite}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chips infos */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-            {evt.est_domicile != null && (
-              <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 800 }}>
-                {evt.est_domicile ? 'Domicile' : 'Extérieur'}
-              </span>
-            )}
-            {joue && (
-              <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 7, padding: '4px 10px', fontSize: '.65rem', fontWeight: 700 }}>
-                {gagné ? 'Victoire' : perdu ? 'Défaite' : 'Match nul'}
-              </span>
-            )}
-          </div>
-        </div>
-      )
-    }
-
-    if (evt.type === 'match') {
-      const mc = matchCatColor(evt.categorie, groupColor)
-      return (
-        <div style={{ background: `linear-gradient(135deg, ${mc}, ${mc}cc)`, borderRadius: 11, padding: '12px 13px', color: '#fff', textAlign: 'center', marginBottom: 2 }}>
-          {evt.categorie && <div style={{ fontSize: '.6rem', fontWeight: 700, opacity: .65, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Match · {evt.categorie}{evt.journee ? ` · ${evt.journee}` : ''}</div>}
-          <div style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1.15, marginBottom: 8 }}>{evt.adversaire ? `vs ${evt.adversaire}` : evt.titre || 'Match'}</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
-            {evt.heure && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{String(evt.heure).slice(0, 5)}</span>}
-            {evt.domicile != null && <span style={{ background: '#e4f816', color: '#333', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.domicile ? 'Domicile' : 'Extérieur'}</span>}
-            {evt.lieu && <span style={{ background: 'rgba(255,255,255,.15)', borderRadius: 5, padding: '2px 7px', fontSize: '.6rem', fontWeight: 700 }}>{evt.lieu}</span>}
-          </div>
-        </div>
-      )
-    }
-
-    // Libellé principal de la séance
-    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
-      : evt.type === 'muscu' ? (evt.titre || 'Musculation')
-      : (evt.titre || TYPES[evt.type]?.label || 'Séance')
-
-    // ── Carte unique englobant toute la séance ──────────────────────────────
-    return (
-      <div style={{ border: `2px solid ${color}35`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-
-        {/* En-tête séance (bandeau coloré) */}
-        <div style={{ background: color, padding: '11px 14px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '.62rem', fontWeight: 800, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 3 }}>
-              {TYPES[evt.type]?.label || evt.type}
-            </div>
-            <div style={{ fontSize: '.95rem', fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{evtLabel}</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-            {evt.heure && (
-              <span style={{ fontSize: '.8rem', fontWeight: 900, color: '#fff', background: 'rgba(0,0,0,.22)', borderRadius: 6, padding: '3px 8px', letterSpacing: '.01em' }}>
-                {String(evt.heure).slice(0, 5)}
-              </span>
-            )}
-            {evt.duree_min && (
-              <span style={{ fontSize: '.68rem', background: 'rgba(255,255,255,.25)', color: '#fff', borderRadius: 5, padding: '2px 7px', fontWeight: 800 }}>
-                {evt.duree_min} min
-              </span>
-            )}
-            {blocs.length > 0 && (
-              <button
-                onClick={() => setDayPreview({ evt, blocs })}
-                style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.35)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 2 }}>
-                Aperçu complet ↗
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Indicateurs globaux contact/course — max des blocs */}
-        {blocs.length > 0 && evt.type === 'entrainement' && (() => {
-          const maxCI = blocs.reduce((m, b) => b.contact_intensite != null ? Math.max(m, b.contact_intensite) : m, -1)
-          const maxVI = blocs.reduce((m, b) => { const i = COURSE_VOLUMES.indexOf(b.course_volume); return i > m ? i : m }, -1)
-          const maxII = blocs.reduce((m, b) => { const i = COURSE_INTENSITES.indexOf(b.course_intensite); return i > m ? i : m }, -1)
-          if (maxCI < 0 && maxVI < 0 && maxII < 0) return null
-          return (
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '5px 12px', background: '#f5f6f8', borderBottom: '1px solid #eceef1' }}>
-              {maxCI >= 0 && (
-                <span style={{ fontSize: '.57rem', fontWeight: 800, background: '#dc262618', color: '#b91c1c', border: '1px solid #dc262630', borderRadius: 4, padding: '2px 7px' }}>
-                  Contact {maxCI}/4
-                </span>
-              )}
-              {maxVI >= 0 && (
-                <span style={{ fontSize: '.57rem', fontWeight: 800, background: '#2563eb22', color: '#1d4ed8', border: '1px solid #2563eb44', borderRadius: 4, padding: '2px 7px' }}>
-                  Vol. {COURSE_VOLUMES[maxVI]}
-                </span>
-              )}
-              {maxII >= 0 && (
-                <span style={{ fontSize: '.57rem', fontWeight: 800, background: '#7c3aed22', color: '#6d28d9', border: '1px solid #7c3aed44', borderRadius: 4, padding: '2px 7px' }}>
-                  {COURSE_INTENSITES[maxII]}
-                </span>
-              )}
-            </div>
-          )
-        })()}
-
-        {/* Phases (blocs) */}
-        {blocs.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {(() => {
-              const totalMins = blocs.reduce((sum, b) => sum + (parseDurMin(b.duree) || 0), 0)
-              const PX_PER_MIN = wide ? 5 : 2.5
-              const MAX_TOTAL = wide ? 999999 : 220
-              const rawH = totalMins * PX_PER_MIN
-              const scale = rawH > MAX_TOTAL ? MAX_TOTAL / rawH : 1
-              return blocs.map((bloc, idx) => {
-              const bc = blocColor(idx, bloc.intervenant)
-              const mins = parseDurMin(bloc.duree)
-              const h = mins ? Math.max(20, Math.round(mins * PX_PER_MIN * scale)) : 40
-
-              const byGroup = {}
-              for (const exo of (bloc.exos || [])) {
-                const g = exo.groupe_label?.trim() || ''
-                ;(byGroup[g] ||= []).push(exo)
-              }
-              const groupKeys = Object.keys(byGroup)
-              const hasGroups = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== '')
-
-              return (
-                <div key={bloc.id} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid #e6e8ec' }}>
-                  {/* En-tête phase */}
-                  <div style={{ padding: '7px 12px', background: bc + '18', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 22, height: 22, borderRadius: '50%', background: bc, color: '#fff', fontSize: '.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 1px 4px ${bc}55` }}>{idx + 1}</span>
-                    <span style={{ fontSize: '.78rem', fontWeight: 800, color: '#1a1a1a', flex: 1 }}>{bloc.nom}</span>
-                    {bloc.intervenant && (
-                      <span style={{ fontSize: '.58rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 7px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                        {bloc.intervenant === 'prepa' ? 'Prépa physique' : bloc.intervenant === 'both' ? 'PP + Coachs' : 'Coachs'}
-                      </span>
-                    )}
-                    {bloc.duree && <span style={{ fontSize: '.67rem', fontWeight: 900, color: '#fff', background: bc, borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>{bloc.duree}</span>}
-                  </div>
-                  {/* Séquences — aperçu repliable */}
-                  {bloc.bloc_type === 'sequences' && (() => {
-                    const seqs = bloc.sequences || []
-                    let jeuCount = 0
-                    const jeuNum = {}
-                    seqs.forEach(s => { if (s.type === 'jeu') { jeuCount++; jeuNum[s.id] = jeuCount } })
-                    const expanded = isSeqExpanded(bloc.id)
-                    return (
-                      <div style={{ background: '#eef3fb' }}>
-                        {/* Ligne résumé cliquable */}
-                        <button onClick={() => toggleSeqs(bloc.id)} style={{ width:'100%', background:'none', border:'none', cursor:'pointer', padding:'4px 8px', display:'flex', gap:5, alignItems:'center', textAlign:'left' }}>
-                          <span style={{ fontSize:'.58rem', fontWeight:800, color:'#2c5faa', flexShrink:0 }}>Jeu {calcJeuEffectif(seqs)}</span>
-                          <span style={{ fontSize:'.55rem', color:'#9db8d8' }}>·</span>
-                          <span style={{ fontSize:'.55rem', fontWeight:600, color:'#6a8aaa', flexShrink:0 }}>{calcDureeBloc(seqs)}</span>
-                          {bloc.conditions_jeu && <>
-                            <span style={{ fontSize:'.55rem', color:'#9db8d8' }}>·</span>
-                            <span style={{ fontSize:'.55rem', fontWeight:700, color:'#92400e', background:'#fef3c7', borderRadius:3, padding:'0 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{bloc.conditions_jeu}</span>
-                          </>}
-                          <span style={{ marginLeft:'auto', fontSize:'.65rem', color:'#6a8aaa', transform: expanded ? 'rotate(90deg)' : 'none', transition:'transform .15s', flexShrink:0 }}>›</span>
-                        </button>
-                        {/* Détail séquences */}
-                        {expanded && (
-                          <div style={{ padding:'0 8px 6px', display:'flex', flexDirection:'column', gap:3 }}>
-                            {seqs.map(seq => seq.type === 'jeu' ? (
-                              <div key={seq.id} style={{ background:'#fff', border:'1px solid #c4d8f0', borderRadius:6, padding:'3px 7px', display:'flex', alignItems:'center', gap:6 }}>
-                                <div style={{ width:14, height:14, borderRadius:'50%', background:'#2c5faa', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.48rem', fontWeight:900, color:'#fff', flexShrink:0 }}>{jeuNum[seq.id]}</div>
-                                <div style={{ flex:1, fontSize:'.6rem', fontWeight:700, color:'#1e2d3d', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{seq.theme || '—'}</div>
-                                <div style={{ fontSize:'.6rem', fontWeight:900, color:'#b03030', flexShrink:0 }}>{formatSeqDur(seq.duree_sec)}</div>
-                              </div>
-                            ) : seq.type === 'inter_bloc' ? (
-                              <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:4, padding:'2px 0' }}>
-                                <div style={{ flex:1, height:1, background:'#a3c4e8' }} />
-                                <span style={{ fontSize:'.52rem', fontWeight:800, color:'#2c5faa', background:'#dce8f8', borderRadius:10, padding:'1px 7px', whiteSpace:'nowrap' }}>Récup · {formatSeqDur(seq.duree_sec)}</span>
-                                <div style={{ flex:1, height:1, background:'#a3c4e8' }} />
-                              </div>
-                            ) : (
-                              <div key={seq.id} style={{ display:'flex', alignItems:'center', gap:4, padding:'1px 0' }}>
-                                <div style={{ flex:1, height:1, background:'#b8d8c8' }} />
-                                <span style={{ fontSize:'.5rem', fontWeight:700, color:'#2e7d4f', fontStyle:'italic', whiteSpace:'nowrap' }}>récup {formatSeqDur(seq.duree_sec)}</span>
-                                <div style={{ flex:1, height:1, background:'#b8d8c8' }} />
-                              </div>
-                            ))}
-                            {bloc.effectif_desc && <span style={{ fontSize:'.55rem', color: '#6b7280', fontStyle:'italic' }}>{bloc.effectif_desc}</span>}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })()}
-
-                  {/* Exercices — toujours affichés (au minimum les noms), jamais masqués */}
-                  {bloc.bloc_type !== 'sequences' && bloc.exos?.length > 0 && (
-                    h < 40
-                    /* Bloc court → liste compacte sur une ligne, scrollable si besoin */
-                    ? <div style={{ maxHeight: Math.max(h, 22), overflowY: 'auto', padding: '3px 8px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {bloc.exos.map(exo => (
-                          <div key={exo.id} style={{ fontSize: '.62rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {exo.nom}{exo.prescription ? ` · ${exo.prescription}` : ''}
-                          </div>
-                        ))}
-                      </div>
-                    : <div style={{ height: h, overflow: 'hidden', padding: '5px 8px 6px', background: bc + '08', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {hasGroups ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${groupKeys.length}, 1fr)`, gap: 5, alignItems: 'stretch' }}>
-                          {groupKeys.map(g => (
-                            <div key={g} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${bc}30`, display: 'flex', flexDirection: 'column' }}>
-                              {g && <div style={{ fontSize: '.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: '#fff', background: bc + 'bb', padding: '3px 8px', textAlign: 'center', flexShrink: 0 }}>{g}</div>}
-                              <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 3, background: bc + '08', flex: 1 }}>
-                                {byGroup[g].map(exo => (
-                                  <div key={exo.id} style={{ background: '#fff', borderRadius: 5, padding: '3px 7px', border: `1px solid ${bc}25` }}>
-                                    <div style={{ fontSize: '.67rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.25 }}>{exo.nom}</div>
-                                    {exo.prescription && <div style={{ fontSize: '.62rem', color: bc, fontWeight: 800, marginTop: 1 }}>{exo.prescription}</div>}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {bloc.exos.map(exo => (
-                            <div key={exo.id} style={{ background: '#fff', borderRadius: 6, padding: '4px 8px', border: `1px solid ${bc}25`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#1a1a1a', flex: 1, lineHeight: 1.25 }}>{exo.nom}</span>
-                              {exo.prescription && <span style={{ fontSize: '.62rem', color: '#fff', fontWeight: 800, flexShrink: 0, background: bc, borderRadius: 4, padding: '1px 5px' }}>{exo.prescription}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {bloc.bloc_type !== 'sequences' && !bloc.exos?.length && (
-                    <div style={{ height: h, background: bc + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '.72rem', fontWeight: 700, color: bc, opacity: 0.5, fontStyle: 'italic' }}>{bloc.nom}</span>
-                    </div>
-                  )}
-                </div>
-              )
-            })
-            })()}
-          </div>
-        ) : (
-          /* Pas de blocs */
-          <div style={{ padding: '10px 13px' }}>
-            {(evt.lieu || evt.note) && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
-                {evt.lieu && <span style={{ fontSize: '.65rem', color: '#5b626c' }}>{evt.lieu}</span>}
-                {evt.note && <span style={{ fontSize: '.65rem', color: '#7a8290', fontStyle: 'italic' }}>{evt.note}</span>}
-              </div>
-            )}
-            <div style={{ color: '#c4ccd4', fontSize: '.65rem', fontStyle: 'italic' }}>Aucun déroulé renseigné</div>
-          </div>
-        )}
-      </div>
-    )
   }
 
   // ── Colonne d'un jour : agenda des séances (heure au début de chaque bloc,
@@ -906,21 +553,34 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
 
     return (
       <>
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:130 }} onClick={() => setDayFull(null)} />
-        <div style={{ position:'fixed', top:'4vh', left:'50%', transform:'translateX(-50%)', width:'min(920px, 96vw)', maxHeight:'92vh', zIndex:131, background:'#f5f6f8', borderRadius:16, overflow:'hidden', boxShadow:'0 28px 90px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 130 }} onClick={() => setDayFull(null)} />
+        <div style={{ position: 'fixed', top: '4vh', left: '50%', transform: 'translateX(-50%)', width: 'min(720px, 96vw)', maxHeight: '92vh', zIndex: 131, background: '#d9d9d9', borderRadius: 16, overflow: 'hidden', boxShadow: '0 28px 90px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column' }}>
 
-          {/* ── Header jour ── */}
-          <div style={{ background:'#333', padding:'12px 18px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-            <div style={{ flex:1, fontSize:'.95rem', fontWeight:900, color:'#fff', textTransform:'capitalize' }}>{dateLabel}</div>
-            <button onClick={() => setDayFull(null)} style={{ background:'rgba(255,255,255,.18)', border:'none', color:'#fff', borderRadius:8, width:30, height:30, fontSize:'1.1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
+          {/* En-tête du jour */}
+          <div style={{ background: '#333', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <div style={{ flex: 1, fontSize: 18, fontWeight: 800, color: '#fff', textTransform: 'capitalize' }}>{dateLabel}</div>
+            <button onClick={() => setDayFull(null)} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Fermer</button>
           </div>
 
-          {/* ── Corps : toutes les séances du jour, même rendu que le résumé de semaine mais en large ── */}
-          <div style={{ flex:1, minHeight:0, overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:16 }}>
+          {/* Séances et match du jour, même rendu que le résumé de semaine */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {day.events.length === 0 ? (
-              <p style={{ textAlign:'center', color:'#9aa1ac', fontSize:'.85rem' }}>Rien de prévu ce jour.</p>
+              <p style={{ textAlign: 'center', color: '#4b5563', fontSize: 15, background: '#f2f2f2', borderRadius: 10, padding: 24, margin: 0 }}>Rien de prévu ce jour.</p>
             ) : day.events.map(evt => (
-              <EventContent key={evt.id} evt={evt} wide />
+              <div key={evt.id} style={{ background: '#f2f2f2', borderRadius: 10, padding: '16px 16px 20px' }}>
+                {evt.type === 'ffr_match' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', maxWidth: 360 }}>
+                    <MatchCardWeek m={evt} groupe={groupe} notreNom={notreNom} competition={competition} journee={evt._journee} />
+                    <button onClick={() => exporterMatch(evt)} disabled={exportEnCours} style={btnImage(false)}>
+                      <IcoTelecharger /> Image du match
+                    </button>
+                  </div>
+                ) : evt.type === 'match' ? (
+                  <div style={{ maxWidth: 360 }}><MatchSimple evt={evt} /></div>
+                ) : (
+                  <SessionAgenda evt={evt} />
+                )}
+              </div>
             ))}
           </div>
         </div>
