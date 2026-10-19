@@ -578,7 +578,7 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     const moisCourt = new Date(yy, mm - 1, dd).toLocaleDateString('fr-FR', { month: 'short' })
     const aMatch = day.events.some(e => e.type === 'ffr_match' || e.type === 'match')
     return (
-      <div style={{ flex: aMatch ? '0 0 330px' : '1 1 0', minWidth: aMatch ? 330 : 280, padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 16, borderLeft: '1px solid #e0e0e0' }}>
+      <div style={{ flex: aMatch ? '0 0 330px' : '1 1 0', minWidth: aMatch ? 330 : 280, padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 16, background: '#f2f2f2', borderRadius: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: 10, borderBottom: '1px solid #cfcfcf' }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
             {DOW_FR[day.dow]} <small style={{ fontWeight: 600, color: '#6b7280', fontSize: 14, marginLeft: 4 }}>{dd} {moisCourt}</small>
@@ -623,7 +623,8 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.72)', marginTop: 2 }}>{plage}</div>
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'stretch', marginLeft: -1 }}>
+        {/* Jours séparés par une gouttière plus foncée */}
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, padding: 8, background: '#d9d9d9' }}>
           {activeDays.map(day => <DayColumn key={day.date} day={day} pourImage={pourImage} />)}
         </div>
         <Legende />
@@ -990,7 +991,7 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
               <MatchCardShare m={aExporter.evt} groupe={groupe} notreNom={notreNom} competition={competition} journee={aExporter.evt._journee} />
             </div>
           ) : (
-            <div ref={exportRef} style={{ width: Math.max(900, activeDays.length * 330) }}>
+            <div ref={exportRef} style={{ width: 1600 }}>
               <FicheSemaine pourImage />
             </div>
           )}
