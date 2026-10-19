@@ -9,6 +9,7 @@ export default function CompetitionClient() {
   const [activeGroupe, setActive]   = useState(null)
   const [matchs, setMatchs]         = useState([])
   const [classement, setClassement] = useState([])
+  const [compIdx, setCompIdx]       = useState(0)    // championnat affiché (ex. Fédérale 2 / Fédérale B)
 
   useEffect(() => { load() }, [])
 
@@ -29,7 +30,7 @@ export default function CompetitionClient() {
 
       const groupeIds = membres.map(m => m.groupe_id)
       const { data: gs } = await supabase
-        .from('groupes').select('id, nom, couleur, monclubhouse_url')
+        .from('groupes').select('id, nom, couleur, monclubhouse_url, monclubhouse_competition')
         .in('id', groupeIds).not('monclubhouse_url', 'is', null)
       setGroupes(gs || [])
 
@@ -58,6 +59,17 @@ export default function CompetitionClient() {
   const resultats = matchs.filter(m => m.date_match < today).reverse()
   const prochain  = prochains[0]
 
+  // Un groupe peut suivre plusieurs championnats (ex. Fédérale 2 + Fédérale B) :
+  // un classement par championnat, le principal en premier.
+  const competitions = [...new Set(classement.map(c => c.competition || null))]
+    .sort((a, b) => (b === (activeGroupe?.monclubhouse_competition || null)) - (a === (activeGroupe?.monclubhouse_competition || null)))
+    .map(tag => {
+      const rows = classement.filter(c => (c.competition || null) === tag)
+      return { tag, rows, label: rows[0]?.competition_label || tag || 'Classement' }
+    })
+  const compActive = competitions[Math.min(compIdx, competitions.length - 1)]
+  const classementAff = compActive?.rows || []
+
   // Notre équipe dans le classement
   const ourNames = matchs
     .map(m => m.est_domicile === true ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : null)
@@ -65,7 +77,7 @@ export default function CompetitionClient() {
   const ourTeam = ourNames.length > 0
     ? ourNames.reduce((b, n) => ourNames.filter(v => v === n).length >= ourNames.filter(v => v === b).length ? n : b)
     : null
-  const notreEquipe = ourTeam ? classement.find(c => c.equipe.toLowerCase() === ourTeam.toLowerCase()) : null
+  const notreEquipe = ourTeam ? classementAff.find(c => c.equipe.toLowerCase() === ourTeam.toLowerCase()) : null
 
   function fmtDate(iso) {
     if (!iso) return ''
@@ -238,7 +250,7 @@ export default function CompetitionClient() {
         {groupes.length > 1 ? (
           <select value={activeGroupe?.id || ''} onChange={async e => {
             const g = groupes.find(x => x.id === e.target.value)
-            setActive(g); setMatchs([]); setClassement([])
+            setActive(g); setMatchs([]); setClassement([]); setCompIdx(0)
             await loadFFR(g.id)
           }} style={{ fontWeight: 800, fontSize: '1rem', background: 'transparent', color: '#fff', border: 'none', outline: 'none', padding: 0, cursor: 'pointer' }}>
             {groupes.map(g => <option key={g.id} value={g.id} style={{ color: '#000' }}>{g.nom}</option>)}
@@ -269,6 +281,20 @@ export default function CompetitionClient() {
               <div style={{ marginBottom: 20 }}>
                 <p style={{ margin: '0 0 10px', fontSize: '.72rem', fontWeight: 900, textTransform: 'uppercase',
                   letterSpacing: '.08em', color: '#6b7280' }}>Classement</p>
+                {competitions.length > 1 && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 10, overflowX: 'auto' }}>
+                    {competitions.map((cp, i) => {
+                      const on = cp === compActive
+                      return (
+                        <button key={cp.tag || i} onClick={() => setCompIdx(i)}
+                          style={{ padding: '0.45rem 0.95rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                            border: `1.5px solid ${on ? gc : '#e5e7eb'}`, background: on ? `color-mix(in srgb, ${gc} 10%, #fff)` : '#fff', color: on ? gc : '#6b7280' }}>
+                          {cp.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
                 <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.75rem' }}>
@@ -282,7 +308,7 @@ export default function CompetitionClient() {
                         </tr>
                       </thead>
                       <tbody>
-                        {classement.map(c => {
+                        {classementAff.map(c => {
                           const isOurs = notreEquipe?.equipe === c.equipe
                           const initials = c.equipe.split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
                           const logoAff = (isOurs && activeGroupe?.logo_url) || c.logo
