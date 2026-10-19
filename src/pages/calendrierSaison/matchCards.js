@@ -100,7 +100,10 @@ export function MatchCardShare({ m, groupe, notreNom, competition, journee }) {
     <div style={{ width: 380, display: 'grid', gridTemplateColumns: '78px 1fr', borderRadius: 14, overflow: 'hidden', color: '#fff', fontFamily: FONT, background: NUIT }}>
       <DateBox info={info} couleur={couleur} />
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-        {titre && <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.62)' }}>{titre}</span>}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.62)' }}>{titre}</span>
+          <img src="/logo-blanc.png" alt="AWprepa" style={{ height: 16, width: 'auto', display: 'block', flexShrink: 0, opacity: 0.9 }} />
+        </div>
         {ligne(info.domicile, m.score_dom, m.score_ext)}
         {ligne(info.exterieur, m.score_ext, m.score_dom)}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid rgba(255,255,255,.14)', paddingTop: 9 }}>

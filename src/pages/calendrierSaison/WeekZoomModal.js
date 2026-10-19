@@ -449,7 +449,7 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const PAL_IV = {
     prepa:  { bg: '#fafcdf', bord: '#b9c70a', label: 'Prépa physique' },
     coachs: { bg: '#eaf1f8', bord: '#2f5f8a', label: 'Coachs' },
-    both:   { bg: '#ffffff', bord: '#1a1a1a', label: 'Prépa + coachs' },
+    both:   { bg: '#eaf4ec', bord: '#3a7d4f', label: 'Prépa + coachs' },
   }
   const PAL_ALT = ['#6b7280', '#b6bac1']
   const CONTACT_MOTS = ['Aucun contact', 'Ceinturé / bloqué', 'Contact contrôlé', 'Plein contact', 'Opposition libre']
@@ -627,25 +627,11 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, padding: 8, background: '#d9d9d9' }}>
           {activeDays.map(day => <DayColumn key={day.date} day={day} pourImage={pourImage} />)}
         </div>
-        <Legende />
       </div>
     )
   }
 
-  function Legende() {
-    return (
-      <div style={{ display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center', fontSize: 12, color: '#4b5563', fontWeight: 600, padding: '10px 18px', borderTop: '1px solid #e0e0e0' }}>
-        {Object.values(PAL_IV).map(v => (
-          <span key={v.label}><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, marginRight: 6, verticalAlign: -2, background: v.bord }} />{v.label}</span>
-        ))}
-        <span>
-          {PAL_ALT.map(c => <span key={c} style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, marginRight: 4, verticalAlign: -2, background: c }} />)}
-          <span style={{ marginLeft: 2 }}>Intervenant non renseigné</span>
-        </span>
-        <span>Charge : valeur la plus haute de la séance, notée sur 4</span>
-      </div>
-    )
-  }
+
 
   /* ── SeanceBody — le corps "fiche tableau" d'une séance (blocs/séquences/totaux),
        réutilisé par DayPreviewModal (une séance) et DayFullModal (toute la journée) ── */
