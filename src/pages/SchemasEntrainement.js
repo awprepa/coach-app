@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SchemaSVG from '../components/SchemaSVG'
+import SchemaTerrainView from '../components/SchemaTerrainView'
 
 export default function SchemasEntrainement() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export default function SchemasEntrainement() {
   async function fetchAll() {
     setLoading(true)
     const [{ data: s }, { data: d }] = await Promise.all([
-      supabase.from('schemas_entrainement').select('*').or('type_exercice.is.null,type_exercice.neq.terrain').order('created_at', { ascending: false }),
+      supabase.from('schemas_entrainement').select('*').order('created_at', { ascending: false }),
       supabase.from('dossiers_schemas').select('*').order('nom'),
     ])
     setSchemas(s || [])
@@ -51,6 +52,7 @@ export default function SchemasEntrainement() {
     setDupliquant(schema.id)
     const { error } = await supabase.from('schemas_entrainement').insert({
       nom: `${schema.nom} (copie)`,
+      type_exercice: schema.type_exercice,
       description: schema.description,
       donnees: schema.donnees,
       dossier_id: schema.dossier_id,
@@ -112,7 +114,9 @@ export default function SchemasEntrainement() {
           {filtres.map(s => (
             <div key={s.id} style={S.card}>
               <div role="button" tabIndex={0} style={S.thumb} onClick={() => navigate(`/bibliotheque/schemas/${s.id}`)}>
-                <SchemaSVG donnees={s.donnees} />
+                {s.type_exercice === 'terrain'
+                  ? <SchemaTerrainView value={s.donnees?.schema} style={{ height: 140, objectFit: 'cover' }} />
+                  : <SchemaSVG donnees={s.donnees} />}
               </div>
               <div style={S.cardBody}>
                 <p style={S.cardNom}>{s.nom}</p>

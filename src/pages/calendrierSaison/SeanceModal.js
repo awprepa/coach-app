@@ -3,10 +3,19 @@ import { supabase } from '../../supabase'
 import CalculateurIntensite from '../../components/CalculateurIntensite'
 import DocumentsEvenement from '../../components/DocumentsEvenement'
 import SchemaSVG from '../../components/SchemaSVG'
+import SchemaTerrainView from '../../components/SchemaTerrainView'
+
 import { CONTACT_LEVELS, COURSE_INTENSITES, COURSE_VOLUMES, CREATE_TYPES, HAS_BLOCS, MATCH_CATEGORIES, STYLE_COLORS, THEMES_SEANCE, TYPES } from './constants'
 import { generateBlocPalette } from './couleurs'
 import { calcDureeBloc, calcJeuEffectif, formatSeqDur, parseDurMin } from './seqHelpers'
 import { Sm } from './styles'
+
+// Schéma de la bibliothèque : nouveau format (éditeur de terrain) ou ancien
+function ApercuSchema({ donnees }) {
+  return donnees?.schema
+    ? <SchemaTerrainView value={donnees.schema} />
+    : <SchemaSVG donnees={donnees} showDistances={false} />
+}
 
 /* ── SeanceModal — plein écran, remplace l'ancien panneau latéral ── */
 export function SeanceModal({
@@ -599,7 +608,7 @@ export function SeanceModal({
                                 <div key={o.niveauId ?? `tous-${i}`} style={{ display:'flex', alignItems:'center', gap:5, background:'#f5f6f8', border:`1px solid ${o.niveauCouleur}55`, borderRadius:7, padding:'3px 7px 3px 5px' }}>
                                   {o.schemaDonnees && (
                                     <div style={{ width:20, height:20, borderRadius:4, overflow:'hidden', border:'1px solid #e0e3e8', flexShrink:0, background:'#fff' }}>
-                                      <SchemaSVG donnees={o.schemaDonnees} showDistances={false} />
+                                      <ApercuSchema donnees={o.schemaDonnees} />
                                     </div>
                                   )}
                                   <span style={{ width:7, height:7, borderRadius:'50%', background:o.niveauCouleur, flexShrink:0 }} />
@@ -805,7 +814,7 @@ export function SeanceModal({
                             <div key={o.niveauId ?? `tous-${i}`} style={{ display:'flex', alignItems:'center', gap:5, background:'#f5f6f8', border:`1px solid ${o.niveauCouleur}55`, borderRadius:7, padding:'3px 7px 3px 5px' }}>
                               {o.schemaDonnees && (
                                 <div style={{ width:20, height:20, borderRadius:4, overflow:'hidden', border:'1px solid #e0e3e8', flexShrink:0, background:'#fff' }}>
-                                  <SchemaSVG donnees={o.schemaDonnees} showDistances={false} />
+                                  <ApercuSchema donnees={o.schemaDonnees} />
                                 </div>
                               )}
                               <span style={{ width:7, height:7, borderRadius:'50%', background:o.niveauCouleur, flexShrink:0 }} />
@@ -924,7 +933,7 @@ export function SeanceModal({
                           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
                             {schema && (
                               <div style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb', flexShrink: 0 }}>
-                                <SchemaSVG donnees={schema.donnees} showDistances={false} />
+                                <ApercuSchema donnees={schema.donnees} />
                               </div>
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>

@@ -183,7 +183,7 @@ function translater(schema, dx, dy) {
   }
 }
 
-export default function SchemaTerrainEditor({ value, onChange, vmiJoueur }) {
+export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteur = 420 }) {
   const schema = value || DEFAULT_SCHEMA
   const groupe = !!schema.groupe
   const [tool, setTool] = useState('select')
@@ -435,7 +435,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur }) {
         </div>
       )}
 
-      <div style={S.body}>
+      <div style={{ ...S.body, height: hauteur }}>
         <div style={S.rail}>
           {[
             { key: 'select', title: 'Sélection', icon: <path d="M5 3l14 7-6 2-2 6-6-15Z" /> },

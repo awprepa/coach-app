@@ -54,7 +54,7 @@ const NouveauProgramme     = lazy(() => import('./pages/NouveauProgramme'))
 const Programme            = lazy(() => import('./pages/Programme'))
 const Seance               = lazy(() => import('./pages/Seance'))
 const Bibliotheque              = lazy(() => import('./pages/Bibliotheque'))
-const SchemaEditorPage          = lazy(() => import('./pages/SchemaEditorPage'))
+const SchemaTypePage            = lazy(() => import('./pages/SchemaTypePage'))
 const GPS                  = lazy(() => import('./pages/GPS'))
 const Tests                = lazy(() => import('./pages/Tests'))
 const AgendaGlobal         = lazy(() => import('./pages/AgendaGlobal'))
@@ -590,8 +590,8 @@ function App() {
               <Route path="/seance/:id"                  element={<WithNav><Seance /></WithNav>} />
               <Route path="/seance/:id/projection"       element={<SeanceProjection />} />
               <Route path="/bibliotheque"                element={<WithNav><Bibliotheque /></WithNav>} />
-              <Route path="/bibliotheque/schemas/nouveau" element={<WithNav><SchemaEditorPage /></WithNav>} />
-              <Route path="/bibliotheque/schemas/:id"    element={<WithNav><SchemaEditorPage /></WithNav>} />
+              <Route path="/bibliotheque/schemas/nouveau" element={<WithNav><SchemaTypePage /></WithNav>} />
+              <Route path="/bibliotheque/schemas/:id"    element={<WithNav><SchemaTypePage /></WithNav>} />
               <Route path="/gps"                         element={<WithNav><GPS /></WithNav>} />
               <Route path="/tests"                       element={<WithNav><Tests /></WithNav>} />
               <Route path="/messages"                    element={<WithNav><CoachMessages /></WithNav>} />
