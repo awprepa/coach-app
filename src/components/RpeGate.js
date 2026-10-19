@@ -98,20 +98,40 @@ function RpeOverlay({ clientId, evenement, onDone }) {
   const [vals, setVals]     = useState({ rpe_cardio: null, rpe_jambes: null, rpe_contact: null })
   const [commentaire, setCommentaire] = useState('')
   const [saving, setSaving] = useState(false)
+  const [erreur, setErreur] = useState(null)
   const allFilled = DIMS.every(d => vals[d.key] != null)
+
+  // Enregistre la note. En cas d'échec (connexion expirée, réseau faible), on
+  // rafraîchit la session et on réessaie une fois. Renvoie true si c'est enregistré.
+  async function enregistrer(ligne) {
+    const envoyer = () => supabase.from('groupe_seance_rpe').upsert(ligne, { onConflict: 'evenement_id,client_id' })
+    let { error } = await envoyer()
+    if (error) {
+      console.warn('[RpeGate] échec, nouvel essai :', error.message)
+      await supabase.auth.refreshSession().catch(() => {})
+      ;({ error } = await envoyer())
+    }
+    if (error) {
+      console.error('[RpeGate] note non enregistrée :', error.message)
+      setErreur('Ta note n\u2019a pas été enregistrée. Vérifie ta connexion et réessaie.')
+      return false
+    }
+    return true
+  }
 
   async function submit() {
     if (!allFilled || saving) return
-    setSaving(true)
-    await supabase.from('groupe_seance_rpe').upsert({
+    setSaving(true); setErreur(null)
+    const ok = await enregistrer({
       evenement_id: evenement.id,
       client_id:    clientId,
       ...vals,
       absent:       false,
       commentaire:  commentaire.trim() || null,
-    }, { onConflict: 'evenement_id,client_id' })
-    notifierCoachRpe(false)
+    })
     setSaving(false)
+    if (!ok) return
+    notifierCoachRpe(false)
     onDone()
   }
 
@@ -119,16 +139,17 @@ function RpeOverlay({ clientId, evenement, onDone }) {
   // le coach le sache, plutôt que de laisser la séance « non répondue ».
   async function marquerAbsent() {
     if (saving) return
-    setSaving(true)
-    await supabase.from('groupe_seance_rpe').upsert({
+    setSaving(true); setErreur(null)
+    const ok = await enregistrer({
       evenement_id: evenement.id,
       client_id:    clientId,
       rpe_cardio: null, rpe_jambes: null, rpe_contact: null,
       absent:       true,
       commentaire:  commentaire.trim() || null,
-    }, { onConflict: 'evenement_id,client_id' })
-    notifierCoachRpe(true)
+    })
     setSaving(false)
+    if (!ok) return
+    notifierCoachRpe(true)
     onDone()
   }
 
@@ -193,6 +214,11 @@ function RpeOverlay({ clientId, evenement, onDone }) {
           <BlessureButton clientId={clientId} compact visible />
         </div>
 
+        {erreur && (
+          <p role="alert" style={{ margin: '0 0 0.75rem', padding: '0.6rem 0.75rem', borderRadius: T.radius.control, background: '#fef2f2', color: T.color.danger, fontSize: T.size.md, fontWeight: 600, lineHeight: 1.4, textAlign: 'center' }}>
+            {erreur}
+          </p>
+        )}
         <button onClick={submit} disabled={!allFilled || saving}
           style={{ ...W.submitBtn, background: allFilled ? T.color.ink : T.color.soft, color: allFilled ? T.color.signal : T.color.muted, cursor: allFilled ? 'pointer' : 'default' }}>
           {saving ? 'Envoi...' : 'Valider ma note'}
