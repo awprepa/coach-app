@@ -37,6 +37,9 @@ export default function SeanceTerrainCoach({ id, seance }) {
   const [genModal, setGenModal] = useState(null) // blocId en cours de description
   const [genText, setGenText] = useState('')
   const [genPreview, setGenPreview] = useState(null)
+  const [vmiJoueur, setVmiJoueur] = useState(null)
+  const [typesOuvert, setTypesOuvert] = useState(false)
+  const [schemasTypes, setSchemasTypes] = useState([])
 
   useEffect(() => {
     supabase.from('exercices').select('*').eq('seance_id', id).order('ordre').then(({ data }) => {
@@ -44,6 +47,58 @@ export default function SeanceTerrainCoach({ id, seance }) {
       setLoading(false)
     })
   }, [id])
+
+  // VMI du joueur : son dernier test 30-15 (s'il est dans un groupe testé)
+  const clientId = seance.programmes?.client_id
+  useEffect(() => {
+    if (!clientId) return
+    ;(async () => {
+      const { data: fiches } = await supabase.from('groupe_joueurs').select('id').eq('client_id', clientId)
+      const ids = (fiches || []).map(f => f.id)
+      if (!ids.length) return
+      const { data: tests } = await supabase.from('joueur_tests_physiques').select('valeur, date')
+        .in('joueur_id', ids).eq('type', '30-15').order('date', { ascending: false }).limit(1)
+      const v = Number(tests?.[0]?.valeur)
+      if (v > 0) setVmiJoueur(v)
+    })()
+  }, [clientId])
+
+  // ── Schémas types (bibliothèque d'exercices terrain réutilisables) ──
+  async function ouvrirTypes() {
+    const { data } = await supabase.from('schemas_entrainement').select('id, nom, donnees, created_at')
+      .eq('type_exercice', 'terrain').order('nom')
+    setSchemasTypes(data || [])
+    setTypesOuvert(true)
+  }
+  async function enregistrerType(bloc) {
+    const nomType = window.prompt('Nom du schéma type :', bloc.nom || '')
+    if (!nomType?.trim()) return
+    // Le schéma type garde les proportions et les réglages, pas la VMI d'un joueur
+    const schema = bloc.schema ? { ...bloc.schema, course: bloc.schema.course ? { ...bloc.schema.course, vmi: null } : undefined } : null
+    const { error } = await supabase.from('schemas_entrainement').insert({
+      nom: nomType.trim(), type_exercice: 'terrain',
+      donnees: { bloc_nom: bloc.nom, contenu: bloc.contenu || [], schema },
+    })
+    if (error) { alert(error.message); return }
+    alert('Schéma type enregistré.')
+  }
+  async function insererType(t) {
+    const d = t.donnees || {}
+    const bloc = {
+      seance_id: id, code: nextCode(blocs), nom: d.bloc_nom || t.nom,
+      ordre: blocs.length + 1, contenu: d.contenu || [], schema: d.schema || null,
+    }
+    const { data, error } = await supabase.from('exercices').insert([bloc]).select().single()
+    if (error) { alert(error.message); return }
+    setBlocs(prev => [...prev, data])
+    setTypesOuvert(false)
+    setOpenSchemaId(data.id)
+  }
+  async function supprimerType(t) {
+    if (!window.confirm(`Supprimer le schéma type « ${t.nom} » ?`)) return
+    await supabase.from('schemas_entrainement').delete().eq('id', t.id)
+    setSchemasTypes(prev => prev.filter(x => x.id !== t.id))
+  }
 
   async function sauvegarderNomSeance() {
     if (nom === seance.nom) return
@@ -143,16 +198,52 @@ export default function SeanceTerrainCoach({ id, seance }) {
               {openSchemaId === bloc.id ? '▾ Masquer le schéma' : '▸ Schéma du terrain'}
             </button>
             {openSchemaId === bloc.id && (
-              <SchemaTerrainEditor
-                value={bloc.schema}
-                onChange={next => { updateBlocLocal(bloc.id, { schema: next }); saveBloc(bloc.id, { schema: next }) }}
-              />
+              <>
+                <SchemaTerrainEditor
+                  value={bloc.schema}
+                  vmiJoueur={vmiJoueur}
+                  onChange={next => { updateBlocLocal(bloc.id, { schema: next }); saveBloc(bloc.id, { schema: next }) }}
+                />
+                <button onClick={() => enregistrerType(bloc)} style={{ ...S.btnGenerate, marginTop: '0.6rem', marginBottom: 0 }}>
+                  Enregistrer comme schéma type
+                </button>
+              </>
             )}
           </div>
         ))}
 
-        <button onClick={ajouterBloc} style={S.btnAddBloc}>+ Ajouter un bloc</button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={ajouterBloc} style={{ ...S.btnAddBloc, flex: 1 }}>+ Ajouter un bloc</button>
+          <button onClick={ouvrirTypes} style={{ ...S.btnAddBloc, flex: 1 }}>+ Depuis un schéma type</button>
+        </div>
       </div>
+
+      {typesOuvert && (
+        <div style={S.modalOverlay} onClick={() => setTypesOuvert(false)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+            <p style={S.modalTitle}>Schémas types</p>
+            <p style={S.modalSub}>
+              Le schéma est ajouté comme nouveau bloc.{vmiJoueur ? ` VMI du joueur : ${String(vmiJoueur).replace('.', ',')} km/h, il reste à cliquer sur « Adapter les distances ».` : ' Renseigne la VMI du joueur dans le bloc, puis « Adapter les distances ».'}
+            </p>
+            {schemasTypes.length === 0 ? (
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '0.5rem 0' }}>Aucun schéma type. Ouvre le schéma d'un bloc puis « Enregistrer comme schéma type ».</p>
+            ) : schemasTypes.map(t => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0', borderBottom: '1px solid #f3f4f6' }}>
+                <button onClick={() => insererType(t)} style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <span style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a' }}>{t.nom}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    {t.donnees?.schema?.course?.effort ? `${t.donnees.schema.course.effort} s · ${t.donnees.schema.course.intensite || 100} % VMI` : 'Sans réglage de course'}
+                  </span>
+                </button>
+                <button onClick={() => supprimerType(t)} style={S.btnIcon} title="Supprimer">✕</button>
+              </div>
+            ))}
+            <div style={S.modalActions}>
+              <button onClick={() => setTypesOuvert(false)} style={S.btnGhost}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {genModal && (
         <div style={S.modalOverlay} onClick={() => setGenModal(null)}>

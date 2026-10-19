@@ -18,7 +18,7 @@ export default function SchemasEntrainement() {
   async function fetchAll() {
     setLoading(true)
     const [{ data: s }, { data: d }] = await Promise.all([
-      supabase.from('schemas_entrainement').select('*').order('created_at', { ascending: false }),
+      supabase.from('schemas_entrainement').select('*').or('type_exercice.is.null,type_exercice.neq.terrain').order('created_at', { ascending: false }),
       supabase.from('dossiers_schemas').select('*').order('nom'),
     ])
     setSchemas(s || [])

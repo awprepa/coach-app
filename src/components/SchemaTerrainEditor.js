@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { analyser, arrondiDemi, calculer, deborde, DEPLACEMENTS, echelleDe, mettreAEchelle, metresFleche, REGLAGES_DEFAUT } from '../utils/courseVmi'
 
 // Éditeur de schéma de terrain (plots, flèches directionnelles, zones) pour les
 // blocs de séance terrain. Remplace l'ancien SchemaEditorPage/SchemaSVG pour ce
 // cas d'usage : flèches avec tête (le sens de course est l'information clé),
 // icônes cohérentes, surfaces réalistes (terrain de rugby / salle / vierge).
 //
-// `value` / `onChange` portent la forme { surface, plots, arrows, zones } —
+// `value` / `onChange` portent la forme { surface, plots, arrows, zones,
+// course, groupe } — distances à l'échelle réelle du terrain (courseVmi.js) ;
 // voir SchemaTerrainView.js pour le rendu lecture seule côté client.
 
 export const PALETTE = ['#f2c94c', '#eb5757', '#2f80ed', '#27ae60', '#f2994a', '#9b51e0', '#f5f7fa', '#1a1d21']
@@ -83,10 +85,28 @@ export function surfaceMarkings(surface) {
 
 // ── Formes partagées par l'éditeur et l'affichage côté client ──
 
+// Flèches aller-retour sur le même trajet : chacune est décalée sur sa droite
+// pour que les deux restent visibles côte à côte.
+export function flechesDecalees(arrows) {
+  const pres = (u, v) => Math.hypot(u.x1 - v.x2, u.y1 - v.y2) < 1 && Math.hypot(u.x2 - v.x1, u.y2 - v.y1) < 1
+  return new Set(arrows.filter(a => arrows.some(b => b !== a && pres(a, b))).map(a => a.id))
+}
+
 // Flèche : la distance est posée au milieu du trait, dans une étiquette.
-export function ArrowShape({ a, selected }) {
-  const label = a.distance != null && a.distance !== '' ? `${a.distance} m` : null
-  const mx = (a.x1 + a.x2) / 2, my = (a.y1 + a.y2) / 2
+export function ArrowShape({ a: brute, selected, surface, decale }) {
+  let a = brute, lx = 0, ly = 0
+  if (decale) {
+    const l = Math.hypot(brute.x2 - brute.x1, brute.y2 - brute.y1) || 1
+    const nx = -(brute.y2 - brute.y1) / l, ny = (brute.x2 - brute.x1) / l
+    a = { ...brute, x1: brute.x1 + nx * 1.1, y1: brute.y1 + ny * 1.1, x2: brute.x2 + nx * 1.1, y2: brute.y2 + ny * 1.1 }
+    // l'étiquette s'écarte encore de son côté, pour ne pas toucher celle du retour
+    const w0 = 6
+    lx = nx * (Math.abs(nx) > 0.7 ? w0 / 2 + 0.6 : 1.4); ly = ny * (Math.abs(ny) > 0.7 ? 1.4 : w0 / 2 + 0.6)
+  }
+  const m = arrondiDemi(metresFleche(a, surface))
+  const mode = a.mode === 'arriere' ? ' · arrière' : a.mode === 'chasses' ? ' · chassés' : ''
+  const label = a.masquerDistance || m < 0.5 ? null : `${String(m).replace('.', ',')} m${mode}`
+  const mx = (a.x1 + a.x2) / 2 + lx, my = (a.y1 + a.y2) / 2 + ly
   const w = label ? label.length * 1.15 + 1.8 : 0
   // Le trait s'arrête un peu avant ses extrémités : la pointe reste visible
   // quand la flèche part d'un plot ou y arrive.
@@ -111,7 +131,7 @@ export function ArrowShape({ a, selected }) {
 
 // Plot : petit point, étiquette juste au-dessus (masquée si vide).
 export function PlotShape({ p, selected }) {
-  const label = (p.label || '').trim()
+  const label = [(p.label || '').trim(), p.sol ? 'sol' : ''].filter(Boolean).join(' · ')
   const w = label.length * 1.05 + 1.6
   return (
     <>
@@ -144,9 +164,28 @@ function ColorChoice({ value, onPick, grande }) {
 }
 
 const DEFAULT_SCHEMA = { surface: 'gazon', plots: [], arrows: [], zones: [] }
+const ACCROCHE = 2 // unités : une flèche commencée ou finie près d'un point s'y accroche
 
-export default function SchemaTerrainEditor({ value, onChange }) {
+// Points d'accroche : plots et extrémités des flèches existantes
+function accrocher(schema, p) {
+  const pts = [...schema.plots.map(q => ({ x: q.x, y: q.y })), ...schema.arrows.flatMap(a => [{ x: a.x1, y: a.y1 }, { x: a.x2, y: a.y2 }])]
+  let best = null, bd = ACCROCHE
+  pts.forEach(q => { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; best = q } })
+  return best ? { x: best.x, y: best.y } : p
+}
+
+// Déplace tout l'exercice de (dx, dy)
+function translater(schema, dx, dy) {
+  return {
+    plots: schema.plots.map(p => ({ ...p, x: p.x + dx, y: p.y + dy })),
+    arrows: schema.arrows.map(a => ({ ...a, x1: a.x1 + dx, y1: a.y1 + dy, x2: a.x2 + dx, y2: a.y2 + dy })),
+    zones: schema.zones.map(z => ({ ...z, x: z.x + dx, y: z.y + dy })),
+  }
+}
+
+export default function SchemaTerrainEditor({ value, onChange, vmiJoueur }) {
   const schema = value || DEFAULT_SCHEMA
+  const groupe = !!schema.groupe
   const [tool, setTool] = useState('select')
   const [plotColor, setPlotColor] = useState(PALETTE[0])
   const [arrowColor, setArrowColor] = useState('#1a1d21')
@@ -158,6 +197,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
   const historyRef = useRef([])
   const futureRef = useRef([])
   const [, forceTick] = useState(0)
+  const [reglagesOuverts, setReglagesOuverts] = useState(false)
 
   function patch(next) { onChange({ ...schema, ...next }) }
 
@@ -196,6 +236,13 @@ export default function SchemaTerrainEditor({ value, onChange }) {
     const target = e.target.closest('[data-kind]')
     const p = svgPoint(e)
 
+    // Exercice verrouillé : on déplace tout d'un seul coup
+    if (groupe) {
+      dragRef.current = { kind: 'group-move', x0: p.x, y0: p.y, base: { plots: schema.plots, arrows: schema.arrows, zones: schema.zones }, historyPushed: false }
+      setSelection(null)
+      return
+    }
+
     if (target) {
       const kind = target.getAttribute('data-kind')
       const id = target.getAttribute('data-id')
@@ -223,7 +270,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
       return
     }
     if (tool === 'arrow') {
-      setDrawStart({ x: p.x, y: p.y })
+      setDrawStart(accrocher(schema, p))
       return
     }
     if (tool === 'zone') {
@@ -231,11 +278,15 @@ export default function SchemaTerrainEditor({ value, onChange }) {
       forceTick(t => t + 1)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tool, plotColor, schema])
+  }, [tool, plotColor, schema, groupe])
 
   const onPointerMove = useCallback((e) => {
     const p = svgPoint(e)
-    if (dragRef.current && dragRef.current.kind === 'plot-move') {
+    if (dragRef.current && dragRef.current.kind === 'group-move') {
+      const d = dragRef.current
+      if (!d.historyPushed) { pushHistory(); d.historyPushed = true }
+      patch(translater(d.base, p.x - d.x0, p.y - d.y0))
+    } else if (dragRef.current && dragRef.current.kind === 'plot-move') {
       if (!dragRef.current.historyPushed) { pushHistory(); dragRef.current.historyPushed = true }
       patch({ plots: schema.plots.map(pl => pl.id === dragRef.current.id ? { ...pl, x: p.x, y: p.y } : pl) })
     } else if (dragRef.current && dragRef.current.kind === 'zone-draft') {
@@ -248,7 +299,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
   }, [schema, drawStart])
 
   const onPointerUp = useCallback((e) => {
-    if (dragRef.current && dragRef.current.kind === 'plot-move') {
+    if (dragRef.current && (dragRef.current.kind === 'plot-move' || dragRef.current.kind === 'group-move')) {
       dragRef.current = null
     } else if (dragRef.current && dragRef.current.kind === 'zone-draft') {
       const d = dragRef.current
@@ -265,12 +316,12 @@ export default function SchemaTerrainEditor({ value, onChange }) {
     } else if (drawStart) {
       const target = e.target.closest('[data-kind="plot"]')
       const endPlot = target ? schema.plots.find(x => x.id === target.getAttribute('data-id')) : null
-      const p = svgPoint(e)
-      const x2 = endPlot ? endPlot.x : p.x, y2 = endPlot ? endPlot.y : p.y
+      const p = endPlot ? { x: endPlot.x, y: endPlot.y } : accrocher(schema, svgPoint(e))
+      const x2 = p.x, y2 = p.y
       const dist = Math.hypot(x2 - drawStart.x, y2 - drawStart.y)
       if (dist > 2) {
         pushHistory()
-        const arrow = { id: uid('a'), x1: drawStart.x, y1: drawStart.y, x2, y2, color: arrowColor, style: arrowStyle, distance: null }
+        const arrow = { id: uid('a'), x1: drawStart.x, y1: drawStart.y, x2, y2, color: arrowColor, style: arrowStyle, mode: 'avant' }
         patch({ arrows: [...schema.arrows, arrow] })
         setSelection({ type: 'arrow', id: arrow.id })
       }
@@ -285,7 +336,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       const meta = e.metaKey || e.ctrlKey
       if (meta && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selection) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selection && !groupe) {
         e.preventDefault()
         pushHistory()
         if (selection.type === 'plot') patch({ plots: schema.plots.filter(x => x.id !== selection.id) })
@@ -297,7 +348,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, schema])
+  }, [selection, schema, groupe])
 
   function deleteSelected() {
     if (!selection) return
@@ -308,6 +359,40 @@ export default function SchemaTerrainEditor({ value, onChange }) {
     setSelection(null)
   }
 
+  function fixerDistance(arrow, metres) {
+    if (!(metres > 0)) return
+    const len = Math.hypot(arrow.x2 - arrow.x1, arrow.y2 - arrow.y1) || 1
+    const cible = metres * echelleDe(surfaceOf(schema))
+    const nx = arrow.x1 + (arrow.x2 - arrow.x1) / len * cible, ny = arrow.y1 + (arrow.y2 - arrow.y1) / len * cible
+    const dx = nx - arrow.x2, dy = ny - arrow.y2
+    const ici = (x, y) => Math.hypot(x - arrow.x2, y - arrow.y2) < 0.01
+    pushHistory()
+    patch({
+      plots: schema.plots.map(p => ici(p.x, p.y) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
+      arrows: schema.arrows.map(a => ({
+        ...a,
+        ...(ici(a.x1, a.y1) ? { x1: a.x1 + dx, y1: a.y1 + dy } : {}),
+        ...(ici(a.x2, a.y2) ? { x2: a.x2 + dx, y2: a.y2 + dy } : {}),
+      })),
+    })
+  }
+
+  // ── Course à la VMI ──
+  const course = schema.course || {}
+  const vmiEffective = course.vmi ?? vmiJoueur ?? null
+  const setCourse = c => patch({ course: { ...course, ...c } })
+  const calcul = schema.arrows.length && course.effort ? calculer(schema, { vmi: vmiEffective, effort: course.effort, intensite: course.intensite }) : null
+  const analyse = schema.arrows.length ? analyser(schema) : null
+  function adapterDistances() {
+    if (!calcul || calcul.erreur) return
+    pushHistory()
+    const s2 = mettreAEchelle(schema, calcul.k)
+    patch({ plots: s2.plots, arrows: s2.arrows, zones: s2.zones, course: { ...course, vmi: vmiEffective } })
+  }
+  const num = v => (v === '' || v == null ? null : Number(v))
+  const fmt = (v, d = 1) => String(Math.round(v * 10 ** d) / 10 ** d).replace('.', ',')
+
+  const decales = flechesDecalees(schema.arrows)
   const selectedPlot = selection?.type === 'plot' ? schema.plots.find(p => p.id === selection.id) : null
   const selectedArrow = selection?.type === 'arrow' ? schema.arrows.find(a => a.id === selection.id) : null
   const selectedZone = selection?.type === 'zone' ? schema.zones.find(z => z.id === selection.id) : null
@@ -322,6 +407,14 @@ export default function SchemaTerrainEditor({ value, onChange }) {
           ))}
         </div>
         <div style={{ flex: 1 }} />
+        <button onClick={() => { setSelection(null); setTool('select'); patch({ groupe: !groupe }) }}
+          title={groupe ? 'Déverrouiller : modifier les éléments un par un' : 'Verrouiller : déplacer tout l\u2019exercice d\u2019un seul coup'}
+          style={{ ...S.lockBtn, ...(groupe ? S.lockBtnOn : {}) }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="2" />{groupe ? <path d="M8 11V7a4 4 0 0 1 8 0v4" /> : <path d="M8 11V7a4 4 0 0 1 7.5-2" />}
+          </svg>
+          {groupe ? 'Exercice verrouillé' : 'Verrouiller l\u2019exercice'}
+        </button>
         <button onClick={undo} disabled={!historyRef.current.length} style={{ ...S.iconBtn, opacity: historyRef.current.length ? 1 : 0.35 }} title="Annuler (Ctrl+Z)"><IcoUndo /></button>
         <button onClick={redo} disabled={!futureRef.current.length} style={{ ...S.iconBtn, opacity: futureRef.current.length ? 1 : 0.35 }} title="Rétablir"><IcoRedo /></button>
       </div>
@@ -350,8 +443,8 @@ export default function SchemaTerrainEditor({ value, onChange }) {
             { key: 'arrow', title: 'Flèche', icon: <><path d="M5 19 19 5" /><path d="M9 5h10v10" /></> },
             { key: 'zone', title: 'Zone', icon: <rect x="4" y="4" width="16" height="16" rx="2" /> },
           ].map(t => (
-            <button key={t.key} title={t.title} onClick={() => { setTool(t.key); setSelection(null) }}
-              style={{ ...S.railBtn, ...(tool === t.key ? S.railBtnOn : {}) }}>
+            <button key={t.key} title={t.title} disabled={groupe} onClick={() => { setTool(t.key); setSelection(null) }}
+              style={{ ...S.railBtn, ...(tool === t.key && !groupe ? S.railBtnOn : {}), ...(groupe ? { opacity: 0.35, cursor: 'default' } : {}) }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">{t.icon}</svg>
             </button>
           ))}
@@ -360,7 +453,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
         <div style={S.canvasWrap}>
           <svg
             ref={svgRef} viewBox="0 0 100 100" width="100%" height="100%"
-            style={{ display: 'block', cursor: tool === 'arrow' ? 'crosshair' : tool === 'zone' ? 'crosshair' : 'default' }}
+            style={{ display: 'block', cursor: groupe ? 'move' : tool === 'arrow' ? 'crosshair' : tool === 'zone' ? 'crosshair' : 'default' }}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
           >
             <defs dangerouslySetInnerHTML={{ __html: surfaceDefs() + markerDefs([...schema.arrows.map(a => a.color), arrowColor]) }} />
@@ -378,10 +471,11 @@ export default function SchemaTerrainEditor({ value, onChange }) {
 
             {schema.arrows.map(a => {
               const isSel = selection?.type === 'arrow' && selection.id === a.id
+              const dec = decales.has(a.id)
               return (
                 <g key={a.id} data-id={a.id} data-kind="arrow" style={{ cursor: 'pointer' }}>
                   <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="transparent" strokeWidth="3.5" />
-                  <ArrowShape a={a} selected={isSel} />
+                  <ArrowShape a={a} selected={isSel} surface={surfaceOf(schema)} decale={dec} />
                 </g>
               )
             })}
@@ -409,8 +503,11 @@ export default function SchemaTerrainEditor({ value, onChange }) {
         </div>
 
         <div style={S.inspector}>
-          {!selection && (
-            <p style={S.hint}>Plot pour poser un point, Flèche pour tracer le sens de course (glisser d'un plot à un autre), Zone pour une surface. Suppr pour effacer, Ctrl+Z pour annuler.</p>
+          {groupe && (
+            <p style={S.hint}>Exercice verrouillé : fais glisser le schéma pour le placer sur le terrain. Les distances ne changent pas. Déverrouille pour modifier un élément.</p>
+          )}
+          {!groupe && !selection && (
+            <p style={S.hint}>Plot pour poser un point, Flèche pour tracer le parcours dans l'ordre (d'un point au suivant), Zone pour une surface. Les distances sont à l'échelle du terrain. Suppr pour effacer, Ctrl+Z pour annuler.</p>
           )}
           {selectedPlot && (
             <>
@@ -418,6 +515,10 @@ export default function SchemaTerrainEditor({ value, onChange }) {
               <input value={selectedPlot.label} onChange={e => patch({ plots: schema.plots.map(p => p.id === selectedPlot.id ? { ...p, label: e.target.value } : p) })} style={S.fieldInput} />
               <label style={S.fieldLabel}>Couleur</label>
               <ColorChoice grande value={selectedPlot.color} onPick={c => { pushHistory(); patch({ plots: schema.plots.map(p => p.id === selectedPlot.id ? { ...p, color: c } : p) }) }} />
+              <label style={S.checkRow}>
+                <input type="checkbox" checked={!!selectedPlot.sol} onChange={e => { pushHistory(); patch({ plots: schema.plots.map(p => p.id === selectedPlot.id ? { ...p, sol: e.target.checked } : p) }) }} />
+                Passage au sol sur ce plot
+              </label>
               <button onClick={deleteSelected} style={S.btnDelete}>Supprimer le plot</button>
             </>
           )}
@@ -425,10 +526,20 @@ export default function SchemaTerrainEditor({ value, onChange }) {
             <>
               <label style={S.fieldLabel}>Couleur</label>
               <ColorChoice grande value={selectedArrow.color} onPick={c => { pushHistory(); patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, color: c } : a) }) }} />
-              <label style={S.fieldLabel}>Distance (m)</label>
-              <input type="number" min="0" step="0.5" value={selectedArrow.distance ?? ''} placeholder="Non renseignée" aria-label="Non renseignée"
-                onChange={e => patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, distance: e.target.value ? Number(e.target.value) : null } : a) })}
+              <label style={S.fieldLabel}>Distance réelle (m)</label>
+              <input key={selectedArrow.id + ':' + arrondiDemi(metresFleche(selectedArrow, surfaceOf(schema)))} type="number" min="0.5" step="0.5"
+                defaultValue={arrondiDemi(metresFleche(selectedArrow, surfaceOf(schema)))}
+                onBlur={e => fixerDistance(selectedArrow, Number(e.target.value))}
+                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                 style={S.fieldInput} />
+              <label style={S.fieldLabel}>Déplacement</label>
+              <select value={selectedArrow.mode || 'avant'} onChange={e => { pushHistory(); patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, mode: e.target.value } : a) }) }} style={S.fieldInput}>
+                {Object.entries(DEPLACEMENTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+              <label style={S.checkRow}>
+                <input type="checkbox" checked={!selectedArrow.masquerDistance} onChange={e => patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, masquerDistance: !e.target.checked } : a) })} />
+                Afficher la distance
+              </label>
               <button onClick={deleteSelected} style={S.btnDelete}>Supprimer la flèche</button>
             </>
           )}
@@ -440,6 +551,75 @@ export default function SchemaTerrainEditor({ value, onChange }) {
             </>
           )}
         </div>
+      </div>
+
+      <div style={S.course}>
+        <div style={S.courseHead}>
+          <span style={S.courseTitre}>Course à la VMI</span>
+          <span style={S.courseSous}>Les distances s'adaptent à la VMI du joueur, dans les proportions du schéma.</span>
+        </div>
+        <div style={S.courseGrid}>
+          {[
+            ['effort', 'Effort (s)', course.effort, 1],
+            ['intensite', 'Intensité (% VMI)', course.intensite ?? '', 5],
+            ['reps', 'Répétitions', course.reps, 1],
+            ['recup', 'Récup (s)', course.recup, 1],
+          ].map(([k, l, v, step]) => (
+            <label key={k} style={S.courseField}>
+              <span style={S.fieldLabelInline}>{l}</span>
+              <input type="number" min="0" step={step} value={v ?? ''} placeholder={k === 'intensite' ? '100' : ''}
+                onChange={e => setCourse({ [k]: num(e.target.value) })} style={S.fieldInput} />
+            </label>
+          ))}
+          <label style={S.courseField}>
+            <span style={S.fieldLabelInline}>VMI du joueur (km/h)</span>
+            <input type="number" min="0" step="0.5" value={course.vmi ?? ''} placeholder={vmiJoueur ? String(vmiJoueur) : ''}
+              onChange={e => setCourse({ vmi: num(e.target.value) })} style={S.fieldInput} />
+          </label>
+        </div>
+        {vmiJoueur && course.vmi == null && <p style={S.courseInfo}>VMI du dernier 30-15 du joueur : {fmt(vmiJoueur)} km/h.</p>}
+
+        {analyse && (
+          <p style={S.courseInfo}>
+            Temps perdu : {fmt(analyse.perteTotale)} s
+            {analyse.virages.length > 0 && ` · ${analyse.virages.length} changement${analyse.virages.length > 1 ? 's' : ''} de direction (${analyse.virages.map(v => `${v.deg}°`).join(', ')})`}
+            {analyse.nbSol > 0 && ` · ${analyse.nbSol} passage${analyse.nbSol > 1 ? 's' : ''} au sol`}
+          </p>
+        )}
+        {calcul && !calcul.erreur && (
+          <p style={S.courseInfo}>
+            À {fmt(calcul.vitesse * 3.6)} km/h : parcours de {fmt(calcul.distanceTotale)} m au lieu de {fmt(calcul.distanceTotale / calcul.k)} m dessinés.
+          </p>
+        )}
+        {calcul?.erreur && course.effort && <p style={S.courseErreur}>{calcul.erreur}</p>}
+        {deborde(schema) && <p style={S.courseErreur}>L'exercice dépasse du dessin : verrouille-le et fais-le glisser, ou réduis l'intensité.</p>}
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+          <button onClick={adapterDistances} disabled={!calcul || !!calcul.erreur || Math.abs(calcul.k - 1) < 0.005}
+            style={{ ...S.btnAdapter, ...(!calcul || calcul.erreur || Math.abs(calcul.k - 1) < 0.005 ? { opacity: 0.4, cursor: 'default' } : {}) }}>
+            Adapter les distances
+          </button>
+          <button onClick={() => setReglagesOuverts(o => !o)} style={S.btnLien}>
+            {reglagesOuverts ? 'Masquer les réglages' : 'Réglages des pertes de temps'}
+          </button>
+        </div>
+
+        {reglagesOuverts && (
+          <div style={S.courseGrid}>
+            {[
+              ['cdd180', 'Demi-tour (s)'], ['cdd90', 'Virage à 90° (s)'], ['cdd45', 'Virage à 45° (s)'],
+              ['sol', 'Passage au sol (s)'], ['arriere', 'Course arrière (% vitesse)'], ['chasses', 'Pas chassés (% vitesse)'],
+            ].map(([k, l]) => (
+              <label key={k} style={S.courseField}>
+                <span style={S.fieldLabelInline}>{l}</span>
+                <input type="number" min="0" step={k === 'arriere' || k === 'chasses' ? 5 : 0.1}
+                  value={course.reglages?.[k] ?? REGLAGES_DEFAUT[k]}
+                  onChange={e => setCourse({ reglages: { ...(course.reglages || {}), [k]: num(e.target.value) ?? REGLAGES_DEFAUT[k] } })}
+                  style={S.fieldInput} />
+              </label>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -485,5 +665,19 @@ const S = {
   swatchBigOn: { borderColor: '#eef0f2' },
   swatchLibre: { position: 'relative', overflow: 'hidden', display: 'block', boxSizing: 'border-box' },
   colorInput: { position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 },
+  lockBtn: { display: 'flex', alignItems: 'center', gap: 6, background: '#21242b', border: '1px solid #2c3036', color: '#a3a9b1', fontSize: 12, fontWeight: 700, padding: '6px 10px', borderRadius: 8, cursor: 'pointer' },
+  lockBtnOn: { background: '#e4f816', color: '#1f2937', borderColor: '#e4f816' },
+  checkRow: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#c9cdd3', margin: '12px 0 0', cursor: 'pointer' },
+  course: { borderTop: '1px solid #2c3036', background: '#1b1e24', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 },
+  courseHead: { display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
+  courseTitre: { fontSize: 13, fontWeight: 800, color: '#eef0f2' },
+  courseSous: { fontSize: 12, color: '#878d96' },
+  courseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8 },
+  courseField: { display: 'flex', flexDirection: 'column', gap: 4 },
+  fieldLabelInline: { fontSize: 11, fontWeight: 700, color: '#878d96' },
+  courseInfo: { margin: 0, fontSize: 12.5, color: '#c9cdd3', lineHeight: 1.5 },
+  courseErreur: { margin: 0, fontSize: 12.5, color: '#f87171', fontWeight: 600, lineHeight: 1.5 },
+  btnAdapter: { background: '#e4f816', color: '#1f2937', border: 'none', fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' },
+  btnLien: { background: 'none', border: 'none', color: '#a3a9b1', fontSize: 12.5, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: 0 },
   btnDelete: { width: '100%', marginTop: 14, background: 'none', border: '1px solid #2c3036', color: '#ef4444', fontSize: 12.5, fontWeight: 700, padding: 9, borderRadius: 8, cursor: 'pointer' },
 }
