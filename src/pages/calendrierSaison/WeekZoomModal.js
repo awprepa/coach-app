@@ -1,24 +1,56 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { FitScale } from './FitScale'
 import { COURSE_INTENSITES, COURSE_VOLUMES, GROUP_COLORS, STYLE_COLORS, TYPES, localISO, matchCatColor } from './constants'
 import { generateBlocPalette } from './couleurs'
 import { calcDureeBloc, calcJeuEffectif, formatSeqDur, parseDurMin } from './seqHelpers'
 import { S } from './styles'
+import { MatchCardShare, MatchCardWeek } from './matchCards'
+import { exporterImage } from './exportImage'
 
 export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
   const groupColor = groupe?.couleur || '#2f6f76'
-  const { wkNum, startISO, days, blocsMap } = weekZoom
+  const { wkNum, startISO, days, blocsMap, notreNom, competition } = weekZoom
   const todayISO = localISO()
   const DOW_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
   const [dayPreview, setDayPreview] = useState(null) // { evt, blocs, dateLabel }
   const [dayFull, setDayFull] = useState(null) // { day }
 
-  // Date range affichage
-  const endDate = new Date(startISO + 'T00:00:00'); endDate.setDate(endDate.getDate() + 6)
+  // Période affichée (dates locales : toISOString décalait la fin d'un jour)
   const [sy, sm, sd] = startISO.split('-').map(Number)
-  const [ey, em, ed] = endDate.toISOString().slice(0, 10).split('-').map(Number)
-  const fmtStart = new Date(sy, sm-1, sd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-  const fmtEnd   = new Date(ey, em-1, ed).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const debutSem = new Date(sy, sm - 1, sd)
+  const finSem = new Date(sy, sm - 1, sd + 6)
+  const plage = debutSem.getMonth() === finSem.getMonth()
+    ? `${debutSem.getDate()} au ${finSem.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    : `${debutSem.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${finSem.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+
+  // Export en image : la fiche (ou la carte du match) est rendue hors écran à
+  // sa taille réelle, sans boutons, puis convertie en PNG.
+  const [aExporter, setAExporter] = useState(null) // { type: 'semaine' } | { type: 'match', evt }
+  const [exportEnCours, setExportEnCours] = useState(false)
+  const [exportErreur, setExportErreur] = useState(null)
+  const exportRef = useRef(null)
+  const slug = (groupe?.nom || 'groupe').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  function exporterMatch(evt) { setExportErreur(null); setExportEnCours(true); setAExporter({ type: 'match', evt }) }
+  function exporterSemaine() { setExportErreur(null); setExportEnCours(true); setAExporter({ type: 'semaine' }) }
+  useEffect(() => {
+    if (!aExporter || !exportRef.current) return
+    const nom = aExporter.type === 'match'
+      ? `match-${aExporter.evt.date_match}-${slug}.png`
+      : `semaine-${wkNum}-${slug}.png`
+    exporterImage(exportRef.current, nom, aExporter.type === 'match' ? 4 : 2)
+      .catch(e => { console.error('[export image]', e); setExportErreur('L\u2019image n\u2019a pas pu être créée. Réessaie.') })
+      .finally(() => { setAExporter(null); setExportEnCours(false) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aExporter])
+  const btnImage = sombre => ({
+    display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+    borderRadius: 8, padding: '7px 12px', opacity: exportEnCours ? 0.6 : 1,
+    background: sombre ? 'rgba(255,255,255,.1)' : '#fff', color: sombre ? '#fff' : '#1a1a1a',
+    border: sombre ? '1.5px solid rgba(255,255,255,.3)' : '1.5px solid #333',
+  })
+  const IcoTelecharger = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+  )
 
   // Seulement les jours avec séances ou matchs FFR
   const activeDays = days.filter(d => d.events.length > 0)
@@ -412,50 +444,204 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     )
   }
 
-  function DayColumn({ day }) {
-    const isToday = day.date === todayISO
-    const matchEvt   = day.events.find(e => e.type === 'match')
-    const ffrMatchEvt = day.events.find(e => e.type === 'ffr_match')
-    const anyMatch   = matchEvt || ffrMatchEvt
-    const isMuscu    = !anyMatch && day.events.every(e => e.type === 'muscu')
-    const [, , dd] = day.date.split('-').map(Number)
-    const borderColor = matchEvt ? matchCatColor(matchEvt.categorie, groupColor)
-      : ffrMatchEvt ? groupColor
-      : isMuscu ? '#b08769'
-      : isToday ? '#e4f816'
-      : '#6b94a3'
-    const typeLabel = anyMatch ? 'Match' : isMuscu ? 'Musculation' : 'Entraînement'
+  // ── Colonne d'un jour : agenda des séances (heure au début de chaque bloc,
+  //    hauteur selon la durée), charge en bas, carte du match ──
+  const PAL_IV = {
+    prepa:  { bg: '#fafcdf', bord: '#b9c70a', label: 'Prépa physique' },
+    coachs: { bg: '#eaf1f8', bord: '#2f5f8a', label: 'Coachs' },
+    both:   { bg: '#ffffff', bord: '#1a1a1a', label: 'Prépa + coachs' },
+  }
+  const PAL_ALT = ['#6b7280', '#b6bac1']
+  const CONTACT_MOTS = ['Aucun contact', 'Ceinturé / bloqué', 'Contact contrôlé', 'Plein contact', 'Opposition libre']
+
+  function heureA(debut, plus) {
+    if (!debut) return plus === 0 ? 'Début' : `+${plus} min`
+    const [h, m] = String(debut).slice(0, 5).split(':').map(Number)
+    const t = h * 60 + m + plus
+    return `${Math.floor(t / 60) % 24}:${String(t % 60).padStart(2, '0')}`
+  }
+
+  function SessionAgenda({ evt }) {
+    const blocs = blocsMap[evt.id] || []
+    const evtLabel = evt.type === 'entrainement' ? (evt.style || evt.titre || 'Entraînement')
+      : evt.type === 'muscu' ? (evt.titre || 'Musculation')
+      : (evt.titre || TYPES[evt.type]?.label || 'Séance')
+    const mins = blocs.map(b => parseDurMin(b.duree) || 0)
+    const totalBlocs = mins.reduce((a, b) => a + b, 0)
+    const total = totalBlocs || evt.duree_min || 0
+    const debut = evt.heure ? String(evt.heure).slice(0, 5) : null
+    let t = 0
+    const departs = mins.map(m => { const x = t; t += m; return x })
+
+    // Charge de la séance : la valeur la plus haute de ses blocs, et où elle arrive
+    const pic = (val) => {
+      let best = -1, at = -1
+      blocs.forEach((b, k) => { const v = val(b); if (v != null && v > best) { best = v; at = k } })
+      return best < 0 ? null : { val: best, bloc: blocs[at], heure: heureA(debut, departs[at]) }
+    }
+    const pc = pic(b => b.contact_intensite)
+    const pv = pic(b => { const i = COURSE_VOLUMES.indexOf(b.course_volume); return i < 0 ? null : i })
+    const pi = pic(b => { const i = COURSE_INTENSITES.indexOf(b.course_intensite); return i < 0 ? null : i })
+    const ligneCharge = (k, note, mot, p) => (
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 38px 1fr', gap: '0 8px', alignItems: 'baseline', padding: '7px 0', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>
+        <span style={{ color: '#6b7280', fontWeight: 700 }}>{k}</span>
+        <span style={{ fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>{note}/4</span>
+        <span style={{ fontWeight: 700, color: '#333' }}>{mot}</span>
+        <span style={{ gridColumn: 3, color: '#6b7280', fontSize: 12, fontWeight: 600 }}>{p.bloc.nom}, {debut ? 'à ' : ''}{p.heure}</span>
+      </div>
+    )
 
     return (
-      <div style={{ background: anyMatch ? '#f8fffe' : isToday ? '#fffef5' : '#fff', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-        {/* En-tête colonne */}
-        <div style={{ padding: '10px 12px 8px', borderBottom: `3px solid ${borderColor}`, textAlign: 'center', flexShrink: 0 }}>
-          <div style={{ fontSize: '.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: '#9aa1ac' }}>{DOW_FR[day.dow]}</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: isToday ? borderColor : '#15181d', lineHeight: 1.1 }}>{dd}</div>
-          <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: borderColor, marginTop: 2 }}>{typeLabel}</div>
-          {isToday && <div style={{ display: 'inline-block', fontSize: '.52rem', fontWeight: 800, background: '#e4f816', color: '#333', borderRadius: 4, padding: '1px 5px', marginTop: 2 }}>Aujourd'hui</div>}
-          {day.events.length > 0 && (
-            <button onClick={() => setDayFull({ day })} style={{ display: 'block', margin: '4px auto 0', fontSize: '.56rem', fontWeight: 800, color: borderColor, background: 'none', border: `1px solid ${borderColor}55`, borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
-              Vue jour ↗
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>{TYPES[evt.type]?.label || 'Séance'}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#1a1a1a' }}>{evtLabel}</div>
+          </div>
+          <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+            {debut
+              ? <><b style={{ display: 'block', fontSize: 16, fontWeight: 800 }}>{total ? `${debut} – ${heureA(debut, total)}` : debut}</b>{total > 0 && <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>{total} min</span>}</>
+              : <>{total > 0 && <b style={{ display: 'block', fontSize: 16, fontWeight: 800 }}>{total} min</b>}<span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>Heure non renseignée</span></>}
+          </div>
+        </div>
+
+        {blocs.length > 0 && (
+          <button data-noexport onClick={() => setDayPreview({ evt, blocs })}
+            style={{ alignSelf: 'flex-start', fontSize: 13, fontWeight: 700, color: '#333', background: 'none', border: 'none', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Voir le déroulé détaillé
+          </button>
+        )}
+
+        {blocs.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '62px 1fr', columnGap: 10 }}>
+            {blocs.map((b, k) => {
+              const iv = PAL_IV[b.intervenant]
+              const bord = iv ? iv.bord : PAL_ALT[k % 2]
+              return (
+                <React.Fragment key={b.id}>
+                  <span style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 800, color: '#333', fontVariantNumeric: 'tabular-nums', paddingTop: 7, borderTop: '1px solid #8a8a8a', marginBottom: 4 }}>{heureA(debut, departs[k])}</span>
+                  <div style={{ minHeight: Math.max(34, mins[k] * 3.2), background: iv ? iv.bg : '#fff', borderLeft: `4px solid ${bord}`, borderRadius: '0 8px 8px 0', padding: '7px 11px', marginBottom: 4, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.25, color: '#1a1a1a' }}>{b.nom}</span>
+                      {mins[k] > 0 && <span style={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: '#1a1a1a' }}>{mins[k]} min</span>}
+                    </div>
+                    {iv && <span style={{ fontSize: 12, fontWeight: 700, color: '#4b5563' }}>{iv.label}</span>}
+                  </div>
+                </React.Fragment>
+              )
+            })}
+            {totalBlocs > 0 && <span style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 800, color: '#6b7280', paddingTop: 7, borderTop: '1px solid #cfcfcf' }}>{heureA(debut, totalBlocs)}</span>}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: '#6b7280' }}>
+            {evt.lieu && <div>{evt.lieu}</div>}
+            {evt.note && <div style={{ fontStyle: 'italic' }}>{evt.note}</div>}
+            <div>Aucun déroulé renseigné</div>
+          </div>
+        )}
+
+        {evt.type === 'entrainement' && blocs.length > 0 && (
+          (pc || pv || pi) ? (
+            <div style={{ borderTop: '1px solid #cfcfcf' }}>
+              {pc && ligneCharge('Contact', pc.val, CONTACT_MOTS[pc.val] || '', pc)}
+              {pv && ligneCharge('Course', pv.val + 1, COURSE_VOLUMES[pv.val], pv)}
+              {pi && ligneCharge('Intensité', pi.val + 1, COURSE_INTENSITES[pi.val], pi)}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, border: '1px dashed #cfcfcf', borderRadius: 10, padding: '9px 11px' }}>Charge non renseignée pour cette séance</div>
+          )
+        )}
+      </div>
+    )
+  }
+
+  function MatchSimple({ evt }) {
+    const [, mm, dd] = evt.date.split('-').map(Number)
+    return (
+      <div style={{ background: '#161616', color: '#fff', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ background: matchCatColor(evt.categorie, groupColor), padding: '10px 14px', fontSize: 12, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+          Match{evt.categorie ? ` · ${evt.categorie}` : ''} · {dd}/{String(mm).padStart(2, '0')}
+        </div>
+        <div style={{ padding: '16px 14px', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 800 }}>{evt.adversaire ? `contre ${evt.adversaire}` : (evt.titre || 'Match')}</div>
+          {evt.heure && <div style={{ fontSize: 30, fontWeight: 900, fontVariantNumeric: 'tabular-nums', marginTop: 8 }}>{String(evt.heure).slice(0, 5)}</div>}
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.72)', fontWeight: 600, marginTop: 4 }}>
+            {[evt.domicile === true ? 'À domicile' : evt.domicile === false ? 'À l’extérieur' : null, evt.lieu].filter(Boolean).join(' · ')}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  function DayColumn({ day, pourImage }) {
+    const [yy, mm, dd] = day.date.split('-').map(Number)
+    const moisCourt = new Date(yy, mm - 1, dd).toLocaleDateString('fr-FR', { month: 'short' })
+    const aMatch = day.events.some(e => e.type === 'ffr_match' || e.type === 'match')
+    return (
+      <div style={{ flex: aMatch ? '0 0 330px' : '1 1 0', minWidth: aMatch ? 330 : 280, padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 16, borderLeft: '1px solid #e0e0e0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: 10, borderBottom: '1px solid #cfcfcf' }}>
+          <span style={{ fontSize: 17, fontWeight: 800, color: '#1a1a1a' }}>
+            {DOW_FR[day.dow]} <small style={{ fontWeight: 600, color: '#6b7280', fontSize: 14, marginLeft: 4 }}>{dd} {moisCourt}</small>
+          </span>
+          {!pourImage && day.date === todayISO && <span style={{ fontSize: 12, fontWeight: 800, background: '#e4f816', color: '#333', borderRadius: 4, padding: '1px 6px' }}>Aujourd'hui</span>}
+          {!pourImage && (
+            <button data-noexport onClick={() => setDayFull({ day })}
+              style={{ fontSize: 13, fontWeight: 700, color: '#333', background: 'none', border: 'none', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Voir la journée
             </button>
           )}
         </div>
+        {day.events.map(evt => (
+          <div key={evt.id}>
+            {evt.type === 'ffr_match' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+                <MatchCardWeek m={evt} groupe={groupe} notreNom={notreNom} competition={competition} journee={evt._journee} />
+                {!pourImage && (
+                  <button data-noexport onClick={() => exporterMatch(evt)} disabled={exportEnCours} style={btnImage(false)}>
+                    <IcoTelecharger /> Image du match
+                  </button>
+                )}
+              </div>
+            ) : evt.type === 'match' ? (
+              <MatchSimple evt={evt} />
+            ) : (
+              <SessionAgenda evt={evt} />
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
-        {/* Séances */}
-        <div style={{ padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          {day.events.map(evt => (
-            <div key={evt.id} style={evt.type === 'ffr_match' ? { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 } : {}}>
-              {evt.heure && evt.type !== 'ffr_match' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                  <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
-                  <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#9aa1ac' }}>{String(evt.heure).slice(0, 5)}</span>
-                  <div style={{ flex: 1, height: 1, background: '#e6e8ec' }} />
-                </div>
-              )}
-              <EventContent evt={evt} />
-            </div>
-          ))}
+  // Fiche de la semaine (affichée dans la fenêtre, et rendue hors écran pour l'export)
+  function FicheSemaine({ pourImage }) {
+    return (
+      <div style={{ background: '#f2f2f2', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", color: '#1a1a1a' }}>
+        {pourImage && (
+          <div style={{ background: '#333', color: '#fff', padding: '14px 18px' }}>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>Semaine {wkNum}{groupe?.nom ? ` · ${groupe.nom}` : ''}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.72)', marginTop: 2 }}>{plage}</div>
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'stretch', marginLeft: -1 }}>
+          {activeDays.map(day => <DayColumn key={day.date} day={day} pourImage={pourImage} />)}
         </div>
+        <Legende />
+      </div>
+    )
+  }
+
+  function Legende() {
+    return (
+      <div style={{ display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center', fontSize: 12, color: '#4b5563', fontWeight: 600, padding: '10px 18px', borderTop: '1px solid #e0e0e0' }}>
+        {Object.values(PAL_IV).map(v => (
+          <span key={v.label}><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, marginRight: 6, verticalAlign: -2, background: v.bord }} />{v.label}</span>
+        ))}
+        <span>
+          {PAL_ALT.map(c => <span key={c} style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, marginRight: 4, verticalAlign: -2, background: c }} />)}
+          <span style={{ marginLeft: 2 }}>Intervenant non renseigné</span>
+        </span>
+        <span>Charge : valeur la plus haute de la séance, notée sur 4</span>
       </div>
     )
   }
@@ -755,53 +941,61 @@ export function WeekZoomModal({ weekZoom, groupe, onClose, onNavigate }) {
     )
   }
 
-  const cols = activeDays.length || 1
-  const Pill = ({ color, label }) => (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,.1)', borderRadius: 7, padding: '3px 9px', fontSize: '.67rem', fontWeight: 700, color: 'rgba(255,255,255,.75)' }}>
-      <span style={{ width: 6, height: 6, borderRadius: 2, background: color, flexShrink: 0 }} />{label}
-    </span>
-  )
+  const btnNav = { background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+  const resume = [nbTrain && `${nbTrain} entraînement${nbTrain > 1 ? 's' : ''}`, nbMuscu && `${nbMuscu} muscu`, nbMatch && `${nbMatch} match${nbMatch > 1 ? 's' : ''}`].filter(Boolean).join(', ')
 
   return (
     <>
       {dayPreview && <DayPreviewModal evt={dayPreview.evt} blocs={dayPreview.blocs} />}
       {dayFull && <DayFullModal day={dayFull.day} />}
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,18,23,.55)', zIndex: 110 }} onClick={onClose} />
-      <div style={{ position: 'fixed', top: '70px', left: '2vw', right: '2vw', bottom: '2vh', zIndex: 111, background: '#f5f6f8', borderRadius: 20, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ position: 'fixed', top: '70px', left: '2vw', right: '2vw', bottom: '2vh', zIndex: 111, background: '#f2f2f2', borderRadius: 16, boxShadow: '0 32px 100px rgba(0,0,0,.45)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #333333 0%, #1f2937 100%)', padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <span style={{ background: '#e4f816', color: '#333', fontSize: '.68rem', fontWeight: 900, padding: '4px 10px', borderRadius: 7, letterSpacing: '.05em', flexShrink: 0 }}>S{wkNum}</span>
-            <div>
-              <div style={{ color: '#fff', fontSize: '.98rem', fontWeight: 800 }}>Semaine {wkNum}</div>
-              <div style={{ color: 'rgba(255,255,255,.45)', fontSize: '.7rem' }}>{fmtStart} → {fmtEnd}</div>
-            </div>
+        {/* En-tête */}
+        <div style={{ background: '#333', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', flexShrink: 0 }}>
+          <div>
+            <div style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>Semaine {wkNum}</div>
+            <div style={{ color: 'rgba(255,255,255,.72)', fontSize: 13, marginTop: 2 }}>{plage}{resume ? ` · ${resume}` : ''}</div>
           </div>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-            {nbMatch > 0 && <Pill color={groupColor} label={`${nbMatch} Match${nbMatch > 1 ? 's' : ''}`} />}
-            {nbTrain > 0 && <Pill color="#6b94a3" label={`${nbTrain} Entraîn.`} />}
-            {nbMuscu > 0 && <Pill color="#b08769" label={`${nbMuscu} Muscu`} />}
-            {allEvts.length === 0 && <span style={{ fontSize: '.7rem', color: 'rgba(255,255,255,.4)', fontStyle: 'italic' }}>Semaine libre</span>}
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button onClick={() => onNavigate(-1)} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>← S{wkNum - 1}</button>
-            <button onClick={() => onNavigate(1)}  style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>S{wkNum + 1} →</button>
-            <button onClick={onClose} style={{ background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            {exportErreur && <span style={{ color: '#fecaca', fontSize: 13, fontWeight: 600 }}>{exportErreur}</span>}
+            {activeDays.length > 0 && (
+              <button onClick={exporterSemaine} disabled={exportEnCours} style={btnImage(true)}>
+                <IcoTelecharger /> {exportEnCours ? 'Création de l\u2019image…' : 'Enregistrer l\u2019image'}
+              </button>
+            )}
+            <button onClick={() => onNavigate(-1)} style={btnNav}>Semaine {wkNum - 1}</button>
+            <button onClick={() => onNavigate(1)} style={btnNav}>Semaine {wkNum + 1}</button>
+            <button onClick={onClose} style={btnNav}>Fermer</button>
           </div>
         </div>
 
-        {/* Grille */}
+        {/* Jours */}
         {activeDays.length === 0 ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa1ac', fontSize: '.9rem', fontStyle: 'italic' }}>Aucune séance cette semaine</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: 15 }}>Aucune séance cette semaine</div>
         ) : (
-          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', display: 'flex', gap: 1, background: '#d8dce4' }}>
-              {activeDays.map(day => <DayColumn key={day.date} day={day} />)}
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+            <div style={{ minWidth: 'max-content' }}>
+              <FicheSemaine />
             </div>
           </div>
         )}
       </div>
+
+      {/* Rendu hors écran pour l'export en image */}
+      {aExporter && (
+        <div style={{ position: 'fixed', left: -100000, top: 0, zIndex: -1 }} aria-hidden="true">
+          {aExporter.type === 'match' ? (
+            <div ref={exportRef} style={{ display: 'inline-block' }}>
+              <MatchCardShare m={aExporter.evt} groupe={groupe} notreNom={notreNom} competition={competition} journee={aExporter.evt._journee} />
+            </div>
+          ) : (
+            <div ref={exportRef} style={{ width: Math.max(900, activeDays.length * 330) }}>
+              <FicheSemaine pourImage />
+            </div>
+          )}
+        </div>
+      )}
     </>
   )
 }

@@ -345,6 +345,16 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const monday = new Date(date)
     monday.setUTCDate(date.getUTCDate() - dow)
 
+    // Matchs FFR : numéro de journée (quand la FFR met une date à la place, on
+    // prend le rang du match dans la saison) et nom de notre équipe (le plus
+    // fréquent), pour les cartes de match.
+    const ffrTries = [...matchsFFR].filter(m => m.date_match).sort((a, b) => a.date_match.localeCompare(b.date_match))
+    const compte = {}
+    ffrTries.forEach(m => [m.equipe_dom, m.equipe_ext].forEach(n => { if (n) compte[n] = (compte[n] || 0) + 1 }))
+    const notreNom = Object.keys(compte).sort((a, b) => compte[b] - compte[a])[0] || null
+    const competition = classementFFR.find(c => c.competition === groupe?.monclubhouse_competition)?.competition_label
+      || classementFFR[0]?.competition_label || null
+
     const days = []
     for (let i = 0; i < 7; i++) {
       const cur = new Date(monday)
@@ -353,7 +363,10 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
       // Inclure les matchs FFR comme événements (lecture seule)
       const ffrEvs = matchsFFR
         .filter(m => m.date_match === dISO)
-        .map(m => ({ ...m, type: 'ffr_match', date: m.date_match }))
+        .map(m => ({
+          ...m, type: 'ffr_match', date: m.date_match,
+          _journee: /^\d+$/.test(String(m.journee || '').trim()) ? String(m.journee).trim() : String(ffrTries.indexOf(m) + 1),
+        }))
       // Un match FFR a aussi son événement « match » dans le calendrier (créé
       // automatiquement, pour le RPE) : on n'affiche que la carte FFR ce jour-là.
       const evs = evenements.filter(e => e.date === dISO && !(ffrEvs.length && e.type === 'match'))
@@ -368,7 +381,7 @@ export default function CalendrierSaison({ groupeId = null, embedded = false, op
     const startISO = monday.toISOString().slice(0, 10)
     const [sy, sm, sd] = startISO.split('-').map(Number)
     const wkNum = isoWeek(sy, sm - 1, sd)
-    setWeekZoom({ startISO, wkNum, days, blocsMap })
+    setWeekZoom({ startISO, wkNum, days, blocsMap, notreNom, competition })
   }
 
   async function navigateWeekZoom(delta) {

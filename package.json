@@ -1,6 +1,6 @@
 {
   "name": "coach-app",
-  "version": "0.67.4",
+  "version": "0.68.0",
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",
@@ -10,6 +10,7 @@
     "@testing-library/user-event": "^13.5.0",
     "@zxing/browser": "^0.2.0",
     "dexie": "^4.4.3",
+    "html-to-image": "1.11.13",
     "jspdf": "^4.2.1",
     "pdfjs-dist": "^3.11.174",
     "react": "^19.2.5",
