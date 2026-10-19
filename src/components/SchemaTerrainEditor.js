@@ -3,13 +3,18 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 // Éditeur de schéma de terrain (plots, flèches directionnelles, zones) pour les
 // blocs de séance terrain. Remplace l'ancien SchemaEditorPage/SchemaSVG pour ce
 // cas d'usage : flèches avec tête (le sens de course est l'information clé),
-// icônes cohérentes, surfaces réalistes (gazon rugby / piste / salle).
+// icônes cohérentes, surfaces réalistes (terrain de rugby / salle / vierge).
 //
 // `value` / `onChange` portent la forme { surface, plots, arrows, zones } —
 // voir SchemaTerrainView.js pour le rendu lecture seule côté client.
 
-const PALETTE = ['#f2c94c', '#eb5757', '#2f80ed', '#27ae60', '#f2994a', '#9b51e0', '#f5f7fa', '#1a1d21']
-const SURFACES = { gazon: 'Gazon', piste: 'Piste', salle: 'Salle', vierge: 'Vierge' }
+export const PALETTE = ['#f2c94c', '#eb5757', '#2f80ed', '#27ae60', '#f2994a', '#9b51e0', '#f5f7fa', '#1a1d21']
+const SURFACES = { gazon: 'Terrain de rugby', salle: 'Salle', vierge: 'Vierge' }
+// Une ancienne surface (ex. « piste », retirée) s'affiche en terrain de rugby.
+export const surfaceOf = schema => (SURFACES[schema?.surface] ? schema.surface : 'gazon')
+
+// Tailles en unités du schéma (le dessin fait 100 × 100)
+export const PLOT_R = 1.15
 
 function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 function nextLabel(plots) {
@@ -23,9 +28,6 @@ export function surfaceDefs() {
       <rect width="12.5" height="25" fill="#3c7d45"/>
       <rect width="12.5" height="12.5" fill="#427f49"/>
     </pattern>
-    <pattern id="surf-piste" width="100" height="100" patternUnits="userSpaceOnUse">
-      <rect width="100" height="100" fill="#a1472b"/>
-    </pattern>
     <pattern id="surf-salle" width="100" height="100" patternUnits="userSpaceOnUse">
       <rect width="100" height="100" fill="#cdae7c"/>
     </pattern>
@@ -36,43 +38,109 @@ export function surfaceDefs() {
   `
 }
 
-export function markerDefs() {
-  return PALETTE.concat(['#1a1d21']).map((c, i) => `
-    <marker id="arrow-${i}" markerWidth="3" markerHeight="3" refX="2.6" refY="1.5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0.2 L3,1.5 L0,2.8 Z" fill="${c}"/>
+// Une tête de flèche par couleur utilisée (couleur libre possible)
+export const markerId = color => `arrow-${String(color || '#1a1d21').replace(/[^0-9a-z]/gi, '')}`
+export function markerDefs(colors = []) {
+  return [...new Set(['#1a1d21', ...colors])].map(c => `
+    <marker id="${markerId(c)}" markerWidth="4" markerHeight="4" refX="3.4" refY="2" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0.3 L4,2 L0,3.7 Z" fill="${c}"/>
     </marker>
   `).join('')
-}
-function markerIdFor(color) {
-  const idx = PALETTE.concat(['#1a1d21']).indexOf(color)
-  return idx >= 0 ? idx : PALETTE.length
 }
 
 export function surfaceMarkings(surface) {
   if (surface === 'gazon') {
-    const L = '#f4f5f2', op = 0.6
-    return `
-      <rect x="3" y="3" width="94" height="94" fill="none" stroke="${L}" stroke-width="0.4" opacity="${op}"/>
-      <line x1="3" y1="50" x2="97" y2="50" stroke="${L}" stroke-width="0.32" opacity="${op}"/>
-      <line x1="3" y1="40" x2="97" y2="40" stroke="${L}" stroke-width="0.26" opacity="${op}" stroke-dasharray="1.4,1"/>
-      <line x1="3" y1="60" x2="97" y2="60" stroke="${L}" stroke-width="0.26" opacity="${op}" stroke-dasharray="1.4,1"/>
-      <line x1="3" y1="24" x2="97" y2="24" stroke="${L}" stroke-width="0.3" opacity="${op}"/>
-      <line x1="3" y1="76" x2="97" y2="76" stroke="${L}" stroke-width="0.3" opacity="${op}"/>
-      <line x1="3" y1="13" x2="97" y2="13" stroke="${L}" stroke-width="0.34" opacity="${op}"/>
-      <line x1="3" y1="87" x2="97" y2="87" stroke="${L}" stroke-width="0.34" opacity="${op}"/>
-      <g opacity="${op}"><line x1="46" y1="9" x2="46" y2="13" stroke="${L}" stroke-width="0.6"/><line x1="54" y1="9" x2="54" y2="13" stroke="${L}" stroke-width="0.6"/><line x1="46" y1="10.6" x2="54" y2="10.6" stroke="${L}" stroke-width="0.5"/></g>
-      <g opacity="${op}"><line x1="46" y1="87" x2="46" y2="91" stroke="${L}" stroke-width="0.6"/><line x1="54" y1="87" x2="54" y2="91" stroke="${L}" stroke-width="0.6"/><line x1="46" y1="89.4" x2="54" y2="89.4" stroke="${L}" stroke-width="0.5"/></g>
-    `
-  }
-  if (surface === 'piste') {
-    let html = ''
-    for (let i = 1; i <= 6; i++) html += `<line x1="0" y1="${i * 100 / 7}" x2="100" y2="${i * 100 / 7}" stroke="#ece2d6" stroke-width="0.25" opacity="0.55"/>`
-    return html
+    // Terrain de rugby dans le sens de la longueur : 120 m (avec les en-buts de
+    // 10 m) × 70 m, à 0,8 unité par mètre. Lignes : ballon mort, en-but, 5 m
+    // (pointillés), 22 m, 40 m (les « 10 m » de part et d'autre du milieu,
+    // pointillés), 50 m (milieu) ; tirets à 5 m et 15 m des lignes de touche.
+    const L = '#f4f5f2', op = 0.75, k = 0.8, top = 2, x1 = 22, x2 = 78
+    const y = m => (top + m * k).toFixed(2)
+    const ligne = (m, w, dash) => `<line x1="${x1}" y1="${y(m)}" x2="${x2}" y2="${y(m)}" stroke="${L}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`
+    const cote = (m, txt) => `<text x="${x1 - 1.2}" y="${(+y(m) + 0.7).toFixed(2)}" font-size="2" font-weight="700" fill="${L}" text-anchor="end">${txt}</text>`
+    const tirets = x => `<line x1="${x}" y1="${y(10)}" x2="${x}" y2="${y(110)}" stroke="${L}" stroke-width="0.22" stroke-dasharray="0.9,4.1"/>`
+    const poteaux = m => {
+      const yy = +y(m), d = 2.24 // 5,6 m entre les poteaux
+      return `<line x1="${50 - d}" y1="${yy - 1.6}" x2="${50 - d}" y2="${yy + 1.6}" stroke="${L}" stroke-width="0.45"/><line x1="${50 + d}" y1="${yy - 1.6}" x2="${50 + d}" y2="${yy + 1.6}" stroke="${L}" stroke-width="0.45"/><line x1="${50 - d}" y1="${yy}" x2="${50 + d}" y2="${yy}" stroke="${L}" stroke-width="0.35"/>`
+    }
+    return `<g opacity="${op}">
+      <rect x="${x1}" y="${y(0)}" width="${x2 - x1}" height="${(120 * k).toFixed(2)}" fill="none" stroke="${L}" stroke-width="0.4"/>
+      ${ligne(10, 0.4)}${ligne(110, 0.4)}
+      ${ligne(15, 0.25, '1.4,1.1')}${ligne(105, 0.25, '1.4,1.1')}
+      ${ligne(32, 0.32)}${ligne(88, 0.32)}
+      ${ligne(50, 0.25, '1.4,1.1')}${ligne(70, 0.25, '1.4,1.1')}
+      ${ligne(60, 0.36)}
+      ${tirets(x1 + 4)}${tirets(x1 + 12)}${tirets(x2 - 4)}${tirets(x2 - 12)}
+      ${poteaux(10)}${poteaux(110)}
+      ${cote(10, 'En-but')}${cote(15, '5')}${cote(32, '22')}${cote(50, '40')}${cote(60, '50')}${cote(70, '40')}${cote(88, '22')}${cote(105, '5')}${cote(110, 'En-but')}
+    </g>`
   }
   if (surface === 'salle') {
     return `<rect x="4" y="4" width="92" height="92" fill="none" stroke="#a9835a" stroke-width="0.35" opacity="0.6"/>`
   }
   return ''
+}
+
+// ── Formes partagées par l'éditeur et l'affichage côté client ──
+
+// Flèche : la distance est posée au milieu du trait, dans une étiquette.
+export function ArrowShape({ a, selected }) {
+  const label = a.distance != null && a.distance !== '' ? `${a.distance} m` : null
+  const mx = (a.x1 + a.x2) / 2, my = (a.y1 + a.y2) / 2
+  const w = label ? label.length * 1.15 + 1.8 : 0
+  // Le trait s'arrête un peu avant ses extrémités : la pointe reste visible
+  // quand la flèche part d'un plot ou y arrive.
+  const len = Math.hypot(a.x2 - a.x1, a.y2 - a.y1) || 1
+  const ux = (a.x2 - a.x1) / len, uy = (a.y2 - a.y1) / len
+  const d0 = len > 6 ? PLOT_R + 0.5 : 0, d1 = len > 6 ? PLOT_R + 0.7 : 0
+  return (
+    <>
+      <line x1={a.x1 + ux * d0} y1={a.y1 + uy * d0} x2={a.x2 - ux * d1} y2={a.y2 - uy * d1} stroke={selected ? '#ffffff' : a.color}
+        strokeWidth={selected ? 0.6 : 0.45} strokeLinecap="round"
+        strokeDasharray={a.style === 'pointille' ? '1.6,1.3' : undefined}
+        markerEnd={`url(#${markerId(a.color)})`} />
+      {label && (
+        <g>
+          <rect x={mx - w / 2} y={my - 1.45} width={w} height="2.9" rx="1.45" fill="#14161a" fillOpacity="0.85" />
+          <text x={mx} y={my + 0.7} fontSize="1.9" fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
+        </g>
+      )}
+    </>
+  )
+}
+
+// Plot : petit point, étiquette juste au-dessus (masquée si vide).
+export function PlotShape({ p, selected }) {
+  const label = (p.label || '').trim()
+  const w = label.length * 1.05 + 1.6
+  return (
+    <>
+      <circle cx={p.x} cy={p.y + 0.15} r={PLOT_R + 0.05} fill="rgba(0,0,0,0.25)" />
+      <circle cx={p.x} cy={p.y} r={PLOT_R} fill={p.color} stroke={selected ? '#ffffff' : 'rgba(0,0,0,0.2)'} strokeWidth={selected ? 0.45 : 0.22} />
+      {label && (
+        <>
+          <rect x={p.x - w / 2} y={p.y - PLOT_R - 3.2} width={w} height="2.6" rx="1.3" fill="#14161a" fillOpacity="0.8" />
+          <text x={p.x} y={p.y - PLOT_R - 1.3} fontSize="1.75" fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
+        </>
+      )}
+    </>
+  )
+}
+
+// Couleurs prédéfinies + couleur libre
+function ColorChoice({ value, onPick, grande }) {
+  const libre = value && !PALETTE.includes(value)
+  return (
+    <div style={grande ? S.swatchGrid : S.swatchRow}>
+      {PALETTE.map(c => (
+        <button key={c} type="button" title={c} onClick={() => onPick(c)}
+          style={grande ? { ...S.swatchBig, background: c, ...(value === c ? S.swatchBigOn : {}) } : { ...S.swatch, background: c, ...(value === c ? S.swatchOn : {}) }} />
+      ))}
+      <label title="Autre couleur" style={{ ...(grande ? S.swatchBig : S.swatch), ...S.swatchLibre, ...(libre ? (grande ? S.swatchBigOn : S.swatchOn) : {}), background: libre ? value : 'conic-gradient(#eb5757, #f2c94c, #27ae60, #2f80ed, #9b51e0, #eb5757)' }}>
+        <input type="color" value={value || '#ffffff'} onChange={e => onPick(e.target.value)} style={S.colorInput} />
+      </label>
+    </div>
+  )
 }
 
 const DEFAULT_SCHEMA = { surface: 'gazon', plots: [], arrows: [], zones: [] }
@@ -250,7 +318,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
       <div style={S.topbar}>
         <div style={S.pills}>
           {Object.entries(SURFACES).map(([key, label]) => (
-            <button key={key} onClick={() => patch({ surface: key })} style={{ ...S.pill, ...(schema.surface === key ? S.pillOn : {}) }}>{label}</button>
+            <button key={key} onClick={() => patch({ surface: key })} style={{ ...S.pill, ...(surfaceOf(schema) === key ? S.pillOn : {}) }}>{label}</button>
           ))}
         </div>
         <div style={{ flex: 1 }} />
@@ -261,12 +329,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
       {(tool === 'plot' || tool === 'arrow' || tool === 'zone') && (
         <div style={S.ctxbar}>
           <span style={S.ctxLabel}>{tool === 'plot' ? 'Couleur du plot' : tool === 'arrow' ? 'Couleur de la flèche' : 'Couleur de la zone'}</span>
-          <div style={S.swatchRow}>
-            {PALETTE.map(c => (
-              <button key={c} onClick={() => tool === 'plot' ? setPlotColor(c) : setArrowColor(c)}
-                style={{ ...S.swatch, background: c, ...((tool === 'plot' ? plotColor : arrowColor) === c ? S.swatchOn : {}) }} />
-            ))}
-          </div>
+          <ColorChoice value={tool === 'plot' ? plotColor : arrowColor} onPick={c => tool === 'plot' ? setPlotColor(c) : setArrowColor(c)} />
           {tool === 'arrow' && (
             <div style={S.styleToggle}>
               {['plein', 'pointille'].map(st => (
@@ -300,9 +363,9 @@ export default function SchemaTerrainEditor({ value, onChange }) {
             style={{ display: 'block', cursor: tool === 'arrow' ? 'crosshair' : tool === 'zone' ? 'crosshair' : 'default' }}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
           >
-            <defs dangerouslySetInnerHTML={{ __html: surfaceDefs() + markerDefs() }} />
-            <rect data-bg="1" x="0" y="0" width="100" height="100" fill={`url(#surf-${schema.surface})`} />
-            <g dangerouslySetInnerHTML={{ __html: surfaceMarkings(schema.surface) }} />
+            <defs dangerouslySetInnerHTML={{ __html: surfaceDefs() + markerDefs([...schema.arrows.map(a => a.color), arrowColor]) }} />
+            <rect data-bg="1" x="0" y="0" width="100" height="100" fill={`url(#surf-${surfaceOf(schema)})`} />
+            <g dangerouslySetInnerHTML={{ __html: surfaceMarkings(surfaceOf(schema)) }} />
 
             {schema.zones.map(z => {
               const isSel = selection?.type === 'zone' && selection.id === z.id
@@ -315,43 +378,27 @@ export default function SchemaTerrainEditor({ value, onChange }) {
 
             {schema.arrows.map(a => {
               const isSel = selection?.type === 'arrow' && selection.id === a.id
-              const dx = a.x2 - a.x1, dy = a.y2 - a.y1, len = Math.hypot(dx, dy) || 1
-              const nx = -dy / len, ny = dx / len
-              const midX = (a.x1 + a.x2) / 2, midY = (a.y1 + a.y2) / 2
-              const labelX = midX + nx * 4.6, labelY = midY + ny * 4.6
               return (
                 <g key={a.id} data-id={a.id} data-kind="arrow" style={{ cursor: 'pointer' }}>
                   <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="transparent" strokeWidth="3.5" />
-                  <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke={isSel ? '#ffffff' : a.color}
-                    strokeWidth={isSel ? 0.75 : 0.55} strokeLinecap="round"
-                    strokeDasharray={a.style === 'pointille' ? '2,1.6' : undefined}
-                    markerEnd={`url(#arrow-${markerIdFor(a.color)})`} />
-                  {a.distance != null && (
-                    <>
-                      <rect x={labelX - 5} y={labelY - 2.1} width="10" height="4.2" rx="2.1" fill="#14161a" fillOpacity="0.82" />
-                      <text x={labelX} y={labelY + 0.9} fontSize="2.5" fontWeight="700" fill="#ffffff" textAnchor="middle">{a.distance} m</text>
-                    </>
-                  )}
+                  <ArrowShape a={a} selected={isSel} />
                 </g>
               )
             })}
 
             {schema.plots.map(p => {
               const isSel = selection?.type === 'plot' && selection.id === p.id
-              const labelW = Math.max(7, p.label.length * 2.3 + 2.4)
               return (
                 <g key={p.id} data-id={p.id} data-kind="plot" style={{ cursor: 'grab' }}>
-                  <circle cx={p.x} cy={p.y + 0.22} r="1.9" fill="rgba(0,0,0,0.28)" />
-                  <circle cx={p.x} cy={p.y} r="1.85" fill={p.color} stroke={isSel ? '#ffffff' : 'rgba(0,0,0,0.18)'} strokeWidth={isSel ? 0.6 : 0.32} />
-                  <rect x={p.x - labelW / 2} y={p.y - 6.3} width={labelW} height="3.7" rx="1.85" fill="#14161a" fillOpacity="0.82" />
-                  <text x={p.x} y={p.y - 3.75} fontSize="2.3" fontWeight="700" fill="#ffffff" textAnchor="middle">{p.label}</text>
+                  <circle cx={p.x} cy={p.y} r="2.6" fill="transparent" />
+                  <PlotShape p={p} selected={isSel} />
                 </g>
               )
             })}
 
             {drawStart && (
               <line x1={drawStart.x} y1={drawStart.y} x2={drawStart.cur?.x ?? drawStart.x} y2={drawStart.cur?.y ?? drawStart.y}
-                stroke={arrowColor} strokeWidth="0.7" strokeDasharray="1.6,1.2" markerEnd={`url(#arrow-${markerIdFor(arrowColor)})`} />
+                stroke={arrowColor} strokeWidth="0.5" strokeDasharray="1.6,1.2" markerEnd={`url(#${markerId(arrowColor)})`} />
             )}
             {zoneDraft && (
               <rect x={Math.min(zoneDraft.x1, zoneDraft.x2)} y={Math.min(zoneDraft.y1, zoneDraft.y2)}
@@ -370,24 +417,14 @@ export default function SchemaTerrainEditor({ value, onChange }) {
               <label style={S.fieldLabel}>Étiquette</label>
               <input value={selectedPlot.label} onChange={e => patch({ plots: schema.plots.map(p => p.id === selectedPlot.id ? { ...p, label: e.target.value } : p) })} style={S.fieldInput} />
               <label style={S.fieldLabel}>Couleur</label>
-              <div style={S.swatchGrid}>
-                {PALETTE.map(c => (
-                  <button key={c} onClick={() => { pushHistory(); patch({ plots: schema.plots.map(p => p.id === selectedPlot.id ? { ...p, color: c } : p) }) }}
-                    style={{ ...S.swatchBig, background: c, ...(selectedPlot.color === c ? S.swatchBigOn : {}) }} />
-                ))}
-              </div>
+              <ColorChoice grande value={selectedPlot.color} onPick={c => { pushHistory(); patch({ plots: schema.plots.map(p => p.id === selectedPlot.id ? { ...p, color: c } : p) }) }} />
               <button onClick={deleteSelected} style={S.btnDelete}>Supprimer le plot</button>
             </>
           )}
           {selectedArrow && (
             <>
               <label style={S.fieldLabel}>Couleur</label>
-              <div style={S.swatchGrid}>
-                {PALETTE.map(c => (
-                  <button key={c} onClick={() => { pushHistory(); patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, color: c } : a) }) }}
-                    style={{ ...S.swatchBig, background: c, ...(selectedArrow.color === c ? S.swatchBigOn : {}) }} />
-                ))}
-              </div>
+              <ColorChoice grande value={selectedArrow.color} onPick={c => { pushHistory(); patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, color: c } : a) }) }} />
               <label style={S.fieldLabel}>Distance (m)</label>
               <input type="number" min="0" step="0.5" value={selectedArrow.distance ?? ''} placeholder="Non renseignée" aria-label="Non renseignée"
                 onChange={e => patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, distance: e.target.value ? Number(e.target.value) : null } : a) })}
@@ -398,12 +435,7 @@ export default function SchemaTerrainEditor({ value, onChange }) {
           {selectedZone && (
             <>
               <label style={S.fieldLabel}>Couleur</label>
-              <div style={S.swatchGrid}>
-                {PALETTE.map(c => (
-                  <button key={c} onClick={() => { pushHistory(); patch({ zones: schema.zones.map(z => z.id === selectedZone.id ? { ...z, color: c } : z) }) }}
-                    style={{ ...S.swatchBig, background: c, ...(selectedZone.color === c ? S.swatchBigOn : {}) }} />
-                ))}
-              </div>
+              <ColorChoice grande value={selectedZone.color} onPick={c => { pushHistory(); patch({ zones: schema.zones.map(z => z.id === selectedZone.id ? { ...z, color: c } : z) }) }} />
               <button onClick={deleteSelected} style={S.btnDelete}>Supprimer la zone</button>
             </>
           )}
@@ -448,8 +480,10 @@ const S = {
   hint: { fontSize: 12, color: '#878d96', lineHeight: 1.6, margin: 0 },
   fieldLabel: { fontSize: 11, fontWeight: 700, color: '#5b6067', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', margin: '10px 0 6px' },
   fieldInput: { width: '100%', background: '#21242b', border: '1px solid #2c3036', color: '#eef0f2', fontSize: 13, fontWeight: 600, padding: '7px 9px', borderRadius: 8, outline: 'none', boxSizing: 'border-box' },
-  swatchGrid: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 },
+  swatchGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 },
   swatchBig: { width: '100%', aspectRatio: '1', borderRadius: '50%', cursor: 'pointer', border: '2px solid transparent' },
   swatchBigOn: { borderColor: '#eef0f2' },
+  swatchLibre: { position: 'relative', overflow: 'hidden', display: 'block', boxSizing: 'border-box' },
+  colorInput: { position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 },
   btnDelete: { width: '100%', marginTop: 14, background: 'none', border: '1px solid #2c3036', color: '#ef4444', fontSize: 12.5, fontWeight: 700, padding: 9, borderRadius: 8, cursor: 'pointer' },
 }
