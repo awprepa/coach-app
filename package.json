@@ -1,6 +1,6 @@
 {
   "name": "coach-app",
-  "version": "0.72.0",
+  "version": "0.72.1",
   "private": true,
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",
