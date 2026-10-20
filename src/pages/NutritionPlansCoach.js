@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { isoLocal } from '../utils/dates'
+import AdherenceSemaines from '../components/AdherenceSemaines'
 
 const STATUT_CONFIG = {
   brouillon: { label: 'Brouillon', bg: '#fef9c3', color: '#854d0e' },
@@ -49,6 +50,7 @@ export default function NutritionPlansCoach() {
   const [copyModal,  setCopyModal]  = useState(null) // { plan } — présent = modale ouverte
   const [copyTarget, setCopyTarget] = useState('')
   const [copying,    setCopying]    = useState(false)
+  const [historique, setHistorique] = useState(false) // adhérence par semaine
 
   // Suivi state
   const [suiviData,    setSuiviData]    = useState([])
@@ -237,6 +239,9 @@ export default function NutritionPlansCoach() {
             <h1 style={S.title}>Nutrition</h1>
             {client && <p style={S.subtitle}>{client.prenom} {client.nom}</p>}
           </div>
+          {client && (
+            <button onClick={() => setHistorique(true)} style={S.btnSecondary}>Historique d'adhérence</button>
+          )}
           {tab === 'plans' && (
             <button onClick={() => navigate(`/nutrition/plan/new?clientId=${clientId}`)} style={S.newBtn}>
               + Nouveau
@@ -288,6 +293,8 @@ export default function NutritionPlansCoach() {
             </>
           )
         )}
+
+        {historique && client && <AdherenceSemaines client={client} onClose={() => setHistorique(false)} />}
 
         {/* ══ MODALE COPIE ═══════════════════════════════════════════════════ */}
         {copyModal && (

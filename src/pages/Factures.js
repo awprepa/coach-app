@@ -122,6 +122,9 @@ export default function Factures() {
   // ── Tableau paiements ───────────────────────────────────────────────────
   const [filter, setFilter]               = useState('tous')
   const [caView, setCaView]               = useState(null) // null | 'mois' | 'total'
+  const [caDate, setCaDate]               = useState(null) // { id, val } : date d'un paiement en cours de modification
+  const [caAjout, setCaAjout]             = useState(null) // formulaire « paiement reçu » ajouté à la main
+  const [caSaving, setCaSaving]           = useState(false)
   const [expanded, setExpanded]           = useState(null) // clientId déplié
   const [showManual, setShowManual]       = useState(false)
   const [manualForm, setManualForm]       = useState(EMPTY_MANUAL())
@@ -326,6 +329,36 @@ export default function Factures() {
       date_echeance: editingPaiement.date_echeance || null,
     }).eq('id', editingPaiement.id)
     setEditingPaiement(null)
+    loadPaiements()
+  }
+
+  // Historique du CA : corriger la date d'un paiement reçu
+  async function saveCaDate() {
+    if (!caDate?.val) return
+    setCaSaving(true)
+    const { error } = await supabase.from('paiements').update({ date_paiement: caDate.val }).eq('id', caDate.id)
+    setCaSaving(false)
+    if (error) { alert('La date n\u2019a pas été modifiée : ' + error.message); return }
+    setCaDate(null)
+    loadPaiements()
+  }
+
+  // Historique du CA : ajouter un paiement déjà reçu, à une date passée
+  async function saveCaAjout() {
+    const f = caAjout
+    if (!f?.client_id || !f.montant || !f.date) return
+    setCaSaving(true)
+    const { error } = await supabase.from('paiements').insert({
+      client_id: f.client_id,
+      montant: parseFloat(f.montant),
+      description: f.description || null,
+      date_echeance: f.date,
+      date_paiement: f.date,
+      statut: 'paye',
+    })
+    setCaSaving(false)
+    if (error) { alert('Le paiement n\u2019a pas été ajouté : ' + error.message); return }
+    setCaAjout(null)
     loadPaiements()
   }
 
@@ -928,8 +961,46 @@ export default function Factures() {
                 <p style={S.caPageTitle}>Chiffre d'affaires {caView === 'mois' ? `— ${moisLabel(moisCourant)}` : '— Historique complet'}</p>
                 <p style={S.caPageTotal}>{(caView === 'mois' ? caMois : caTotal).toFixed(0)} € reçus{caView === 'mois' ? ' ce mois-ci' : ' au total'}</p>
               </div>
-              <button onClick={() => setCaView(null)} style={S.btnClose}>✕</button>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {!caAjout && (
+                  <button onClick={() => setCaAjout({ client_id: '', montant: '', description: '', date: isoLocal() })} style={S.btnPrimary}>
+                    Ajouter un paiement reçu
+                  </button>
+                )}
+                <button onClick={() => { setCaView(null); setCaAjout(null); setCaDate(null) }} style={S.btnClose}>✕</button>
+              </div>
             </div>
+
+            {caAjout && (
+              <div style={{ ...S.card, marginBottom: '1.25rem' }}>
+                <p style={{ ...S.sectionTitle, marginTop: 0 }}>Paiement reçu, ajouté à la main</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 2fr) 1fr 1fr', gap: '0.75rem', alignItems: 'end' }}>
+                  <div>
+                    <label style={S.label}>Client *</label>
+                    <ClientPicker value={caAjout.client_id} onChange={id => setCaAjout(f => ({ ...f, client_id: id }))} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Montant (€) *</label>
+                    <input style={S.input} type="number" min={0} step={0.01} value={caAjout.montant} onChange={e => setCaAjout(f => ({ ...f, montant: e.target.value }))} placeholder="69" />
+                  </div>
+                  <div>
+                    <label style={S.label}>Reçu le *</label>
+                    <input style={S.input} type="date" max={isoLocal()} value={caAjout.date} onChange={e => setCaAjout(f => ({ ...f, date: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={S.label}>Description (optionnel)</label>
+                  <input style={S.input} value={caAjout.description} onChange={e => setCaAjout(f => ({ ...f, description: e.target.value }))} placeholder="Coaching juillet, bilan…" />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button onClick={() => setCaAjout(null)} style={S.btnSecondary}>Annuler</button>
+                  <button onClick={saveCaAjout} disabled={caSaving || !caAjout.client_id || !caAjout.montant || !caAjout.date}
+                    style={{ ...S.btnPrimary, opacity: (caSaving || !caAjout.client_id || !caAjout.montant || !caAjout.date) ? 0.5 : 1 }}>
+                    {caSaving ? 'Enregistrement…' : 'Ajouter'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {caListe.length === 0 ? (
               <p style={{ color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 0' }}>Aucun paiement reçu pour l'instant.</p>
@@ -946,9 +1017,25 @@ export default function Factures() {
                     <div key={p.id} style={{ ...S.caLigne, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
                       <div>
                         <p style={{ margin: 0, fontWeight: 700, color: '#111', fontSize: '0.86rem' }}>{p.clients?.prenom} {p.clients?.nom}</p>
-                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.76rem', color: '#6b7280' }}>
-                          Validé le {fmtDate(p.date_paiement)}{(p.contrats?.formule_label || p.description) && ` — ${p.contrats?.formule_label || p.description}`}
-                        </p>
+                        {caDate?.id === p.id ? (
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.3rem' }}>
+                            <input type="date" max={isoLocal()} value={caDate.val} autoFocus
+                              onChange={e => setCaDate(d => ({ ...d, val: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') saveCaDate(); if (e.key === 'Escape') setCaDate(null) }}
+                              style={{ ...S.input, width: 'auto', padding: '0.35rem 0.5rem', fontSize: '0.8rem' }} />
+                            <button onClick={saveCaDate} disabled={caSaving || !caDate.val} style={{ ...S.btnPrimary, padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}>OK</button>
+                            <button onClick={() => setCaDate(null)} style={{ ...S.btnSecondary, padding: '0.4rem 0.7rem', fontSize: '0.78rem' }}>Annuler</button>
+                          </div>
+                        ) : (
+                          <p style={{ margin: '0.1rem 0 0', fontSize: '0.76rem', color: '#6b7280' }}>
+                            Reçu le {fmtDate(p.date_paiement)}{(p.contrats?.formule_label || p.description) && ` — ${p.contrats?.formule_label || p.description}`}
+                            {' · '}
+                            <button onClick={() => setCaDate({ id: p.id, val: p.date_paiement })}
+                              style={{ background: 'none', border: 'none', padding: 0, color: '#374151', fontSize: '0.76rem', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}>
+                              Modifier la date
+                            </button>
+                          </p>
+                        )}
                       </div>
                       <span style={{ fontWeight: 800, color: '#111', fontSize: '0.95rem' }}>{parseFloat(p.montant).toFixed(0)} €</span>
                     </div>

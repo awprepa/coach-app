@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { ChargePanel } from './ChargeEntrainement'
 import BilanClient from '../components/BilanClient'
 import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
+import AdherenceSemaines from '../components/AdherenceSemaines'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
 import ClientListSidebar from '../components/ClientListSidebar'
@@ -115,6 +116,7 @@ export default function FicheClient() {
   const [nutritionPlan, setNutritionPlan]     = useState(null)  // null=pas chargé, false=aucun plan actif
   const [nutritionAdher, setNutritionAdher]   = useState([])   // 7 derniers jours
   const [nutritionProfile, setNutritionProfile] = useState(null)
+  const [historiqueNutri, setHistoriqueNutri] = useState(false) // fenêtre d'adhérence par semaine
   const [seancesClient, setSeancesClient] = useState([])
   const [showAllSeancesClient, setShowAllSeancesClient] = useState(false)
   const [notesCoach, setNotesCoach] = useState('')
@@ -1262,6 +1264,7 @@ export default function FicheClient() {
       </div> /* fin onglet profil */}
 
       {/* ─── Onglet Nutrition ─────────────────────────────────────────── */}
+      {historiqueNutri && client && <AdherenceSemaines client={client} onClose={() => setHistoriqueNutri(false)} />}
       {activeTab === 'nutrition' && (
         <div style={{ marginTop: '1rem' }}>
 
@@ -1364,7 +1367,11 @@ export default function FicheClient() {
           {nutritionAdher.length > 0 && (
             <div style={{ background: 'white', borderRadius: 14, padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <p style={{ ...styles.sectionTitle, margin: 0 }}>Adhérence — 7 derniers jours</p>
+                <p style={{ ...styles.sectionTitle, margin: 0, flex: 1 }}>Adhérence — 7 derniers jours</p>
+                <button onClick={() => setHistoriqueNutri(true)}
+                  style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '5px 10px', marginRight: 10, fontSize: '0.78rem', fontWeight: 700, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Historique par semaine
+                </button>
                 {(() => {
                   const withData = nutritionAdher.filter(d => d.total > 0)
                   if (!withData.length) return null
