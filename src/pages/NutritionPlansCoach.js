@@ -473,7 +473,7 @@ function DayAdherenceCard({ day }) {
 function PlanCard({ plan, navigate, onDelete, onToggle, onCopy }) {
   const sc = STATUT_CONFIG[plan.statut] || STATUT_CONFIG.brouillon
   return (
-    <div role="button" tabIndex={0} onClick={() => navigate(`/nutrition/plan/${plan.id}`)} style={S.card}>
+    <div role="button" tabIndex={0} onClick={() => navigate(`/nutrition/vue/${plan.id}`)} style={S.card}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: '0.97rem', color: '#1a1a1a', marginBottom: 4 }}>{plan.nom}</div>
@@ -508,7 +508,7 @@ function PlanCard({ plan, navigate, onDelete, onToggle, onCopy }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
   page:       { background: '#fafafa', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  inner:      { maxWidth: 700, margin: '0 auto', padding: '2rem 1.25rem' },
+  inner:      { maxWidth: 1200, margin: '0 auto', padding: '2rem 2.5rem' },
   backBtn:    { width: 36, height: 36, borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', flexShrink: 0 },
   title:      { fontSize: '1.4rem', fontWeight: 800, color: '#1a1a1a', margin: 0, letterSpacing: '-0.02em' },
   subtitle:   { fontSize: '0.83rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 500 },

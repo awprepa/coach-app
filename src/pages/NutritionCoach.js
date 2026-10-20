@@ -21,6 +21,8 @@ export default function NutritionCoach() {
   const [enriched, setEnriched] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [search,   setSearch]   = useState('')
+  const [groupes,  setGroupes]  = useState([])   // équipes : { id, nom, ids: [clientId] }
+  const [ouverts,  setOuverts]  = useState({})   // groupeId -> déplié
 
   useEffect(() => {
     async function load() {
@@ -36,6 +38,25 @@ export default function NutritionCoach() {
       }
       setClients(allClients)
       const ids = allClients.map(c => c.id)
+
+      // Groupes : équipes (et clubs qui ont des membres en propre), pas les
+      // sous-groupes, dont les joueurs font déjà partie de leur équipe.
+      const [{ data: gs }, { data: gms }] = await Promise.all([
+        supabase.from('groupes').select('id, nom, type, parent_id'),
+        supabase.from('groupe_membres').select('groupe_id, client_id'),
+      ])
+      const parNom = Object.fromEntries((gs || []).map(g => [g.id, g]))
+      const membres = {}
+      for (const m of (gms || [])) (membres[m.groupe_id] ||= []).push(m.client_id)
+      const blocs = (gs || [])
+        .filter(g => g.type !== 'sous_groupe' && (membres[g.id] || []).length)
+        .map(g => ({
+          id: g.id,
+          nom: g.parent_id && parNom[g.parent_id] ? `${parNom[g.parent_id].nom} · ${g.nom}` : g.nom,
+          ids: membres[g.id],
+        }))
+        .sort((a, b) => a.nom.localeCompare(b.nom))
+      setGroupes(blocs)
       const today = isoLocal()
 
       // Plans par client (actif + total)
@@ -88,17 +109,15 @@ export default function NutritionCoach() {
     load()
   }, [])
 
-  const displayed = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const filtered = q
-      ? enriched.filter(c => `${c.prenom} ${c.nom}`.toLowerCase().includes(q) || `${c.nom} ${c.prenom}`.toLowerCase().includes(q))
-      : enriched
-    // Clients avec plan actif en premier
-    return [
-      ...filtered.filter(c => c.plans.actif),
-      ...filtered.filter(c => !c.plans.actif),
-    ]
-  }, [enriched, search])
+  // Coachés : clients hors groupe, ou qui ont (eu) un plan nutritionnel
+  const enGroupe = useMemo(() => new Set(groupes.flatMap(g => g.ids)), [groupes])
+  const q = search.trim().toLowerCase()
+  const correspond = c => !q || `${c.prenom} ${c.nom}`.toLowerCase().includes(q) || `${c.nom} ${c.prenom}`.toLowerCase().includes(q)
+  const trier = list => [...list.filter(c => c.plans.actif), ...list.filter(c => !c.plans.actif)]
+  const displayed = useMemo(() => trier(enriched.filter(c => (!enGroupe.has(c.id) || c.plans.total > 0) && correspond(c))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enriched, enGroupe, q])
+  const parId = useMemo(() => Object.fromEntries(enriched.map(c => [c.id, c])), [enriched])
 
   const nbAvecPlan = enriched.filter(c => c.plans.actif).length
 
@@ -129,11 +148,12 @@ export default function NutritionCoach() {
           {search && <button onClick={() => setSearch('')} style={S.searchClear}>×</button>}
         </div>
 
+        {!loading && <div style={S.sectionTitre}>Coachés · {displayed.length}</div>}
         {loading ? (
           <div style={S.emptyState}>Chargement…</div>
         ) : displayed.length === 0 ? (
           <div style={S.emptyState}>
-            {search ? 'Aucun client ne correspond.' : 'Aucun client trouvé.'}
+            {search ? 'Aucun coaché ne correspond.' : 'Aucun coaché.'}
           </div>
         ) : (
           <div style={S.grid}>
@@ -202,6 +222,48 @@ export default function NutritionCoach() {
             })}
           </div>
         )}
+
+        {/* Groupes : repliés, un bloc par équipe */}
+        {!loading && groupes.length > 0 && (
+          <>
+            <div style={{ ...S.sectionTitre, marginTop: '2rem' }}>Groupes</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {groupes.map(g => {
+                const joueurs = g.ids.map(id => parId[id]).filter(Boolean).filter(correspond)
+                  .sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`))
+                if (q && !joueurs.length) return null
+                const avecPlan = joueurs.filter(c => c.plans.actif).length
+                const ouvert = ouverts[g.id] || !!q
+                return (
+                  <div key={g.id} style={S.groupe}>
+                    <button onClick={() => setOuverts(o => ({ ...o, [g.id]: !o[g.id] }))} style={S.groupeHead} aria-expanded={ouvert}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>
+                        <polyline points="9 18 15 12 9 6"/>
+                      </svg>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a', flex: 1, textAlign: 'left' }}>{g.nom}</span>
+                      <span style={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 600 }}>
+                        {joueurs.length} joueur{joueurs.length > 1 ? 's' : ''} · {avecPlan ? `${avecPlan} avec plan actif` : 'aucun plan actif'}
+                      </span>
+                    </button>
+                    {ouvert && (
+                      <div style={S.groupeGrille}>
+                        {joueurs.map(c => (
+                          <button key={c.id} onClick={() => navigate(`/nutrition/${c.id}`)} style={S.joueur}>
+                            <span style={{ fontWeight: 700, color: '#1a1a1a', flex: 1, textAlign: 'left', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.prenom} {c.nom}</span>
+                            <span style={{ fontSize: '0.75rem', color: c.plans.actif ? '#166534' : '#9ca3af', fontWeight: 600, flexShrink: 0 }}>
+                              {c.plans.actif ? 'Plan actif' : c.plans.total ? `${c.plans.total} plan${c.plans.total > 1 ? 's' : ''}` : 'Aucun plan'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -209,7 +271,7 @@ export default function NutritionCoach() {
 
 const S = {
   page: { background: '#fafafa', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  inner: { maxWidth: 900, margin: '0 auto', padding: '2rem' },
+  inner: { maxWidth: 1600, margin: '0 auto', padding: '2rem 2.5rem' },
   header: { marginBottom: '1.5rem' },
   title: { fontSize: '1.6rem', fontWeight: 800, color: '#1a1a1a', margin: '0 0 4px', letterSpacing: '-0.02em' },
   subtitle: { fontSize: '0.875rem', color: '#6b7280', margin: 0, fontWeight: 500 },
@@ -221,8 +283,13 @@ const S = {
     outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   },
   searchClear: { position: 'absolute', right: 12, background: 'none', border: 'none', color: '#6b7280', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 4px' },
+  sectionTitre: { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' },
+  groupe: { background: 'white', border: '1.5px solid #f0f0f0', borderRadius: 14, overflow: 'hidden' },
+  groupeHead: { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' },
+  groupeGrille: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 6, padding: '0 18px 16px' },
+  joueur: { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 10, cursor: 'pointer', fontSize: '0.86rem', fontFamily: 'inherit' },
   emptyState: { textAlign: 'center', color: '#6b7280', padding: '3rem 0', fontSize: '0.95rem' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 },
   card: {
     background: 'white', borderRadius: 16, padding: '16px 18px',
     boxShadow: '0 1px 4px rgba(0,0,0,0.07)', cursor: 'pointer',
