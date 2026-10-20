@@ -6,8 +6,11 @@
 // hanches). Elle est visible sur presque toutes les photos, même quand les
 // pieds ou le haut de la tête sont coupés.
 
-const VERSION = '1.0.1' // même version que le paquet @mediapipe/tasks-vision
-const WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/wasm`
+// Chargée depuis le CDN au moment de l'utiliser (pas intégrée à l'app : son
+// code déclenche un avertissement que la compilation Vercel traite en erreur).
+const VERSION = '1.0.1'
+const CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`
+const WASM = `${CDN}/wasm`
 const MODELE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task'
 
 // Placement cible dans le cadre (fractions de sa hauteur / largeur)
@@ -19,7 +22,7 @@ let detecteurP = null
 function detecteur() {
   if (!detecteurP) {
     detecteurP = (async () => {
-      const { FilesetResolver, PoseLandmarker } = await import('@mediapipe/tasks-vision')
+      const { FilesetResolver, PoseLandmarker } = await import(/* webpackIgnore: true */ `${CDN}/vision_bundle.mjs`)
       const fichiers = await FilesetResolver.forVisionTasks(WASM)
       return PoseLandmarker.createFromOptions(fichiers, {
         baseOptions: { modelAssetPath: MODELE },
