@@ -1,8 +1,9 @@
 {
   "name": "coach-app",
-  "version": "0.71.0",
+  "version": "0.72.0",
   "private": true,
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
     "@supabase/supabase-js": "^2.105.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

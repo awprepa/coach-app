@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { compressImage } from '../lib/compressImage'
 import { isoLocal } from '../utils/dates'
+import ComparaisonPhotos from './ComparaisonPhotos'
 
 // Poses : comparer une face avec une face. « Toutes » reste possible pour
 // balayer une date, mais le filtre par pose est ce qui rend la comparaison juste.
@@ -32,11 +33,11 @@ export default function EvolutionPhotosCoach({ clientId }) {
   const [addDate, setAddDate]   = useState(isoLocal())
   const [uploading, setUploading] = useState(false)
   const [compare, setCompare]   = useState([])     // ids sélectionnés pour comparaison (max 2)
-  const [viewer, setViewer]     = useState(null)   // url plein écran
   const [filtre, setFiltre]     = useState('')     // '' = toutes | face | profil | dos
   const [addPose, setAddPose]   = useState('face') // pose des photos ajoutées par le coach
   const [poseEdit, setPoseEdit] = useState(null)   // photo dont on choisit la pose
   const [dateEditVal, setDateEditVal] = useState('')
+  const [comparer, setComparer] = useState(false) // plan de travail de comparaison ouvert
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -165,28 +166,20 @@ export default function EvolutionPhotosCoach({ clientId }) {
         </div>
       )}
 
-      {/* Bandeau comparaison — photos en entier, non rognées */}
+      {/* Comparaison : ouverte en plein écran (recadrage automatique, traits) */}
       {cmpPhotos.length >= 2 && (
-        <div style={{ marginBottom: '0.9rem' }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-            {cmpPhotos.map(p => (
-              <div key={p.id} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-                <img loading="lazy" src={p.url} alt="" onClick={() => setViewer(p.url)}
-                  style={{ width: '100%', maxHeight: '62vh', objectFit: 'contain', borderRadius: 10, cursor: 'zoom-in', background: '#f3f4f6' }} />
-                <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0.3rem 0 0', fontWeight: 700 }}>{fmtDate(p.date)}</p>
-                <p style={{ fontSize: '0.66rem', color: '#6b7280', margin: 0, fontWeight: 700 }}>{POSE_LABEL[p.pose] || 'Pose ?'}</p>
-              </div>
-            ))}
-          </div>
-          {new Set(cmpPhotos.map(p => p.pose)).size > 1 && (
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', background: '#fff8f0', border: '1px solid #f0c98a', borderRadius: 8, padding: '6px 9px' }}>
-              Ces photos ne sont pas toutes prises sous le même angle — la comparaison peut induire en erreur.
-            </p>
-          )}
-          <button onClick={() => setCompare([])} style={{ marginTop: '0.5rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', padding: '0.2rem' }}>
-            Fermer la comparaison
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: '0.9rem', background: '#f5f5f5', borderRadius: 10, padding: '10px 12px' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', flex: 1 }}>{cmpPhotos.length} photos sélectionnées</span>
+          <button onClick={() => setComparer(true)} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 9, padding: '0.55rem 0.95rem', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer' }}>
+            Comparer
+          </button>
+          <button onClick={() => setCompare([])} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+            Annuler la sélection
           </button>
         </div>
+      )}
+      {comparer && cmpPhotos.length >= 2 && (
+        <ComparaisonPhotos clientId={clientId} photos={cmpPhotos} onClose={() => setComparer(false)} />
       )}
 
       {loading ? (
@@ -198,7 +191,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
       ) : (
         <>
           <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0 0 0.6rem' }}>
-            Touche jusqu'à 3 photos pour les comparer. Touche l'étiquette de pose pour la définir.
+            Sélectionne 2 ou 3 photos puis « Comparer ». Touche l'étiquette de pose pour la définir.
           </p>
           {dates.map(d => (
             <div key={d} style={{ marginBottom: '0.9rem' }}>
@@ -260,12 +253,6 @@ export default function EvolutionPhotosCoach({ clientId }) {
         </div>
       )}
 
-      {/* Visionneuse plein écran */}
-      {viewer && (
-        <div onClick={() => setViewer(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <img loading="lazy" src={viewer} alt="" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8 }} />
-        </div>
-      )}
     </div>
   )
 }
