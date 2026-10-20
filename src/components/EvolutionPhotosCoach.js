@@ -167,13 +167,16 @@ export default function EvolutionPhotosCoach({ clientId }) {
       )}
 
       {/* Comparaison : ouverte en plein écran (recadrage automatique, traits) */}
-      {cmpPhotos.length >= 2 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: '0.9rem', background: '#f5f5f5', borderRadius: 10, padding: '10px 12px' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a', flex: 1 }}>{cmpPhotos.length} photos sélectionnées</span>
-          <button onClick={() => setComparer(true)} style={{ background: '#1a1a1a', color: '#e4f816', border: 'none', borderRadius: 9, padding: '0.55rem 0.95rem', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer' }}>
+      {cmpPhotos.length >= 1 && (
+        // Barre fixe en bas de l'écran : visible où que l'on soit dans la liste des photos
+        <div style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 900, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#1a1a1a', color: 'white', borderRadius: 14, padding: '10px 12px 10px 18px', boxShadow: '0 10px 30px rgba(0,0,0,.25)', maxWidth: 'calc(100vw - 32px)' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>
+            {cmpPhotos.length === 1 ? '1 photo sélectionnée : sélectionne une deuxième photo' : `${cmpPhotos.length} photos sélectionnées`}
+          </span>
+          <button onClick={() => setComparer(true)} disabled={cmpPhotos.length < 2} style={{ opacity: cmpPhotos.length < 2 ? 0.4 : 1, background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 9, padding: '0.6rem 1.1rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
             Comparer
           </button>
-          <button onClick={() => setCompare([])} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setCompare([])} style={{ background: 'none', border: 'none', color: '#d1d5db', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
             Annuler la sélection
           </button>
         </div>
