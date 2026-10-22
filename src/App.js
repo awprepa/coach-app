@@ -72,6 +72,7 @@ const NutritionCoach       = lazy(() => import('./pages/NutritionCoach'))
 const NutritionPlansCoach  = lazy(() => import('./pages/NutritionPlansCoach'))
 const NutritionPlanEditor  = lazy(() => import('./pages/NutritionPlanEditor'))
 const NutritionPlanVue     = lazy(() => import('./pages/NutritionPlanVue'))
+const NutritionHistoriquePlans = lazy(() => import('./pages/NutritionHistoriquePlans'))
 // ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
 function InAppBrowserSheet({ onDismiss }) {
   const ua         = navigator.userAgent
@@ -601,6 +602,7 @@ function App() {
               <Route path="/groupe/:groupeId/nouveau-programme" element={<WithNav><NouveauProgramme /></WithNav>} />
               <Route path="/factures"                        element={<WithNav><Factures /></WithNav>} />
               <Route path="/nutrition"                       element={<WithNav><NutritionCoach /></WithNav>} />
+              <Route path="/nutrition/historique"            element={<WithNav><NutritionHistoriquePlans /></WithNav>} />
               <Route path="/nutrition/:clientId"             element={<WithNav><NutritionPlansCoach /></WithNav>} />
               <Route path="/nutrition/plan/:planId"          element={<WithNav><NutritionPlanEditor /></WithNav>} />
               <Route path="/nutrition/vue/:planId"           element={<WithNav><NutritionPlanVue /></WithNav>} />

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { isoLocal } from '../utils/dates'
 import AdherenceSemaines from '../components/AdherenceSemaines'
+import { chargerPlanComplet, dupliquerPlan } from '../utils/plansNutrition'
 
 const STATUT_CONFIG = {
   brouillon: { label: 'Brouillon', bg: '#fef9c3', color: '#854d0e' },
@@ -75,53 +76,17 @@ export default function NutritionPlansCoach() {
   // ── Dupliquer un plan (copie profonde) vers un client ─────────────────────
   async function duplicatePlan(sourcePlan, targetClientId) {
     setCopying(true)
-    // 1. Charge toute la hiérarchie du plan source
-    const { data: days } = await supabase
-      .from('nutrition_plan_days')
-      .select('*, nutrition_plan_meals(*, nutrition_plan_foods(*))')
-      .eq('plan_id', sourcePlan.id).order('jour_numero')
-
-    // 2. Nouveau plan (brouillon, sans dates — à repositionner pour le client)
-    const { data: newPlan, error: pErr } = await supabase.from('nutrition_plans').insert({
-      client_id: targetClientId,
-      nom: `${sourcePlan.nom} (copie)`,
-      description: sourcePlan.description,
-      date_debut: null, date_fin: null,
-      statut: 'brouillon',
-      objectif_kcal: sourcePlan.objectif_kcal, objectif_prot: sourcePlan.objectif_prot,
-      objectif_carbs: sourcePlan.objectif_carbs, objectif_fat: sourcePlan.objectif_fat,
-    }).select('id').single()
-    if (pErr || !newPlan) { setCopying(false); alert('Erreur lors de la copie du plan.'); return }
-
-    // 3. Jours → repas → aliments
-    for (const d of (days || [])) {
-      const { data: newDay } = await supabase.from('nutrition_plan_days').insert({
-        plan_id: newPlan.id, jour_numero: d.jour_numero, label: d.label, type_jour: d.type_jour,
-        objectif_kcal: d.objectif_kcal, objectif_prot: d.objectif_prot,
-        objectif_carbs: d.objectif_carbs, objectif_fat: d.objectif_fat,
-      }).select('id').single()
-      if (!newDay) continue
-      for (const m of (d.nutrition_plan_meals || [])) {
-        const { data: newMeal } = await supabase.from('nutrition_plan_meals').insert({
-          day_id: newDay.id, meal_type: m.meal_type, nom: m.nom, ordre: m.ordre,
-          kcal: m.kcal, prot_g: m.prot_g, carbs_g: m.carbs_g, fat_g: m.fat_g,
-          recette: m.recette, notes: m.notes,
-        }).select('id').single()
-        if (!newMeal) continue
-        const foods = (m.nutrition_plan_foods || [])
-        if (foods.length) {
-          await supabase.from('nutrition_plan_foods').insert(foods.map(f => ({
-            meal_id: newMeal.id, nom: f.nom, quantite_g: f.quantite_g, ordre: f.ordre,
-            kcal: f.kcal, prot_g: f.prot_g, carbs_g: f.carbs_g, fat_g: f.fat_g, fibre_g: f.fibre_g,
-          })))
-        }
-      }
+    try {
+      const { jours } = await chargerPlanComplet(sourcePlan.id)
+      const id = await dupliquerPlan(sourcePlan, jours, targetClientId)
+      setCopyModal(null)
+      setCopyTarget('')
+      navigate(`/nutrition/plan/${id}`)
+    } catch {
+      alert('Erreur lors de la copie du plan.')
+    } finally {
+      setCopying(false)
     }
-
-    setCopying(false)
-    setCopyModal(null)
-    setCopyTarget('')
-    navigate(`/nutrition/plan/${newPlan.id}`)
   }
 
   // ── Chargement du suivi ───────────────────────────────────────────────────

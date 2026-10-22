@@ -127,12 +127,18 @@ export default function NutritionCoach() {
     <div style={S.page}>
       <div style={S.inner}>
 
-        <div style={S.header}>
+        <div style={{ ...S.header, display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
           <h1 style={S.title}>Plans nutrition</h1>
           <p style={S.subtitle}>
             {clients.length} client{clients.length !== 1 ? 's' : ''} ·{' '}
             {nbAvecPlan} avec plan actif
           </p>
+          </div>
+          <button onClick={() => navigate('/nutrition/historique')}
+            style={{ background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Historique des plans
+          </button>
         </div>
 
         <div style={S.searchWrapper}>
