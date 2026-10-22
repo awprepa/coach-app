@@ -94,7 +94,7 @@ function Jauge({ value, onChange }) {
   )
 }
 
-function RpeOverlay({ clientId, evenement, onDone }) {
+function RpeOverlay({ clientId, nomJoueur, evenement, onDone }) {
   const [vals, setVals]     = useState({ rpe_cardio: null, rpe_jambes: null, rpe_contact: null })
   const [commentaire, setCommentaire] = useState('')
   const [saving, setSaving] = useState(false)
@@ -155,11 +155,10 @@ function RpeOverlay({ clientId, evenement, onDone }) {
 
   async function notifierCoachRpe(absent) {
     try {
-      const [{ data: client }, coachId] = await Promise.all([
-        supabase.from('clients').select('prenom, nom').eq('id', clientId).single(),
-        getCoachId(),
-      ])
-      const nomClient = client ? `${client.prenom} ${client.nom}` : 'Un joueur'
+      // Nom chargé avec le joueur à l'ouverture du questionnaire : une seconde
+      // requête ici renvoyait parfois une réponse vide (« undefined undefined »).
+      const coachId = await getCoachId()
+      const nomClient = nomJoueur || 'Un joueur'
       await sendNotif(coachId, {
         titre: absent ? `${nomClient} était absent` : `${nomClient} a noté ${isMatch ? 'un match' : 'un entraînement'}`,
         corps: absent
@@ -244,6 +243,7 @@ const W = {
 export default function RpeGate({ children }) {
   const [show, setShow]       = useState(false)
   const [clientId, setClientId] = useState(null)
+  const [nomJoueur, setNomJoueur] = useState('')
   const [evenement, setEvenement] = useState(null)
   const [lsKey, setLsKey]     = useState(null)
 
@@ -263,9 +263,9 @@ export default function RpeGate({ children }) {
         sessionStorage.setItem(throttleKey, String(Date.now()))
 
         // Lookup client (le coach n'est pas dans clients → pas de gate)
-        let { data: client } = await supabase.from('clients').select('id').eq('user_id', userId).maybeSingle()
+        let { data: client } = await supabase.from('clients').select('id, prenom, nom').eq('user_id', userId).maybeSingle()
         if (!client && session.user.email) {
-          const res = await supabase.from('clients').select('id').eq('email', session.user.email).maybeSingle()
+          const res = await supabase.from('clients').select('id, prenom, nom').eq('email', session.user.email).maybeSingle()
           client = res.data
         }
         if (!client) return
@@ -310,6 +310,7 @@ export default function RpeGate({ children }) {
           if (localStorage.getItem(key)) continue
           setLsKey(key)
           setClientId(client.id)
+          setNomJoueur([client.prenom, client.nom].filter(Boolean).join(' '))
           setEvenement(ev)
           setShow(true)
           return
@@ -330,7 +331,7 @@ export default function RpeGate({ children }) {
     <>
       {children}
       {show && clientId && evenement && createPortal(
-        <RpeOverlay clientId={clientId} evenement={evenement} onDone={handleDone} />,
+        <RpeOverlay clientId={clientId} nomJoueur={nomJoueur} evenement={evenement} onDone={handleDone} />,
         document.body
       )}
     </>
