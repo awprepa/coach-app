@@ -5,6 +5,7 @@ import { getCoachId, sendNotif } from '../notifs'
 import { isoLocal } from '../utils/dates'
 import Icon from './Icon'
 import T from '../theme/tokens'
+import { fmtAllure, fmtDistance, fmtDuree, lireFichierCourse } from '../utils/fichierCourse'
 
 const EVENT_TYPES = [
   { value: 'seance',       label: 'Séance',        bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
@@ -12,6 +13,7 @@ const EVENT_TYPES = [
   { value: 'match',        label: 'Match',         bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
   { value: 'combat',       label: 'Combat',        bg: '#dc2626', text: 'white'   },
   { value: 'competition',  label: 'Compétition',   bg: '#7c3aed', text: 'white'   },
+  { value: 'course',       label: 'Course',        bg: '#0f766e', text: 'white'   },
   { value: 'repos',        label: 'Repos',         bg: T.color.soft, text: T.color.muted },
   { value: 'autre',        label: 'Autre',         bg: '#ccfbf1', text: '#115e59' },
 ]
@@ -225,6 +227,62 @@ function PeriodView({ startDate, numWeeks, todayStr, selectedStr, eventsMap, onD
   )
 }
 
+// ── Course : résumé lu dans le fichier GPX/TCX, tracé, lien Strava ──
+function TraceCourse({ trace, couleur }) {
+  if (!trace || trace.length < 2) return null
+  const lats = trace.map(p => p[0]), lons = trace.map(p => p[1])
+  const [la0, la1, lo0, lo1] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)]
+  const k = Math.cos(((la0 + la1) / 2) * Math.PI / 180) // longitudes resserrées selon la latitude
+  const w = Math.max((lo1 - lo0) * k, 1e-6), h = Math.max(la1 - la0, 1e-6)
+  const ech = 90 / Math.max(w, h)
+  const pts = trace.map(([la, lo]) => `${(5 + (lo - lo0) * k * ech).toFixed(1)},${(5 + (la1 - la) * ech).toFixed(1)}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${10 + w * ech} ${10 + h * ech}`} style={{ width: 72, height: 72, flexShrink: 0, background: 'rgb(255 255 255 / .14)', borderRadius: 8 }} aria-label="Tracé de la course">
+      <polyline points={pts} fill="none" stroke={couleur} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ResumeCourse({ activite, couleur }) {
+  if (!activite) return null
+  const stats = [
+    activite.distance_m ? fmtDistance(activite.distance_m) : null,
+    fmtDuree(activite.duree_s),
+    fmtAllure(activite.allure_s_km),
+    activite.denivele_m ? `D+ ${activite.denivele_m} m` : null,
+    activite.fc_moy ? `FC moy. ${activite.fc_moy}${activite.fc_max ? ` · max ${activite.fc_max}` : ''}` : null,
+  ].filter(Boolean)
+  return (
+    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginTop: '0.45rem' }}>
+      <TraceCourse trace={activite.trace} couleur={couleur} />
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        {stats.length > 0 && <span style={{ fontSize: T.size.sm, fontWeight: 600, lineHeight: 1.45 }}>{stats.join(' · ')}</span>}
+        {activite.strava_url && (
+          <a href={activite.strava_url} target="_blank" rel="noreferrer"
+            style={{ alignSelf: 'flex-start', fontSize: T.size.sm, fontWeight: 700, color: couleur, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+            Voir sur Strava
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Aide : exporter le fichier d'une course depuis Strava
+function AideExportStrava() {
+  return (
+    <details style={{ fontSize: T.size.sm, color: T.color.muted, lineHeight: 1.5 }}>
+      <summary style={{ cursor: 'pointer', fontWeight: 600, color: T.color.ink }}>Comment récupérer le fichier depuis Strava ?</summary>
+      <ol style={{ margin: '0.4rem 0 0', paddingLeft: '1.2rem' }}>
+        <li>Ouvre strava.com dans ton navigateur (pas l'app Strava). Sur téléphone, demande la « version ordinateur » du site.</li>
+        <li>Ouvre ta course, appuie sur « … » puis « Exporter GPX ».</li>
+        <li>Reviens ici et choisis le fichier téléchargé (dans « Fichiers » ou « Téléchargements »).</li>
+      </ol>
+      <p style={{ margin: '0.4rem 0 0' }}>Un fichier GPX ou TCX de Garmin, Coros ou Suunto marche aussi.</p>
+    </details>
+  )
+}
+
 export default function Calendrier({ clientId, readOnly = false, eventSource = 'coach', programmeDebut, programmeSemaines = 8, seances = [], onViewSeance }) {
   const [vue, setVue]                 = useState('mois')
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -234,6 +292,7 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   const [selectedDay, setSelectedDay] = useState(null)
   const [form, setForm]               = useState({ type: 'seance', titre: '', seanceId: '', description: '' })
   const [saving, setSaving]           = useState(false)
+  const [lectureCourse, setLectureCourse] = useState(null) // { evId?, enCours, erreur }
   const [showSyncModal, setShowSyncModal] = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,8 +398,10 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
   async function ajouterEvenement() {
     const titre = (form.type === 'seance' && seances.length > 0)
       ? (seances.find(s => s.id === form.seanceId)?.nom || form.titre)
-      : form.titre
+      : form.type === 'course' ? (form.titre?.trim() || 'Course') : form.titre
     if (!titre?.trim() || !selectedDay) return
+    const strava = form.type === 'course' ? lienStrava(form.strava) : null
+    const activite = form.type === 'course' && (form.activite || strava) ? { ...(form.activite || {}), strava_url: strava } : null
     setSaving(true)
     const payload = {
       client_id: clientId,
@@ -350,12 +411,14 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
       seance_id: form.type === 'seance' && form.seanceId ? form.seanceId : null,
       description: form.description?.trim() || null,
       source: eventSource,
+      ...(activite ? { activite } : {}),
     }
     const { data, error } = await supabase.from('evenements').insert([payload]).select().single()
     if (error) alert(error.message)
     else {
       setEvenements(prev => [...prev, data])
       setForm({ type: 'seance', titre: '', seanceId: '', description: '' })
+      setLectureCourse(null)
       if (eventSource === 'client') notifierCoachNouvelEvenement(data)
     }
     setSaving(false)
@@ -378,6 +441,28 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     } catch (e) {
       console.warn('[notifierCoachNouvelEvenement] échec :', e?.message)
     }
+  }
+
+  // Lien Strava : on ne garde qu'une adresse strava.com ou strava.app.link
+  function lienStrava(v) {
+    const t = (v || '').trim()
+    if (!t) return null
+    try {
+      const u = new URL(t.startsWith('http') ? t : `https://${t}`)
+      return /(^|\.)strava\.(com|app\.link)$/.test(u.hostname) ? u.toString() : null
+    } catch { return null }
+  }
+
+  async function ajouterFichierCourse(ev, fichier) {
+    setLectureCourse({ evId: ev.id, enCours: true })
+    try {
+      const a = await lireFichierCourse(fichier)
+      const activite = { ...a, strava_url: ev.activite?.strava_url || null }
+      const { error } = await supabase.from('evenements').update({ activite }).eq('id', ev.id)
+      if (error) throw new Error('Le fichier n\u2019a pas pu être enregistré.')
+      setEvenements(prev => prev.map(e => e.id === ev.id ? { ...e, activite } : e))
+      setLectureCourse(null)
+    } catch (err) { setLectureCourse({ evId: ev.id, erreur: err.message }) }
   }
 
   async function supprimerEvenement(evId) {
@@ -457,9 +542,43 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
         </select>
       )
     }
+    if (form.type === 'course') {
+      return (
+        <div style={{ flex: '1 1 220px', minWidth: 220, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+          <input type="text" placeholder="Titre (ex. Footing 45 min)" aria-label="Titre de la course"
+            value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })}
+            style={{ ...S.formInput, width: '100%', boxSizing: 'border-box' }} />
+          <label style={{ ...S.formInput, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', boxSizing: 'border-box', fontSize: T.size.md, fontWeight: 600 }}>
+            <Icon name="plus" size={16} />
+            {lectureCourse?.enCours ? 'Lecture du fichier…' : form.activite?.distance_m ? 'Fichier ajouté : changer' : 'Ajouter le fichier de la course (GPX)'}
+            <input type="file" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml" style={{ display: 'none' }}
+              onChange={async e => {
+                const f = e.target.files?.[0]; e.target.value = ''
+                if (!f) return
+                setLectureCourse({ enCours: true })
+                try {
+                  const a = await lireFichierCourse(f)
+                  setForm(prev => ({ ...prev, activite: a, titre: prev.titre || a.nom || '' }))
+                  setLectureCourse(null)
+                } catch (err) { setLectureCourse({ erreur: err.message }) }
+              }} />
+          </label>
+          {lectureCourse?.erreur && !lectureCourse.evId && <span style={{ fontSize: T.size.sm, color: T.color.danger, fontWeight: 600 }}>{lectureCourse.erreur}</span>}
+          {form.activite?.distance_m != null && (
+            <div style={{ background: '#0f766e', color: 'white', borderRadius: T.radius.control, padding: '0.5rem 0.65rem' }}>
+              <ResumeCourse activite={form.activite} couleur="white" />
+            </div>
+          )}
+          <input type="url" placeholder="Lien Strava (facultatif)" aria-label="Lien de la course sur Strava"
+            value={form.strava || ''} onChange={e => setForm({ ...form, strava: e.target.value })}
+            style={{ ...S.formInput, width: '100%', boxSizing: 'border-box' }} />
+          <AideExportStrava />
+        </div>
+      )
+    }
     if (form.type === 'autre') {
       return (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div style={{ flex: '1 1 220px', minWidth: 220, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           <input
             type="text" placeholder="Titre *" aria-label="Titre *"
             value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })}
@@ -663,6 +782,18 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
                     </div>
                     {ev.description && (
                       <p style={{ fontSize: T.size.sm, margin: '0.35rem 0 0', opacity: 0.9, lineHeight: 1.4 }}>{ev.description}</p>
+                    )}
+                    {ev.type === 'course' && <ResumeCourse activite={ev.activite} couleur={ts.text} />}
+                    {ev.type === 'course' && !ev.activite?.distance_m && !readOnly && (
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: '0.45rem', minHeight: 36, padding: '0 10px', background: 'rgb(255 255 255 / .18)', borderRadius: 8, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer' }}>
+                        <Icon name="plus" size={14} />
+                        {lectureCourse?.evId === ev.id && lectureCourse.enCours ? 'Lecture du fichier…' : 'Ajouter le fichier GPX'}
+                        <input type="file" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml" style={{ display: 'none' }}
+                          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) ajouterFichierCourse(ev, f) }} />
+                      </label>
+                    )}
+                    {lectureCourse?.evId === ev.id && lectureCourse.erreur && (
+                      <p style={{ fontSize: T.size.sm, margin: '0.35rem 0 0', fontWeight: 700 }}>{lectureCourse.erreur}</p>
                     )}
                   </div>
                 )
