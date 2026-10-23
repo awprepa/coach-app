@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SeanceAIModal from '../components/SeanceAIModal'
 import ClientPicker from '../components/ClientPicker'
+import { copierSeanceModele, copiesDuModele, mettreAJourCopies, seancesManquantes } from '../utils/cyclesModeles'
 
 export default function CycleTemplates() {
   const navigate = useNavigate()
@@ -22,6 +23,8 @@ export default function CycleTemplates() {
   const [clientProgrammes, setClientProgrammes] = useState([])
   const [programmeToOverwrite, setProgrammeToOverwrite] = useState(null)
   const [loadingProgrammes, setLoadingProgrammes] = useState(false)
+  // ── Mettre à jour les cycles déjà envoyés (ajout des nouvelles séances) ──
+  const [majModal, setMajModal] = useState(null) // { template, copies, enCours, rapport }
 
   // ── Dossiers ─────────────────────────────────────────────────────────────────
   const [openFolders, setOpenFolders]     = useState(new Set())
@@ -108,34 +111,24 @@ export default function CycleTemplates() {
   async function materialiserSeances(templateSeancesRaw, programmeId) {
     const seances = [...(templateSeancesRaw || [])].sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
     for (const [idx, ts] of seances.entries()) {
-      const { data: newSeance } = await supabase
-        .from('seances')
-        .insert({
-          programme_id: programmeId, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [],
-          cardio_debut: ts.cardio_debut || null, cardio_fin: ts.cardio_fin || null, cardio_blocs: ts.cardio_blocs || [],
-        })
-        .select().single()
-      if (newSeance && ts.exercices?.length > 0) {
-        await supabase.from('exercices').insert(
-          ts.exercices.map(ex => ({
-            seance_id: newSeance.id,
-            code: ex.code, nom: ex.nom, series: ex.series,
-            repetitions: ex.repetitions, tempo: ex.tempo,
-            recuperation: ex.recuperation, type_intensite: ex.type_intensite,
-            valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
-            bibliotheque_id: ex.bibliotheque_id || null,
-            progressions: ex.progressions || null,
-            series_echauffement: ex.series_echauffement || null,
-            media_url: ex.media_url || null,
-          }))
-        )
-      }
-      const rpeCibles = ts.rpe_cibles || {}
-      if (newSeance && Object.keys(rpeCibles).length > 0) {
-        await supabase.from('rpe_seances').insert(
-          Object.entries(rpeCibles).map(([sem, val]) => ({ seance_id: newSeance.id, semaine: parseInt(sem), rpe_cible: val }))
-        )
-      }
+      try { await copierSeanceModele(programmeId, ts, ts.ordre || idx + 1) }
+      catch (err) { console.error('[CycleTemplates] séance non copiée :', err.message) }
+    }
+  }
+
+  async function ouvrirMaj(t) {
+    setMajModal({ template: t, copies: null, enCours: false, rapport: null })
+    const copies = await copiesDuModele(t.id)
+    setMajModal(m => m && m.template.id === t.id ? { ...m, copies } : m)
+  }
+  async function appliquerMaj() {
+    setMajModal(m => ({ ...m, enCours: true }))
+    try {
+      const rapport = await mettreAJourCopies(majModal.template.id)
+      setMajModal(m => ({ ...m, enCours: false, rapport }))
+    } catch (err) {
+      alert('La mise à jour a échoué : ' + err.message)
+      setMajModal(m => ({ ...m, enCours: false }))
     }
   }
 
@@ -238,7 +231,7 @@ export default function CycleTemplates() {
     if (sendMode === 'nouveau') {
       const { data: prog, error } = await supabase
         .from('programmes')
-        .insert({ nom: sendForm.nom || sendModal.nom, semaines: sendModal.semaines, client_id: sendForm.client_id, date_debut: sendForm.date_debut || null })
+        .insert({ nom: sendForm.nom || sendModal.nom, semaines: sendModal.semaines, client_id: sendForm.client_id, date_debut: sendForm.date_debut || null, modele_id: sendModal.id })
         .select().single()
       if (error) { alert(error.message); setSending(false); return }
       progId = prog.id
@@ -246,7 +239,7 @@ export default function CycleTemplates() {
       // Écraser le cycle existant
       progId = programmeToOverwrite.id
       await supabase.from('programmes')
-        .update({ nom: sendForm.nom || sendModal.nom, semaines: sendModal.semaines, date_debut: sendForm.date_debut || programmeToOverwrite.date_debut })
+        .update({ nom: sendForm.nom || sendModal.nom, semaines: sendModal.semaines, date_debut: sendForm.date_debut || programmeToOverwrite.date_debut, modele_id: sendModal.id })
         .eq('id', progId)
       // Supprimer les séances existantes (exercices supprimés en cascade)
       const { data: oldSeances } = await supabase.from('seances').select('id').eq('programme_id', progId)
@@ -391,6 +384,7 @@ export default function CycleTemplates() {
 
           <div style={S.cardActions}>
             <button style={S.btnPrimary} onClick={() => openSendModal(t)}>Envoyer</button>
+            <button style={S.btnSecondary} onClick={() => ouvrirMaj(t)} title="Ajouter les nouvelles séances du modèle aux cycles déjà envoyés">Mettre à jour les envoyés</button>
             <button style={S.btnSecondary} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
               {ouvrantId === t.id ? 'Ouverture…' : 'Modifier'}
             </button>
@@ -511,6 +505,59 @@ export default function CycleTemplates() {
             )}
           </div>
         )}
+
+      {/* ── Modale : mettre à jour les cycles déjà envoyés ───────────────────── */}
+      {majModal && (() => {
+        const modele = [...(majModal.template.programme_template_seances || [])].sort((a, b) => a.ordre - b.ordre)
+        const copies = majModal.copies
+        const aFaire = (copies || []).map(p => ({ p, manquantes: seancesManquantes(modele, p.seances || []) }))
+        const total = aFaire.reduce((n, x) => n + x.manquantes.length, 0)
+        return (
+          <div style={S.overlay} onClick={() => !majModal.enCours && setMajModal(null)}>
+            <div style={{ ...S.modal, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#111827', marginBottom: '0.3rem' }}>Mettre à jour « {majModal.template.nom} »</div>
+              <p style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                Ajoute aux cycles déjà envoyés les séances du modèle qu'ils n'ont pas encore. Les séances existantes, et tout ce que les clients ont rempli, ne sont pas modifiés.
+              </p>
+              {majModal.rapport ? (
+                <>
+                  {majModal.rapport.map((x, i) => (
+                    <div key={i} style={{ padding: '0.6rem 0', borderTop: i ? '1px solid #f3f4f6' : 'none', fontSize: '0.88rem' }}>
+                      <b>{x.client}</b>
+                      <div style={{ color: '#4b5563', marginTop: 2 }}>{x.ajoutees.length ? `Ajoutée${x.ajoutees.length > 1 ? 's' : ''} : ${x.ajoutees.join(', ')}` : 'Déjà à jour'}</div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                    <button style={S.btnPrimary} onClick={() => setMajModal(null)}>Fermer</button>
+                  </div>
+                </>
+              ) : copies === null ? (
+                <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Chargement…</p>
+              ) : copies.length === 0 ? (
+                <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Ce cycle n'a encore été envoyé à personne depuis la bibliothèque.</p>
+              ) : (
+                <>
+                  {aFaire.map(({ p, manquantes }) => (
+                    <div key={p.id} style={{ padding: '0.6rem 0', borderTop: '1px solid #f3f4f6', fontSize: '0.88rem' }}>
+                      <b>{p.clients ? `${p.clients.prenom} ${p.clients.nom}` : 'Client'}</b>
+                      <span style={{ color: '#6b7280' }}> · {(p.seances || []).length} séance{(p.seances || []).length > 1 ? 's' : ''} aujourd'hui</span>
+                      <div style={{ color: manquantes.length ? '#1a1a1a' : '#6b7280', marginTop: 2 }}>
+                        {manquantes.length ? `À ajouter : ${manquantes.map(t => t.nom.trim()).join(', ')}` : 'Déjà à jour'}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                    <button style={S.btnSecondary} onClick={() => setMajModal(null)} disabled={majModal.enCours}>Annuler</button>
+                    <button style={{ ...S.btnPrimary, opacity: total && !majModal.enCours ? 1 : 0.5 }} onClick={appliquerMaj} disabled={!total || majModal.enCours}>
+                      {majModal.enCours ? 'Mise à jour…' : total ? `Ajouter ${total} séance${total > 1 ? 's' : ''}` : 'Tout est à jour'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Modale : Envoyer à un client ──────────────────────────────────── */}
       {sendModal && (

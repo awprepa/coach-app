@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SeanceAIModal from '../components/SeanceAIModal'
+import { copierSeanceModele } from '../utils/cyclesModeles'
 
 export default function NouveauProgramme() {
   const { id: clientId, groupeId } = useParams()
@@ -40,7 +41,7 @@ export default function NouveauProgramme() {
     setCreating(true)
     const payload = groupeId
       ? { ...form, groupe_id: groupeId, date_debut: form.date_debut || null }
-      : { ...form, client_id: id, date_debut: form.date_debut || null }
+      : { ...form, client_id: id, date_debut: form.date_debut || null, modele_id: selectedTemplate?.id || null }
     const { data: prog, error } = await supabase.from('programmes').insert([payload]).select().single()
     if (error) { alert(error.message); setCreating(false); return }
 
@@ -50,32 +51,8 @@ export default function NouveauProgramme() {
         .sort((a, b) => a.jour - b.jour || a.ordre - b.ordre)
 
       for (const [idx, ts] of seances.entries()) {
-        const { data: newSeance } = await supabase
-          .from('seances')
-          .insert({ programme_id: prog.id, nom: ts.nom, ordre: ts.ordre || idx + 1, echauffement: ts.echauffement || [] })
-          .select().single()
-        if (newSeance && ts.exercices?.length > 0) {
-          await supabase.from('exercices').insert(
-            ts.exercices.map(ex => ({
-              seance_id: newSeance.id,
-              code: ex.code, nom: ex.nom, series: ex.series,
-              repetitions: ex.repetitions, tempo: ex.tempo,
-              recuperation: ex.recuperation, type_intensite: ex.type_intensite,
-              valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
-              bibliotheque_id: ex.bibliotheque_id || null,
-              progressions: ex.progressions || null,
-              series_echauffement: ex.series_echauffement || null,
-              media_url: ex.media_url || null,
-            }))
-          )
-        }
-        // RPE cibles
-        const rpeCibles = ts.rpe_cibles || {}
-        if (newSeance && Object.keys(rpeCibles).length > 0) {
-          await supabase.from('rpe_seances').insert(
-            Object.entries(rpeCibles).map(([sem, val]) => ({ seance_id: newSeance.id, semaine: parseInt(sem), rpe_cible: val }))
-          )
-        }
+        try { await copierSeanceModele(prog.id, ts, ts.ordre || idx + 1) }
+        catch (err) { console.error('[NouveauProgramme] séance non copiée :', err.message) }
       }
     }
 
