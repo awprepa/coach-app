@@ -35,7 +35,7 @@ export default function Programme() {
 
   async function fetchProgramme() {
     const { data, error } = await supabase
-      .from('programmes').select('*, clients(prenom, nom), groupes(id, nom, couleur), programme_templates(nom, description)').eq('id', id).single()
+      .from('programmes').select('*, clients(prenom, nom), groupes(id, nom, couleur), programme_templates!programmes_bibliotheque_template_id_fkey(nom, description)').eq('id', id).single()
     if (error) console.error(error)
     else { setProgramme(data); setFormProgramme({ nom: data.nom, semaines: data.semaines, date_debut: data.date_debut || '', description: data.programme_templates?.description || '' }) }
     setLoading(false)
