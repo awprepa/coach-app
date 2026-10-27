@@ -88,6 +88,7 @@ export default function Seance() {
   const [trackingMap, setTrackingMap] = useState({})
   const [serieTrackingMap, setSerieTrackingMap] = useState({}) // { [exId]: { [semaine]: [{ serie, poids, reps_reelles, valide }] } }
   const [rpeSeances, setRpeSeances] = useState({})
+  const [notesClient, setNotesClient] = useState([]) // notes laissées par le client en fin de séance (seance_commentaires)
   const [semaines, setSemaines] = useState(4)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ code: '', nom: '', series: '', repetitions: '', tempo: '', recuperation: '', type_intensite: '', valeur_intensite: '', bibliotheque_id: null, media_url: '' })
@@ -181,7 +182,7 @@ export default function Seance() {
   async function fetchSeance() {
     const { data, error } = await supabase.from('seances').select('*, programmes(id, nom, client_id, semaines)').eq('id', id).single()
     if (error) console.error(error)
-    else { setSeance(data); setSemaines(data.programmes?.semaines || 4); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); setCardioBlocs(Array.isArray(data.cardio_blocs) ? data.cardio_blocs : []); await fetchExercices(); await fetchRpeSeances() }
+    else { setSeance(data); setSemaines(data.programmes?.semaines || 4); setEchauffement(data.echauffement || []); setCardioDebut(data.cardio_debut || {}); setCardioFin(data.cardio_fin || {}); setCardioBlocs(Array.isArray(data.cardio_blocs) ? data.cardio_blocs : []); await fetchExercices(); await fetchRpeSeances(); fetchNotesClient() }
     setLoading(false)
   }
 
@@ -249,6 +250,12 @@ export default function Seance() {
         setSerieTrackingMap(stMap)
       }
     }
+  }
+
+  async function fetchNotesClient() {
+    const { data } = await supabase.from('seance_commentaires').select('semaine, texte, non_effectuee, created_at')
+      .eq('seance_id', id).order('semaine', { ascending: false })
+    setNotesClient((data || []).filter(n => (n.texte || '').trim() || n.non_effectuee))
   }
 
   async function fetchRpeSeances() {
@@ -1526,6 +1533,25 @@ export default function Seance() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Notes du client */}
+      {notesClient.length > 0 && (
+        <div style={{ ...styles.card, marginTop: '1rem' }}>
+          <p style={styles.sectionTitle}>Notes du client</p>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {notesClient.map(n => (
+              <div key={n.semaine} style={{ display: 'flex', gap: '0.9rem', padding: '0.6rem 0', borderTop: '1px solid #f3f4f6' }}>
+                <span style={{ flexShrink: 0, minWidth: 34, fontSize: '0.8rem', fontWeight: 800, color: '#333333' }}>S{n.semaine}</span>
+                <div style={{ minWidth: 0 }}>
+                  {n.non_effectuee && <p style={{ margin: '0 0 0.2rem', fontSize: '0.8rem', fontWeight: 700, color: '#dc2626' }}>Séance non effectuée</p>}
+                  {(n.texte || '').trim() && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{n.texte.trim()}</p>}
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Table exercices */}
       <div style={{ ...styles.card, marginTop: '1rem', overflowX: 'hidden', padding: editAllMode ? '1.25rem 1rem' : '1.25rem 1.5rem' }}>
