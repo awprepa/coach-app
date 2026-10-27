@@ -10,6 +10,7 @@ import AdherenceSemaines from '../components/AdherenceSemaines'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
 import ModifierClientModal from '../components/ModifierClientModal'
+import NotesSeancesClient from '../components/NotesSeancesClient'
 import ClientListSidebar from '../components/ClientListSidebar'
 import { ensureJoueurId, getActiveBlessure, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
 import { isoLocal } from '../utils/dates'
@@ -714,6 +715,7 @@ export default function FicheClient() {
       {/* Onglet Entraînement — Charge + Progression */}
       {activeTab === 'perf' && client && (
         <div style={{ marginTop: '1rem' }}>
+          <NotesSeancesClient key={id} clientId={id} />
           <ChargePanel clientId={id} clientPrenom={client.prenom} clientNom={client.nom} />
           {progression.length > 0 && (
             <div style={{ marginTop: '1.5rem' }}>
