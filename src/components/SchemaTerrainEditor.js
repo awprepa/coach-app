@@ -221,6 +221,26 @@ function translater(schema, dx, dy) {
   }
 }
 
+// Rectangle qui contient tout l'exercice
+function emprise(schema) {
+  const xs = [], ys = []
+  schema.plots.forEach(p => { xs.push(p.x); ys.push(p.y) })
+  schema.arrows.forEach(a => { xs.push(a.x1, a.x2); ys.push(a.y1, a.y2) })
+  schema.zones.forEach(z => { xs.push(z.x, z.x + z.w); ys.push(z.y, z.y + z.h) })
+  return xs.length ? { x1: Math.min(...xs), x2: Math.max(...xs), y1: Math.min(...ys), y2: Math.max(...ys) } : null
+}
+
+// Ramène l'exercice à l'intérieur du cadre (avec une marge pour les étiquettes),
+// sans changer ses distances ; centré s'il est plus grand que le cadre.
+function recaler(schema, { x0, y0, t, e }) {
+  const b = emprise(schema)
+  if (!b) return schema
+  const m = 4.5 * e
+  const decal = (lo, hi, o) => hi - lo > t - 2 * m ? o + t / 2 - (lo + hi) / 2
+    : lo < o + m ? o + m - lo : hi > o + t - m ? o + t - m - hi : 0
+  return translater(schema, decal(b.x1, b.x2, x0), decal(b.y1, b.y2, y0))
+}
+
 export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteur = 420, pleinEcran = false, entete = null, infos = null }) {
   const schema = value || DEFAULT_SCHEMA
   const groupe = !!schema.groupe
@@ -497,7 +517,15 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
     if (!calcul || calcul.erreur) return
     pushHistory()
     const s2 = mettreAEchelle(schema, calcul.k)
-    patch({ plots: s2.plots, arrows: s2.arrows, zones: s2.zones, course: { ...course, vmi: vmiEffective } })
+    // Surface vierge : on dézoome si l'exercice agrandi ne tient plus (jamais de zoom automatique)
+    let taille = schema.taille
+    if (surfaceOf(schema) === 'vierge') {
+      const b = emprise(s2)
+      const besoin = b ? Math.max(b.x2 - b.x1, b.y2 - b.y1) : 0
+      taille = Math.max(t, TAILLES_VIERGE.find(v => besoin + 9 * v / 100 <= v) ?? TAILLES_VIERGE[TAILLES_VIERGE.length - 1])
+    }
+    const s3 = recaler(s2, cadreDe({ ...schema, taille }))
+    patch({ plots: s3.plots, arrows: s3.arrows, zones: s3.zones, course: { ...course, vmi: vmiEffective }, ...(taille ? { taille } : {}) })
   }
   const repere = repereIntensite(course.effort)
   const num = v => (v === '' || v == null ? null : Number(v))

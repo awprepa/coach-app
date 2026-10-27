@@ -9,6 +9,7 @@ import EvolutionPhotosCoach from '../components/EvolutionPhotosCoach'
 import AdherenceSemaines from '../components/AdherenceSemaines'
 import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
+import ModifierClientModal from '../components/ModifierClientModal'
 import ClientListSidebar from '../components/ClientListSidebar'
 import { ensureJoueurId, getActiveBlessure, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
 import { isoLocal } from '../utils/dates'
@@ -97,7 +98,6 @@ export default function FicheClient() {
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [listCollapsed, setListCollapsed] = useState(false)
-  const [form, setForm] = useState({})
   const [categories, setCategories] = useState([])
   const [seances, setSeances] = useState([])
   const [wellness, setWellness] = useState([])
@@ -205,7 +205,7 @@ export default function FicheClient() {
   async function fetchClient() {
     const { data, error } = await supabase.from('clients').select('*, categories(id, nom, couleur)').eq('id', id).single()
     if (error) console.error(error)
-    else { setClient(data); setForm(data); setNotesCoach(data.notes_coach || '') }
+    else { setClient(data); setNotesCoach(data.notes_coach || '') }
     setLoading(false)
   }
 
@@ -226,23 +226,6 @@ export default function FicheClient() {
         .order('ordre', { ascending: true })
       setSeances(seancesData || [])
     }
-  }
-
-  async function sauvegarderClient() {
-    // Si l'offre change, on remet offre_confirmee_at à null
-    // pour que le client re-confirme son abonnement à la prochaine connexion
-    const offreChangee = form.offre !== client.offre
-    const { error } = await supabase.from('clients').update({
-      prenom: form.prenom, nom: form.nom, email: form.email,
-      telephone: form.telephone, objectif: form.objectif,
-      offre: form.offre, engagement_mois: form.engagement_mois || null,
-      date_debut: form.date_debut, date_fin: form.date_fin,
-      notes: form.notes, categorie_id: form.categorie_id || null,
-      peut_creer_seances: form.peut_creer_seances || false,
-      ...(offreChangee ? { offre_confirmee_at: null } : {}),
-    }).eq('id', id)
-    if (error) alert(error.message)
-    else { await fetchClient(); setEditMode(false) }
   }
 
   async function supprimerClient() {
@@ -521,122 +504,7 @@ export default function FicheClient() {
       <div className="fc-sidecol" style={styles.sideCol}>
       <button onClick={() => navigate('/')} style={styles.backBtn}>← Retour</button>
 
-      {editMode ? (
-        <div style={styles.card}>
-          <p style={styles.sectionTitle}>Modifier le client</p>
-          <div style={styles.row2}>
-            <EditField label="Prénom" value={form.prenom} onChange={v => setForm({ ...form, prenom: v })} />
-            <EditField label="Nom" value={form.nom} onChange={v => setForm({ ...form, nom: v })} />
-          </div>
-          <div style={styles.row2}>
-            <EditField label="Email" value={form.email} onChange={v => setForm({ ...form, email: v })} />
-            <EditField label="Téléphone" value={form.telephone} onChange={v => setForm({ ...form, telephone: v })} />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={styles.label}>Offre</label>
-            <select value={form.offre} onChange={e => {
-              const updated = { ...form, offre: e.target.value, engagement_mois: null }
-              if (e.target.value === 'essai') {
-                const base = updated.date_debut || isoLocal()
-                const fin = new Date(base + 'T00:00:00')
-                fin.setMonth(fin.getMonth() + 1)
-                updated.date_fin = isoLocal(fin)
-              }
-              setForm(updated)
-            }} style={styles.select}>
-              <option value="gratuit">Gratuit</option>
-              <option value="essai">Essai</option>
-              <option value="preparation_physique">Préparation physique</option>
-              <option value="coaching">Coaching</option>
-              <option value="club">Club</option>
-            </select>
-          </div>
-          {['coaching', 'preparation_physique'].includes(form.offre) && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={styles.label}>Engagement</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {[
-                  { val: null, label: 'Sans engagement' },
-                  { val: 1,    label: '1 mois' },
-                  { val: 3,    label: '3 mois' },
-                  { val: 6,    label: '6 mois' },
-                ].map(opt => {
-                  const active = (form.engagement_mois || null) === opt.val
-                  return (
-                    <button key={String(opt.val)} type="button" onClick={() => {
-                      const base = form.date_debut || isoLocal()
-                      let date_fin = form.date_fin || null
-                      if (opt.val) {
-                        const fin = new Date(base + 'T00:00:00')
-                        fin.setMonth(fin.getMonth() + opt.val)
-                        date_fin = isoLocal(fin)
-                      }
-                      setForm({ ...form, engagement_mois: opt.val, date_fin })
-                    }} style={{
-                      flex: 1, padding: '0.5rem 0.25rem', border: '1.5px solid',
-                      borderColor: active ? '#333' : '#e5e7eb',
-                      background: active ? '#333' : 'white',
-                      color: active ? '#e4f816' : '#374151',
-                      borderRadius: 10, fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer',
-                    }}>{opt.label}</button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={styles.label}>Catégorie</label>
-            <select value={form.categorie_id || ''} onChange={e => setForm({ ...form, categorie_id: e.target.value || null })} style={styles.select}>
-              <option value="">— Aucune —</option>
-              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.nom}</option>)}
-            </select>
-          </div>
-          <div style={styles.row2}>
-            <EditField label="Date début" type="date" value={form.date_debut || ''} onChange={v => setForm({ ...form, date_debut: v })} />
-            <EditField label="Date fin" type="date" value={form.date_fin || ''} onChange={v => setForm({ ...form, date_fin: v })} />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={styles.label}>Objectif</label>
-            <textarea value={form.objectif || ''} onChange={e => setForm({ ...form, objectif: e.target.value })} rows={3} style={styles.textarea} />
-          </div>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={styles.label}>Notes</label>
-            <textarea value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} style={styles.textarea} />
-          </div>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={styles.label}>Options</label>
-            <button
-              type="button"
-              onClick={() => setForm({ ...form, peut_creer_seances: !form.peut_creer_seances })}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left' }}
-            >
-              <div style={{
-                width: 42, height: 24, borderRadius: 12, position: 'relative', flexShrink: 0,
-                background: form.peut_creer_seances ? '#333' : '#e5e7eb',
-                transition: 'background 0.2s',
-              }}>
-                <div style={{
-                  position: 'absolute', top: 3, left: form.peut_creer_seances ? 21 : 3,
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: form.peut_creer_seances ? 'var(--accent-fg)' : 'white',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  transition: 'left 0.2s',
-                }} />
-              </div>
-              <span style={{ fontSize: '0.88rem', color: '#374151', fontWeight: 600 }}>
-                Peut créer des séances
-              </span>
-            </button>
-            <p style={{ margin: '0.35rem 0 0', fontSize: '0.75rem', color: '#6b7280', paddingLeft: 54 }}>
-              Accès au créateur de séances (hors groupe)
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={() => setEditMode(false)} style={styles.btnSecondary}>Annuler</button>
-            <button onClick={sauvegarderClient} style={styles.btnPrimary}>Sauvegarder</button>
-          </div>
-        </div>
-      ) : (
+      {(
         <>
           {/* Profil */}
           <div style={styles.profileCard}>
@@ -1475,6 +1343,15 @@ export default function FicheClient() {
         </div>
       )}
 
+      {editMode && (
+        <ModifierClientModal
+          client={client}
+          categories={categories}
+          onClose={() => setEditMode(false)}
+          onSaved={async () => { await fetchClient(); setEditMode(false) }}
+        />
+      )}
+
       {/* ── Modal envoyer un contrat ── */}
       {showContratModal === 'envoyer' && (
         <EnvoyerContratModal
@@ -1510,15 +1387,6 @@ function InfoItem({ label, value, full, valueStyle }) {
     <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
       <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ fontSize: '0.9rem', color: '#333333', margin: 0, ...valueStyle }}>{value}</p>
-    </div>
-  )
-}
-
-function EditField({ label, value, onChange, type = 'text' }) {
-  return (
-    <div style={{ marginBottom: '1rem', flex: 1 }}>
-      <label style={styles.label}>{label}</label>
-      <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} style={styles.input} />
     </div>
   )
 }
