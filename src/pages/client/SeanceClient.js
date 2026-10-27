@@ -624,6 +624,9 @@ export default function SeanceClient() {
 
   async function saveCommentaire() {
     if (!commentaire.trim()) return
+    // Note nouvelle ou modifiée (pas un simple enregistrement à l'identique) : on prévient le coach
+    const avant = (commentaires.find(c => c.semaine === semaineActuelle)?.texte || '').trim()
+    const changee = commentaire.trim() !== avant
     const { error } = await supabase.from('seance_commentaires').upsert(
       { seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() },
       { onConflict: 'seance_id,semaine' }
@@ -641,6 +644,28 @@ export default function SeanceClient() {
     })
     setCommentSaved(true)
     setTimeout(() => setCommentSaved(false), 2000)
+    if (changee) notifierCoachNote(commentaire.trim())
+  }
+
+  async function notifierCoachNote(texte) {
+    try {
+      const coachId = await getCoachId()
+      const clientId = seance?.programmes?.client_id
+      if (!coachId) return
+      // Séance de groupe (programme sans client) : on retrouve le client connecté
+      const userId = clientId ? null : (await supabase.auth.getSession()).data.session?.user?.id
+      const { data: c } = clientId || userId
+        ? await supabase.from('clients').select('prenom, nom').eq(clientId ? 'id' : 'user_id', clientId || userId).maybeSingle()
+        : { data: null }
+      const nom = c ? `${c.prenom} ${c.nom || ''}`.trim() : 'Un client'
+      const extrait = texte.length > 120 ? texte.slice(0, 117) + '…' : texte
+      sendNotif(coachId, {
+        titre: `${nom} a laissé une note`,
+        corps: `${seance?.nom || 'Séance'} · S${semaineActuelle} : « ${extrait} »`,
+        type: 'note_seance',
+        lien: `/seance/${id}`,
+      })
+    } catch (e) { console.warn('[notifierCoachNote] échec :', e?.message) }
   }
 
   async function fetchRpeSeances() {

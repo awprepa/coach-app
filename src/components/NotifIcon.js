@@ -33,6 +33,10 @@ const CONFIG = {
     bg: '#dbeafe', stroke: '#2563eb',
     path: <><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l6-4v12l-6-4" /></>,
   },
+  note_seance: {
+    bg: '#f3f4f6', stroke: '#374151',
+    path: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
+  },
   contrat: {
     bg: '#f3f4f6', stroke: '#374151',
     path: <><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z" /><path d="M9 13h6M9 17h6" /></>,
