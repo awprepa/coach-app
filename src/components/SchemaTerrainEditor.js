@@ -15,6 +15,16 @@ const SURFACES = { gazon: 'Terrain de rugby', salle: 'Salle', vierge: 'Vierge' }
 // Une ancienne surface (ex. « piste », retirée) s'affiche en terrain de rugby.
 export const surfaceOf = schema => (SURFACES[schema?.surface] ? schema.surface : 'gazon')
 
+// Surface vierge : on peut dézoomer pour faire de plus grands schémas.
+// `taille` = côté visible en unités (100 par défaut), centré sur le milieu ;
+// `e` agrandit d'autant plots, flèches et étiquettes pour qu'ils restent lisibles.
+export const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
+export function cadreDe(schema) {
+  const t = surfaceOf(schema) === 'vierge' && schema?.taille > 100 ? schema.taille : 100
+  return { x0: 50 - t / 2, y0: 50 - t / 2, t, e: t / 100 }
+}
+export const fondUrl = (surface, e = 1) => `url(#surf-${surface === 'vierge' ? `vierge-${Math.round(e * 100)}` : surface})`
+
 // Tailles en unités du schéma (le dessin fait 100 × 100)
 export const PLOT_R = 1.15
 
@@ -24,7 +34,8 @@ function nextLabel(plots) {
   return 'P' + ((nums.length ? Math.max(...nums) : 0) + 1)
 }
 
-export function surfaceDefs() {
+export function surfaceDefs(e = 1) {
+  const c = 10 * e
   return `
     <pattern id="surf-gazon" width="12.5" height="25" patternUnits="userSpaceOnUse">
       <rect width="12.5" height="25" fill="#3c7d45"/>
@@ -33,9 +44,9 @@ export function surfaceDefs() {
     <pattern id="surf-salle" width="100" height="100" patternUnits="userSpaceOnUse">
       <rect width="100" height="100" fill="#cdae7c"/>
     </pattern>
-    <pattern id="surf-vierge" width="10" height="10" patternUnits="userSpaceOnUse">
-      <rect width="10" height="10" fill="#eef0ec"/>
-      <path d="M10 0H0V10" fill="none" stroke="#dcdfd7" stroke-width="0.25"/>
+    <pattern id="surf-vierge-${Math.round(e * 100)}" width="${c}" height="${c}" patternUnits="userSpaceOnUse">
+      <rect width="${c}" height="${c}" fill="#eef0ec"/>
+      <path d="M${c} 0H0V${c}" fill="none" stroke="#dcdfd7" stroke-width="${0.25 * e}"/>
     </pattern>
   `
 }
@@ -85,47 +96,59 @@ export function surfaceMarkings(surface) {
 
 // ── Formes partagées par l'éditeur et l'affichage côté client ──
 
-// Flèches aller-retour sur le même trajet : chacune est décalée sur sa droite
-// pour que les deux restent visibles côte à côte.
-export function flechesDecalees(arrows) {
-  const pres = (u, v) => Math.hypot(u.x1 - v.x2, u.y1 - v.y2) < 1 && Math.hypot(u.x2 - v.x1, u.y2 - v.y1) < 1
-  return new Set(arrows.filter(a => arrows.some(b => b !== a && pres(a, b))).map(a => a.id))
+// Flèches aller-retour sur le même trajet (même en partie, ex. aller 10 m,
+// retour 5 m) : chacune est décalée sur sa droite pour que les deux restent
+// visibles côte à côte.
+export function flechesDecalees(arrows, e = 1) {
+  const opposees = (a, b) => {
+    const la = Math.hypot(a.x2 - a.x1, a.y2 - a.y1), lb = Math.hypot(b.x2 - b.x1, b.y2 - b.y1)
+    if (la < 0.01 || lb < 0.01) return false
+    const ux = (a.x2 - a.x1) / la, uy = (a.y2 - a.y1) / la
+    if ((ux * (b.x2 - b.x1) + uy * (b.y2 - b.y1)) / lb > -0.99) return false // pas en sens inverse
+    const ecart = (x, y) => Math.abs((x - a.x1) * uy - (y - a.y1) * ux) // distance à la droite de a
+    if (ecart(b.x1, b.y1) > e || ecart(b.x2, b.y2) > e) return false
+    const t1 = (b.x1 - a.x1) * ux + (b.y1 - a.y1) * uy, t2 = (b.x2 - a.x1) * ux + (b.y2 - a.y1) * uy
+    return Math.min(la, Math.max(t1, t2)) - Math.max(0, Math.min(t1, t2)) > e
+  }
+  return new Set(arrows.filter(a => arrows.some(b => b !== a && opposees(a, b))).map(a => a.id))
 }
 
 // Flèche : la distance est posée au milieu du trait, dans une étiquette.
-export function ArrowShape({ a: brute, selected, surface, decale, plots = [] }) {
+export function ArrowShape({ a: brute, selected, surface, decale, plots = [], e = 1 }) {
   let a = brute, lx = 0, ly = 0
   if (decale) {
     const l = Math.hypot(brute.x2 - brute.x1, brute.y2 - brute.y1) || 1
     const nx = -(brute.y2 - brute.y1) / l, ny = (brute.x2 - brute.x1) / l
-    a = { ...brute, x1: brute.x1 + nx * 1.1, y1: brute.y1 + ny * 1.1, x2: brute.x2 + nx * 1.1, y2: brute.y2 + ny * 1.1 }
+    const d = 1.1 * e
+    a = { ...brute, x1: brute.x1 + nx * d, y1: brute.y1 + ny * d, x2: brute.x2 + nx * d, y2: brute.y2 + ny * d }
     // l'étiquette s'écarte encore de son côté, pour ne pas toucher celle du retour
-    const w0 = 6
-    lx = nx * (Math.abs(nx) > 0.7 ? w0 / 2 + 0.6 : 1.4); ly = ny * (Math.abs(ny) > 0.7 ? 1.4 : w0 / 2 + 0.6)
+    const w0 = 6 * e
+    lx = nx * (Math.abs(nx) > 0.7 ? w0 / 2 + 0.6 * e : 1.4 * e); ly = ny * (Math.abs(ny) > 0.7 ? 1.4 * e : w0 / 2 + 0.6 * e)
   }
   const m = arrondiDemi(metresFleche(a, surface))
   const mode = a.mode === 'arriere' ? ' · arrière' : a.mode === 'chasses' ? ' · chassés' : ''
   const label = a.masquerDistance || m < 0.5 ? null : `${String(m).replace('.', ',')} m${mode}`
   const mx = (a.x1 + a.x2) / 2 + lx, my = (a.y1 + a.y2) / 2 + ly
-  const w = label ? label.length * 1.15 + 1.8 : 0
+  const w = label ? (label.length * 1.15 + 1.8) * e : 0
   // La flèche va jusqu'à son point d'arrivée. Si elle part d'un plot ou y
   // arrive, elle s'arrête au bord du plot (la pointe touche le plot).
   const len = Math.hypot(a.x2 - a.x1, a.y2 - a.y1) || 1
   const ux = (a.x2 - a.x1) / len, uy = (a.y2 - a.y1) / len
   const surPlot = (x, y) => plots.some(p => Math.hypot(p.x - x, p.y - y) < 0.3)
-  const pointe = 0.6 * (selected ? 0.6 : 0.45) // la pointe dépasse le bout du trait
-  const d0 = surPlot(brute.x1, brute.y1) ? PLOT_R : 0
-  const d1 = (surPlot(brute.x2, brute.y2) ? PLOT_R : 0) + pointe
+  const trait = (selected ? 0.6 : 0.45) * e
+  const pointe = 0.6 * trait // la pointe dépasse le bout du trait
+  const d0 = surPlot(brute.x1, brute.y1) ? PLOT_R * e : 0
+  const d1 = (surPlot(brute.x2, brute.y2) ? PLOT_R * e : 0) + pointe
   return (
     <>
       <line x1={a.x1 + ux * d0} y1={a.y1 + uy * d0} x2={a.x2 - ux * d1} y2={a.y2 - uy * d1} stroke={selected ? '#ffffff' : a.color}
-        strokeWidth={selected ? 0.6 : 0.45} strokeLinecap="round"
-        strokeDasharray={a.style === 'pointille' ? '1.6,1.3' : undefined}
+        strokeWidth={trait} strokeLinecap="round"
+        strokeDasharray={a.style === 'pointille' ? `${1.6 * e},${1.3 * e}` : undefined}
         markerEnd={`url(#${markerId(a.color)})`} />
       {label && (
         <g>
-          <rect x={mx - w / 2} y={my - 1.45} width={w} height="2.9" rx="1.45" fill="#14161a" fillOpacity="0.85" />
-          <text x={mx} y={my + 0.7} fontSize="1.9" fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
+          <rect x={mx - w / 2} y={my - 1.45 * e} width={w} height={2.9 * e} rx={1.45 * e} fill="#14161a" fillOpacity="0.85" />
+          <text x={mx} y={my + 0.7 * e} fontSize={1.9 * e} fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
         </g>
       )}
     </>
@@ -133,17 +156,17 @@ export function ArrowShape({ a: brute, selected, surface, decale, plots = [] }) 
 }
 
 // Plot : petit point, étiquette juste au-dessus (masquée si vide).
-export function PlotShape({ p, selected }) {
+export function PlotShape({ p, selected, e = 1 }) {
   const label = [(p.label || '').trim(), p.sol ? 'sol' : ''].filter(Boolean).join(' · ')
-  const w = label.length * 1.05 + 1.6
+  const w = (label.length * 1.05 + 1.6) * e, r = PLOT_R * e
   return (
     <>
-      <circle cx={p.x} cy={p.y + 0.15} r={PLOT_R + 0.05} fill="rgba(0,0,0,0.25)" />
-      <circle cx={p.x} cy={p.y} r={PLOT_R} fill={p.color} stroke={selected ? '#ffffff' : 'rgba(0,0,0,0.2)'} strokeWidth={selected ? 0.45 : 0.22} />
+      <circle cx={p.x} cy={p.y + 0.15 * e} r={r + 0.05 * e} fill="rgba(0,0,0,0.25)" />
+      <circle cx={p.x} cy={p.y} r={r} fill={p.color} stroke={selected ? '#ffffff' : 'rgba(0,0,0,0.2)'} strokeWidth={(selected ? 0.45 : 0.22) * e} />
       {label && (
         <>
-          <rect x={p.x - w / 2} y={p.y - PLOT_R - 3.2} width={w} height="2.6" rx="1.3" fill="#14161a" fillOpacity="0.8" />
-          <text x={p.x} y={p.y - PLOT_R - 1.3} fontSize="1.75" fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
+          <rect x={p.x - w / 2} y={p.y - r - 3.2 * e} width={w} height={2.6 * e} rx={1.3 * e} fill="#14161a" fillOpacity="0.8" />
+          <text x={p.x} y={p.y - r - 1.3 * e} fontSize={1.75 * e} fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
         </>
       )}
     </>
@@ -170,12 +193,23 @@ const DEFAULT_SCHEMA = { surface: 'gazon', plots: [], arrows: [], zones: [] }
 const ACCROCHE = 2 // unités : une flèche commencée ou finie près d'un point s'y accroche
 const ALIGNE = 1.2  // unités : un plot déplacé se cale sur l'axe d'un autre plot à cette distance
 
-// Points d'accroche : plots et extrémités des flèches existantes
-function accrocher(schema, p) {
-  const pts = [...schema.plots.map(q => ({ x: q.x, y: q.y })), ...schema.arrows.flatMap(a => [{ x: a.x1, y: a.y1 }, { x: a.x2, y: a.y2 }])]
-  let best = null, bd = ACCROCHE
+// Points d'accroche : plots et extrémités des flèches existantes (sauf la
+// flèche `exclure`, celle qu'on est en train de modifier)
+function accrocher(schema, p, e = 1, exclure = null) {
+  const pts = [...schema.plots.map(q => ({ x: q.x, y: q.y })), ...schema.arrows.filter(a => a.id !== exclure).flatMap(a => [{ x: a.x1, y: a.y1 }, { x: a.x2, y: a.y2 }])]
+  let best = null, bd = ACCROCHE * e
   pts.forEach(q => { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; best = q } })
   return best ? { x: best.x, y: best.y } : p
+}
+
+// Une flèche presque horizontale, verticale ou à 45° est redressée
+function redresser(o, p) {
+  const dx = p.x - o.x, dy = p.y - o.y, l = Math.hypot(dx, dy)
+  if (l < 0.01) return p
+  const ang = Math.atan2(dy, dx), pas = Math.PI / 4
+  const cible = Math.round(ang / pas) * pas
+  if (Math.abs(ang - cible) > 7 * Math.PI / 180) return p
+  return { x: o.x + Math.cos(cible) * l, y: o.y + Math.sin(cible) * l }
 }
 
 // Déplace tout l'exercice de (dx, dy)
@@ -190,6 +224,7 @@ function translater(schema, dx, dy) {
 export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteur = 420, pleinEcran = false, entete = null, infos = null }) {
   const schema = value || DEFAULT_SCHEMA
   const groupe = !!schema.groupe
+  const { x0, y0, t, e } = cadreDe(schema)
   const [tool, setTool] = useState('select')
   const [plotColor, setPlotColor] = useState(PALETTE[0])
   const [arrowColor, setArrowColor] = useState('#1a1d21')
@@ -233,12 +268,18 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
     const pt = svg.createSVGPoint()
     pt.x = e.clientX; pt.y = e.clientY
     const loc = pt.matrixTransform(svg.getScreenCTM().inverse())
-    return { x: Math.max(0, Math.min(100, loc.x)), y: Math.max(0, Math.min(100, loc.y)) }
+    return { x: Math.max(x0, Math.min(x0 + t, loc.x)), y: Math.max(y0, Math.min(y0 + t, loc.y)) }
+  }
+  // Bout de flèche : accroché à un plot ou une extrémité proche, sinon redressé
+  // s'il est presque droit par rapport à l'autre bout `o`
+  function bout(o, p, exclure) {
+    const q = accrocher(schema, p, e, exclure)
+    return q !== p ? q : redresser(o, p)
   }
 
-  const onPointerDown = useCallback((e) => {
-    const target = e.target.closest('[data-kind]')
-    const p = svgPoint(e)
+  const onPointerDown = useCallback((ev) => {
+    const target = ev.target.closest('[data-kind]')
+    const p = svgPoint(ev)
 
     // Exercice verrouillé : on déplace tout d'un seul coup
     if (groupe) {
@@ -250,8 +291,17 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
     if (target) {
       const kind = target.getAttribute('data-kind')
       const id = target.getAttribute('data-id')
+      // Poignée d'une flèche sélectionnée : change sa direction et sa longueur
+      if (kind === 'arrow-end') {
+        dragRef.current = { kind: 'arrow-end', id, end: target.getAttribute('data-end'), historyPushed: false }
+        return
+      }
       setSelection({ type: kind, id })
 
+      if (kind === 'arrow' && tool === 'select') {
+        dragRef.current = { kind: 'arrow-move', id, x0: p.x, y0: p.y, base: schema.arrows.find(x => x.id === id), historyPushed: false }
+        return
+      }
       if (kind === 'plot' && tool === 'arrow') {
         const plot = schema.plots.find(x => x.id === id)
         setDrawStart({ x: plot.x, y: plot.y })
@@ -275,7 +325,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
       return
     }
     if (tool === 'arrow') {
-      setDrawStart(accrocher(schema, p))
+      setDrawStart(accrocher(schema, p, e))
       return
     }
     if (tool === 'zone') {
@@ -283,10 +333,10 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
       forceTick(t => t + 1)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tool, plotColor, schema, groupe])
+  }, [tool, plotColor, schema, groupe, e])
 
-  const onPointerMove = useCallback((e) => {
-    const p = svgPoint(e)
+  const onPointerMove = useCallback((ev) => {
+    const p = svgPoint(ev)
     if (dragRef.current && dragRef.current.kind === 'group-move') {
       const d = dragRef.current
       if (!d.historyPushed) { pushHistory(); d.historyPushed = true }
@@ -296,7 +346,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
       if (!d.historyPushed) { pushHistory(); d.historyPushed = true }
       // Alignement : le point se cale sur l'axe d'un autre plot proche (guide en pointillés)
       const autres = schema.plots.filter(pl => pl.id !== d.id)
-      let x = p.x, y = p.y, gx = null, gy = null, bx = ALIGNE, by = ALIGNE
+      let x = p.x, y = p.y, gx = null, gy = null, bx = ALIGNE * e, by = ALIGNE * e
       autres.forEach(o => {
         if (Math.abs(o.x - p.x) < bx) { bx = Math.abs(o.x - p.x); x = o.x; gx = o.x }
         if (Math.abs(o.y - p.y) < by) { by = Math.abs(o.y - p.y); y = o.y; gy = o.y }
@@ -312,17 +362,37 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
           ...(ici(a.x2, a.y2) ? { x2: x, y2: y } : {}),
         })),
       })
+    } else if (dragRef.current && dragRef.current.kind === 'arrow-end') {
+      const d = dragRef.current
+      const a = schema.arrows.find(x => x.id === d.id)
+      if (!a) return
+      if (!d.historyPushed) { pushHistory(); d.historyPushed = true }
+      const q = d.end === '1' ? bout({ x: a.x2, y: a.y2 }, p, a.id) : bout({ x: a.x1, y: a.y1 }, p, a.id)
+      patch({ arrows: schema.arrows.map(x => x.id !== a.id ? x : d.end === '1' ? { ...x, x1: q.x, y1: q.y } : { ...x, x2: q.x, y2: q.y }) })
+    } else if (dragRef.current && dragRef.current.kind === 'arrow-move') {
+      const d = dragRef.current, b = d.base
+      if (!b) return
+      if (!d.historyPushed) {
+        if (Math.hypot(p.x - d.x0, p.y - d.y0) < 0.5 * e) return // simple clic : sélection seulement
+        pushHistory(); d.historyPushed = true
+      }
+      // La flèche garde sa direction et sa longueur ; un de ses bouts se cale sur un plot proche
+      const dx = p.x - d.x0, dy = p.y - d.y0
+      const s1 = { x: b.x1 + dx, y: b.y1 + dy }, s2 = { x: b.x2 + dx, y: b.y2 + dy }
+      const c1 = accrocher(schema, s1, e, b.id), c2 = accrocher(schema, s2, e, b.id)
+      const [ox, oy] = c1 !== s1 ? [c1.x - s1.x, c1.y - s1.y] : c2 !== s2 ? [c2.x - s2.x, c2.y - s2.y] : [0, 0]
+      patch({ arrows: schema.arrows.map(x => x.id === b.id ? { ...x, x1: s1.x + ox, y1: s1.y + oy, x2: s2.x + ox, y2: s2.y + oy } : x) })
     } else if (dragRef.current && dragRef.current.kind === 'zone-draft') {
       dragRef.current.x2 = p.x; dragRef.current.y2 = p.y
       forceTick(t => t + 1)
     } else if (drawStart) {
-      setDrawStart(s => ({ ...s, cur: p }))
+      setDrawStart(s => ({ ...s, cur: bout(s, p) }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, drawStart])
+  }, [schema, drawStart, e])
 
-  const onPointerUp = useCallback((e) => {
-    if (dragRef.current && (dragRef.current.kind === 'plot-move' || dragRef.current.kind === 'group-move')) {
+  const onPointerUp = useCallback((ev) => {
+    if (dragRef.current && ['plot-move', 'group-move', 'arrow-end', 'arrow-move'].includes(dragRef.current.kind)) {
       dragRef.current = null
       forceTick(t => t + 1)
     } else if (dragRef.current && dragRef.current.kind === 'zone-draft') {
@@ -338,12 +408,12 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
       dragRef.current = null
       forceTick(t => t + 1)
     } else if (drawStart) {
-      const target = e.target.closest('[data-kind="plot"]')
+      const target = ev.target.closest('[data-kind="plot"]')
       const endPlot = target ? schema.plots.find(x => x.id === target.getAttribute('data-id')) : null
-      const p = endPlot ? { x: endPlot.x, y: endPlot.y } : accrocher(schema, svgPoint(e))
+      const p = endPlot ? { x: endPlot.x, y: endPlot.y } : bout(drawStart, svgPoint(ev))
       const x2 = p.x, y2 = p.y
       const dist = Math.hypot(x2 - drawStart.x, y2 - drawStart.y)
-      if (dist > 2) {
+      if (dist > 2 * e) {
         pushHistory()
         const arrow = { id: uid('a'), x1: drawStart.x, y1: drawStart.y, x2, y2, color: arrowColor, style: arrowStyle, mode: 'avant' }
         patch({ arrows: [...schema.arrows, arrow] })
@@ -352,7 +422,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
       setDrawStart(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, drawStart, arrowColor, arrowStyle])
+  }, [schema, drawStart, arrowColor, arrowStyle, e])
 
   useEffect(() => {
     function onKeyDown(e) {
@@ -401,6 +471,22 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
     })
   }
 
+  // Ajoute juste après la flèche son retour exact (même trajet, sens inverse)
+  function ajouterRetour(a) {
+    pushHistory()
+    const retour = { ...a, id: uid('a'), x1: a.x2, y1: a.y2, x2: a.x1, y2: a.y1 }
+    const i = schema.arrows.findIndex(x => x.id === a.id)
+    patch({ arrows: [...schema.arrows.slice(0, i + 1), retour, ...schema.arrows.slice(i + 1)] })
+    setSelection({ type: 'arrow', id: retour.id })
+  }
+
+  // Surface vierge : dézoomer agrandit la zone de dessin
+  function zoomer(sens) {
+    const i = TAILLES_VIERGE.findIndex(v => v >= t)
+    const next = TAILLES_VIERGE[Math.max(0, Math.min(TAILLES_VIERGE.length - 1, (i < 0 ? TAILLES_VIERGE.length - 1 : i) + sens))]
+    patch({ taille: next })
+  }
+
   // ── Course à la VMI ──
   const course = schema.course || {}
   const vmiEffective = course.vmi ?? vmiJoueur ?? null
@@ -416,7 +502,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
   const num = v => (v === '' || v == null ? null : Number(v))
   const fmt = (v, d = 1) => String(Math.round(v * 10 ** d) / 10 ** d).replace('.', ',')
 
-  const decales = flechesDecalees(schema.arrows)
+  const decales = flechesDecalees(schema.arrows, e)
   const selectedPlot = selection?.type === 'plot' ? schema.plots.find(p => p.id === selection.id) : null
   const selectedArrow = selection?.type === 'arrow' ? schema.arrows.find(a => a.id === selection.id) : null
   const selectedZone = selection?.type === 'zone' ? schema.zones.find(z => z.id === selection.id) : null
@@ -431,6 +517,15 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
             <button key={key} onClick={() => patch({ surface: key })} style={{ ...S.pill, ...(surfaceOf(schema) === key ? S.pillOn : {}) }}>{label}</button>
           ))}
         </div>
+        {surfaceOf(schema) === 'vierge' && (
+          <div style={S.zoom}>
+            <button onClick={() => zoomer(1)} disabled={t >= TAILLES_VIERGE[TAILLES_VIERGE.length - 1]} title="Dézoomer : agrandir la zone de dessin"
+              style={{ ...S.iconBtn, opacity: t >= TAILLES_VIERGE[TAILLES_VIERGE.length - 1] ? 0.35 : 1 }}><IcoMoins /></button>
+            <span style={S.zoomVal} title="Largeur visible">{Math.round(t / echelleDe('vierge'))} m</span>
+            <button onClick={() => zoomer(-1)} disabled={t <= 100} title="Zoomer"
+              style={{ ...S.iconBtn, opacity: t <= 100 ? 0.35 : 1 }}><IcoPlus /></button>
+          </div>
+        )}
         <div style={{ flex: 1 }} />
         <button onClick={() => { setSelection(null); setTool('select'); patch({ groupe: !groupe }) }}
           title={groupe ? 'Déverrouiller : modifier les éléments un par un' : 'Verrouiller : déplacer tout l\u2019exercice d\u2019un seul coup'}
@@ -477,19 +572,19 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
 
         <div style={S.canvasWrap}>
           <svg
-            ref={svgRef} viewBox="0 0 100 100" width="100%" height="100%"
+            ref={svgRef} viewBox={`${x0} ${y0} ${t} ${t}`} width="100%" height="100%"
             style={{ display: 'block', cursor: groupe ? 'move' : tool === 'arrow' ? 'crosshair' : tool === 'zone' ? 'crosshair' : 'default' }}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
           >
-            <defs dangerouslySetInnerHTML={{ __html: surfaceDefs() + markerDefs([...schema.arrows.map(a => a.color), arrowColor]) }} />
-            <rect data-bg="1" x="0" y="0" width="100" height="100" fill={`url(#surf-${surfaceOf(schema)})`} />
+            <defs dangerouslySetInnerHTML={{ __html: surfaceDefs(e) + markerDefs([...schema.arrows.map(a => a.color), arrowColor]) }} />
+            <rect data-bg="1" x={x0} y={y0} width={t} height={t} fill={fondUrl(surfaceOf(schema), e)} />
             <g dangerouslySetInnerHTML={{ __html: surfaceMarkings(surfaceOf(schema)) }} />
 
             {schema.zones.map(z => {
               const isSel = selection?.type === 'zone' && selection.id === z.id
               return (
                 <rect key={z.id} data-id={z.id} data-kind="zone" x={z.x} y={z.y} width={z.w} height={z.h}
-                  fill={z.color} fillOpacity={0.22} stroke={isSel ? '#ffffff' : z.color} strokeWidth={isSel ? 1 : 0.6}
+                  fill={z.color} fillOpacity={0.22} stroke={isSel ? '#ffffff' : z.color} strokeWidth={(isSel ? 1 : 0.6) * e}
                   style={{ cursor: 'pointer' }} />
               )
             })}
@@ -498,9 +593,9 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
               const isSel = selection?.type === 'arrow' && selection.id === a.id
               const dec = decales.has(a.id)
               return (
-                <g key={a.id} data-id={a.id} data-kind="arrow" style={{ cursor: 'pointer' }}>
-                  <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="transparent" strokeWidth="3.5" />
-                  <ArrowShape a={a} selected={isSel} surface={surfaceOf(schema)} decale={dec} plots={schema.plots} />
+                <g key={a.id} data-id={a.id} data-kind="arrow" style={{ cursor: tool === 'select' ? 'move' : 'pointer' }}>
+                  <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="transparent" strokeWidth={3.5 * e} />
+                  <ArrowShape a={a} selected={isSel} surface={surfaceOf(schema)} decale={dec} plots={schema.plots} e={e} />
                 </g>
               )
             })}
@@ -509,26 +604,34 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
               const isSel = selection?.type === 'plot' && selection.id === p.id
               return (
                 <g key={p.id} data-id={p.id} data-kind="plot" style={{ cursor: 'grab' }}>
-                  <circle cx={p.x} cy={p.y} r="2.6" fill="transparent" />
-                  <PlotShape p={p} selected={isSel} />
+                  <circle cx={p.x} cy={p.y} r={2.6 * e} fill="transparent" />
+                  <PlotShape p={p} selected={isSel} e={e} />
                 </g>
               )
             })}
 
+            {/* Poignées de la flèche sélectionnée : à faire glisser pour changer direction et longueur */}
+            {selectedArrow && !groupe && tool === 'select' && [['1', selectedArrow.x1, selectedArrow.y1], ['2', selectedArrow.x2, selectedArrow.y2]].map(([n, hx, hy]) => (
+              <g key={n} data-kind="arrow-end" data-id={selectedArrow.id} data-end={n} style={{ cursor: 'grab' }}>
+                <circle cx={hx} cy={hy} r={2.4 * e} fill="transparent" />
+                <circle cx={hx} cy={hy} r={0.95 * e} fill="#ffffff" stroke="#333333" strokeWidth={0.4 * e} />
+              </g>
+            ))}
+
             {dragRef.current?.kind === 'plot-move' && dragRef.current.guides && (
               <g pointerEvents="none">
-                {dragRef.current.guides.x != null && <line x1={dragRef.current.guides.x} y1="0" x2={dragRef.current.guides.x} y2="100" stroke="#e4f816" strokeWidth="0.35" strokeDasharray="1,0.8" />}
-                {dragRef.current.guides.y != null && <line x1="0" y1={dragRef.current.guides.y} x2="100" y2={dragRef.current.guides.y} stroke="#e4f816" strokeWidth="0.35" strokeDasharray="1,0.8" />}
+                {dragRef.current.guides.x != null && <line x1={dragRef.current.guides.x} y1={y0} x2={dragRef.current.guides.x} y2={y0 + t} stroke="#e4f816" strokeWidth={0.35 * e} strokeDasharray={`${e},${0.8 * e}`} />}
+                {dragRef.current.guides.y != null && <line x1={x0} y1={dragRef.current.guides.y} x2={x0 + t} y2={dragRef.current.guides.y} stroke="#e4f816" strokeWidth={0.35 * e} strokeDasharray={`${e},${0.8 * e}`} />}
               </g>
             )}
             {drawStart && (
               <line x1={drawStart.x} y1={drawStart.y} x2={drawStart.cur?.x ?? drawStart.x} y2={drawStart.cur?.y ?? drawStart.y}
-                stroke={arrowColor} strokeWidth="0.5" strokeDasharray="1.6,1.2" markerEnd={`url(#${markerId(arrowColor)})`} />
+                stroke={arrowColor} strokeWidth={0.5 * e} strokeDasharray={`${1.6 * e},${1.2 * e}`} markerEnd={`url(#${markerId(arrowColor)})`} />
             )}
             {zoneDraft && (
               <rect x={Math.min(zoneDraft.x1, zoneDraft.x2)} y={Math.min(zoneDraft.y1, zoneDraft.y2)}
                 width={Math.abs(zoneDraft.x2 - zoneDraft.x1)} height={Math.abs(zoneDraft.y2 - zoneDraft.y1)}
-                fill={arrowColor} fillOpacity="0.15" stroke={arrowColor} strokeWidth="0.7" strokeDasharray="1.6,1.2" />
+                fill={arrowColor} fillOpacity="0.15" stroke={arrowColor} strokeWidth={0.7 * e} strokeDasharray={`${1.6 * e},${1.2 * e}`} />
             )}
           </svg>
         </div>
@@ -556,6 +659,8 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
           )}
           {selectedArrow && (
             <>
+              <p style={S.hint}>Fais glisser la flèche pour la déplacer, ou un de ses ronds blancs pour changer sa direction et sa longueur.</p>
+              <button onClick={() => ajouterRetour(selectedArrow)} style={S.btnRetour}>Ajouter le retour</button>
               <label style={S.fieldLabel}>Couleur</label>
               <ColorChoice grande value={selectedArrow.color} onPick={c => { pushHistory(); patch({ arrows: schema.arrows.map(a => a.id === selectedArrow.id ? { ...a, color: c } : a) }) }} />
               <label style={S.fieldLabel}>Distance réelle (m)</label>
@@ -624,7 +729,7 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
           </p>
         )}
         {calcul?.erreur && course.effort && <p style={S.courseErreur}>{calcul.erreur}</p>}
-        {deborde(schema) && <p style={S.courseErreur}>L'exercice dépasse du dessin : verrouille-le et fais-le glisser, ou réduis l'intensité.</p>}
+        {deborde(schema, { x0, y0, t }) && <p style={S.courseErreur}>L'exercice dépasse du dessin : verrouille-le et fais-le glisser{surfaceOf(schema) === 'vierge' ? ', dézoome' : ''} ou réduis l'intensité.</p>}
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
           <button onClick={adapterDistances} disabled={!calcul || !!calcul.erreur || Math.abs(calcul.k - 1) < 0.005}
@@ -660,6 +765,12 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
 function IcoUndo() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-2" /></svg>
 }
+function IcoMoins() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" /></svg>
+}
+function IcoPlus() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14M12 5v14" /></svg>
+}
 function IcoRedo() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H10a6 6 0 0 0 0 12h2" /></svg>
 }
@@ -672,6 +783,8 @@ const S = {
   pills: { display: 'flex', gap: 2, background: '#f3f4f6', borderRadius: 9, padding: 3 },
   pill: { border: 'none', background: 'none', color: '#6b7280', fontSize: 12.5, fontWeight: 700, padding: '6px 11px', borderRadius: 7, cursor: 'pointer' },
   pillOn: { background: '#333333', color: '#e4f816' },
+  zoom: { display: 'flex', alignItems: 'center', gap: 2, background: '#f3f4f6', borderRadius: 9, padding: '0 3px' },
+  zoomVal: { fontSize: 12.5, fontWeight: 700, color: '#374151', minWidth: 46, textAlign: 'center', fontVariantNumeric: 'tabular-nums' },
   iconBtn: { width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, color: '#4b5563', cursor: 'pointer' },
 
   ctxbar: { minHeight: 44, display: 'flex', alignItems: 'center', gap: 12, padding: '4px 12px', background: '#fafafa', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' },
@@ -713,5 +826,6 @@ const S = {
   courseErreur: { margin: 0, fontSize: 13, color: '#dc2626', fontWeight: 600, lineHeight: 1.5 },
   btnAdapter: { background: '#333333', color: '#e4f816', border: 'none', fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' },
   btnLien: { background: 'none', border: 'none', color: '#374151', fontSize: 13, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: 0 },
+  btnRetour: { width: '100%', marginTop: 10, background: '#333333', color: '#e4f816', border: 'none', fontSize: 13, fontWeight: 800, padding: 9, borderRadius: 8, cursor: 'pointer' },
   btnDelete: { width: '100%', marginTop: 14, background: 'none', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 13, fontWeight: 700, padding: 9, borderRadius: 8, cursor: 'pointer' },
 }

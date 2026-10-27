@@ -109,10 +109,10 @@ export function mettreAEchelle(schema, k) {
   }
 }
 
-// Vrai si un élément sort du dessin (0–100)
-export function deborde(schema) {
-  const hors = v => v < 0 || v > 100
-  return (schema.plots || []).some(p => hors(p.x) || hors(p.y))
-    || (schema.arrows || []).some(a => hors(a.x1) || hors(a.y1) || hors(a.x2) || hors(a.y2))
-    || (schema.zones || []).some(z => hors(z.x) || hors(z.y) || hors(z.x + z.w) || hors(z.y + z.h))
+// Vrai si un élément sort du dessin (0–100, ou le cadre dézoomé d'une surface vierge)
+export function deborde(schema, { x0 = 0, y0 = 0, t = 100 } = {}) {
+  const hx = v => v < x0 || v > x0 + t, hy = v => v < y0 || v > y0 + t
+  return (schema.plots || []).some(p => hx(p.x) || hy(p.y))
+    || (schema.arrows || []).some(a => hx(a.x1) || hy(a.y1) || hx(a.x2) || hy(a.y2))
+    || (schema.zones || []).some(z => hx(z.x) || hy(z.y) || hx(z.x + z.w) || hy(z.y + z.h))
 }
