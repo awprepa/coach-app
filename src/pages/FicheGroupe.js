@@ -71,6 +71,7 @@ export default function FicheGroupe() {
   const [wellnessDetail, setWellnessDetail] = useState(false) // détail des wellness du jour
   const [manquantsOuverts, setManquantsOuverts] = useState(false) // liste « pas encore rempli » dépliée
   const [sgMembres, setSgMembres] = useState(new Set()) // client_id présents dans au moins un sous-groupe
+  const [sgCompte, setSgCompte] = useState({}) // sous-groupe -> nombre de membres
   const [sansSGOuvert, setSansSGOuvert] = useState(false)
   const [eventsCountMap, setEventsCountMap] = useState({}) // { client_id: nb événements cette semaine }
   const [programmes, setProgrammes]       = useState([])
@@ -145,15 +146,28 @@ export default function FicheGroupe() {
     setEditLogoFile(null)
     setEditLogoPreview(null)
     setSousGroupes(sg || [])
-    const membresList = (gm || []).map(r => r.clients).filter(Boolean)
+    let membresList = (gm || []).map(r => r.clients).filter(Boolean)
+    // Un club regroupe les joueurs de toutes ses équipes : ses membres sont
+    // ceux rattachés au club + ceux de ses équipes, sans doublon.
+    if (g?.type === 'club' && sg?.length) {
+      const { data: em } = await supabase.from('groupe_membres')
+        .select('client_id, clients(id, prenom, nom, offre, date_fin)').in('groupe_id', sg.map(x => x.id))
+      const vus = new Set(membresList.map(c => c.id))
+      for (const r of (em || [])) if (r.clients && !vus.has(r.clients.id)) { vus.add(r.clients.id); membresList.push(r.clients) }
+      membresList = membresList.sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`))
+    }
     setMembres(membresList)
 
     // Membres déjà répartis dans un sous-groupe (pour lister ceux qui ne le sont pas)
     if (sg?.length) {
-      const { data: sgm } = await supabase.from('groupe_membres').select('client_id').in('groupe_id', sg.map(x => x.id))
+      const { data: sgm } = await supabase.from('groupe_membres').select('groupe_id, client_id').in('groupe_id', sg.map(x => x.id))
       setSgMembres(new Set((sgm || []).map(r => r.client_id)))
+      const compte = {}
+      for (const r of (sgm || [])) compte[r.groupe_id] = (compte[r.groupe_id] || 0) + 1
+      setSgCompte(compte)
     } else {
       setSgMembres(new Set())
+      setSgCompte({})
     }
     setProgrammes(progs || [])
 
@@ -1279,6 +1293,7 @@ export default function FicheGroupe() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: sg.couleur }} />
                 <span style={{ fontWeight: 700, color: '#333', fontSize: '0.85rem' }}>{sg.nom}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>{sgCompte[sg.id] || 0}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <button onClick={e => { e.stopPropagation(); supprimerSousGroupe(sg.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }}>✕</button>
