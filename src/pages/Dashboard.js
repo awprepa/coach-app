@@ -5,12 +5,11 @@ import { extractColorsFromImage } from '../utils/colorExtract'
 import CropLogoModal from '../components/CropLogoModal'
 import { useNotifications } from '../hooks/useNotifications'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
-import NotifIcon from '../components/NotifIcon'
+import FilNotifications, { LogoGroupe } from '../components/FilNotifications'
 import Icon from '../components/Icon'
 import { isoLocal } from '../utils/dates'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
-const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 // Icônes SVG du menu (line-icons faits maison, héritent de currentColor)
 const svgIco = paths => (
@@ -79,20 +78,10 @@ function getWeekBounds() {
   return { start: isoLocal(monday), end: isoLocal(sunday) }
 }
 
-function formatNotifTime(isoStr) {
-  if (!isoStr) return ''
-  const d = new Date(isoStr)
-  const today = new Date()
-  const isToday = d.toDateString() === today.toDateString()
-  const hhmm = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  if (isToday) return hhmm
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' · ' + hhmm
-}
-
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { notifs, unread, markRead, markAllRead } = useNotifications()
+  const { notifs, markRead, markAllRead, chargerPlus, toutCharge } = useNotifications()
   // Reste surligné tant que le coach n'a pas quitté cette page, même après
   // avoir cliqué dessus (marquer comme lu ne doit pas faire disparaître le
   // surlignage tout de suite — sinon on perd de vue ce qu'on vient de lire).
@@ -109,11 +98,11 @@ export default function Dashboard() {
   const [newCatNom, setNewCatNom]     = useState('')
   const [newCatColor, setNewCatColor] = useState(PALETTE_CATS[0])
   const [tab, setTab]                 = useState('overview') // overview | clients | notifs | groupes | calendrier
-  const [showSecondaire, setShowSecondaire] = useState(true)
   // Groupes
   const [groupes, setGroupes]               = useState([])
   const [groupMemberIds, setGroupMemberIds] = useState(new Set())
   const [memberGroupMap, setMemberGroupMap] = useState({}) // client_id → { id, nom, couleur, logo_url }
+  const [membresGroupes, setMembresGroupes] = useState([]) // lignes groupe_membres (client_id, groupe_id)
   const [showGroupeForm, setShowGroupeForm] = useState(false)
   const [newGroupeNom, setNewGroupeNom]     = useState('')
   const [newGroupeCouleur, setNewGroupeCouleur]   = useState('')
@@ -202,6 +191,7 @@ export default function Dashboard() {
       if (m.client_id && m.groupes) map[m.client_id] = m.groupes
     }
     setMemberGroupMap(map)
+    setMembresGroupes(membresData || [])
     setLoading(false)
   }
 
@@ -354,20 +344,6 @@ export default function Dashboard() {
   const nouveaux = clientsActifs.filter(c => c.coach_notifie === false)
   const totalAlertes = wellnessAlertes.length + expirations.length + nouveaux.length + progFinBientot.length
 
-  // Bilan hebdo (actifs uniquement) — triés par activité récente (dernier
-  // wellness rempli), les plus récents en premier ; jamais rempli en dernier.
-  const { start: wStart, end: wEnd } = getWeekBounds()
-  const bilanRows = clientsActifs.map(c => {
-    const evs = weekEvents.filter(e => e.client_id === c.id)
-    return { ...c, eventsCount: evs.length }
-  }).sort((a, b) => {
-    if (!a.derniere_activite && !b.derniere_activite) return 0
-    if (!a.derniere_activite) return 1
-    if (!b.derniere_activite) return -1
-    if (a.derniere_activite !== b.derniere_activite) return b.derniere_activite.localeCompare(a.derniere_activite)
-    return 0
-  })
-
   // Clients individuels (pas membres d'un groupe, actifs)
   const clientsIndividuels = clientsActifs.filter(c => !groupMemberIds.has(c.id))
   // Membres de groupes (actifs)
@@ -417,132 +393,112 @@ export default function Dashboard() {
   const TABS = [
     { k: 'overview',   label: "Vue d'ensemble", icon: NAV_ICONS.overview },
     { k: 'clients',    label: 'Clients',        icon: NAV_ICONS.clients },
-    { k: 'notifs',     label: 'Notifications',  icon: NAV_ICONS.notifs, badge: unread },
     { k: 'groupes',    label: 'Groupes',        icon: NAV_ICONS.groupes },
     { k: 'calendrier', label: 'Calendrier',     icon: NAV_ICONS.calendrier },
   ]
   function selectTab(k) {
     if (k === 'clients') { navigate('/clients'); return }
     setTab(k)
-    if (k === 'notifs' && unread > 0) markAllRead()
     window.scrollTo({ top: 0 })
+  }
+
+  // Équipe de chaque joueur de groupe : l'équipe plutôt que le sous-groupe
+  // (Avants, 3/4…) ou le club, pour l'afficher à côté de son nom
+  const parIdGroupe = Object.fromEntries(groupes.map(g => [g.id, g]))
+  const equipeDe = {}
+  const rang = g => g.type === 'equipe' ? 3 : g.type === 'sous_groupe' ? 2 : 1
+  for (const m of membresGroupes) {
+    let g = parIdGroupe[m.groupe_id]
+    if (!g) continue
+    if (g.type === 'sous_groupe' && parIdGroupe[g.parent_id]) g = parIdGroupe[g.parent_id]
+    const actuel = equipeDe[m.client_id]
+    if (!actuel || rang(g) > rang(actuel)) equipeDe[m.client_id] = g
+  }
+  // Logo du club (ou de l'équipe) devant le nom d'un joueur de groupe
+  function logoMembre(clientId, size = 14) {
+    let g = equipeDe[clientId]
+    while (g && !g.logo_url && g.parent_id && parIdGroupe[g.parent_id]) g = parIdGroupe[g.parent_id]
+    return g ? <LogoGroupe groupe={g} size={size} /> : null
   }
 
   return (
     <div style={S.page}>
-      {/* Adaptations mobile — aucune règle au-dessus de 820px, desktop inchangé */}
+      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
       <style>{`
         @media (max-width: 820px){
-          .dash-hero{grid-template-columns:1fr !important;}
-          .dash-side{position:static !important;}
-          .dash-bento{grid-template-columns:1fr !important;}
-          .dash-bilan-row{grid-template-columns:1fr 64px 44px 52px !important;gap:0.35rem !important;padding-left:0.6rem !important;padding-right:0.6rem !important;}
+          .dash-grille{grid-template-columns:1fr !important;}
         }
       `}</style>
-      <div style={S.hero} className="dash-hero">
-
-        {/* ── Colonne gauche — résumé + menu d'onglets ── */}
-        <div style={S.side} className="dash-side">
-          <div style={S.sumCard}>
-            <p style={S.sumDate}>{dateLabel}</p>
-            <h1 style={S.sumTitle}>Tableau de bord</h1>
-            <button style={S.sumStatBtn} onClick={() => selectTab('clients')}>
-              <span style={S.sumStatL}>Clients</span><span style={S.sumStatV}>{clients.length}</span>
-            </button>
-            <button style={S.sumStatBtn} onClick={() => selectTab('overview')}>
-              <span style={S.sumStatL}>Séances du jour</span><span style={S.sumStatV}>{seancesAujourdhui.length}</span>
-            </button>
-            <button style={S.sumStatBtn} onClick={() => selectTab('overview')}>
-              <span style={S.sumStatL}>Alertes</span><span style={{ ...S.sumStatV, color: totalAlertes > 0 ? '#fca5a5' : '#e4f816' }}>{totalAlertes}</span>
-            </button>
-            <button style={S.sumStatBtn} onClick={() => selectTab('groupes')}>
-              <span style={S.sumStatL}>Groupes</span><span style={S.sumStatV}>{groupes.length}</span>
-            </button>
-          </div>
-
-          <div style={S.navCard}>
-            {TABS.map(t => (
-              <button key={t.k} onClick={() => selectTab(t.k)}
-                style={{ ...S.navItem, ...(tab === t.k ? S.navItemOn : null) }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                  <span style={{ ...S.navIco, color: tab === t.k ? '#e4f816' : '#9aa1ac' }}>{t.icon}</span>
-                  {t.label}
-                </span>
-                {t.badge > 0 && <span style={{ ...S.navBadge, ...(tab === t.k ? { background: '#e4f816', color: '#333333' } : null) }}>{t.badge}</span>}
-              </button>
-            ))}
-          </div>
-
-          {/* Actions rapides — adaptées à l'onglet */}
-          <div style={S.navCard}>
-            <p style={{ ...S.sectionTitle, padding: '0.35rem 0.6rem 0.15rem' }}>Actions rapides</p>
-            {tab === 'groupes' ? (
-              <>
-                <button style={S.btnPrimary} onClick={() => setShowGroupeForm(true)}>+ Nouveau groupe</button>
-                <button style={S.quickAction} onClick={() => selectTab('clients')}>{NAV_ICONS.clients} Voir les clients</button>
-              </>
-            ) : tab === 'calendrier' ? (
-              <>
-                <button style={S.quickAction} onClick={() => selectTab('groupes')}>{NAV_ICONS.groupes} Gérer les groupes</button>
-                <button style={S.btnPrimary} onClick={() => navigate('/nouveau-client')}>+ Nouveau client</button>
-              </>
-            ) : (
-              <>
-                <button style={S.btnPrimary} onClick={() => navigate('/nouveau-client')}>+ Nouveau client</button>
-                <button style={S.quickAction} onClick={() => navigate('/messages')}>{NAV_ICONS.notifs} Messagerie</button>
-                <button style={S.quickAction} onClick={() => selectTab('calendrier')}>{NAV_ICONS.calendrier} Calendriers</button>
-              </>
-            )}
-          </div>
+      <div style={S.head}>
+        <div>
+          <p style={S.dateLabel}>{dateLabel}</p>
+          <h1 style={S.title}>Tableau de bord</h1>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {totalAlertes > 0 && <span style={S.alertBadge}>{totalAlertes} à traiter</span>}
+          <button style={S.btnPrimary} onClick={() => navigate('/nouveau-client')}>+ Nouveau client</button>
+        </div>
+      </div>
 
-        {/* ── Colonne droite — un seul grand bloc, change selon l'onglet ── */}
+      <nav style={S.navBar}>
+        {TABS.map(t => (
+          <button key={t.k} onClick={() => selectTab(t.k)}
+            style={{ ...S.navItem, width: 'auto', justifyContent: 'flex-start', gap: '0.55rem', whiteSpace: 'nowrap', ...(tab === t.k ? S.navItemOn : null) }}>
+            <span style={{ ...S.navIco, color: tab === t.k ? '#e4f816' : '#9aa1ac' }}>{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <div>
         <div style={S.panel}>
 
           {/* ═══ VUE D'ENSEMBLE ═══ */}
           {tab === 'overview' && (
-            <div style={S.bento}>
-              <div style={S.kpis}>
-                <div style={S.kpiDark}>
-                  <div style={S.kpiVal}>{seancesAujourdhui.length}</div>
-                  <div style={S.kpiLbl}>séance{seancesAujourdhui.length > 1 ? 's' : ''} aujourd'hui</div>
-                </div>
-                <div style={S.kpiAccent}>
-                  <div style={{ ...S.kpiVal, color: '#333333' }}>{totalAlertes}</div>
-                  <div style={{ ...S.kpiLbl, color: '#333333', opacity: 0.8 }}>alerte{totalAlertes > 1 ? 's' : ''} à traiter</div>
-                </div>
-              </div>
+            <div style={S.grille} className="dash-grille">
+              <FilNotifications
+                notifs={notifs}
+                estNonLue={n => stillHighlighted.has(n.id)}
+                markRead={markRead}
+                markAllRead={markAllRead}
+                onOuvrir={lien => navigate(lien)}
+                clients={clients}
+                groupes={groupes}
+                equipeDe={equipeDe}
+                chargerPlus={chargerPlus}
+                peutChargerPlus={!toutCharge}
+              />
 
-              <div style={S.bentoGrid} className="dash-bento">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
                 {/* Alertes — à traiter en priorité */}
                 <div style={S.card}>
                   <div style={S.cardHead}>
                     <span style={S.sectionTitle}>À traiter</span>
-                    {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>{totalAlertes}</span>}
+                    {totalAlertes > 0 && <span style={{ ...S.pill, background: '#fef2f2', color: '#b91c1c' }}>{totalAlertes}</span>}
                   </div>
                   {totalAlertes === 0 ? (
-                    <p style={{ ...S.empty, color: '#16a34a' }}>✓ Tout va bien aujourd'hui.</p>
+                    <p style={S.empty}>Rien à traiter aujourd'hui.</p>
                   ) : (
                     <>
                       {wellnessAlertes.map(c => (
                         <div key={'w' + c.id} style={{ ...S.miniRow, cursor: 'default' }}>
-                          <div style={{ ...S.miniAva, background: '#fef2f2', color: '#dc2626' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas · {c.avg.toFixed(1)}/4</p></div>
+                          <div style={{ ...S.miniAva, background: '#fef2f2', color: '#b91c1c' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{logoMembre(c.id)}{c.prenom} {c.nom}</p><p style={S.miniSub}>Wellness bas · {c.avg.toFixed(1)}/4</p></div>
                           <button style={S.miniBtnDark} onClick={() => navigate('/messages')}>Message</button>
                           <button style={S.miniBtn} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
                         </div>
                       ))}
                       {expirations.map(c => (
                         <div key={'e' + c.id} style={{ ...S.miniRow, cursor: 'default' }}>
-                          <div style={{ ...S.miniAva, background: '#fffbeb', color: '#d97706' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire {c.daysLeft === 0 ? "auj." : `dans ${c.daysLeft}j`}</p></div>
+                          <div style={{ ...S.miniAva, background: '#fffbeb', color: '#92400e' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{logoMembre(c.id)}{c.prenom} {c.nom}</p><p style={S.miniSub}>Abonnement expire {c.daysLeft === 0 ? "aujourd'hui" : `dans ${c.daysLeft} j`}</p></div>
                           <button style={S.miniBtn} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
                         </div>
                       ))}
                       {nouveaux.map(c => (
                         <div key={'n' + c.id} style={{ ...S.miniRow, cursor: 'default' }}>
                           <div style={{ ...S.miniAva, background: '#ede9fe', color: '#6d28d9' }}>{c.prenom?.[0]}{c.nom?.[0]}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{logoMembre(c.id)}{c.prenom} {c.nom}</p><p style={S.miniSub}>Nouveau client</p></div>
                           <button style={S.miniBtnDark} onClick={() => navigate(`/client/${c.id}`)}>Voir</button>
                           <button style={S.miniBtn} onClick={() => marquerVu(c.id)}>Vu</button>
                         </div>
@@ -550,8 +506,8 @@ export default function Dashboard() {
                       {progFinBientot.map(p => (
                         <div role="button" tabIndex={0} key={'p' + p.id} onClick={() => navigate(`/client/${p.clientId}`)} style={S.miniRow}>
                           <div style={{ ...S.miniAva, background: '#e0f2fe', color: '#0284c7' }}><Icon name="clipboard" size={14} /></div>
-                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{p.clientNom}</p><p style={S.miniSub}>Cycle : {p.nom}</p></div>
-                          <span style={{ ...S.pill, background: '#e0f2fe', color: '#0284c7' }}>Fin {p.daysLeft}j</span>
+                          <div style={{ flex: 1, minWidth: 0 }}><p style={S.miniName}>{logoMembre(p.clientId)}{p.clientNom}</p><p style={S.miniSub}>Cycle « {p.nom} » · fin dans {p.daysLeft} j</p></div>
+                          <span style={S.chevron}>›</span>
                         </div>
                       ))}
                     </>
@@ -569,7 +525,7 @@ export default function Dashboard() {
                         <div style={S.miniIco}><Icon name="calendar" size={14} /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={S.miniName}>{ev.titre}</p>
-                          <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
+                          <p style={S.miniSub}>{logoMembre(ev.client_id, 12)}{ev.clients?.prenom} {ev.clients?.nom}</p>
                         </div>
                         <span style={S.chevron}>›</span>
                       </div>
@@ -579,133 +535,13 @@ export default function Dashboard() {
                     <div style={{ ...S.miniRow, cursor: 'default' }}>
                       <div style={S.miniIco}><Icon name="bell" size={14} /></div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={S.miniName}>{sansWellness.length} sans wellness 3j+</p>
+                        <p style={S.miniName}>{sansWellness.length} sans wellness depuis 3 j ou plus</p>
                         <p style={S.miniSub}>{sansWellness.slice(0, 3).map(c => c.prenom).join(', ')}{sansWellness.length > 3 ? ` +${sansWellness.length - 3}` : ''}</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* Détails (bilan + planning) — repliable */}
-              <button onClick={() => setShowSecondaire(v => !v)} style={S.collapseBtn}>
-                <span style={S.sectionTitle}>Bilan & planning de la semaine</span>
-                <span style={{ color: '#9aa1ac', fontSize: '1rem', transform: showSecondaire ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-              </button>
-
-              {showSecondaire && (<>
-              {/* Bilan de la semaine */}
-              <div style={S.card}>
-                <div style={S.cardHead}>
-                  <span style={S.sectionTitle}>Bilan de la semaine</span>
-                  <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>
-                    {new Date(wStart + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {new Date(wEnd + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                  </span>
-                </div>
-                <div className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', padding: '0.4rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
-                  {['Client', 'Wellness moy.', 'Séances', 'Statut'].map(h => (
-                    <span key={h} style={{ fontSize: '0.6rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
-                  ))}
-                </div>
-                {bilanRows.map((c) => {
-                  const avg = c.wellness_week_avg
-                  const entriesCount = c.wellness_week?.length || 0
-                  const inactif = entriesCount === 0 && c.eventsCount === 0
-                  const wColor = avg === null ? '#9ca3af' : avg <= 2 ? '#dc2626' : avg <= 3 ? '#d97706' : '#16a34a'
-                  const av = getAvatar(c.prenom, c.nom)
-                  return (
-                    <div role="button" tabIndex={0} key={c.id} onClick={() => navigate(`/client/${c.id}`)}
-                      className="dash-bilan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 70px 70px', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 1rem', borderTop: '1px solid #f6f7f8', cursor: 'pointer' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                        {c.avatar_url
-                          ? <img loading="lazy" src={c.avatar_url} alt={c.prenom} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                          : <div style={{ width: 28, height: 28, borderRadius: '50%', background: av.bg, color: av.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>{av.initiales}</div>
-                        }
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ ...S.miniName, margin: 0 }}>{c.prenom} {c.nom}</p>
-                          <p style={{ margin: '1px 0 0', fontSize: '0.68rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatDerniereActivite(c.derniere_activite)}</p>
-                        </div>
-                      </div>
-                      <div>
-                        {avg !== null ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <div style={{ flex: 1, height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
-                              <div style={{ width: `${(avg / 4) * 100}%`, height: '100%', background: wColor, borderRadius: 99 }} />
-                            </div>
-                            <span style={{ fontSize: '0.78rem', fontWeight: '700', color: wColor, minWidth: 26 }}>{avg.toFixed(1)}</span>
-                          </div>
-                        ) : <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>—</span>}
-                      </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: '700', color: c.eventsCount > 0 ? '#333333' : '#d1d5db' }}>
-                        {c.eventsCount > 0 ? c.eventsCount : '—'}
-                      </span>
-                      {inactif ? (
-                        <span style={{ ...S.pill, background: '#f3f4f6', color: '#6b7280' }}>Inactif</span>
-                      ) : avg !== null && avg <= 2 ? (
-                        <span style={{ ...S.pill, background: '#fef2f2', color: '#dc2626' }}>Bas</span>
-                      ) : (
-                        <span style={{ ...S.pill, background: '#f0fdf4', color: '#16a34a' }}>✓ OK</span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Cette semaine */}
-              <div style={S.card}>
-                <div style={S.cardHead}>
-                  <span style={S.sectionTitle}>Cette semaine</span>
-                  <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '600' }}>{weekEvents.length} évènement{weekEvents.length !== 1 ? 's' : ''}</span>
-                </div>
-                {weekEvents.length === 0 ? (
-                  <p style={S.empty}>Aucun évènement cette semaine.</p>
-                ) : (
-                  weekEvents.map(ev => {
-                    const d = new Date(ev.date + 'T00:00:00')
-                    const isToday = ev.date === today
-                    const isPast  = ev.date < today
-                    return (
-                      <div role="button" tabIndex={0} key={ev.id} onClick={() => navigate(`/client/${ev.client_id}`)}
-                        style={{ ...S.miniRow, opacity: isPast && !isToday ? 0.55 : 1 }}>
-                        <div style={{ ...S.dayBadge, background: isToday ? '#333333' : '#f3f4f6', color: isToday ? '#e4f816' : '#6b7280' }}>
-                          <span style={{ fontSize: '0.5rem', fontWeight: '800', textTransform: 'uppercase', lineHeight: 1 }}>{JOURS[d.getDay()]}</span>
-                          <span style={{ fontSize: '0.9rem', fontWeight: '900', lineHeight: 1 }}>{d.getDate()}</span>
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={S.miniName}>{ev.titre}</p>
-                          <p style={S.miniSub}>{ev.clients?.prenom} {ev.clients?.nom}</p>
-                        </div>
-                        {isToday && <span style={{ ...S.pill, background: 'rgba(228,248,22,0.25)', color: '#7a8400' }}>Auj.</span>}
-                        <span style={S.chevron}>›</span>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-              </>)}
-            </div>
-          )}
-
-          {/* ═══ NOTIFICATIONS ═══ */}
-          {tab === 'notifs' && (
-            <div style={S.card}>
-              <div style={S.cardHead}><span style={S.sectionTitle}>Notifications</span></div>
-              {notifs.length === 0 && <p style={S.empty}>Aucune notification</p>}
-              {notifs.slice(0, 50).map(n => {
-                const highlighted = stillHighlighted.has(n.id)
-                return (
-                <div role="button" tabIndex={0} key={n.id} onClick={() => { markRead(n.id); if (n.lien && n.lien.startsWith('/')) navigate(n.lien) }}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 1rem', borderTop: '1px solid #f6f7f8', background: highlighted ? '#fafff0' : 'white', cursor: n.lien ? 'pointer' : 'default' }}>
-                  <NotifIcon type={n.type} size={32} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: highlighted ? '700' : '500', color: '#1a1a1a' }}>{n.titre}</p>
-                    {n.corps && <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{n.corps}</p>}
-                  </div>
-                  <span style={{ fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{formatNotifTime(n.created_at)}</span>
-                  {highlighted && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e4f816', flexShrink: 0, marginTop: 5 }} />}
-                </div>
-                )
-              })}
             </div>
           )}
 
@@ -1110,7 +946,10 @@ export default function Dashboard() {
 }
 
 const S = {
-  page:        { padding: '2rem', maxWidth: '1120px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:        { padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  head:        { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' },
+  navBar:      { background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '0.4rem', display: 'flex', gap: '0.1rem', marginBottom: '1rem', overflowX: 'auto' },
+  grille:      { display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(300px, 1fr)', gap: '1rem', alignItems: 'start' },
   centered:    { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
 
   // ── Héros (sidebar + bento) ──

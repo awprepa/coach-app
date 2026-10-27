@@ -4,6 +4,8 @@ import { supabase } from '../supabase'
 export function useNotifications() {
   const [notifs, setNotifs] = useState([])
   const [userId, setUserId] = useState(null)
+  const [limite, setLimite] = useState(50)
+  const [toutCharge, setToutCharge] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -13,15 +15,6 @@ export function useNotifications() {
 
   useEffect(() => {
     if (!userId) return
-
-    // Charger les 50 dernières notifications
-    supabase
-      .from('notifications')
-      .select('*')
-      .eq('destinataire_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data }) => setNotifs(data || []))
 
     // Realtime
     const channel = supabase
@@ -43,6 +36,20 @@ export function useNotifications() {
     return () => { supabase.removeChannel(channel) }
   }, [userId])
 
+  // Charger les dernières notifications (50, puis plus avec chargerPlus)
+  useEffect(() => {
+    if (!userId) return
+    supabase
+      .from('notifications')
+      .select('*')
+      .eq('destinataire_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limite)
+      .then(({ data }) => { setNotifs(data || []); setToutCharge((data || []).length < limite) })
+  }, [userId, limite])
+
+  const chargerPlus = useCallback(() => setLimite(l => l + 150), [])
+
   const markRead = useCallback(async (id) => {
     await supabase.from('notifications').update({ lu: true }).eq('id', id)
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n))
@@ -56,5 +63,5 @@ export function useNotifications() {
 
   const unread = notifs.filter(n => !n.lu).length
 
-  return { notifs, unread, markRead, markAllRead }
+  return { notifs, unread, markRead, markAllRead, chargerPlus, toutCharge }
 }
