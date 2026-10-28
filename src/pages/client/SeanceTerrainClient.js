@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
@@ -6,6 +6,8 @@ import SchemaTerrainView from '../../components/SchemaTerrainView'
 import ChronoIntermittent from '../../components/ChronoIntermittent'
 import { Jauge, RANGE_CSS } from '../../components/RpeGate'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
+import { getCoachId, sendNotif } from '../../notifs'
+import { isoLocal } from '../../utils/dates'
 import { lireIntermittent, passagesPlots, PLOTS } from '../../utils/intermittents'
 import { arrondiDemi } from '../../utils/courseVmi'
 
@@ -19,6 +21,11 @@ function getSemaineActuelle(dateDebut) {
 const virgule = v => String(Math.round(v * 10) / 10).replace('.', ',')
 const metres = v => `${virgule(arrondiDemi(v))} m`
 const milliers = v => Math.round(v).toLocaleString('fr-FR')
+// Durée d'un bloc d'intermittent (navettes × (effort + récup))
+const dureeBloc = i => {
+  const sec = i.reps * (i.effort + i.recup)
+  return sec % 60 === 0 ? `${sec / 60} min` : `${Math.floor(sec / 60)} min ${sec % 60} s`
+}
 const aDessin = s => s && (s.plots?.length > 0 || s.arrows?.length > 0)
 // Plot vers lequel mène le trajet k (1 = premier aller)
 const plotDuTrajet = k => (k % 2 === 0 ? PLOTS.depart : PLOTS.demiTour)
@@ -26,27 +33,28 @@ const plotDuTrajet = k => (k % 2 === 0 ? PLOTS.depart : PLOTS.demiTour)
 // chiffres du coach : côté joueur, ils sont recalculés, on ne la montre pas.
 const consignesCoach = bloc => (bloc.contenu || []).filter(l => l.texte && !/% VMI ·/.test(l.texte))
 
-// Vue client d'une séance terrain : résumé (distance, durée), blocs à cocher
-// (gammes ligne par ligne), blocs d'intermittent avec chiffres recalculés à la
-// VMI du joueur, plots de couleurs différentes, fiche détaillée, chrono, et
-// RPE ressenti sur la même jauge que les entraînements de groupe.
+// Vue client d'une séance terrain : résumé (distance, durée), blocs, blocs
+// d'intermittent avec chiffres recalculés à la VMI du joueur, plots de couleurs
+// différentes, fiche détaillée, chrono, puis RPE (même jauge que les
+// entraînements de groupe), commentaire et bouton « Séance terminée ».
 export default function SeanceTerrainClient({ id, seance }) {
   const navigate = useNavigate()
   const [blocs, setBlocs] = useState([])
   const [validations, setValidations] = useState({}) // exercice_id -> true
-  const [lignesFaites, setLignesFaites] = useState({}) // exercice_id -> [index]
   const [ouverts, setOuverts] = useState({}) // blocs terminés rouverts
-  const [rpe, setRpe] = useState(null) // { id, rpe_reel } | null
+  const [rpe, setRpe] = useState(null) // note 0-10 | null
+  const [commentaire, setCommentaire] = useState('')
+  const [enregistre, setEnregistre] = useState(null) // { rpe, texte } déjà enregistrés | null
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState(null)
   const [vmiJoueur, setVmiJoueur] = useState(null)
   const [loading, setLoading] = useState(true)
   const [openSchemaId, setOpenSchemaId] = useState(null)
   const [detail, setDetail] = useState(null) // bloc affiché en détail
   const [chrono, setChrono] = useState(null) // bloc dont le chrono est ouvert
-  const rpeTimer = useRef(null)
 
   const semaineActuelle = getSemaineActuelle(seance?.programmes?.date_debut)
   const clientId = seance?.programmes?.client_id
-  const cleLignes = `terrain_lignes_${id}_${semaineActuelle}`
 
   useEffect(() => {
     (async () => {
@@ -65,7 +73,12 @@ export default function SeanceTerrainClient({ id, seance }) {
 
       const { data: r } = await supabase
         .from('rpe_seances').select('id, rpe_reel').eq('seance_id', id).eq('semaine', semaineActuelle).maybeSingle()
-      setRpe(r || null)
+      const { data: com } = await supabase
+        .from('seance_commentaires').select('texte').eq('seance_id', id).eq('semaine', semaineActuelle).maybeSingle()
+      const note = r?.rpe_reel != null ? Math.round(r.rpe_reel) : null
+      setRpe(note)
+      setCommentaire(com?.texte || '')
+      if (note != null || com?.texte) setEnregistre({ rpe: note, texte: com?.texte || '' })
 
       // VMI du joueur : son dernier test 30-15 (s'il est dans un groupe testé)
       if (clientId) {
@@ -84,11 +97,6 @@ export default function SeanceTerrainClient({ id, seance }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, semaineActuelle])
 
-  // Lignes cochées : gardées sur le téléphone, le temps de la séance
-  useEffect(() => {
-    try { setLignesFaites(JSON.parse(localStorage.getItem(cleLignes) || '{}')) } catch (e) { /* stockage indisponible */ }
-  }, [cleLignes])
-
   async function validerBloc(blocId, valide) {
     setValidations(prev => ({ ...prev, [blocId]: valide }))
     setOuverts(prev => ({ ...prev, [blocId]: false }))
@@ -97,28 +105,50 @@ export default function SeanceTerrainClient({ id, seance }) {
     if (valide) autoPlacerSeanceSurCalendrier(clientId, id, semaineActuelle)
   }
 
-  function cocherLigne(bloc, i) {
-    const faites = lignesFaites[bloc.id] || []
-    const nouv = faites.includes(i) ? faites.filter(x => x !== i) : [...faites, i]
-    const map = { ...lignesFaites, [bloc.id]: nouv }
-    setLignesFaites(map)
-    try { localStorage.setItem(cleLignes, JSON.stringify(map)) } catch (e) { /* stockage indisponible */ }
-    // Toutes les lignes cochées : le bloc est terminé
-    if (nouv.length === (bloc.contenu || []).length && !validations[bloc.id]) validerBloc(bloc.id, true)
-  }
-
-  // La jauge bouge en continu : on enregistre une fois le doigt posé
-  function changerRpe(value) {
-    setRpe(prev => ({ ...(prev || {}), rpe_reel: value }))
-    clearTimeout(rpeTimer.current)
-    rpeTimer.current = setTimeout(() => saveRpe(value), 600)
-  }
-  async function saveRpe(value) {
+  // « Séance terminée » / « Enregistrer les modifications » : RPE + commentaire
+  async function terminer() {
+    if (rpe == null || saving) return
+    setSaving(true); setMessage(null)
+    const premiere = !enregistre
+    const texte = commentaire.trim()
     const { data: exist } = await supabase
       .from('rpe_seances').select('id').eq('seance_id', id).eq('semaine', semaineActuelle).maybeSingle()
-    if (exist?.id) await supabase.from('rpe_seances').update({ rpe_reel: value }).eq('id', exist.id)
-    else await supabase.from('rpe_seances').insert([{ seance_id: id, semaine: semaineActuelle, rpe_reel: value }])
+    const { error } = exist?.id
+      ? await supabase.from('rpe_seances').update({ rpe_reel: rpe }).eq('id', exist.id)
+      : await supabase.from('rpe_seances').insert([{ seance_id: id, semaine: semaineActuelle, rpe_reel: rpe }])
+    if (!error && (texte || enregistre?.texte)) {
+      await supabase.from('seance_commentaires')
+        .upsert({ seance_id: id, semaine: semaineActuelle, texte }, { onConflict: 'seance_id,semaine' })
+    }
+    setSaving(false)
+    if (error) { setMessage({ ok: false, texte: 'Pas enregistré. Vérifie ta connexion et réessaie.' }); return }
     autoPlacerSeanceSurCalendrier(clientId, id, semaineActuelle)
+    if (texte && texte !== (enregistre?.texte || '')) notifierCoach(`a laissé une note`, `${seance.nom} · S${semaineActuelle} : « ${texte.length > 120 ? texte.slice(0, 117) + '…' : texte} »`, 'note_seance', `/seance/${id}`)
+    if (premiere) marquerTerminee()
+    setEnregistre({ rpe, texte })
+    setMessage({ ok: true, texte: premiere ? 'Séance enregistrée. Bien joué !' : 'Modifications enregistrées.' })
+  }
+
+  async function notifierCoach(action, corps, type, lien) {
+    try {
+      const coachId = await getCoachId()
+      if (!coachId) return
+      const { data: c } = clientId ? await supabase.from('clients').select('prenom, nom').eq('id', clientId).maybeSingle() : { data: null }
+      const nom = c ? `${c.prenom} ${c.nom || ''}`.trim() : 'Un client'
+      sendNotif(coachId, { titre: `${nom} ${action}`, corps, type, lien })
+    } catch (e) { console.warn('[SeanceTerrainClient] notification non envoyée :', e?.message) }
+  }
+
+  // Séance du calendrier passée en « terminée », comme pour la musculation
+  async function marquerTerminee() {
+    try {
+      const hier = new Date(); hier.setDate(hier.getDate() - 1)
+      const { data: ev } = await supabase.from('evenements').select('id')
+        .eq('seance_id', id).eq('terminee', false).gte('date', isoLocal(hier))
+        .order('date', { ascending: true }).limit(1).maybeSingle()
+      if (ev?.id) await supabase.from('evenements').update({ terminee: true }).eq('id', ev.id).eq('terminee', false)
+      notifierCoach('a terminé une séance', `${seance.nom} · S${semaineActuelle} · RPE ${rpe}`, 'seance', clientId ? `/client/${clientId}` : '/')
+    } catch (e) { console.warn('[SeanceTerrainClient] séance non marquée terminée :', e?.message) }
   }
 
   if (loading) return <div style={S.page}><p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement…</p></div>
@@ -146,7 +176,6 @@ export default function SeanceTerrainClient({ id, seance }) {
     <div style={S.page}>
       <style>{RANGE_CSS}</style>
       <div style={S.header}>
-        <div style={S.headTop}>
           <button onClick={() => navigate(-1)} style={S.iconBtn} aria-label="Retour">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
@@ -154,7 +183,8 @@ export default function SeanceTerrainClient({ id, seance }) {
             <div style={S.headerTitle}>{seance.nom}</div>
             <div style={S.headerSub}>Séance terrain · Semaine {semaineActuelle}</div>
           </div>
-        </div>
+      </div>
+      <div style={S.content}>
         <div style={{ ...S.resume, gridTemplateColumns: `repeat(${resume.length}, 1fr)` }}>
           {resume.map(([v, l], i) => (
             <div key={i} style={{ ...S.resumeCase, ...(i > 0 ? S.resumeSep : null) }}>
@@ -162,9 +192,6 @@ export default function SeanceTerrainClient({ id, seance }) {
             </div>
           ))}
         </div>
-      </div>
-
-      <div style={S.content}>
         {plots > 0 && (
           <div style={S.materiel}>
             <span style={{ ...S.pastille, background: PLOTS.depart.color }} />
@@ -177,7 +204,6 @@ export default function SeanceTerrainClient({ id, seance }) {
           const valide = !!validations[bloc.id]
           const info = infos[bloc.id]
           const lignes = bloc.contenu || []
-          const nbFaites = (lignesFaites[bloc.id] || []).length
           const replie = valide && !ouverts[bloc.id]
 
           const tete = (
@@ -185,7 +211,7 @@ export default function SeanceTerrainClient({ id, seance }) {
               <span style={S.blocCode}>{bloc.code}</span>
               <span style={S.blocNom}>{bloc.nom}</span>
               <span style={S.blocMeta}>
-                {info ? `≈ ${Math.max(1, Math.round((info.reps * info.effort + (info.reps - 1) * info.recup) / 60))} min` : lignes.length > 0 && !valide ? `${nbFaites} / ${lignes.length}` : null}
+                {info ? dureeBloc(info) : null}
                 {info && !replie && <span style={S.chevron}>›</span>}
               </span>
             </button>
@@ -209,24 +235,21 @@ export default function SeanceTerrainClient({ id, seance }) {
                   {info.navette ? (
                     <>
                       <div style={S.chiffres}>
-                        <div style={{ ...S.chiffre, ...S.chiffreCle }}>
-                          <b style={{ ...S.chiffreVal, color: '#e4f816' }}>{info.ligne != null ? metres(info.ligne) : '—'}</b>
-                          <span style={{ ...S.chiffreLab, color: 'rgba(255,255,255,0.68)' }}>{info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite'}</span>
-                        </div>
-                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.reps} × {info.effort} s</b><span style={S.chiffreLab}>effort, récup {info.recup} s</span></div>
-                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.cdd + 1} trajet{info.cdd > 0 ? 's' : ''}</b><span style={S.chiffreLab}>{info.cdd} demi-tour{info.cdd > 1 ? 's' : ''}</span></div>
-                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.vitesse ? `${virgule(info.vitesse * 3.6)} km/h` : `${info.intensite} %`}</b><span style={S.chiffreLab}>{info.vitesse ? 'ton allure' : 'de ta VMI'}</span></div>
+                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.ligne != null ? metres(info.ligne) : '—'}</b><span style={S.chiffreLab}>{info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite'}</span></div>
+                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.reps} × {info.effort}-{info.recup}</b><span style={S.chiffreLab}>{dureeBloc(info)} au total</span></div>
+                        {info.cdd > 0 && <div style={S.chiffre}><b style={S.chiffreVal}>{info.cdd} demi-tour{info.cdd > 1 ? 's' : ''}</b><span style={S.chiffreLab}>par navette</span></div>}
+                        {info.vitesse && <div style={S.chiffre}><b style={S.chiffreVal}>{virgule(info.vitesse * 3.6)} km/h</b><span style={S.chiffreLab}>ton allure</span></div>}
                       </div>
                       <button onClick={() => setDetail(bloc)} style={S.miniBtn} aria-label="Voir le détail du bloc">
                         <MiniNavette ligne={info.ligne} cdd={info.cdd} />
                       </button>
                       <p style={S.repere}>
-                        <b>Repère :</b>{' '}
+                        <b>{info.reps} navette{info.reps > 1 ? 's' : ''}</b> : {info.effort} s de course, {info.recup} s de récup.{' '}
                         {info.cdd === 1
-                          ? `demi-tour au plot bleu vers ${virgule(info.tTrajet)} s, retour au plot jaune à ${info.effort} s.`
+                          ? `Demi-tour au plot bleu vers ${virgule(info.tTrajet)} s, retour au plot jaune à ${info.effort} s.`
                           : info.cdd > 1
-                          ? `un plot toutes les ${virgule(info.tTrajet + 1)} s environ (${virgule(info.tTrajet)} s de course, 1 s de demi-tour). Tu finis les ${info.effort} s au plot ${plotDuTrajet(info.cdd + 1).nom}.`
-                          : `${info.ligne != null ? metres(info.ligne) : 'la ligne'} en ${info.effort} s, du plot jaune au plot bleu.`}
+                          ? `Un plot toutes les ${virgule(info.tTrajet + 1)} s environ (${virgule(info.tTrajet)} s de course, 1 s de demi-tour). Tu finis les ${info.effort} s au plot ${plotDuTrajet(info.cdd + 1).nom}.`
+                          : `Du plot jaune au plot bleu en ${info.effort} s.`}
                       </p>
                     </>
                   ) : (
@@ -247,20 +270,12 @@ export default function SeanceTerrainClient({ id, seance }) {
                 <>
                   {lignes.length > 0 && (
                     <ul style={S.lignes}>
-                      {lignes.map((ligne, i) => {
-                        const ok = (lignesFaites[bloc.id] || []).includes(i)
-                        return (
-                          <li key={i}>
-                            <button onClick={() => cocherLigne(bloc, i)} style={{ ...S.ligne, ...(ok ? S.ligneOk : null) }} aria-pressed={ok}>
-                              <span style={{ ...S.coche, ...(ok ? S.cocheOk : null) }}>
-                                {ok && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 12 10 17 19 7" /></svg>}
-                              </span>
-                              <span style={{ flex: 1 }}>{ligne.texte}</span>
-                              {ligne.repos && <span style={S.ligneRepos}>{ligne.repos}</span>}
-                            </button>
-                          </li>
-                        )
-                      })}
+                      {lignes.map((ligne, i) => (
+                        <li key={i} style={S.ligne}>
+                          <span style={{ flex: 1 }}>{ligne.texte}</span>
+                          {ligne.repos && <span style={S.ligneRepos}>{ligne.repos}</span>}
+                        </li>
+                      ))}
                     </ul>
                   )}
                   {aDessin(bloc.schema) && (
@@ -280,7 +295,16 @@ export default function SeanceTerrainClient({ id, seance }) {
 
         <div style={S.rpeCard}>
           <p style={S.rpeLabel}>Intensité ressentie de la séance</p>
-          <Jauge value={rpe?.rpe_reel != null ? Math.round(rpe.rpe_reel) : null} onChange={changerRpe} />
+          <Jauge value={rpe} onChange={v => { setRpe(v); setMessage(null) }} />
+          <p style={{ ...S.rpeLabel, margin: '1.1rem 0 0.5rem' }}>Commentaire <span style={S.facultatif}>(facultatif)</span></p>
+          <textarea value={commentaire} onChange={e => { setCommentaire(e.target.value); setMessage(null) }}
+            placeholder="Comment s'est passée la séance ?" rows={3} maxLength={600} style={S.commentaire} />
+          <button onClick={terminer} disabled={rpe == null || saving}
+            style={{ ...S.btnTerminer, ...(rpe == null || saving ? S.btnTerminerOff : null) }}>
+            {saving ? 'Enregistrement…' : enregistre ? 'Enregistrer les modifications' : 'Séance terminée'}
+          </button>
+          {rpe == null && !message && <p style={S.aide}>Note l'intensité pour terminer la séance.</p>}
+          {message && <p role="status" style={{ ...S.aide, ...(message.ok ? S.aideOk : S.aideErreur) }}>{message.texte}</p>}
         </div>
 
         <div style={{ height: 90 }} />
@@ -352,7 +376,7 @@ function DetailBloc({ bloc, info, onClose, onChrono }) {
         {aDessin(schema) && <SchemaTerrainView value={schema} consigne={false} style={{ borderRadius: 0 }} />}
         <div style={S.content}>
           <div style={S.section}>
-            <p style={S.sectionTitre}>Une répétition</p>
+            <p style={S.sectionTitre}>Une navette</p>
             <div style={S.frise}>
               <div style={{ ...S.friseE, flex: info.effort }}>{info.effort} s effort</div>
               {info.recup > 0 && <div style={{ ...S.friseR, flex: info.recup }}>{info.recup} s récup</div>}
@@ -377,10 +401,10 @@ function DetailBloc({ bloc, info, onClose, onChrono }) {
           <div style={S.section}>
             <p style={S.sectionTitre}>Au total</p>
             <div style={{ ...S.chiffres, margin: 0 }}>
-              <div style={S.chiffre}><b style={S.chiffreVal}>{info.reps} rép.</b><span style={S.chiffreLab}>≈ {Math.max(1, Math.round((info.reps * tour - info.recup) / 60))} min</span></div>
+              <div style={S.chiffre}><b style={S.chiffreVal}>{info.reps} navette{info.reps > 1 ? 's' : ''}</b><span style={S.chiffreLab}>{dureeBloc(info)} au total</span></div>
               <div style={S.chiffre}><b style={S.chiffreVal}>{info.total != null ? `${milliers(info.total * info.reps)} m` : '—'}</b><span style={S.chiffreLab}>de course</span></div>
-              <div style={S.chiffre}><b style={S.chiffreVal}>{info.vitesse ? `${virgule(info.vitesse * 3.6)} km/h` : `${info.intensite} %`}</b><span style={S.chiffreLab}>{info.vitesse ? 'ton allure' : 'de ta VMI'}</span></div>
-              <div style={S.chiffre}><b style={S.chiffreVal}>{info.vmi ? `${virgule(info.vmi)} km/h` : '—'}</b><span style={S.chiffreLab}>{info.vmi ? 'VMI' : 'VMI non renseignée'}</span></div>
+              {info.vitesse && <div style={S.chiffre}><b style={S.chiffreVal}>{virgule(info.vitesse * 3.6)} km/h</b><span style={S.chiffreLab}>ton allure</span></div>}
+              {info.vmi && <div style={S.chiffre}><b style={S.chiffreVal}>{virgule(info.vmi)} km/h</b><span style={S.chiffreLab}>ta VMI</span></div>}
             </div>
           </div>
 
@@ -403,16 +427,16 @@ function DetailBloc({ bloc, info, onClose, onChrono }) {
 
 const S = {
   page: { minHeight: '100vh', background: '#f4f4f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header: { padding: '0.75rem 1rem 1rem', background: 'var(--header-bg, linear-gradient(135deg, #333333 0%, #1f2937 100%))', color: 'white' },
-  headTop: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
+  // En-tête collé en haut (comme Programme/Accueil) : sous l'encoche, toujours le fond sombre et jamais la page grise
+  header: { position: 'sticky', top: 0, zIndex: 40, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', background: 'var(--header-bg, linear-gradient(135deg, #333333 0%, #1f2937 100%))', color: 'white' },
   iconBtn: { width: 44, height: 44, marginLeft: -12, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 },
   headerTitle: { color: 'white', fontWeight: 800, fontSize: 17 },
   headerSub: { color: 'rgba(255,255,255,0.68)', fontSize: 12.5, marginTop: 2 },
-  resume: { display: 'grid', marginTop: 14, background: 'rgba(255,255,255,0.08)', borderRadius: 12 },
-  resumeCase: { padding: '10px 12px', minWidth: 0 },
-  resumeSep: { borderLeft: '1px solid rgba(255,255,255,0.12)' },
-  resumeVal: { display: 'block', fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' },
-  resumeLab: { fontSize: 12, color: 'rgba(255,255,255,0.68)' },
+  resume: { display: 'grid', background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  resumeCase: { padding: '12px 14px', minWidth: 0 },
+  resumeSep: { borderLeft: '1px solid #f3f4f6' },
+  resumeVal: { display: 'block', fontSize: 16, fontWeight: 800, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums' },
+  resumeLab: { fontSize: 12, color: '#6b7280' },
 
   content: { padding: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   materiel: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151', padding: '0 2px' },
@@ -429,7 +453,6 @@ const S = {
 
   chiffres: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#f3f4f6', margin: '0 14px', borderRadius: 12, overflow: 'hidden' },
   chiffre: { background: '#fafafa', padding: '10px 12px', minWidth: 0 },
-  chiffreCle: { background: '#1f2937' },
   chiffreVal: { display: 'block', fontSize: 17, fontWeight: 800, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums' },
   chiffreLab: { fontSize: 12, color: '#6b7280' },
   miniBtn: { display: 'block', width: 'calc(100% - 28px)', margin: '12px 14px 0', padding: 0, border: 'none', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', background: 'none' },
@@ -441,15 +464,19 @@ const S = {
   btnFiniOn: { background: '#65a30d', color: 'white' },
 
   lignes: { listStyle: 'none', margin: 0, padding: '0 6px 0' },
-  ligne: { width: '100%', display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, padding: '6px 8px', border: 'none', borderTop: '1px solid #f3f4f6', background: 'none', textAlign: 'left', fontSize: 14, color: '#374151', lineHeight: 1.35, cursor: 'pointer', fontFamily: 'inherit' },
-  ligneOk: { color: '#9ca3af' },
-  coche: { width: 22, height: 22, borderRadius: 7, border: '1.5px solid #d1d5db', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' },
-  cocheOk: { background: '#65a30d', borderColor: '#65a30d' },
+  ligne: { display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 8px', borderTop: '1px solid #f3f4f6', fontSize: 14, color: '#374151', lineHeight: 1.4 },
   ligneRepos: { color: '#65a30d', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' },
   btnSchemaToggle: { border: 'none', background: 'none', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '0.6rem 0', minHeight: 44, fontFamily: 'inherit' },
 
   rpeCard: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   rpeLabel: { fontWeight: 800, fontSize: 14, color: '#1a1a1a', margin: '0 0 0.7rem' },
+  facultatif: { fontWeight: 400, fontSize: 12.5, color: '#6b7280' },
+  commentaire: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: 14, fontFamily: 'inherit', lineHeight: 1.4, resize: 'vertical', color: '#1a1a1a' },
+  btnTerminer: { width: '100%', marginTop: '0.9rem', minHeight: 50, border: 'none', borderRadius: 12, background: '#333333', color: '#e4f816', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  btnTerminerOff: { background: '#f3f4f6', color: '#6b7280', cursor: 'default' },
+  aide: { margin: '0.6rem 0 0', fontSize: 13, color: '#6b7280', textAlign: 'center' },
+  aideOk: { color: '#3f6212', fontWeight: 700 },
+  aideErreur: { color: '#dc2626', fontWeight: 700 },
 
   feuille: { position: 'fixed', inset: 0, zIndex: 1000, background: '#f4f4f5', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   feuilleTete: { display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px', background: 'white', borderBottom: '1px solid #f3f4f6' },

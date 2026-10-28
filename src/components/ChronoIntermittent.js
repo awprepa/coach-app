@@ -108,7 +108,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
     precedentRef.current = 0
     setIdx(i); setEcoule(0); setPause(false)
   }
-  // Recommencer l'effort de la répétition en cours
+  // Recommencer l'effort de la navette en cours
   function recommencer() {
     const ph = phases[idx]
     allerA(ph.type === 'effort' ? idx : phases.findIndex(p => p.type === 'effort' && p.rep === ph.rep))
@@ -134,11 +134,11 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
 
   let ensuite = null
   if (ph.type === 'effort') {
-    const apres = idx + 1 < phases.length ? `puis ${phases[idx + 1].dur} s de récup` : 'dernière répétition'
+    const apres = idx + 1 < phases.length ? `puis ${phases[idx + 1].dur} s de récup` : 'dernière navette'
     ensuite = prochain != null
       ? <>Plot {couleurPlot(trajet + 1).nom} dans <b style={S.blanc}>{Math.max(0, Math.ceil(prochain - ecoule))} s</b> · {apres}</>
       : <>{apres.charAt(0).toUpperCase() + apres.slice(1)}</>
-  } else if (ph.type === 'recup') ensuite = <>Répétition {ph.rep + 1} au plot <b style={S.blanc}>{couleurPlot(info.cdd + 1).nom}</b></>
+  } else if (ph.type === 'recup') ensuite = <>Navette {ph.rep + 1} au plot <b style={S.blanc}>{couleurPlot(info.cdd + 1).nom}</b></>
   else ensuite = <>Place-toi au plot <b style={S.blanc}>{PLOTS.depart.nom}</b></>
 
   const contenu = (
@@ -155,7 +155,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
           <p style={S.accueilGrand}>{info.reps} × {info.effort}-{info.recup}</p>
           {info.navette && info.ligne != null && (
             <p style={S.accueilSous}>
-              {info.cdd > 0 ? `Plots à ${virgule(Math.round(info.ligne * 2) / 2)} m · ${nbTrajets} trajets par répétition` : `Ligne droite de ${virgule(Math.round(info.ligne * 2) / 2)} m`}
+              {info.cdd > 0 ? `Plots à ${virgule(Math.round(info.ligne * 2) / 2)} m · ${info.cdd} demi-tour${info.cdd > 1 ? 's' : ''} par navette` : `Ligne droite de ${virgule(Math.round(info.ligne * 2) / 2)} m`}
             </p>
           )}
           <p style={S.accueilSous}>Monte le son du téléphone : un bip au départ, à chaque plot et à la fin de l'effort.</p>
@@ -164,13 +164,13 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
       ) : fini ? (
         <div style={S.accueil}>
           <p style={S.accueilGrand}>Bloc terminé</p>
-          <p style={S.accueilSous}>{info.reps} répétition{info.reps > 1 ? 's' : ''} de {info.effort}-{info.recup}.</p>
+          <p style={S.accueilSous}>{info.reps} navette{info.reps > 1 ? 's' : ''} de {info.effort}-{info.recup}.</p>
           <button onClick={() => { onTermine?.(); onClose() }} style={S.go}>Marquer le bloc terminé</button>
           <button onClick={onClose} style={S.secondaire}>Fermer</button>
         </div>
       ) : (
         <>
-          <div style={S.rep}>{ph.type === 'prepa' ? 'Départ dans' : `Répétition ${ph.rep} sur ${info.reps}`}</div>
+          <div style={S.rep}>{ph.type === 'prepa' ? 'Départ dans' : `Navette ${ph.rep} sur ${info.reps}`}</div>
           <div style={S.reps}>
             {Array.from({ length: info.reps }, (_, i) => {
               const r = i + 1
@@ -200,7 +200,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
           <p style={S.ensuite}>{ensuite}</p>
 
           <div style={S.bas}>
-            <button onClick={recommencer} style={S.rond} aria-label="Recommencer la répétition">
+            <button onClick={recommencer} style={S.rond} aria-label="Recommencer la navette">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7" /><polyline points="3 3 3 9 9 9" /></svg>
             </button>
             <button onClick={basculerPause} style={{ ...S.rond, ...S.rondPause }} aria-label={pause ? 'Reprendre' : 'Pause'}>
