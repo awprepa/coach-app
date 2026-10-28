@@ -1,4 +1,4 @@
-import { echelleDe, REGLAGES_DEFAUT, arrondiDemi } from './courseVmi'
+import { echelleDe, REGLAGES_DEFAUT, arrondiDemi, metresFleche } from './courseVmi'
 
 // Intermittents prédéfinis (30-30, 15-15…) : à partir du format, du nombre de
 // changements de direction (des demi-tours, en navette entre 2 plots), de
@@ -18,6 +18,12 @@ export const FORMATS = [
 // jusqu'au dézoom maximal (600 unités à 2 u/m, moins la marge)
 const LONGUEUR_MAX = { gazon: 115, vierge: 270 }
 const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
+
+// Deux couleurs de plots pour qu'on ne confonde pas le départ et le demi-tour
+export const PLOTS = {
+  depart: { color: '#f2c94c', nom: 'jaune' },
+  demiTour: { color: '#2f80ed', nom: 'bleu' },
+}
 
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
@@ -63,8 +69,8 @@ export function genererSchema({ effort, recup, cdd, intensite, vmi, reps, surfac
     A = { x: 50, y: 50 + L / 2 }
     B = { x: 50, y: 50 - L / 2 }
   }
-  const p1 = { id: uid('p'), x: A.x, y: A.y, color: '#f2c94c', label: 'Départ' }
-  const p2 = { id: uid('p'), x: B.x, y: B.y, color: '#f2c94c', label: cdd > 0 ? 'Demi-tour' : 'Arrivée' }
+  const p1 = { id: uid('p'), x: A.x, y: A.y, color: PLOTS.depart.color, label: 'Départ' }
+  const p2 = { id: uid('p'), x: B.x, y: B.y, color: PLOTS.demiTour.color, label: cdd > 0 ? 'Demi-tour' : 'Arrivée' }
   const arrows = Array.from({ length: cdd + 1 }, (_, i) => {
     const [d, f] = i % 2 === 0 ? [A, B] : [B, A]
     return { id: uid('a'), x1: d.x, y1: d.y, x2: f.x, y2: f.y, color: '#1a1d21', style: 'plein', mode: 'avant' }
@@ -77,4 +83,34 @@ export function genererSchema({ effort, recup, cdd, intensite, vmi, reps, surfac
     zones: [],
     course: { effort, intensite, reps: reps || null, recup, vmi },
   }
+}
+
+// Lecture côté joueur d'un bloc réglé à la VMI. Navette (2 plots) : distance
+// recalculée avec la VMI du schéma, sinon celle du joueur, sinon mesurée sur
+// le dessin. `tTrajet` : secondes de course par trajet (demi-tours déduits).
+export function lireIntermittent(schema, vmiJoueur) {
+  const c = schema?.course
+  if (!(c?.effort > 0)) return null
+  const arrows = schema.arrows || []
+  const navette = (schema.plots || []).length === 2 && arrows.length > 0
+  const cdd = navette ? arrows.length - 1 : 0
+  const surface = schema.surface === 'vierge' ? 'vierge' : 'gazon'
+  const vmi = c.vmi || vmiJoueur || null
+  let ligne = null, vitesse = null
+  if (navette && vmi) {
+    const r = calculerIntermittent({ effort: c.effort, cdd, intensite: c.intensite, vmi, surface })
+    if (!r.erreur) { ligne = r.ligne; vitesse = r.vitesse }
+  }
+  if (navette && ligne == null) ligne = metresFleche(arrows[0], surface)
+  return {
+    effort: c.effort, recup: c.recup || 0, reps: c.reps || 1, intensite: c.intensite || 100,
+    navette, cdd, ligne, vitesse, vmi,
+    total: ligne != null ? ligne * (cdd + 1) : null,
+    tTrajet: (c.effort - cdd * REGLAGES_DEFAUT.cdd180) / (cdd + 1),
+  }
+}
+
+// Instants (s depuis le début de l'effort) où le joueur passe chaque plot de demi-tour
+export function passagesPlots({ cdd, tTrajet }) {
+  return Array.from({ length: cdd }, (_, i) => (i + 1) * tTrajet + i * REGLAGES_DEFAUT.cdd180)
 }

@@ -9,7 +9,7 @@ import { supabase } from '../supabase'
 
 export async function copierSeanceModele(programmeId, ts, ordre) {
   const { data: seance, error } = await supabase.from('seances').insert({
-    programme_id: programmeId, nom: ts.nom, ordre: ordre ?? ts.ordre,
+    programme_id: programmeId, nom: ts.nom, ordre: ordre ?? ts.ordre, type: ts.type || 'musculation',
     echauffement: ts.echauffement || [],
     cardio_debut: ts.cardio_debut || null, cardio_fin: ts.cardio_fin || null, cardio_blocs: ts.cardio_blocs || [],
   }).select().single()
@@ -25,6 +25,8 @@ export async function copierSeanceModele(programmeId, ts, ordre) {
       progressions: ex.progressions || null,
       series_echauffement: ex.series_echauffement || null,
       media_url: ex.media_url || null,
+      contenu: ex.contenu || null,
+      schema: ex.schema || null,
     })))
   }
   const rpe = ts.rpe_cibles || {}

@@ -262,7 +262,7 @@ export default function FicheClient() {
       for (const s of (seancesOrig || [])) {
         // 3. Créer la séance
         const { data: newSeance, error: e2 } = await supabase.from('seances')
-          .insert([{ programme_id: newProg.id, nom: s.nom, ordre: s.ordre, echauffement: s.echauffement }])
+          .insert([{ programme_id: newProg.id, nom: s.nom, ordre: s.ordre, type: s.type || 'musculation', echauffement: s.echauffement }])
           .select().single()
         if (e2) throw e2
         if (!newSeance) throw new Error('Erreur création séance')
@@ -273,7 +273,7 @@ export default function FicheClient() {
 
         for (const ex of (exos || [])) {
           const { data: newEx, error: e3 } = await supabase.from('exercices')
-            .insert([{ seance_id: newSeance.id, code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions, tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite, valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id }])
+            .insert([{ seance_id: newSeance.id, code: ex.code, nom: ex.nom, series: ex.series, repetitions: ex.repetitions, tempo: ex.tempo, recuperation: ex.recuperation, type_intensite: ex.type_intensite, valeur_intensite: ex.valeur_intensite, ordre: ex.ordre, bibliotheque_id: ex.bibliotheque_id, contenu: ex.contenu || null, schema: ex.schema || null }])
             .select().single()
           if (e3) throw e3
 

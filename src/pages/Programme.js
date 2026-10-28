@@ -238,6 +238,8 @@ export default function Programme() {
         progressions: ex.progressions?.length > 0 ? ex.progressions : null,
         series_echauffement: ex.series_echauffement?.length > 0 ? ex.series_echauffement : null,
         media_url: ex.media_url || null,
+        contenu: ex.contenu || null,
+        schema: ex.schema || null,
       })
     })
 

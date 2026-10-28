@@ -29,7 +29,7 @@ function noteColor(n) {
 // Jauge glissante 0-10 — bien plus confortable au doigt que 11 boutons collés.
 // Tant que le joueur n'y a pas touché, la valeur reste nulle (rien n'est
 // pré-rempli à sa place) : le curseur est gris et la note affiche « – ».
-const RANGE_CSS = `
+export const RANGE_CSS = `
 .rpe-range{
   -webkit-appearance:none; appearance:none;
   width:100%; height:12px; border-radius:999px; outline:none;
@@ -51,7 +51,7 @@ const RANGE_CSS = `
 .rpe-range:focus-visible{ outline:2px solid #141414; outline-offset:4px; }
 `
 
-function Jauge({ value, onChange }) {
+export function Jauge({ value, onChange }) {
   const touched = value != null
   const pos = touched ? value : 5                    // position neutre au repos
   const col = touched ? noteColor(value) : '#cbd5e1'

@@ -554,6 +554,7 @@ export default function FicheGroupe() {
             programme_id: progCopy.id,
             nom: s.nom,
             ordre: s.ordre,
+            type: s.type || 'musculation',
             echauffement: s.echauffement || null,
           }).select().single()
 
@@ -566,6 +567,7 @@ export default function FicheGroupe() {
                 recuperation: ex.recuperation, type_intensite: ex.type_intensite,
                 valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
                 bibliotheque_id: ex.bibliotheque_id || null,
+                contenu: ex.contenu || null, schema: ex.schema || null,
               }))
             )
           }
@@ -634,6 +636,7 @@ export default function FicheGroupe() {
           programme_id: progCopy.id,
           nom: s.nom,
           ordre: s.ordre,
+          type: s.type || 'musculation',
           echauffement: s.echauffement || null,
         }).select().single()
 
@@ -646,6 +649,7 @@ export default function FicheGroupe() {
               recuperation: ex.recuperation, type_intensite: ex.type_intensite,
               valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
               bibliotheque_id: ex.bibliotheque_id || null,
+              contenu: ex.contenu || null, schema: ex.schema || null,
             }))
           )
         }
@@ -803,7 +807,7 @@ export default function FicheGroupe() {
       // Re-copier les séances
       for (const s of seancesData || []) {
         const { data: sc } = await supabase.from('seances').insert({
-          programme_id: copy.id, nom: s.nom, ordre: s.ordre, echauffement: s.echauffement || null,
+          programme_id: copy.id, nom: s.nom, ordre: s.ordre, type: s.type || 'musculation', echauffement: s.echauffement || null,
         }).select().single()
         if (sc && s.exercices?.length) {
           await supabase.from('exercices').insert(
@@ -814,6 +818,7 @@ export default function FicheGroupe() {
               recuperation: ex.recuperation, type_intensite: ex.type_intensite,
               valeur_intensite: ex.valeur_intensite, ordre: ex.ordre,
               bibliotheque_id: ex.bibliotheque_id || null,
+              contenu: ex.contenu || null, schema: ex.schema || null,
             }))
           )
         }
