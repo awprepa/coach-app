@@ -36,10 +36,13 @@ export function calculerIntermittent({ effort, cdd, intensite, vmi, surface = 'g
 }
 
 export function libelleIntermittent({ effort, recup, cdd, intensite, reps, series, recupSeries }, ligne) {
-  const navette = cdd > 0 ? `navette ${cdd + 1} × ${String(arrondiDemi(ligne)).replace('.', ',')} m` : `ligne de ${String(arrondiDemi(ligne)).replace('.', ',')} m`
+  const m = v => String(arrondiDemi(v)).replace('.', ',')
+  const navette = cdd > 0 ? `plots à ${m(ligne)} m, ${cdd + 1} trajets` : `ligne droite de ${m(ligne)} m`
+  const total = ligne * (cdd + 1) * (reps || 0) * (series > 1 ? series : 1)
   return [
     `${series > 1 ? `${series} × ` : ''}${reps ? `${reps} × ` : ''}${effort}-${recup} à ${intensite} % VMI`,
     navette,
+    total > 0 ? `${Math.round(total).toLocaleString('fr-FR')} m au total` : null,
     series > 1 && recupSeries ? `${recupSeries} min entre les séries` : null,
   ].filter(Boolean).join(' · ')
 }

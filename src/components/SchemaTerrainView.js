@@ -2,7 +2,8 @@ import { surfaceDefs, markerDefs, surfaceMarkings, surfaceOf, ArrowShape, PlotSh
 
 // Rendu lecture seule du schéma d'un bloc terrain (même format de données et
 // mêmes formes que SchemaTerrainEditor), pour l'affichage côté client.
-export default function SchemaTerrainView({ value, style }) {
+// `consigne` : afficher la ligne de consigne de course sous le dessin (pas dans les vignettes)
+export default function SchemaTerrainView({ value, style, consigne: avecConsigne = true }) {
   const schema = value || { surface: 'gazon', plots: [], arrows: [], zones: [] }
   const surface = surfaceOf(schema)
   const { x0, y0, t, e } = cadreDe(schema)
@@ -32,7 +33,7 @@ export default function SchemaTerrainView({ value, style }) {
 
       {(schema.plots || []).map(p => <g key={p.id}><PlotShape p={p} e={e} /></g>)}
     </svg>
-    {consigne && <p style={{ margin: '8px 0 0', fontSize: 13, fontWeight: 700, color: '#333333', lineHeight: 1.4 }}>{consigne}</p>}
+    {avecConsigne && consigne && <p style={{ margin: '8px 0 0', fontSize: 13, fontWeight: 700, color: '#333333', lineHeight: 1.4 }}>{consigne}</p>}
     </div>
   )
 }

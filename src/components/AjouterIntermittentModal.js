@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FORMATS, calculerIntermittent, genererSchema, libelleIntermittent } from '../utils/intermittents'
-import { repereIntensite } from '../utils/courseVmi'
+import { repereIntensite, arrondiDemi } from '../utils/courseVmi'
 
 // Fenêtre « Ajouter un intermittent » (séance terrain d'un client et
 // Bibliothèque > Schémas) : format, changements de direction (demi-tours),
@@ -42,6 +42,7 @@ export default function AjouterIntermittentModal({ vmiJoueur, onValider, onClose
   const calcul = calculerIntermittent(params)
   const repere = repereIntensite(Number(effort))
   const ok = !calcul.erreur && !calcul.tropLong
+  const totalExercice = calcul.total ? calcul.total * (Number(reps) || 0) * (Number(series) || 1) : 0
 
   async function valider() {
     if (!ok) return
@@ -126,11 +127,18 @@ export default function AjouterIntermittentModal({ vmiJoueur, onValider, onClose
             {calcul.erreur ? calcul.erreur : (
               <>
                 <p style={S.resultatGrand}>
-                  {cdd > 0 ? `${cdd + 1} lignes de ${virgule(calcul.ligne)} m` : `1 ligne de ${virgule(calcul.ligne)} m`}
+                  {cdd > 0
+                    ? `Plots à ${virgule(arrondiDemi(calcul.ligne))} m · ${cdd + 1} trajets (${cdd} demi-tour${cdd > 1 ? 's' : ''})`
+                    : `Ligne droite de ${virgule(arrondiDemi(calcul.ligne))} m`}
                 </p>
                 <p style={S.resultatSous}>
                   {virgule(calcul.total)} m par répétition, à {virgule(calcul.vitesse * 3.6)} km/h{cdd > 0 ? ` · ${cdd} s perdue${cdd > 1 ? 's' : ''} aux demi-tours` : ''}
                 </p>
+                {totalExercice > 0 && (
+                  <p style={S.resultatSous}>
+                    Exercice complet : {Number(series) > 1 ? `${series} × ` : ''}{reps} × {virgule(calcul.total)} m = <b style={{ color: '#1a1a1a' }}>{Math.round(totalExercice).toLocaleString('fr-FR')} m</b>
+                  </p>
+                )}
                 {calcul.tropLong && (
                   <p style={{ ...S.resultatSous, color: '#b91c1c', fontWeight: 700, marginTop: 6 }}>
                     La ligne est plus longue que le terrain : ajoute un changement de direction ou choisis le fond vierge.
@@ -169,11 +177,11 @@ const S = {
   segment: { flex: '1 1 auto', minHeight: 38, border: 'none', background: 'none', color: '#4b5563', fontSize: 13, fontWeight: 700, padding: '0 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' },
   segmentOn: { background: '#333333', color: '#e4f816' },
   stepper: { display: 'flex', alignItems: 'center', gap: 8 },
-  stepBtn: { width: 44, height: 44, borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#ffffff', color: '#1a1a1a', fontSize: 20, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
-  stepVal: { minWidth: 40, textAlign: 'center', fontSize: 22, fontWeight: 800, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums' },
-  resultat: { background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '12px 14px', fontSize: 13.5, color: '#374151' },
-  resultatErreur: { background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' },
-  resultatGrand: { margin: 0, fontSize: 20, fontWeight: 800, color: '#1a1a1a' },
+  stepBtn: { width: 44, height: 44, borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#ffffff', color: '#374151', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  stepVal: { minWidth: 32, textAlign: 'center', fontSize: 15, fontWeight: 600, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums' },
+  resultat: { background: '#f3f4f6', borderRadius: 10, padding: '10px 14px', fontSize: 13.5, color: '#374151' },
+  resultatErreur: { background: '#fef2f2', color: '#b91c1c' },
+  resultatGrand: { margin: 0, fontSize: 14, fontWeight: 600, color: '#1a1a1a' },
   resultatSous: { margin: '4px 0 0', fontSize: 13, color: '#6b7280' },
   pied: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '14px 20px', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' },
   btnSecondaire: { minHeight: 44, background: '#ffffff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },

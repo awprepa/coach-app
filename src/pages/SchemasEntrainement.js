@@ -132,7 +132,7 @@ export default function SchemasEntrainement() {
             <div key={s.id} style={S.card}>
               <div role="button" tabIndex={0} style={S.thumb} onClick={() => navigate(`/bibliotheque/schemas/${s.id}`)}>
                 {s.type_exercice === 'terrain'
-                  ? <SchemaTerrainView value={s.donnees?.schema} style={{ height: 140, objectFit: 'cover' }} />
+                  ? <SchemaTerrainView value={s.donnees?.schema} consigne={false} style={{ height: 140, borderRadius: 0 }} />
                   : <SchemaSVG donnees={s.donnees} />}
               </div>
               <div style={S.cardBody}>
@@ -177,7 +177,7 @@ const S = {
   empty: { color: '#6b7280', fontSize: '0.85rem', padding: '2rem 0', textAlign: 'center' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 },
   card: { background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', border: '1px solid #f0f0f0' },
-  thumb: { cursor: 'pointer', borderBottom: '1px solid #f0f0f0', height: 140 },
+  thumb: { cursor: 'pointer', borderBottom: '1px solid #f0f0f0', height: 140, overflow: 'hidden' },
   cardBody: { padding: '0.7rem 0.85rem' },
   cardNom: { fontWeight: 800, fontSize: '0.88rem', color: '#1f2937', margin: '0 0 4px' },
   dossierSelect: { fontSize: '0.68rem', fontWeight: 700, color: '#374151', background: '#f3f4f6', border: 'none', borderRadius: 6, padding: '2px 4px', maxWidth: 130 },
