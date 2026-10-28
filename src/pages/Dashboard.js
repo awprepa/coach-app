@@ -8,6 +8,8 @@ import { useAutoRefresh } from '../hooks/useAutoRefresh'
 import FilNotifications, { LogoGroupe } from '../components/FilNotifications'
 import Icon from '../components/Icon'
 import { isoLocal } from '../utils/dates'
+import Groupes from './Groupes'
+import AgendaGlobal from './AgendaGlobal'
 
 const PALETTE_CATS    = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4']
 
@@ -379,13 +381,6 @@ export default function Dashboard() {
   const groupesAvecMembres = Object.values(membresParGroupe)
     .sort((a, b) => (a.groupe?.nom || 'zzz').localeCompare(b.groupe?.nom || 'zzz'))
 
-  // Groupes top-niveau + sous-groupes rattachés (clubs → catégories)
-  const topGroupes = groupes.filter(g => !g.parent_id)
-  const sousGroupesByParent = {}
-  groupes.filter(g => g.parent_id).forEach(g => {
-    ;(sousGroupesByParent[g.parent_id] ||= []).push(g)
-  })
-
   const nbEssai = clientsIndividuels.filter(c => c.offre === 'essai').length
   const nbPrepa = clientsIndividuels.filter(c => c.offre === 'preparation_physique').length
   const nbCoach = clientsIndividuels.filter(c => c.offre === 'coaching').length
@@ -394,7 +389,7 @@ export default function Dashboard() {
     { k: 'overview',   label: "Vue d'ensemble", icon: NAV_ICONS.overview },
     { k: 'clients',    label: 'Clients',        icon: NAV_ICONS.clients },
     { k: 'groupes',    label: 'Groupes',        icon: NAV_ICONS.groupes },
-    { k: 'calendrier', label: 'Calendrier',     icon: NAV_ICONS.calendrier },
+    { k: 'calendrier', label: 'Agenda',         icon: NAV_ICONS.calendrier },
   ]
   function selectTab(k) {
     if (k === 'clients') { navigate('/clients'); return }
@@ -726,60 +721,12 @@ export default function Dashboard() {
           )}
 
           {/* ═══ CALENDRIER ═══ */}
-          {tab === 'calendrier' && (
-            <div style={S.card}>
-              <div style={S.cardHead}><span style={S.sectionTitle}>Calendrier des groupes</span></div>
-              {groupes.length === 0 ? (
-                <p style={S.empty}>Crée un groupe pour accéder à son calendrier de saison.</p>
-              ) : (
-                topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
-                  <div role="button" tabIndex={0} key={g.id} onClick={() => navigate(`/groupe/${g.id}?tab=calendrier`)}
-                    style={{ ...S.miniRow, border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
-                    {g.logo_url
-                      ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-                      : <div style={{ width: 28, height: 28, borderRadius: 7, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 800, color: g.couleur, flexShrink: 0 }}>{(g.nom || '?').charAt(0).toUpperCase()}</div>}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={S.miniName}>{g.nom}</p>
-                      <p style={S.miniSub}>Ouvrir le calendrier de saison</p>
-                    </div>
-                    <span style={{ ...S.pill, background: g.couleur + '18', color: g.couleur }}><Icon name="calendar" size={14} /></span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+          {tab === 'calendrier' && <AgendaGlobal integre />}
 
           {/* ═══ GROUPES ═══ */}
           {tab === 'groupes' && (
             <div>
-              {groupes.length > 0 && (
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <p style={{ ...S.sectionTitle, marginBottom: '0.6rem' }}>Groupes</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                    {topGroupes.flatMap(g => [g, ...(sousGroupesByParent[g.id] || [])]).map(g => (
-                      <div role="button" tabIndex={0} key={g.id}
-                        onClick={() => navigate(`/groupe/${g.id}`)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.1rem', background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: `1.5px solid ${g.couleur}`, ...(g.parent_id ? { marginLeft: '1.25rem' } : {}) }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          {g.logo_url
-                            ? <img loading="lazy" src={g.logo_url} alt={g.nom} style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-                            : <div style={{ width: g.parent_id ? 26 : 32, height: g.parent_id ? 26 : 32, borderRadius: 8, background: g.couleur + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 800, color: g.couleur, flexShrink: 0 }}>{(g.nom || '?').charAt(0).toUpperCase()}</div>
-                          }
-                          <span style={{ fontWeight: '700', fontSize: g.parent_id ? '0.84rem' : '0.92rem', color: g.parent_id ? '#374151' : '#1a1a1a' }}>{g.nom}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <button onClick={e => { e.stopPropagation(); navigate(`/groupe/${g.id}?tab=calendrier`) }}
-                            title="Ouvrir le calendrier du groupe"
-                            style={{ background: g.couleur + '14', color: g.couleur, border: `1px solid ${g.couleur}33`, borderRadius: 8, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer' }}>
-                            Calendrier
-                          </button>
-                          <span style={S.chevron}>›</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Groupes integre />
 
       {/* Bouton nouveau groupe */}
       <div style={{ marginBottom: '1.25rem' }}>
