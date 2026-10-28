@@ -63,7 +63,6 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
     plot: () => bip(1050, 0.1, 2, 0.07),
     termine: () => bip(1050, 0.25, 3, 0.12),
   }
-  const vibrer = ms => { try { navigator.vibrate?.(ms) } catch (e) { /* non pris en charge */ } }
 
   // Créé au toucher : sans geste de l'utilisateur, iOS n'autorise pas le son.
   // « playback » : volume média, et le son passe même en mode silencieux (iPhone)
@@ -104,19 +103,18 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
       const t = (performance.now() - debutRef.current) / 1000
       const avant = precedentRef.current
       const franchi = s => avant < s && t >= s
-      if (ph.type === 'effort') passages.forEach(p => { if (franchi(p)) { SONS.plot(); vibrer(60) } })
+      if (ph.type === 'effort') passages.forEach(p => { if (franchi(p)) SONS.plot() })
       // Décompte 3-2-1 avant chaque départ et avant la fin de l'effort
       ;[ph.dur - 3, ph.dur - 2, ph.dur - 1].forEach(s => { if (s > 0 && franchi(s)) SONS.decompte() })
       precedentRef.current = t
       if (t >= ph.dur) {
         if (idx + 1 >= phases.length) {
-          SONS.termine(); vibrer([200, 100, 200])
+          SONS.termine()
           setFini(true); setEcoule(ph.dur)
           return
         }
         const suivante = phases[idx + 1]
         if (suivante.type === 'effort') SONS.depart(); else SONS.fin()
-        vibrer(300)
         debutRef.current += ph.dur * 1000
         precedentRef.current = 0
         setIdx(idx + 1); setEcoule(0)
@@ -196,7 +194,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
 
           <div style={S.sonCarte}>
             <p style={S.sonTexte}>Monte le volume du téléphone au maximum.</p>
-            {passages.length > 0 && <p style={S.sonTexte}>À chaque plot, un double bip, et le téléphone vibre (Android uniquement : l'iPhone ne permet pas la vibration depuis une app web).</p>}
+            {passages.length > 0 && <p style={S.sonTexte}>À chaque plot, un double bip.</p>}
             <button onClick={testerSon} style={S.tester}>Tester le son</button>
           </div>
 
