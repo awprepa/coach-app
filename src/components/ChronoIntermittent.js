@@ -20,7 +20,6 @@ function phasesDe(info) {
 }
 
 const virgule = v => String(Math.round(v * 10) / 10).replace('.', ',')
-const dureeTexte = sec => (sec % 60 ? `${Math.floor(sec / 60)} min ${sec % 60} s` : `${sec / 60} min`)
 
 export default function ChronoIntermittent({ titre, info, onClose, onTermine }) {
   const phases = useMemo(() => phasesDe(info), [info])
@@ -39,33 +38,30 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
   const sonRef = useRef(son)
   sonRef.current = son
 
-  // Bip à plein volume pendant toute sa durée (avant, le son retombait aussitôt
-  // et paraissait faible). Onde carrée + seconde note à la quinte : son plus
-  // perçant, mieux entendu dehors.
-  function bip(freq = 1800, duree = 0.15, fois = 1, ecart = 0.09) {
+  // Bip à plein volume pendant toute sa durée (sinon il paraît faible), note
+  // de chrono classique (autour de 1 kHz), adoucie par un filtre pour ne pas grésiller
+  function bip(freq = 880, duree = 0.15, fois = 1, ecart = 0.09) {
     const ctx = audioRef.current
     if (!ctx || !sonRef.current) return
     for (let i = 0; i < fois; i++) {
       const t = ctx.currentTime + 0.01 + i * (duree + ecart)
-      const g = ctx.createGain()
+      const o = ctx.createOscillator(), filtre = ctx.createBiquadFilter(), g = ctx.createGain()
+      o.type = 'square'; o.frequency.value = freq
+      filtre.type = 'lowpass'; filtre.frequency.value = 2500
       g.gain.setValueAtTime(0, t)
-      g.gain.linearRampToValueAtTime(0.5, t + 0.004)
-      g.gain.setValueAtTime(0.5, t + duree - 0.015)
+      g.gain.linearRampToValueAtTime(1, t + 0.006)
+      g.gain.setValueAtTime(1, t + duree - 0.02)
       g.gain.linearRampToValueAtTime(0, t + duree)
-      g.connect(ctx.destination)
-      ;[freq, freq * 1.5].forEach(f => {
-        const o = ctx.createOscillator()
-        o.type = 'square'; o.frequency.value = f
-        o.connect(g); o.start(t); o.stop(t + duree + 0.01)
-      })
+      o.connect(filtre); filtre.connect(g); g.connect(ctx.destination)
+      o.start(t); o.stop(t + duree + 0.01)
     }
   }
   const SONS = {
-    decompte: () => bip(1760, 0.16),
-    depart: () => bip(2350, 0.75),
-    fin: () => bip(1175, 0.75),
-    plot: () => bip(2350, 0.09, 2, 0.06),
-    termine: () => bip(2350, 0.22, 3, 0.1),
+    decompte: () => bip(880, 0.18),
+    depart: () => bip(1050, 0.75),
+    fin: () => bip(660, 0.75),
+    plot: () => bip(1050, 0.1, 2, 0.07),
+    termine: () => bip(1050, 0.25, 3, 0.12),
   }
   const vibrer = ms => { try { navigator.vibrate?.(ms) } catch (e) { /* non pris en charge */ } }
 
@@ -188,39 +184,18 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
             <p style={S.introFormat}>{formatIR(info.effort, info.recup)}</p>
           </div>
 
-          {/* Le bloc entier, navette par navette : effort en jaune, récup en gris */}
-          <div>
-            <div style={S.frise} aria-hidden="true">
-              {Array.from({ length: info.reps }, (_, i) => (
-                <div key={i} style={{ display: 'flex', flex: info.effort + (i < info.reps - 1 ? info.recup : 0), gap: 2 }}>
-                  <i style={{ ...S.friseE, flex: info.effort }} />
-                  {i < info.reps - 1 && info.recup > 0 && <i style={{ ...S.friseR, flex: info.recup }} />}
-                </div>
-              ))}
-            </div>
-            <div style={S.friseLeg}><span>Départ</span><span>{dureeTexte(info.reps * info.effort + (info.reps - 1) * info.recup)}</span></div>
-          </div>
-
           {info.navette && info.ligne != null && (
             <div style={S.faits}>
               <div style={S.fait}>
                 <span style={S.faitPlots}><i style={{ ...S.pastille, background: PLOTS.depart.color }} /><i style={{ ...S.pastille, background: PLOTS.demiTour.color }} /></span>
-                <span>{distanceNavette(info)}</span>
+                <span>{distanceNavette(info)} en {info.effort}″</span>
               </div>
               {info.vitesse && <div style={S.fait}><span style={S.faitLab}>Allure</span><span>{virgule(info.vitesse * 3.6)} km/h</span></div>}
             </div>
           )}
 
           <div style={S.sonCarte}>
-            <div style={S.sonTete}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></svg>
-              <span>Volume du téléphone au maximum</span>
-            </div>
-            <ul style={S.sons}>
-              <li style={S.sonLigne}><span style={S.sonMotif}><i style={S.pt} /><i style={S.pt} /><i style={S.pt} /></span>Décompte 3, 2, 1 avant le départ et avant la fin</li>
-              <li style={S.sonLigne}><span style={S.sonMotif}><i style={S.long} /></span>Bip long : départ et fin de l'effort</li>
-              {passages.length > 0 && <li style={S.sonLigne}><span style={S.sonMotif}><i style={S.pt} /><i style={S.pt} /></span>Double bip : passage au plot</li>}
-            </ul>
+            <p style={S.sonTexte}>Monte le volume du téléphone au maximum.</p>
             <button onClick={testerSon} style={S.tester}>Tester le son</button>
           </div>
 
@@ -295,22 +270,13 @@ const S = {
   intro: { flex: 1, display: 'flex', flexDirection: 'column', gap: 22, padding: '20px 20px 20px', overflowY: 'auto' },
   introNb: { margin: 0, fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)' },
   introFormat: { margin: '2px 0 0', fontSize: 'min(84px, 22vw)', lineHeight: 1, fontWeight: 800, letterSpacing: '-0.03em', color: '#e4f816', fontVariantNumeric: 'tabular-nums' },
-  frise: { display: 'flex', gap: 2, height: 14 },
-  friseE: { display: 'block', background: '#e4f816', borderRadius: 2 },
-  friseR: { display: 'block', background: 'rgba(255,255,255,0.18)', borderRadius: 2 },
-  friseLeg: { display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: 'rgba(255,255,255,0.55)', fontVariantNumeric: 'tabular-nums' },
   faits: { display: 'flex', flexDirection: 'column', borderTop: '1px solid rgba(255,255,255,0.12)' },
   fait: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 46, borderBottom: '1px solid rgba(255,255,255,0.12)', fontSize: 16, fontWeight: 700 },
   faitLab: { fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.6)' },
   faitPlots: { display: 'flex', gap: 4 },
-  sonCarte: { background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16 },
-  sonTete: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700 },
-  sons: { listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 9 },
-  sonLigne: { display: 'flex', alignItems: 'center', gap: 12, fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.35 },
-  sonMotif: { width: 34, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 },
-  pt: { width: 6, height: 6, borderRadius: '50%', background: '#e4f816', display: 'block' },
-  long: { width: 30, height: 6, borderRadius: 3, background: '#e4f816', display: 'block' },
-  tester: { marginTop: 14, width: '100%', minHeight: 44, border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 12, background: 'none', color: '#ffffff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  sonCarte: { display: 'flex', flexDirection: 'column', gap: 12 },
+  sonTexte: { margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.45 },
+  tester: { width: '100%', minHeight: 44, border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 12, background: 'none', color: '#ffffff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   accueil: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px 40px', gap: 12 },
   accueilGrand: { margin: 0, fontSize: 34, fontWeight: 800, fontVariantNumeric: 'tabular-nums' },
   accueilSous: { margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.72)', lineHeight: 1.45 },

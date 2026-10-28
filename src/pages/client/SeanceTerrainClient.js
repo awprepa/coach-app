@@ -209,7 +209,7 @@ export default function SeanceTerrainClient({ id, seance }) {
                   {info.navette ? (
                     <>
                       <Cases items={[
-                        [distanceNavette(info), info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite', true],
+                        [`${distanceNavette(info)} en ${info.effort}″`, info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite', true],
                         [`${info.reps} × ${formatIR(info.effort, info.recup)}`, `${dureeBloc(info)} au total`],
                         info.vitesse && [`${virgule(info.vitesse * 3.6)} km/h`, 'ton allure'],
                       ]} />
@@ -217,12 +217,7 @@ export default function SeanceTerrainClient({ id, seance }) {
                         <MiniNavette ligne={info.ligne} cdd={info.cdd} />
                       </button>
                       <p style={S.repere}>
-                        <b>{info.reps} navette{info.reps > 1 ? 's' : ''}</b> : {info.effort}″ de course, {info.recup}″ de récup.{' '}
-                        {info.cdd === 1
-                          ? `Demi-tour au plot bleu vers ${virgule(info.tTrajet)} s, retour au plot jaune à ${info.effort} s.`
-                          : info.cdd > 1
-                          ? `Un plot toutes les ${virgule(info.tTrajet + 1)} s environ (${virgule(info.tTrajet)} s de course, 1 s de demi-tour). Tu finis les ${info.effort} s au plot ${plotDuTrajet(info.cdd + 1).nom}.`
-                          : `Du plot jaune au plot bleu en ${info.effort} s.`}
+                        <b>{info.reps} navette{info.reps > 1 ? 's' : ''}</b> : {info.effort}″ de course, {info.recup}″ de récup.
                       </p>
                     </>
                   ) : (
