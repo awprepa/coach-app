@@ -217,12 +217,12 @@ export default function Dashboard() {
       <div style={S.haut} className="dash-haut">
         <AgendaSemaine jour={jour} setJour={setJour} setEvenements={setEvtsSemaine} />
         {/* Jour choisi dans le résumé de la semaine */}
-        <div style={{ ...S.card, minWidth: 0 }}>
+        <div style={{ ...S.card, ...S.carteJour }}>
           <div style={S.cardHead}>
             <span style={S.sectionTitle}>{titreJour}</span>
             {evtsJour.length > 0 && <span style={{ ...S.pill, background: '#f3f4f6', color: '#374151' }}>{evtsJour.length}</span>}
           </div>
-          <div style={S.listeJour}>
+          <div style={S.zoneJour}><div style={S.listeJour}>
           {evtsJour.length === 0 ? (
             <p style={S.empty}>Rien de prévu ce jour-là.</p>
           ) : evtsJour.map(ev => (
@@ -238,7 +238,7 @@ export default function Dashboard() {
               <span style={S.chevron}>›</span>
             </div>
           ))}
-          </div>
+          </div></div>
         </div>
         <div style={S.actions} className="dash-actions">
           {totalAlertes > 0 && <span style={S.alertBadge}>{totalAlertes} à traiter</span>}
@@ -324,7 +324,10 @@ const S = {
   page:        { padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   centered:    { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   haut:        { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 360px) auto', gap: '1rem', alignItems: 'start', marginBottom: '1rem' },
-  listeJour:   { maxHeight: 132, overflowY: 'auto' },
+  // Taille fixe : hauteur de l'agenda de la semaine, seul le contenu défile
+  carteJour:   { minWidth: 0, alignSelf: 'stretch', minHeight: 176, display: 'flex', flexDirection: 'column' },
+  zoneJour:    { flex: 1, position: 'relative' },
+  listeJour:   { position: 'absolute', inset: 0, overflowY: 'auto' },
   actions:     { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', gap: '0.6rem', padding: '0.2rem 0' },
   grille:      { display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(0, 1.9fr)', gap: '1rem', alignItems: 'start' },
   grille3:     { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', alignItems: 'start' },

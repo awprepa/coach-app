@@ -172,16 +172,18 @@ export default function ClientBottomNav() {
   ]
 
   return createPortal(
+    // Barre flottante, détachée des bords (au-dessus de la barre Apple sur iPhone)
     <nav aria-label="Navigation principale" style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
+      position: 'fixed', zIndex: 90,
+      left: 12, right: 12, bottom: 'max(12px, calc(env(safe-area-inset-bottom) - 8px))',
+      maxWidth: 520, margin: '0 auto',
       background: T.color.card,
-      borderTop: `1px solid ${T.color.line}`,
-      display: 'flex',
-      flexDirection: 'column',
+      border: `1px solid ${T.color.line}`,
+      borderRadius: 28,
+      boxShadow: T.shadow.float,
       fontFamily: T.font.body,
     }}>
-      {/* Zone boutons */}
-      <div style={{ display: 'flex', overflow: 'hidden', maxWidth: 560, width: '100%', margin: '0 auto' }}>
+      <div style={{ display: 'flex', overflow: 'hidden', padding: '2px 4px', borderRadius: 28 }}>
         {tabs.map(({ label, Icon, active, to, badge }) => (
           <button key={label} onClick={() => navigate(to)} aria-current={active ? 'page' : undefined}
             aria-label={badge > 0 ? `${label}, ${badge} non lus` : undefined}
@@ -218,8 +220,6 @@ export default function ClientBottomNav() {
           </button>
         ))}
       </div>
-      {/* Zone safe-area iPhone (barre Apple) */}
-      <div style={{ height: 'env(safe-area-inset-bottom)', minHeight: 12, background: T.color.card }} />
     </nav>,
     document.body
   )
