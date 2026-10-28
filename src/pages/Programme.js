@@ -222,7 +222,7 @@ export default function Programme() {
 
     const [{ data: exos }, { data: seancesData }, { data: rpeData }] = await Promise.all([
       supabase.from('exercices').select('*').in('seance_id', seanceIds).order('ordre', { ascending: true }),
-      supabase.from('seances').select('id, echauffement, cardio_debut, cardio_fin, cardio_blocs').in('id', seanceIds),
+      supabase.from('seances').select('id, type, echauffement, cardio_debut, cardio_fin, cardio_blocs').in('id', seanceIds),
       supabase.from('rpe_seances').select('seance_id, semaine, rpe_cible').in('seance_id', seanceIds).not('rpe_cible', 'is', null),
     ])
 
@@ -245,7 +245,9 @@ export default function Programme() {
 
     const echauffMap = {}
     const cardioMap = {}
+    const typeMap = {}
     ;(seancesData || []).forEach(s => {
+      typeMap[s.id] = s.type || 'musculation'
       echauffMap[s.id] = s.echauffement || []
       cardioMap[s.id] = { cardio_debut: s.cardio_debut || null, cardio_fin: s.cardio_fin || null, cardio_blocs: s.cardio_blocs || [] }
     })
@@ -259,6 +261,7 @@ export default function Programme() {
     return seances.map((s, idx) => ({
       template_id: templateId,
       nom: s.nom,
+      type: typeMap[s.id] || 'musculation',
       jour: idx + 1,
       ordre: s.ordre || idx + 1,
       exercices: bySeance[s.id] || [],
