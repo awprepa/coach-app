@@ -1349,6 +1349,7 @@ export default function FicheClient() {
         <ModifierClientModal
           client={client}
           categories={categories}
+          onCategories={setCategories}
           onClose={() => setEditMode(false)}
           onSaved={async () => { await fetchClient(); setEditMode(false) }}
         />

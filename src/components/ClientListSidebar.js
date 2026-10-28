@@ -30,13 +30,18 @@ export default function ClientListSidebar({ activeId, onSelect }) {
   const [groupes, setGroupes] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
+  const [categories, setCategories] = useState([])
+  const [filtre, setFiltre]   = useState('') // '' | 'offre:<offre>' | 'cat:<id>'
+  const [voirInactifs, setVoirInactifs] = useState(false)
 
   useEffect(() => {
     Promise.all([
-      supabase.from('clients').select('id, prenom, nom, offre, avatar_url').order('nom', { ascending: true }),
+      supabase.from('clients').select('id, prenom, nom, offre, avatar_url, actif, categorie_id').order('nom', { ascending: true }),
       supabase.from('groupe_membres').select('client_id'),
       supabase.from('groupes').select('id, nom, couleur, logo_url, parent_id').order('nom', { ascending: true }),
-    ]).then(([{ data: cData }, { data: mData }, { data: gData }]) => {
+      supabase.from('categories').select('id, nom').order('nom'),
+    ]).then(([{ data: cData }, { data: mData }, { data: gData }, { data: catData }]) => {
+      setCategories(catData || [])
       setClients(cData || [])
       setGroupMemberIds(new Set((mData || []).map(m => m.client_id)))
       setGroupes(gData || [])
@@ -45,34 +50,46 @@ export default function ClientListSidebar({ activeId, onSelect }) {
   }, [])
 
   const individuels = clients.filter(c => !groupMemberIds.has(c.id))
-  const filtered = individuels.filter(c =>
-    `${c.prenom} ${c.nom}`.toLowerCase().includes(search.trim().toLowerCase())
-  )
+  const [typeFiltre, valFiltre] = filtre.split(':')
+  const correspond = c =>
+    `${c.prenom} ${c.nom}`.toLowerCase().includes(search.trim().toLowerCase()) &&
+    (!filtre || (typeFiltre === 'offre' ? (c.offre || 'gratuit') === valFiltre : c.categorie_id === valFiltre))
+  // Les clients inactifs passent en bas, dans une section repliée
+  const filtered = individuels.filter(c => c.actif !== false && correspond(c))
+  const inactifs = individuels.filter(c => c.actif === false && correspond(c))
 
   return (
     <div style={S.col}>
       <div style={S.head}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.7rem' }}>
-          <p style={S.title}>Clients <span style={S.count}>· {individuels.length}</span></p>
-          <button onClick={() => navigate('/clients/gestion')} title="Gérer clients, groupes et catégories" style={S.gearBtn}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
+          <p style={S.title}>Clients <span style={S.count}>· {individuels.filter(c => c.actif !== false).length}</span></p>
         </div>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…" style={S.search} />
+        <select value={filtre} onChange={e => setFiltre(e.target.value)} style={{ ...S.search, marginTop: 6, background: '#fff', color: filtre ? '#1a1a1a' : '#6b7280' }} aria-label="Filtrer les clients">
+          <option value="">Tous les clients</option>
+          <optgroup label="Offre">
+            {Object.entries(OFFRE_LABEL).map(([k, l]) => <option key={k} value={`offre:${k}`}>{l}</option>)}
+          </optgroup>
+          {categories.length > 0 && (
+            <optgroup label="Catégorie">
+              {categories.map(c => <option key={c.id} value={`cat:${c.id}`}>{c.nom}</option>)}
+            </optgroup>
+          )}
+        </select>
       </div>
       <div style={S.scroll}>
         {loading ? (
           <p style={S.empty}>Chargement…</p>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && inactifs.length === 0 ? (
           <p style={S.empty}>Aucun client trouvé.</p>
-        ) : filtered.map(c => {
+        ) : [...filtered, ...(voirInactifs ? inactifs : [])].map((c, i) => {
           const av = getAvatar(c.prenom, c.nom)
           const on = c.id === activeId
           return (
-            <div role="button" tabIndex={0} key={c.id} onClick={() => onSelect(c.id)}
-              style={{ ...S.row, background: on ? '#eef2f2' : 'transparent' }}
+            <div key={c.id}>
+            {i === filtered.length && <p style={S.groupsHead}>Inactifs</p>}
+            <div role="button" tabIndex={0} onClick={() => onSelect(c.id)}
+              style={{ ...S.row, background: on ? '#eef2f2' : 'transparent', opacity: c.actif === false ? 0.6 : 1 }}
               onMouseEnter={e => { if (!on) e.currentTarget.style.background = '#f7f7f8' }}
               onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent' }}
             >
@@ -84,8 +101,14 @@ export default function ClientListSidebar({ activeId, onSelect }) {
                 {c.offre && <p style={S.offre}>{OFFRE_LABEL[c.offre] || c.offre}</p>}
               </div>
             </div>
+            </div>
           )
         })}
+        {!loading && inactifs.length > 0 && (
+          <button onClick={() => setVoirInactifs(v => !v)} style={S.inactifsBtn}>
+            {voirInactifs ? 'Masquer les inactifs' : `Voir les inactifs (${inactifs.length})`}
+          </button>
+        )}
 
         {groupes.length > 0 && (() => {
           const topGroupes = groupes.filter(g => !g.parent_id)
@@ -134,6 +157,7 @@ const S = {
   avatar: { width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 },
   name: { fontSize: '0.8rem', fontWeight: 700, margin: 0, lineHeight: 1.25, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   offre: { fontSize: '0.66rem', color: '#6b7280', margin: '1px 0 0' },
+  inactifsBtn: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '8px 9px', fontSize: '0.75rem', fontWeight: 700, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 },
   groupsHead: { fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', margin: '0.9rem 0 0.4rem', padding: '0 9px' },
   groupRow: { display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', borderRadius: 10, cursor: 'pointer', marginBottom: 2 },
   groupName: { fontSize: '0.8rem', fontWeight: 700, margin: 0, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },

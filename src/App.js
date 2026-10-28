@@ -1,6 +1,6 @@
 import { lazy, Suspense, Component, useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
 import APP_VERSION from './version'
@@ -47,7 +47,6 @@ const CGV                  = lazy(() => import('./pages/CGV'))
 const Conditions            = lazy(() => import('./pages/Conditions'))
 
 // ── Pages coach — lazy (jamais vues par le client) ───────────────────────────
-const Clients              = lazy(() => import('./pages/Clients'))
 const NouveauClient        = lazy(() => import('./pages/NouveauClient'))
 const FicheClient          = lazy(() => import('./pages/FicheClient'))
 const NouveauProgramme     = lazy(() => import('./pages/NouveauProgramme'))
@@ -582,7 +581,8 @@ function App() {
               <Route path="/groupes"                     element={<WithNav><Groupes /></WithNav>} />
               <Route path="/groupes/charges"              element={<WithNav><ChargesGroupes /></WithNav>} />
               <Route path="/groupes/bilan"                element={<WithNav><BilanClub /></WithNav>} />
-              <Route path="/clients/gestion"             element={<WithNav><Clients /></WithNav>} />
+              {/* Ancienne page de gestion des clients, supprimée : ses fonctions sont sur la page Clients, Groupes et dans « Modifier le profil » */}
+              <Route path="/clients/gestion"             element={<Navigate to="/clients" replace />} />
               <Route path="/nouveau-client"              element={<WithNav><NouveauClient /></WithNav>} />
               <Route path="/client/:id"                  element={<WithNav><FicheClient /></WithNav>} />
               <Route path="/clients"                     element={<WithNav><FicheClient /></WithNav>} />

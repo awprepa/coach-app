@@ -9,6 +9,7 @@ const OFFRES = [
   ['gratuit', 'Gratuit'], ['essai', 'Essai'], ['preparation_physique', 'Préparation physique'],
   ['coaching', 'Coaching'], ['club', 'Club'],
 ]
+const PALETTE_CATS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4']
 const ENGAGEMENTS = [[null, 'Sans engagement'], [1, '1 mois'], [3, '3 mois'], [6, '6 mois']]
 
 // Date de fin = début + n mois
@@ -18,11 +19,32 @@ function finApres(debut, mois) {
   return isoLocal(fin)
 }
 
-export default function ModifierClientModal({ client, categories, onClose, onSaved }) {
+export default function ModifierClientModal({ client, categories: categoriesInit, onCategories, onClose, onSaved }) {
   const [form, setForm] = useState(client)
   const [saving, setSaving] = useState(false)
   const [erreur, setErreur] = useState(null)
   const set = champs => setForm(f => ({ ...f, ...champs }))
+  // Catégories (Remise en forme, Rugby…) : gérées ici depuis la suppression de l'ancienne page Clients
+  const [categories, setCategories] = useState(categoriesInit)
+  const [gestionCats, setGestionCats] = useState(false)
+  const [nouvelleCat, setNouvelleCat] = useState('')
+  const [couleurCat, setCouleurCat] = useState(PALETTE_CATS[0])
+  const majCategories = liste => { setCategories(liste); onCategories?.(liste) }
+  async function ajouterCategorie() {
+    if (!nouvelleCat.trim()) return
+    const { data, error } = await supabase.from('categories').insert([{ nom: nouvelleCat.trim(), couleur: couleurCat }]).select().single()
+    if (error) { setErreur('La catégorie n’a pas été créée. Réessaie.'); return }
+    majCategories([...categories, data])
+    set({ categorie_id: data.id })
+    setNouvelleCat('')
+  }
+  async function supprimerCategorie(cat) {
+    if (!window.confirm(`Supprimer la catégorie « ${cat.nom} » ? Les clients concernés n'auront plus de catégorie.`)) return
+    const { error } = await supabase.from('categories').delete().eq('id', cat.id)
+    if (error) { setErreur('La catégorie n’a pas été supprimée. Réessaie.'); return }
+    majCategories(categories.filter(c => c.id !== cat.id))
+    if (form.categorie_id === cat.id) set({ categorie_id: null })
+  }
   const avecEngagement = ['coaching', 'preparation_physique'].includes(form.offre)
 
   useEffect(() => {
@@ -56,6 +78,7 @@ export default function ModifierClientModal({ client, categories, onClose, onSav
       date_debut: form.date_debut || null, date_fin: form.date_fin || null,
       notes: form.notes, categorie_id: form.categorie_id || null,
       peut_creer_seances: form.peut_creer_seances || false,
+      actif: form.actif !== false,
       ...(offreChangee ? { offre_confirmee_at: null } : {}),
     }).eq('id', client.id)
     setSaving(false)
@@ -103,14 +126,40 @@ export default function ModifierClientModal({ client, categories, onClose, onSav
                   {OFFRES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </label>
-              <label style={S.champ}>
-                <span style={S.label}>Catégorie</span>
-                <select value={form.categorie_id || ''} onChange={e => set({ categorie_id: e.target.value || null })} style={S.input}>
+              <div style={S.champ}>
+                <span style={{ ...S.label, display: 'flex', justifyContent: 'space-between' }}>
+                  Catégorie
+                  <button type="button" onClick={() => setGestionCats(v => !v)} style={S.lien}>{gestionCats ? 'Fermer' : 'Gérer'}</button>
+                </span>
+                <select value={form.categorie_id || ''} onChange={e => set({ categorie_id: e.target.value || null })} style={S.input} aria-label="Catégorie">
                   <option value="">Aucune</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                 </select>
-              </label>
+              </div>
             </div>
+            {gestionCats && (
+              <div style={S.gestion}>
+                {categories.length === 0 && <span style={S.optionSous}>Aucune catégorie.</span>}
+                {categories.map(c => (
+                  <div key={c.id} style={S.catLigne}>
+                    <span style={{ ...S.catPoint, background: c.couleur }} />
+                    <span style={{ flex: 1, fontSize: 14, color: '#1a1a1a' }}>{c.nom}</span>
+                    <button type="button" onClick={() => supprimerCategorie(c)} style={S.lien}>Supprimer</button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                  <input value={nouvelleCat} onChange={e => setNouvelleCat(e.target.value)} onKeyDown={e => e.key === 'Enter' && ajouterCategorie()}
+                    placeholder="Nouvelle catégorie" style={{ ...S.input, flex: '1 1 160px', width: 'auto' }} />
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {PALETTE_CATS.map(c => (
+                      <button key={c} type="button" onClick={() => setCouleurCat(c)} aria-label={`Couleur ${c}`}
+                        style={{ ...S.catCouleur, background: c, ...(couleurCat === c ? { boxShadow: '0 0 0 2px #fff, 0 0 0 4px #333333' } : null) }} />
+                    ))}
+                  </div>
+                  <button type="button" onClick={ajouterCategorie} style={S.btnSecondaire}>Ajouter</button>
+                </div>
+              </div>
+            )}
             {avecEngagement && (
               <div style={S.champ}>
                 <span style={S.label}>Engagement</span>
@@ -151,6 +200,16 @@ export default function ModifierClientModal({ client, categories, onClose, onSav
                 <span style={S.optionSous}>Accès au créateur de séances, hors groupe</span>
               </span>
             </button>
+            <button type="button" onClick={() => set({ actif: form.actif === false })} style={S.option}
+              role="switch" aria-checked={form.actif !== false}>
+              <span style={{ ...S.interrupteur, background: form.actif !== false ? '#333333' : '#e5e7eb' }}>
+                <span style={{ ...S.bouton, left: form.actif !== false ? 21 : 3, background: form.actif !== false ? '#e4f816' : '#ffffff' }} />
+              </span>
+              <span>
+                <span style={S.optionTitre}>Client actif</span>
+                <span style={S.optionSous}>Un client inactif n'apparaît plus dans le tableau de bord et passe en bas de la liste</span>
+              </span>
+            </button>
           </section>
         </div>
 
@@ -184,6 +243,11 @@ const S = {
   segments: { display: 'flex', gap: 2, background: '#f3f4f6', borderRadius: 10, padding: 3, flexWrap: 'wrap' },
   segment: { flex: '1 1 auto', minHeight: 38, border: 'none', background: 'none', color: '#4b5563', fontSize: 13, fontWeight: 700, padding: '0 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' },
   segmentOn: { background: '#333333', color: '#e4f816' },
+  lien: { background: 'none', border: 'none', color: '#374151', fontSize: 13, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: 0, fontFamily: 'inherit' },
+  gestion: { display: 'flex', flexDirection: 'column', gap: 6, background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: 12 },
+  catLigne: { display: 'flex', alignItems: 'center', gap: 10, minHeight: 32 },
+  catPoint: { width: 10, height: 10, borderRadius: '50%', flexShrink: 0 },
+  catCouleur: { width: 22, height: 22, borderRadius: '50%', border: 'none', cursor: 'pointer', padding: 0 },
   option: { display: 'flex', alignItems: 'center', gap: 12, background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
   interrupteur: { width: 42, height: 24, borderRadius: 12, position: 'relative', flexShrink: 0, transition: 'background 0.2s' },
   bouton: { position: 'absolute', top: 3, width: 18, height: 18, borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' },

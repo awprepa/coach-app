@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { getActiveBlessure } from '../components/BlessureButton'
+import NouveauGroupeModal from '../components/NouveauGroupeModal'
 
 // ── Accès direct aux groupes (coach) ─────────────────────────────────────────
 // Avant, il fallait passer par le Tableau de bord (onglet Groupes) ou la page
@@ -21,6 +22,7 @@ export default function Groupes() {
   const [blesses, setBlesses] = useState({})   // groupe_id → [{ prenom, nom, description, duree_estimee, date_retour_prevue }]
   const [sousGroupes, setSousGroupes] = useState({}) // parent_id → [sous-groupes]
   const [loading, setLoading] = useState(true)
+  const [creation, setCreation] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -56,6 +58,8 @@ export default function Groupes() {
 
   return (
     <div style={S.page}>
+      {/* Un groupe créé s'ouvre directement, pour y ajouter les joueurs */}
+      {creation && <NouveauGroupeModal onClose={() => setCreation(false)} onCree={g => navigate(`/groupe/${g.id}`)} />}
       <div style={S.head}>
         <div>
           <h1 style={S.h1}>Groupes</h1>
@@ -66,12 +70,12 @@ export default function Groupes() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => navigate('/groupes/charges')} style={S.btnSecondary}>Charges</button>
           <button onClick={() => navigate('/groupes/bilan')} style={S.btnSecondary}>Bilan</button>
-          <button onClick={() => navigate('/clients')} style={S.btnSecondary}>Gérer depuis Clients</button>
+          <button onClick={() => setCreation(true)} style={S.btnPrimary}>+ Nouveau groupe</button>
         </div>
       </div>
 
       {!loading && groupes.length === 0 && (
-        <p style={S.empty}>Aucun groupe pour l'instant. Tu peux en créer un depuis la page Clients.</p>
+        <p style={S.empty}>Aucun groupe pour l'instant. Crée-le avec « + Nouveau groupe ».</p>
       )}
 
       {groupes.length > 0 && (
@@ -146,6 +150,7 @@ const S = {
   h1:       { margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#111' },
   sub:      { margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#8a8f98', fontWeight: 500 },
   btnSecondary: { border: '1px solid #dfe2e7', background: 'white', borderRadius: 8, padding: '7px 12px', fontSize: '0.78rem', fontWeight: 600, color: '#374151', cursor: 'pointer' },
+  btnPrimary:   { border: '1px solid #333333', background: '#333333', borderRadius: 8, padding: '7px 12px', fontSize: '0.78rem', fontWeight: 700, color: '#e4f816', cursor: 'pointer' },
   empty:    { fontSize: '0.86rem', color: '#8a8f98', fontWeight: 500 },
 
   list:     { background: 'white', borderRadius: 10, border: '1px solid #e5e7eb' },
