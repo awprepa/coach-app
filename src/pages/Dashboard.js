@@ -5,7 +5,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 import FilNotifications, { LogoGroupe } from '../components/FilNotifications'
 import AgendaSemaine, { LogoMini } from '../components/AgendaSemaine'
-import SuiviClients from '../components/SuiviClients'
+import SuiviClients, { ResumeEquipes } from '../components/SuiviClients'
 import Icon from '../components/Icon'
 import { isoLocal } from '../utils/dates'
 
@@ -208,8 +208,11 @@ export default function Dashboard() {
     <div style={S.page}>
       {/* Adaptations mobile — aucune règle au-dessus de 820px */}
       <style>{`
+        @media (max-width: 1100px){
+          .dash-grille{grid-template-columns:1fr !important;}
+        }
         @media (max-width: 820px){
-          .dash-grille, .dash-haut{grid-template-columns:1fr !important;}
+          .dash-haut{grid-template-columns:1fr !important;}
           .dash-actions{flex-direction:row !important;align-items:center !important;justify-content:flex-start !important;}
         }
       `}</style>
@@ -227,7 +230,7 @@ export default function Dashboard() {
           notifs={notifs}
           estNonLue={n => stillHighlighted.has(n.id)}
           markRead={markRead}
-          markAllRead={markAllRead}
+          markAllRead={() => { stillHighlighted.clear(); markAllRead() }}
           onOuvrir={lien => navigate(lien)}
           clients={clients}
           groupes={groupes}
@@ -237,6 +240,9 @@ export default function Dashboard() {
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
+          <SuiviClients clients={clientsIndividuels} programmes={programmes} evenements={weekEvents} />
+
+          <div style={S.grille3}>
           {/* Jour choisi dans le résumé de la semaine */}
           <div style={S.card}>
             <div style={S.cardHead}>
@@ -307,10 +313,11 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          <ResumeEquipes equipes={equipes} />
+          </div>
         </div>
       </div>
-
-      <SuiviClients clients={clientsIndividuels} programmes={programmes} evenements={weekEvents} equipes={equipes} />
     </div>
   )
 }
@@ -320,7 +327,8 @@ const S = {
   centered:    { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   haut:        { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '1rem', alignItems: 'stretch', marginBottom: '1rem' },
   actions:     { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', gap: '0.6rem', padding: '0.2rem 0' },
-  grille:      { display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(300px, 1fr)', gap: '1rem', alignItems: 'start' },
+  grille:      { display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(0, 1.9fr)', gap: '1rem', alignItems: 'start' },
+  grille3:     { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', alignItems: 'start' },
   card:        { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', paddingBottom: '0.35rem' },
   cardHead:    { padding: '0.8rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   empty:       { color: '#6b7280', fontSize: '0.82rem', padding: '0.5rem 1rem 0.9rem', margin: 0 },

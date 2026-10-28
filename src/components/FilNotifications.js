@@ -111,8 +111,7 @@ export default function FilNotifications({ notifs, estNonLue, markRead, markAllR
           </p>
           {i.n.corps && <p style={S.c}>{sansTiret(i.n.corps)}</p>}
         </div>
-        <span style={S.h}>{heure(i.n.created_at)}</span>
-        {nl && <span style={S.point} />}
+        <span style={{ ...S.h, ...(nl ? S.hNonLue : null) }}>{heure(i.n.created_at)}</span>
       </div>
     )
   }
@@ -173,8 +172,7 @@ export default function FilNotifications({ notifs, estNonLue, markRead, markAllR
             )}
           </div>
         </div>
-        <span style={S.h}>depuis {heure(premiere)}</span>
-        {nl && <span style={S.point} />}
+        <span style={{ ...S.h, ...(nl ? S.hNonLue : null) }}>depuis {heure(premiere)}</span>
       </div>
     )
   }
@@ -233,7 +231,7 @@ const S = {
   equipe: { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginLeft: '0.35rem' },
   c: { margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#6b7280', lineHeight: 1.45 },
   h: { fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 },
-  point: { width: 7, height: 7, borderRadius: '50%', background: '#e4f816', boxShadow: '0 0 0 1.5px #333333', flexShrink: 0, marginTop: 5 },
+  hNonLue: { color: '#333333', fontWeight: 800 },
   lotBtn: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' },
   noms: { display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' },
   nom: { fontSize: '0.72rem', fontWeight: 700, color: '#374151', background: '#f3f4f6', border: 'none', borderRadius: 999, padding: '0.15rem 0.55rem', cursor: 'pointer', fontFamily: 'inherit' },

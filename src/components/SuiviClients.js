@@ -50,13 +50,12 @@ function suivi(c, programmes, evenements) {
   return { c, wellness, etats, cycle, reste, attention }
 }
 
-export default function SuiviClients({ clients, programmes, evenements, equipes }) {
+export default function SuiviClients({ clients, programmes, evenements }) {
   const navigate = useNavigate()
   const lignes = clients.map(c => suivi(c, programmes, evenements))
     .sort((a, b) => b.attention - a.attention || a.c.prenom.localeCompare(b.c.prenom))
 
   return (
-    <div style={S.grille} className="dash-grille">
       <div style={S.card}>
         <div style={S.cardHead}>
           <span style={S.sectionTitle}>Clients individuels · suivi de la semaine</span>
@@ -124,7 +123,13 @@ export default function SuiviClients({ clients, programmes, evenements, equipes 
           </div>
         )}
       </div>
+  )
+}
 
+// Résumé des joueurs de groupe, par équipe
+export function ResumeEquipes({ equipes }) {
+  const navigate = useNavigate()
+  return (
       <div style={S.card}>
         <div style={S.cardHead}><span style={S.sectionTitle}>Joueurs des groupes</span></div>
         {equipes.length === 0 ? <p style={S.empty}>Aucun groupe.</p> : equipes.map(e => (
@@ -142,13 +147,11 @@ export default function SuiviClients({ clients, programmes, evenements, equipes 
           </div>
         ))}
       </div>
-    </div>
   )
 }
 
 // Styles repris de Dashboard.js (card, cardHead, sectionTitle, miniRow, pill…)
 const S = {
-  grille: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(300px, 1fr)', gap: '1rem', alignItems: 'start', marginTop: '1rem' },
   card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', paddingBottom: '0.35rem', minWidth: 0 },
   cardHead: { padding: '0.8rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' },
   sectionTitle: { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
