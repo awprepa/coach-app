@@ -196,6 +196,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
 
           <div style={S.sonCarte}>
             <p style={S.sonTexte}>Monte le volume du téléphone au maximum.</p>
+            {passages.length > 0 && <p style={S.sonTexte}>À chaque plot, un double bip, et le téléphone vibre (Android uniquement : l'iPhone ne permet pas la vibration depuis une app web).</p>}
             <button onClick={testerSon} style={S.tester}>Tester le son</button>
           </div>
 
