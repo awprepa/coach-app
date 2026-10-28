@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { analyser, arrondiDemi, calculer, deborde, DEPLACEMENTS, echelleDe, mettreAEchelle, metresFleche, REGLAGES_DEFAUT } from '../utils/courseVmi'
+import { analyser, arrondiDemi, calculer, deborde, DEPLACEMENTS, echelleDe, mettreAEchelle, metresFleche, REGLAGES_DEFAUT, repereIntensite } from '../utils/courseVmi'
 
 // Éditeur de schéma de terrain (plots, flèches directionnelles, zones) pour les
 // blocs de séance terrain. Remplace l'ancien SchemaEditorPage/SchemaSVG pour ce
@@ -802,14 +802,6 @@ export default function SchemaTerrainEditor({ value, onChange, vmiJoueur, hauteu
 function IcoUndo() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-2" /></svg>
 }
-// Fourchette d'intensité selon la durée de l'effort, en % de la vitesse finale
-// du 30-15 IFT (repères Buchheit) ; `conseil` = milieu de la fourchette.
-function repereIntensite(effort) {
-  if (!(effort > 0)) return null
-  const [min, max] = effort < 10 ? [100, 110] : effort <= 20 ? [90, 100] : effort <= 60 ? [85, 95] : effort <= 120 ? [80, 90] : [80, 85]
-  return { min, max, conseil: Math.round((min + max) / 2) }
-}
-
 function IcoMoins() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" /></svg>
 }

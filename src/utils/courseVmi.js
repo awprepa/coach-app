@@ -116,3 +116,11 @@ export function deborde(schema, { x0 = 0, y0 = 0, t = 100 } = {}) {
     || (schema.arrows || []).some(a => hx(a.x1) || hy(a.y1) || hx(a.x2) || hy(a.y2))
     || (schema.zones || []).some(z => hx(z.x) || hy(z.y) || hx(z.x + z.w) || hy(z.y + z.h))
 }
+
+// Fourchette d'intensité selon la durée de l'effort, en % de la vitesse finale
+// du 30-15 IFT (repères Buchheit) ; `conseil` = milieu de la fourchette.
+export function repereIntensite(effort) {
+  if (!(effort > 0)) return null
+  const [min, max] = effort < 10 ? [100, 110] : effort <= 20 ? [90, 100] : effort <= 60 ? [85, 95] : effort <= 120 ? [80, 90] : [80, 85]
+  return { min, max, conseil: Math.round((min + max) / 2) }
+}

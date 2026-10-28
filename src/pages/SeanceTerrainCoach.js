@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SchemaTerrainEditor from '../components/SchemaTerrainEditor'
+import AjouterIntermittentModal from '../components/AjouterIntermittentModal'
 
 // Éditeur coach d'une séance terrain : une liste de blocs (A, B, C — même
 // convention de lettrage que les séances muscu, réutilise `exercices.code`),
@@ -40,6 +41,7 @@ export default function SeanceTerrainCoach({ id, seance }) {
   const [vmiJoueur, setVmiJoueur] = useState(null)
   const [typesOuvert, setTypesOuvert] = useState(false)
   const [schemasTypes, setSchemasTypes] = useState([])
+  const [intermittentOuvert, setIntermittentOuvert] = useState(false)
 
   useEffect(() => {
     supabase.from('exercices').select('*').eq('seance_id', id).order('ordre').then(({ data }) => {
@@ -103,6 +105,16 @@ export default function SeanceTerrainCoach({ id, seance }) {
   async function sauvegarderNomSeance() {
     if (nom === seance.nom) return
     await supabase.from('seances').update({ nom }).eq('id', id)
+  }
+
+  // Intermittent prédéfini (30-30, 15-15…) : bloc + schéma générés, schéma ouvert pour retouche
+  async function ajouterIntermittent({ nom, contenu, schema }) {
+    const bloc = { seance_id: id, code: nextCode(blocs), nom, ordre: blocs.length + 1, contenu, schema }
+    const { data, error } = await supabase.from('exercices').insert([bloc]).select().single()
+    if (error) { alert(error.message); return }
+    setBlocs(prev => [...prev, data])
+    setIntermittentOuvert(false)
+    setOpenSchemaId(data.id)
   }
 
   async function ajouterBloc() {
@@ -215,8 +227,13 @@ export default function SeanceTerrainCoach({ id, seance }) {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button onClick={ajouterBloc} style={{ ...S.btnAddBloc, flex: 1 }}>+ Ajouter un bloc</button>
           <button onClick={ouvrirTypes} style={{ ...S.btnAddBloc, flex: 1 }}>+ Depuis un schéma type</button>
+          <button onClick={() => setIntermittentOuvert(true)} style={{ ...S.btnAddBloc, flex: 1 }}>+ Ajouter un intermittent</button>
         </div>
       </div>
+
+      {intermittentOuvert && (
+        <AjouterIntermittentModal vmiJoueur={vmiJoueur} onValider={ajouterIntermittent} onClose={() => setIntermittentOuvert(false)} />
+      )}
 
       {typesOuvert && (
         <div style={S.modalOverlay} onClick={() => setTypesOuvert(false)}>

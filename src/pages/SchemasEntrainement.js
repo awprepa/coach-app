@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SchemaSVG from '../components/SchemaSVG'
 import SchemaTerrainView from '../components/SchemaTerrainView'
+import AjouterIntermittentModal from '../components/AjouterIntermittentModal'
 
 export default function SchemasEntrainement() {
   const navigate = useNavigate()
   const [schemas, setSchemas] = useState([])
   const [dossiers, setDossiers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [intermittentOuvert, setIntermittentOuvert] = useState(false)
   const [search, setSearch] = useState('')
   const [dossierActif, setDossierActif] = useState('tous') // 'tous' | 'sans' | <id>
   const [dupliquant, setDupliquant] = useState(null)
@@ -75,10 +77,25 @@ export default function SchemasEntrainement() {
     return true
   })
 
+  // Intermittent prédéfini enregistré comme schéma type (proportions et réglages,
+  // sans la VMI d'un joueur, comme un schéma type enregistré à la main), puis ouvert
+  async function creerIntermittent({ nom, contenu, schema }) {
+    const { data, error } = await supabase.from('schemas_entrainement').insert({
+      nom, type_exercice: 'terrain', dossier_id: ['tous', 'sans'].includes(dossierActif) ? null : dossierActif,
+      donnees: { bloc_nom: nom, contenu, schema: { ...schema, course: { ...schema.course, vmi: null } } },
+    }).select('id').single()
+    if (error) { alert('Le schéma n’a pas été créé. Réessaie.'); return }
+    navigate(`/bibliotheque/schemas/${data.id}`)
+  }
+
   return (
     <div style={S.page}>
+      {intermittentOuvert && (
+        <AjouterIntermittentModal libelleValider="Créer le schéma type" onValider={creerIntermittent} onClose={() => setIntermittentOuvert(false)} />
+      )}
       <div style={S.topRow}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un schéma…" style={S.search} />
+        <button onClick={() => setIntermittentOuvert(true)} style={S.newBtn}>+ Intermittent</button>
         <button onClick={() => navigate('/bibliotheque/schemas/nouveau')} style={S.newBtn}>+ Nouveau schéma</button>
       </div>
 
