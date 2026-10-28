@@ -54,8 +54,7 @@ function tint(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-// `integre` : affichée dans un onglet du tableau de bord (sans marges de page)
-export default function AgendaGlobal({ integre = false }) {
+export default function AgendaGlobal() {
   const navigate = useNavigate()
   const [vue, setVue]           = useState('mois')       // 'mois' | 'semaine'
   const [anchor, setAnchor]     = useState(new Date())   // date de référence
@@ -176,7 +175,7 @@ export default function AgendaGlobal({ integre = false }) {
   const selEvents = selDay ? (byDay[selDay] || []) : []
 
   return (
-    <div style={integre ? { ...S.page, padding: 0 } : S.page}>
+    <div style={S.page}>
       <style>{`
         @media (max-width: 620px){
           .agenda-panel{

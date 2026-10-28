@@ -14,8 +14,7 @@ function initialesGroupe(nom) {
   return (mots[0][0] + mots[1][0]).toUpperCase()
 }
 
-// `integre` : affichée dans un onglet du tableau de bord (sans marges de page)
-export default function Groupes({ integre = false }) {
+export default function Groupes() {
   const navigate = useNavigate()
   const [groupes, setGroupes] = useState([])
   const [counts, setCounts]   = useState({})   // groupe_id → nb de membres
@@ -56,7 +55,7 @@ export default function Groupes({ integre = false }) {
   }, [])
 
   return (
-    <div style={integre ? { ...S.page, padding: 0 } : S.page}>
+    <div style={S.page}>
       <div style={S.head}>
         <div>
           <h1 style={S.h1}>Groupes</h1>
