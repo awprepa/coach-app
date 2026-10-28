@@ -155,19 +155,19 @@ export function ArrowShape({ a: brute, selected, surface, decale, plots = [], e 
   )
 }
 
-// Plot : petit point, étiquette juste au-dessus (masquée si vide).
+// Plot : coupelle vue de dessus (disque coloré, trou au centre), étiquette
+// écrite juste au-dessus, sans pastille (masquée si vide).
 export function PlotShape({ p, selected, e = 1 }) {
   const label = [(p.label || '').trim(), p.sol ? 'sol' : ''].filter(Boolean).join(' · ')
-  const w = (label.length * 1.05 + 1.6) * e, r = PLOT_R * e
+  const r = PLOT_R * e
   return (
     <>
-      <circle cx={p.x} cy={p.y + 0.15 * e} r={r + 0.05 * e} fill="rgba(0,0,0,0.25)" />
-      <circle cx={p.x} cy={p.y} r={r} fill={p.color} stroke={selected ? '#ffffff' : 'rgba(0,0,0,0.2)'} strokeWidth={(selected ? 0.45 : 0.22) * e} />
+      <ellipse cx={p.x} cy={p.y + 0.3 * e} rx={r * 1.25} ry={r * 0.7} fill="rgba(0,0,0,0.22)" />
+      <ellipse cx={p.x} cy={p.y} rx={r * 1.25} ry={r * 0.7} fill={p.color} stroke={selected ? '#ffffff' : 'rgba(0,0,0,0.3)'} strokeWidth={(selected ? 0.45 : 0.15) * e} />
+      <ellipse cx={p.x} cy={p.y - 0.12 * e} rx={r * 0.45} ry={r * 0.25} fill="rgba(0,0,0,0.3)" />
       {label && (
-        <>
-          <rect x={p.x - w / 2} y={p.y - r - 3.2 * e} width={w} height={2.6 * e} rx={1.3 * e} fill="#14161a" fillOpacity="0.8" />
-          <text x={p.x} y={p.y - r - 1.3 * e} fontSize={1.75 * e} fontWeight="700" fill="#ffffff" textAnchor="middle">{label}</text>
-        </>
+        <text x={p.x} y={p.y - r * 0.7 - 0.9 * e} fontSize={1.7 * e} fontWeight="600" fill="#ffffff" textAnchor="middle"
+          stroke="rgba(20,22,26,0.55)" strokeWidth={0.45 * e} strokeLinejoin="round" style={{ paintOrder: 'stroke' }}>{label}</text>
       )}
     </>
   )

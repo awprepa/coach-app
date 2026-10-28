@@ -119,3 +119,13 @@ export function lireIntermittent(schema, vmiJoueur) {
 export function passagesPlots({ cdd, tTrajet }) {
   return Array.from({ length: cdd }, (_, i) => (i + 1) * tTrajet + i * REGLAGES_DEFAUT.cdd180)
 }
+
+// « 13,5 m aller-retour × 2 » : les trajets d'une navette, dits simplement
+export function distanceNavette(i) {
+  if (i.ligne == null) return '—'
+  const m = `${String(arrondiDemi(i.ligne)).replace('.', ',')} m`
+  const trajets = i.cdd + 1
+  if (trajets === 1) return m
+  if (trajets % 2) return `${m} × ${trajets} trajets`
+  return `${m} aller-retour${trajets > 2 ? ` × ${trajets / 2}` : ''}`
+}

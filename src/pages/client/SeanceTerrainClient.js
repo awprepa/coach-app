@@ -8,7 +8,7 @@ import { Jauge, RANGE_CSS } from '../../components/RpeGate'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 import { getCoachId, sendNotif } from '../../notifs'
 import { isoLocal } from '../../utils/dates'
-import { lireIntermittent, passagesPlots, PLOTS, formatIR, nomIR } from '../../utils/intermittents'
+import { lireIntermittent, passagesPlots, PLOTS, formatIR, nomIR, distanceNavette } from '../../utils/intermittents'
 import { arrondiDemi } from '../../utils/courseVmi'
 
 function getSemaineActuelle(dateDebut) {
@@ -153,18 +153,7 @@ export default function SeanceTerrainClient({ id, seance }) {
 
   if (loading) return <div style={S.page}><p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement…</p></div>
 
-  // Résumé de la séance
   const infos = Object.fromEntries(blocs.map(b => [b.id, lireIntermittent(b.schema, vmiJoueur)]))
-  const inters = Object.values(infos).filter(Boolean)
-  const distance = inters.reduce((s, i) => s + (i.total != null ? i.total * i.reps : 0), 0)
-  const secondes = inters.reduce((s, i) => s + i.reps * i.effort + (i.reps - 1) * i.recup, 0)
-  const faits = blocs.filter(b => validations[b.id]).length
-  const plots = Math.max(0, ...blocs.map(b => b.schema?.plots?.length || 0))
-  const resume = [
-    [`${blocs.length} bloc${blocs.length > 1 ? 's' : ''}`, `${faits} terminé${faits > 1 ? 's' : ''}`],
-    distance > 0 && [`${milliers(distance)} m`, 'en intermittent'],
-    secondes > 0 && [`≈ ${Math.max(1, Math.round(secondes / 60))} min`, "d'intermittent"],
-  ].filter(Boolean)
 
   const btnTermine = (bloc) => (
     <button onClick={() => validerBloc(bloc.id, !validations[bloc.id])} style={{ ...S.btnFini, ...(validations[bloc.id] ? S.btnFiniOn : null) }}>
@@ -185,21 +174,6 @@ export default function SeanceTerrainClient({ id, seance }) {
           </div>
       </div>
       <div style={S.content}>
-        <div style={{ ...S.resume, gridTemplateColumns: `repeat(${resume.length}, 1fr)` }}>
-          {resume.map(([v, l], i) => (
-            <div key={i} style={{ ...S.resumeCase, ...(i > 0 ? S.resumeSep : null) }}>
-              <b style={S.resumeVal}>{v}</b><span style={S.resumeLab}>{l}</span>
-            </div>
-          ))}
-        </div>
-        {plots > 0 && (
-          <div style={S.materiel}>
-            <span style={{ ...S.pastille, background: PLOTS.depart.color }} />
-            <span style={{ ...S.pastille, background: PLOTS.demiTour.color, marginLeft: -4 }} />
-            Matériel : {plots} plot{plots > 1 ? 's' : ''}
-          </div>
-        )}
-
         {blocs.map(bloc => {
           const valide = !!validations[bloc.id]
           const info = infos[bloc.id]
@@ -235,9 +209,8 @@ export default function SeanceTerrainClient({ id, seance }) {
                   {info.navette ? (
                     <>
                       <Cases items={[
-                        [info.ligne != null ? metres(info.ligne) : '—', info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite'],
+                        [distanceNavette(info), info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite', true],
                         [`${info.reps} × ${formatIR(info.effort, info.recup)}`, `${dureeBloc(info)} au total`],
-                        info.cdd > 0 && [`${info.cdd} demi-tour${info.cdd > 1 ? 's' : ''}`, 'par navette'],
                         info.vitesse && [`${virgule(info.vitesse * 3.6)} km/h`, 'ton allure'],
                       ]} />
                       <button onClick={() => setDetail(bloc)} style={S.miniBtn} aria-label="Voir le détail du bloc">
@@ -327,15 +300,17 @@ export default function SeanceTerrainClient({ id, seance }) {
   )
 }
 
-// Cases de chiffres sur 2 colonnes ; en nombre impair, la dernière prend toute
-// la largeur (jamais de case vide)
+// Cases de chiffres sur 2 colonnes. Une case marquée « pleine » prend toute la
+// largeur ; s'il reste un nombre impair de cases, la dernière aussi (jamais de case vide)
 function Cases({ items, marge }) {
   const cases = items.filter(Boolean)
+  const demi = cases.filter(c => !c[2])
+  const pleine = c => c[2] || (demi.length % 2 && c === demi[demi.length - 1])
   return (
     <div style={{ ...S.chiffres, ...(marge != null ? { margin: marge } : null) }}>
-      {cases.map(([v, l], i) => (
-        <div key={i} style={{ ...S.chiffre, ...(cases.length % 2 && i === cases.length - 1 ? { gridColumn: '1 / -1' } : null) }}>
-          <b style={S.chiffreVal}>{v}</b><span style={S.chiffreLab}>{l}</span>
+      {cases.map((c, i) => (
+        <div key={i} style={{ ...S.chiffre, ...(pleine(c) ? { gridColumn: '1 / -1' } : null) }}>
+          <b style={S.chiffreVal}>{c[0]}</b><span style={S.chiffreLab}>{c[1]}</span>
         </div>
       ))}
     </div>
@@ -368,6 +343,7 @@ function MiniNavette({ ligne, cdd }) {
       {coupelle(B, PLOTS.demiTour.color)}
       <text x={A} y={24} textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="600">Départ</text>
       <text x={B} y={24} textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="600">{cdd > 0 ? 'Demi-tour' : 'Arrivée'}</text>
+      {cdd > 1 && <text x={(A + B) / 2} y={32} textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="800">{(cdd + 1) % 2 ? `× ${cdd + 1} trajets` : `× ${(cdd + 1) / 2}`}</text>}
       {ligne != null && (
         <g stroke="rgba(255,255,255,0.75)" strokeWidth="1">
           <line x1={A} y1={78} x2={B} y2={78} />
@@ -466,14 +442,8 @@ const S = {
   iconBtn: { width: 44, height: 44, marginLeft: -12, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 },
   headerTitle: { color: 'white', fontWeight: 800, fontSize: 17 },
   headerSub: { color: 'rgba(255,255,255,0.68)', fontSize: 12.5, marginTop: 2 },
-  resume: { display: 'grid', background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  resumeCase: { padding: '12px 14px', minWidth: 0 },
-  resumeSep: { borderLeft: '1px solid #f3f4f6' },
-  resumeVal: { display: 'block', fontSize: 16, fontWeight: 800, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums' },
-  resumeLab: { fontSize: 12, color: '#6b7280' },
 
   content: { padding: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-  materiel: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151', padding: '0 2px' },
   pastille: { width: 10, height: 10, borderRadius: '50%', border: '1.5px solid rgba(0,0,0,0.25)', display: 'inline-block', flexShrink: 0 },
 
   blocCard: { background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' },
