@@ -19,6 +19,11 @@ export const FORMATS = [
 const LONGUEUR_MAX = { gazon: 115, vierge: 270 }
 const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
 
+// Effort / récup en secondes, écrit 15″/15″
+export const formatIR = (effort, recup) => `${effort}″/${recup}″`
+// Noms de blocs déjà créés (« 15-15 · 95 % VMI ») au même format
+export const nomIR = nom => (nom || '').replace(/\b(\d+)-(\d+)\b/, '$1″/$2″')
+
 // Deux couleurs de plots pour qu'on ne confonde pas le départ et le demi-tour
 export const PLOTS = {
   depart: { color: '#f2c94c', nom: 'jaune' },
@@ -46,7 +51,7 @@ export function libelleIntermittent({ effort, recup, cdd, intensite, reps, serie
   const navette = cdd > 0 ? `plots à ${m(ligne)} m, ${cdd + 1} trajets` : `ligne droite de ${m(ligne)} m`
   const total = ligne * (cdd + 1) * (reps || 0) * (series > 1 ? series : 1)
   return [
-    `${series > 1 ? `${series} × ` : ''}${reps ? `${reps} × ` : ''}${effort}-${recup} à ${intensite} % VMI`,
+    `${series > 1 ? `${series} × ` : ''}${reps ? `${reps} × ` : ''}${formatIR(effort, recup)} à ${intensite} % VMI`,
     navette,
     total > 0 ? `${Math.round(total).toLocaleString('fr-FR')} m au total` : null,
     series > 1 && recupSeries ? `${recupSeries} min entre les séries` : null,

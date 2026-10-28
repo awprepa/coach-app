@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PLOTS, passagesPlots } from '../utils/intermittents'
+import { PLOTS, passagesPlots, formatIR } from '../utils/intermittents'
 
 // Chrono plein écran d'un intermittent (séance terrain côté joueur) : 5 s de
 // préparation, puis effort / récup × répétitions. Bips au départ, à chaque
@@ -43,9 +43,11 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
     for (let i = 0; i < fois; i++) {
       const t = ctx.currentTime + i * (duree + 0.08)
       const o = ctx.createOscillator(), g = ctx.createGain()
+      // Onde carrée dans les aigus : ce que le haut-parleur d'un téléphone rend le plus fort
+      o.type = 'square'
       o.frequency.value = freq
       g.gain.setValueAtTime(0.0001, t)
-      g.gain.exponentialRampToValueAtTime(0.5, t + 0.01)
+      g.gain.exponentialRampToValueAtTime(1, t + 0.01)
       g.gain.exponentialRampToValueAtTime(0.0001, t + duree)
       o.connect(g); g.connect(ctx.destination)
       o.start(t); o.stop(t + duree + 0.02)
@@ -54,7 +56,9 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
   const vibrer = ms => { try { navigator.vibrate?.(ms) } catch (e) { /* non pris en charge */ } }
 
   async function demarrer() {
-    // Créé au toucher : sans geste de l'utilisateur, iOS n'autorise pas le son
+    // Créé au toucher : sans geste de l'utilisateur, iOS n'autorise pas le son.
+    // « playback » : volume média, et le son passe même en mode silencieux (iPhone)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback' } catch (e) { /* non pris en charge */ }
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext
       if (Ctx && !audioRef.current) audioRef.current = new Ctx()
@@ -79,17 +83,17 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
       const t = (performance.now() - debutRef.current) / 1000
       const avant = precedentRef.current
       const franchi = s => avant < s && t >= s
-      if (ph.type === 'effort') passages.forEach(p => { if (franchi(p)) { bip(1040, 0.1); vibrer(60) } })
-      else [ph.dur - 3, ph.dur - 2, ph.dur - 1].forEach(s => { if (s > 0 && franchi(s)) bip(660, 0.09) })
+      if (ph.type === 'effort') passages.forEach(p => { if (franchi(p)) { bip(2600, 0.14); vibrer(60) } })
+      else [ph.dur - 3, ph.dur - 2, ph.dur - 1].forEach(s => { if (s > 0 && franchi(s)) bip(1800, 0.12) })
       precedentRef.current = t
       if (t >= ph.dur) {
         if (idx + 1 >= phases.length) {
-          bip(1040, 0.18, 3); vibrer([200, 100, 200])
+          bip(2600, 0.25, 3); vibrer([200, 100, 200])
           setFini(true); setEcoule(ph.dur)
           return
         }
         const suivante = phases[idx + 1]
-        if (suivante.type === 'effort') { bip(1040, 0.45); vibrer(300) } else { bip(520, 0.45); vibrer(300) }
+        if (suivante.type === 'effort') { bip(2600, 0.6); vibrer(300) } else { bip(1300, 0.6); vibrer(300) }
         debutRef.current += ph.dur * 1000
         precedentRef.current = 0
         setIdx(idx + 1); setEcoule(0)
@@ -152,7 +156,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
 
       {!demarre ? (
         <div style={S.accueil}>
-          <p style={S.accueilGrand}>{info.reps} × {info.effort}-{info.recup}</p>
+          <p style={S.accueilGrand}>{info.reps} × {formatIR(info.effort, info.recup)}</p>
           {info.navette && info.ligne != null && (
             <p style={S.accueilSous}>
               {info.cdd > 0 ? `Plots à ${virgule(Math.round(info.ligne * 2) / 2)} m · ${info.cdd} demi-tour${info.cdd > 1 ? 's' : ''} par navette` : `Ligne droite de ${virgule(Math.round(info.ligne * 2) / 2)} m`}
@@ -164,7 +168,7 @@ export default function ChronoIntermittent({ titre, info, onClose, onTermine }) 
       ) : fini ? (
         <div style={S.accueil}>
           <p style={S.accueilGrand}>Bloc terminé</p>
-          <p style={S.accueilSous}>{info.reps} navette{info.reps > 1 ? 's' : ''} de {info.effort}-{info.recup}.</p>
+          <p style={S.accueilSous}>{info.reps} navette{info.reps > 1 ? 's' : ''} de {formatIR(info.effort, info.recup)}.</p>
           <button onClick={() => { onTermine?.(); onClose() }} style={S.go}>Marquer le bloc terminé</button>
           <button onClick={onClose} style={S.secondaire}>Fermer</button>
         </div>

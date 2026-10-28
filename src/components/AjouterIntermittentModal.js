@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FORMATS, calculerIntermittent, genererSchema, libelleIntermittent } from '../utils/intermittents'
+import { FORMATS, calculerIntermittent, genererSchema, libelleIntermittent, formatIR } from '../utils/intermittents'
 import { repereIntensite, arrondiDemi } from '../utils/courseVmi'
 
 // Fenêtre « Ajouter un intermittent » (séance terrain d'un client et
@@ -47,7 +47,7 @@ export default function AjouterIntermittentModal({ vmiJoueur, onValider, onClose
   async function valider() {
     if (!ok) return
     setSaving(true)
-    const nom = `${params.effort}-${params.recup} · ${params.intensite} % VMI`
+    const nom = `${formatIR(params.effort, params.recup)} · ${params.intensite} % VMI`
     const contenu = [{ texte: libelleIntermittent(params, calcul.ligne), repos: params.series > 1 ? `r = ${params.recupSeries}'` : null }]
     await onValider({ nom, contenu, schema: genererSchema(params, calcul.ligne) })
     setSaving(false)
@@ -75,7 +75,7 @@ export default function AjouterIntermittentModal({ vmiJoueur, onValider, onClose
             <span style={S.label}>Format</span>
             <div style={S.segments}>
               {FORMATS.map(f => (
-                <button key={f.nom} type="button" onClick={() => choisirFormat(f)} style={{ ...S.segment, ...(format === f.nom ? S.segmentOn : null) }}>{f.nom}</button>
+                <button key={f.nom} type="button" onClick={() => choisirFormat(f)} style={{ ...S.segment, ...(format === f.nom ? S.segmentOn : null) }}>{formatIR(f.effort, f.recup)}</button>
               ))}
               <button type="button" onClick={() => setFormat('autre')} style={{ ...S.segment, ...(format === 'autre' ? S.segmentOn : null) }}>Autre</button>
             </div>

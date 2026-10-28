@@ -3,10 +3,22 @@ import { surfaceDefs, markerDefs, surfaceMarkings, surfaceOf, ArrowShape, PlotSh
 // Rendu lecture seule du schéma d'un bloc terrain (même format de données et
 // mêmes formes que SchemaTerrainEditor), pour l'affichage côté client.
 // `consigne` : afficher la ligne de consigne de course sous le dessin (pas dans les vignettes)
-export default function SchemaTerrainView({ value, style, consigne: avecConsigne = true }) {
+// `zoom` : sur le terrain de rugby, cadre resserré autour des plots et des flèches
+// quand l'exercice est petit (40 m visibles de côté au minimum).
+export default function SchemaTerrainView({ value, style, consigne: avecConsigne = true, zoom = false }) {
   const schema = value || { surface: 'gazon', plots: [], arrows: [], zones: [] }
   const surface = surfaceOf(schema)
-  const { x0, y0, t, e } = cadreDe(schema)
+  let { x0, y0, t, e } = cadreDe(schema)
+  const pts = [...(schema.plots || []).map(p => [p.x, p.y]), ...(schema.arrows || []).flatMap(a => [[a.x1, a.y1], [a.x2, a.y2]])]
+  if (zoom && surface === 'gazon' && pts.length) {
+    const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
+    const cote = Math.min(100, Math.max(32, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.8 + 10))
+    const borne = v => Math.min(100 - cote, Math.max(0, v))
+    x0 = borne((Math.min(...xs) + Math.max(...xs) - cote) / 2)
+    y0 = borne((Math.min(...ys) + Math.max(...ys) - cote) / 2)
+    // plots et textes grossissent un peu avec le zoom, sans devenir énormes
+    t = cote; e = Math.sqrt(cote / 100)
+  }
   const decales = flechesDecalees(schema.arrows || [], e)
 
   // Consigne de course (si le schéma a été réglé à la VMI)

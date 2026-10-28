@@ -8,7 +8,7 @@ import { Jauge, RANGE_CSS } from '../../components/RpeGate'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 import { getCoachId, sendNotif } from '../../notifs'
 import { isoLocal } from '../../utils/dates'
-import { lireIntermittent, passagesPlots, PLOTS } from '../../utils/intermittents'
+import { lireIntermittent, passagesPlots, PLOTS, formatIR, nomIR } from '../../utils/intermittents'
 import { arrondiDemi } from '../../utils/courseVmi'
 
 function getSemaineActuelle(dateDebut) {
@@ -209,7 +209,7 @@ export default function SeanceTerrainClient({ id, seance }) {
           const tete = (
             <button onClick={() => (replie ? setOuverts(p => ({ ...p, [bloc.id]: true })) : info ? setDetail(bloc) : valide && setOuverts(p => ({ ...p, [bloc.id]: false })))} style={S.blocHead}>
               <span style={S.blocCode}>{bloc.code}</span>
-              <span style={S.blocNom}>{bloc.nom}</span>
+              <span style={S.blocNom}>{info ? nomIR(bloc.nom) : bloc.nom}</span>
               <span style={S.blocMeta}>
                 {info ? dureeBloc(info) : null}
                 {info && !replie && <span style={S.chevron}>›</span>}
@@ -234,17 +234,17 @@ export default function SeanceTerrainClient({ id, seance }) {
                 <>
                   {info.navette ? (
                     <>
-                      <div style={S.chiffres}>
-                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.ligne != null ? metres(info.ligne) : '—'}</b><span style={S.chiffreLab}>{info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite'}</span></div>
-                        <div style={S.chiffre}><b style={S.chiffreVal}>{info.reps} × {info.effort}-{info.recup}</b><span style={S.chiffreLab}>{dureeBloc(info)} au total</span></div>
-                        {info.cdd > 0 && <div style={S.chiffre}><b style={S.chiffreVal}>{info.cdd} demi-tour{info.cdd > 1 ? 's' : ''}</b><span style={S.chiffreLab}>par navette</span></div>}
-                        {info.vitesse && <div style={S.chiffre}><b style={S.chiffreVal}>{virgule(info.vitesse * 3.6)} km/h</b><span style={S.chiffreLab}>ton allure</span></div>}
-                      </div>
+                      <Cases items={[
+                        [info.ligne != null ? metres(info.ligne) : '—', info.cdd > 0 ? 'entre les 2 plots' : 'en ligne droite'],
+                        [`${info.reps} × ${formatIR(info.effort, info.recup)}`, `${dureeBloc(info)} au total`],
+                        info.cdd > 0 && [`${info.cdd} demi-tour${info.cdd > 1 ? 's' : ''}`, 'par navette'],
+                        info.vitesse && [`${virgule(info.vitesse * 3.6)} km/h`, 'ton allure'],
+                      ]} />
                       <button onClick={() => setDetail(bloc)} style={S.miniBtn} aria-label="Voir le détail du bloc">
                         <MiniNavette ligne={info.ligne} cdd={info.cdd} />
                       </button>
                       <p style={S.repere}>
-                        <b>{info.reps} navette{info.reps > 1 ? 's' : ''}</b> : {info.effort} s de course, {info.recup} s de récup.{' '}
+                        <b>{info.reps} navette{info.reps > 1 ? 's' : ''}</b> : {info.effort}″ de course, {info.recup}″ de récup.{' '}
                         {info.cdd === 1
                           ? `Demi-tour au plot bleu vers ${virgule(info.tTrajet)} s, retour au plot jaune à ${info.effort} s.`
                           : info.cdd > 1
@@ -315,7 +315,7 @@ export default function SeanceTerrainClient({ id, seance }) {
       )}
       {chrono && infos[chrono.id] && (
         <ChronoIntermittent
-          titre={`${chrono.code} · ${chrono.nom}`}
+          titre={`${chrono.code} · ${nomIR(chrono.nom)}`}
           info={infos[chrono.id]}
           onClose={() => setChrono(null)}
           onTermine={() => validerBloc(chrono.id, true)}
@@ -327,22 +327,56 @@ export default function SeanceTerrainClient({ id, seance }) {
   )
 }
 
-// Navette dessinée à plat : plot jaune (départ), plot bleu (demi-tour)
-function MiniNavette({ ligne, cdd }) {
+// Cases de chiffres sur 2 colonnes ; en nombre impair, la dernière prend toute
+// la largeur (jamais de case vide)
+function Cases({ items, marge }) {
+  const cases = items.filter(Boolean)
   return (
-    <svg viewBox="0 0 320 96" style={{ display: 'block', width: '100%' }} aria-hidden="true">
+    <div style={{ ...S.chiffres, ...(marge != null ? { margin: marge } : null) }}>
+      {cases.map(([v, l], i) => (
+        <div key={i} style={{ ...S.chiffre, ...(cases.length % 2 && i === cases.length - 1 ? { gridColumn: '1 / -1' } : null) }}>
+          <b style={S.chiffreVal}>{v}</b><span style={S.chiffreLab}>{l}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Navette en vue de dessus, façon tableau de coach : coupelles (plot jaune au
+// départ, bleu au demi-tour), course en épingle (aller, demi-tour, retour) et
+// cote de distance sous les plots
+function MiniNavette({ ligne, cdd }) {
+  const A = 60, B = 260
+  const coupelle = (x, c) => (
+    <g>
+      <ellipse cx={x} cy={48} rx={10} ry={4.5} fill="rgba(0,0,0,0.18)" transform="translate(0 3)" />
+      <ellipse cx={x} cy={48} rx={10} ry={4.5} fill={c} />
+      <ellipse cx={x} cy={46.5} rx={4} ry={1.8} fill="rgba(0,0,0,0.28)" />
+    </g>
+  )
+  const parcours = cdd > 0
+    ? `M ${A + 12} 40 L ${B - 6} 40 A 8 8 0 0 1 ${B - 6} 56 L ${A + 12} 56`
+    : `M ${A + 12} 40 L ${B - 12} 40`
+  return (
+    <svg viewBox="0 0 320 100" style={{ display: 'block', width: '100%' }} aria-hidden="true">
       <defs>
-        <pattern id="navette-gazon" width="40" height="96" patternUnits="userSpaceOnUse"><rect width="20" height="96" fill="#3d7a37" /><rect x="20" width="20" height="96" fill="#44843d" /></pattern>
-        <marker id="navette-fl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#fff" /></marker>
+        <marker id="navette-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path d="M0 1 9 5 0 9z" fill="#ffffff" /></marker>
       </defs>
-      <rect width="320" height="96" fill="url(#navette-gazon)" />
-      <line x1="62" y1={cdd > 0 ? 38 : 46} x2="252" y2={cdd > 0 ? 38 : 46} stroke="#fff" strokeWidth="2.5" markerEnd="url(#navette-fl)" />
-      {cdd > 0 && <line x1="258" y1="54" x2="68" y2="54" stroke="#fff" strokeWidth="2.5" strokeDasharray="7 5" markerEnd="url(#navette-fl)" />}
-      <circle cx="56" cy="46" r="8" fill={PLOTS.depart.color} stroke="rgba(0,0,0,0.35)" strokeWidth="2" />
-      <circle cx="264" cy="46" r="8" fill={PLOTS.demiTour.color} stroke="rgba(0,0,0,0.35)" strokeWidth="2" />
-      <text x="56" y="80" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700">Départ</text>
-      <text x="264" y="80" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700">{cdd > 0 ? 'Demi-tour' : 'Arrivée'}</text>
-      {ligne != null && <text x="160" y="24" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="800">{metres(ligne)}</text>}
+      <rect width="320" height="100" fill="#3b7a3a" />
+      <path d={parcours} fill="none" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" markerEnd="url(#navette-fl)" />
+      {coupelle(A, PLOTS.depart.color)}
+      {coupelle(B, PLOTS.demiTour.color)}
+      <text x={A} y={24} textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="600">Départ</text>
+      <text x={B} y={24} textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="600">{cdd > 0 ? 'Demi-tour' : 'Arrivée'}</text>
+      {ligne != null && (
+        <g stroke="rgba(255,255,255,0.75)" strokeWidth="1">
+          <line x1={A} y1={78} x2={B} y2={78} />
+          <line x1={A} y1={73} x2={A} y2={83} />
+          <line x1={B} y1={73} x2={B} y2={83} />
+          <rect x={(A + B) / 2 - 26} y={70} width={52} height={16} fill="#3b7a3a" stroke="none" />
+          <text x={(A + B) / 2} y={82} textAnchor="middle" fill="#ffffff" stroke="none" fontSize="12" fontWeight="600">{metres(ligne)}</text>
+        </g>
+      )}
     </svg>
   )
 }
@@ -367,13 +401,13 @@ function DetailBloc({ bloc, info, onClose, onChrono }) {
     <div style={S.feuille} role="dialog" aria-label={bloc.nom}>
       <div style={S.feuilleTete}>
         <span style={S.blocCode}>{bloc.code}</span>
-        <p style={S.feuilleTitre}>{bloc.nom}</p>
+        <p style={S.feuilleTitre}>{nomIR(bloc.nom)}</p>
         <button onClick={onClose} style={S.fermer} aria-label="Fermer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </div>
       <div style={S.feuilleCorps}>
-        {aDessin(schema) && <SchemaTerrainView value={schema} consigne={false} style={{ borderRadius: 0 }} />}
+        {aDessin(schema) && <SchemaTerrainView value={schema} consigne={false} zoom style={{ borderRadius: 0 }} />}
         <div style={S.content}>
           <div style={S.section}>
             <p style={S.sectionTitre}>Une navette</p>
@@ -400,12 +434,12 @@ function DetailBloc({ bloc, info, onClose, onChrono }) {
 
           <div style={S.section}>
             <p style={S.sectionTitre}>Au total</p>
-            <div style={{ ...S.chiffres, margin: 0 }}>
-              <div style={S.chiffre}><b style={S.chiffreVal}>{info.reps} navette{info.reps > 1 ? 's' : ''}</b><span style={S.chiffreLab}>{dureeBloc(info)} au total</span></div>
-              <div style={S.chiffre}><b style={S.chiffreVal}>{info.total != null ? `${milliers(info.total * info.reps)} m` : '—'}</b><span style={S.chiffreLab}>de course</span></div>
-              {info.vitesse && <div style={S.chiffre}><b style={S.chiffreVal}>{virgule(info.vitesse * 3.6)} km/h</b><span style={S.chiffreLab}>ton allure</span></div>}
-              {info.vmi && <div style={S.chiffre}><b style={S.chiffreVal}>{virgule(info.vmi)} km/h</b><span style={S.chiffreLab}>ta VMI</span></div>}
-            </div>
+            <Cases marge={0} items={[
+              [`${info.reps} navette${info.reps > 1 ? 's' : ''}`, `${dureeBloc(info)} au total`],
+              [info.total != null ? `${milliers(info.total * info.reps)} m` : '—', 'de course'],
+              info.vitesse && [`${virgule(info.vitesse * 3.6)} km/h`, 'ton allure'],
+              info.vmi && [`${virgule(info.vmi)} km/h`, 'ta VMI'],
+            ]} />
           </div>
 
           {consignes.length > 0 && (
