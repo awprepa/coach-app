@@ -4,6 +4,7 @@ import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
 import Icon from '../../components/Icon'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 const MEAL_TYPES = [
   { key: 'petit_dej', label: 'Petit-déj' },
@@ -779,15 +780,7 @@ export default function AjouterRepas() {
     <>
     <div style={{ ...S.page, ...fadeStyle }}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.iconBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <span style={S.headerTitle}>Ajouter un repas</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Ajouter un repas" />
 
       <div style={S.content}>
 

@@ -5,6 +5,8 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import usePageFade from '../../hooks/usePageFade'
 import T from '../../theme/tokens'
+import EnTeteClient from '../../components/EnTeteClient'
+import useEtatMemorise from '../../hooks/useEtatMemorise'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -18,7 +20,11 @@ export default function MonProgrammeClient() {
   const fadeStyle = usePageFade()
   const [noProg, setNoProg] = useState(false)
 
+  const [derniere, setDerniere] = useEtatMemorise('monprogramme.destination', null)
+
   useEffect(() => {
+    // Onglet déjà ouvert il y a peu : on va directement au programme
+    if (derniere && Date.now() - derniere.at < 10 * 60 * 1000) { navigate(derniere.chemin, { replace: true }); return }
     async function redirect() {
       const { data } = await supabase.auth.getSession()
       const userId = data?.session?.user?.id
@@ -39,19 +45,20 @@ export default function MonProgrammeClient() {
       const active = dejaCommence.length > 0 ? dejaCommence[0]
         : vraisActifs.length > 0 ? vraisActifs[0]
         : list.find(p => !p.date_debut)
-      if (active) navigate(`/client/programme/${active.id}`, { replace: true })
+      if (active) {
+        setDerniere({ chemin: `/client/programme/${active.id}`, at: Date.now() })
+        navigate(`/client/programme/${active.id}`, { replace: true })
+      }
       else setNoProg(true)
     }
     redirect()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!noProg) return <PageLoading />
+  if (!noProg) return <PageLoading entete />
 
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <div style={S.header}>
-        <span style={S.headerTitle}>Mon programme</span>
-      </div>
+      <EnTeteClient titre="Mon programme" />
       <div style={S.content}>
         <div style={S.emptyCard}>
           <p style={S.emptyTitle}>Aucun programme assigné</p>

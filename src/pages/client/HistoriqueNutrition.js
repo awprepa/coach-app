@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 function toISO(date) { return isoLocal(date) }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return toISO(d) }
@@ -44,7 +44,6 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 export default function HistoriqueNutrition() {
-  const navigate  = useNavigate()
   const fadeStyle = usePageFade()
   const [client,  setClient]  = useState(null)
   const [plan,    setPlan]    = useState(null)
@@ -158,11 +157,7 @@ export default function HistoriqueNutrition() {
 
   if (loading) return (
     <div style={S.page}>
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <span style={S.headerTitle}>Historique</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Historique" />
       <div style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>Chargement…</div>
       <ClientBottomNav />
     </div>
@@ -170,13 +165,7 @@ export default function HistoriqueNutrition() {
 
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <span style={S.headerTitle}>Historique nutrition</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Historique nutrition" />
 
       <div style={S.content}>
 

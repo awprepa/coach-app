@@ -4,6 +4,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 const INDICATORS = [
   { key: 'sommeil',  label: 'Sommeil' },
@@ -90,15 +91,7 @@ export default function WellnessClient() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <span style={S.headerTitle}>Mon wellness</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Mon wellness" />
 
       {/* Onglets */}
       <div style={{ display: 'flex', background: '#f3f4f6', margin: '1rem', borderRadius: 12, padding: 3, gap: 3 }}>

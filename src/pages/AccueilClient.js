@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { purgerCachePrive } from '../utils/purgeCachePrive'
 import Calendrier from '../components/Calendrier'
-import AppLogo from '../components/AppLogo'
 import { useClientTheme } from '../context/ClientThemeContext'
 import ClientBottomNav from '../components/ClientBottomNav'
 import ClientProfileMenu from '../components/ClientProfileMenu'
@@ -20,6 +19,8 @@ import { CURRENT_CONDITIONS_VERSION } from './Conditions'
 import { loadClientAllSets, loadClientBodyweight } from '../data/exerciseHistory'
 import { computeExerciseXp, levelFromXp } from '../data/xpSystem'
 import { isoLocal } from '../utils/dates'
+import EnTeteClient from '../components/EnTeteClient'
+import useEtatMemorise from '../hooks/useEtatMemorise'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -47,23 +48,23 @@ export default function AccueilClient() {
   const navigate = useNavigate()
   const fadeStyle = usePageFade()
   const { permission, subscribed, requestAndSubscribe } = usePush()
-  const [client, setClient]               = useState(null)
-  const [avatarUrl, setAvatarUrl]         = useState(null)
-  const [programmes, setProgrammes]       = useState([])
-  const [seances, setSeances]             = useState([])
-  const [prochaineSeance, setProchaineSeance] = useState(null)
-  const [weekEvents, setWeekEvents]       = useState([])
+  const [client, setClient]               = useEtatMemorise('accueil.client', null)
+  const [avatarUrl, setAvatarUrl]         = useEtatMemorise('accueil.avatarUrl', null)
+  const [programmes, setProgrammes]       = useEtatMemorise('accueil.programmes', [])
+  const [seances, setSeances]             = useEtatMemorise('accueil.seances', [])
+  const [prochaineSeance, setProchaineSeance] = useEtatMemorise('accueil.prochaineSeance', null)
+  const [weekEvents, setWeekEvents]       = useEtatMemorise('accueil.weekEvents', [])
   const [showPastCycles, setShowPastCycles] = useState(false)
 
-  const [nutritionToday, setNutritionToday] = useState(null)
-  const [levelWidget, setLevelWidget] = useState(null)
+  const [nutritionToday, setNutritionToday] = useEtatMemorise('accueil.nutritionToday', null)
+  const [levelWidget, setLevelWidget] = useEtatMemorise('accueil.levelWidget', null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const [loading, setLoading]             = useState(true)
+  const [loading, setLoading]             = useEtatMemorise('accueil.loading', true)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
-  const [conditionsAcceptees, setConditionsAcceptees] = useState(null) // null=vérif, true=ok, false=à signer
-  const [contratASigner, setContratASigner] = useState(null) // null=vérif, false=aucun en attente, {…}=contrat à signer
-  const [userId, setUserId] = useState(null)
+  const [conditionsAcceptees, setConditionsAcceptees] = useEtatMemorise('accueil.conditionsAcceptees', null) // null=vérif, true=ok, false=à signer
+  const [contratASigner, setContratASigner] = useEtatMemorise('accueil.contratASigner', null) // null=vérif, false=aucun en attente, {…}=contrat à signer
+  const [userId, setUserId] = useEtatMemorise('accueil.userId', null)
   const { unread } = useNotifCtx()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -322,39 +323,38 @@ export default function AccueilClient() {
         />
       )}
 
-      <div style={styles.header}>
-        <AppLogo size={28} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <button
-            onClick={() => navigate('/client/notifications')}
-            style={{
-              position: 'relative', width: 38, height: 38, borderRadius: 999,
-              background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-            aria-label="Notifications"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            {unread > 0 && (
-              <span style={{
-                position: 'absolute', top: 2, right: 2,
-                background: '#ef4444', color: 'white',
-                borderRadius: 999, fontSize: '0.7rem', fontWeight: '800',
-                minWidth: 16, height: 16, padding: '0 4px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-              }}>{unread > 9 ? '9+' : unread}</span>
-            )}
-          </button>
-          <div role="button" tabIndex={0} style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>
-            {avatarUrl ? (
-              <img loading="lazy" src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-            ) : initiales}
-          </div>
+      <EnTeteClient actions={<>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <button
+          onClick={() => navigate('/client/notifications')}
+          style={{
+            position: 'relative', width: 38, height: 38, borderRadius: 999,
+            background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          aria-label="Notifications"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          {unread > 0 && (
+            <span style={{
+              position: 'absolute', top: 2, right: 2,
+              background: '#ef4444', color: 'white',
+              borderRadius: 999, fontSize: '0.7rem', fontWeight: '800',
+              minWidth: 16, height: 16, padding: '0 4px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+            }}>{unread > 9 ? '9+' : unread}</span>
+          )}
+        </button>
+        <div role="button" tabIndex={0} style={styles.avatar} onClick={() => setShowProfileMenu(v => !v)}>
+          {avatarUrl ? (
+            <img loading="lazy" src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+          ) : initiales}
         </div>
       </div>
+      </>} />
       {showProfileMenu && <ClientProfileMenu client={client} avatarUrl={avatarUrl} onClose={() => setShowProfileMenu(false)} />}
 
       <div style={styles.content}>

@@ -1,11 +1,12 @@
-import AppLogo from '../../components/AppLogo'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import Icon from '../../components/Icon'
 import T from '../../theme/tokens'
+import EnTeteClient from '../../components/EnTeteClient'
+import useEtatMemorise from '../../hooks/useEtatMemorise'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -18,15 +19,15 @@ function getSemaineActuelle(dateDebut, totalSemaines) {
 export default function ProgrammeClient() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [programme, setProgramme] = useState(null)
-  const [seances, setSeances] = useState([])
-  const [semaineActuelle, setSemaineActuelle] = useState(null)
-  const [seancesRenseignees, setSeancesRenseignees] = useState({})
-  const [loading, setLoading] = useState(true)
+  const [programme, setProgramme] = useEtatMemorise(`programme.${id}.programme`, null)
+  const [seances, setSeances] = useEtatMemorise(`programme.${id}.seances`, [])
+  const [semaineActuelle, setSemaineActuelle] = useEtatMemorise(`programme.${id}.semaineActuelle`, null)
+  const [seancesRenseignees, setSeancesRenseignees] = useEtatMemorise(`programme.${id}.seancesRenseignees`, {})
+  const [loading, setLoading] = useEtatMemorise(`programme.${id}.loading`, true)
 
   // Séances ponctuelles
-  const [seancesLibres, setSeancesLibres] = useState([])
-  const [canCreate, setCanCreate] = useState(false)
+  const [seancesLibres, setSeancesLibres] = useEtatMemorise(`programme.${id}.seancesLibres`, [])
+  const [canCreate, setCanCreate] = useEtatMemorise(`programme.${id}.canCreate`, false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData() }, [])
@@ -98,7 +99,7 @@ export default function ProgrammeClient() {
     setSeancesLibres(prev => prev.filter(e => e.id !== evId))
   }
 
-  if (loading) return <PageLoading />
+  if (loading) return <PageLoading entete />
 
   if (!programme) return (
     <div style={styles.centered}>
@@ -113,13 +114,7 @@ export default function ProgrammeClient() {
   return (
     <div style={styles.page}>
       {/* Header */}
-      <header style={styles.header}>
-        <button onClick={() => navigate('/client/accueil')} style={styles.backBtn} aria-label="Retour à l'accueil">
-          <Icon name="chevron-right" size={20} style={{ transform: 'rotate(180deg)' }} />
-        </button>
-        <AppLogo size={36} />
-        <div style={{ width: T.touch }} />
-      </header>
+      <EnTeteClient retour="/client/accueil" />
 
       <div style={styles.content}>
         {/* Titre programme */}

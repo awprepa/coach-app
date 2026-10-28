@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import EnTeteClient from './EnTeteClient'
 
 // Injecte une fois les keyframes @shimmer dans le document
 let shimmerInjected = false
@@ -81,13 +82,13 @@ export function NutritionSkeleton() {
 }
 
 // Spinner générique — remplace les "Chargement..." texte brut
-export function PageLoading({ dark = false }) {
+export function PageLoading({ dark = false, entete = false }) {
   const bg   = dark ? '#1a1a1a' : '#efefef'
   const ring = dark ? 'rgba(255,255,255,0.15)' : '#e5e7eb'
   const top  = dark ? 'rgba(255,255,255,0.7)'  : '#1a1a1a'
-  return (
+  const roue = (
     <div style={{
-      minHeight: '100vh', background: bg,
+      minHeight: entete ? 'calc(100vh - 60px)' : '100vh', background: bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
@@ -98,6 +99,8 @@ export function PageLoading({ dark = false }) {
       <style>{`@keyframes aw-spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
+  // entete : barre du haut des pages client, pour qu'elle ne disparaisse pas pendant le chargement
+  return entete ? <div style={{ background: bg }}><EnTeteClient />{roue}</div> : roue
 }
 
 // Skeleton pour la page Accueil client
@@ -107,10 +110,7 @@ export function AccueilSkeleton() {
   return (
     <div style={{ minHeight: '100vh', background: '#efefef', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg,#333 0%,#1f2937 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Skeleton width={100} height={22} borderRadius={6} style={{ background: 'rgba(255,255,255,0.12)' }} />
-        <Skeleton width={38} height={38} borderRadius={19} style={{ background: 'rgba(255,255,255,0.12)' }} />
-      </div>
+      <EnTeteClient actions={<Skeleton width={38} height={38} borderRadius={19} style={{ background: 'rgba(255,255,255,0.12)' }} />} />
       <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Titre */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

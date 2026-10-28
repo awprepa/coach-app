@@ -6,6 +6,7 @@ import ScanHistoryCard from '../../components/ScanHistoryCard'
 import usePageFade from '../../hooks/usePageFade'
 import Icon from '../../components/Icon'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 const OBJECTIFS = [
   { key: 'masse', label: 'Prise de masse',          desc: 'Développer muscle et force' },
@@ -241,11 +242,7 @@ export default function ProfilNutrition() {
   if (loading) {
     return (
       <div style={S.page}>
-        <div style={S.header}>
-          <button onClick={() => navigate(-1)} style={S.iconBtn}><ChevronLeft /></button>
-          <span style={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>Mon profil nutritionnel</span>
-          <div style={{ width: 34 }} />
-        </div>
+        <EnTeteClient retour titre="Mon profil nutritionnel" />
         <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>Chargement…</p>
       </div>
     )
@@ -255,17 +252,12 @@ export default function ProfilNutrition() {
   if (wizardOpen) {
     return (
       <div style={{ ...S.page, background: '#f5f5f5' }}>
-        <div style={{ ...S.header, padding: '52px 16px 14px', gap: 10 }}>
-          <button onClick={() => wizardStep > 0 ? setWizardStep(s => s - 1) : isSetup ? navigate('/client/accueil', { replace: true }) : setWizardOpen(false)} style={S.iconBtn}>
-            <ChevronLeft />
-          </button>
-          <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' }}>
+        <EnTeteClient retour={() => wizardStep > 0 ? setWizardStep(s => s - 1) : isSetup ? navigate('/client/accueil', { replace: true }) : setWizardOpen(false)}
+          titre="Mon profil nutritionnel" sousTitre={`Étape ${wizardStep + 1} sur 4`}>
+          <div style={{ height: 4, margin: '0 16px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${((wizardStep + 1) / 4) * 100}%`, background: 'var(--accent)', borderRadius: 999, transition: 'width 0.35s ease' }} />
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem', fontWeight: 700, minWidth: 28, textAlign: 'right' }}>
-            {wizardStep + 1}/4
-          </span>
-        </div>
+        </EnTeteClient>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
@@ -442,14 +434,7 @@ export default function ProfilNutrition() {
   // ── Page principale ───────────────────────────────────────────────────────────
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.iconBtn}><ChevronLeft /></button>
-        <div>
-          <p style={{ fontWeight: 800, fontSize: '1.05rem', color: 'white', margin: 0, lineHeight: 1.2 }}>Mon profil nutritionnel</p>
-          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', margin: 0, fontWeight: 600 }}>Objectifs caloriques & macros</p>
-        </div>
-        <div style={{ width: 34 }} />
-      </div>
+      <EnTeteClient retour titre="Mon profil nutritionnel" sousTitre="Objectifs caloriques & macros" />
 
       {/* Tab bar */}
       <div style={S.tabBar}>
@@ -662,13 +647,6 @@ function PhysRow({ label, val }) {
   )
 }
 
-function ChevronLeft() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  )
-}
 
 function CheckCircle() {
   return (

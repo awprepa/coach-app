@@ -1,8 +1,8 @@
-import AppLogo from '../../components/AppLogo'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
+import EnTeteClient from '../../components/EnTeteClient'
 
 function parseGpsNom(nom) {
   if (!nom) return {}
@@ -131,11 +131,7 @@ export default function GPSClient() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={S.header}>
-        <AppLogo size={28} />
-        <span style={S.headerTitle}>GPS</span>
-        <div style={{ width: 60 }} />
-      </div>
+      <EnTeteClient titre="GPS" />
 
       <div style={S.content}>
         {sessions.length === 0 ? (

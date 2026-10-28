@@ -6,6 +6,7 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import BlessureButton from '../../components/BlessureButton'
 import usePageFade from '../../hooks/usePageFade'
 import Icon from '../../components/Icon'
+import EnTeteClient from '../../components/EnTeteClient'
 
 const OFFRES = {
   essai:               'Essai',
@@ -440,10 +441,7 @@ export default function ProfilClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
 
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>← Retour</button>
-        <h1 style={S.headerTitle}>Mon profil</h1>
-      </div>
+      <EnTeteClient retour titre="Mon profil" />
 
       {/* Avatar */}
       <div style={S.avatarSection}>

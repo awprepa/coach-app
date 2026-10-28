@@ -12,6 +12,7 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 // Palette façon rangs de jeu vidéo (fer → bronze → argent → or → platine → diamant → champion)
 const RANK_COLORS = {
@@ -741,10 +742,7 @@ export default function ProgressionClient() {
   if (!exNames.length) return (
     <div style={{ ...S.page, ...fadeStyle }}>
       {/* Header */}
-      <div style={S.header}>
-        <h1 style={S.headerTitle}>Progression</h1>
-        <p style={S.headerSub}>Évolution de tes performances</p>
-      </div>
+      <EnTeteClient titre="Progression" sousTitre="Évolution de tes performances" />
       <div style={S.medalsSection}>
         <h2 style={S.sectionTitle}>Tes rangs</h2>
         <div style={S.medalsRow}>
@@ -786,10 +784,7 @@ export default function ProgressionClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div style={S.header}>
-        <h1 style={S.headerTitle}>Progression</h1>
-        <p style={S.headerSub}>Évolution de tes performances</p>
-      </div>
+      <EnTeteClient titre="Progression" sousTitre="Évolution de tes performances" />
 
       {/* ── Niveau de compte ─────────────────────────────────────────────────── */}
       <div style={S.statusCard}>

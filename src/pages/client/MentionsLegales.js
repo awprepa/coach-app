@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom'
 import usePageFade from '../../hooks/usePageFade'
+import EnTeteClient from '../../components/EnTeteClient'
 
 function Section({ title, children }) {
   return (
@@ -15,17 +15,12 @@ function Para({ children }) {
 }
 
 export default function MentionsLegales() {
-  const navigate = useNavigate()
   const fadeStyle = usePageFade()
 
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>‹</button>
-        <span style={S.headerTitle}>Confidentialité & Mentions légales</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Confidentialité & Mentions légales" />
 
       <div style={S.content}>
 

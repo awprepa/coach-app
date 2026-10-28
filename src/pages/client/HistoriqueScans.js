@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ScanHistoryCard from '../../components/ScanHistoryCard'
+import EnTeteClient, { boutonEnTete } from '../../components/EnTeteClient'
 
 const GRADE_COLOR = { A: '#16a34a', B: '#65a30d', C: '#ca8a04', D: '#ea580c', E: '#dc2626' }
 
@@ -98,28 +99,10 @@ export default function HistoriqueScans() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.iconBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div>
-          <p style={{ color: 'white', fontWeight: 800, fontSize: '1.05rem', margin: 0, lineHeight: 1.2 }}>
-            Mes scans
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 600, margin: 0 }}>
-            Notes nutritionnelles
-          </p>
-        </div>
-        <button
-          onClick={() => navigate('/client/nutrition/scanner')}
-          style={{ ...S.iconBtn, background: 'var(--accent)', color: 'var(--accent-text)' }}
-          aria-label="Nouveau scan"
-        >
+      <EnTeteClient retour titre="Mes scans" sousTitre="Notes nutritionnelles"
+        actions={<button onClick={() => navigate('/client/nutrition/scanner')} style={{ ...boutonEnTete, background: 'var(--accent)', color: 'var(--accent-text)' }} aria-label="Nouveau scan">
           <IconScan />
-        </button>
-      </div>
+        </button>} />
 
       <div style={S.content}>
         {loading ? (

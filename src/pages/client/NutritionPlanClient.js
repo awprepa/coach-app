@@ -4,6 +4,7 @@ import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient, { boutonEnTete } from '../../components/EnTeteClient'
 
 function toISO(date) { return isoLocal(date) }
 function formatDateCourt(iso) {
@@ -466,13 +467,7 @@ export default function NutritionPlanClient() {
   // ── Render loading ───────────────────────────────────────────────────────
   if (loading) return (
     <div style={S.page}>
-      <div style={S.header}>
-        <button onClick={() => navigate('/client/nutrition')} style={S.iconBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <span style={{ color: 'white', fontWeight: 800, fontSize: '1rem' }}>Nutrition</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour="/client/nutrition" titre="Nutrition" />
       <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>Chargement…</div>
       <ClientBottomNav />
     </div>
@@ -481,13 +476,7 @@ export default function NutritionPlanClient() {
   // ── Render sans plan ─────────────────────────────────────────────────────
   if (!plan) return (
     <div style={S.page}>
-      <div style={S.header}>
-        <button onClick={() => navigate('/client/nutrition')} style={S.iconBtn} aria-label="Retour au journal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <span style={{ color: 'white', fontWeight: 800, fontSize: '1rem' }}>Plan de mon coach</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour="/client/nutrition" titre="Plan de mon coach" />
       <div style={S.content}>
         <div style={{ background: 'white', borderRadius: 18, padding: '2rem 1.5rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f3f4f6', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -553,18 +542,10 @@ export default function NutritionPlanClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
 
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate('/client/nutrition')} style={S.iconBtn} aria-label="Retour au journal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: 'white', fontWeight: 800, fontSize: '0.95rem' }}>{plan.nom}</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Plan prescrit</div>
-        </div>
-        <button onClick={() => navigate('/client/nutrition/historique')} style={{ width: 32, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <EnTeteClient retour="/client/nutrition" titre={plan.nom} sousTitre="Plan prescrit"
+        actions={<button onClick={() => navigate('/client/nutrition/historique')} style={boutonEnTete} aria-label="Historique">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        </button>
-      </div>
+        </button>} />
 
       {/* Onglets */}
       <div style={S.tabBar}>

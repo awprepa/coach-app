@@ -1,4 +1,3 @@
-import AppLogo from '../../components/AppLogo'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
@@ -6,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { PageLoading } from '../../components/Skeleton'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 export default function TestsClient() {
   const navigate = useNavigate()
@@ -81,7 +81,7 @@ export default function TestsClient() {
     }))
   }
 
-  if (loading) return <PageLoading />
+  if (loading) return <PageLoading entete />
 
   const currentResults = selectedType ? (resultats[selectedType.id] || []) : []
   const graphData = currentResults.map(r => ({ date: r.date, valeur: Number(r.valeur) }))
@@ -91,11 +91,7 @@ export default function TestsClient() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate('/client/accueil')} style={S.backBtn}>‹</button>
-        <AppLogo />
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour="/client/accueil" />
 
       <div style={S.content}>
         <div style={{ marginBottom: '1.5rem' }}>

@@ -10,6 +10,7 @@ import { getCoachId, sendNotif } from '../../notifs'
 import { isoLocal } from '../../utils/dates'
 import { lireIntermittent, passagesPlots, PLOTS, formatIR, nomIR, distanceNavette } from '../../utils/intermittents'
 import { arrondiDemi } from '../../utils/courseVmi'
+import EnTeteClient from '../../components/EnTeteClient'
 
 function getSemaineActuelle(dateDebut) {
   if (!dateDebut) return 1
@@ -164,15 +165,7 @@ export default function SeanceTerrainClient({ id, seance }) {
   return (
     <div style={S.page}>
       <style>{RANGE_CSS}</style>
-      <div style={S.header}>
-          <button onClick={() => navigate(-1)} style={S.iconBtn} aria-label="Retour">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          </button>
-          <div style={{ minWidth: 0 }}>
-            <div style={S.headerTitle}>{seance.nom}</div>
-            <div style={S.headerSub}>Séance terrain · Semaine {semaineActuelle}</div>
-          </div>
-      </div>
+      <EnTeteClient retour titre={seance.nom} sousTitre={`Séance terrain · Semaine ${semaineActuelle}`} />
       <div style={S.content}>
         {blocs.map(bloc => {
           const valide = !!validations[bloc.id]

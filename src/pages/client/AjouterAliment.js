@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import usePageFade from '../../hooks/usePageFade'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 // ── Ajouter un aliment ───────────────────────────────────────────────────────
 // Deux temps : on cherche l'aliment dans CIQUAL (table officielle ANSES), puis
@@ -212,13 +213,7 @@ export default function AjouterAliment() {
   // ── Écran quantité ────────────────────────────────────────────────────────
   if (choisi) return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <div style={S.header}>
-        <button onClick={() => setChoisi(null)} style={S.back} aria-label="Retour">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M15 5l-7 7 7 7" /></svg>
-        </button>
-        <span style={S.headerTitle}>Quantité</span>
-        <div style={{ width: 34 }} />
-      </div>
+      <EnTeteClient retour={() => setChoisi(null)} titre="Quantité" />
       <div style={S.body}>
         <p style={S.qNom}>{choisi.nom}</p>
         <p style={S.qSub}>{choisi.groupe} — {fmt(choisi.kcal)} kcal / 100 g</p>
@@ -273,13 +268,7 @@ export default function AjouterAliment() {
   // ── Écran recherche ───────────────────────────────────────────────────────
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <div style={S.header}>
-        <button onClick={() => navigate('/client/nutrition')} style={S.back} aria-label="Retour">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M15 5l-7 7 7 7" /></svg>
-        </button>
-        <span style={S.headerTitle}>Ajouter au {REPAS_LABEL[repas]}</span>
-        <div style={{ width: 34 }} />
-      </div>
+      <EnTeteClient retour="/client/nutrition" titre={`Ajouter au ${REPAS_LABEL[repas]}`} />
 
       <div style={{ padding: '12px 14px 0' }}>
         <div style={S.search}>

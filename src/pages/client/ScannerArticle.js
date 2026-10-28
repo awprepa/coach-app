@@ -5,6 +5,7 @@ import { NotFoundException } from '@zxing/library'
 import { supabase } from '../../supabase'
 import { noteMatieresGrasses, noteProteines, noteGlucides, noteFibres } from '../../nutritionQuality'
 import Icon from '../../components/Icon'
+import EnTeteClient, { boutonEnTete } from '../../components/EnTeteClient'
 
 // ─── Calcul du grade nutritionnel (A→E) ──────────────────────────────────────
 function calculateGrade(food) {
@@ -221,21 +222,8 @@ export default function ScannerArticle() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.iconBtn}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <span style={S.headerTitle}>Scanner un article</span>
-        {phase === 'result' ? (
-          <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...S.iconBtn, fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'rgba(228,248,22,0.12)', width: 'auto', padding: '0 10px' }}>
-            Historique
-          </button>
-        ) : (
-          <div style={{ width: 32 }} />
-        )}
-      </div>
+      <EnTeteClient retour titre="Scanner un article"
+        actions={phase === 'result' ? <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...boutonEnTete, width: 'auto', padding: '0 12px', fontSize: '0.8rem', fontWeight: 700 }}>Historique</button> : null} />
 
       {/* ── Phase : scan ───────────────────────────────────────── */}
       {phase === 'scan' && (

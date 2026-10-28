@@ -5,6 +5,7 @@ import Conversation from '../../components/Conversation'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import Icon from '../../components/Icon'
 import T from '../../theme/tokens'
+import EnTeteClient from '../../components/EnTeteClient'
 
 // Hauteur de la barre d'onglets (ClientBottomNav) : boutons 56 px + zone iPhone
 const NAV_H = 'calc(56px + max(env(safe-area-inset-bottom), 12px))'
@@ -77,13 +78,7 @@ export default function MessagesClient() {
   return (
     <>
       <div style={{ ...S.page, ...cadre }}>
-        <header style={S.header}>
-          <img loading="lazy" src="/coach-avatar.png" alt="" style={S.avatar} />
-          <div style={{ minWidth: 0 }}>
-            <p style={S.nom}>Arthur</p>
-            <p style={S.role}>Ton coach</p>
-          </div>
-        </header>
+        <EnTeteClient titre="Arthur" sousTitre="Ton coach" actions={<img loading="lazy" src="/coach-avatar.png" alt="" style={S.avatar} />} />
 
         {loadError ? (
           <div style={S.centre}>

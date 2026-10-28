@@ -1,4 +1,3 @@
-import AppLogo from '../../components/AppLogo'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../supabase'
@@ -16,6 +15,7 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 import SeanceTerrainClient from './SeanceTerrainClient'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 function getSemaineActuelle(dateDebut) {
   const debut = new Date(dateDebut)
@@ -1245,7 +1245,7 @@ export default function SeanceClient() {
     return /\.(png|gif|jpe?g|webp|svg)(\?.*)?$/i.test(url) || (!youtubeId(url) && !/youtube|youtu\.be/i.test(url))
   }
 
-  if (loading) return <PageLoading />
+  if (loading) return <PageLoading entete />
   if (!seance) return <div style={S.centered}><p style={{ color: '#888' }}>Séance introuvable.</p></div>
   if (seance.type === 'terrain') return <SeanceTerrainClient id={id} seance={seance} />
 
@@ -1696,11 +1696,7 @@ export default function SeanceClient() {
       </div>
 
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(`/client/programme/${seance.programmes.id}`)} style={S.backBtn}>‹</button>
-        <AppLogo />
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour={`/client/programme/${seance.programmes.id}`} />
 
       <div style={S.content}>
         {/* Titre */}

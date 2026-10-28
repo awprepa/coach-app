@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
+import useEtatMemorise from '../../hooks/useEtatMemorise'
 
 export default function CompetitionClient() {
-  const [loading, setLoading]       = useState(true)
-  const [groupes, setGroupes]       = useState([])   // groupes avec FFR
-  const [activeGroupe, setActive]   = useState(null)
-  const [matchs, setMatchs]         = useState([])
-  const [classement, setClassement] = useState([])
-  const [compIdx, setCompIdx]       = useState(0)    // championnat affiché (ex. Fédérale 2 / Fédérale B)
+  const [loading, setLoading]       = useEtatMemorise('competition.loading', true)
+  const [groupes, setGroupes]       = useEtatMemorise('competition.groupes', [])   // groupes avec FFR
+  const [activeGroupe, setActive]   = useEtatMemorise('competition.activeGroupe', null)
+  const [matchs, setMatchs]         = useEtatMemorise('competition.matchs', [])
+  const [classement, setClassement] = useEtatMemorise('competition.classement', [])
+  const [compIdx, setCompIdx]       = useEtatMemorise('competition.compIdx', 0)    // championnat affiché (ex. Fédérale 2 / Fédérale B)
   // Client en préparation physique sans groupe : il suit son équipe avec son propre lien
-  const [perso, setPerso]           = useState(null) // { clientId, url } | null
+  const [perso, setPerso]           = useEtatMemorise('competition.perso', null) // { clientId, url } | null
   const [lien, setLien]             = useState('')
   const [edition, setEdition]       = useState(false)
   const [synchro, setSynchro]       = useState(false)
@@ -283,8 +285,11 @@ export default function CompetitionClient() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-      <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#333', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+    <div style={{ minHeight: '100vh', background: '#f5f6f8' }}>
+      <EnTeteClient titre="Compétition" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#333', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      </div>
     </div>
   )
 
@@ -293,10 +298,9 @@ export default function CompetitionClient() {
   return (
     <div style={{ minHeight: '100vh', background: '#f5f6f8', paddingBottom: 100, fontFamily: 'inherit' }}>
       {/* Header */}
-      <div style={{ background: `linear-gradient(135deg, #333333 0%, #1f2937 100%)`,
-        padding: '18px 18px 16px', color: '#fff', position: 'sticky', top: 0, zIndex: 40 }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#e4f816', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Compétition</div>
-        {groupes.length > 1 ? (
+      <EnTeteClient titre="Compétition" sousTitre={groupes.length > 1 ? null : (activeGroupe?.nom || (perso && ourTeam) || 'Mon équipe')}>
+        {groupes.length > 1 && (
+        <div style={{ padding: '0 16px 12px' }}>
           <select value={activeGroupe?.id || ''} onChange={async e => {
             const g = groupes.find(x => x.id === e.target.value)
             setActive(g); setMatchs([]); setClassement([]); setCompIdx(0)
@@ -304,10 +308,9 @@ export default function CompetitionClient() {
           }} style={{ fontWeight: 800, fontSize: '1rem', background: 'transparent', color: '#fff', border: 'none', outline: 'none', padding: 0, cursor: 'pointer' }}>
             {groupes.map(g => <option key={g.id} value={g.id} style={{ color: '#000' }}>{g.nom}</option>)}
           </select>
-        ) : (
-          <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{activeGroupe?.nom || (perso && ourTeam) || 'Mon équipe'}</div>
+        </div>
         )}
-      </div>
+      </EnTeteClient>
 
       <div style={{ padding: '16px 16px 0' }}>
         {perso && (!perso.url || edition) ? (

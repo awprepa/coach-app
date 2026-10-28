@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']
 function formatDate(str) {
@@ -319,11 +320,7 @@ export default function SeancePonctuelleClient() {
   if (isNew) return (
     <div style={S.page}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>‹</button>
-        <span style={S.headerTitle}>Nouvelle séance</span>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Nouvelle séance" />
 
       <div style={S.content}>
         {/* Nom + date */}
@@ -382,18 +379,8 @@ export default function SeancePonctuelleClient() {
   return (
     <div style={S.page}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>‹</button>
-        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-          <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {evenement?.titre}
-          </p>
-          <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>{formatDate(evenement?.date)}</p>
-        </div>
-        <div style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          {saved && <span style={{ fontSize: '0.7rem', color: 'var(--accent-fg)', fontWeight: 700 }}>✓</span>}
-        </div>
-      </div>
+      <EnTeteClient retour titre={evenement?.titre} sousTitre={formatDate(evenement?.date)}
+        actions={saved ? <span style={{ fontSize: '0.8rem', color: 'var(--accent-fg-dark)', fontWeight: 700 }}>✓</span> : null} />
 
       <div style={S.content}>
         {exercices.length === 0 && (

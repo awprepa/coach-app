@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useNotifCtx } from '../../context/NotifContext'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import Icon from '../../components/Icon'
+import EnTeteClient, { boutonEnTete } from '../../components/EnTeteClient'
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -34,14 +35,8 @@ export default function NotificationsClient() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.backBtn}>←</button>
-        <h1 style={S.title}>Notifications</h1>
-        {unread > 0 && (
-          <button onClick={markAllRead} style={S.markAllBtn}>Tout marquer lu</button>
-        )}
-        {unread === 0 && <div style={{ width: 90 }} />}
-      </div>
+      <EnTeteClient retour titre="Notifications"
+        actions={unread > 0 ? <button onClick={markAllRead} style={{ ...boutonEnTete, width: 'auto', padding: '0 12px', fontSize: '0.8rem', fontWeight: 700 }}>Tout marquer lu</button> : null} />
 
       {/* Liste */}
       <div style={S.list}>

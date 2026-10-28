@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
 import { compressImage } from '../../lib/compressImage'
 import { isoLocal } from '../../utils/dates'
+import EnTeteClient from '../../components/EnTeteClient'
 
 const DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 const MOIS_LABELS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -92,7 +92,6 @@ function IconPose({ pose }) {
 }
 
 export default function PhotosClient() {
-  const navigate  = useNavigate()
   const fadeStyle = usePageFade()
   const fileRef   = useRef(null)
   const [client, setClient]   = useState(null)
@@ -171,11 +170,7 @@ export default function PhotosClient() {
 
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <div style={S.header}>
-        <button onClick={() => navigate(-1)} style={S.back}>‹</button>
-        <h1 style={S.headerTitle}>Photos d'évolution</h1>
-        <div style={{ width: 32 }} />
-      </div>
+      <EnTeteClient retour titre="Photos d'évolution" />
 
       <div style={S.body}>
         <div style={S.infoCard}>
