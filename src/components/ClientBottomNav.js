@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import T from '../theme/tokens'
+import { COACH_EMAIL } from '../accountSwitch'
 
 function IconHome({ active }) {
   const s = 'currentColor'
@@ -73,7 +74,33 @@ function IconTrophy({ active }) {
   )
 }
 
+// Les pages client déclarent encore <ClientBottomNav /> : la vraie barre
+// (BarreClient) est montée une seule fois dans App, pour qu'elle ne disparaisse
+// pas à chaque changement de page et que l'onglet actif glisse d'un onglet à l'autre.
 export default function ClientBottomNav() {
+  return null
+}
+
+// Pages où la barre est affichée (mêmes pages qu'avant)
+const AVEC_BARRE = [
+  /^\/$/, /^\/client\/accueil$/, /^\/client\/mon-programme$/, /^\/client\/programme\//, /^\/client\/seance\//,
+  /^\/client\/nutrition(\/(plan|profil|historique))?$/, /^\/client\/messages$/, /^\/client\/competition$/,
+  /^\/client\/gps$/, /^\/client\/progression$/, /^\/client\/notifications$/, /^\/client\/tests$/,
+  /^\/client\/profil$/, /^\/client\/wellness$/, /^\/client\/photos$/,
+]
+
+// Écrans des onglets chargés à l'avance : pas d'écran de chargement au premier passage
+function prechargerOnglets() {
+  import('../pages/client/MonProgrammeClient')
+  import('../pages/client/ProgrammeClient')
+  import('../pages/client/NutritionClient')
+  import('../pages/client/MessagesClient')
+  import('../pages/client/CompetitionClient')
+}
+
+const MARGE = 20 // même distance au bas et aux côtés de l'écran
+
+export function BarreClient() {
   const location = useLocation()
   const navigate = useNavigate()
   const p = location.pathname
@@ -83,6 +110,7 @@ export default function ClientBottomNav() {
     const cachedAt = parseInt(localStorage.getItem('aw_client_offre_at') || '0', 10)
     return (cached && Date.now() - cachedAt < 24 * 60 * 60 * 1000) ? cached : null
   })
+  const [appuye, setAppuye] = useState(null)
 
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
@@ -101,14 +129,23 @@ export default function ClientBottomNav() {
     }
   }, [])
 
-  // Récupère l'offre du client — cache localStorage 24h pour éviter une requête à chaque navigation
+  // Compte connecté (suit la connexion et la bascule coach ↔ client)
   const [userId, setUserId] = useState(null)
+  const [estCoach, setEstCoach] = useState(false)
   useEffect(() => {
-    async function fetchOffre() {
-      const { data: sess } = await supabase.auth.getSession()
-      const uid = sess?.session?.user?.id
-      if (uid) setUserId(uid)
+    const appliquer = session => {
+      setUserId(session?.user?.id || null)
+      setEstCoach(session?.user?.email === COACH_EMAIL)
+    }
+    supabase.auth.getSession().then(({ data }) => appliquer(data?.session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => appliquer(session))
+    return () => subscription.unsubscribe()
+  }, [])
 
+  // Récupère l'offre du client — cache localStorage 24h pour éviter une requête à chaque navigation
+  useEffect(() => {
+    if (!userId || estCoach) return
+    async function fetchOffre() {
       const cached = localStorage.getItem('aw_client_offre')
       const cachedAt = parseInt(localStorage.getItem('aw_client_offre_at') || '0', 10)
       const TTL = 24 * 60 * 60 * 1000 // 24h
@@ -116,9 +153,8 @@ export default function ClientBottomNav() {
         setOffre(cached)
         return
       }
-      if (!uid) return
       const { data: client } = await supabase
-        .from('clients').select('offre').eq('user_id', uid).maybeSingle()
+        .from('clients').select('offre').eq('user_id', userId).maybeSingle()
       if (client?.offre) {
         localStorage.setItem('aw_client_offre', client.offre)
         localStorage.setItem('aw_client_offre_at', String(Date.now()))
@@ -126,12 +162,14 @@ export default function ClientBottomNav() {
       }
     }
     fetchOffre()
-  }, [])
+    const t = setTimeout(prechargerOnglets, 1500)
+    return () => clearTimeout(t)
+  }, [userId, estCoach])
 
   // Pastille messages non lus — refetch au changement de page (la page Messages marque comme lu à l'ouverture) + Realtime
   const [unreadMsg, setUnreadMsg] = useState(0)
   useEffect(() => {
-    if (!userId) return
+    if (!userId || estCoach) return
     async function fetchUnread() {
       const { count } = await supabase
         .from('messages')
@@ -148,15 +186,14 @@ export default function ClientBottomNav() {
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [userId, location.pathname])
+  }, [userId, estCoach, location.pathname])
 
-  if (kbOpen) return null
+  if (kbOpen || !userId || estCoach || !AVEC_BARRE.some(r => r.test(p))) return null
 
   const isHome        = p === '/' || p === '/client/accueil'
   const isProgramme   = p.startsWith('/client/programme') || p.startsWith('/client/seance') || p === '/client/mon-programme'
   const isNutrition   = p.startsWith('/client/nutrition')
   const isMessages    = p === '/client/messages'
-  const isGPS         = p.startsWith('/client/gps')
   const isCompetition = p.startsWith('/client/competition')
 
   const isPrepaPhysique = offre === 'preparation_physique'
@@ -170,36 +207,54 @@ export default function ClientBottomNav() {
       { label: 'Compét.', Icon: IconTrophy, active: isCompetition, to: '/client/competition' },
     ] : []),
   ]
+  const n = tabs.length
+  const actif = tabs.findIndex(t => t.active)
 
   return createPortal(
-    // Barre flottante, détachée des bords (au-dessus de la barre Apple sur iPhone)
-    <nav aria-label="Navigation principale" style={{
+    // Barre flottante, à la même distance du bas et des côtés de l'écran
+    <nav aria-label="Navigation principale" className="aw-barre" style={{
       position: 'fixed', zIndex: 90,
-      left: 12, right: 12, bottom: 'max(12px, calc(env(safe-area-inset-bottom) - 8px))',
+      left: MARGE, right: MARGE, bottom: MARGE,
       maxWidth: 520, margin: '0 auto',
       background: T.color.card,
       border: `1px solid ${T.color.line}`,
-      borderRadius: 28,
+      borderRadius: T.radius.pill,
       boxShadow: T.shadow.float,
       fontFamily: T.font.body,
     }}>
-      <div style={{ display: 'flex', overflow: 'hidden', padding: '2px 4px', borderRadius: 28 }}>
-        {tabs.map(({ label, Icon, active, to, badge }) => (
-          <button key={label} onClick={() => navigate(to)} aria-current={active ? 'page' : undefined}
+      <style>{`
+        @keyframes aw-barre-pop { 0% { transform: scale(0.86) } 55% { transform: scale(1.12) } 100% { transform: scale(1) } }
+        @media (prefers-reduced-motion: reduce) { .aw-barre * { transition: none !important; animation: none !important } }
+      `}</style>
+      <div style={{ display: 'flex', position: 'relative', padding: '2px 4px' }}>
+        {/* Pastille jaune de l'onglet actif : glisse d'un onglet à l'autre */}
+        <div aria-hidden style={{
+          position: 'absolute', top: 10, width: 52, height: 30,
+          left: `calc(4px + (100% - 8px) * ${(Math.max(actif, 0) + 0.5) / n} - 26px)`,
+          borderRadius: T.radius.pill, background: 'var(--accent)',
+          opacity: actif < 0 ? 0 : 1,
+          transition: 'left 0.32s cubic-bezier(.3, 1.25, .5, 1), opacity 0.2s',
+        }} />
+        {tabs.map(({ label, Icon, active, to, badge }, i) => (
+          <button key={label} onClick={() => { if (!active) navigate(to) }} aria-current={active ? 'page' : undefined}
             aria-label={badge > 0 ? `${label}, ${badge} non lus` : undefined}
+            onPointerDown={() => setAppuye(i)} onPointerUp={() => setAppuye(null)}
+            onPointerLeave={() => setAppuye(null)} onPointerCancel={() => setAppuye(null)}
             style={{
               flex: 1, minWidth: 0, minHeight: 56, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              gap: 4, padding: '8px 2px 6px',
+              gap: 4, padding: '8px 0 6px',
               background: 'none', border: 'none', cursor: 'pointer',
               color: active ? T.color.ink : T.color.muted,
+              WebkitTapHighlightColor: 'transparent',
+              transform: appuye === i ? 'scale(0.9)' : 'scale(1)',
+              transition: 'transform 0.18s cubic-bezier(.3, 1.4, .5, 1), color 0.2s',
             }}>
-            <div style={{
+            <div key={active ? 'on' : 'off'} style={{
               width: 48, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: T.radius.pill, position: 'relative',
-              background: active ? 'var(--accent)' : 'transparent',
+              position: 'relative',
               color: active ? 'var(--accent-text)' : 'inherit',
-              transition: 'background 0.15s',
+              animation: active ? 'aw-barre-pop 0.38s ease-out' : undefined,
             }}>
               <Icon active={active} />
               {badge > 0 && (

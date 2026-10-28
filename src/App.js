@@ -1,4 +1,5 @@
 import { lazy, Suspense, Component, useState, useEffect, useCallback, useRef } from 'react'
+import { BarreClient } from './components/ClientBottomNav'
 import { createPortal } from 'react-dom'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import AuthGate from './AuthGate'
@@ -608,6 +609,7 @@ function App() {
               <Route path="/nutrition/vue/:planId"           element={<WithNav><NutritionPlanVue /></WithNav>} />
             </Routes>
           </Suspense>
+          <BarreClient />
         </TimerProvider>
       </AuthGate>
       </ClientThemeProvider>
