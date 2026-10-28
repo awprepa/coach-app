@@ -7,6 +7,8 @@
  *
  * POST body (optionnel) : { groupe_id: "uuid" }  → sync un seul groupe
  * Sans body              → sync tous les groupes avec monclubhouse_url
+ * POST body : { client_id: "uuid" } → sync le lien d'un client sans groupe
+ *   (clients.monclubhouse_url) ; lignes rangées sous client_id
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -80,7 +82,8 @@ function extractKeyValue(html: string, key: string): any | null {
 // ── Parsers spécifiques ─────────────────────────────────────────────────────────
 
 interface MatchRow {
-  groupe_id: string;
+  groupe_id: string | null;
+  client_id?: string;
   journee: string;
   date_match: string | null;
   heure: string | null;
@@ -95,7 +98,8 @@ interface MatchRow {
 }
 
 interface StandingRow {
-  groupe_id: string;
+  groupe_id: string | null;
+  client_id?: string;
   position: number;
   equipe: string;
   pts: number;
@@ -256,7 +260,9 @@ function parseStandings(data: any[], groupeId: string, competition: string | nul
 
 // ── Sync d'un groupe ─────────────────────────────────────────────────────────────
 
-async function syncGroupe(groupeId: string, url: string, competitionFilter: string | null, competitionEspoirs: string | null) {
+async function syncGroupe(groupeId: string, url: string, competitionFilter: string | null, competitionEspoirs: string | null, colonne: "groupe_id" | "client_id" = "groupe_id") {
+  // Lignes d'un client : rangées sous client_id (groupeId contient alors l'id du client)
+  const proprio = <T extends { groupe_id: string | null }>(r: T): T => colonne === "groupe_id" ? r : { ...r, groupe_id: null, client_id: groupeId };
   // L'URL enregistrée peut être soit la page de base d'une compétition
   // (".../competitions/federale-2/qualification-44288"), soit déjà une page
   // "calendrier-resultats" ou "classements" copiée directement depuis le site
@@ -301,8 +307,8 @@ async function syncGroupe(groupeId: string, url: string, competitionFilter: stri
 
       if (rows.length > 0) {
         // Supprimer les anciens et réinsérer
-        await supabase.from("matchs_ffr").delete().eq("groupe_id", groupeId);
-        const { error } = await supabase.from("matchs_ffr").insert(rows);
+        await supabase.from("matchs_ffr").delete().eq(colonne, groupeId);
+        const { error } = await supabase.from("matchs_ffr").insert(rows.map(proprio));
         if (error) errors.push(`Insert matchs: ${error.message}`);
         else matchCount = rows.length;
       }
@@ -345,8 +351,8 @@ async function syncGroupe(groupeId: string, url: string, competitionFilter: stri
   }
 
   if (allStandingRows.length > 0) {
-    await supabase.from("classements_ffr").delete().eq("groupe_id", groupeId);
-    const { error } = await supabase.from("classements_ffr").insert(allStandingRows);
+    await supabase.from("classements_ffr").delete().eq(colonne, groupeId);
+    const { error } = await supabase.from("classements_ffr").insert(allStandingRows.map(proprio));
     if (error) errors.push(`Insert classement: ${error.message}`);
     else standingsCount = allStandingRows.length;
   }
@@ -362,6 +368,24 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const targetId: string | null = body?.groupe_id || null;
+
+    // Client sans groupe : son propre lien. La compétition suivie est celle de
+    // l'adresse collée (".../competitions/federale-2/..."), sinon toutes.
+    if (body?.client_id) {
+      const { data: c, error: ce } = await supabase
+        .from("clients").select("id, monclubhouse_url").eq("id", body.client_id).maybeSingle();
+      if (ce) throw ce;
+      if (!c?.monclubhouse_url) {
+        return new Response(JSON.stringify({ ok: false, error: "Aucun lien enregistré" }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+      const filtre = c.monclubhouse_url.match(/\/competitions\/([^/]+)/)?.[1] || null;
+      const result = await syncGroupe(c.id, c.monclubhouse_url, filtre, null, "client_id");
+      return new Response(JSON.stringify({ ok: true, synced: 1, results: [result] }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
 
     let q = supabase
       .from("groupes")

@@ -10,6 +10,12 @@ export default function CompetitionClient() {
   const [matchs, setMatchs]         = useState([])
   const [classement, setClassement] = useState([])
   const [compIdx, setCompIdx]       = useState(0)    // championnat affiché (ex. Fédérale 2 / Fédérale B)
+  // Client en préparation physique sans groupe : il suit son équipe avec son propre lien
+  const [perso, setPerso]           = useState(null) // { clientId, url } | null
+  const [lien, setLien]             = useState('')
+  const [edition, setEdition]       = useState(false)
+  const [synchro, setSynchro]       = useState(false)
+  const [erreurLien, setErreurLien] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -20,23 +26,34 @@ export default function CompetitionClient() {
       if (!userId) return
 
       const { data: client } = await supabase
-        .from('clients').select('id').eq('user_id', userId).maybeSingle()
+        .from('clients').select('id, offre, monclubhouse_url').eq('user_id', userId).maybeSingle()
       if (!client) return
 
       // Groupes du client qui ont un lien FFR
       const { data: membres } = await supabase
         .from('groupe_membres').select('groupe_id').eq('client_id', client.id)
-      if (!membres?.length) { setLoading(false); return }
-
-      const groupeIds = membres.map(m => m.groupe_id)
-      const { data: gs } = await supabase
-        .from('groupes').select('id, nom, couleur, monclubhouse_url, monclubhouse_competition')
-        .in('id', groupeIds).not('monclubhouse_url', 'is', null)
+      const groupeIds = (membres || []).map(m => m.groupe_id)
+      const { data: gs } = groupeIds.length
+        ? await supabase
+          .from('groupes').select('id, nom, couleur, monclubhouse_url, monclubhouse_competition')
+          .in('id', groupeIds).not('monclubhouse_url', 'is', null)
+        : { data: [] }
       setGroupes(gs || [])
 
       if (gs?.length) {
         setActive(gs[0])
         await loadFFR(gs[0].id)
+      } else if (client.offre === 'preparation_physique') {
+        setPerso({ clientId: client.id, url: client.monclubhouse_url || null })
+        setLien(client.monclubhouse_url || '')
+        if (client.monclubhouse_url) {
+          const ffr = await loadFFR(client.id, 'client_id')
+          // Données de plus de 6 h (ou aucune) : on relance la mise à jour en fond
+          const derniere = ffr.classement[0]?.synced_at || ffr.matchs[0]?.synced_at
+          if (!derniere || Date.now() - new Date(derniere).getTime() > 6 * 3600 * 1000) {
+            synchroniser(client.id)
+          }
+        }
       }
     } catch (e) {
       console.error('CompetitionClient:', e)
@@ -45,13 +62,45 @@ export default function CompetitionClient() {
     }
   }
 
-  async function loadFFR(groupeId) {
+  async function loadFFR(id, colonne = 'groupe_id') {
     const [{ data: m }, { data: c }] = await Promise.all([
-      supabase.from('matchs_ffr').select('*').eq('groupe_id', groupeId).order('date_match'),
-      supabase.from('classements_ffr').select('*').eq('groupe_id', groupeId).order('position'),
+      supabase.from('matchs_ffr').select('*').eq(colonne, id).order('date_match'),
+      supabase.from('classements_ffr').select('*').eq(colonne, id).order('position'),
     ])
     setMatchs(m || [])
     setClassement(c || [])
+    return { matchs: m || [], classement: c || [] }
+  }
+
+  // Récupère matchs et classement depuis Mon Clubhouse pour le lien du client
+  async function synchroniser(clientId) {
+    setSynchro(true)
+    try {
+      const { data } = await supabase.functions.invoke('sync-ffr', { body: { client_id: clientId } })
+      const ffr = await loadFFR(clientId, 'client_id')
+      return data?.ok && (ffr.matchs.length > 0 || ffr.classement.length > 0)
+    } catch (e) {
+      console.warn('[CompetitionClient] mise à jour impossible :', e?.message)
+      return false
+    } finally {
+      setSynchro(false)
+    }
+  }
+
+  async function enregistrerLien() {
+    const url = lien.trim()
+    if (!/^https:\/\/monclubhouse\.ffr\.fr\/clubs\/[^/]+/.test(url)) {
+      setErreurLien('Ce lien ne vient pas de Mon Clubhouse. Il doit commencer par https://monclubhouse.ffr.fr/clubs/')
+      return
+    }
+    setErreurLien(null)
+    const { error } = await supabase.from('clients').update({ monclubhouse_url: url }).eq('id', perso.clientId)
+    if (error) { setErreurLien('Le lien n\u2019a pas été enregistré. Réessaie.'); return }
+    setPerso(p => ({ ...p, url }))
+    setEdition(false)
+    setCompIdx(0)
+    const ok = await synchroniser(perso.clientId)
+    if (!ok) setErreurLien('Aucun match ni classement trouvé avec ce lien. Copie l\u2019adresse de la page de ton équipe (Compétitions, puis ton championnat).')
   }
 
   const today = isoLocal()
@@ -256,12 +305,36 @@ export default function CompetitionClient() {
             {groupes.map(g => <option key={g.id} value={g.id} style={{ color: '#000' }}>{g.nom}</option>)}
           </select>
         ) : (
-          <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{activeGroupe?.nom || 'Mon équipe'}</div>
+          <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{activeGroupe?.nom || (perso && ourTeam) || 'Mon équipe'}</div>
         )}
       </div>
 
       <div style={{ padding: '16px 16px 0' }}>
-        {groupes.length === 0 ? (
+        {perso && (!perso.url || edition) ? (
+          <div style={S.carteLien}>
+            <p style={S.lienTitre}>Suis le classement de ton équipe</p>
+            <p style={S.lienTexte}>
+              Sur monclubhouse.ffr.fr, ouvre la page de ton club, puis Compétitions et le championnat de ton équipe. Copie l'adresse de la page et colle-la ici : matchs et classement se mettront à jour tout seuls.
+            </p>
+            <input value={lien} onChange={e => { setLien(e.target.value); setErreurLien(null) }} inputMode="url" autoCapitalize="none" autoCorrect="off"
+              placeholder="https://monclubhouse.ffr.fr/clubs/…" style={S.lienInput} />
+            {erreurLien && <p role="alert" style={S.lienErreur}>{erreurLien}</p>}
+            <button onClick={enregistrerLien} disabled={!lien.trim() || synchro} style={{ ...S.lienBtn, opacity: !lien.trim() || synchro ? 0.5 : 1 }}>
+              {synchro ? 'Récupération du classement…' : 'Enregistrer le lien'}
+            </button>
+            {edition && <button onClick={() => { setEdition(false); setLien(perso.url || ''); setErreurLien(null) }} style={S.lienAnnuler}>Annuler</button>}
+          </div>
+        ) : perso && synchro && matchs.length === 0 && classement.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
+            <p style={{ fontWeight: 700, color: '#374151' }}>Récupération du classement…</p>
+          </div>
+        ) : perso && matchs.length === 0 && classement.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
+            <p style={{ fontWeight: 700, color: '#374151' }}>Aucun match trouvé</p>
+            <p style={{ fontSize: '.85rem' }}>{erreurLien || 'Vérifie que le lien mène bien à la page du championnat de ton équipe.'}</p>
+            <button onClick={() => setEdition(true)} style={S.lienAnnuler}>Changer le lien</button>
+          </div>
+        ) : groupes.length === 0 && !perso ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
             <p style={{ fontWeight: 700, color: '#374151', fontSize: '1rem' }}>Aucune compétition disponible</p>
             <p style={{ fontSize: '.85rem' }}>Ton coach n'a pas encore configuré de lien de compétition.</p>
@@ -355,6 +428,12 @@ export default function CompetitionClient() {
                 {prochains.slice(1).map(m => <MatchCard key={m.id} m={m} />)}
               </div>
             )}
+
+            {perso && (
+              <button onClick={() => setEdition(true)} style={{ ...S.lienAnnuler, display: 'block', margin: '0 auto 16px' }}>
+                Changer le lien Mon Clubhouse
+              </button>
+            )}
           </>
         )}
       </div>
@@ -362,4 +441,14 @@ export default function CompetitionClient() {
       <ClientBottomNav />
     </div>
   )
+}
+
+const S = {
+  carteLien:   { background: '#fff', borderRadius: 16, padding: '18px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: 10 },
+  lienTitre:   { margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1a1a1a' },
+  lienTexte:   { margin: 0, fontSize: '.85rem', color: '#6b7280', lineHeight: 1.5 },
+  lienInput:   { width: '100%', minHeight: 44, padding: '0 12px', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: 14, color: '#1a1a1a', background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' },
+  lienErreur:  { margin: 0, fontSize: '.8rem', fontWeight: 600, color: '#dc2626', lineHeight: 1.4 },
+  lienBtn:     { minHeight: 46, border: 'none', borderRadius: 12, background: '#333333', color: '#e4f816', fontSize: '.9rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  lienAnnuler: { minHeight: 44, border: 'none', background: 'none', color: '#6b7280', fontSize: '.82rem', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' },
 }
