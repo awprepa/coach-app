@@ -209,16 +209,37 @@ export default function Dashboard() {
       {/* Adaptations mobile — aucune règle au-dessus de 820px */}
       <style>{`
         @media (max-width: 1100px){
-          .dash-grille{grid-template-columns:1fr !important;}
-        }
-        @media (max-width: 820px){
-          .dash-haut{grid-template-columns:1fr !important;}
+          .dash-grille, .dash-haut{grid-template-columns:1fr !important;}
           .dash-actions{flex-direction:row !important;align-items:center !important;justify-content:flex-start !important;}
         }
       `}</style>
 
       <div style={S.haut} className="dash-haut">
         <AgendaSemaine jour={jour} setJour={setJour} setEvenements={setEvtsSemaine} />
+        {/* Jour choisi dans le résumé de la semaine */}
+        <div style={{ ...S.card, minWidth: 0 }}>
+          <div style={S.cardHead}>
+            <span style={S.sectionTitle}>{titreJour}</span>
+            {evtsJour.length > 0 && <span style={{ ...S.pill, background: '#f3f4f6', color: '#374151' }}>{evtsJour.length}</span>}
+          </div>
+          <div style={S.listeJour}>
+          {evtsJour.length === 0 ? (
+            <p style={S.empty}>Rien de prévu ce jour-là.</p>
+          ) : evtsJour.map(ev => (
+            <div role="button" tabIndex={0} key={ev.id} onClick={() => navigate(ev.lien)} onKeyDown={e => e.key === 'Enter' && navigate(ev.lien)} style={S.miniRow}>
+              <div style={S.miniIco}>
+                {ev.groupe ? <LogoMini src={ev.logo} couleur={ev.couleur} size={18} /> : <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#374151' }}>{(ev.prenom || '?').charAt(0)}</span>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={S.miniName}>{ev.titre}</p>
+                <p style={S.miniSub}>{ev.qui}{ev.heure ? ` · ${ev.heure}` : ''}</p>
+              </div>
+              {ev.terminee && <span style={{ ...S.pill, background: '#f0fdf4', color: '#15803d' }}>Fait</span>}
+              <span style={S.chevron}>›</span>
+            </div>
+          ))}
+          </div>
+        </div>
         <div style={S.actions} className="dash-actions">
           {totalAlertes > 0 && <span style={S.alertBadge}>{totalAlertes} à traiter</span>}
           <button style={S.btnPrimary} onClick={() => navigate('/nouveau-client')}>+ Nouveau client</button>
@@ -243,29 +264,6 @@ export default function Dashboard() {
           <SuiviClients clients={clientsIndividuels} programmes={programmes} evenements={weekEvents} />
 
           <div style={S.grille3}>
-          {/* Jour choisi dans le résumé de la semaine */}
-          <div style={S.card}>
-            <div style={S.cardHead}>
-              <span style={S.sectionTitle}>{titreJour}</span>
-              {evtsJour.length > 0 && <span style={{ ...S.pill, background: '#f3f4f6', color: '#374151' }}>{evtsJour.length}</span>}
-            </div>
-            {evtsJour.length === 0 ? (
-              <p style={S.empty}>Rien de prévu ce jour-là.</p>
-            ) : evtsJour.map(ev => (
-              <div role="button" tabIndex={0} key={ev.id} onClick={() => navigate(ev.lien)} onKeyDown={e => e.key === 'Enter' && navigate(ev.lien)} style={S.miniRow}>
-                <div style={S.miniIco}>
-                  {ev.groupe ? <LogoMini src={ev.logo} couleur={ev.couleur} size={18} /> : <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#374151' }}>{(ev.prenom || '?').charAt(0)}</span>}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={S.miniName}>{ev.titre}</p>
-                  <p style={S.miniSub}>{ev.qui}{ev.heure ? ` · ${ev.heure}` : ''}</p>
-                </div>
-                {ev.terminee && <span style={{ ...S.pill, background: '#f0fdf4', color: '#15803d' }}>Fait</span>}
-                <span style={S.chevron}>›</span>
-              </div>
-            ))}
-          </div>
-
           {/* Alertes — à traiter en priorité */}
           <div style={S.card}>
             <div style={S.cardHead}>
@@ -325,7 +323,8 @@ export default function Dashboard() {
 const S = {
   page:        { padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   centered:    { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  haut:        { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '1rem', alignItems: 'stretch', marginBottom: '1rem' },
+  haut:        { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 360px) auto', gap: '1rem', alignItems: 'start', marginBottom: '1rem' },
+  listeJour:   { maxHeight: 132, overflowY: 'auto' },
   actions:     { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', gap: '0.6rem', padding: '0.2rem 0' },
   grille:      { display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(0, 1.9fr)', gap: '1rem', alignItems: 'start' },
   grille3:     { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', alignItems: 'start' },

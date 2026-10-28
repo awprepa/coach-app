@@ -59,7 +59,7 @@ export default function SuiviClients({ clients, programmes, evenements }) {
       <div style={S.card}>
         <div style={S.cardHead}>
           <span style={S.sectionTitle}>Clients individuels · suivi de la semaine</span>
-          <button onClick={() => navigate('/clients/gestion')} style={S.miniBtn}>Gérer les clients</button>
+          <button onClick={() => navigate('/clients')} style={S.miniBtn}>Gérer les clients</button>
         </div>
         {lignes.length === 0 ? <p style={S.empty}>Aucun client individuel actif.</p> : (
           <div style={{ overflowX: 'auto' }}>

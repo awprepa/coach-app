@@ -141,14 +141,16 @@ export default function FilNotifications({ notifs, estNonLue, markRead, markAllR
       ].filter(Boolean).join(' · ')
       chips = ids.map((id, k) => {
         const v = moyennes[k]
-        return { cle: id, id, texte: `${nomCourt(clientParId[id]) || 'Joueur'}${v != null ? ` ${v.toFixed(1).replace('.', ',')}` : ''}`, bas: v != null && v <= 2 }
+        // Heure à laquelle le joueur a rempli son wellness (sa notification la plus ancienne du jour)
+        const quand = lot.items.filter(i => i.clientId === id).map(i => i.n.created_at).sort()[0]
+        return { cle: id, id, texte: `${nomCourt(clientParId[id]) || 'Joueur'}${v != null ? ` ${v.toFixed(1).replace('.', ',')}` : ''}`, heure: heure(quand), bas: v != null && v <= 2 }
       })
     } else {
       const notes = lot.items.filter(i => i.n.type === 'rpe')
       const absents = lot.items.filter(i => i.n.type === 'rpe_absence')
       titre = `RPE · ${nomEquipe}`
       detail = [`${notes.length} note${notes.length > 1 ? 's' : ''}`, absents.length ? `${absents.length} absent${absents.length > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')
-      chips = lot.items.map(i => ({ cle: i.n.id, id: i.clientId, lien: i.n.lien, texte: `${joueurDe(i)}${i.n.type === 'rpe_absence' ? ' · absent' : ''}`, bas: false }))
+      chips = lot.items.map(i => ({ cle: i.n.id, id: i.clientId, lien: i.n.lien, texte: `${joueurDe(i)}${i.n.type === 'rpe_absence' ? ' · absent' : ''}`, heure: heure(i.n.created_at), bas: false }))
     }
     const premiere = lot.items[lot.items.length - 1].n.created_at
     const montres = ouvert ? chips : chips.slice(0, NOMS_VISIBLES)
@@ -165,7 +167,7 @@ export default function FilNotifications({ notifs, estNonLue, markRead, markAllR
           <div style={S.noms}>
             {montres.map(ch => (
               <button key={ch.cle} onClick={() => onOuvrir(ch.id ? `/client/${ch.id}` : ch.lien)}
-                style={{ ...S.nom, ...(ch.bas ? S.nomBas : null) }}>{ch.texte}</button>
+                style={{ ...S.nom, ...(ch.bas ? S.nomBas : null) }}>{ch.texte}<span style={S.nomHeure}>{ch.heure}</span></button>
             ))}
             {!ouvert && chips.length > NOMS_VISIBLES && (
               <button onClick={() => basculer(lot)} style={S.nom}>+ {chips.length - NOMS_VISIBLES}</button>
@@ -235,6 +237,7 @@ const S = {
   lotBtn: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' },
   noms: { display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' },
   nom: { fontSize: '0.72rem', fontWeight: 700, color: '#374151', background: '#f3f4f6', border: 'none', borderRadius: 999, padding: '0.15rem 0.55rem', cursor: 'pointer', fontFamily: 'inherit' },
+  nomHeure: { fontWeight: 600, color: '#6b7280', marginLeft: '0.35rem' },
   nomBas: { background: '#fef2f2', color: '#b91c1c' },
   pied: { display: 'flex', justifyContent: 'center', padding: '0.6rem 1rem 0.4rem', borderTop: '1px solid #f6f7f8' },
   vide: { color: '#6b7280', fontSize: '0.82rem', padding: '0.5rem 1rem 0.9rem', margin: 0 },
