@@ -7,8 +7,9 @@ import Icon from '../../components/Icon'
 import T from '../../theme/tokens'
 import EnTeteClient from '../../components/EnTeteClient'
 
-// Hauteur de la barre d'onglets (ClientBottomNav) : boutons 56 px + zone iPhone
-const NAV_H = 'calc(56px + max(env(safe-area-inset-bottom), 12px))'
+// Place de la barre d'onglets flottante (ClientBottomNav) : 20 px du bas
+// + 68 px de barre + 8 px d'écart avec la zone de saisie
+const NAV_H = 96
 
 // Suit la zone réellement visible quand le clavier est ouvert (visualViewport),
 // pour garder la barre de saisie juste au-dessus du clavier.
