@@ -42,6 +42,17 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
     setNouveaux(false)
   }, [])
 
+  // Quand la zone de la conversation change de hauteur (clavier qui s'ouvre ou
+  // se ferme), on reste calé sur le dernier message si on y était
+  const colleEnBas = useRef(true)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const obs = new ResizeObserver(() => { if (colleEnBas.current) el.scrollTop = el.scrollHeight })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
   // Positionnement : ouverture directe en bas, sans défilement visible ;
   // ensuite on ne descend tout seul que si on est déjà en bas (ou si c'est mon message).
   useLayoutEffect(() => {
@@ -107,7 +118,7 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
   let jourPrecedent = null
   return (
     <div style={S.wrap}>
-      <div ref={scrollRef} style={S.scroll} onScroll={() => { if (nouveaux && auBas()) setNouveaux(false) }}>
+      <div ref={scrollRef} style={S.scroll} onScroll={() => { colleEnBas.current = auBas(); if (nouveaux && colleEnBas.current) setNouveaux(false) }}>
         {loading ? (
           <p style={S.info}>Chargement…</p>
         ) : messages.length === 0 ? (
@@ -164,7 +175,7 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
           value={texte}
           onChange={e => { setTexte(e.target.value); autosize(e.target) }}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer() } }}
-          onFocus={() => onFocusChange?.(true)}
+          onFocus={() => { colleEnBas.current = true; allerEnBas(); onFocusChange?.(true) }}
           onBlur={() => onFocusChange?.(false)}
           placeholder="Écris un message…"
           aria-label="Message"
@@ -175,6 +186,7 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
         />
         <button
           onPointerDown={e => e.preventDefault()}
+          onMouseDown={e => e.preventDefault()}
           onClick={envoyer}
           disabled={!texte.trim()}
           aria-label="Envoyer"

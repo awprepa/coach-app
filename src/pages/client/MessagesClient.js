@@ -72,13 +72,36 @@ export default function MessagesClient() {
     if (focus) setSaisie(true)
     else blurTimer.current = setTimeout(() => setSaisie(false), 100)
   }
-  const cadre = saisie
-    ? { top: vp.offsetTop, height: vp.height }
-    : { top: 0, bottom: NAV_H }
+  // Dès qu'on touche le champ (avant que le clavier ne sorte), la conversation
+  // remonte à la hauteur du clavier attendu : iOS n'a plus besoin de faire
+  // glisser tout l'écran pour dégager le champ (le saut « descend puis remonte »).
+  function onToucher(e) {
+    if (e.target.tagName !== 'TEXTAREA' || saisie) return
+    setSaisie(true)
+    clearTimeout(blurTimer.current)
+    blurTimer.current = setTimeout(() => {
+      if (document.activeElement?.tagName !== 'TEXTAREA') setSaisie(false)
+    }, 800)
+  }
+  // Hauteur du clavier : mesurée à chaque ouverture et gardée pour la fois suivante
+  const clavierOuvert = vp.height < window.innerHeight - 120
+  useEffect(() => {
+    if (saisie && clavierOuvert) {
+      try { localStorage.setItem('aw_clavier_h', String(Math.round(window.innerHeight - vp.height))) } catch (_) {}
+    }
+  }, [saisie, clavierOuvert, vp.height])
+  const clavierAttendu = (() => {
+    try { return parseInt(localStorage.getItem('aw_clavier_h'), 10) || 300 } catch (_) { return 300 }
+  })()
+  const cadre = !saisie
+    ? { top: 0, bottom: NAV_H }
+    : clavierOuvert
+      ? { top: vp.offsetTop, height: vp.height }
+      : { top: 0, height: window.innerHeight - clavierAttendu }
 
   return (
     <>
-      <div style={{ ...S.page, ...cadre }}>
+      <div style={{ ...S.page, ...cadre }} onTouchStart={onToucher} onPointerDown={onToucher}>
         <EnTeteClient titre="Arthur" sousTitre="Ton coach" actions={<img loading="lazy" src="/coach-avatar.png" alt="" style={S.avatar} />} />
 
         {loadError ? (

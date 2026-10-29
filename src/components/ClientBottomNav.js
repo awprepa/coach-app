@@ -106,7 +106,10 @@ export function BarreClient() {
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
   useEffect(() => {
-    const show = () => setTimeout(() => setKbOpen(false), 80)
+    // Réaffichée seulement si plus aucun champ n'a le focus (après un envoi, le
+    // champ de message reprend le focus aussitôt : la barre doit rester cachée)
+    const estChamp = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+    const show = () => setTimeout(() => { if (!estChamp(document.activeElement)) setKbOpen(false) }, 80)
     const hide = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
         setKbOpen(true)
