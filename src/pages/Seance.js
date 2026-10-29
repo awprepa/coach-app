@@ -1091,8 +1091,10 @@ export default function Seance() {
         </div>
       </div>
 
+      {/* Échauffement, blocs cardio et cardio côte à côte : le haut de la page reste compact */}
+      <div style={styles.hautSeance}>
       {/* ── Échauffement ── */}
-      <div style={{ ...styles.card, marginBottom: '1rem' }}>
+      <div style={{ ...styles.card, minWidth: 0, flex: '1.6 1 520px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
           <p style={styles.sectionTitle}>Échauffement</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1326,7 +1328,7 @@ export default function Seance() {
       </div>
 
       {/* ── Blocs cardio (texte libre) ── */}
-      <div style={{ ...styles.card, marginBottom: '1rem' }}>
+      <div style={{ ...styles.card, minWidth: 0, flex: '1 1 320px' }}>
         <p style={styles.sectionTitle}>Blocs cardio</p>
         <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.75rem' }}>
           Pour une séance 100 % cardio : ajoute un ou plusieurs blocs en texte libre.
@@ -1366,7 +1368,7 @@ export default function Seance() {
       </div>
 
       {/* ── Cardio ── */}
-      <div style={{ ...styles.card, marginBottom: '1rem' }}>
+      <div style={{ ...styles.card, minWidth: 0, flex: '1 1 320px' }}>
         <p style={styles.sectionTitle}>Cardio</p>
         {[
           { position: 'debut', label: 'Avant séance', cardioAll: cardioDebut, sem: cardioDebutSem, setSem: setCardioDebutSem },
@@ -1477,6 +1479,7 @@ export default function Seance() {
             </div>
           )
         })}
+      </div>
       </div>
 
       {/* RPE + graphique */}
@@ -1676,9 +1679,20 @@ export default function Seance() {
               {exercices.map((ex, idx) => {
                 const lettre = lettreBloc(ex.code)
                 const debutBloc = idx === 0 || lettre !== lettreBloc(exercices[idx - 1].code)
+                const finBloc = idx === exercices.length - 1 || lettre !== lettreBloc(exercices[idx + 1].code)
+                // Barre foncée continue sur toutes les lignes du bloc, lettre en haut
                 const caseBloc = (
-                  <td style={{ ...styles.td, padding: '0.5rem 0.25rem 0.5rem 0.75rem' }}>
-                    {lettre && debutBloc && <span style={styles.blocTag}>{lettre}</span>}
+                  <td style={{ ...styles.td, position: 'relative', width: 52, padding: 0 }}>
+                    {lettre && (
+                      <span style={{
+                        ...styles.blocBarre,
+                        top: debutBloc ? 8 : 0, bottom: finBloc ? 8 : -1,
+                        borderTopLeftRadius: debutBloc ? 8 : 0, borderTopRightRadius: debutBloc ? 8 : 0,
+                        borderBottomLeftRadius: finBloc ? 8 : 0, borderBottomRightRadius: finBloc ? 8 : 0,
+                      }}>
+                        {debutBloc && lettre}
+                      </span>
+                    )}
                   </td>
                 )
                 return (
@@ -2365,7 +2379,9 @@ const styles = {
   tr: { borderBottom: '1px solid #f3f4f6' },
   td: { padding: '0.6rem 0.75rem', color: '#374151' },
   tdCenter: { padding: '0.6rem 0.5rem', textAlign: 'center', color: '#374151' },
-  blocTag: { display: 'inline-flex', width: 28, height: 28, borderRadius: 8, background: '#333333', color: '#e4f816', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem' },
+  // Échauffement plus large que les deux cartes cardio ; passent à la ligne sur petit écran
+  hautSeance: { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-start', marginBottom: '1rem' },
+  blocBarre: { position: 'absolute', left: 12, width: 28, background: '#333333', color: '#e4f816', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 6, boxSizing: 'border-box', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1 },
   actionBtn: { width: 32, height: 32, background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   menu: { position: 'fixed', zIndex: 500, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: 260, padding: 4, display: 'flex', flexDirection: 'column' },
   menuItem: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 8, padding: '0.6rem 0.75rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' },

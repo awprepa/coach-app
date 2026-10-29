@@ -8,6 +8,13 @@ import { findMuscles, MUSCLES } from '../data/muscleData'
 
 const SANS_CAT = 'Sans catégorie'
 
+// Muscles rangés par zone du corps
+const ZONES = [
+  { titre: 'Haut du corps', muscles: ['pectoraux', 'dorsaux', 'epaules', 'trapezes', 'biceps', 'triceps', 'avant_bras'] },
+  { titre: 'Tronc', muscles: ['abdominaux', 'obliques', 'lombaires'] },
+  { titre: 'Bas du corps', muscles: ['quadriceps', 'ischio_jambiers', 'fessiers', 'mollets'] },
+]
+
 // Muscles d'un exercice : JSON { p, s } rangé dans description par la page
 // Bibliothèque ; à défaut, déduits du nom.
 function musclesDe(ex) {
@@ -81,18 +88,24 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
                   style={{ ...S.segBtn, ...(avecSecondaires === v ? S.segOn : {}) }}>{l}</button>
               ))}
             </div>
-            <div style={S.puces}>
-              {Object.entries(MUSCLES).map(([k, { label }]) => {
-                const actif = muscles.includes(k)
-                const n = base.filter(ex => touche(ex, k) && muscles.every(m => m === k || touche(ex, m))).length
-                return (
-                  <button key={k} onClick={() => bascule(muscles, setMuscles, k)} aria-pressed={actif}
-                    style={{ ...S.puce, ...(actif ? S.puceOn : {}) }}>
-                    {label}<span style={{ ...S.nb, color: actif ? 'rgba(228,248,22,0.6)' : '#9ca3af' }}>{n}</span>
-                  </button>
-                )
-              })}
-            </div>
+            {ZONES.map(z => (
+              <div key={z.titre} style={{ marginBottom: 12 }}>
+                <p style={S.zone}>{z.titre}</p>
+                <div style={S.grilleMuscles}>
+                  {z.muscles.filter(k => MUSCLES[k]).map(k => {
+                    const actif = muscles.includes(k)
+                    const n = base.filter(ex => touche(ex, k) && muscles.every(m => m === k || touche(ex, m))).length
+                    return (
+                      <button key={k} onClick={() => bascule(muscles, setMuscles, k)} aria-pressed={actif}
+                        style={{ ...S.puce, ...S.puceMuscle, ...(actif ? S.puceOn : {}) }}>
+                        <span>{MUSCLES[k].label}</span>
+                        <span style={{ ...S.nb, color: actif ? 'rgba(228,248,22,0.6)' : '#9ca3af' }}>{n}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
           {categories.length > 1 && (
             <div>
@@ -154,7 +167,7 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
 
 const S = {
   fond:      { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  fenetre:   { background: 'white', borderRadius: 16, width: '100%', maxWidth: 1100, height: 'min(720px, calc(100vh - 48px))', display: 'grid', gridTemplateColumns: '300px 1fr', gridTemplateRows: 'auto minmax(0, 1fr)', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' },
+  fenetre:   { background: 'white', borderRadius: 16, width: '100%', maxWidth: 1100, height: 'min(720px, calc(100vh - 48px))', display: 'grid', gridTemplateColumns: '340px 1fr', gridTemplateRows: 'auto minmax(0, 1fr)', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' },
   tete:      { gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 16, padding: '16px 16px 16px 24px', borderBottom: '1px solid #e5e7eb' },
   titre:     { margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#333333', flex: 1 },
   recherche: { display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0 12px', minHeight: 40, width: 360, maxWidth: '45%' },
@@ -169,6 +182,9 @@ const S = {
   segOn:     { background: 'white', color: '#333333', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' },
   puces:     { display: 'flex', flexWrap: 'wrap', gap: 8 },
   puce:      { border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 999, minHeight: 32, padding: '0 12px', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 700, color: '#374151', cursor: 'pointer' },
+  zone:      { margin: '0 0 6px', fontSize: '0.75rem', fontWeight: 700, color: '#374151' },
+  grilleMuscles: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 },
+  puceMuscle:{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, width: '100%', padding: '0 10px', textAlign: 'left' },
   puceOn:    { background: '#333333', borderColor: '#333333', color: '#e4f816' },
   nb:        { fontWeight: 600, marginLeft: 4, fontVariantNumeric: 'tabular-nums' },
   resultats: { display: 'flex', flexDirection: 'column', minHeight: 0 },
