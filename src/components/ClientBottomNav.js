@@ -218,14 +218,15 @@ export function BarreClient() {
         @keyframes aw-barre-pop { 0% { transform: scale(0.86) } 55% { transform: scale(1.12) } 100% { transform: scale(1) } }
         @media (prefers-reduced-motion: reduce) { .aw-barre * { transition: none !important; animation: none !important } }
       `}</style>
-      <div style={{ display: 'flex', position: 'relative', padding: '2px 4px' }}>
-        {/* Pastille jaune de l'onglet actif : glisse d'un onglet à l'autre */}
+      <div style={{ display: 'flex', position: 'relative', padding: 4 }}>
+        {/* Pastille jaune qui entoure toute la case de l'onglet actif (icône + libellé) : glisse d'un onglet à l'autre */}
         <div aria-hidden style={{
-          position: 'absolute', top: 10, width: 52, height: 30,
-          left: `calc(4px + (100% - 8px) * ${(Math.max(actif, 0) + 0.5) / n} - 26px)`,
+          position: 'absolute', top: 4, bottom: 4,
+          width: `calc((100% - 8px) / ${n})`,
+          left: `calc(4px + (100% - 8px) * ${Math.max(actif, 0) / n})`,
           borderRadius: T.radius.pill, background: 'var(--accent)',
           opacity: actif < 0 ? 0 : 1,
-          transition: 'left 0.32s cubic-bezier(.3, 1.25, .5, 1), opacity 0.2s',
+          transition: 'left 0.34s cubic-bezier(.3, 1.2, .5, 1), opacity 0.2s',
         }} />
         {tabs.map(({ label, Icon, active, to, badge }, i) => (
           <button key={label} onClick={() => { if (!active) navigate(to) }} aria-current={active ? 'page' : undefined}
@@ -235,17 +236,16 @@ export function BarreClient() {
             style={{
               flex: 1, minWidth: 0, minHeight: 56, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              gap: 4, padding: '8px 0 6px',
+              gap: 2, padding: '6px 0 5px', position: 'relative',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: active ? T.color.ink : T.color.muted,
+              color: active ? 'var(--accent-text)' : T.color.muted,
               WebkitTapHighlightColor: 'transparent',
               transform: appuye === i ? 'scale(0.9)' : 'scale(1)',
               transition: 'transform 0.18s cubic-bezier(.3, 1.4, .5, 1), color 0.2s',
             }}>
             <div key={active ? 'on' : 'off'} style={{
-              width: 48, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 48, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
               position: 'relative',
-              color: active ? 'var(--accent-text)' : 'inherit',
               animation: active ? 'aw-barre-pop 0.38s ease-out' : undefined,
             }}>
               <Icon active={active} />
@@ -260,7 +260,7 @@ export function BarreClient() {
               )}
             </div>
             <span style={{
-              fontSize: T.size.xs, fontWeight: active ? 700 : 500,
+              fontSize: T.size.xs, fontWeight: 500,
               whiteSpace: 'nowrap',
               overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
             }}>{label}</span>
