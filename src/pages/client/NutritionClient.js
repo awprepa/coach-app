@@ -349,8 +349,8 @@ export default function NutritionClient() {
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
       <EnTeteClient titre="Nutrition" actions={<>
-        <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...boutonEnTete, width: 'auto', padding: '0 13px 0 11px', gap: 6, fontSize: 13, fontWeight: 700 }}>
-          <IconeCodeBarre taille={16} />
+        <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...boutonEnTete, width: 'auto', padding: '0 13px 0 10px', gap: 7, fontSize: 13, fontWeight: 700 }}>
+          <IconeCodeBarre taille={22} />
           Mes scans
         </button>
         <button onClick={() => navigate('/client/nutrition/profil')} style={boutonEnTete} aria-label="Mes besoins">
@@ -521,7 +521,7 @@ export default function NutritionClient() {
       {/* Barre scanner fixe */}
       <div style={S.scanCta}>
         <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanCtaBtn}>
-          <IconeCodeBarre taille={20} />
+          <IconeCodeBarre taille={26} />
           Scanner un article
         </button>
       </div>
@@ -574,14 +574,15 @@ export default function NutritionClient() {
   )
 }
 
-// Code-barres dans un cadre de visée : barres verticales d'épaisseurs variées
+// Code-barres : barres pleines d'épaisseurs variées, coins de visée fins autour
 function IconeCodeBarre({ taille }) {
   return (
-    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-      <g strokeLinecap="butt">
-        <path d="M7 8v8" /><path d="M10 8v8" strokeWidth="1.2" /><path d="M12.5 8v8" strokeWidth="2.4" />
-        <path d="M15 8v8" strokeWidth="1.2" /><path d="M17 8v8" />
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 6.5V4a2 2 0 0 1 2-2h2.5M17.5 2H20a2 2 0 0 1 2 2v2.5M22 17.5V20a2 2 0 0 1-2 2h-2.5M6.5 22H4a2 2 0 0 1-2-2v-2.5" />
+      <g fill="currentColor" stroke="none">
+        <rect x="5.5" y="6" width="1.6" height="12" /><rect x="8.2" y="6" width="0.9" height="12" />
+        <rect x="10.2" y="6" width="2.2" height="12" /><rect x="13.4" y="6" width="0.9" height="12" />
+        <rect x="15.3" y="6" width="1.6" height="12" /><rect x="17.8" y="6" width="0.9" height="12" />
       </g>
     </svg>
   )
