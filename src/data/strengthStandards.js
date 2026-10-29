@@ -28,21 +28,27 @@ export function getWorldRecord(exerciseKey, sexe) {
 // Platine recalculé comme moyenne géométrique entre Or et Diamant (et non plus
 // arithmétique entre Avancé/Élite d'origine) : ça évite l'écart disproportionné
 // qui se formait entre Or et Platine sur certains exercices (ex: bench).
+// Barèmes hommes revus par Arthur le 29/10/2026 (développé couché, squat,
+// soulevé de terre, front squat, rowing, dips) : définis en kg pour 76,7 kg de
+// poids de corps puis ramenés en ratio, pour s'adapter au poids de chaque joueur.
+// Rowing : repères StrengthLevel (intermédiaire ≈ 1 × PDC, avancé ≈ 1,5,
+// élite ≈ 1,75), avec des paliers réguliers de 20 kg à ce poids de corps.
+// Front squat : environ 80 % du squat, comme l'écart habituel entre les deux.
 const STANDARDS = {
   developpe_couche: {
-    homme: [0.5, 0.75, 1.0, 1.3, 1.7, 2.2],
+    homme: [0.782, 1.043, 1.304, 1.565, 1.825, 2.347],
     femme: [0.25, 0.5, 0.75, 0.865, 1.0, 1.25],
   },
   squat: {
-    homme: [0.75, 1.0, 1.5, 1.73, 2.0, 2.5],
+    homme: [0.782, 1.043, 1.434, 1.695, 1.956, 2.477],
     femme: [0.5, 0.75, 1.25, 1.48, 1.75, 2.0],
   },
   souleve_de_terre: {
-    homme: [1.0, 1.25, 1.75, 1.99, 2.25, 2.75],
+    homme: [1.043, 1.304, 1.825, 2.216, 2.608, 3.259],
     femme: [0.75, 1.0, 1.5, 1.73, 2.0, 2.25],
   },
   front_squat: {
-    homme: [0.65, 0.85, 1.25, 1.46, 1.7, 2.1],
+    homme: [0.652, 0.913, 1.173, 1.434, 1.565, 2.086],
     femme: [0.4, 0.6, 1.05, 1.26, 1.5, 1.7],
   },
   developpe_militaire: {
@@ -50,7 +56,7 @@ const STANDARDS = {
     femme: [0.2, 0.3, 0.45, 0.52, 0.6, 0.75],
   },
   rowing: {
-    homme: [0.5, 0.75, 1.0, 1.16, 1.35, 1.6],
+    homme: [0.522, 0.782, 1.043, 1.304, 1.565, 1.825],
     femme: [0.25, 0.4, 0.6, 0.715, 0.85, 1.05],
   },
   hip_thrust: {
@@ -63,7 +69,7 @@ const STANDARDS = {
   // avec des seuils bien plus bas (0 = tractions/dips au poids de corps, sans rien
   // ajouté = encore "Fer").
   dips: {
-    homme: [0.15, 0.35, 0.6, 0.75, 0.9, 1.15],
+    homme: [0.13, 0.391, 0.652, 0.782, 1.043, 1.304],
     femme: [0.05, 0.15, 0.3, 0.4, 0.5, 0.65],
   },
   tractions_lestees: {
@@ -98,13 +104,11 @@ export function matchBenchmarkExercise(nom) {
   return found ? found.key : null
 }
 
-// Arrondit un seuil à un chiffre "rond" : à la dizaine près en dessous de 100 kg,
-// à la cinquantaine près au-delà — pour que les paliers affichés (et utilisés
-// pour le calcul du rang, mêmes valeurs) soient des chiffres lisibles (100,
-// 150, 200 kg...) plutôt que 94.5, 131, 169.
+// Arrondit un seuil à la dizaine près — pour que les paliers affichés (et
+// utilisés pour le calcul du rang, mêmes valeurs) soient des chiffres lisibles
+// (120, 130, 170 kg...) plutôt que 94.5, 131, 169.
 function roundToNiceKg(kg) {
-  const base = kg >= 100 ? 50 : 10
-  return Math.max(base, Math.round(kg / base) * base)
+  return Math.max(10, Math.round(kg / 10) * 10)
 }
 
 // Seuils en kg (arrondis), pour un poids de corps donné. Garantit des seuils
@@ -118,8 +122,7 @@ function roundedThresholdsKg(exerciseKey, bodyweightKg, sexe) {
   let prev = 0
   for (const ratio of table) {
     let kg = roundToNiceKg(ratio * bodyweightKg)
-    const base = kg >= 100 ? 50 : 10
-    while (kg <= prev) kg += base
+    while (kg <= prev) kg += 10
     result.push(kg)
     prev = kg
   }
