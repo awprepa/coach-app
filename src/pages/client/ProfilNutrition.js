@@ -310,7 +310,7 @@ export default function ProfilNutrition() {
                     <button key={s.key} onClick={() => setSexe(s.key)} style={{
                       flex: 1, padding: '12px', borderRadius: 12, border: '2px solid',
                       borderColor: sexe === s.key ? '#1a1a1a' : '#e5e7eb',
-                      background:  sexe === s.key ? '#1a1a1a' : '#f9fafb',
+                      background:  sexe === s.key ? '#333333' : '#f9fafb',
                       color:       sexe === s.key ? 'var(--accent)' : '#374151',
                       fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', lineHeight: 1,
                     }}>{s.symbol} {s.label}</button>
@@ -598,7 +598,7 @@ export default function ProfilNutrition() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {[['all','Tous'],['good','Bons'],['bad','À éviter'],['week','7 jours']].map(([k, lbl]) => (
                     <button key={k} onClick={() => setScanFilter(k)}
-                      style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: scanFilter === k ? '#1a1a1a' : '#e5e7eb', background: scanFilter === k ? '#1a1a1a' : 'white', color: scanFilter === k ? 'var(--accent)' : '#6b7280' }}>
+                      style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: scanFilter === k ? '#333333' : '#e5e7eb', background: scanFilter === k ? '#333333' : 'white', color: scanFilter === k ? 'var(--accent)' : '#6b7280' }}>
                       {lbl}
                     </button>
                   ))}
@@ -699,14 +699,14 @@ const S = {
   wizTitle: { fontSize: '1.4rem', fontWeight: 900, color: '#1a1a1a', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' },
   wizSub:   { fontSize: '0.82rem', color: '#6b7280', margin: '6px 0 0', lineHeight: 1.5 },
   bigCard: { display: 'flex', alignItems: 'center', gap: 14, background: 'white', borderRadius: 16, padding: '16px', border: '2px solid #f3f4f6', cursor: 'pointer', textAlign: 'left', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'border-color 0.15s, background 0.15s', width: '100%' },
-  bigCardActive: { background: '#1a1a1a', borderColor: '#1a1a1a', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' },
-  nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
+  bigCardActive: { background: '#333333', borderColor: '#333333', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' },
+  nextBtn: { width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#333333', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '-0.01em', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' },
   ghostBtn: { width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', marginTop: -6 },
   resultsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
   goalsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
   recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
+  ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#333333', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
   tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6' },
   tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
   tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid var(--accent)' },

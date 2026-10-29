@@ -506,7 +506,7 @@ export default function NutritionPlanClient() {
             dans ton journal.
           </p>
           <button onClick={() => navigate('/client/nutrition')}
-            style={{ marginTop: '1.1rem', width: '100%', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '0.85rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ marginTop: '1.1rem', width: '100%', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '0.85rem', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
             Aller à mon journal
           </button>
         </div>
@@ -862,7 +862,7 @@ const S = {
     zIndex: 70, pointerEvents: 'none',
   },
   scanCtaBtn: {
-    width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: '#e4f816',
+    width: '100%', padding: '0.9rem 1.25rem', background: '#333333', color: '#e4f816',
     border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
     boxShadow: '0 4px 20px rgba(0,0,0,0.22)', pointerEvents: 'all',

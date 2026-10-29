@@ -32,6 +32,71 @@ const MACROS = [
   { k: 'carbs_g', l: 'Glucides',  c: '#f59e0b' },
   { k: 'fat_g',   l: 'Lipides',   c: '#8b5cf6' },
 ]
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+
+// Calendrier du mois : choisir un jour à afficher dans le journal. Un point
+// sous les jours où quelque chose a été noté (aliment ajouté ou plat coché).
+function Calendrier({ clientId, jour, onChoisir, onFermer }) {
+  const [mois, setMois] = useState(() => new Date(jour.getFullYear(), jour.getMonth(), 1))
+  const [notes, setNotes] = useState(new Set())
+  const debut = toISO(mois)
+  const fin = toISO(new Date(mois.getFullYear(), mois.getMonth() + 1, 0))
+  useEffect(() => {
+    let annule = false
+    Promise.all([
+      supabase.from('nutrition_meals').select('date').eq('client_id', clientId).gte('date', debut).lte('date', fin),
+      supabase.from('nutrition_plan_logs').select('date').eq('client_id', clientId).eq('statut', 'fait').gte('date', debut).lte('date', fin),
+    ]).then(([a, b]) => {
+      if (!annule) setNotes(new Set([...(a.data || []), ...(b.data || [])].map(r => r.date)))
+    })
+    return () => { annule = true }
+  }, [clientId, debut, fin])
+
+  const auj = toISO(new Date())
+  const choisi = toISO(jour)
+  const nbJours = new Date(mois.getFullYear(), mois.getMonth() + 1, 0).getDate()
+  const decalage = (mois.getDay() + 6) % 7 // lundi en premier
+  const cases = [...Array(decalage).fill(null), ...Array.from({ length: nbJours }, (_, i) => new Date(mois.getFullYear(), mois.getMonth(), i + 1))]
+  const moisSuivantFutur = new Date(mois.getFullYear(), mois.getMonth() + 1, 1) > new Date()
+  const changerMois = n => setMois(m => new Date(m.getFullYear(), m.getMonth() + n, 1))
+
+  return (
+    <div style={S.overlay} onClick={onFermer}>
+      <div style={S.sheet} onClick={e => e.stopPropagation()} role="dialog" aria-label="Choisir un jour">
+        <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 10px' }} />
+        <div style={S.calTete}>
+          <button onClick={() => changerMois(-1)} style={S.calFleche} aria-label="Mois précédent">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M15 5l-7 7 7 7" /></svg>
+          </button>
+          <span style={S.calMois}>{MOIS[mois.getMonth()]} {mois.getFullYear()}</span>
+          <button onClick={() => changerMois(1)} disabled={moisSuivantFutur} style={{ ...S.calFleche, opacity: moisSuivantFutur ? 0.25 : 1 }} aria-label="Mois suivant">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+        <div style={S.calGrille}>
+          {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((l, i) => <span key={i} style={S.calJourSem}>{l}</span>)}
+          {cases.map((d, i) => {
+            if (!d) return <span key={i} />
+            const iso = toISO(d)
+            const futur = iso > auj
+            const estChoisi = iso === choisi
+            return (
+              <button key={i} disabled={futur} onClick={() => onChoisir(d)}
+                aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                aria-current={estChoisi ? 'date' : undefined}
+                style={{ ...S.calCase, ...(iso === auj ? S.calAuj : {}), ...(estChoisi ? S.calChoisi : {}), opacity: futur ? 0.3 : 1, cursor: futur ? 'default' : 'pointer' }}>
+                {d.getDate()}
+                <span style={{ ...S.calPoint, background: notes.has(iso) ? (estChoisi ? 'var(--accent)' : '#333333') : 'transparent' }} />
+              </button>
+            )
+          })}
+        </div>
+        <button onClick={() => onChoisir(new Date())} style={S.calAujBtn}>Revenir à aujourd'hui</button>
+      </div>
+    </div>
+  )
+}
+
 const toISO = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const fmt = n => Math.round(n || 0).toLocaleString('fr-FR')
 
@@ -52,6 +117,7 @@ export default function NutritionClient() {
   const [logs, setLogs]       = useState([])
   const [coche, setCoche]     = useState(null)   // id du repas en cours d'envoi
   const [detailPlat, setDetailPlat] = useState(null) // repas prescrit dont on affiche le détail
+  const [calendrier, setCalendrier] = useState(false)
   const [aRetirer, setARetirer] = useState(null)     // aliment dont la suppression attend confirmation
   const [message, setMessage] = useState(null)       // petit message en bas de l'écran
   const minuteurMsg = useRef(null)
@@ -266,7 +332,12 @@ export default function NutritionClient() {
           <button onClick={() => decale(-1)} style={S.navBtn} aria-label="Jour précédent">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M15 5l-7 7 7 7" /></svg>
           </button>
-          <span style={S.dateLabel}>{labelJour}</span>
+          <button onClick={() => setCalendrier(true)} style={S.dateLabel} aria-label={`${labelJour}, ouvrir le calendrier`}>
+            {labelJour}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+              <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" />
+            </svg>
+          </button>
           <button onClick={() => decale(1)} disabled={estAujourdhui}
             style={{ ...S.navBtn, opacity: estAujourdhui ? 0.25 : 1 }} aria-label="Jour suivant">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M9 5l7 7-7 7" /></svg>
@@ -380,7 +451,7 @@ export default function NutritionClient() {
                 )) : (!prescrits.length && <p style={S.empty}>Rien pour l'instant</p>)}
                 <button onClick={() => navigate(`/client/nutrition/aliment?repas=${type}&date=${iso}`)} style={S.add}>
                   <span style={S.addIco}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                   </span>
                   Ajouter un aliment
                 </button>
@@ -429,6 +500,11 @@ export default function NutritionClient() {
 
       {message && <div role="status" style={S.message}>{message}</div>}
 
+      {calendrier && client && (
+        <Calendrier clientId={client.id} jour={jour} onFermer={() => setCalendrier(false)}
+          onChoisir={d => { setJour(d); setCalendrier(false) }} />
+      )}
+
       {/* Détail d'un plat prescrit — quantités par ingrédient */}
       {detailPlat && (
         <div style={S.overlay} onClick={() => setDetailPlat(null)}>
@@ -453,7 +529,7 @@ export default function NutritionClient() {
               <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Pas de détail par ingrédient pour ce plat.</p>
             )}
             <button onClick={() => setDetailPlat(null)}
-              style={{ marginTop: 16, width: '100%', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ marginTop: 16, width: '100%', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
               Fermer
             </button>
           </div>
@@ -474,7 +550,7 @@ const S = {
   headerTitle:{ color: 'white', fontWeight: 800, fontSize: '1.02rem' },
   icoBtn:     { width: 34, height: 34, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.12)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 },
   dateBar:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 1 },
-  dateLabel:  { color: 'white', fontSize: '0.82rem', fontWeight: 700, textTransform: 'capitalize', minWidth: 130, textAlign: 'center' },
+  dateLabel:  { color: 'white', fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize', minWidth: 150, minHeight: 36, padding: '0 14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' },
   navBtn:     { background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', padding: 0, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   body:       { padding: '14px' },
   card:       { background: 'white', borderRadius: 16, padding: 15, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 12 },
@@ -486,7 +562,7 @@ const S = {
   macVal:     { fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
   bar:        { height: 6, background: '#eef1f4', borderRadius: 99, overflow: 'hidden', marginTop: 4 },
   hintGoal:   { margin: '10px 0 0', padding: '8px 0', minHeight: 44, width: '100%', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', borderTop: '1px solid #eef0f3', fontSize: '0.8rem', color: '#374151', fontWeight: 700, lineHeight: 1.45, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' },
-  planBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px 14px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', marginBottom: 12, fontFamily: 'inherit' },
+  planBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px 14px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', marginBottom: 12, fontFamily: 'inherit' },
   secHead:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 2px 7px' },
   secTitle:   { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.09em', textTransform: 'uppercase', margin: 0 },
   secKcal:    { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
@@ -501,7 +577,7 @@ const S = {
   delConfirm: { minHeight: 36, padding: '0 12px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' },
   empty:      { padding: '15px 14px', color: '#6b7280', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
   add:        { width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', borderTop: '1px dashed #e2e6ea', padding: 11, fontSize: '0.8rem', fontWeight: 800, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
-  addIco:     { width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  addIco:     { width: 22, height: 22, borderRadius: '50%', background: '#eef0f3', color: '#333333', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   prescrit:   { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'none', borderBottom: '1px solid #eef0f3', fontFamily: 'inherit' },
   checkZone:  { width: 44, height: 44, margin: '-10px -6px -10px -10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', padding: 0, flexShrink: 0 },
   check:      { width: 24, height: 24, borderRadius: 7, border: '2px solid #d1d5db', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'white' },
@@ -511,9 +587,19 @@ const S = {
   // 96px = hauteur de la barre de navigation + une respiration : à 82px le
   // bouton la touchait presque (2px d'écart mesurés).
   scanCta:    { position: 'fixed', bottom: 'calc(96px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
-  scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
+  scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
   message:    { position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(160px + env(safe-area-inset-bottom, 0px))', zIndex: 95, background: '#1a1a1a', color: 'white', borderRadius: 999, padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(0,0,0,0.22)', maxWidth: 'calc(100% - 40px)', textAlign: 'center' },
   loading:    { color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 },
+  calTete:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  calMois:    { fontSize: '1rem', fontWeight: 800, color: '#1a1a1a', textTransform: 'capitalize' },
+  calFleche:  { width: 44, height: 44, border: 'none', background: 'none', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  calGrille:  { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: 4, textAlign: 'center' },
+  calJourSem: { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', padding: '4px 0 6px' },
+  calCase:    { height: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, border: 'none', background: 'none', borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums', fontFamily: 'inherit', padding: 0 },
+  calAuj:     { boxShadow: 'inset 0 0 0 1.5px #d1d5db' },
+  calChoisi:  { background: '#333333', color: 'white', boxShadow: 'none' },
+  calPoint:   { width: 5, height: 5, borderRadius: '50%' },
+  calAujBtn:  { marginTop: 12, width: '100%', minHeight: 46, border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 12, fontSize: '0.88rem', fontWeight: 800, color: '#333333', cursor: 'pointer', fontFamily: 'inherit' },
   overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
   sheet:      { background: 'white', borderRadius: '20px 20px 0 0', padding: '14px 18px calc(20px + env(safe-area-inset-bottom, 0px))', width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' },
 }

@@ -553,7 +553,7 @@ const S = {
   },
   btnPrimary: {
     width: '100%', padding: '0.9rem', borderRadius: 14,
-    border: 'none', background: '#1a1a1a', color: 'var(--accent-fg-dark)',
+    border: 'none', background: '#333333', color: 'var(--accent-fg-dark)',
     fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
   },
   btnSecondary: {
