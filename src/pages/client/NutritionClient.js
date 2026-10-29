@@ -6,6 +6,7 @@ import usePageFade from '../../hooks/usePageFade'
 import { isoLocal } from '../../utils/dates'
 import EnTeteClient, { boutonEnTete } from '../../components/EnTeteClient'
 import { useAuRetourOnglet } from '../../context/OngletContext'
+import AjouterAliment from './AjouterAliment'
 
 // ── Journal alimentaire ──────────────────────────────────────────────────────
 // Écran d'accueil de l'onglet Nutrition. Il fonctionne SANS plan du coach : le
@@ -147,6 +148,7 @@ export default function NutritionClient() {
   const [coche, setCoche]     = useState(null)   // id du repas en cours d'envoi
   const [detailPlat, setDetailPlat] = useState(null) // repas prescrit dont on affiche le détail
   const [calendrier, setCalendrier] = useState(false)
+  const [ajoutRepas, setAjoutRepas] = useState(null) // repas dont la fenêtre d'ajout est ouverte
   const [aRetirer, setARetirer] = useState(null)     // aliment dont la suppression attend confirmation
   const [message, setMessage] = useState(null)       // petit message en bas de l'écran
   const minuteurMsg = useRef(null)
@@ -352,7 +354,7 @@ export default function NutritionClient() {
             <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
           </svg>
         </button>
-        <button onClick={() => navigate('/client/nutrition/profil')} style={boutonEnTete} aria-label="Mon profil">
+        <button onClick={() => navigate('/client/nutrition/profil')} style={boutonEnTete} aria-label="Mes besoins">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
           </svg>
@@ -479,7 +481,7 @@ export default function NutritionClient() {
                     )}
                   </div>
                 )) : (!prescrits.length && <p style={S.empty}>Rien pour l'instant</p>)}
-                <button onClick={() => navigate(`/client/nutrition/aliment?repas=${type}&date=${iso}`)} style={S.add}>
+                <button onClick={() => setAjoutRepas(type)} style={S.add}>
                   <span style={S.addIco}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                   </span>
@@ -529,6 +531,11 @@ export default function NutritionClient() {
       </div>
 
       {message && <div role="status" style={S.message}>{message}</div>}
+
+      {ajoutRepas && (
+        <AjouterAliment feuille repasInitial={ajoutRepas} dateInitiale={iso} onFermer={() => setAjoutRepas(null)}
+          onAjoute={msg => { setAjoutRepas(null); afficher(msg); charger(true) }} />
+      )}
 
       {calendrier && client && (
         <Calendrier clientId={client.id} jour={jour} plan={plan} joursPlan={joursPlan} onFermer={() => setCalendrier(false)}

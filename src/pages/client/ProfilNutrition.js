@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
-import ScanHistoryCard from '../../components/ScanHistoryCard'
 import usePageFade from '../../hooks/usePageFade'
 import Icon from '../../components/Icon'
 import { isoLocal } from '../../utils/dates'
@@ -84,10 +83,7 @@ export default function ProfilNutrition() {
   const [existingGoals, setExistingGoals] = useState(null)
   const [planCoach,     setPlanCoach]     = useState(null)   // programme du coach en cours
   const [physProfile,   setPhysProfile]   = useState(null)
-  const [activeTab,     setActiveTab]     = useState('objectifs')
-  const [scans,         setScans]         = useState([])
-  const [scansLoading,  setScansLoading]  = useState(false)
-  const [scanFilter,    setScanFilter]    = useState('all')
+  const [explication,   setExplication]   = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -205,55 +201,11 @@ export default function ProfilNutrition() {
 
   function openWizard() { setWizardStep(0); setWizardOpen(true) }
 
-  async function loadScans(cid) {
-    setScansLoading(true)
-    const { data } = await supabase
-      .from('nutrition_scan_history')
-      .select('*')
-      .eq('client_id', cid)
-      .order('scanned_at', { ascending: false })
-      .limit(100)
-    setScans(data || [])
-    setScansLoading(false)
-  }
-
-  function handleTabChange(tab) {
-    setActiveTab(tab)
-    if (tab === 'historique' && scans.length === 0 && client) {
-      loadScans(client.id)
-    }
-  }
-
-  async function deleteScan(id) {
-    setScans(prev => prev.filter(s => s.id !== id))
-    await supabase.from('nutrition_scan_history').delete().eq('id', id)
-  }
-
-  function reuseScan(scan) {
-    navigate('/client/nutrition/aliment', {
-      state: {
-        prefillFood: {
-          id: scan.food_id,
-          name: scan.product_name,
-          brand: scan.brand,
-          image_url: scan.image_url,
-          kcal_100: scan.kcal_100g,
-          prot_100: scan.prot_100g,
-          carbs_100: scan.carbs_100g,
-          fat_100: scan.fat_100g,
-          fibre_100: scan.fiber_100g,
-          nutri_score: scan.nutriscore_grade,
-          nova_group: scan.nova_group,
-        },
-      },
-    })
-  }
-
   // ── Loading ───────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={S.page}>
-        <EnTeteClient retour titre="Mon profil nutritionnel" />
+        <EnTeteClient retour titre="Mes besoins" />
         <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>Chargement…</p>
       </div>
     )
@@ -264,7 +216,7 @@ export default function ProfilNutrition() {
     return (
       <div style={{ ...S.page, background: '#f5f5f5' }}>
         <EnTeteClient retour={() => wizardStep > 0 ? setWizardStep(s => s - 1) : isSetup ? navigate('/client/accueil', { replace: true }) : setWizardOpen(false)}
-          titre="Mon profil nutritionnel" sousTitre={`Étape ${wizardStep + 1} sur 4`}>
+          titre="Mes besoins" sousTitre={`Étape ${wizardStep + 1} sur 4`}>
           <div style={{ height: 4, margin: '0 16px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: 999, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${((wizardStep + 1) / 4) * 100}%`, background: 'var(--accent)', borderRadius: 999, transition: 'width 0.35s ease' }} />
           </div>
@@ -443,182 +395,109 @@ export default function ProfilNutrition() {
   }
 
   // ── Page principale ───────────────────────────────────────────────────────────
+  // Une seule question : combien je dois manger par jour.
+  const act = ACTIVITES.find(a => a.key === physProfile?.activite)
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
-      <EnTeteClient retour titre="Mon profil nutritionnel" sousTitre="Objectifs caloriques & macros" />
+      <EnTeteClient retour titre="Mes besoins" />
 
-      {/* Tab bar */}
-      <div style={S.tabBar}>
-        <button onClick={() => handleTabChange('objectifs')} style={activeTab === 'objectifs' ? S.tabActive : S.tab}>
-          Objectifs
-        </button>
-        <button onClick={() => handleTabChange('historique')} style={activeTab === 'historique' ? S.tabActive : S.tab}>
-          Mes scans
-        </button>
-      </div>
-
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 120px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* ── Onglet Objectifs ── */}
-        {activeTab === 'objectifs' && (
-          <>
-            {saved && (
-              <div style={{ background: '#dcfce7', borderRadius: 12, padding: '12px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.9rem' }}>
-                Objectifs enregistrés avec succès !
-              </div>
-            )}
-
-            {planCoach ? (
-              <div style={S.goalsCard}>
-                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Programme de ton coach</p>
-                <p style={{ color: 'white', fontWeight: 800, fontSize: '1.05rem', margin: '6px 0 0' }}>{planCoach.nom}</p>
-                {planCoach.objectif_kcal ? (
-                  <>
-                    <div style={{ textAlign: 'center', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.07)', margin: '12px 0 14px' }}>
-                      <p style={{ fontSize: '2.9rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                        {planCoach.objectif_kcal.toLocaleString('fr-FR')}
-                      </p>
-                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                      <MacroCell label="Protéines" val={`${planCoach.objectif_prot || '–'}g`}  color="#38bdf8" />
-                      <MacroCell label="Glucides"  val={`${planCoach.objectif_carbs || '–'}g`} color="#fbbf24" />
-                      <MacroCell label="Lipides"   val={`${planCoach.objectif_fat || '–'}g`}   color="#a78bfa" />
-                    </div>
-                  </>
-                ) : <div style={{ height: 12 }} />}
-                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', lineHeight: 1.5, margin: 0 }}>
-                  Tes objectifs viennent de ce programme et peuvent changer selon le jour. Suis les plats prévus dans ton journal.
-                </p>
-              </div>
-            ) : existingGoals ? (
-              <>
-                <div style={S.goalsCard}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                    <div>
-                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
-                      {physProfile && (
-                        <p style={{ color: 'var(--accent-fg)', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
-                          {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
-                        </p>
-                      )}
-                    </div>
-                    <button onClick={openWizard} style={S.recalcBtn}>Recalculer</button>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '12px 0 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 14 }}>
-                    <p style={{ fontSize: '2.9rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                      {(existingGoals.kcal_target || 0).toLocaleString('fr-FR')}
-                    </p>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                    <MacroCell label="Protéines" val={`${existingGoals.prot_g || '–'}g`}  color="#38bdf8" />
-                    <MacroCell label="Glucides"  val={`${existingGoals.carbs_g || '–'}g`} color="#fbbf24" />
-                    <MacroCell label="Lipides"   val={`${existingGoals.fat_g || '–'}g`}   color="#a78bfa" />
-                  </div>
-                  {existingGoals.hydration_ml != null && (
-                    <div style={{ background: 'rgba(96,165,250,0.1)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '1.1rem' }}><Icon name="droplet" size={14} /></span>
-                      <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', fontWeight: 700 }}>
-                        {(existingGoals.hydration_ml / 1000).toFixed(1)} L d'eau / jour
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {physProfile && (
-                  <div style={S.card}>
-                    <h3 style={{ fontWeight: 700, color: '#1a1a1a', fontSize: '0.95rem', margin: '0 0 12px' }}>Profil physique utilisé</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      {physProfile.sexe    && <PhysRow label="Sexe"     val={physProfile.sexe === 'homme' ? 'Homme' : 'Femme'} />}
-                      {physProfile.age     && <PhysRow label="Âge"      val={`${physProfile.age} ans`} />}
-                      {physProfile.taille  && <PhysRow label="Taille"   val={`${physProfile.taille} cm`} />}
-                      {physProfile.poids   && <PhysRow label="Poids"    val={`${physProfile.poids} kg`} />}
-                      {physProfile.activite && (
-                        <div style={{ gridColumn: '1/-1' }}>
-                          <PhysRow label="Activité" val={ACTIVITES.find(a => a.key === physProfile.activite)?.label} />
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
-                      <SourceBadge label="Mifflin-St Jeor 1990" dark />
-                      <SourceBadge label="Morton et al. 2018" dark />
-                      <SourceBadge label="ANSES 2019" dark />
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div style={S.emptyCard}>
-                <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1.1rem', margin: '0 0 10px', letterSpacing: '-0.02em' }}>Définis tes objectifs nutritionnels</h3>
-                <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.65, margin: '0 0 18px', maxWidth: 280, textAlign: 'center' }}>
-                  En 3 questions, un algorithme basé sur des études scientifiques calcule tes besoins quotidiens en kcal, protéines, glucides, lipides et hydratation.
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 }}>
-                  <SourceBadge label="Mifflin-St Jeor 1990" dark />
-                  <SourceBadge label="Morton et al. 2018" dark />
-                  <SourceBadge label="ANSES 2019" dark />
-                  <SourceBadge label="EFSA 2010" dark />
-                </div>
-                <button onClick={openWizard} style={S.ctaBtn}>Calculer mes objectifs →</button>
-              </div>
-            )}
-          </>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 120px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {saved && (
+          <div style={{ background: '#dcfce7', borderRadius: 12, padding: '12px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.9rem' }}>
+            Besoins enregistrés
+          </div>
         )}
 
-        {/* ── Onglet Historique scans ── */}
-        {activeTab === 'historique' && (
+        {planCoach ? (
           <>
-            {scansLoading ? (
-              <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>Chargement…</p>
-            ) : scans.length === 0 ? (
-              <div style={S.emptyCard}>
-                <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1rem', margin: '0 0 8px' }}>Aucun scan pour l'instant</h3>
-                <p style={{ color: '#6b7280', fontSize: '0.83rem', textAlign: 'center', lineHeight: 1.5 }}>
-                  Scanne le code-barres d'un produit depuis l'onglet Nutrition pour l'ajouter ici.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  <StatCard label="Scans" val={scans.length} />
-                  <StatCard label="Note moy." val={(() => {
-                    const gradeVal = { A: 1, B: 2, C: 3, D: 4, E: 5 }
-                    const avg = scans.reduce((acc, s) => acc + (gradeVal[s.quality_grade] || 3), 0) / scans.length
-                    return ['A','A','B','C','D','E'][Math.round(avg)] || 'B'
-                  })()} color={GRADE_COLORS[(() => {
-                    const gradeVal = { A: 1, B: 2, C: 3, D: 4, E: 5 }
-                    const avg = scans.reduce((acc, s) => acc + (gradeVal[s.quality_grade] || 3), 0) / scans.length
-                    return ['A','A','B','C','D','E'][Math.round(avg)] || 'B'
-                  })()]} />
-                  <StatCard label="À éviter" val={scans.filter(s => ['D','E'].includes(s.quality_grade)).length} color="#dc2626" />
-                </div>
-
-                {/* Filtres */}
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {[['all','Tous'],['good','Bons'],['bad','À éviter'],['week','7 jours']].map(([k, lbl]) => (
-                    <button key={k} onClick={() => setScanFilter(k)}
-                      style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1.5px solid', borderColor: scanFilter === k ? '#333333' : '#e5e7eb', background: scanFilter === k ? '#333333' : 'white', color: scanFilter === k ? 'var(--accent)' : '#6b7280' }}>
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Liste */}
-                {scans.filter(s => {
-                  if (scanFilter === 'good') return ['A','B'].includes(s.quality_grade)
-                  if (scanFilter === 'bad')  return ['C','D','E'].includes(s.quality_grade)
-                  if (scanFilter === 'week') { const w = new Date(); w.setDate(w.getDate()-7); return new Date(s.scanned_at) >= w }
-                  return true
-                }).map(scan => (
-                  <ScanHistoryCard key={scan.id} scan={scan} onReuse={reuseScan} onDelete={deleteScan} />
-                ))}
-              </>
-            )}
+            <div style={S.goalsCard}>
+              <p style={S.surTitre}>Fixés par ton coach</p>
+              <p style={{ color: 'white', fontWeight: 800, fontSize: '1rem', margin: '4px 0 0' }}>{planCoach.nom}</p>
+              {planCoach.objectif_kcal ? (
+                <Besoins kcal={planCoach.objectif_kcal} prot={planCoach.objectif_prot} gluc={planCoach.objectif_carbs} lip={planCoach.objectif_fat} />
+              ) : null}
+            </div>
+            <div style={{ ...S.card, fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>
+              Tes besoins peuvent changer selon le jour (entraînement, match, repos). Suis les plats prévus dans ton journal.
+            </div>
+            <button onClick={() => navigate('/client/nutrition/plan')} style={S.lienCarte}>
+              Voir ma semaine et mes courses <Chevron />
+            </button>
           </>
-        )}
+        ) : existingGoals ? (
+          <>
+            <div style={S.goalsCard}>
+              <Besoins kcal={existingGoals.kcal_target || 0} prot={existingGoals.prot_g} gluc={existingGoals.carbs_g} lip={existingGoals.fat_g} />
+              {existingGoals.hydration_ml != null && (
+                <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  <Icon name="droplet" size={14} />
+                  <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 700 }}>
+                    {(existingGoals.hydration_ml / 1000).toFixed(1).replace('.', ',')} L d'eau par jour
+                  </span>
+                </div>
+              )}
+            </div>
 
-        <div style={{ height: 20 }} />
+            <div style={S.card}>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, margin: '0 0 4px' }}>Calculé pour toi</p>
+              {physProfile ? (
+                <>
+                  <p style={{ fontSize: '0.92rem', fontWeight: 800, color: '#1a1a1a', margin: 0 }}>
+                    {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label}
+                  </p>
+                  <p style={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 600, margin: '2px 0 0', lineHeight: 1.45 }}>
+                    {[physProfile.sexe && (physProfile.sexe === 'homme' ? 'Homme' : 'Femme'),
+                      physProfile.age && `${physProfile.age} ans`,
+                      physProfile.taille && `${physProfile.taille} cm`,
+                      physProfile.poids && `${physProfile.poids} kg`,
+                      act?.label].filter(Boolean).join(' · ')}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: '0.85rem', color: '#374151', margin: 0 }}>À partir de tes réponses au questionnaire.</p>
+              )}
+              <button onClick={openWizard} style={S.majBtn}>Mettre à jour mon poids ou mon objectif</button>
+            </div>
+
+            <div style={S.card}>
+              <button onClick={() => setExplication(v => !v)} aria-expanded={explication}
+                style={{ ...S.lienCarte, padding: 0, boxShadow: 'none', minHeight: 24 }}>
+                Comment c'est calculé
+                <span style={{ display: 'flex', transform: explication ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><Chevron /></span>
+              </button>
+              {explication && (
+                <>
+                  <ul style={{ margin: '12px 0 0', padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <li style={S.explLigne}>
+                      <strong>Calories :</strong> ton métabolisme de base (formule de Mifflin-St Jeor) × {act ? String(act.mult).replace('.', ',') : 'ton niveau d\'activité'}
+                      {physProfile?.objectif === 'masse' ? ', + 300 kcal' : physProfile?.objectif === 'perte' ? ', − 400 kcal' : ''}
+                    </li>
+                    <li style={S.explLigne}>
+                      <strong>Protéines :</strong> {physProfile?.poids ? `${physProfile.poids} kg × ` : ''}{{ perte: '2,2', masse: '1,8', recomposition: '2,0' }[physProfile?.objectif] || '1,6'} g par kg
+                    </li>
+                    <li style={S.explLigne}><strong>Lipides :</strong> environ 27 % des calories</li>
+                    <li style={S.explLigne}><strong>Glucides :</strong> le reste des calories</li>
+                    <li style={S.explLigne}><strong>Eau :</strong> 35 ml par kg de poids</li>
+                  </ul>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
+                    <SourceBadge label="Mifflin-St Jeor 1990" dark />
+                    <SourceBadge label="Morton et al. 2018" dark />
+                    <SourceBadge label="ANSES 2019" dark />
+                    <SourceBadge label="EFSA 2010" dark />
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          <div style={S.emptyCard}>
+            <h3 style={{ fontWeight: 800, color: '#1a1a1a', fontSize: '1.1rem', margin: '0 0 10px', letterSpacing: '-0.02em' }}>Calcule tes besoins</h3>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 18px', maxWidth: 280, textAlign: 'center' }}>
+              En 3 questions, on calcule ce qu'il te faut par jour : calories, protéines, glucides, lipides et eau.
+            </p>
+            <button onClick={openWizard} style={S.ctaBtn}>Calculer mes besoins</button>
+          </div>
+        )}
       </div>
 
       <ClientBottomNav />
@@ -626,24 +505,27 @@ export default function ProfilNutrition() {
   )
 }
 
-const GRADE_COLORS = { A: '#16a34a', B: '#65a30d', C: '#ca8a04', D: '#ea580c', E: '#dc2626' }
-
-function formatScanDate(iso) {
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = Math.floor((now - d) / 86400000)
-  if (diff === 0) return `Aujourd'hui · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-  if (diff === 1) return `Hier · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-  if (diff < 7)  return `Il y a ${diff} jours`
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+function Besoins({ kcal, prot, gluc, lip }) {
+  return (
+    <>
+      <div style={{ textAlign: 'center', padding: '10px 0 0' }}>
+        <p style={{ fontSize: '2.6rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+          {Number(kcal).toLocaleString('fr-FR')}
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, margin: '4px 0 0' }}>kcal par jour</p>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 14 }}>
+        <MacroCell label="Protéines" val={`${prot || '–'} g`} color="#38bdf8" />
+        <MacroCell label="Glucides"  val={`${gluc || '–'} g`} color="#fbbf24" />
+        <MacroCell label="Lipides"   val={`${lip || '–'} g`}  color="#a78bfa" />
+      </div>
+    </>
+  )
 }
 
-function StatCard({ label, val, color }) {
+function Chevron() {
   return (
-    <div style={{ background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-      <p style={{ fontSize: '1.6rem', fontWeight: 900, color: color || '#1a1a1a', margin: 0, lineHeight: 1 }}>{val}</p>
-      <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
-    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
   )
 }
 
@@ -670,18 +552,6 @@ function SourceBadge({ label, dark }) {
   )
 }
 
-function PhysRow({ label, val }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9fafb', borderRadius: 10, padding: '8px 10px' }}>
-      <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>{label}</p>
-        <p style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1a1a1a', margin: '1px 0 0' }}>{val}</p>
-      </div>
-    </div>
-  )
-}
-
-
 function CheckCircle() {
   return (
     <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -707,9 +577,10 @@ const S = {
   recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#333333', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
-  tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6' },
-  tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
-  tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid var(--accent)' },
+  surTitre: { color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, margin: 0 },
+  lienCarte: { width: '100%', minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'white', border: 'none', borderRadius: 16, padding: '0 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', fontSize: '0.88rem', fontWeight: 700, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' },
+  majBtn: { marginTop: 12, width: '100%', minHeight: 44, border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 12, fontSize: '0.85rem', fontWeight: 800, color: '#333333', cursor: 'pointer', fontFamily: 'inherit' },
+  explLigne: { fontSize: '0.82rem', color: '#4b5563', lineHeight: 1.5 },
   card: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   inputLabel: { fontSize: '0.82rem', fontWeight: 700, color: '#374151', display: 'block' },
   numberInput: { flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', fontSize: '1.1rem', fontWeight: 700, color: '#1a1a1a', background: '#f9fafb', outline: 'none' },

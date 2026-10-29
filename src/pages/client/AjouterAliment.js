@@ -55,13 +55,15 @@ async function chercherMarques(terme) {
   return data?.produits || []
 }
 
-export default function AjouterAliment() {
+// Deux usages : page entière (arrivée depuis le scanner) ou fenêtre ouverte par
+// le « + » du journal (`feuille`), qui garde le journal visible derrière.
+export default function AjouterAliment({ feuille, repasInitial, dateInitiale, onFermer, onAjoute }) {
   const navigate  = useNavigate()
   const location  = useLocation()
   const fadeStyle = usePageFade()
   const [params]  = useSearchParams()
-  const [repas, setRepas] = useState(params.get('repas') || repasSelonHeure())
-  const date  = params.get('date')  || isoLocal()
+  const [repas, setRepas] = useState(repasInitial || params.get('repas') || repasSelonHeure())
+  const date  = dateInitiale || params.get('date')  || isoLocal()
 
   const [client, setClient]   = useState(null)
   const [terme, setTerme]     = useState('')
@@ -96,7 +98,7 @@ export default function AjouterAliment() {
   // l'écran quantité, sans repasser par la recherche.
   useEffect(() => {
     const f = location.state?.prefillFood
-    if (!f) return
+    if (feuille || !f) return
     setChoisi({
       nom: f.brand ? `${f.name} — ${f.brand}` : f.name,
       groupe: f.brand || 'Scanné',
@@ -217,7 +219,8 @@ export default function AjouterAliment() {
         fat_g:   (Number(m.fat_g || 0)   + somme('lip')).toFixed(1),
       }).eq('id', m.id)
       if (e2) throw e2
-      navigate('/client/nutrition', { replace: true, state: { ajout: confirmation } })
+      if (feuille) onAjoute(confirmation)
+      else navigate('/client/nutrition', { replace: true, state: { ajout: confirmation } })
     } catch (err) {
       setEnvoi(false)
       setErreur("Pas enregistré. Vérifie ta connexion et réessaie.")
@@ -245,13 +248,37 @@ export default function AjouterAliment() {
   )
   const messageErreur = erreur && <p role="alert" style={S.erreur}>{erreur}</p>
 
+  // Cadre commun : en-tête de page, ou fenêtre qui monte du bas avec ses boutons
+  const cadre = (titre, retour, contenu) => feuille ? (
+    <div style={S.overlay} onClick={onFermer}>
+      <div style={S.feuille} onClick={e => e.stopPropagation()} role="dialog" aria-label={titre}>
+        <div style={S.poignee} />
+        <div style={S.feuilleTete}>
+          {retour ? (
+            <button onClick={retour} style={S.feuilleBtn} aria-label="Retour">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </button>
+          ) : <span style={{ width: 44 }} />}
+          <p style={S.feuilleTitre}>{titre}</p>
+          <button onClick={onFermer} style={S.feuilleBtn} aria-label="Fermer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        {contenu}
+      </div>
+    </div>
+  ) : (
+    <div style={{ ...S.page, ...fadeStyle }}>
+      <EnTeteClient retour={retour || '/client/nutrition'} titre={titre} />
+      {contenu}
+    </div>
+  )
+
   const t = calc()
   const liste = onglet === 'recents' && !terme.trim() ? [] : resultats
 
   // ── Écran quantité ────────────────────────────────────────────────────────
-  if (choisi) return (
-    <div style={{ ...S.page, ...fadeStyle }}>
-      <EnTeteClient retour={() => setChoisi(null)} titre="Quantité" />
+  if (choisi) return cadre('Quantité', () => setChoisi(null), (<>
       <div style={S.body}>
         <p style={S.qNom}>{choisi.nom}</p>
         <p style={S.qSub}>{choisi.groupe} — {fmt(choisi.kcal)} kcal / 100 g</p>
@@ -294,15 +321,11 @@ export default function AjouterAliment() {
           {envoi ? 'Enregistrement…' : `Ajouter au ${REPAS_LABEL[repas]}`}
         </button>
       </div>
-    </div>
-  )
+    </>))
 
   // ── Écran recherche ───────────────────────────────────────────────────────
-  return (
-    <div style={{ ...S.page, ...fadeStyle }}>
-      <EnTeteClient retour="/client/nutrition" titre={`Ajouter au ${REPAS_LABEL[repas]}`} />
-
-      <div style={{ padding: '12px 14px 0' }}>
+  return cadre(`Ajouter au ${REPAS_LABEL[repas]}`, null, (<>
+      <div style={{ padding: feuille ? '4px 14px 0' : '12px 14px 0' }}>
         <div style={S.search}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.2" strokeLinecap="round">
             <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
@@ -402,8 +425,7 @@ export default function AjouterAliment() {
         )}
         <div style={{ height: 40 }} />
       </div>
-    </div>
-  )
+    </>))
 }
 
 const S = {
@@ -447,5 +469,12 @@ const S = {
   repasRow:   { display: 'flex', gap: 6, marginBottom: 14 },
   repasChip:  { flex: 1, minHeight: 40, padding: '0 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#4b5563', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   erreur:     { margin: '0 0 8px', background: '#fee2e2', color: '#991b1b', borderRadius: 12, padding: '10px 12px', fontSize: '0.82rem', fontWeight: 700, textAlign: 'center' },
+  overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
+  // Presque tout l'écran : avec le clavier ouvert, il reste de la place pour les résultats
+  feuille:    { background: '#f5f5f5', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 500, height: '90dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  poignee:    { width: 36, height: 4, background: '#d1d5db', borderRadius: 999, margin: '10px auto 2px', flexShrink: 0 },
+  feuilleTete:{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 6px', flexShrink: 0 },
+  feuilleTitre:{ flex: 1, margin: 0, textAlign: 'center', fontSize: '1rem', fontWeight: 800, color: '#1a1a1a' },
+  feuilleBtn: { width: 44, height: 44, border: 'none', background: 'none', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 },
   repasChipOn:{ background: '#333333', borderColor: '#333333', color: 'var(--accent-fg-dark)' },
 }

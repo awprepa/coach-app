@@ -289,11 +289,10 @@ export function BarreClient() {
           boxShadow: glisse
             ? 'inset 0 0 0 1.5px rgba(255,255,255,0.9), inset 0 2px 3px rgba(255,255,255,0.8), inset 0 -3px 6px rgba(0,0,0,0.08), 0 6px 18px rgba(0,0,0,0.18)'
             : 'inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 1px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.06)',
-          transform: glisse ? 'scale(1.14, 1.1)' : 'scale(1)',
           opacity: actif < 0 && !glisse ? 0 : 1,
           transition: glisse
-            ? 'transform 0.25s cubic-bezier(.3, 1.4, .5, 1), background 0.2s, box-shadow 0.2s'
-            : `left ${ressort}, width ${ressort}, transform ${ressort}, opacity 0.2s, background 0.2s, box-shadow 0.2s`,
+            ? 'background 0.2s, box-shadow 0.2s'
+            : `left ${ressort}, width ${ressort}, opacity 0.2s, background 0.2s, box-shadow 0.2s`,
         }} />
         {tabs.map(({ label, Icon, active, to, badge }, i) => (
           <button key={label} onClick={() => { if (!active && !ignorerClic.current) navigate(to) }} aria-current={active ? 'page' : undefined}
@@ -307,8 +306,7 @@ export function BarreClient() {
               background: 'none', border: 'none', cursor: 'pointer',
               color: (glisse ? glisse.survol === i : active) ? T.color.ink : T.color.muted,
               WebkitTapHighlightColor: 'transparent',
-              // onglet sous la bulle grossi, comme vu à travers une loupe
-              transform: glisse?.survol === i ? 'scale(1.12)' : appuye === i ? 'scale(0.9)' : 'scale(1)',
+              transform: !glisse && appuye === i ? 'scale(0.9)' : 'scale(1)',
               transition: `transform 0.18s cubic-bezier(.3, 1.4, .5, 1), color 0.2s, flex-grow ${ressort}`,
             }}>
             <div key={active ? 'on' : 'off'} style={{
