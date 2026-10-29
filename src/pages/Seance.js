@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { autoLinkBiblio } from '../utils/exerciceMatch'
+import ChoixBibliotheque from '../components/ChoixBibliotheque'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
 import Icon from '../components/Icon'
 
@@ -110,8 +111,6 @@ export default function Seance() {
   const [biblioSearch, setBiblioSearch] = useState('')
   const [biblioResults, setBiblioResults] = useState([])
   const [showFullLibrary, setShowFullLibrary] = useState(false)
-  const [allBiblio, setAllBiblio] = useState([])
-  const [biblioFullSearch, setBiblioFullSearch] = useState('')
   const [saveToLibrary, setSaveToLibrary] = useState(false)
   const [libraryImageFile, setLibraryImageFile] = useState(null)
   const [libraryImagePreview, setLibraryImagePreview] = useState(null)
@@ -289,21 +288,11 @@ export default function Seance() {
     setEditNomSuggestions(data || [])
   }
 
-  async function openFullLibrary() {
-    setShowFullLibrary(true)
-    if (allBiblio.length === 0) {
-      const { data } = await supabase.from('bibliotheque_exercices')
-        .select('id, nom, categorie, image_url').order('nom')
-      setAllBiblio(data || [])
-    }
-  }
-
   function selectFromBiblio(ex) {
     setForm(f => ({ ...f, nom: ex.nom, bibliotheque_id: ex.id }))
     setBiblioSearch('')
     setBiblioResults([])
     setShowFullLibrary(false)
-    setBiblioFullSearch('')
   }
 
   async function ajouterExercice(e) {
@@ -328,7 +317,6 @@ export default function Seance() {
       if (libData) {
         bibliotheque_id = libData.id
         setBiblioFull(prev => [...prev, { id: libData.id, nom: libData.nom }].sort((a, b) => a.nom.localeCompare(b.nom)))
-        setAllBiblio(prev => [...prev, libData].sort((a, b) => a.nom.localeCompare(b.nom)))
       }
     }
 
@@ -692,7 +680,6 @@ export default function Seance() {
       .insert([{ nom: ex.nom, image_url: ex.bibliotheque_exercices?.image_url || null }])
       .select().single()
     if (error) { alert(error.message); return }
-    setAllBiblio(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
     await lierABibliotheque(exId, data.id)
   }
 
@@ -2153,52 +2140,17 @@ export default function Seance() {
 
         {/* Bibliothèque — bouton unique */}
         <div style={{ marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button type="button" onClick={() => showFullLibrary ? setShowFullLibrary(false) : openFullLibrary()}
+          <button type="button" onClick={() => setShowFullLibrary(true)}
             style={{ ...styles.btnSecondary, whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '0.55rem 0.875rem' }}>
-            {showFullLibrary ? '✕ Fermer la bibliothèque' : 'Choisir dans la bibliothèque'}
+            Choisir dans la bibliothèque
           </button>
           {form.bibliotheque_id && (
             <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ Lié</span>
           )}
         </div>
 
-          {/* Panel bibliothèque complète */}
           {showFullLibrary && (
-            <div style={{ border: '1.5px solid #e5e7eb', borderRadius: '12px', background: 'white', marginTop: '6px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
-              <div style={{ padding: '0.75rem', borderBottom: '1px solid #f3f4f6' }}>
-                <input
-                  value={biblioFullSearch}
-                  onChange={e => setBiblioFullSearch(e.target.value)}
-                  placeholder="Filtrer..."
-                  style={{ ...styles.formInput, width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
-                  autoFocus
-                />
-              </div>
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {allBiblio.filter(ex => ex.nom.toLowerCase().includes(biblioFullSearch.toLowerCase())).length === 0 ? (
-                  <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>
-                    {allBiblio.length === 0 ? 'La bibliothèque est vide.' : 'Aucun résultat.'}
-                  </p>
-                ) : (
-                  allBiblio
-                    .filter(ex => ex.nom.toLowerCase().includes(biblioFullSearch.toLowerCase()))
-                    .map(ex => (
-                      <div role="button" tabIndex={0} key={ex.id} onClick={() => selectFromBiblio(ex)}
-                        style={{ padding: '0.55rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid #f9fafb', fontSize: '0.875rem', color: '#333333', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                      >
-                        {ex.image_url
-                          ? <img loading="lazy" src={ex.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
-                          : <div style={{ width: 40, height: 40, background: '#f3f4f6', borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}><Icon name="dumbbell" size={14} /></div>
-                        }
-                        <span style={{ flex: 1 }}>{ex.nom}</span>
-                        {ex.categorie && <span style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '400' }}>{ex.categorie}</span>}
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
+            <ChoixBibliotheque onChoisir={selectFromBiblio} onFermer={() => setShowFullLibrary(false)} />
           )}
 
         <form onSubmit={ajouterExercice}>
