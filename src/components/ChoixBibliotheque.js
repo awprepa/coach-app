@@ -11,7 +11,7 @@ const SANS_CAT = 'Sans catégorie'
 // Muscles rangés par zone du corps
 const ZONES = [
   { titre: 'Haut du corps', muscles: ['pectoraux', 'dorsaux', 'epaules', 'trapezes', 'biceps', 'triceps', 'avant_bras'] },
-  { titre: 'Tronc', muscles: ['abdominaux', 'obliques', 'lombaires'] },
+  { titre: 'Core', muscles: ['abdominaux', 'obliques', 'lombaires'] },
   { titre: 'Bas du corps', muscles: ['quadriceps', 'ischio_jambiers', 'fessiers', 'mollets'] },
 ]
 
@@ -33,6 +33,7 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
   const [terme, setTerme] = useState('')
   const [muscles, setMuscles] = useState([])
   const [cats, setCats] = useState([])
+  const [zones, setZones] = useState([])   // zones entières : au moins un muscle de la zone
   const [avecSecondaires, setAvecSecondaires] = useState(false)
 
   useEffect(() => {
@@ -54,7 +55,9 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
     (!t || ex.nom.toLowerCase().includes(t)) &&
     (!cats.length || cats.includes(ex.categorie || SANS_CAT))
   ), [liste, t, cats])
-  const resultats = base.filter(ex => muscles.every(k => touche(ex, k)))
+  const dansZone = (ex, titre) => ZONES.find(z => z.titre === titre).muscles.some(k => touche(ex, k))
+  const correspond = (ex, ms, zs) => ms.every(k => touche(ex, k)) && zs.every(z => dansZone(ex, z))
+  const resultats = base.filter(ex => correspond(ex, muscles, zones))
   const categories = [...new Set((liste || []).map(ex => ex.categorie || SANS_CAT))]
     .sort((a, b) => (a === SANS_CAT) - (b === SANS_CAT) || a.localeCompare(b))
 
@@ -78,8 +81,8 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
           <div>
             <div style={S.filtreTete}>
               <p style={S.label}>Muscles</p>
-              {(muscles.length > 0 || cats.length > 0) && (
-                <button onClick={() => { setMuscles([]); setCats([]) }} style={S.lien}>Tout effacer</button>
+              {(muscles.length > 0 || cats.length > 0 || zones.length > 0) && (
+                <button onClick={() => { setMuscles([]); setCats([]); setZones([]) }} style={S.lien}>Tout effacer</button>
               )}
             </div>
             <div style={S.seg}>
@@ -89,16 +92,27 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
               ))}
             </div>
             {ZONES.map(z => (
-              <div key={z.titre} style={{ marginBottom: 12 }}>
-                <p style={S.zone}>{z.titre}</p>
+              <div key={z.titre} style={{ marginBottom: 16 }}>
+                {/* La zone entière : exercices qui travaillent au moins un de ses muscles */}
+                {(() => {
+                  const actif = zones.includes(z.titre)
+                  const n = base.filter(ex => correspond(ex, muscles, actif ? zones : [...zones, z.titre])).length
+                  return (
+                    <button onClick={() => bascule(zones, setZones, z.titre)} aria-pressed={actif} onMouseDown={e => e.preventDefault()}
+                      style={{ ...S.puce, ...S.puceMuscle, ...S.zoneBtn, ...(actif ? S.puceOn : {}) }}>
+                      <span style={S.puceTexte}>{z.titre}</span>
+                      <span style={{ ...S.nb, color: actif ? 'rgba(228,248,22,0.6)' : '#9ca3af' }}>{n}</span>
+                    </button>
+                  )
+                })()}
                 <div style={S.grilleMuscles}>
                   {z.muscles.filter(k => MUSCLES[k]).map(k => {
                     const actif = muscles.includes(k)
-                    const n = base.filter(ex => touche(ex, k) && muscles.every(m => m === k || touche(ex, m))).length
+                    const n = base.filter(ex => correspond(ex, actif ? muscles : [...muscles, k], zones)).length
                     return (
-                      <button key={k} onClick={() => bascule(muscles, setMuscles, k)} aria-pressed={actif}
+                      <button key={k} onClick={() => bascule(muscles, setMuscles, k)} aria-pressed={actif} onMouseDown={e => e.preventDefault()}
                         style={{ ...S.puce, ...S.puceMuscle, ...(actif ? S.puceOn : {}) }}>
-                        <span>{MUSCLES[k].label}</span>
+                        <span style={S.puceTexte}>{MUSCLES[k].label}</span>
                         <span style={{ ...S.nb, color: actif ? 'rgba(228,248,22,0.6)' : '#9ca3af' }}>{n}</span>
                       </button>
                     )
@@ -123,6 +137,14 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
         <div style={S.resultats}>
           <div style={S.resTete}>
             <span style={S.compte}>{liste ? `${resultats.length} exercice${resultats.length > 1 ? 's' : ''}` : 'Chargement…'}</span>
+            {zones.map(z => (
+              <span key={z} style={S.actif}>
+                {z}
+                <button onClick={() => bascule(zones, setZones, z)} style={S.actifX} aria-label={`Retirer ${z}`}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </span>
+            ))}
             {muscles.map(k => (
               <span key={k} style={S.actif}>
                 {MUSCLES[k]?.label}
@@ -150,8 +172,8 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
                   <span style={S.nom}>{ex.nom}</span>
                   {(ex.m.p.length > 0 || ex.m.s.length > 0) && (
                     <span style={S.muscles}>
-                      {ex.m.p.map(k => <span key={k} style={S.mp}>{MUSCLES[k]?.label || k}</span>)}
-                      {ex.m.s.map(k => <span key={k} style={S.ms}>{MUSCLES[k]?.label || k}</span>)}
+                      {ex.m.p.length > 0 && <span style={S.mp}>{ex.m.p.map(k => MUSCLES[k]?.label || k).join(', ')}</span>}
+                      {ex.m.s.length > 0 && <span style={S.ms}>{ex.m.p.length > 0 ? '· ' : ''}{ex.m.s.map(k => MUSCLES[k]?.label || k).join(', ')}</span>}
                     </span>
                   )}
                 </span>
@@ -167,7 +189,7 @@ export default function ChoixBibliotheque({ onChoisir, onFermer }) {
 
 const S = {
   fond:      { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  fenetre:   { background: 'white', borderRadius: 16, width: '100%', maxWidth: 1100, height: 'min(720px, calc(100vh - 48px))', display: 'grid', gridTemplateColumns: '340px 1fr', gridTemplateRows: 'auto minmax(0, 1fr)', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' },
+  fenetre:   { background: 'white', borderRadius: 16, width: '100%', maxWidth: 1100, height: 'min(720px, calc(100vh - 48px))', display: 'grid', gridTemplateColumns: '360px 1fr', gridTemplateRows: 'auto minmax(0, 1fr)', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' },
   tete:      { gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 16, padding: '16px 16px 16px 24px', borderBottom: '1px solid #e5e7eb' },
   titre:     { margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#333333', flex: 1 },
   recherche: { display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0 12px', minHeight: 40, width: 360, maxWidth: '45%' },
@@ -182,10 +204,12 @@ const S = {
   segOn:     { background: 'white', color: '#333333', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' },
   puces:     { display: 'flex', flexWrap: 'wrap', gap: 8 },
   puce:      { border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 999, minHeight: 32, padding: '0 12px', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 700, color: '#374151', cursor: 'pointer' },
+  zoneBtn:   { marginBottom: 6, fontWeight: 800 },
+  puceTexte: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 },
   zone:      { margin: '0 0 6px', fontSize: '0.75rem', fontWeight: 700, color: '#374151' },
   grilleMuscles: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 },
   puceMuscle:{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, width: '100%', padding: '0 10px', textAlign: 'left' },
-  puceOn:    { background: '#333333', borderColor: '#333333', color: '#e4f816' },
+  puceOn:    { background: '#333333', border: '1.5px solid #333333', color: '#e4f816' },
   nb:        { fontWeight: 600, marginLeft: 4, fontVariantNumeric: 'tabular-nums' },
   resultats: { display: 'flex', flexDirection: 'column', minHeight: 0 },
   resTete:   { display: 'flex', alignItems: 'center', gap: 8, padding: '16px 24px 8px', flexWrap: 'wrap', minHeight: 52 },
@@ -196,9 +220,10 @@ const S = {
   item:      { width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: 8, borderRadius: 12, cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left', fontFamily: 'inherit' },
   vignette:  { width: 48, height: 48, borderRadius: 10, background: '#f3f4f6', flexShrink: 0, objectFit: 'cover', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   nom:       { display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#333333' },
-  muscles:   { display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' },
-  mp:        { fontSize: '0.75rem', fontWeight: 700, background: '#333333', color: 'white', borderRadius: 999, padding: '1px 8px' },
-  ms:        { fontSize: '0.75rem', fontWeight: 600, background: '#f3f4f6', color: '#6b7280', borderRadius: 999, padding: '1px 8px' },
+  muscles:   { display: 'flex', gap: 4, marginTop: 2, flexWrap: 'wrap' },
+  // Muscles en texte discret : principaux en gris foncé, secondaires en gris clair
+  mp:        { fontSize: '0.75rem', fontWeight: 600, color: '#4b5563' },
+  ms:        { fontSize: '0.75rem', fontWeight: 500, color: '#9ca3af' },
   cat:       { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' },
   vide:      { padding: '48px 24px', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem', fontWeight: 600, lineHeight: 1.5 },
 }

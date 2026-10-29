@@ -1091,7 +1091,7 @@ export default function Seance() {
         </div>
       </div>
 
-      {/* Échauffement, blocs cardio et cardio côte à côte : le haut de la page reste compact */}
+      {/* Échauffement et notes du joueur, puis les deux cartes cardio : le haut de la page reste compact */}
       <div style={styles.hautSeance}>
       {/* ── Échauffement ── */}
       <div style={{ ...styles.card, minWidth: 0, flex: '1.6 1 520px' }}>
@@ -1327,8 +1327,32 @@ export default function Seance() {
         </div>
       </div>
 
-      {/* ── Blocs cardio (texte libre) ── */}
+      {/* ── Notes du joueur, à droite de l'échauffement ── */}
       <div style={{ ...styles.card, minWidth: 0, flex: '1 1 320px' }}>
+        <p style={styles.sectionTitle}>Notes du client</p>
+        {notesClient.length === 0 ? (
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Pas encore de note du joueur sur cette séance.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {notesClient.map(n => (
+              <div key={n.semaine} style={{ display: 'flex', gap: '0.9rem', padding: '0.6rem 0', borderTop: '1px solid #f3f4f6' }}>
+                <span style={{ flexShrink: 0, minWidth: 34, fontSize: '0.8rem', fontWeight: 800, color: '#333333' }}>S{n.semaine}</span>
+                <div style={{ minWidth: 0 }}>
+                  {n.non_effectuee && <p style={{ margin: '0 0 0.2rem', fontSize: '0.8rem', fontWeight: 700, color: '#dc2626' }}>Séance non effectuée</p>}
+                  {(n.texte || '').trim() && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{n.texte.trim()}</p>}
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      </div>
+
+      {/* Les deux cartes cardio côte à côte, sous l'échauffement */}
+      <div style={styles.hautSeance}>
+      {/* ── Blocs cardio (texte libre) ── */}
+      <div style={{ ...styles.card, minWidth: 0, flex: '1 1 400px' }}>
         <p style={styles.sectionTitle}>Blocs cardio</p>
         <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.75rem' }}>
           Pour une séance 100 % cardio : ajoute un ou plusieurs blocs en texte libre.
@@ -1368,7 +1392,7 @@ export default function Seance() {
       </div>
 
       {/* ── Cardio ── */}
-      <div style={{ ...styles.card, minWidth: 0, flex: '1 1 320px' }}>
+      <div style={{ ...styles.card, minWidth: 0, flex: '1 1 400px' }}>
         <p style={styles.sectionTitle}>Cardio</p>
         {[
           { position: 'debut', label: 'Avant séance', cardioAll: cardioDebut, sem: cardioDebutSem, setSem: setCardioDebutSem },
@@ -1538,25 +1562,6 @@ export default function Seance() {
         </div>
       </div>
 
-      {/* Notes du client */}
-      {notesClient.length > 0 && (
-        <div style={{ ...styles.card, marginTop: '1rem' }}>
-          <p style={styles.sectionTitle}>Notes du client</p>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {notesClient.map(n => (
-              <div key={n.semaine} style={{ display: 'flex', gap: '0.9rem', padding: '0.6rem 0', borderTop: '1px solid #f3f4f6' }}>
-                <span style={{ flexShrink: 0, minWidth: 34, fontSize: '0.8rem', fontWeight: 800, color: '#333333' }}>S{n.semaine}</span>
-                <div style={{ minWidth: 0 }}>
-                  {n.non_effectuee && <p style={{ margin: '0 0 0.2rem', fontSize: '0.8rem', fontWeight: 700, color: '#dc2626' }}>Séance non effectuée</p>}
-                  {(n.texte || '').trim() && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{n.texte.trim()}</p>}
-                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Table exercices */}
       <div style={{ ...styles.card, marginTop: '1rem', overflowX: 'hidden', padding: editAllMode ? '1.25rem 1rem' : '1.25rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -1680,7 +1685,10 @@ export default function Seance() {
                 const lettre = lettreBloc(ex.code)
                 const debutBloc = idx === 0 || lettre !== lettreBloc(exercices[idx - 1].code)
                 const finBloc = idx === exercices.length - 1 || lettre !== lettreBloc(exercices[idx + 1].code)
-                // Barre foncée continue sur toutes les lignes du bloc, lettre en haut
+                // Nombre de lignes du bloc, pour placer la lettre au milieu de la barre
+                let tailleBloc = 1
+                while (debutBloc && idx + tailleBloc < exercices.length && lettreBloc(exercices[idx + tailleBloc].code) === lettre) tailleBloc++
+                // Barre foncée continue sur toutes les lignes du bloc, lettre au centre
                 const caseBloc = (
                   <td style={{ ...styles.td, position: 'relative', width: 52, padding: 0 }}>
                     {lettre && (
@@ -1690,8 +1698,10 @@ export default function Seance() {
                         borderTopLeftRadius: debutBloc ? 8 : 0, borderTopRightRadius: debutBloc ? 8 : 0,
                         borderBottomLeftRadius: finBloc ? 8 : 0, borderBottomRightRadius: finBloc ? 8 : 0,
                       }}>
-                        {debutBloc && lettre}
                       </span>
+                    )}
+                    {lettre && debutBloc && (
+                      <span style={{ ...styles.blocLettre, top: `${tailleBloc * 50}%` }}>{lettre}</span>
                     )}
                   </td>
                 )
@@ -2379,9 +2389,10 @@ const styles = {
   tr: { borderBottom: '1px solid #f3f4f6' },
   td: { padding: '0.6rem 0.75rem', color: '#374151' },
   tdCenter: { padding: '0.6rem 0.5rem', textAlign: 'center', color: '#374151' },
-  // Échauffement plus large que les deux cartes cardio ; passent à la ligne sur petit écran
-  hautSeance: { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-start', marginBottom: '1rem' },
-  blocBarre: { position: 'absolute', left: 12, width: 28, background: '#333333', color: '#e4f816', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 6, boxSizing: 'border-box', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1 },
+  // Cartes de même hauteur sur une ligne ; passent à la ligne sur petit écran
+  hautSeance: { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'stretch', marginBottom: '1rem' },
+  blocLettre: { position: 'absolute', left: 12, width: 28, transform: 'translateY(-50%)', textAlign: 'center', color: '#e4f816', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1, zIndex: 1, pointerEvents: 'none' },
+  blocBarre: { position: 'absolute', left: 12, width: 28, background: '#333333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1 },
   actionBtn: { width: 32, height: 32, background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   menu: { position: 'fixed', zIndex: 500, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: 260, padding: 4, display: 'flex', flexDirection: 'column' },
   menuItem: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 8, padding: '0.6rem 0.75rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' },
