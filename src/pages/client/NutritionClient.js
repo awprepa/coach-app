@@ -350,7 +350,7 @@ export default function NutritionClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
       <EnTeteClient titre="Nutrition" actions={<>
         <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...boutonEnTete, width: 'auto', padding: '0 13px 0 11px', gap: 6, fontSize: 13, fontWeight: 700 }}>
-          <IconeQR taille={16} />
+          <IconeCodeBarre taille={16} />
           Mes scans
         </button>
         <button onClick={() => navigate('/client/nutrition/profil')} style={boutonEnTete} aria-label="Mes besoins">
@@ -521,7 +521,7 @@ export default function NutritionClient() {
       {/* Barre scanner fixe */}
       <div style={S.scanCta}>
         <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanCtaBtn}>
-          <IconeQR taille={20} />
+          <IconeCodeBarre taille={20} />
           Scanner un article
         </button>
       </div>
@@ -574,15 +574,14 @@ export default function NutritionClient() {
   )
 }
 
-// QR code : trois carrés de repère et quelques modules, lisible même petit
-function IconeQR({ taille }) {
+// Code-barres dans un cadre de visée : barres verticales d'épaisseurs variées
+function IconeCodeBarre({ taille }) {
   return (
-    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
-      <g fill="currentColor" stroke="none">
-        <rect x="5.5" y="5.5" width="2" height="2" /><rect x="16.5" y="5.5" width="2" height="2" /><rect x="5.5" y="16.5" width="2" height="2" />
-        <rect x="13" y="13" width="3" height="3" /><rect x="18" y="13" width="3" height="3" /><rect x="15.5" y="15.5" width="3" height="3" />
-        <rect x="13" y="18" width="3" height="3" /><rect x="18" y="18" width="3" height="3" />
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+      <g strokeLinecap="butt">
+        <path d="M7 8v8" /><path d="M10 8v8" strokeWidth="1.2" /><path d="M12.5 8v8" strokeWidth="2.4" />
+        <path d="M15 8v8" strokeWidth="1.2" /><path d="M17 8v8" />
       </g>
     </svg>
   )
