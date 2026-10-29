@@ -635,16 +635,21 @@ export default function ProgressionClient() {
     const standard = BENCHMARK_EXERCISES.map(bench => {
       // Parmi tous les noms d'exercices du client, on prend celui qui matche ce
       // benchmark et qui a le plus de tests réels à 1 rep (au cas où plusieurs
-      // variantes du même mouvement existent dans son historique). Les rangs ne
-      // doivent se baser que sur un vrai record testé, jamais sur une estimation.
+      // variantes du même mouvement existent dans son historique), sinon celui
+      // qui a le plus de séries. Le rang se base sur un vrai poids soulevé, jamais
+      // sur une estimation : le record testé à 1 rep, ou à défaut la charge la
+      // plus lourde mise sur une série (quel que soit le nombre de reps).
       const candidates = Object.entries(exercicesData)
         .filter(([nom]) => matchBenchmarkExercise(nom) === bench.key)
-        .filter(([, d]) => d.direct1RepPoints?.length > 0)
-        .sort((a, b) => b[1].direct1RepPoints.length - a[1].direct1RepPoints.length)
+        .filter(([, d]) => d.allSets?.length > 0)
+        .sort((a, b) => (b[1].direct1RepPoints.length - a[1].direct1RepPoints.length) || (b[1].allSets.length - a[1].allSets.length))
       const data = candidates[0]?.[1]
       if (!data) return { ...bench, hasData: false }
 
-      const bestRm = Math.max(...data.direct1RepPoints.map(p => p.poids))
+      const teste = data.direct1RepPoints.length > 0
+      const bestRm = teste
+        ? Math.max(...data.direct1RepPoints.map(p => p.poids))
+        : Math.max(...data.allSets.map(p => p.poids))
       if (!bestRm) return { ...bench, hasData: false }
 
       const rank = computeRank(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
@@ -652,7 +657,7 @@ export default function ProgressionClient() {
       const percentile = estimatePercentile(bench.key, bestRm, profileInfo.poids, profileInfo.sexe)
       const wr = getWorldRecord(bench.key, profileInfo.sexe)
       const level = levelFromXp(computeExerciseXp(data.allSets, profileInfo.poids))
-      return { ...bench, hasData: true, bestRm, rank, bareme, percentile, wr, level }
+      return { ...bench, hasData: true, bestRm, teste, rank, bareme, percentile, wr, level }
     })
 
     // Rangs personnalisés créés par le coach pour un exercice de son choix —
@@ -849,6 +854,7 @@ export default function ProgressionClient() {
                     <div>
                       <p style={S.medalDetailLabel}>{selectedMedal.label}</p>
                       <p style={S.exStatusValue}>{selectedMedal.bestRm} kg</p>
+                      {selectedMedal.teste === false && <p style={S.medalsHint}>Charge la plus lourde sur une série (pas encore de test à 1 rép.)</p>}
                     </div>
                     <div style={{ ...S.medalBadge, background: RANK_COLORS[selectedMedal.rank.rank].bg, color: RANK_COLORS[selectedMedal.rank.rank].fg, fontSize: '0.78rem', padding: '5px 12px' }}>
                       {selectedMedal.rank.rank}

@@ -306,6 +306,19 @@ export default function AccueilClient() {
   const initiales = `${client.prenom?.[0] || ''}${client.nom?.[0] || ''}`.toUpperCase()
   const todayStr  = isoLocal()
 
+  // Ligne de contexte du jour (à la place de « Bonjour, prénom ») :
+  // « Jeudi 29 octobre · Semaine 3 sur 6 », ou le match du jour
+  const dateDuJour = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const contexteDuJour = (() => {
+    if (prochaineSeance?.date === todayStr && (prochaineSeance._isFFR || prochaineSeance.type === 'match')) {
+      return `Match ${(prochaineSeance.titre || '').replace(/^vs /, 'contre ')}`.trim()
+    }
+    const cycle = programmes.find(p => p.date_debut && !isCycleTermine(p) && new Date(p.date_debut + 'T00:00:00') <= new Date())
+    if (!cycle) return null
+    const semaine = Math.floor((new Date(todayStr + 'T00:00:00') - new Date(cycle.date_debut + 'T00:00:00')) / (7 * 86400000)) + 1
+    return `Semaine ${semaine} sur ${cycle.semaines}`
+  })()
+
   return (
     <div style={{ ...styles.page, ...fadeStyle }}>
       {/* Signature A — conditions générales, bloque l'accès tant que non signées */}
@@ -360,11 +373,10 @@ export default function AccueilClient() {
       {showProfileMenu && <ClientProfileMenu client={client} avatarUrl={avatarUrl} onClose={() => setShowProfileMenu(false)} />}
 
       <div style={styles.content}>
-        <div style={{ marginBottom: '1.75rem' }}>
-          <p style={styles.label}>Bonjour,</p>
-          <h1 style={styles.title}>{client.prenom}</h1>
-          {client.objectif && <p style={styles.subtitle}>{client.objectif}</p>}
-        </div>
+        <p style={styles.contexte}>
+          <span style={styles.contexteDate}>{dateDuJour.charAt(0).toUpperCase() + dateDuJour.slice(1)}</span>
+          {contexteDuJour && <span style={styles.contexteSuite}> · {contexteDuJour}</span>}
+        </p>
 
         {levelWidget && (
           <div role="button" tabIndex={0} onClick={() => navigate('/client/progression')} style={styles.levelWidget}>
@@ -615,6 +627,9 @@ const styles = {
   avatar:      { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'var(--header-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
   content:     { padding: '1.5rem', maxWidth: '480px', margin: '0 auto' },
   label:       { color: '#888', fontSize: '0.875rem', margin: '0 0 0.2rem' },
+  contexte:    { margin: '0 0 1rem', fontSize: '0.95rem', lineHeight: 1.4 },
+  contexteDate: { fontWeight: 700, color: '#333333' },
+  contexteSuite: { color: '#6b7280', fontWeight: 500 },
   title:       { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
   subtitle:    { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.4rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
