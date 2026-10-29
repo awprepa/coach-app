@@ -80,13 +80,13 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0 }} />
         <div style={{ flex: 1, textAlign: 'left' }}>
           <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</div>
-          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>
             {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`, meal.fat_g && `L ${meal.fat_g}g`].filter(Boolean).join(' · ')}
           </div>
         </div>
         {statut && (
           <span style={{
-            fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', borderRadius: 20,
+            fontSize: '0.75rem', fontWeight: 800, padding: '3px 8px', borderRadius: 20,
             background: statut === 'fait' ? '#dcfce7' : statut === 'hors_plan' ? '#fef9c3' : '#fee2e2',
             color: statut === 'fait' ? '#166534' : statut === 'hors_plan' ? '#92400e' : '#dc2626',
           }}>
@@ -107,7 +107,7 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
               {foods.map(food => (
                 <div key={food.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f9fafb' }}>
                   <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{food.nom}</span>
-                  <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                     {food.quantite_g ? `${food.quantite_g}g` : ''}{food.kcal ? ` · ${food.kcal} kcal` : ''}
                   </span>
                 </div>
@@ -115,12 +115,12 @@ function MealCard({ meal, log, dayNum, saving, onLog, onHorsPlan }) {
             </div>
           )}
           {meal.recette && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '0.5rem 0.75rem', marginBottom: 8, fontSize: '0.72rem', color: '#92400e', lineHeight: 1.5 }}>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '0.5rem 0.75rem', marginBottom: 8, fontSize: '0.75rem', color: '#92400e', lineHeight: 1.5 }}>
               <strong>Préparation :</strong> {meal.recette}
             </div>
           )}
           {log?.statut === 'hors_plan' && log.hors_plan_nom && (
-            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '0.5rem 0.75rem', marginBottom: 8, fontSize: '0.72rem', color: '#92400e' }}>
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '0.5rem 0.75rem', marginBottom: 8, fontSize: '0.75rem', color: '#92400e' }}>
               Mangé à la place : <strong>{log.hors_plan_nom}</strong>
               {log.hors_plan_kcal && ` · ${log.hors_plan_kcal} kcal`}
             </div>
@@ -155,11 +155,11 @@ function ExtraCard({ log, onDelete }) {
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366f1', display: 'inline-block', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a' }}>{log.hors_plan_nom || 'Repas ajouté'}</div>
-          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>
             {[log.hors_plan_kcal && `${log.hors_plan_kcal} kcal`, log.hors_plan_prot && `P ${log.hors_plan_prot}g`, log.hors_plan_carbs && `G ${log.hors_plan_carbs}g`, log.hors_plan_fat && `L ${log.hors_plan_fat}g`].filter(Boolean).join(' · ') || 'Sans info nutritionnelle'}
           </div>
         </div>
-        <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', borderRadius: 20, background: '#ede9fe', color: '#6d28d9', flexShrink: 0 }}>Ajouté</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 8px', borderRadius: 20, background: '#ede9fe', color: '#6d28d9', flexShrink: 0 }}>Ajouté</span>
         <button onClick={() => onDelete(log.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#6b7280', display: 'flex' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -597,7 +597,7 @@ export default function NutritionPlanClient() {
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: ml.color, display: 'inline-block', flexShrink: 0, transform: 'translateY(-1px)' }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#1a1a1a' }}>{ml.label} — {meal.nom}</span>
-                            <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                               {[meal.kcal && `${meal.kcal} kcal`, meal.prot_g && `P ${meal.prot_g}g`, meal.carbs_g && `G ${meal.carbs_g}g`, meal.fat_g && `L ${meal.fat_g}g`].filter(Boolean).join(' · ')}
                             </div>
                           </div>
@@ -605,7 +605,7 @@ export default function NutritionPlanClient() {
                         {foods.length > 0 && (
                           <div style={{ marginTop: 5, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {foods.map(food => (
-                              <div key={food.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.74rem' }}>
+                              <div key={food.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.75rem' }}>
                                 <span style={{ color: '#374151' }}>{food.nom}</span>
                                 <span style={{ color: '#6b7280', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                                   {food.quantite_g ? `${food.quantite_g % 1 === 0 ? food.quantite_g : food.quantite_g.toFixed(0)} g` : '—'}
@@ -653,7 +653,7 @@ export default function NutritionPlanClient() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {shoppingList.map(groupe => (
                   <div key={groupe.rayon}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{groupe.rayon}</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{groupe.rayon}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {groupe.items.map((item, i) => <ShoppingItem key={i} item={item} />)}
                     </div>
@@ -760,7 +760,7 @@ function HydratationCard({ water, onUpdate }) {
     <div style={S.waterCard}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>Hydratation</span>
-        <span style={{ fontSize: '0.72rem', fontWeight: 700, background: 'rgba(255,255,255,0.25)', padding: '3px 9px', borderRadius: 20, color: 'white' }}>{Math.round(waterPct)}%</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, background: 'rgba(255,255,255,0.25)', padding: '3px 9px', borderRadius: 20, color: 'white' }}>{Math.round(waterPct)}%</span>
       </div>
       <div style={{ height: 8, background: '#eff6ff', borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>
         <div style={{ height: '100%', background: '#3b82f6', borderRadius: 999, width: `${waterPct}%`, transition: 'width 0.3s ease' }} />
@@ -768,13 +768,13 @@ function HydratationCard({ water, onUpdate }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <button onClick={() => onUpdate(-250)} style={S.waterBtnMinus} aria-label="Retirer 1 verre">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2 }}>1 verre</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: 2 }}>1 verre</span>
         </button>
         <div style={{ textAlign: 'center', flex: 1 }}>
           <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
             {verres} <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>verre{verres > 1 ? 's' : ''}</span>
           </div>
-          <div style={{ fontSize: '0.7rem', color: '#93c5fd', fontWeight: 600, marginTop: 3 }}>
+          <div style={{ fontSize: '0.75rem', color: '#93c5fd', fontWeight: 600, marginTop: 3 }}>
             {water.ml || 0} ml · objectif {targetVerres} verres
           </div>
         </div>
@@ -782,7 +782,7 @@ function HydratationCard({ water, onUpdate }) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, marginTop: 2 }}>1 verre</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: 2 }}>1 verre</span>
         </button>
       </div>
     </div>
@@ -799,7 +799,7 @@ function ShoppingItem({ item }) {
       </div>
       <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a1a1a', flex: 1, textDecoration: checked ? 'line-through' : 'none' }}>{item.nom}</span>
       {item.quantite > 0 && (
-        <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
+        <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
           {item.count > 1 ? `${Math.round(item.quantite)}g / sem.` : `${Math.round(item.quantite)}g`}
         </span>
       )}
@@ -843,7 +843,7 @@ const S = {
   },
   overlay: { position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end' },
   sheet: { background: 'white', borderRadius: '22px 22px 0 0', padding: '1rem 1.25rem 2.5rem', width: '100%', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' },
-  fieldLabel: { display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '0.3rem' },
+  fieldLabel: { display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '0.3rem' },
   fieldInput: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit' },
   cancelBtn: { flex: 1, padding: '0.75rem', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', color: '#6b7280', fontFamily: 'inherit' },
   saveBtn:   { flex: 2, padding: '0.75rem', borderRadius: 12, border: 'none', background: 'var(--chip-bg)', color: 'var(--chip-text)', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit' },

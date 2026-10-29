@@ -64,32 +64,32 @@ function DetailTable({ scan }) {
         <div style={{ display: 'flex', gap: 4 }}>
           {['g', 'ml'].map(u => (
             <button key={u} onClick={(e) => { e.stopPropagation(); setUnit(u) }} style={{
-              padding: '2px 9px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              minWidth: 44, minHeight: 32, padding: '0 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
               background: unit === u ? 'var(--accent)' : '#f3f4f6',
               color: unit === u ? '#1a1a1a' : '#6b7280',
-              fontSize: '0.65rem', fontWeight: 700,
+              fontSize: '0.75rem', fontWeight: 700,
             }}>{u}</button>
           ))}
         </div>
         <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 600 }}>Portion consommée</span>
+          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>Portion consommée</span>
           <input
             value={portion}
             onChange={e => setPortion(e.target.value)}
             placeholder="200"
             inputMode="decimal"
-            style={{ width: 48, padding: '3px 6px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: '0.72rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'right' }}
+            style={{ width: 48, padding: '3px 6px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: '0.75rem', fontWeight: 700, color: '#1a1a1a', outline: 'none', textAlign: 'right' }}
           />
-          <span style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 600 }}>{unit}</span>
+          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>{unit}</span>
         </div>
       </div>
 
       <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
         <div style={{ display: 'flex', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ flex: 1, padding: '5px 10px', fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }} />
-          <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour 100 {unit}</div>
+          <div style={{ flex: 1, padding: '5px 10px', fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }} />
+          <div style={{ width: 92, padding: '5px 8px', fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour 100 {unit}</div>
           {hasPortion && (
-            <div style={{ width: 92, padding: '5px 8px', fontSize: '0.6rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour {portion} {unit}</div>
+            <div style={{ width: 92, padding: '5px 8px', fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' }}>Pour {portion} {unit}</div>
           )}
         </div>
         {rows.map((row, i) => (
@@ -97,7 +97,7 @@ function DetailTable({ scan }) {
             <div style={{ display: 'flex', alignItems: 'center', borderTop: i === 0 ? 'none' : '1px solid #f3f4f6', background: i % 2 ? '#fbfbfc' : 'white' }}>
               <div style={{ flex: 1, padding: '6px 10px', minWidth: 0 }}>
                 <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}>{row.label}</span>
-                {row.note && <span style={{ marginLeft: 6, fontSize: '0.6rem', fontWeight: 700, color: row.note.color }}>{row.note.label}</span>}
+                {row.note && <span style={{ marginLeft: 6, fontSize: '0.75rem', fontWeight: 700, color: row.note.color }}>{row.note.label}</span>}
               </div>
               <div style={{ width: 92, padding: '6px 8px', textAlign: 'right', fontSize: '0.76rem', fontWeight: 700, color: '#1a1a1a' }}>
                 {fmtVal(row.val, row.unit)}
@@ -111,13 +111,13 @@ function DetailTable({ scan }) {
             {row.sub && (
               <div style={{ display: 'flex', alignItems: 'center', background: i % 2 ? '#fbfbfc' : 'white' }}>
                 <div style={{ flex: 1, padding: '2px 10px 6px 18px', minWidth: 0 }}>
-                  <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>{row.sub.label}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>{row.sub.label}</span>
                 </div>
-                <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>
+                <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
                   {fmtVal(row.sub.val, unit)}
                 </div>
                 {hasPortion && (
-                  <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.68rem', color: '#6b7280', fontWeight: 700 }}>
+                  <div style={{ width: 92, padding: '2px 8px 6px', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: 700 }}>
                     {row.sub.val != null ? fmtVal(row.sub.val * factor, unit) : '—'}
                   </div>
                 )}
@@ -154,7 +154,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
               <p style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1a1a1a', margin: '0 0 2px', lineHeight: 1.2 }}>
                 {scan.product_name || 'Produit inconnu'}
               </p>
-              {scan.brand && <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, margin: 0 }}>{scan.brand}</p>}
+              {scan.brand && <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, margin: 0 }}>{scan.brand}</p>}
             </div>
             {scan.quality_grade && (
               <div style={{ width: 34, height: 34, borderRadius: 10, background: gc, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '1rem' }}>
@@ -170,7 +170,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
             {scan.fat_100g   != null && <Chip label={`L ${Math.round(scan.fat_100g)}g`}   bg="#fee2e2" color="#991b1b" />}
           </div>
 
-          <p style={{ fontSize: '0.62rem', color: '#6b7280', fontWeight: 600, margin: '0.45rem 0 0' }}>
+          <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, margin: '0.45rem 0 0' }}>
             {formatDate(scan.scanned_at)}
           </p>
         </div>
@@ -181,14 +181,14 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.7rem', paddingTop: '0.7rem', borderTop: '1px solid #f3f4f6' }}>
         <button onClick={(e) => { e.stopPropagation(); onReuse(scan) }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '0.55rem', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#1a1a1a',
+          minHeight: 44, padding: '0.55rem', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#1a1a1a',
           fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
         }}>
           <IconPlus /> Réutiliser
         </button>
         <button onClick={(e) => { e.stopPropagation(); onDelete(scan.id) }} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0.55rem 0.8rem', borderRadius: 10, border: '1.5px solid #fee2e2', background: 'white', color: '#dc2626', cursor: 'pointer',
+          minWidth: 44, minHeight: 44, padding: '0.55rem 0.8rem', borderRadius: 10, border: '1.5px solid #fee2e2', background: 'white', color: '#dc2626', cursor: 'pointer',
         }}>
           <IconTrash />
         </button>
@@ -199,7 +199,7 @@ export default function ScanHistoryCard({ scan, onReuse, onDelete }) {
 
 function Chip({ label, bg, color }) {
   return (
-    <span style={{ padding: '2px 8px', borderRadius: 999, background: bg, color, fontSize: '0.63rem', fontWeight: 700 }}>
+    <span style={{ padding: '2px 8px', borderRadius: 999, background: bg, color, fontSize: '0.75rem', fontWeight: 700 }}>
       {label}
     </span>
   )

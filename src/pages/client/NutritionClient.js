@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
@@ -37,6 +37,7 @@ const fmt = n => Math.round(n || 0).toLocaleString('fr-FR')
 
 export default function NutritionClient() {
   const navigate  = useNavigate()
+  const location  = useLocation()
   const fadeStyle = usePageFade()
   const [client, setClient]   = useState(null)
   const [jour, setJour]       = useState(new Date())
@@ -51,6 +52,15 @@ export default function NutritionClient() {
   const [logs, setLogs]       = useState([])
   const [coche, setCoche]     = useState(null)   // id du repas en cours d'envoi
   const [detailPlat, setDetailPlat] = useState(null) // repas prescrit dont on affiche le détail
+  const [aRetirer, setARetirer] = useState(null)     // aliment dont la suppression attend confirmation
+  const [message, setMessage] = useState(null)       // petit message en bas de l'écran
+  const minuteurMsg = useRef(null)
+  function afficher(texte) {
+    clearTimeout(minuteurMsg.current)
+    setMessage(texte)
+    minuteurMsg.current = setTimeout(() => setMessage(null), 2600)
+  }
+  const ECHEC = "Pas enregistré. Vérifie ta connexion et réessaie."
 
   const iso = toISO(jour)
 
@@ -68,14 +78,14 @@ export default function NutritionClient() {
       // Plan actif éventuel (chargé une fois, il ne change pas d'un jour à l'autre)
       const today = isoLocal()
       const { data: p } = await supabase.from('nutrition_plans')
-        .select('id, nom, date_debut').eq('client_id', data.id).eq('statut', 'actif')
+        .select('id, nom, date_debut, objectif_kcal, objectif_prot, objectif_carbs, objectif_fat').eq('client_id', data.id).eq('statut', 'actif')
         .lte('date_debut', today)
         .or(`date_fin.is.null,date_fin.gte.${today}`)
         .order('date_debut', { ascending: false }).limit(1).maybeSingle()
       if (p) {
         setPlan(p)
         const { data: jrs } = await supabase.from('nutrition_plan_days')
-          .select('jour_numero, nutrition_plan_meals(id, meal_type, nom, kcal, prot_g, carbs_g, fat_g, recette, nutrition_plan_foods(id, nom, quantite_g, kcal, prot_g, carbs_g, fat_g, ordre))')
+          .select('jour_numero, objectif_kcal, objectif_prot, objectif_carbs, objectif_fat, nutrition_plan_meals(id, meal_type, nom, kcal, prot_g, carbs_g, fat_g, recette, nutrition_plan_foods(id, nom, quantite_g, kcal, prot_g, carbs_g, fat_g, ordre))')
           .eq('plan_id', p.id).order('jour_numero')
         setJoursPlan(jrs || [])
       }
@@ -107,12 +117,40 @@ export default function NutritionClient() {
   }, [client, iso, plan])
 
   useEffect(() => { charger() }, [charger])
-  useAuRetourOnglet(() => charger(true))
+
+  // L'onglet reste ouvert en arrière-plan : si on regardait « aujourd'hui » et
+  // que la date a changé (app laissée ouverte la nuit), on passe au nouveau jour
+  // pour ne pas enregistrer le petit-déjeuner sur la veille.
+  const aujourdhuiVu = useRef(toISO(new Date()))
+  const suivreLeJour = useCallback(() => {
+    const auj = toISO(new Date())
+    if (auj === aujourdhuiVu.current) return false
+    setJour(j => (toISO(j) === aujourdhuiVu.current ? new Date() : j))
+    aujourdhuiVu.current = auj
+    return true
+  }, [])
+  useAuRetourOnglet(() => { suivreLeJour(); charger(true) })
+  useEffect(() => {
+    const auRetour = () => { if (document.visibilityState === 'visible') suivreLeJour() }
+    document.addEventListener('visibilitychange', auRetour)
+    return () => document.removeEventListener('visibilitychange', auRetour)
+  }, [suivreLeJour])
+
+  // Retour de l'écran d'ajout : confirmation « ajouté »
+  useEffect(() => {
+    const ajout = location.state?.ajout
+    if (!ajout) return
+    afficher(ajout)
+    charger(true)
+    window.history.replaceState({}, '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   // Repas prescrits du jour + statut de chacun
   const jourNum   = plan ? numeroJourPlan(iso, plan) : null
   const planMeals = jourNum ? (joursPlan.find(j => j.jour_numero === jourNum)?.nutrition_plan_meals || []) : []
   const statutDe  = id => logs.find(l => l.meal_id === id)?.statut || null
+  const jourPlan  = jourNum ? joursPlan.find(j => j.jour_numero === jourNum) : null
 
   // Le total du jour additionne les repas du plan cochés « mangé » ET les
   // aliments ajoutés librement : un seul chiffre, quelle que soit la source.
@@ -140,11 +178,13 @@ export default function NutritionClient() {
     setCoche(pm.id)
     const existant = logs.find(l => l.meal_id === pm.id)
     if (existant?.statut === 'fait') {
-      await supabase.from('nutrition_plan_logs').delete().eq('id', existant.id)
-      setLogs(prev => prev.filter(l => l.id !== existant.id))
+      const { error } = await supabase.from('nutrition_plan_logs').delete().eq('id', existant.id)
+      if (error) afficher(ECHEC)
+      else setLogs(prev => prev.filter(l => l.id !== existant.id))
     } else if (existant) {
-      await supabase.from('nutrition_plan_logs').update({ statut: 'fait' }).eq('id', existant.id)
-      setLogs(prev => prev.map(l => l.id === existant.id ? { ...l, statut: 'fait' } : l))
+      const { error } = await supabase.from('nutrition_plan_logs').update({ statut: 'fait' }).eq('id', existant.id)
+      if (error) afficher(ECHEC)
+      else setLogs(prev => prev.map(l => l.id === existant.id ? { ...l, statut: 'fait' } : l))
     } else {
       // On conserve l'écriture dans nutrition_plan_logs : c'est elle qui
       // alimente le suivi d'adhérence côté coach.
@@ -153,23 +193,38 @@ export default function NutritionClient() {
         jour_numero: jourNum, meal_id: pm.id, statut: 'fait',
       }).select('id, meal_id, statut').single()
       if (data) setLogs(prev => [...prev, data])
+      else afficher(ECHEC)
     }
     setCoche(null)
   }
-  const cible = goals?.kcal_target || null
+  // Avec un programme du coach, c'est lui qui fixe les objectifs (ceux du jour,
+  // sinon ceux du programme). Sans programme, ceux que le joueur a calculés.
+  const objectifs = plan
+    ? {
+        kcal_target: jourPlan?.objectif_kcal || plan.objectif_kcal || null,
+        prot_g:  jourPlan?.objectif_prot  || plan.objectif_prot  || null,
+        carbs_g: jourPlan?.objectif_carbs || plan.objectif_carbs || null,
+        fat_g:   jourPlan?.objectif_fat   || plan.objectif_fat   || null,
+      }
+    : goals
+  const cible = objectifs?.kcal_target || null
   const pct = cible ? Math.min(1, total.kcal / cible) : 0
   const R = 41, CIRC = 2 * Math.PI * R
 
   async function majEau(delta) {
+    const avant = water
     const ml = Math.max(0, water + delta)
     setWater(ml)
-    await supabase.from('nutrition_water').upsert(
+    const { error } = await supabase.from('nutrition_water').upsert(
       { client_id: client.id, date: iso, ml, updated_at: new Date().toISOString() },
       { onConflict: 'client_id,date' })
+    if (error) { setWater(avant); afficher(ECHEC) }
   }
 
   async function supprimerItem(mealId, itemId) {
-    await supabase.from('nutrition_meal_items').delete().eq('id', itemId)
+    setARetirer(null)
+    const { error } = await supabase.from('nutrition_meal_items').delete().eq('id', itemId)
+    if (error) { afficher(ECHEC); return }
     const { data: restants } = await supabase.from('nutrition_meal_items')
       .select('kcal, prot_g, carbs_g, fat_g').eq('meal_id', mealId)
     if (!restants?.length) {
@@ -184,7 +239,8 @@ export default function NutritionClient() {
         carbs_g: t.carbs.toFixed(1), fat_g: t.fat.toFixed(1),
       }).eq('id', mealId)
     }
-    charger()
+    charger(true)
+    afficher('Aliment retiré')
   }
 
   function decale(n) { const d = new Date(jour); d.setDate(d.getDate() + n); setJour(d) }
@@ -236,7 +292,7 @@ export default function NutritionClient() {
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 11 }}>
               {MACROS.map(m => {
-                const v = total[m.k], go = goals?.[m.k] ? Number(goals[m.k]) : null
+                const v = total[m.k], go = objectifs?.[m.k] ? Number(objectifs[m.k]) : null
                 return (
                   <div key={m.k}>
                     <div style={S.macTop}>
@@ -244,14 +300,19 @@ export default function NutritionClient() {
                       <span style={S.macVal}>{fmt(v)}{go ? ` / ${fmt(go)}` : ''} g</span>
                     </div>
                     <div style={S.bar}>
-                      <div style={{ height: '100%', borderRadius: 99, background: m.c, width: `${go ? Math.min(100, v / go * 100) : (v > 0 ? 100 : 0)}%` }} />
+                      <div style={{ height: '100%', borderRadius: 99, background: m.c, width: `${go ? Math.min(100, v / go * 100) : 0}%` }} />
                     </div>
                   </div>
                 )
               })}
             </div>
           </div>
-          {!cible && <p style={S.hintGoal}>Pas d'objectif défini — tu vois ce que tu as mangé. Ton coach peut en fixer un.</p>}
+          {!cible && !plan && (
+            <button onClick={() => navigate('/client/nutrition/profil')} style={S.hintGoal}>
+              Pas encore d'objectif. Calcule tes besoins en 3 questions
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M9 5l7 7-7 7" /></svg>
+            </button>
+          )}
         </div>
 
         {plan && (
@@ -281,10 +342,12 @@ export default function NutritionClient() {
                     <div key={pm.id} style={S.prescrit}>
                       <button onClick={() => cocherRepas(pm)} disabled={!!coche}
                         aria-label={fait ? 'Décocher ce plat' : 'Valider ce plat'}
-                        style={{ ...S.check, ...(fait ? S.checkOn : {}), cursor: coche ? 'default' : 'pointer', padding: 0 }}>
-                        {fait && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                        )}
+                        style={{ ...S.checkZone, cursor: coche ? 'default' : 'pointer' }}>
+                        <span style={{ ...S.check, ...(fait ? S.checkOn : {}) }}>
+                          {fait && (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                          )}
+                        </span>
                       </button>
                       <button onClick={() => setDetailPlat(pm)}
                         style={{ minWidth: 0, flex: 1, textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
@@ -302,9 +365,15 @@ export default function NutritionClient() {
                       <p style={S.itemQty}>{fmt(it.quantity)} {it.unit || 'g'}</p>
                     </div>
                     <span style={S.itemKcal}>{fmt(it.kcal)} kcal</span>
-                    <button onClick={() => supprimerItem(m.id, it.id)} style={S.del} aria-label="Retirer">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                    </button>
+                    {aRetirer === it.id ? (
+                      <button onClick={() => supprimerItem(m.id, it.id)} style={S.delConfirm}>Retirer</button>
+                    ) : (
+                      <button onClick={() => setARetirer(it.id)} style={S.del} aria-label={`Retirer ${it.name}`}>
+                        <span style={S.delIco}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )) : (!prescrits.length && <p style={S.empty}>Rien pour l'instant</p>)}
                 <button onClick={() => navigate(`/client/nutrition/aliment?repas=${type}&date=${iso}`)} style={S.add}>
@@ -326,8 +395,9 @@ export default function NutritionClient() {
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800 }}>Hydratation</p>
-            <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#6b7280', fontWeight: 600 }}>
+            <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
               {(water / 1000).toFixed(2).replace('.', ',')} L
+              {!plan && goals?.hydration_ml ? ` / ${(goals.hydration_ml / 1000).toFixed(1).replace('.', ',')} L` : ''}
             </p>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -356,13 +426,15 @@ export default function NutritionClient() {
         </button>
       </div>
 
+      {message && <div role="status" style={S.message}>{message}</div>}
+
       {/* Détail d'un plat prescrit — quantités par ingrédient */}
       {detailPlat && (
         <div style={S.overlay} onClick={() => setDetailPlat(null)}>
           <div style={S.sheet} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 999, margin: '0 auto 14px' }} />
             <p style={{ fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: '#1a1a1a' }}>{detailPlat.nom}</p>
-            <p style={{ fontSize: '0.74rem', color: '#6b7280', margin: '0 0 14px' }}>
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 14px' }}>
               {[detailPlat.kcal && `${fmt(detailPlat.kcal)} kcal`, detailPlat.prot_g && `P ${fmt(detailPlat.prot_g)}g`, detailPlat.carbs_g && `G ${fmt(detailPlat.carbs_g)}g`, detailPlat.fat_g && `L ${fmt(detailPlat.fat_g)}g`].filter(Boolean).join(' · ')}
             </p>
             {(detailPlat.nutrition_plan_foods || []).length > 0 ? (
@@ -400,41 +472,46 @@ const S = {
   headerRow:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle:{ color: 'white', fontWeight: 800, fontSize: '1.02rem' },
   icoBtn:     { width: 34, height: 34, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.12)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 },
-  dateBar:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 11 },
+  dateBar:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 1 },
   dateLabel:  { color: 'white', fontSize: '0.82rem', fontWeight: 700, textTransform: 'capitalize', minWidth: 130, textAlign: 'center' },
-  navBtn:     { background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', padding: 2, display: 'flex' },
+  navBtn:     { background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', padding: 0, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   body:       { padding: '14px' },
   card:       { background: 'white', borderRadius: 16, padding: 15, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 12 },
   ringCenter: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   ringNum:    { fontSize: '1.42rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums' },
-  ringLbl:    { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.04em', marginTop: 3, whiteSpace: 'nowrap' },
-  macTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.74rem' },
+  ringLbl:    { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.02em', marginTop: 3, whiteSpace: 'nowrap' },
+  macTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.75rem' },
   macName:    { fontWeight: 800, color: '#4b5563' },
   macVal:     { fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
   bar:        { height: 6, background: '#eef1f4', borderRadius: 99, overflow: 'hidden', marginTop: 4 },
-  hintGoal:   { margin: '12px 0 0', fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, lineHeight: 1.45 },
+  hintGoal:   { margin: '10px 0 0', padding: '8px 0', minHeight: 44, width: '100%', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', borderTop: '1px solid #eef0f3', fontSize: '0.8rem', color: '#374151', fontWeight: 700, lineHeight: 1.45, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' },
   planBtn:    { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px 14px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', marginBottom: 12, fontFamily: 'inherit' },
   secHead:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 2px 7px' },
-  secTitle:   { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.09em', textTransform: 'uppercase', margin: 0 },
-  secKcal:    { fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
+  secTitle:   { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.09em', textTransform: 'uppercase', margin: 0 },
+  secKcal:    { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
   meal:       { background: 'white', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' },
   item:       { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px 11px 14px', borderBottom: '1px solid #eef0f3' },
   itemName:   { fontSize: '0.85rem', fontWeight: 700, margin: 0, lineHeight: 1.25 },
-  itemQty:    { fontSize: '0.72rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 600 },
+  itemQty:    { fontSize: '0.75rem', color: '#6b7280', margin: '2px 0 0', fontWeight: 600 },
   itemKcal:   { fontSize: '0.82rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-  del:        { width: 26, height: 26, borderRadius: 8, border: 'none', background: '#f3f4f6', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 },
+  // Zone de 44 px autour d'une pastille de 28 px : facile à toucher sans grossir l'icône
+  del:        { width: 44, height: 44, margin: '-8px -8px -8px 0', border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 },
+  delIco:     { width: 28, height: 28, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  delConfirm: { minHeight: 36, padding: '0 12px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' },
   empty:      { padding: '15px 14px', color: '#6b7280', fontSize: '0.79rem', fontWeight: 600, margin: 0 },
   add:        { width: '100%', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', borderTop: '1px dashed #e2e6ea', padding: 11, fontSize: '0.8rem', fontWeight: 800, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   addIco:     { width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   prescrit:   { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'none', borderBottom: '1px solid #eef0f3', fontFamily: 'inherit' },
-  check:      { width: 22, height: 22, borderRadius: 7, border: '2px solid #d1d5db', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'white' },
+  checkZone:  { width: 44, height: 44, margin: '-10px -6px -10px -10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', padding: 0, flexShrink: 0 },
+  check:      { width: 24, height: 24, borderRadius: 7, border: '2px solid #d1d5db', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'white' },
   checkOn:    { background: 'var(--accent)', borderColor: 'var(--accent)' },
   waterIco:   { width: 36, height: 36, borderRadius: 11, background: '#e8f4fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  step:       { width: 32, height: 32, borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  step:       { width: 44, height: 44, borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   // 96px = hauteur de la barre de navigation + une respiration : à 82px le
   // bouton la touchait presque (2px d'écart mesurés).
   scanCta:    { position: 'fixed', bottom: 'calc(96px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
   scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#1a1a1a', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
+  message:    { position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(160px + env(safe-area-inset-bottom, 0px))', zIndex: 95, background: '#1a1a1a', color: 'white', borderRadius: 999, padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(0,0,0,0.22)', maxWidth: 'calc(100% - 40px)', textAlign: 'center' },
   loading:    { color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 },
   overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
   sheet:      { background: 'white', borderRadius: '20px 20px 0 0', padding: '14px 18px calc(20px + env(safe-area-inset-bottom, 0px))', width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' },

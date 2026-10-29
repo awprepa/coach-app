@@ -280,7 +280,7 @@ export default function ScannerArticle() {
                 position: 'absolute', top: 'calc(42% + 80px)', left: 0, right: 0,
                 textAlign: 'center', pointerEvents: 'none',
               }}>
-                <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
                   Place le code-barres dans le cadre
                 </p>
               </div>
@@ -361,7 +361,7 @@ export default function ScannerArticle() {
                     {food.brand}
                   </p>
                 )}
-                <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: 0 }}>Pour 100g</p>
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>Pour 100g</p>
               </div>
               {/* Grade badge */}
               <div style={{
@@ -391,8 +391,8 @@ export default function ScannerArticle() {
                 ['Fibres',           noteFibres(food.fibre_100)],
               ].filter(([, n]) => n).map(([label, n]) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>{label}</span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: n.color }}>{n.label}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>{label}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: n.color }}>{n.label}</span>
                 </div>
               ))}
             </div>
@@ -400,8 +400,8 @@ export default function ScannerArticle() {
             {/* Barre de score */}
             <div style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151' }}>Score qualité</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: gc }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151' }}>Score qualité</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: gc }}>
                   {GRADE_SCORE[grade]?.toFixed(1)}/10
                 </span>
               </div>
@@ -424,19 +424,19 @@ export default function ScannerArticle() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {tags.ok.map((t, i) => (
                   <div key={i} style={S.tagRow}>
-                    <span style={{ ...S.tagDot, background: '#dcfce7', color: '#16a34a' }}>✓</span>
+                    <span style={{ ...S.tagDot, background: '#dcfce7', color: '#16a34a' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
                     <span style={{ fontSize: '0.82rem', color: '#166534' }}>{t}</span>
                   </div>
                 ))}
                 {tags.warn.map((t, i) => (
                   <div key={i} style={S.tagRow}>
-                    <span style={{ ...S.tagDot, background: '#fef3c7', color: '#92400e' }}>⚠</span>
+                    <span style={{ ...S.tagDot, background: '#fef3c7', color: '#92400e' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round"><path d="M12 7v6M12 17h.01" /></svg></span>
                     <span style={{ fontSize: '0.82rem', color: '#78350f' }}>{t}</span>
                   </div>
                 ))}
                 {tags.bad.map((t, i) => (
                   <div key={i} style={S.tagRow}>
-                    <span style={{ ...S.tagDot, background: '#fee2e2', color: '#991b1b' }}>✕</span>
+                    <span style={{ ...S.tagDot, background: '#fee2e2', color: '#991b1b' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></span>
                     <span style={{ fontSize: '0.82rem', color: '#991b1b' }}>{t}</span>
                   </div>
                 ))}
@@ -461,7 +461,7 @@ export default function ScannerArticle() {
                   <p style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1a1a1a', margin: '0 0 2px' }}>
                     NOVA {food.nova_group}
                   </p>
-                  <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: 0 }}>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>
                     {['Aliments non transformés', 'Ingrédients culinaires', 'Aliments transformés', 'Produits ultra-transformés'][food.nova_group - 1] || ''}
                   </p>
                 </div>
@@ -484,11 +484,11 @@ export default function ScannerArticle() {
           zIndex: 80,
         }}>
           <button onClick={addToMeal} style={S.btnPrimary}>
-            ➕ Ajouter à mes repas
+            Ajouter à mes repas
           </button>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: saved ? '#16a34a' : '#9ca3af' }}>
-              {saved ? '✓ Enregistré dans l\'historique' : 'Enregistrement dans l\'historique…'}
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: saved ? '#16a34a' : '#9ca3af' }}>
+              {saved ? 'Enregistré dans l\'historique' : 'Enregistrement dans l\'historique…'}
             </span>
             <button onClick={rescan} style={{ ...S.btnSecondary, width: 'auto', padding: '0.5rem 1.1rem' }}>
               Rescanner
@@ -505,7 +505,7 @@ function Chip({ label, bg, color }) {
     <span style={{
       padding: '3px 10px', borderRadius: 999,
       background: bg, color,
-      fontSize: '0.7rem', fontWeight: 700,
+      fontSize: '0.75rem', fontWeight: 700,
     }}>
       {label}
     </span>
@@ -549,7 +549,7 @@ const S = {
   tagDot: {
     width: 22, height: 22, borderRadius: 6,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '0.7rem', fontWeight: 800, flexShrink: 0,
+    fontSize: '0.75rem', fontWeight: 800, flexShrink: 0,
   },
   btnPrimary: {
     width: '100%', padding: '0.9rem', borderRadius: 14,

@@ -82,6 +82,7 @@ export default function ProfilNutrition() {
   const [activite,     setActivite]     = useState(null)
 
   const [existingGoals, setExistingGoals] = useState(null)
+  const [planCoach,     setPlanCoach]     = useState(null)   // programme du coach en cours
   const [physProfile,   setPhysProfile]   = useState(null)
   const [activeTab,     setActiveTab]     = useState('objectifs')
   const [scans,         setScans]         = useState([])
@@ -122,12 +123,22 @@ export default function ProfilNutrition() {
         setActivite(profil.niveau_activite)
       }
 
+      // Programme du coach en cours : c'est lui qui fixe les objectifs, le joueur
+      // ne les calcule pas lui-même.
+      const today = isoLocal()
+      const { data: plan } = await supabase.from('nutrition_plans')
+        .select('id, nom, objectif_kcal, objectif_prot, objectif_carbs, objectif_fat')
+        .eq('client_id', c.id).eq('statut', 'actif').lte('date_debut', today)
+        .or(`date_fin.is.null,date_fin.gte.${today}`)
+        .order('date_debut', { ascending: false }).limit(1).maybeSingle()
+      if (plan) setPlanCoach(plan)
+
       const { data: goals } = await supabase.from('nutrition_goals').select('*')
         .eq('client_id', c.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (goals) setExistingGoals(goals)
 
       // Si premier accès et pas encore de profil physique → ouvrir le wizard directement
-      if (isSetup && !profil?.objectif_physique) {
+      if (isSetup && !plan && !profil?.objectif_physique) {
         setWizardOpen(true)
       }
 
@@ -290,7 +301,7 @@ export default function ProfilNutrition() {
             <>
               <div style={{ marginBottom: 4 }}>
                 <h1 style={S.wizTitle}>Tes informations physiques</h1>
-                <p style={S.wizSub}>Nécessaires pour calculer ton métabolisme de base (Mifflin-St Jeor 2005)</p>
+                <p style={S.wizSub}>Nécessaires pour calculer ton métabolisme de base (Mifflin-St Jeor 1990)</p>
               </div>
               <div style={S.card}>
                 <label style={S.inputLabel}>Sexe biologique</label>
@@ -341,8 +352,8 @@ export default function ProfilNutrition() {
                   style={{ ...S.bigCard, ...(activite === a.key ? S.bigCardActive : {}) }}>
                   <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: activite === a.key ? 'var(--accent)' : '#1a1a1a', lineHeight: 1.2 }}>{a.label}</div>
-                    <div style={{ fontSize: '0.74rem', color: activite === a.key ? 'rgba(228,248,22,0.65)' : '#9ca3af', marginTop: 3 }}>{a.desc}</div>
-                    <div style={{ fontSize: '0.7rem', color: activite === a.key ? 'rgba(228,248,22,0.4)' : '#d1d5db', marginTop: 2, fontWeight: 600 }}>× {a.mult} BMR</div>
+                    <div style={{ fontSize: '0.75rem', color: activite === a.key ? 'rgba(228,248,22,0.65)' : '#9ca3af', marginTop: 3 }}>{a.desc}</div>
+                    <div style={{ fontSize: '0.75rem', color: activite === a.key ? 'rgba(228,248,22,0.4)' : '#d1d5db', marginTop: 2, fontWeight: 600 }}>× {a.mult} BMR</div>
                   </div>
                   {activite === a.key && <CheckCircle />}
                 </button>
@@ -363,11 +374,11 @@ export default function ProfilNutrition() {
               </div>
               <div style={S.resultsCard}>
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Profil calculé</p>
+                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Profil calculé</p>
                   <p style={{ color: 'var(--accent-fg)', fontWeight: 700, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.4 }}>
                     {OBJECTIFS.find(o => o.key === objectif)?.label} · {poids} kg · {sexe} · {age} ans
                   </p>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', margin: '2px 0 0' }}>
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', margin: '2px 0 0' }}>
                     {ACTIVITES.find(a => a.key === activite)?.label}
                   </p>
                 </div>
@@ -375,8 +386,8 @@ export default function ProfilNutrition() {
                   <p style={{ fontSize: '3.2rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
                     {computed.kcal.toLocaleString('fr-FR')}
                   </p>
-                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '5px 0 0' }}>kcal par jour</p>
-                  <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem', margin: '6px 0 0' }}>BMR {computed.bmr} kcal · TDEE {computed.tdee} kcal</p>
+                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '5px 0 0' }}>kcal par jour</p>
+                  <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem', margin: '6px 0 0' }}>BMR {computed.bmr} kcal · TDEE {computed.tdee} kcal</p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
                   <MacroCell label="Protéines" val={`${computed.prot_g}g`} color="#60a5fa" note={`${(computed.prot_g / parseFloat(poids)).toFixed(1)} g/kg`} />
@@ -387,11 +398,11 @@ export default function ProfilNutrition() {
                   <span style={{ fontSize: '1.3rem' }}><Icon name="droplet" size={14} /></span>
                   <div>
                     <p style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem', margin: 0 }}>{(computed.hydration_ml / 1000).toFixed(1)} L d'eau / jour</p>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem', margin: '2px 0 0' }}>35 ml/kg de poids corporel · EFSA 2010</p>
+                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', margin: '2px 0 0' }}>35 ml/kg de poids corporel · EFSA 2010</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  <SourceBadge label="Mifflin-St Jeor 2005" />
+                  <SourceBadge label="Mifflin-St Jeor 1990" />
                   <SourceBadge label="Morton et al. 2018" />
                   <SourceBadge label="ANSES 2019" />
                   <SourceBadge label="EFSA 2010" />
@@ -420,7 +431,7 @@ export default function ProfilNutrition() {
 
               <button onClick={saveGoals} disabled={saving}
                 style={{ ...S.nextBtn, opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'Enregistrement…' : '✓ Valider et enregistrer'}
+                {saving ? 'Enregistrement…' : 'Valider et enregistrer'}
               </button>
               <button onClick={() => setWizardStep(2)} style={S.ghostBtn}>← Modifier les réponses</button>
               <div style={{ height: 30 }} />
@@ -446,7 +457,7 @@ export default function ProfilNutrition() {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 120px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* ── Onglet Objectifs ── */}
         {activeTab === 'objectifs' && (
           <>
@@ -456,12 +467,35 @@ export default function ProfilNutrition() {
               </div>
             )}
 
-            {existingGoals ? (
+            {planCoach ? (
+              <div style={S.goalsCard}>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Programme de ton coach</p>
+                <p style={{ color: 'white', fontWeight: 800, fontSize: '1.05rem', margin: '6px 0 0' }}>{planCoach.nom}</p>
+                {planCoach.objectif_kcal ? (
+                  <>
+                    <div style={{ textAlign: 'center', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.07)', margin: '12px 0 14px' }}>
+                      <p style={{ fontSize: '2.9rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
+                        {planCoach.objectif_kcal.toLocaleString('fr-FR')}
+                      </p>
+                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                      <MacroCell label="Protéines" val={`${planCoach.objectif_prot || '–'}g`}  color="#60a5fa" />
+                      <MacroCell label="Glucides"  val={`${planCoach.objectif_carbs || '–'}g`} color="#fbbf24" />
+                      <MacroCell label="Lipides"   val={`${planCoach.objectif_fat || '–'}g`}   color="#f87171" />
+                    </div>
+                  </>
+                ) : <div style={{ height: 12 }} />}
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', lineHeight: 1.5, margin: 0 }}>
+                  Tes objectifs viennent de ce programme et peuvent changer selon le jour. Suis les plats prévus dans ton journal.
+                </p>
+              </div>
+            ) : existingGoals ? (
               <>
                 <div style={S.goalsCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                     <div>
-                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
+                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Objectifs nutritionnels</p>
                       {physProfile && (
                         <p style={{ color: 'var(--accent-fg)', fontWeight: 700, fontSize: '0.8rem', margin: '4px 0 0' }}>
                           {OBJECTIFS.find(o => o.key === physProfile.objectif)?.label} · {physProfile.poids} kg
@@ -474,7 +508,7 @@ export default function ProfilNutrition() {
                     <p style={{ fontSize: '2.9rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
                       {(existingGoals.kcal_target || 0).toLocaleString('fr-FR')}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
+                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
                     <MacroCell label="Protéines" val={`${existingGoals.prot_g || '–'}g`}  color="#60a5fa" />
@@ -506,7 +540,7 @@ export default function ProfilNutrition() {
                       )}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
-                      <SourceBadge label="Mifflin-St Jeor 2005" dark />
+                      <SourceBadge label="Mifflin-St Jeor 1990" dark />
                       <SourceBadge label="Morton et al. 2018" dark />
                       <SourceBadge label="ANSES 2019" dark />
                     </div>
@@ -520,7 +554,7 @@ export default function ProfilNutrition() {
                   En 3 questions, un algorithme basé sur des études scientifiques calcule tes besoins quotidiens en kcal, protéines, glucides, lipides et hydratation.
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 }}>
-                  <SourceBadge label="Mifflin-St Jeor 2005" dark />
+                  <SourceBadge label="Mifflin-St Jeor 1990" dark />
                   <SourceBadge label="Morton et al. 2018" dark />
                   <SourceBadge label="ANSES 2019" dark />
                   <SourceBadge label="EFSA 2010" dark />
@@ -608,7 +642,7 @@ function StatCard({ label, val, color }) {
   return (
     <div style={{ background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <p style={{ fontSize: '1.6rem', fontWeight: 900, color: color || '#1a1a1a', margin: 0, lineHeight: 1 }}>{val}</p>
-      <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
+      <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
     </div>
   )
 }
@@ -617,8 +651,8 @@ function MacroCell({ label, val, color, note }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
       <p style={{ fontSize: '1.2rem', fontWeight: 900, color, margin: 0, lineHeight: 1 }}>{val}</p>
-      <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
-      {note && <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', margin: '3px 0 0', fontWeight: 600 }}>{note}</p>}
+      <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 0' }}>{label}</p>
+      {note && <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', margin: '3px 0 0', fontWeight: 600 }}>{note}</p>}
     </div>
   )
 }
@@ -629,7 +663,7 @@ function SourceBadge({ label, dark }) {
       padding: '3px 9px', borderRadius: 999,
       background: dark ? '#f3f4f6' : 'rgba(255,255,255,0.1)',
       color:      dark ? '#6b7280'  : 'rgba(255,255,255,0.5)',
-      fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.02em',
+      fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.02em',
     }}>
       {label}
     </span>
@@ -640,7 +674,7 @@ function PhysRow({ label, val }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9fafb', borderRadius: 10, padding: '8px 10px' }}>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>{label}</p>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>{label}</p>
         <p style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1a1a1a', margin: '1px 0 0' }}>{val}</p>
       </div>
     </div>
@@ -670,7 +704,7 @@ const S = {
   ghostBtn: { width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', color: '#6b7280', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', marginTop: -6 },
   resultsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
   goalsCard: { background: '#1a1a1a', borderRadius: 20, padding: '18px 16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' },
-  recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
+  recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
   tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 88, zIndex: 50 },

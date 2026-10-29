@@ -182,12 +182,12 @@ export default function HistoriqueNutrition() {
           <div style={S.card}>
             <div style={S.cardHeader}>
               <span style={S.cardTitle}>Résumé — 14 jours</span>
-              <span style={S.cardSub}>{datesLoggued.length} jour{datesLoggued.length > 1 ? 's' : ''} loggué{datesLoggued.length > 1 ? 's' : ''}</span>
+              <span style={S.cardSub}>{datesLoggued.length} jour{datesLoggued.length > 1 ? 's' : ''} noté{datesLoggued.length > 1 ? 's' : ''}</span>
             </div>
 
             {datesLoggued.length === 0 ? (
               <p style={{ color: '#6b7280', fontSize: '0.83rem', textAlign: 'center', margin: '0.5rem 0 0', lineHeight: 1.5 }}>
-                Commence à cocher tes repas depuis la page plan pour voir tes stats ici.
+                Coche les plats de ton programme dans ton journal pour voir tes stats ici.
               </p>
             ) : (
               <>
@@ -200,7 +200,7 @@ export default function HistoriqueNutrition() {
                   ].map(stat => (
                     <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: stat.color + '15', borderRadius: 10, padding: '8px 4px' }}>
                       <div style={{ fontSize: '1.2rem', fontWeight: 900, color: stat.color, lineHeight: 1 }}>{stat.val}</div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: stat.color, opacity: 0.8, marginTop: 3, textTransform: 'uppercase' }}>{stat.label}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: stat.color, opacity: 0.8, marginTop: 3, textTransform: 'uppercase' }}>{stat.label}</div>
                     </div>
                   ))}
                 </div>
@@ -221,17 +221,17 @@ export default function HistoriqueNutrition() {
           <div style={{ ...S.card, background: '#1a1a1a', overflow: 'hidden' }}>
             <div style={S.cardHeader}>
               <span style={{ ...S.cardTitle, color: '#f9fafb' }}>Kcal consommés</span>
-              <span style={{ ...S.cardSub, color: '#6b7280' }}>14 derniers jours loggués</span>
+              <span style={{ ...S.cardSub, color: '#6b7280' }}>14 derniers jours notés</span>
             </div>
             <ResponsiveContainer width="100%" height={170}>
               <LineChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2d2d2d" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} width={42} />
+                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} width={42} />
                 <Tooltip content={<CustomTooltip />} />
                 {avgKcalPrevu > 0 && (
                   <ReferenceLine y={avgKcalPrevu} stroke="#e4f816" strokeDasharray="5 3" strokeWidth={1.5}
-                    label={{ value: `${avgKcalPrevu} kcal`, position: 'insideTopRight', fill: '#e4f816', fontSize: 10, fontWeight: 700 }} />
+                    label={{ value: `${avgKcalPrevu} kcal`, position: 'insideTopRight', fill: '#e4f816', fontSize: 12, fontWeight: 700 }} />
                 )}
                 <Line type="monotone" dataKey="kcalMange" stroke="#e4f816" strokeWidth={2.5}
                   dot={{ fill: '#e4f816', r: 3, strokeWidth: 0 }} activeDot={{ fill: 'white', r: 4, strokeWidth: 0 }} />
@@ -249,7 +249,7 @@ export default function HistoriqueNutrition() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: 6 }}>
               {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                <span key={i} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>{d}</span>
+                <span key={i} style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>{d}</span>
               ))}
             </div>
             <CalendarGrid dayStats={dayStats} />
@@ -296,7 +296,7 @@ function CalendarGrid({ dayStats }) {
               outline: cell.isToday ? '2.5px solid #1a1a1a' : 'none',
               outlineOffset: 1,
             }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: cell.hasData ? 'white' : '#9ca3af', lineHeight: 1 }}>{cell.dayNum}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: cell.hasData ? 'white' : '#9ca3af', lineHeight: 1 }}>{cell.dayNum}</span>
             </div>
           </div>
         )
@@ -307,13 +307,14 @@ function CalendarGrid({ dayStats }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
-  page:       { background: '#fafafa', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:       { background: '#f5f5f5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   header:     { background: 'var(--header-bg)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', position: 'sticky', top: 0, zIndex: 60 },
   headerTitle:{ fontSize: '1rem', fontWeight: 800 },
   backBtn:    { width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  content:    { padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
+  // 120 px en bas : la barre de navigation flottante ne cache pas le dernier bloc
+  content:    { padding: '1rem 1rem 120px', display: 'flex', flexDirection: 'column', gap: '1rem' },
   card:       { background: 'white', borderRadius: 16, padding: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' },
   cardTitle:  { fontSize: '0.92rem', fontWeight: 800, color: '#1a1a1a' },
-  cardSub:    { fontSize: '0.74rem', fontWeight: 600, color: '#6b7280' },
+  cardSub:    { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280' },
 }
