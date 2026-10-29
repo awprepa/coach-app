@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { isoLocal } from '../../utils/dates'
 import EnTeteClient from '../../components/EnTeteClient'
+import { toutesLesLignes } from '../../utils/toutesLesLignes'
 
 // Palette façon rangs de jeu vidéo (fer → bronze → argent → or → platine → diamant → champion)
 const RANK_COLORS = {
@@ -417,21 +418,23 @@ export default function ProgressionClient() {
         // Note : poids est une colonne TEXT — on ne filtre pas avec .gt() car PostgreSQL
         // tenterait de caster en numeric et planterait sur "102,5" (virgule fr).
         // Le filtrage numérique se fait en JS après parsing.
-        const { data: series, error: seriesError } = await supabase
+        const { data: series, error: seriesError } = await toutesLesLignes(() => supabase
           .from('serie_tracking')
           .select('exercice_id, semaine, serie, poids, reps_reelles, valide, is_done, created_at')
           .in('exercice_id', exIds)
           .not('poids', 'is', null)
           .not('reps_reelles', 'is', null)
           .lt('serie', 1000)  // exclure les séries d'échauffement (serie >= 1000)
+          .order('id'))
 
         if (seriesError) console.error('[Progression] series error:', seriesError)
 
         // 6. Charges / RPE par exercice et semaine
-        const { data: charges } = await supabase
+        const { data: charges } = await toutesLesLignes(() => supabase
           .from('charges')
           .select('exercice_id, semaine, rpe_reel')
           .in('exercice_id', exIds)
+          .order('id'))
 
         // Map RPE : exercice_id + semaine → rpe_reel
         const rpeMap = {}
@@ -1573,6 +1576,8 @@ const S = {
     display: 'flex',
     gap: 8,
     overflowX: 'auto',
+    overflowY: 'hidden',          // défilement horizontal uniquement
+    overscrollBehaviorX: 'contain',
     WebkitOverflowScrolling: 'touch',
     paddingBottom: 2,
     marginBottom: 10,

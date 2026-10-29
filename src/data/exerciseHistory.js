@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { isoLocal } from '../utils/dates'
+import { toutesLesLignes } from '../utils/toutesLesLignes'
 
 // Version "légère" du chargement d'historique d'exercices (pour le calcul d'XP
 // uniquement — pas de formule 1RM, pas de RPE). Utilisée par les widgets qui
@@ -36,13 +37,14 @@ export async function loadClientAllSets(clientId) {
   const exIds = exercices.map(e => e.id)
   const exMap = Object.fromEntries(exercices.map(e => [e.id, e]))
 
-  const { data: series } = await supabase
+  const { data: series } = await toutesLesLignes(() => supabase
     .from('serie_tracking')
     .select('exercice_id, semaine, poids, reps_reelles, created_at')
     .in('exercice_id', exIds)
     .not('poids', 'is', null)
     .not('reps_reelles', 'is', null)
     .lt('serie', 1000)
+    .order('id'))
 
   const byName = {}
   ;(series || []).forEach(s => {

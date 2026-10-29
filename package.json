@@ -1,6 +1,6 @@
 {
   "name": "coach-app",
-  "version": "0.92.0",
+  "version": "0.92.1",
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",

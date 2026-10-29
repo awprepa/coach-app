@@ -1,4 +1,5 @@
 import { isoLocal } from '../utils/dates'
+import { toutesLesLignes } from '../utils/toutesLesLignes'
 // ─── Système de niveaux / XP ────────────────────────────────────────────────
 //
 // Deux niveaux distincts des rangs de force (Fer→Champion, basés sur le 1RM) :
@@ -117,13 +118,14 @@ export async function fetchExerciceSetsByName(supabase, clientId) {
   const exIds = exos.map(e => e.id)
   const exoMap = Object.fromEntries(exos.map(e => [e.id, e]))
 
-  const { data: series } = await supabase
+  const { data: series } = await toutesLesLignes(() => supabase
     .from('serie_tracking')
     .select('exercice_id, semaine, serie, poids, reps_reelles, created_at')
     .in('exercice_id', exIds)
     .not('poids', 'is', null)
     .not('reps_reelles', 'is', null)
     .lt('serie', 1000) // exclut les séries d'échauffement
+    .order('id'))
 
   ;(series || []).forEach(s => {
     const exo = exoMap[s.exercice_id]
