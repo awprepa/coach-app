@@ -72,9 +72,10 @@ export default function MessagesClient() {
     if (focus) setSaisie(true)
     else blurTimer.current = setTimeout(() => setSaisie(false), 100)
   }
-  // Clavier ouvert : le cadre suit la zone visible en glissant (pas de saut)
+  // Clavier ouvert : le cadre suit la zone visible. Seule la hauteur glisse ;
+  // la position suit iOS immédiatement (sinon la barre du haut descend puis remonte)
   const cadre = saisie
-    ? { top: vp.offsetTop, height: vp.height, transition: 'top .25s ease, height .25s ease' }
+    ? { top: vp.offsetTop, height: vp.height, transition: 'height .25s ease' }
     : { top: 0, bottom: NAV_H }
 
   return (
