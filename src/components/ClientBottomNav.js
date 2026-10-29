@@ -9,7 +9,7 @@ function IconHome({ active }) {
   const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path fill={active ? 'var(--accent)' : 'none'} d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" />
+      <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" />
       <path d="M9 21V13h6v8" />
     </svg>
   )
@@ -19,7 +19,7 @@ function IconProgramme({ active }) {
   const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect fill={active ? 'var(--accent)' : 'none'} x="5" y="2" width="14" height="20" rx="2" />
+      <rect x="5" y="2" width="14" height="20" rx="2" />
       <line x1="9" y1="7"  x2="15" y2="7" />
       <line x1="9" y1="11" x2="15" y2="11" />
       <line x1="9" y1="15" x2="13" y2="15" />
@@ -33,7 +33,7 @@ function IconNutrition({ active }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       {/* Bol */}
       <path d="M4 11h16" />
-      <path fill={active ? 'var(--accent)' : 'none'} d="M5 11c0 5 2 8 7 8s7-3 7-8" />
+      <path d="M5 11c0 5 2 8 7 8s7-3 7-8" />
       {/* Vapeur */}
       <path d="M9 7 Q10 5 9 3" />
       <path d="M12 7 Q13 5 12 3" />
@@ -56,7 +56,7 @@ function IconChat({ active }) {
   const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path fill={active ? 'var(--accent)' : 'none'} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   )
 }
@@ -67,7 +67,7 @@ function IconTrophy({ active }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 9H3V5h3" />
       <path d="M18 9h3V5h-3" />
-      <path fill={active ? 'var(--accent)' : 'none'} d="M6 5h12v6a6 6 0 0 1-12 0V5z" />
+      <path d="M6 5h12v6a6 6 0 0 1-12 0V5z" />
       <path d="M12 17v4" />
       <path d="M8 21h8" />
     </svg>
