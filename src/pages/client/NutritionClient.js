@@ -349,10 +349,9 @@ export default function NutritionClient() {
   return (
     <div style={{ ...S.page, ...fadeStyle }}>
       <EnTeteClient titre="Nutrition" actions={<>
-        <button onClick={() => navigate('/client/nutrition/scans')} style={boutonEnTete} aria-label="Historique des scans">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
-          </svg>
+        <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...boutonEnTete, width: 'auto', padding: '0 13px 0 11px', gap: 6, fontSize: 13, fontWeight: 700 }}>
+          <IconeQR taille={16} />
+          Mes scans
         </button>
         <button onClick={() => navigate('/client/nutrition/profil')} style={boutonEnTete} aria-label="Mes besoins">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -522,10 +521,7 @@ export default function NutritionClient() {
       {/* Barre scanner fixe */}
       <div style={S.scanCta}>
         <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanCtaBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" /><line x1="14" y1="14" x2="14" y2="21" /><line x1="14" y1="14" x2="21" y2="14" />
-          </svg>
+          <IconeQR taille={20} />
           Scanner un article
         </button>
       </div>
@@ -575,6 +571,20 @@ export default function NutritionClient() {
 
       <ClientBottomNav />
     </div>
+  )
+}
+
+// QR code : trois carrés de repère et quelques modules, lisible même petit
+function IconeQR({ taille }) {
+  return (
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+      <g fill="currentColor" stroke="none">
+        <rect x="5.5" y="5.5" width="2" height="2" /><rect x="16.5" y="5.5" width="2" height="2" /><rect x="5.5" y="16.5" width="2" height="2" />
+        <rect x="13" y="13" width="3" height="3" /><rect x="18" y="13" width="3" height="3" /><rect x="15.5" y="15.5" width="3" height="3" />
+        <rect x="13" y="18" width="3" height="3" /><rect x="18" y="18" width="3" height="3" />
+      </g>
+    </svg>
   )
 }
 
