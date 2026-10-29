@@ -9,7 +9,7 @@ function IconHome({ active }) {
   const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" />
+      <path fill={active ? 'var(--accent)' : 'none'} d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" />
       <path d="M9 21V13h6v8" />
     </svg>
   )
@@ -19,7 +19,7 @@ function IconProgramme({ active }) {
   const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <rect fill={active ? 'var(--accent)' : 'none'} x="5" y="2" width="14" height="20" rx="2" />
       <line x1="9" y1="7"  x2="15" y2="7" />
       <line x1="9" y1="11" x2="15" y2="11" />
       <line x1="9" y1="15" x2="13" y2="15" />
@@ -33,7 +33,7 @@ function IconNutrition({ active }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       {/* Bol */}
       <path d="M4 11h16" />
-      <path d="M5 11c0 5 2 8 7 8s7-3 7-8" />
+      <path fill={active ? 'var(--accent)' : 'none'} d="M5 11c0 5 2 8 7 8s7-3 7-8" />
       {/* Vapeur */}
       <path d="M9 7 Q10 5 9 3" />
       <path d="M12 7 Q13 5 12 3" />
@@ -56,7 +56,7 @@ function IconChat({ active }) {
   const s = 'currentColor'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path fill={active ? 'var(--accent)' : 'none'} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   )
 }
@@ -67,7 +67,7 @@ function IconTrophy({ active }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 9H3V5h3" />
       <path d="M18 9h3V5h-3" />
-      <path d="M6 5h12v6a6 6 0 0 1-12 0V5z" />
+      <path fill={active ? 'var(--accent)' : 'none'} d="M6 5h12v6a6 6 0 0 1-12 0V5z" />
       <path d="M12 17v4" />
       <path d="M8 21h8" />
     </svg>
@@ -212,12 +212,13 @@ export function BarreClient() {
       position: 'fixed', zIndex: 90,
       left: MARGE, right: MARGE, bottom: MARGE,
       maxWidth: 520, margin: '0 auto',
-      // Verre dépoli : laisse deviner (flouté) ce qui défile derrière
-      background: 'rgba(255,255,255,0.72)',
-      backdropFilter: 'blur(18px) saturate(1.6)', WebkitBackdropFilter: 'blur(18px) saturate(1.6)',
-      border: '1px solid rgba(0,0,0,0.06)',
+      // Verre liquide : fond translucide qui floute ce qui défile derrière,
+      // reflet clair sur le bord haut, ombre plus marquée en bas
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(240,240,240,0.42) 100%)',
+      backdropFilter: 'blur(14px) saturate(1.8) brightness(0.96)', WebkitBackdropFilter: 'blur(14px) saturate(1.8) brightness(0.96)',
+      border: '1px solid rgba(255,255,255,0.75)',
       borderRadius: T.radius.pill,
-      boxShadow: T.shadow.float,
+      boxShadow: '0 0 0 0.5px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -2px 6px rgba(0,0,0,0.06), 0 10px 30px rgba(0,0,0,0.16)',
       fontFamily: T.font.body,
     }}>
       <style>{`
@@ -230,8 +231,9 @@ export function BarreClient() {
           position: 'absolute', top: 4, bottom: 4,
           width: `calc((100% - 8px) * ${LARGE / total})`,
           left: `calc(4px + (100% - 8px) * ${Math.max(actif, 0) / total})`,
-          borderRadius: T.radius.pill, background: 'rgba(0,0,0,0.07)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.04)',
+          borderRadius: T.radius.pill,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.07) 0%, rgba(0,0,0,0.13) 100%)',
+          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 1px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.06)',
           opacity: actif < 0 ? 0 : 1,
           transition: `left ${ressort}, width ${ressort}, opacity 0.2s`,
         }} />
@@ -253,9 +255,6 @@ export function BarreClient() {
             <div key={active ? 'on' : 'off'} style={{
               width: 48, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
               position: 'relative',
-              color: active ? 'var(--accent)' : 'inherit',
-              // léger contour sombre pour que le jaune reste lisible sur la pastille claire
-              filter: active ? 'drop-shadow(0 0 0.6px rgba(0,0,0,0.55))' : undefined,
               animation: active ? 'aw-barre-pop 0.38s ease-out' : undefined,
             }}>
               <Icon active={active} />
