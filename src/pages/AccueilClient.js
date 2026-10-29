@@ -57,7 +57,6 @@ export default function AccueilClient() {
   const [weekEvents, setWeekEvents]       = useEtatMemorise('accueil.weekEvents', [])
   const [showPastCycles, setShowPastCycles] = useState(false)
 
-  const [nutritionToday, setNutritionToday] = useEtatMemorise('accueil.nutritionToday', null)
   const [levelWidget, setLevelWidget] = useEtatMemorise('accueil.levelWidget', null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [loading, setLoading]             = useEtatMemorise('accueil.loading', true)
@@ -90,48 +89,6 @@ export default function AccueilClient() {
     setLevelWidget(levelFromXp(totalXp))
   }
 
-  useEffect(() => {
-    if (!client?.id) return
-    loadNutritionToday(client.id)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client?.id])
-
-  async function loadNutritionToday(clientId) {
-    const today = isoLocal()
-    const { data: plan } = await supabase
-      .from('nutrition_plans')
-      .select('id, date_debut')
-      .eq('client_id', clientId)
-      .eq('statut', 'actif')
-      .lte('date_debut', today)
-      .or(`date_fin.is.null,date_fin.gte.${today}`)
-      .order('date_debut', { ascending: false }).limit(1).maybeSingle()
-    if (!plan) { setNutritionToday(false); return }
-    const diffDays = Math.floor((new Date(today + 'T00:00:00') - new Date(plan.date_debut + 'T00:00:00')) / 86400000)
-    const dayNum = diffDays >= 0 ? (diffDays % 7) + 1 : null
-    if (!dayNum) { setNutritionToday(false); return }
-    const { data: planDay } = await supabase
-      .from('nutrition_plan_days').select('id')
-      .eq('plan_id', plan.id).eq('jour', dayNum).maybeSingle()
-    const [mealsRes, logsRes] = await Promise.all([
-      planDay
-        ? supabase.from('nutrition_plan_meals').select('id, kcal').eq('day_id', planDay.id)
-        : Promise.resolve({ data: [] }),
-      supabase.from('nutrition_plan_logs').select('statut, meal_id, kcal')
-        .eq('client_id', clientId).eq('date', today),
-    ])
-    const meals = mealsRes.data || []
-    const logs  = logsRes.data || []
-    const planLogs  = logs.filter(l => l.meal_id !== null)
-    const extraLogs = logs.filter(l => l.meal_id === null)
-    const kcalPrevu = meals.reduce((s, m) => s + (m.kcal || 0), 0)
-    const kcalMange = planLogs.filter(l => l.statut === 'fait' || l.statut === 'hors_plan')
-      .reduce((s, l) => s + (l.kcal || 0), 0)
-      + extraLogs.reduce((s, l) => s + (l.kcal || 0), 0)
-    const mealsDone  = planLogs.filter(l => l.statut === 'fait' || l.statut === 'hors_plan').length
-    const mealsTotal = meals.length
-    setNutritionToday({ kcalMange, kcalPrevu, mealsDone, mealsTotal })
-  }
 
 
   // Re-fetch quand l'app revient au premier plan (PWA backgroundée puis rouverte)
@@ -455,34 +412,6 @@ export default function AccueilClient() {
           </div>
         )}
 
-        {/* Widget nutrition aujourd'hui */}
-        {nutritionToday && (
-          <div role="button" tabIndex={0} onClick={() => navigate('/client/nutrition')} style={styles.nutritionWidget}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={styles.sectionTitle}>Nutrition aujourd'hui</span>
-              <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
-                {nutritionToday.mealsDone}/{nutritionToday.mealsTotal} repas
-              </span>
-            </div>
-            {nutritionToday.kcalPrevu > 0 && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#6b7280', marginBottom: 5 }}>
-                  <span style={{ fontWeight: 700, color: '#1a1a1a' }}>{nutritionToday.kcalMange} kcal</span>
-                  <span>/ {nutritionToday.kcalPrevu} kcal prescrits</span>
-                </div>
-                <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 999,
-                    width: `${Math.min(100, Math.round(nutritionToday.kcalMange / nutritionToday.kcalPrevu * 100))}%`,
-                    background: nutritionToday.kcalMange > nutritionToday.kcalPrevu * 1.05 ? '#ef4444' : '#16a34a',
-                    transition: 'width 0.4s ease',
-                  }} />
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
         {/* Planning de la semaine */}
         {weekEvents.length > 0 && (
           <div style={{ marginBottom: '1.75rem' }}>
@@ -651,7 +580,6 @@ const styles = {
   nextDate:    { fontSize: '0.82rem', color: 'var(--header-text)', opacity: 0.7, margin: 0 },
   calendarCard:{ background: 'white', borderRadius: 16, padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   pushBtn:     { width: '100%', padding: '0.75rem 1rem', marginBottom: '1.25rem', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 12, fontSize: '0.875rem', fontWeight: '600', color: '#374151', cursor: 'pointer', textAlign: 'left' },
-  nutritionWidget: { background: 'white', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1.5px solid #16a34a' },
   levelWidget: {
     position: 'relative',
     borderRadius: 16,

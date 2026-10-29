@@ -350,7 +350,7 @@ export default function NutritionClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
       <EnTeteClient titre="Nutrition" actions={<>
         <button onClick={() => navigate('/client/nutrition/scans')} style={{ ...boutonEnTete, width: 'auto', padding: '0 13px 0 10px', gap: 7, fontSize: 13, fontWeight: 700 }}>
-          <IconeCodeBarre taille={22} />
+          <IconeCodeBarre taille={20} />
           Mes scans
         </button>
         <button onClick={() => navigate('/client/nutrition/profil')} style={boutonEnTete} aria-label="Mes besoins">
@@ -521,7 +521,7 @@ export default function NutritionClient() {
       {/* Barre scanner fixe */}
       <div style={S.scanCta}>
         <button onClick={() => navigate('/client/nutrition/scanner', { state: { returnTo: '/client/nutrition' } })} style={S.scanCtaBtn}>
-          <IconeCodeBarre taille={26} />
+          <IconeCodeBarre taille={22} />
           Scanner un article
         </button>
       </div>
@@ -574,15 +574,16 @@ export default function NutritionClient() {
   )
 }
 
-// Code-barres : barres pleines d'épaisseurs variées, coins de visée fins autour
+// Code-barres : plus large que haut, barres pleines d'épaisseurs variées, coins de visée fins
 function IconeCodeBarre({ taille }) {
   return (
-    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 6.5V4a2 2 0 0 1 2-2h2.5M17.5 2H20a2 2 0 0 1 2 2v2.5M22 17.5V20a2 2 0 0 1-2 2h-2.5M6.5 22H4a2 2 0 0 1-2-2v-2.5" />
+    <svg width={Math.round(taille * 4 / 3)} height={taille} viewBox="0 0 32 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 7V4.5A2.5 2.5 0 0 1 4.5 2H7M25 2h2.5A2.5 2.5 0 0 1 30 4.5V7M30 17v2.5a2.5 2.5 0 0 1-2.5 2.5H25M7 22H4.5A2.5 2.5 0 0 1 2 19.5V17" />
       <g fill="currentColor" stroke="none">
-        <rect x="5.5" y="6" width="1.6" height="12" /><rect x="8.2" y="6" width="0.9" height="12" />
-        <rect x="10.2" y="6" width="2.2" height="12" /><rect x="13.4" y="6" width="0.9" height="12" />
-        <rect x="15.3" y="6" width="1.6" height="12" /><rect x="17.8" y="6" width="0.9" height="12" />
+        <rect x="6.5" y="7" width="1.8" height="10" /><rect x="9.6" y="7" width="0.9" height="10" />
+        <rect x="11.8" y="7" width="2.4" height="10" /><rect x="15.5" y="7" width="0.9" height="10" />
+        <rect x="17.7" y="7" width="1.8" height="10" /><rect x="20.8" y="7" width="0.9" height="10" />
+        <rect x="23" y="7" width="2.4" height="10" />
       </g>
     </svg>
   )
