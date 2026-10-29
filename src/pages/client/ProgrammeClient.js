@@ -51,7 +51,7 @@ export default function ProgrammeClient(props) {
 
     const { data: seancesData, error: errSeances } = await supabase
       .from('seances')
-      .select('id, nom, ordre, exercices(charges(semaine)), rpe_seances(semaine, rpe_reel)')
+      .select('id, nom, ordre, type, exercices(charges(semaine)), rpe_seances(semaine, rpe_reel)')
       .eq('programme_id', id)
       .order('ordre', { ascending: true })
     if (errSeances) { console.error(errSeances); setLoading(false); return }
@@ -142,41 +142,65 @@ export default function ProgrammeClient(props) {
           </section>
         )}
 
-        {/* Séances */}
-        <section>
-          <div style={styles.sectionHeader}>
-            <h2 style={T.label}>Séances</h2>
-            <span style={styles.sectionCount}>{seances.length} séance{seances.length > 1 ? 's' : ''}</span>
-          </div>
-
-          {seances.length === 0 ? (
-            <div style={styles.emptyCard}>Aucune séance pour l'instant.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.sm }}>
-              {seances.map((seance, i) => {
-                const renseignee = seancesRenseignees[seance.id]
-                return (
-                  <button key={seance.id} onClick={() => navigate(`/client/seance/${seance.id}`)} style={styles.card}>
-                    <span style={styles.jourBadge}>
-                      <span style={styles.jourLabel}>Jour</span>
-                      <span style={styles.jourNum}>{i + 1}</span>
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                      <span style={styles.cardTitle}>{seance.nom}</span>
-                      {semaineActuelle && (
-                        <span style={{ ...styles.cardSub, color: renseignee ? T.color.success : T.color.warning }}>
-                          <Icon name={renseignee ? 'check' : 'clock'} size={14} />
-                          {renseignee ? 'Renseignée' : 'À compléter'}
-                        </span>
+        {/* Séances : musculation puis terrain, en deux parties quand il y a les deux.
+            Le numéro du jour reste celui de l'ordre dans le cycle. */}
+        {(() => {
+          const numerotees = seances.map((seance, i) => ({ seance, jour: i + 1 }))
+          const terrain = numerotees.filter(({ seance }) => seance.type === 'terrain')
+          const groupes = terrain.length > 0 && terrain.length < seances.length
+            ? [
+                { titre: 'Musculation', icone: 'dumbbell', liste: numerotees.filter(({ seance }) => seance.type !== 'terrain') },
+                { titre: 'Terrain', icone: 'terrain', liste: terrain },
+              ]
+            : [{ titre: 'Séances', liste: numerotees }]
+          return groupes.map(g => (
+            <section key={g.titre}>
+              <div style={styles.sectionHeader}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: T.space.sm }}>
+                  {g.icone && (
+                    <span style={styles.groupeIcone}>
+                      {g.icone === 'dumbbell' ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5" /><path d="M12 5v14" /><circle cx="12" cy="12" r="2.5" /></svg>
                       )}
                     </span>
-                    <Icon name="chevron-right" size={18} style={{ color: T.color.muted }} />
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </section>
+                  )}
+                  <h2 style={T.label}>{g.titre}</h2>
+                </span>
+                <span style={styles.sectionCount}>{g.liste.length} séance{g.liste.length > 1 ? 's' : ''}</span>
+              </div>
+
+              {g.liste.length === 0 ? (
+                <div style={styles.emptyCard}>Aucune séance pour l'instant.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.sm }}>
+                  {g.liste.map(({ seance, jour }) => {
+                    const renseignee = seancesRenseignees[seance.id]
+                    return (
+                      <button key={seance.id} onClick={() => navigate(`/client/seance/${seance.id}`)} style={styles.card}>
+                        <span style={styles.jourBadge}>
+                          <span style={styles.jourLabel}>Jour</span>
+                          <span style={styles.jourNum}>{jour}</span>
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                          <span style={styles.cardTitle}>{seance.nom}</span>
+                          {semaineActuelle && (
+                            <span style={{ ...styles.cardSub, color: renseignee ? T.color.success : T.color.warning }}>
+                              <Icon name={renseignee ? 'check' : 'clock'} size={14} />
+                              {renseignee ? 'Renseignée' : 'À compléter'}
+                            </span>
+                          )}
+                        </span>
+                        <Icon name="chevron-right" size={18} style={{ color: T.color.muted }} />
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          ))
+        })()}
 
         {/* ── Séances ponctuelles ───────────────────────────────────────────── */}
         {(seancesLibres.length > 0 || canCreate) && (
@@ -253,6 +277,7 @@ const styles = {
   progressBar: { height: 8, background: T.color.soft, borderRadius: T.radius.pill, overflow: 'hidden' },
   progressFill:{ height: '100%', background: 'var(--chip-bg)', borderRadius: T.radius.pill, transition: 'width 0.4s ease' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: T.space.sm, padding: '0 4px' },
+  groupeIcone: { width: 28, height: 28, borderRadius: 8, background: '#333333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   sectionCount:  { color: T.color.muted, fontSize: T.size.sm },
   emptyCard:   { ...T.card, textAlign: 'center', color: T.color.muted, fontSize: T.size.md },
   card:        { ...T.card, width: '100%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: T.space.md, fontFamily: T.font.body, minHeight: 72 },

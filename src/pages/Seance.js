@@ -96,6 +96,17 @@ export default function Seance() {
   const [enEdition, setEnEdition] = useState(null)
   const [formEdition, setFormEdition] = useState({})
   const [showProgressionFor, setShowProgressionFor] = useState(null) // exercice id
+  const [menuEx, setMenuEx] = useState(null) // exercice dont le menu d'actions est ouvert
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const menuRef = useRef(null)
+  useEffect(() => {
+    if (!menuEx) return
+    const fermer = e => { if (menuRef.current && !menuRef.current.contains(e.target) && !e.target.closest('[aria-label="Plus d\'actions"]')) setMenuEx(null) }
+    const auDefilement = () => setMenuEx(null)
+    document.addEventListener('mousedown', fermer)
+    window.addEventListener('scroll', auDefilement, true)
+    return () => { document.removeEventListener('mousedown', fermer); window.removeEventListener('scroll', auDefilement, true) }
+  }, [menuEx])
   const [showWarmupFor, setShowWarmupFor]           = useState(null) // exercice id
   const [showSeriesFor, setShowSeriesFor]           = useState(null) // exercice id
   const [biblioEchauffOpen, setBiblioEchauffOpen]  = useState(null) // exercice id
@@ -1020,13 +1031,13 @@ export default function Seance() {
 
   const colSemaines = Array.from({ length: semaines }, (_, i) => i + 1)
 
-  const BLOC_BG = ['#fffbeb','#eff6ff','#f0fdf4','#faf5ff','#fff1f2','#fff7ed','#ecfdf5','#f0f9ff']
-  const BLOC_BORDER = ['#f59e0b','#3b82f6','#22c55e','#a855f7','#f43f5e','#f97316','#10b981','#0ea5e9']
+  // Blocs dans le thème : fond alterné blanc / gris très clair selon la lettre
+  // (A, C, E… blancs ; B, D… gris), la lettre s'affiche dans une case foncée.
+  const lettreBloc = code => code?.match(/^([A-Za-z]+)/)?.[1]?.toUpperCase() || null
   function blocStyle(code) {
-    const letter = code?.match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+    const letter = lettreBloc(code)
     if (!letter) return {}
-    const i = letter.charCodeAt(0) - 65
-    return { background: BLOC_BG[i % BLOC_BG.length], borderLeft: `3px solid ${BLOC_BORDER[i % BLOC_BORDER.length]}` }
+    return { background: (letter.charCodeAt(0) - 65) % 2 ? '#f7f7f7' : 'white' }
   }
   const graphData = colSemaines.map(s => ({
     name: `S${s}`,
@@ -1059,20 +1070,23 @@ export default function Seance() {
         </div>
       )}
 
-      <button onClick={() => seance.programme_id ? navigate(`/programme/${seance.programmes.id}`) : navigate('/bibliotheque?tab=modeles')} style={styles.backBtn}>← Retour</button>
+      <button onClick={() => seance.programme_id ? navigate(`/programme/${seance.programmes.id}`) : navigate('/bibliotheque?tab=modeles')} style={styles.backBtn}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+        {seance.programmes?.nom || 'Retour'}
+      </button>
 
       {/* En-tête */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <p style={styles.progLabel}>{seance.programmes?.nom || 'Bibliothèque'}</p>
+          <p style={styles.progLabel}>{seance.programmes ? `Jour ${seance.ordre} · ${seance.type === 'terrain' ? 'Terrain' : 'Musculation'}` : 'Bibliothèque'}</p>
           <h1 style={styles.title}>{seance.nom}</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => navigate(`/seance/${id}/projection`)} style={{ background: '#111827', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            Projection
-          </button>
           <button onClick={sauvegarderTemplate} style={{ background: templateSaved ? '#f0fdf4' : 'white', color: templateSaved ? '#16a34a' : '#374151', border: `1.5px solid ${templateSaved ? '#86efac' : '#e5e7eb'}`, borderRadius: 10, padding: '0.5rem 0.875rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.3s' }}>
-            {templateSaved ? '✓ Modèle sauvegardé' : 'Sauvegarder comme modèle'}
+            {templateSaved ? 'Modèle enregistré' : 'Enregistrer comme modèle'}
+          </button>
+          <button onClick={() => navigate(`/seance/${id}/projection`)} style={{ ...styles.btnPrimary, padding: '0.5rem 0.875rem', fontSize: '0.8rem' }}>
+            Projection
           </button>
         </div>
       </div>
@@ -1547,8 +1561,8 @@ export default function Seance() {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {editAllMode ? (
               <>
-                <button onClick={saveAllEditions} style={{ ...styles.btnPrimary, padding: '0.45rem 1rem', fontSize: '0.82rem' }}>✓ Sauvegarder tout</button>
-                <button onClick={() => setEditAllMode(false)} style={{ ...styles.btnSecondary, padding: '0.45rem 0.875rem', fontSize: '0.82rem' }}>✕ Annuler</button>
+                <button onClick={saveAllEditions} style={{ ...styles.btnPrimary, padding: '0.45rem 1rem', fontSize: '0.82rem' }}>Enregistrer tout</button>
+                <button onClick={() => setEditAllMode(false)} style={{ ...styles.btnSecondary, padding: '0.45rem 0.875rem', fontSize: '0.82rem' }}>Annuler</button>
               </>
             ) : (
               <>
@@ -1633,7 +1647,7 @@ export default function Seance() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.thead}>
-                <th style={styles.th}></th>
+                <th style={{ ...styles.th, width: 48 }}>Bloc</th>
                 <th style={styles.th}>Code</th>
                 <th style={styles.th}>Exercice</th>
                 <th style={styles.th}>Séries</th>
@@ -1643,12 +1657,13 @@ export default function Seance() {
                 <th style={{ ...styles.th, textAlign: 'center' }}>Intensité</th>
                 <th style={{ ...styles.th, textAlign: 'center' }}>Valeur</th>
                 <th style={{ ...styles.th, textAlign: 'center' }}>Média</th>
+                <th style={styles.th}></th>
                 {colSemaines.map(s => (
                   <th key={s} style={{ ...styles.th, textAlign: 'center' }} colSpan={2}>S{s}</th>
                 ))}
               </tr>
               <tr style={{ background: '#fafafa', fontSize: '0.7rem', color: '#6b7280' }}>
-                <th colSpan={10}></th>
+                <th colSpan={11}></th>
                 {colSemaines.map(s => (
                   <Fragment key={s}>
                     <th style={{ padding: '0.25rem 0.5rem', textAlign: 'center', fontWeight: '600' }}>kg</th>
@@ -1658,17 +1673,20 @@ export default function Seance() {
               </tr>
             </thead>
             <tbody>
-              {exercices.map(ex => (
+              {exercices.map((ex, idx) => {
+                const lettre = lettreBloc(ex.code)
+                const debutBloc = idx === 0 || lettre !== lettreBloc(exercices[idx - 1].code)
+                const caseBloc = (
+                  <td style={{ ...styles.td, padding: '0.5rem 0.25rem 0.5rem 0.75rem' }}>
+                    {lettre && debutBloc && <span style={styles.blocTag}>{lettre}</span>}
+                  </td>
+                )
+                return (
                 <Fragment key={ex.id}>
-                <tr style={{ ...styles.tr, ...blocStyle(ex.code) }}>
+                <tr style={{ ...styles.tr, ...blocStyle(ex.code), ...(debutBloc && idx > 0 ? { borderTop: '1px solid #e5e7eb' } : {}) }}>
                   {enEdition === ex.id ? (
                     <>
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button onClick={() => sauvegarderEdition(ex.id)} style={styles.iconBtnSm}>✓</button>
-                          <button onClick={() => setEnEdition(null)} style={styles.iconBtnSm}>✕</button>
-                        </div>
-                      </td>
+                      {caseBloc}
                       <td style={styles.td}><input value={formEdition.code} onChange={e => setFormEdition({ ...formEdition, code: e.target.value })} style={{ ...styles.cellInput, width: '50px' }} /></td>
                       <td style={styles.td}>
                         <div style={{ position: 'relative' }}>
@@ -1718,6 +1736,12 @@ export default function Seance() {
                           style={{ ...styles.cellInput, width: '160px' }}
                         />
                       </td>
+                      <td style={styles.td}>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <button onClick={() => sauvegarderEdition(ex.id)} style={styles.actionBtn} title="Enregistrer" aria-label="Enregistrer"><Icon name="check" size={16} /></button>
+                          <button onClick={() => setEnEdition(null)} style={styles.actionBtn} title="Annuler" aria-label="Annuler"><Icon name="x" size={16} /></button>
+                        </div>
+                      </td>
                       {colSemaines.map(s => (
                         <Fragment key={s}>
                           <td style={styles.td}>—</td>
@@ -1727,56 +1751,7 @@ export default function Seance() {
                     </>
                   ) : (
                     <>
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: 'fit-content' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.2rem' }}>
-                            {/* Modifier */}
-                            <button
-                              title="Modifier"
-                              onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '', media_url: ex.media_url || '' }) }}
-                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            </button>
-                            {/* Périodisation */}
-                            <button
-                              title="Progression par semaines"
-                              onClick={() => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id)}
-                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (ex.progressions?.length > 0) ? '#eff6ff' : undefined, color: (ex.progressions?.length > 0) ? '#2563eb' : '#6b7280' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            </button>
-                            {/* Séries d'échauffement */}
-                            <button
-                              title="Séries d'échauffement"
-                              onClick={() => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id)}
-                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (ex.series_echauffement?.length > 0) ? '#fff7ed' : undefined, color: (ex.series_echauffement?.length > 0) ? '#ea580c' : '#6b7280' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"/></svg>
-                            </button>
-                            {/* Supprimer */}
-                            <button
-                              title="Supprimer"
-                              onClick={() => supprimerExercice(ex.id)}
-                              style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                            </button>
-                          </div>
-                          {/* Séries réalisées */}
-                          <button
-                            title="Séries réalisées par le client"
-                            onClick={() => setShowSeriesFor(showSeriesFor === ex.id ? null : ex.id)}
-                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', fontSize: '0.6rem', fontWeight: 700, color: serieTrackingMap[ex.id] ? '#0369a1' : '#9ca3af', background: showSeriesFor === ex.id ? '#e0f2fe' : serieTrackingMap[ex.id] ? '#f0f9ff' : undefined, borderColor: showSeriesFor === ex.id ? '#7dd3fc' : serieTrackingMap[ex.id] ? '#bae6fd' : undefined }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M5 4h2v2H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2V4h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-                            {serieTrackingMap[ex.id] ? 'réalisé' : '—'}
-                          </button>
-                          {/* Bibliothèque */}
-                          <button
-                            title={ex.bibliotheque_id ? 'Lié à la bibliothèque' : 'Ajouter à la bibliothèque'}
-                            onClick={() => openLibraryPanel(ex.id)}
-                            style={{ ...styles.iconBtnSm, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', fontSize: '0.6rem', fontWeight: 700, color: libraryLinked[ex.id] ? '#16a34a' : ex.bibliotheque_id ? '#6366f1' : '#9ca3af', background: libraryLinked[ex.id] ? '#f0fdf4' : ex.bibliotheque_id ? '#f5f3ff' : undefined, borderColor: libraryLinked[ex.id] ? '#bbf7d0' : ex.bibliotheque_id ? '#ddd6fe' : undefined }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                            {libraryLinked[ex.id] ? '✓' : ex.bibliotheque_id ? 'lié' : '—'}
-                          </button>
-                        </div>
-                      </td>
+                      {caseBloc}
                       <td style={styles.td}>
                         <span style={styles.codeTag}>{ex.code}</span>
                       </td>
@@ -1798,6 +1773,44 @@ export default function Seance() {
                             </span>
                           : <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>—</span>
                         }
+                      </td>
+                      <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: '0.25rem', position: 'relative' }}>
+                          <button
+                            title="Modifier" aria-label="Modifier"
+                            onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '', media_url: ex.media_url || '' }) }}
+                            style={styles.actionBtn}>
+                            <Icon name="edit" size={16} />
+                          </button>
+                          <button title="Plus d'actions" aria-label="Plus d'actions" aria-expanded={menuEx === ex.id}
+                            onClick={e => {
+                              // Menu en position fixe : le tableau défile horizontalement et le couperait
+                              const r = e.currentTarget.getBoundingClientRect()
+                              setMenuPos({ top: r.bottom + 4, left: Math.max(8, r.right - 260) })
+                              setMenuEx(menuEx === ex.id ? null : ex.id)
+                            }}
+                            style={{ ...styles.actionBtn, background: menuEx === ex.id ? '#f3f4f6' : 'none' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+                          </button>
+                          {menuEx === ex.id && (
+                            <div ref={menuRef} style={{ ...styles.menu, top: menuPos.top, left: menuPos.left }} role="menu">
+                              {[
+                                { l: 'Progression par semaines', etat: ex.progressions?.length > 0 && 'définie', f: () => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id) },
+                                { l: "Séries d'échauffement", etat: ex.series_echauffement?.length > 0 && `${ex.series_echauffement.length}`, f: () => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id) },
+                                { l: 'Séries réalisées par le joueur', etat: serieTrackingMap[ex.id] && 'réalisées', f: () => setShowSeriesFor(showSeriesFor === ex.id ? null : ex.id) },
+                                { l: ex.bibliotheque_id || libraryLinked[ex.id] ? 'Lié à la bibliothèque' : 'Ajouter à la bibliothèque', f: () => openLibraryPanel(ex.id) },
+                              ].map(it => (
+                                <button key={it.l} role="menuitem" onClick={() => { setMenuEx(null); it.f() }} style={styles.menuItem}>
+                                  <span style={{ flex: 1 }}>{it.l}</span>
+                                  {it.etat && <span style={styles.menuEtat}>{it.etat}</span>}
+                                </button>
+                              ))}
+                              <button role="menuitem" onClick={() => { setMenuEx(null); supprimerExercice(ex.id) }} style={{ ...styles.menuItem, color: '#dc2626', borderTop: '1px solid #f3f4f6' }}>
+                                Supprimer l'exercice
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       {colSemaines.map(s => (
                         <Fragment key={s}>
@@ -2127,7 +2140,8 @@ export default function Seance() {
                   </tr>
                 )}
                 </Fragment>
-              ))}
+                )
+              })}
             </tbody>
           </table>
           </div>
@@ -2332,8 +2346,8 @@ export default function Seance() {
 }
 const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  page: { padding: '1.25rem', maxWidth: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
+  page: { padding: '2rem', maxWidth: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', padding: '0.5rem 0.5rem 0.5rem 0', marginBottom: '1rem', fontFamily: 'inherit' },
   progLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
   title: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
   rpeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' },
@@ -2351,6 +2365,11 @@ const styles = {
   tr: { borderBottom: '1px solid #f3f4f6' },
   td: { padding: '0.6rem 0.75rem', color: '#374151' },
   tdCenter: { padding: '0.6rem 0.5rem', textAlign: 'center', color: '#374151' },
+  blocTag: { display: 'inline-flex', width: 28, height: 28, borderRadius: 8, background: '#333333', color: '#e4f816', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem' },
+  actionBtn: { width: 32, height: 32, background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  menu: { position: 'fixed', zIndex: 500, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: 260, padding: 4, display: 'flex', flexDirection: 'column' },
+  menuItem: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 8, padding: '0.6rem 0.75rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' },
+  menuEtat: { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', background: '#f3f4f6', borderRadius: 999, padding: '1px 8px' },
   codeTag: { background: '#333333', color: '#e4f816', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' },
   intensiteTag: { background: '#f3f4f6', color: '#374151', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600' },
   chargeInput: { width: '52px', textAlign: 'center', border: '1.5px solid #e5e7eb', borderRadius: '6px', padding: '0.25rem', fontSize: '0.8rem', outline: 'none' },
@@ -2360,7 +2379,7 @@ const styles = {
   formInput: { padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', color: '#333333', outline: 'none' },
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
-  btnAI: { background: '#111827', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.35)', borderRadius: '10px', padding: '0.5rem 0.875rem', fontSize: '0.82rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.01em' },
+  btnAI: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.45rem 0.875rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   suggDropdown: { position: 'absolute', top: '100%', left: 0, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, marginTop: '3px', overflow: 'hidden', minWidth: '200px' },
   suggItem: { padding: '0.45rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: '0.85rem', color: '#333333', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white' },
   suggImg: { width: 32, height: 32, objectFit: 'cover', borderRadius: 6, flexShrink: 0 },

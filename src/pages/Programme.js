@@ -11,8 +11,8 @@ export default function Programme() {
   const [programme, setProgramme] = useState(null)
   const [seances, setSeances] = useState([])
   const [loading, setLoading] = useState(true)
-  const [nouvelleSeance, setNouvelleSeance] = useState('')
-  const [nouvelleSeanceType, setNouvelleSeanceType] = useState('musculation')
+  // Nom de la nouvelle séance, un champ par colonne (musculation / terrain)
+  const [nouvelleSeance, setNouvelleSeance] = useState({ musculation: '', terrain: '' })
   const [enEdition, setEnEdition] = useState(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [templates, setTemplates] = useState([])
@@ -43,20 +43,20 @@ export default function Programme() {
 
   async function fetchSeances() {
     const { data, error } = await supabase
-      .from('seances').select('*').eq('programme_id', id).order('ordre', { ascending: true })
+      .from('seances').select('*, exercices(count)').eq('programme_id', id).order('ordre', { ascending: true })
     if (error) console.error(error)
     else setSeances(data)
   }
 
-  async function ajouterSeance(e) {
+  async function ajouterSeance(e, type) {
     e.preventDefault()
-    if (!nouvelleSeance.trim()) return
+    const nom = nouvelleSeance[type].trim()
+    if (!nom) return
     const { data, error } = await supabase
-      .from('seances').insert([{ programme_id: id, nom: nouvelleSeance, ordre: seances.length + 1, type: nouvelleSeanceType }]).select().single()
+      .from('seances').insert([{ programme_id: id, nom, ordre: seances.length + 1, type }]).select().single()
     if (error) { alert(error.message); return }
     setSeances([...seances, data])
-    setNouvelleSeance('')
-    setNouvelleSeanceType('musculation')
+    setNouvelleSeance(n => ({ ...n, [type]: '' }))
     // Notifier le client (sans objet pour un brouillon bibliothèque, sans client)
     if (!programme.client_id) return
     try {
@@ -67,7 +67,7 @@ export default function Programme() {
         .single()
       if (clientData?.user_id) {
         const result = await sendNotif(clientData.user_id, {
-          titre: `Nouvelle séance : ${nouvelleSeance}`,
+          titre: `Nouvelle séance : ${nom}`,
           corps: `Ton coach a ajouté une séance à ton programme ${programme.nom}`,
           type: 'seance',
           lien: '/client/mon-programme',
@@ -91,13 +91,12 @@ export default function Programme() {
     else { setSeances(seances.map(s => s.id === seanceId ? { ...s, nom: nomEdition } : s)); setEnEdition(null) }
   }
 
-  async function deplacerSeance(index, direction) {
-    const targetIndex = index + direction
+  // Échange la séance avec sa voisine de la même colonne (musculation ou
+  // terrain) : les séances de l'autre colonne gardent leur place.
+  async function deplacerSeance(index, targetIndex) {
     if (targetIndex < 0 || targetIndex >= seances.length) return
-    // Déplace l'élément dans le tableau
     const arr = [...seances]
-    const [moved] = arr.splice(index, 1)
-    arr.splice(targetIndex, 0, moved)
+    ;[arr[index], arr[targetIndex]] = [arr[targetIndex], arr[index]]
     // Renumérote proprement 1..n — robuste même si les ordres étaient nuls ou
     // dupliqués (ex. séances créées par assignation/import).
     const renum = arr.map((s, i) => ({ ...s, ordre: i + 1 }))
@@ -340,13 +339,22 @@ export default function Programme() {
     />
   )
 
+  // Deux colonnes : musculation et terrain. Le numéro du jour reste celui de
+  // l'ordre dans le cycle.
+  const COLONNES = [
+    { type: 'musculation', titre: 'Musculation', icone: 'dumbbell', placeholder: 'Nouvelle séance de musculation' },
+    { type: 'terrain', titre: 'Terrain', icone: 'terrain', placeholder: 'Nouvelle séance terrain' },
+  ]
+  const typeDe = s => (s.type === 'terrain' ? 'terrain' : 'musculation')
+  const nbExos = s => s.exercices?.[0]?.count || 0
+
   return (
     <div style={styles.page}>
       {/* Toast confirmation notification */}
       {notifToast && (
         <div style={{
           position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
-          background: notifToast.ok ? '#111827' : '#dc2626',
+          background: notifToast.ok ? '#333333' : '#dc2626',
           color: notifToast.ok ? '#e4f816' : 'white',
           padding: '0.65rem 1.25rem', borderRadius: 12,
           fontSize: '0.85rem', fontWeight: '700',
@@ -356,7 +364,8 @@ export default function Programme() {
           {notifToast.msg}
         </div>
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <button onClick={async () => {
           if (programme.bibliotheque_template_id) {
             await sauvegarderDansBibliotheque(true)
@@ -365,38 +374,41 @@ export default function Programme() {
           else if (programme.groupe_id && !programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
           else if (programme.template_id) navigate(`/groupe/${programme.groupe_id}`)
           else navigate(`/client/${programme.client_id}`)
-        }} style={styles.backBtn}>← Retour</button>
+        }} style={styles.backBtn}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+          Retour
+        </button>
         {programme.client_id && (
-          <button onClick={testerPushClient} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#6b7280', cursor: 'pointer' }}>
-            Test push
-          </button>
+          <button onClick={testerPushClient} style={styles.btnGhost}>Test push</button>
         )}
       </div>
 
       {/* En-tête programme */}
       {editProgramme ? (
         <div style={styles.card}>
-          <p style={styles.sectionTitle}>Modifier le cycle</p>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={styles.label}>Nom</label>
-            <input value={formProgramme.nom} onChange={e => setFormProgramme({ ...formProgramme, nom: e.target.value })} style={styles.input} />
-          </div>
-          {programme.bibliotheque_template_id ? (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={styles.label}>Description (optionnel)</label>
-              <input value={formProgramme.description} onChange={e => setFormProgramme({ ...formProgramme, description: e.target.value })} style={styles.input} placeholder="Niveau, objectifs, particularités…" />
+          <p style={{ ...styles.sectionTitle, marginBottom: '1rem' }}>Modifier le cycle</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div>
+              <label style={styles.label}>Nom</label>
+              <input value={formProgramme.nom} onChange={e => setFormProgramme({ ...formProgramme, nom: e.target.value })} style={styles.input} />
             </div>
-          ) : (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={styles.label}>Date de début</label>
-              <input type="date" value={formProgramme.date_debut} onChange={e => setFormProgramme({ ...formProgramme, date_debut: e.target.value })} style={styles.input} />
+            {programme.bibliotheque_template_id ? (
+              <div>
+                <label style={styles.label}>Description (optionnel)</label>
+                <input value={formProgramme.description} onChange={e => setFormProgramme({ ...formProgramme, description: e.target.value })} style={styles.input} placeholder="Niveau, objectifs, particularités…" />
+              </div>
+            ) : (
+              <div>
+                <label style={styles.label}>Date de début</label>
+                <input type="date" value={formProgramme.date_debut} onChange={e => setFormProgramme({ ...formProgramme, date_debut: e.target.value })} style={styles.input} />
+              </div>
+            )}
+            <div>
+              <label style={styles.label}>Semaines</label>
+              <select value={formProgramme.semaines} onChange={e => setFormProgramme({ ...formProgramme, semaines: e.target.value })} style={styles.select}>
+                {[2,3,4,5,6,7,8,10,12].map(n => <option key={n} value={n}>{n} semaines</option>)}
+              </select>
             </div>
-          )}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={styles.label}>Semaines</label>
-            <select value={formProgramme.semaines} onChange={e => setFormProgramme({ ...formProgramme, semaines: e.target.value })} style={styles.select}>
-              {[2,3,4,5,6,7,8,10,12].map(n => <option key={n} value={n}>{n} semaines</option>)}
-            </select>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={() => setEditProgramme(false)} style={styles.btnSecondary}>Annuler</button>
@@ -405,56 +417,50 @@ export default function Programme() {
         </div>
       ) : (
         <div style={styles.card}>
-          {/* Titre selon contexte groupe, individuel ou brouillon bibliothèque */}
-          {programme.bibliotheque_template_id && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Brouillon bibliothèque</span>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 280 }}>
+              {/* Contexte : brouillon bibliothèque, template de groupe ou copie de groupe */}
+              {(programme.bibliotheque_template_id || programme.groupe_id) && (
+                <span style={{ ...styles.metaBadge, display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem' }}>
+                  {programme.groupe_id && <span style={{ width: 8, height: 8, borderRadius: '50%', background: programme.groupes?.couleur || '#6b7280' }} />}
+                  {programme.bibliotheque_template_id ? 'Brouillon bibliothèque'
+                    : programme.template_id ? `Copie de groupe · ${programme.groupes?.nom}`
+                    : `Groupe · ${programme.groupes?.nom}`}
+                </span>
+              )}
+              {programme.clients && <p style={styles.clientLabel}>{programme.clients.prenom} {programme.clients.nom}</p>}
+              <h1 style={styles.progTitle}>{programme.nom}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                <span style={styles.metaBadge}>{programme.semaines} semaines</span>
+                <span style={styles.metaBadge}>{seances.length} séance{seances.length > 1 ? 's' : ''}</span>
+                {programme.date_debut && <span style={styles.metaBadge}>Début le {new Date(programme.date_debut + 'T00:00:00').toLocaleDateString('fr-FR')}</span>}
+              </div>
             </div>
-          )}
-          {programme.groupe_id && !programme.template_id && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: (programme.groupes?.couleur || '#6366f1') + '18', border: `1px solid ${(programme.groupes?.couleur || '#6366f1')}44`, borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: programme.groupes?.couleur || '#6366f1', display: 'inline-block' }} />
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: programme.groupes?.couleur || '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Template · {programme.groupes?.nom}</span>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={() => setEditProgramme(true)} style={styles.btnSecondary}>Modifier</button>
+              {programme.bibliotheque_template_id ? (
+                <button
+                  onClick={sauvegarderDansBibliotheque}
+                  disabled={savingTemplate}
+                  style={{ ...styles.btnPrimary, opacity: savingTemplate ? 0.7 : 1 }}
+                >
+                  {savingTemplate ? 'Enregistrement…' : 'Enregistrer dans la bibliothèque'}
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>Enregistrer comme modèle</button>
+                  <button onClick={supprimerProgramme} style={styles.btnDanger}>Supprimer le cycle</button>
+                </>
+              )}
             </div>
-          )}
-          {programme.template_id && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '0.2rem 0.75rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Copie de groupe · {programme.groupes?.nom}</span>
-            </div>
-          )}
-          {programme.clients && <p style={styles.clientLabel}>{programme.clients.prenom} {programme.clients.nom}</p>}
-          <h1 style={styles.progTitle}>{programme.nom}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-            <span style={styles.metaBadge}>{programme.semaines} semaines</span>
-            <span style={styles.metaBadge}>{seances.length} séance{seances.length > 1 ? 's' : ''}</span>
-            {programme.date_debut && <span style={styles.metaBadge}>Début : {new Date(programme.date_debut + 'T00:00:00').toLocaleDateString('fr-FR')}</span>}
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button onClick={() => setEditProgramme(true)} style={styles.btnSecondary}>Modifier</button>
-            {programme.bibliotheque_template_id ? (
-              <button
-                onClick={sauvegarderDansBibliotheque}
-                disabled={savingTemplate}
-                style={{ ...styles.btnPrimary, opacity: savingTemplate ? 0.7 : 1 }}
-              >
-                {savingTemplate ? 'Enregistrement…' : 'Enregistrer dans la bibliothèque'}
-              </button>
-            ) : (
-              <>
-                <button onClick={() => { setTemplateForm({ nom: programme.nom, description: '' }); setShowSaveTemplate(true) }} style={styles.btnSecondary}>Template</button>
-                <button onClick={supprimerProgramme} style={styles.btnDanger}>Supprimer</button>
-              </>
-            )}
           </div>
 
-          {/* Modale enregistrer comme template */}
+          {/* Enregistrer comme template */}
           {!programme.bibliotheque_template_id && showSaveTemplate && (
-            <div style={{ marginTop: '1rem', background: '#f9fafb', borderRadius: 12, border: '1.5px solid #e5e7eb', padding: '1rem' }}>
-              <p style={{ margin: '0 0 0.75rem', fontWeight: '700', fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Enregistrer comme template de cycle
-              </p>
+            <div style={{ marginTop: '1.25rem', background: '#f9fafb', borderRadius: 12, border: '1.5px solid #e5e7eb', padding: '1rem', maxWidth: 640 }}>
+              <p style={{ ...styles.sectionTitle, marginBottom: '0.75rem' }}>Enregistrer comme modèle de cycle</p>
               <div style={{ marginBottom: '0.65rem' }}>
-                <label style={styles.label}>Nom du template *</label>
+                <label style={styles.label}>Nom du modèle *</label>
                 <input
                   value={templateForm.nom}
                   onChange={e => setTemplateForm(f => ({ ...f, nom: e.target.value }))}
@@ -490,107 +496,130 @@ export default function Programme() {
         </div>
       )}
 
-      {/* Séances */}
-      <div style={{ marginTop: '1.5rem' }}>
-        <div style={styles.sectionHeader}>
-          <p style={styles.sectionTitle}>Séances</p>
-        </div>
+      {/* Séances : une colonne par type */}
+      <div style={styles.colonnes}>
+        {COLONNES.map(col => {
+          const liste = seances.map((s, i) => ({ s, i })).filter(({ s }) => typeDe(s) === col.type)
+          const nbTotal = liste.reduce((n, { s }) => n + nbExos(s), 0)
+          return (
+            <section key={col.type} style={styles.colonne}>
+              <div style={styles.colTete}>
+                <span style={styles.colIcone}>
+                  {col.icone === 'dumbbell' ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11" /></svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5" /><path d="M12 5v14" /><circle cx="12" cy="12" r="2.5" /></svg>
+                  )}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <p style={styles.colTitre}>{col.titre}</p>
+                  <p style={styles.colSous}>
+                    {liste.length} séance{liste.length > 1 ? 's' : ''}
+                    {col.type === 'musculation' && nbTotal > 0 && ` · ${nbTotal} exercice${nbTotal > 1 ? 's' : ''}`}
+                  </p>
+                </div>
+              </div>
 
-        {seances.length === 0 ? (
-          <div style={styles.emptyCard}>Aucune séance. Ajoutez-en une ci-dessous.</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>
-            {seances.map((seance, i) => (
-              <div key={seance.id} style={styles.seanceRow}>
-                {enEdition === seance.id ? (
-                  <>
-                    <input
-                      value={nomEdition}
-                      onChange={e => setNomEdition(e.target.value)}
-                      style={{ ...styles.input, flex: 1 }}
-                      autoFocus
-                    />
-                    <button onClick={() => sauvegarderSeance(seance.id)} style={styles.btnPrimary}>✓</button>
-                    <button onClick={() => setEnEdition(null)} style={styles.btnSecondary}>✕</button>
-                  </>
-                ) : (
-                  <>
-                    <div style={styles.orderBtns}>
-                      <button onClick={() => deplacerSeance(i, -1)} disabled={i === 0} style={{ ...styles.orderBtn, opacity: i === 0 ? 0.2 : 1 }}>↑</button>
-                      <button onClick={() => deplacerSeance(i, 1)} disabled={i === seances.length - 1} style={{ ...styles.orderBtn, opacity: i === seances.length - 1 ? 0.2 : 1 }}>↓</button>
-                    </div>
-                    <div role="button" tabIndex={0}
-                      onClick={() => navigate(`/seance/${seance.id}`)}
-                      style={{ ...styles.seanceCard, border: `1.5px solid ${i === 0 ? '#e4f816' : '#e5e7eb'}` }}
-                    >
-                      <span style={styles.seanceOrdre}>Jour {i + 1}</span>
-                      <span style={styles.seanceNom}>{seance.nom}</span>
-                      {seance.type === 'terrain' && (
-                        <span style={{ background: '#ecfccb', color: '#3f6212', fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: 999, marginLeft: 'auto' }}>Terrain</span>
+              <div style={{ flex: 1 }}>
+                {liste.length === 0 ? (
+                  <p style={styles.vide}>Aucune séance {col.type === 'terrain' ? 'terrain' : 'de musculation'}.</p>
+                ) : liste.map(({ s: seance, i }, k) => {
+                  const precedente = liste[k - 1]?.i
+                  const suivante = liste[k + 1]?.i
+                  return (
+                    <div key={seance.id} style={styles.seanceRow}>
+                      {enEdition === seance.id ? (
+                        <>
+                          <input
+                            value={nomEdition}
+                            onChange={e => setNomEdition(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') sauvegarderSeance(seance.id); if (e.key === 'Escape') setEnEdition(null) }}
+                            style={{ ...styles.input, flex: 1 }}
+                            autoFocus
+                          />
+                          <button onClick={() => sauvegarderSeance(seance.id)} style={styles.iconBtn} aria-label="Enregistrer le nom"><Icon name="check" size={16} /></button>
+                          <button onClick={() => setEnEdition(null)} style={styles.iconBtn} aria-label="Annuler"><Icon name="x" size={16} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <div style={styles.orderBtns}>
+                            <button onClick={() => deplacerSeance(i, precedente)} disabled={precedente === undefined} aria-label="Monter"
+                              style={{ ...styles.orderBtn, opacity: precedente === undefined ? 0.25 : 1 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 15l6-6 6 6" /></svg>
+                            </button>
+                            <button onClick={() => deplacerSeance(i, suivante)} disabled={suivante === undefined} aria-label="Descendre"
+                              style={{ ...styles.orderBtn, opacity: suivante === undefined ? 0.25 : 1 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
+                            </button>
+                          </div>
+                          <div role="button" tabIndex={0} onClick={() => navigate(`/seance/${seance.id}`)}
+                            onKeyDown={e => { if (e.key === 'Enter') navigate(`/seance/${seance.id}`) }}
+                            style={styles.seanceCard}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'none' }}>
+                            <span style={styles.seanceOrdre}>Jour {i + 1}</span>
+                            <span style={{ minWidth: 0 }}>
+                              <span style={styles.seanceNom}>{seance.nom}</span>
+                              {col.type === 'musculation' && (
+                                <span style={styles.seanceSous}>{nbExos(seance)} exercice{nbExos(seance) > 1 ? 's' : ''}</span>
+                              )}
+                            </span>
+                          </div>
+                          <button onClick={() => { setEnEdition(seance.id); setNomEdition(seance.nom) }} style={styles.iconBtn} aria-label="Renommer"><Icon name="edit" size={16} /></button>
+                          <button onClick={() => supprimerSeance(seance.id)} style={styles.iconBtn} aria-label="Supprimer"><Icon name="trash" size={16} /></button>
+                        </>
                       )}
                     </div>
-                    <button onClick={() => { setEnEdition(seance.id); setNomEdition(seance.nom) }} style={styles.iconBtn}><Icon name="edit" size={14} /></button>
-                    <button onClick={() => supprimerSeance(seance.id)} style={styles.iconBtn}><Icon name="trash" size={14} /></button>
-                  </>
-                )}
+                  )
+                })}
               </div>
-            ))}
-          </div>
-        )}
 
-        <form onSubmit={ajouterSeance}>
-          <div style={styles.addForm}>
-            <input
-              value={nouvelleSeance}
-              onChange={e => setNouvelleSeance(e.target.value)}
-              placeholder="ex: Séance A — Lower body"
-              style={{ ...styles.input, flex: 1 }}
-            />
-            <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
-          </div>
-          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
-            {[['musculation', 'Musculation'], ['terrain', 'Terrain']].map(([val, label]) => (
-              <button key={val} type="button" onClick={() => setNouvelleSeanceType(val)}
-                style={{
-                  border: '1.5px solid', borderColor: nouvelleSeanceType === val ? '#1f2937' : '#e5e7eb',
-                  background: nouvelleSeanceType === val ? '#1f2937' : 'white',
-                  color: nouvelleSeanceType === val ? '#e4f816' : '#6b7280',
-                  fontSize: '0.76rem', fontWeight: 700, padding: '0.35rem 0.75rem', borderRadius: 8, cursor: 'pointer',
-                }}>{label}</button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button type="button" onClick={ouvrirTemplates} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>Depuis un modèle</button>
-            <button type="button" onClick={() => setShowImport(true)} style={{ ...styles.btnSecondary, fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}>Importer Excel</button>
-          </div>
-        </form>
-
-        {/* Panel modèles */}
-        {showTemplates && (
-          <div style={{ marginTop: '0.75rem', background: 'white', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
-            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Choisir un modèle</p>
-              <button onClick={() => setShowTemplates(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
-            </div>
-            {templates.length === 0 ? (
-              <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>Aucun modèle sauvegardé.</p>
-            ) : (
-              templates.map(t => (
-                <div role="button" tabIndex={0} key={t.id} onClick={() => chargerTemplate(t)}
-                  style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                >
-                  <div>
-                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333333' }}>{t.nom}</p>
-                    <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{t.exercices?.length || 0} exercice{(t.exercices?.length || 0) > 1 ? 's' : ''}</p>
+              <form onSubmit={e => ajouterSeance(e, col.type)} style={styles.addForm}>
+                <input
+                  value={nouvelleSeance[col.type]}
+                  onChange={e => setNouvelleSeance(n => ({ ...n, [col.type]: e.target.value }))}
+                  placeholder={col.placeholder}
+                  style={{ ...styles.input, flex: 1 }}
+                />
+                <button type="submit" style={styles.btnPrimary}>Ajouter</button>
+              </form>
+              {col.type === 'musculation' && (
+                <>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={ouvrirTemplates} style={styles.btnGhost}>Depuis un modèle</button>
+                    <button type="button" onClick={() => setShowImport(true)} style={styles.btnGhost}>Importer un fichier Excel</button>
                   </div>
-                  <span style={{ color: '#6b7280', fontSize: '1.2rem' }}>›</span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                  {/* Panel modèles */}
+                  {showTemplates && (
+                    <div style={{ marginTop: '0.75rem', background: 'white', borderRadius: 12, border: '1.5px solid #e5e7eb', overflow: 'hidden' }}>
+                      <div style={{ padding: '0.5rem 0.5rem 0.5rem 1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <p style={styles.sectionTitle}>Choisir un modèle</p>
+                        <button onClick={() => setShowTemplates(false)} style={styles.iconBtn} aria-label="Fermer"><Icon name="x" size={16} /></button>
+                      </div>
+                      {templates.length === 0 ? (
+                        <p style={{ color: '#6b7280', textAlign: 'center', padding: '1.5rem', fontSize: '0.85rem' }}>Aucun modèle sauvegardé.</p>
+                      ) : (
+                        templates.map(t => (
+                          <div role="button" tabIndex={0} key={t.id} onClick={() => chargerTemplate(t)}
+                            style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                          >
+                            <div>
+                              <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333333' }}>{t.nom}</p>
+                              <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>{t.exercices?.length || 0} exercice{(t.exercices?.length || 0) > 1 ? 's' : ''}</p>
+                            </div>
+                            <Icon name="chevron-right" size={18} style={{ color: '#9ca3af' }} />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          )
+        })}
       </div>
     </div>
   )
@@ -598,27 +627,34 @@ export default function Programme() {
 
 const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  page: { padding: '2rem', maxWidth: '700px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  backBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', cursor: 'pointer', padding: 0, marginBottom: '1.5rem' },
+  page: { padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#6b7280', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', padding: '0.5rem 0.5rem 0.5rem 0', fontFamily: 'inherit' },
   card: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   clientLabel: { fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.25rem' },
   progTitle: { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  metaBadge: { background: '#f3f4f6', color: '#374151', padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600' },
-  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
+  metaBadge: { background: '#f3f4f6', color: '#374151', padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 },
-  emptyCard: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '1rem' },
-  seanceRow: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
-  seanceCard: { flex: 1, display: 'flex', alignItems: 'center', gap: '0.875rem', background: 'white', borderRadius: '12px', padding: '0.875rem 1rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  seanceOrdre: { fontSize: '0.75rem', fontWeight: '800', color: '#6b7280', minWidth: '20px' },
-  seanceNom: { fontWeight: '600', fontSize: '0.9rem', color: '#333333' },
-  addForm: { display: 'flex', gap: '0.75rem' },
+  colonnes: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1rem', marginTop: '1rem', alignItems: 'start' },
+  colonne: { background: 'white', borderRadius: 16, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
+  colTete: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0 1rem 0.25rem', borderBottom: '1px solid #f3f4f6', marginBottom: '0.5rem' },
+  colIcone: { width: 40, height: 40, borderRadius: 10, background: '#333333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  colTitre: { margin: 0, fontSize: '1rem', fontWeight: 800, color: '#333333' },
+  colSous: { margin: '2px 0 0', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' },
+  vide: { color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0', margin: 0 },
+  seanceRow: { display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0' },
+  seanceCard: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 10, padding: '0.5rem', cursor: 'pointer', background: 'none' },
+  seanceOrdre: { fontSize: '0.75rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 56, flexShrink: 0 },
+  seanceNom: { display: 'block', fontWeight: '700', fontSize: '0.92rem', color: '#333333' },
+  seanceSous: { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginTop: 2 },
+  addForm: { display: 'flex', gap: '0.5rem', marginTop: '0.75rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
-  input: { padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box', width: '100%' },
+  input: { padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box', width: '100%', fontFamily: 'inherit' },
   select: { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', background: 'white' },
-  btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnDanger: { background: '#fef2f2', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
-  iconBtn: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' },
-  orderBtns: { display: 'flex', flexDirection: 'column', gap: '2px' },
-  orderBtn: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '6px', padding: '0.2rem 0.45rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '700', color: '#374151', lineHeight: 1 },
+  btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  btnGhost: { background: 'none', color: '#6b7280', border: 'none', borderRadius: '10px', padding: '0.5rem 0.5rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  btnDanger: { background: 'none', color: '#dc2626', border: 'none', borderRadius: '10px', padding: '0.65rem 0.75rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  iconBtn: { width: 36, height: 36, background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 },
+  orderBtns: { display: 'flex', flexDirection: 'column', flexShrink: 0 },
+  orderBtn: { width: 28, height: 20, background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
 }
