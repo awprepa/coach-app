@@ -84,7 +84,7 @@ export default function ClientBottomNav() {
 // Pages où la barre est affichée (mêmes pages qu'avant)
 const AVEC_BARRE = [
   /^\/$/, /^\/client\/accueil$/, /^\/client\/mon-programme$/, /^\/client\/programme\//, /^\/client\/seance\//,
-  /^\/client\/nutrition(\/(plan|profil|historique))?$/, /^\/client\/messages$/, /^\/client\/competition$/,
+  /^\/client\/nutrition(\/(plan|profil))?$/, /^\/client\/messages$/, /^\/client\/competition$/,
   /^\/client\/gps$/, /^\/client\/progression$/, /^\/client\/notifications$/, /^\/client\/tests$/,
   /^\/client\/profil$/, /^\/client\/wellness$/, /^\/client\/photos$/,
 ]

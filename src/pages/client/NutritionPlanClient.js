@@ -557,10 +557,7 @@ export default function NutritionPlanClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
 
       {/* Header */}
-      <EnTeteClient retour="/client/nutrition" titre="Ma semaine" sousTitre={plan.nom}
-        actions={<button onClick={() => navigate('/client/nutrition/historique')} style={boutonEnTete} aria-label="Historique">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        </button>} />
+      <EnTeteClient retour="/client/nutrition" titre="Ma semaine" sousTitre={plan.nom} />
 
       {/* Onglets */}
       <div style={S.tabBar}>

@@ -34,23 +34,46 @@ const MACROS = [
 ]
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
-// Calendrier du mois : choisir un jour à afficher dans le journal. Un point
-// sous les jours où quelque chose a été noté (aliment ajouté ou plat coché).
-function Calendrier({ clientId, jour, onChoisir, onFermer }) {
+// Objectif kcal d'un jour : celui du programme du coach (jour, sinon programme,
+// sinon total des plats prévus), sans programme celui calculé par le joueur.
+function objectifDuJour(iso, plan, joursPlan, goals) {
+  const n = plan && iso >= plan.date_debut ? numeroJourPlan(iso, plan) : null
+  if (n) {
+    const j = joursPlan.find(x => x.jour_numero === n)
+    return j?.objectif_kcal || plan.objectif_kcal ||
+      (j?.nutrition_plan_meals || []).reduce((s, m) => s + (m.kcal || 0), 0) || null
+  }
+  const g = goals.filter(x => (x.active_from || '') <= iso).pop()
+  return g?.kcal_target || null
+}
+
+// Calendrier du mois : choisir un jour à afficher dans le journal. Sous chaque
+// jour noté, la part de l'objectif atteinte (en rouge si l'objectif est dépassé).
+function Calendrier({ clientId, jour, plan, joursPlan, onChoisir, onFermer }) {
   const [mois, setMois] = useState(() => new Date(jour.getFullYear(), jour.getMonth(), 1))
-  const [notes, setNotes] = useState(new Set())
+  const [manges, setManges] = useState({})   // date → kcal
+  const [goals, setGoals] = useState([])
   const debut = toISO(mois)
   const fin = toISO(new Date(mois.getFullYear(), mois.getMonth() + 1, 0))
   useEffect(() => {
     let annule = false
+    // kcal des plats du programme, pour compter ceux que le joueur a cochés
+    const kcalPlat = {}
+    joursPlan.forEach(j => (j.nutrition_plan_meals || []).forEach(m => { kcalPlat[m.id] = m.kcal || 0 }))
     Promise.all([
-      supabase.from('nutrition_meals').select('date').eq('client_id', clientId).gte('date', debut).lte('date', fin),
-      supabase.from('nutrition_plan_logs').select('date').eq('client_id', clientId).eq('statut', 'fait').gte('date', debut).lte('date', fin),
-    ]).then(([a, b]) => {
-      if (!annule) setNotes(new Set([...(a.data || []), ...(b.data || [])].map(r => r.date)))
+      supabase.from('nutrition_meals').select('date, kcal').eq('client_id', clientId).gte('date', debut).lte('date', fin),
+      supabase.from('nutrition_plan_logs').select('date, meal_id').eq('client_id', clientId).eq('statut', 'fait').gte('date', debut).lte('date', fin),
+      supabase.from('nutrition_goals').select('kcal_target, active_from').eq('client_id', clientId).order('active_from'),
+    ]).then(([a, b, g]) => {
+      if (annule) return
+      const t = {}
+      ;(a.data || []).forEach(r => { t[r.date] = (t[r.date] || 0) + (r.kcal || 0) })
+      ;(b.data || []).forEach(r => { t[r.date] = (t[r.date] || 0) + (kcalPlat[r.meal_id] || 0) })
+      setManges(t)
+      setGoals(g.data || [])
     })
     return () => { annule = true }
-  }, [clientId, debut, fin])
+  }, [clientId, debut, fin, joursPlan])
 
   const auj = toISO(new Date())
   const choisi = toISO(jour)
@@ -80,13 +103,19 @@ function Calendrier({ clientId, jour, onChoisir, onFermer }) {
             const iso = toISO(d)
             const futur = iso > auj
             const estChoisi = iso === choisi
+            const kcal = manges[iso] || 0
+            const obj = kcal ? objectifDuJour(iso, plan, joursPlan, goals) : null
+            const pct = obj ? Math.round(kcal / obj * 100) : null
+            const date = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
             return (
               <button key={i} disabled={futur} onClick={() => onChoisir(d)}
-                aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                aria-label={pct !== null ? `${date}, ${pct} % de l'objectif` : date}
                 aria-current={estChoisi ? 'date' : undefined}
-                style={{ ...S.calCase, ...(iso === auj ? S.calAuj : {}), ...(estChoisi ? S.calChoisi : {}), opacity: futur ? 0.3 : 1, cursor: futur ? 'default' : 'pointer' }}>
-                {d.getDate()}
-                <span style={{ ...S.calPoint, background: notes.has(iso) ? (estChoisi ? 'var(--accent)' : '#333333') : 'transparent' }} />
+                style={{ ...S.calCase, opacity: futur ? 0.3 : 1, cursor: futur ? 'default' : 'pointer' }}>
+                <span style={{ ...S.calNum, ...(iso === auj ? S.calAuj : {}), ...(estChoisi ? S.calChoisi : {}) }}>{d.getDate()}</span>
+                <span style={{ ...S.calPct, color: pct > 100 ? '#dc2626' : '#6b7280' }}>
+                  {pct !== null ? `${pct} %` : kcal ? '•' : ''}
+                </span>
               </button>
             )
           })}
@@ -267,7 +296,8 @@ export default function NutritionClient() {
   // sinon ceux du programme). Sans programme, ceux que le joueur a calculés.
   const objectifs = plan
     ? {
-        kcal_target: jourPlan?.objectif_kcal || plan.objectif_kcal || null,
+        kcal_target: jourPlan?.objectif_kcal || plan.objectif_kcal ||
+          planMeals.reduce((s, m) => s + (m.kcal || 0), 0) || null,
         prot_g:  jourPlan?.objectif_prot  || plan.objectif_prot  || null,
         carbs_g: jourPlan?.objectif_carbs || plan.objectif_carbs || null,
         fat_g:   jourPlan?.objectif_fat   || plan.objectif_fat   || null,
@@ -501,7 +531,7 @@ export default function NutritionClient() {
       {message && <div role="status" style={S.message}>{message}</div>}
 
       {calendrier && client && (
-        <Calendrier clientId={client.id} jour={jour} onFermer={() => setCalendrier(false)}
+        <Calendrier clientId={client.id} jour={jour} plan={plan} joursPlan={joursPlan} onFermer={() => setCalendrier(false)}
           onChoisir={d => { setJour(d); setCalendrier(false) }} />
       )}
 
@@ -529,7 +559,7 @@ export default function NutritionClient() {
               <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Pas de détail par ingrédient pour ce plat.</p>
             )}
             <button onClick={() => setDetailPlat(null)}
-              style={{ marginTop: 16, width: '100%', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 14, padding: '12px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ marginTop: 16, width: '100%', minHeight: 50, background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 999, padding: '12px', fontSize: '0.86rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
               Fermer
             </button>
           </div>
@@ -549,7 +579,7 @@ const S = {
   headerRow:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle:{ color: 'white', fontWeight: 800, fontSize: '1.02rem' },
   icoBtn:     { width: 34, height: 34, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.12)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 },
-  dateBar:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 1 },
+  dateBar:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '0 0 8px' },
   dateLabel:  { color: 'white', fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize', minWidth: 150, minHeight: 36, padding: '0 14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' },
   navBtn:     { background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', padding: 0, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   body:       { padding: '14px' },
@@ -593,13 +623,16 @@ const S = {
   calTete:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   calMois:    { fontSize: '1rem', fontWeight: 800, color: '#1a1a1a', textTransform: 'capitalize' },
   calFleche:  { width: 44, height: 44, border: 'none', background: 'none', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
-  calGrille:  { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: 4, textAlign: 'center' },
+  calGrille:  { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: 2, textAlign: 'center' },
   calJourSem: { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', padding: '4px 0 6px' },
-  calCase:    { height: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, border: 'none', background: 'none', borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums', fontFamily: 'inherit', padding: 0 },
+  // Numéro dans un rond de 34 px, centré ; pourcentage sur une ligne fixe en dessous
+  calCase:    { height: 56, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 2, border: 'none', background: 'none', fontFamily: 'inherit', padding: '2px 0 0' },
+  calNum:     { width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums', lineHeight: 1 },
   calAuj:     { boxShadow: 'inset 0 0 0 1.5px #d1d5db' },
   calChoisi:  { background: '#333333', color: 'white', boxShadow: 'none' },
-  calPoint:   { width: 5, height: 5, borderRadius: '50%' },
-  calAujBtn:  { marginTop: 12, width: '100%', minHeight: 46, border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 12, fontSize: '0.88rem', fontWeight: 800, color: '#333333', cursor: 'pointer', fontFamily: 'inherit' },
+  calPct:     { height: 15, fontSize: '0.75rem', fontWeight: 700, lineHeight: '15px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  calAujBtn:  { marginTop: 14, width: '100%', minHeight: 50, border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 999, fontSize: '0.88rem', fontWeight: 800, color: '#333333', cursor: 'pointer', fontFamily: 'inherit' },
   overlay:    { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
-  sheet:      { background: 'white', borderRadius: '20px 20px 0 0', padding: '14px 18px calc(20px + env(safe-area-inset-bottom, 0px))', width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' },
+  // Même marge (20 px) sur les côtés et en bas : le bouton du bas suit les bords de l'écran, comme la barre de navigation
+  sheet:      { background: 'white', borderRadius: '24px 24px 0 0', padding: '14px 20px 20px', width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' },
 }

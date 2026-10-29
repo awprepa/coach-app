@@ -36,7 +36,6 @@ const NutritionClient      = lazy(() => import('./pages/client/NutritionClient')
 const NutritionPlanClient  = lazy(() => import('./pages/client/NutritionPlanClient'))
 const AjouterAliment      = lazy(() => import('./pages/client/AjouterAliment'))
 const AjouterRepas         = lazy(() => import('./pages/client/AjouterRepas'))
-const HistoriqueNutrition  = lazy(() => import('./pages/client/HistoriqueNutrition'))
 const ProfilNutrition      = lazy(() => import('./pages/client/ProfilNutrition'))
 const ScannerArticle       = lazy(() => import('./pages/client/ScannerArticle'))
 const HistoriqueScans      = lazy(() => import('./pages/client/HistoriqueScans'))
@@ -614,7 +613,6 @@ function App() {
               <Route path="/client/nutrition/plan"       element={<WithNotifs><NutritionPlanClient /></WithNotifs>} />
               <Route path="/client/nutrition/aliment"    element={<WithNotifs><AjouterAliment /></WithNotifs>} />
               <Route path="/client/nutrition/ajouter"    element={<WithNotifs><AjouterRepas /></WithNotifs>} />
-              <Route path="/client/nutrition/historique" element={<WithNotifs><HistoriqueNutrition /></WithNotifs>} />
               <Route path="/client/nutrition/profil"     element={<WithNotifs><ProfilNutrition /></WithNotifs>} />
               <Route path="/client/nutrition/scanner"    element={<WithNotifs><ScannerArticle /></WithNotifs>} />
               <Route path="/client/nutrition/scans"      element={<WithNotifs><HistoriqueScans /></WithNotifs>} />
