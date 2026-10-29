@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
@@ -102,6 +102,12 @@ export function BarreClient() {
     return (cached && Date.now() - cachedAt < 24 * 60 * 60 * 1000) ? cached : null
   })
   const [appuye, setAppuye] = useState(null)
+  // Glissé du doigt le long de la barre : la pastille suit le doigt (comme le
+  // « liquid glass » d'iOS), grossit, et l'onglet lâché s'ouvre.
+  const rangeeRef = useRef(null)
+  const geste = useRef(null)          // { id, x0, actif }
+  const ignorerClic = useRef(false)
+  const [glisse, setGlisse] = useState(null) // { x, w, survol }
 
   // Se cache dès qu'un input/textarea est focus — fonctionne sur toutes les pages
   const [kbOpen, setKbOpen] = useState(false)
@@ -206,6 +212,45 @@ export function BarreClient() {
   const total = n + (actif < 0 ? 0 : LARGE - 1)
   const ressort = '0.38s cubic-bezier(.3, 1.2, .5, 1)'
 
+  // Onglet le plus proche du doigt
+  const survolDe = x => {
+    let meilleur = 0, ecart = Infinity
+    rangeeRef.current.querySelectorAll('button').forEach((b, i) => {
+      const r = b.getBoundingClientRect()
+      const d = Math.abs(r.left + r.width / 2 - x)
+      if (d < ecart) { ecart = d; meilleur = i }
+    })
+    return meilleur
+  }
+  const debutGeste = e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    geste.current = { id: e.pointerId, x0: e.clientX, actif: false }
+  }
+  const suiteGeste = e => {
+    const g = geste.current
+    if (!g || g.id !== e.pointerId) return
+    if (!g.actif) {
+      if (Math.abs(e.clientX - g.x0) < 8) return // simple toucher : le bouton gère
+      g.actif = true
+      try { rangeeRef.current.setPointerCapture(e.pointerId) } catch { /* pointeur déjà relâché */ }
+      setAppuye(null)
+    }
+    const r = rangeeRef.current.getBoundingClientRect()
+    const w = (r.width - 8) * LARGE / total
+    const x = Math.min(Math.max(e.clientX - r.left - w / 2, 4), r.width - 4 - w)
+    setGlisse({ x, w, survol: survolDe(e.clientX) })
+  }
+  const finGeste = (e, annule) => {
+    const g = geste.current
+    geste.current = null
+    if (!g?.actif) return
+    ignorerClic.current = true
+    setTimeout(() => { ignorerClic.current = false }, 80)
+    setGlisse(null)
+    const cible = annule ? null : tabs[survolDe(e.clientX)]
+    if (cible && !cible.active) navigate(cible.to)
+  }
+
   return createPortal(
     // Barre flottante, à la même distance du bas et des côtés de l'écran
     <nav aria-label="Navigation principale" className="aw-barre" style={{
@@ -225,20 +270,33 @@ export function BarreClient() {
         @keyframes aw-barre-pop { 0% { transform: scale(0.86) } 55% { transform: scale(1.12) } 100% { transform: scale(1) } }
         @media (prefers-reduced-motion: reduce) { .aw-barre * { transition: none !important; animation: none !important } }
       `}</style>
-      <div style={{ display: 'flex', position: 'relative', padding: 4 }}>
+      <div ref={rangeeRef} onPointerDown={debutGeste} onPointerMove={suiteGeste}
+        onPointerUp={e => finGeste(e)} onPointerCancel={e => finGeste(e, true)}
+        style={{ display: 'flex', position: 'relative', padding: 4, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}>
         {/* Pastille grise (reflet en haut) qui entoure toute la case de l'onglet actif : glisse d'un onglet à l'autre */}
+        {/* Pendant le glissé : la pastille suit le doigt, grossit et devient une
+            bulle de verre (bord clair, reflet, ombre) au-dessus des icônes. */}
         <div aria-hidden style={{
-          position: 'absolute', top: 4, bottom: 4,
-          width: `calc((100% - 8px) * ${LARGE / total})`,
-          left: `calc(4px + (100% - 8px) * ${Math.max(actif, 0) / total})`,
+          position: 'absolute', top: 4, bottom: 4, zIndex: glisse ? 1 : 0, pointerEvents: 'none',
+          width: glisse ? glisse.w : `calc((100% - 8px) * ${LARGE / total})`,
+          left: glisse ? glisse.x : `calc(4px + (100% - 8px) * ${Math.max(actif, 0) / total})`,
           borderRadius: T.radius.pill,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.07) 0%, rgba(0,0,0,0.13) 100%)',
-          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 1px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.06)',
-          opacity: actif < 0 ? 0 : 1,
-          transition: `left ${ressort}, width ${ressort}, opacity 0.2s`,
+          background: glisse
+            ? 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.06) 100%)'
+            : 'linear-gradient(180deg, rgba(0,0,0,0.07) 0%, rgba(0,0,0,0.13) 100%)',
+          backdropFilter: glisse ? 'saturate(1.8) brightness(1.05)' : 'none',
+          WebkitBackdropFilter: glisse ? 'saturate(1.8) brightness(1.05)' : 'none',
+          boxShadow: glisse
+            ? 'inset 0 0 0 1.5px rgba(255,255,255,0.9), inset 0 2px 3px rgba(255,255,255,0.8), inset 0 -3px 6px rgba(0,0,0,0.08), 0 6px 18px rgba(0,0,0,0.18)'
+            : 'inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 1px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.06)',
+          transform: glisse ? 'scale(1.14, 1.1)' : 'scale(1)',
+          opacity: actif < 0 && !glisse ? 0 : 1,
+          transition: glisse
+            ? 'transform 0.25s cubic-bezier(.3, 1.4, .5, 1), background 0.2s, box-shadow 0.2s'
+            : `left ${ressort}, width ${ressort}, transform ${ressort}, opacity 0.2s, background 0.2s, box-shadow 0.2s`,
         }} />
         {tabs.map(({ label, Icon, active, to, badge }, i) => (
-          <button key={label} onClick={() => { if (!active) navigate(to) }} aria-current={active ? 'page' : undefined}
+          <button key={label} onClick={() => { if (!active && !ignorerClic.current) navigate(to) }} aria-current={active ? 'page' : undefined}
             aria-label={badge > 0 ? `${label}, ${badge} non lus` : undefined}
             onPointerDown={() => setAppuye(i)} onPointerUp={() => setAppuye(null)}
             onPointerLeave={() => setAppuye(null)} onPointerCancel={() => setAppuye(null)}
@@ -247,9 +305,10 @@ export function BarreClient() {
               alignItems: 'center', justifyContent: 'center',
               gap: 2, padding: '6px 0 5px', position: 'relative',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: active ? T.color.ink : T.color.muted,
+              color: (glisse ? glisse.survol === i : active) ? T.color.ink : T.color.muted,
               WebkitTapHighlightColor: 'transparent',
-              transform: appuye === i ? 'scale(0.9)' : 'scale(1)',
+              // onglet sous la bulle grossi, comme vu à travers une loupe
+              transform: glisse?.survol === i ? 'scale(1.12)' : appuye === i ? 'scale(0.9)' : 'scale(1)',
               transition: `transform 0.18s cubic-bezier(.3, 1.4, .5, 1), color 0.2s, flex-grow ${ressort}`,
             }}>
             <div key={active ? 'on' : 'off'} style={{
