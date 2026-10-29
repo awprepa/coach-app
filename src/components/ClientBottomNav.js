@@ -201,6 +201,10 @@ export function BarreClient() {
   ]
   const n = tabs.length
   const actif = tabs.findIndex(t => t.active)
+  // La case active s'élargit pour que son libellé tienne dans la pastille
+  const LARGE = 1.25
+  const total = n + (actif < 0 ? 0 : LARGE - 1)
+  const ressort = '0.38s cubic-bezier(.3, 1.2, .5, 1)'
 
   return createPortal(
     // Barre flottante, à la même distance du bas et des côtés de l'écran
@@ -208,8 +212,10 @@ export function BarreClient() {
       position: 'fixed', zIndex: 90,
       left: MARGE, right: MARGE, bottom: MARGE,
       maxWidth: 520, margin: '0 auto',
-      background: T.color.card,
-      border: `1px solid ${T.color.line}`,
+      // Verre dépoli : laisse deviner (flouté) ce qui défile derrière
+      background: 'rgba(255,255,255,0.72)',
+      backdropFilter: 'blur(18px) saturate(1.6)', WebkitBackdropFilter: 'blur(18px) saturate(1.6)',
+      border: '1px solid rgba(0,0,0,0.06)',
       borderRadius: T.radius.pill,
       boxShadow: T.shadow.float,
       fontFamily: T.font.body,
@@ -219,14 +225,15 @@ export function BarreClient() {
         @media (prefers-reduced-motion: reduce) { .aw-barre * { transition: none !important; animation: none !important } }
       `}</style>
       <div style={{ display: 'flex', position: 'relative', padding: 4 }}>
-        {/* Pastille jaune qui entoure toute la case de l'onglet actif (icône + libellé) : glisse d'un onglet à l'autre */}
+        {/* Pastille grise (reflet en haut) qui entoure toute la case de l'onglet actif : glisse d'un onglet à l'autre */}
         <div aria-hidden style={{
           position: 'absolute', top: 4, bottom: 4,
-          width: `calc((100% - 8px) / ${n})`,
-          left: `calc(4px + (100% - 8px) * ${Math.max(actif, 0) / n})`,
-          borderRadius: T.radius.pill, background: 'var(--accent)',
+          width: `calc((100% - 8px) * ${LARGE / total})`,
+          left: `calc(4px + (100% - 8px) * ${Math.max(actif, 0) / total})`,
+          borderRadius: T.radius.pill, background: 'rgba(0,0,0,0.07)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.04)',
           opacity: actif < 0 ? 0 : 1,
-          transition: 'left 0.34s cubic-bezier(.3, 1.2, .5, 1), opacity 0.2s',
+          transition: `left ${ressort}, width ${ressort}, opacity 0.2s`,
         }} />
         {tabs.map(({ label, Icon, active, to, badge }, i) => (
           <button key={label} onClick={() => { if (!active) navigate(to) }} aria-current={active ? 'page' : undefined}
@@ -234,18 +241,21 @@ export function BarreClient() {
             onPointerDown={() => setAppuye(i)} onPointerUp={() => setAppuye(null)}
             onPointerLeave={() => setAppuye(null)} onPointerCancel={() => setAppuye(null)}
             style={{
-              flex: 1, minWidth: 0, minHeight: 56, display: 'flex', flexDirection: 'column',
+              flex: active ? LARGE : 1, minWidth: 0, minHeight: 56, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               gap: 2, padding: '6px 0 5px', position: 'relative',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: active ? 'var(--accent-text)' : T.color.muted,
+              color: active ? T.color.ink : T.color.muted,
               WebkitTapHighlightColor: 'transparent',
               transform: appuye === i ? 'scale(0.9)' : 'scale(1)',
-              transition: 'transform 0.18s cubic-bezier(.3, 1.4, .5, 1), color 0.2s',
+              transition: `transform 0.18s cubic-bezier(.3, 1.4, .5, 1), color 0.2s, flex-grow ${ressort}`,
             }}>
             <div key={active ? 'on' : 'off'} style={{
               width: 48, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
               position: 'relative',
+              color: active ? 'var(--accent)' : 'inherit',
+              // léger contour sombre pour que le jaune reste lisible sur la pastille claire
+              filter: active ? 'drop-shadow(0 0 0.6px rgba(0,0,0,0.55))' : undefined,
               animation: active ? 'aw-barre-pop 0.38s ease-out' : undefined,
             }}>
               <Icon active={active} />
@@ -261,8 +271,7 @@ export function BarreClient() {
             </div>
             <span style={{
               fontSize: T.size.xs, fontWeight: 500,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+              whiteSpace: 'nowrap', letterSpacing: '-0.01em',
             }}>{label}</span>
           </button>
         ))}
