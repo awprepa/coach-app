@@ -7,6 +7,7 @@ import Icon from '../../components/Icon'
 import T from '../../theme/tokens'
 import EnTeteClient from '../../components/EnTeteClient'
 import useEtatMemorise from '../../hooks/useEtatMemorise'
+import { useAuRetourOnglet } from '../../context/OngletContext'
 
 function getSemaineActuelle(dateDebut, totalSemaines) {
   const debut = new Date(dateDebut)
@@ -16,8 +17,9 @@ function getSemaineActuelle(dateDebut, totalSemaines) {
   return Math.min(Math.max(semaine, 1), totalSemaines)
 }
 
-export default function ProgrammeClient() {
-  const { id } = useParams()
+export default function ProgrammeClient(props) {
+  const { id: idRoute } = useParams()
+  const id = props.id || idRoute
   const navigate = useNavigate()
   const [programme, setProgramme] = useEtatMemorise(`programme.${id}.programme`, null)
   const [seances, setSeances] = useEtatMemorise(`programme.${id}.seances`, [])
@@ -31,6 +33,7 @@ export default function ProgrammeClient() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData() }, [])
+  useAuRetourOnglet(fetchData)
 
   async function fetchData() {
     const { data: prog, error } = await supabase

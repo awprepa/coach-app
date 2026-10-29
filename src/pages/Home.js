@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import CoachNav from '../CoachNav'
 import Dashboard from './Dashboard'
-import AccueilClient from './AccueilClient'
 
 const COACH_EMAIL = 'wehrey.arthur@gmail.com'
 
@@ -25,5 +24,6 @@ export default function Home() {
     </>
   )
 
-  return <AccueilClient />
+  // Client : l'accueil est affiché par les onglets gardés ouverts (OngletsClient, App.js)
+  return null
 }

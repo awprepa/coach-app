@@ -5,6 +5,7 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import usePageFade from '../../hooks/usePageFade'
 import { isoLocal } from '../../utils/dates'
 import EnTeteClient, { boutonEnTete } from '../../components/EnTeteClient'
+import { useAuRetourOnglet } from '../../context/OngletContext'
 
 // ── Journal alimentaire ──────────────────────────────────────────────────────
 // Écran d'accueil de l'onglet Nutrition. Il fonctionne SANS plan du coach : le
@@ -81,9 +82,9 @@ export default function NutritionClient() {
     })()
   }, [])
 
-  const charger = useCallback(async () => {
+  const charger = useCallback(async (silencieux) => {
     if (!client) return
-    setLoading(true)
+    if (silencieux !== true) setLoading(true)
     const [{ data: ms }, { data: g }, { data: w }, { data: lg }] = await Promise.all([
       supabase.from('nutrition_meals')
         .select('id, meal_type, kcal, prot_g, carbs_g, fat_g, nutrition_meal_items(id, name, quantity, unit, kcal, prot_g, carbs_g, fat_g, ordre)')
@@ -106,6 +107,7 @@ export default function NutritionClient() {
   }, [client, iso, plan])
 
   useEffect(() => { charger() }, [charger])
+  useAuRetourOnglet(() => charger(true))
 
   // Repas prescrits du jour + statut de chacun
   const jourNum   = plan ? numeroJourPlan(iso, plan) : null

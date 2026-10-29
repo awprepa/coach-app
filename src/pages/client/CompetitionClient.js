@@ -4,6 +4,7 @@ import ClientBottomNav from '../../components/ClientBottomNav'
 import { isoLocal } from '../../utils/dates'
 import EnTeteClient from '../../components/EnTeteClient'
 import useEtatMemorise from '../../hooks/useEtatMemorise'
+import { useAuRetourOnglet } from '../../context/OngletContext'
 
 export default function CompetitionClient() {
   const [loading, setLoading]       = useEtatMemorise('competition.loading', true)
@@ -20,6 +21,7 @@ export default function CompetitionClient() {
   const [erreurLien, setErreurLien] = useState(null)
 
   useEffect(() => { load() }, [])
+  useAuRetourOnglet(load)
 
   async function load() {
     try {

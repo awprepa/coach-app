@@ -8,7 +8,9 @@
   --accent-nav:     #2a2a2a;   /* barre nav sombre */
   --accent-text:    #111111;   /* texte sur fond jaune-vert */
   --accent-text2:   #ffffff;   /* texte sur fond sombre */
-  --header-bg:      linear-gradient(135deg, #333333 0%, #1f2937 100%);
+  /* Dégradé vertical : le haut de la barre a exactement la couleur que l'iPhone
+     met derrière l'heure (theme-color), sans démarcation */
+  --header-bg:      linear-gradient(180deg, #333333 0%, #1f2937 100%);
   --accent-stripe:  #e4f816;
   --accent-fg:      #727a0b;   /* jaune assombri, lisible sur fond blanc */
   --accent2-fg:     #1f2937;   /* navy, lisible sur fond blanc */

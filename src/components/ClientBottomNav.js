@@ -89,15 +89,6 @@ const AVEC_BARRE = [
   /^\/client\/profil$/, /^\/client\/wellness$/, /^\/client\/photos$/,
 ]
 
-// Écrans des onglets chargés à l'avance : pas d'écran de chargement au premier passage
-function prechargerOnglets() {
-  import('../pages/client/MonProgrammeClient')
-  import('../pages/client/ProgrammeClient')
-  import('../pages/client/NutritionClient')
-  import('../pages/client/MessagesClient')
-  import('../pages/client/CompetitionClient')
-}
-
 const MARGE = 20 // même distance au bas et aux côtés de l'écran
 
 export function BarreClient() {
@@ -162,8 +153,6 @@ export function BarreClient() {
       }
     }
     fetchOffre()
-    const t = setTimeout(prechargerOnglets, 1500)
-    return () => clearTimeout(t)
   }, [userId, estCoach])
 
   // Pastille messages non lus — refetch au changement de page (la page Messages marque comme lu à l'ouverture) + Realtime

@@ -94,7 +94,8 @@ function applyPalette(primary, secondary) {
 
   // Le dégradé du header va toujours de primary vers secondary
   // (c'était le comportement original : #333333 → #1f2937)
-  const headerBg = `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`
+  // Vertical : le haut de la barre = primary = couleur derrière l'heure (theme-color)
+  const headerBg = `linear-gradient(180deg, ${primary} 0%, ${secondary} 100%)`
 
   // Nav : fond uni légèrement assombri
   const navBg = darken(primary, 0.15)

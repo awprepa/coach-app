@@ -21,6 +21,7 @@ import { computeExerciseXp, levelFromXp } from '../data/xpSystem'
 import { isoLocal } from '../utils/dates'
 import EnTeteClient from '../components/EnTeteClient'
 import useEtatMemorise from '../hooks/useEtatMemorise'
+import { useAuRetourOnglet } from '../context/OngletContext'
 
 function isCycleTermine(prog) {
   if (!prog.date_debut) return false
@@ -69,6 +70,7 @@ export default function AccueilClient() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchClientData() }, [])
+  useAuRetourOnglet(fetchClientData)
 
   useEffect(() => {
     if (!client?.id) return

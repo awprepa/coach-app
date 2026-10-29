@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
+import { COACH_EMAIL } from '../accountSwitch'
 
 const NotifCtx = createContext({
   notifs: [], unread: 0,
@@ -11,15 +12,18 @@ export function NotifProvider({ children }) {
   const [userId, setUserId]   = useState(null)
   const [ready,  setReady]    = useState(false)
 
-  // Récupérer l'utilisateur courant
+  // Utilisateur courant (suit la connexion et la bascule de compte : le
+  // fournisseur est monté une seule fois pour toute l'app). Rien pour le coach.
   useEffect(() => {
+    const appliquer = user => {
+      setUserId(user && user.email !== COACH_EMAIL ? user.id : null)
+      setReady(true)
+    }
     supabase.auth.getUser()
-      .then(result => {
-        const user = result?.data?.user
-        if (user) setUserId(user.id)
-        setReady(true)
-      })
+      .then(result => appliquer(result?.data?.user))
       .catch(() => setReady(true))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => appliquer(session?.user))
+    return () => subscription.unsubscribe()
   }, [])
 
   // Charger les notifs + Realtime + polling de secours

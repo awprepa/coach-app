@@ -1,11 +1,11 @@
-import { lazy, Suspense, Component, useState, useEffect, useCallback, useRef } from 'react'
+import { lazy, Suspense, Component, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { BarreClient } from './components/ClientBottomNav'
 import { createPortal } from 'react-dom'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import AuthGate from './AuthGate'
 import CoachNav from './CoachNav'
 import APP_VERSION from './version'
-import { syncDown, _flushQueue, pendingCount } from './supabase'
+import { supabase, syncDown, _flushQueue, pendingCount } from './supabase'
 import { NotifProvider } from './context/NotifContext'
 import { TimerProvider } from './context/TimerContext'
 import { ClientThemeProvider } from './context/ClientThemeContext'
@@ -14,7 +14,9 @@ import InstallGuide, { shouldShowInstall, markInstalled } from './components/Ins
 import WellnessGate from './components/WellnessGate'
 import RpeGate from './components/RpeGate'
 import ProfilJoueurGate from './components/ProfilJoueurGate'
-import { initAccountSwitch } from './accountSwitch'
+import { initAccountSwitch, COACH_EMAIL } from './accountSwitch'
+import { OngletCtx } from './context/OngletContext'
+import AccueilClient from './pages/AccueilClient'
 
 // ── Pages chargées immédiatement (Auth critique) ──────────────────────────────
 import Login from './pages/Login'
@@ -357,6 +359,7 @@ if ('scrollRestoration' in window.history) {
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
+    if (ongletDe(pathname)) return // onglet client : OngletsClient remet son propre défilement
     // Reset sur tous les conteneurs possibles (window + html + body)
     window.scrollTo(0, 0)
     document.documentElement.scrollTop = 0
@@ -391,7 +394,60 @@ function WithNav({ children }) {
 }
 
 function WithNotifs({ children }) {
-  return <NotifProvider><WellnessGate><ProfilJoueurGate><RpeGate>{children}</RpeGate></ProfilJoueurGate></WellnessGate></NotifProvider>
+  // NotifProvider : un seul pour toute l'app (dans App), partagé avec les onglets
+  return <WellnessGate><ProfilJoueurGate><RpeGate>{children}</RpeGate></ProfilJoueurGate></WellnessGate>
+}
+
+// ── Onglets client gardés ouverts ─────────────────────────────────────────────
+// Comme une app native : les 5 onglets de la barre du bas se chargent tous à
+// l'ouverture de l'app et restent ouverts en arrière-plan. Changer d'onglet ne
+// fait qu'afficher l'un et cacher les autres : rien ne se recharge, pas de flash.
+const ONGLETS = [
+  { cle: 'accueil',     chemins: ['/', '/client/accueil'], Page: AccueilClient },
+  { cle: 'programme',   chemins: ['/client/mon-programme'], Page: MonProgrammeClient },
+  { cle: 'nutrition',   chemins: ['/client/nutrition'],     Page: NutritionClient },
+  { cle: 'messages',    chemins: ['/client/messages'],      Page: MessagesClient },
+  { cle: 'competition', chemins: ['/client/competition'],   Page: CompetitionClient },
+]
+const ongletDe = p => ONGLETS.find(o => o.chemins.includes(p))?.cle || null
+
+function OngletsClient() {
+  const { pathname } = useLocation()
+  const actif = ongletDe(pathname)
+  // Compte client connecté (rien pour le coach)
+  const [uid, setUid] = useState(null)
+  useEffect(() => {
+    const appliquer = s => setUid(s?.user && s.user.email !== COACH_EMAIL ? s.user.id : null)
+    supabase.auth.getSession().then(({ data }) => appliquer(data?.session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => appliquer(s))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Chaque onglet retrouve l'endroit où on l'avait laissé
+  const defilement = useRef({})
+  const actifRef = useRef(actif)
+  useLayoutEffect(() => {
+    actifRef.current = actif
+    if (actif) window.scrollTo(0, defilement.current[actif] || 0)
+  }, [actif])
+  useEffect(() => {
+    const f = () => { if (actifRef.current) defilement.current[actifRef.current] = window.scrollY }
+    window.addEventListener('scroll', f, { passive: true })
+    return () => window.removeEventListener('scroll', f)
+  }, [])
+
+  if (!uid) return null
+  return (
+    <div key={uid}>
+      {ONGLETS.map(({ cle, Page }) => (
+        <div key={cle} style={{ display: cle === actif ? 'block' : 'none' }}>
+          <OngletCtx.Provider value={cle === actif}>
+            <Suspense fallback={cle === actif ? <PageLoader /> : null}><Page /></Suspense>
+          </OngletCtx.Provider>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 // Fallback minimaliste — évite un flash blanc prolongé
@@ -539,6 +595,7 @@ function App() {
       <ClientThemeProvider>
       <AuthGate>
         <TimerProvider>
+          <NotifProvider>
           <GlobalTimerBubble />
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -548,12 +605,12 @@ function App() {
               <Route path="/client/tests"                element={<WithNotifs><TestsClient /></WithNotifs>} />
               <Route path="/client/wellness"             element={<WithNotifs><WellnessClient /></WithNotifs>} />
               <Route path="/client/gps"                  element={<WithNotifs><GPSClient /></WithNotifs>} />
-              <Route path="/client/mon-programme"           element={<WithNotifs><MonProgrammeClient /></WithNotifs>} />
+              <Route path="/client/mon-programme"           element={<WithNotifs>{null}</WithNotifs>} />
               <Route path="/client/seance-ponctuelle/:id" element={<WithNotifs><SeancePonctuelleClient /></WithNotifs>} />
               <Route path="/client/accueil"              element={<WithNotifs><Home /></WithNotifs>} />
               <Route path="/client/notifications"        element={<WithNotifs><NotificationsClient /></WithNotifs>} />
-              <Route path="/client/messages"             element={<WithNotifs><MessagesClient /></WithNotifs>} />
-              <Route path="/client/nutrition"            element={<WithNotifs><NutritionClient /></WithNotifs>} />
+              <Route path="/client/messages"             element={<WithNotifs>{null}</WithNotifs>} />
+              <Route path="/client/nutrition"            element={<WithNotifs>{null}</WithNotifs>} />
               <Route path="/client/nutrition/plan"       element={<WithNotifs><NutritionPlanClient /></WithNotifs>} />
               <Route path="/client/nutrition/aliment"    element={<WithNotifs><AjouterAliment /></WithNotifs>} />
               <Route path="/client/nutrition/ajouter"    element={<WithNotifs><AjouterRepas /></WithNotifs>} />
@@ -564,7 +621,7 @@ function App() {
               <Route path="/client/photos"               element={<WithNotifs><PhotosClient /></WithNotifs>} />
               <Route path="/client/sciences"             element={<WithNotifs><SciencesClient /></WithNotifs>} />
               <Route path="/client/progression"          element={<WithNotifs><ProgressionClient /></WithNotifs>} />
-              <Route path="/client/competition"          element={<WithNotifs><CompetitionClient /></WithNotifs>} />
+              <Route path="/client/competition"          element={<WithNotifs>{null}</WithNotifs>} />
               <Route path="/client/profil"              element={<WithNotifs><ProfilClient /></WithNotifs>} />
               <Route path="/client/mentions-legales"    element={<MentionsLegales />} />
 
@@ -608,8 +665,10 @@ function App() {
               <Route path="/nutrition/plan/:planId"          element={<WithNav><NutritionPlanEditor /></WithNav>} />
               <Route path="/nutrition/vue/:planId"           element={<WithNav><NutritionPlanVue /></WithNav>} />
             </Routes>
+            <OngletsClient />
           </Suspense>
           <BarreClient />
+          </NotifProvider>
         </TimerProvider>
       </AuthGate>
       </ClientThemeProvider>

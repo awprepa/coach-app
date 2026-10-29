@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react
 import { useMessages } from '../hooks/useMessages'
 import Icon from './Icon'
 import T from '../theme/tokens'
+import { useOngletActif } from '../context/OngletContext'
 
 // Fil de discussion partagé coach ↔ client : s'ouvre directement sur le dernier
 // message, charge l'historique à la demande, séparateurs de date, statut « Lu ».
@@ -25,6 +26,7 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
   const [texte, setTexte] = useState('')
   const [nouveaux, setNouveaux] = useState(false)
   const scrollRef = useRef(null)
+  const actif = useOngletActif()
   const inputRef  = useRef(null)
   const premierAffichage = useRef(true)
   const dernierId = useRef(null)
@@ -62,11 +64,16 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
     dernierId.current = dernier?.id || null
   }, [messages, loading, myId, allerEnBas])
 
-  // Marquer comme lus les messages reçus
+  // Marquer comme lus les messages reçus (seulement quand la conversation est affichée)
   useEffect(() => {
-    if (myId && otherId && messages.some(m => m.to_id === myId && !m.lu)) markRead()
+    if (actif && myId && otherId && messages.some(m => m.to_id === myId && !m.lu)) markRead()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length])
+  }, [messages.length, actif])
+
+  // Retour sur l'onglet Messages : on se replace sur le dernier message
+  useLayoutEffect(() => {
+    if (actif && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [actif])
 
   async function voirPrecedents() {
     hauteurAvantHistorique.current = scrollRef.current?.scrollHeight ?? null
