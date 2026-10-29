@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../supabase'
 import { sendPushOnly } from '../../notifs'
 import Conversation from '../../components/Conversation'
@@ -11,29 +11,50 @@ import EnTeteClient from '../../components/EnTeteClient'
 // + 68 px de barre + 8 px d'écart avec la zone de saisie
 const NAV_H = 96
 
-// Suit la zone réellement visible quand le clavier est ouvert (visualViewport),
-// pour garder la barre de saisie juste au-dessus du clavier.
-function useVisualViewport() {
-  const [vp, setVp] = useState({ height: typeof window !== 'undefined' ? window.innerHeight : 0, offsetTop: 0 })
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => setVp({ height: vv.height, offsetTop: vv.offsetTop })
-    update()
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
-    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update) }
-  }, [])
-  return vp
-}
-
 export default function MessagesClient() {
-  const vp = useVisualViewport()
   const [clientId, setClientId] = useState(null)
   const [coachId,  setCoachId]  = useState(null)
   const [loadError, setLoadError] = useState(false)
-  const [saisie, setSaisie] = useState(false)
   const blurTimer = useRef(null)
+  const cadreRef = useRef(null)
+  const saisieRef = useRef(false)
+  const raf = useRef(null)
+
+  // Place le cadre de la page : clavier ouvert → exactement la zone visible
+  // au-dessus du clavier (visualViewport) ; sinon au-dessus de la barre d'onglets.
+  // Écrit directement dans le style (sans re-rendu React) pour suivre iOS sans retard.
+  const placer = useCallback(() => {
+    const el = cadreRef.current
+    if (!el) return
+    const vv = window.visualViewport
+    if (saisieRef.current && vv) {
+      el.style.top = `${vv.offsetTop}px`
+      el.style.height = `${vv.height}px`
+      el.style.bottom = 'auto'
+      el.style.paddingBottom = '0px'
+    } else {
+      // Jusqu'en bas de l'écran (même fond derrière la barre d'onglets)
+      el.style.top = '0px'
+      el.style.height = 'auto'
+      el.style.bottom = '0px'
+      el.style.paddingBottom = `${NAV_H}px`
+    }
+  }, [])
+  // Pendant l'animation du clavier, on recale le cadre à chaque image
+  const suivreClavier = useCallback(() => {
+    cancelAnimationFrame(raf.current)
+    const fin = performance.now() + 800
+    const image = () => { placer(); if (performance.now() < fin) raf.current = requestAnimationFrame(image) }
+    image()
+  }, [placer])
+  useEffect(() => {
+    const vv = window.visualViewport
+    placer()
+    if (!vv) return
+    vv.addEventListener('resize', placer)
+    vv.addEventListener('scroll', placer)
+    return () => { vv.removeEventListener('resize', placer); vv.removeEventListener('scroll', placer); cancelAnimationFrame(raf.current) }
+  }, [placer])
 
   useEffect(() => {
     async function load() {
@@ -69,18 +90,13 @@ export default function MessagesClient() {
   // au-dessus du clavier. Sinon il s'arrête juste au-dessus de la barre d'onglets.
   function onFocusChange(focus) {
     clearTimeout(blurTimer.current)
-    if (focus) setSaisie(true)
-    else blurTimer.current = setTimeout(() => setSaisie(false), 100)
+    if (focus) { saisieRef.current = true; suivreClavier() }
+    else blurTimer.current = setTimeout(() => { saisieRef.current = false; suivreClavier() }, 100)
   }
-  // Clavier ouvert : le cadre suit la zone visible. Seule la hauteur glisse ;
-  // la position suit iOS immédiatement (sinon la barre du haut descend puis remonte)
-  const cadre = saisie
-    ? { top: vp.offsetTop, height: vp.height, transition: 'height .25s ease' }
-    : { top: 0, bottom: NAV_H }
 
   return (
     <>
-      <div style={{ ...S.page, ...cadre }}>
+      <div ref={cadreRef} style={{ ...S.page, top: 0, bottom: 0, paddingBottom: NAV_H }}>
         <EnTeteClient titre="Arthur" sousTitre="Ton coach" actions={<img loading="lazy" src="/coach-avatar.png" alt="" style={S.avatar} />} />
 
         {loadError ? (
@@ -98,6 +114,7 @@ export default function MessagesClient() {
             myId={clientId}
             otherId={coachId}
             onFocusChange={onFocusChange}
+            flottant
             emptyText="Aucun message pour l’instant. Écris à ton coach."
             onAfterSend={corps => {
               sendPushOnly(coachId, { titre: "Message d'un client", corps, lien: `/messages?c=${clientId}` }).catch(() => {})

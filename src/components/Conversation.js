@@ -21,7 +21,7 @@ function libelleJour(iso) {
   })
 }
 
-export default function Conversation({ myId, otherId, onAfterSend, onFocusChange, emptyText = 'Aucun message pour l’instant. Écris le premier.' }) {
+export default function Conversation({ myId, otherId, onAfterSend, onFocusChange, flottant = false, emptyText = 'Aucun message pour l’instant. Écris le premier.' }) {
   const { messages, loading, hasMore, loadingOlder, loadOlder, sendMessage, markRead } = useMessages(myId, otherId)
   const [texte, setTexte] = useState('')
   const [nouveaux, setNouveaux] = useState(false)
@@ -169,7 +169,9 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
         </button>
       )}
 
-      <div style={S.inputBar}>
+      {/* flottant (app client) : pilule détachée des bords, comme la barre d'onglets */}
+      <div style={flottant ? S.inputBarFlottant : S.inputBar}>
+        <div style={flottant ? S.pilule : S.ligneSaisie}>
         <textarea
           ref={inputRef}
           value={texte}
@@ -182,7 +184,7 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
           maxLength={500}
           rows={1}
           autoComplete="off"
-          style={S.input}
+          style={flottant ? S.inputFlottant : S.input}
         />
         <button
           onPointerDown={e => e.preventDefault()}
@@ -194,6 +196,7 @@ export default function Conversation({ myId, otherId, onAfterSend, onFocusChange
         >
           <Icon name="send" size={18} />
         </button>
+        </div>
       </div>
     </div>
   )
@@ -217,5 +220,9 @@ const S = {
   newPill:  { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: 74, display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, padding: '0 14px', borderRadius: T.radius.pill, border: 'none', background: T.color.ink, color: T.color.signal, fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, boxShadow: T.shadow.float, cursor: 'pointer', zIndex: 2 },
   inputBar: { flexShrink: 0, display: 'flex', alignItems: 'flex-end', gap: 8, padding: '8px 12px', background: T.color.card, borderTop: `1px solid ${T.color.line}` },
   input:    { flex: 1, minHeight: T.touch, maxHeight: 120, padding: '11px 14px', border: `1.5px solid ${T.color.line}`, borderRadius: 22, background: T.color.page, color: T.color.ink, fontFamily: T.font.body, fontSize: T.size.lg, lineHeight: 1.35, resize: 'none', boxSizing: 'border-box', WebkitAppearance: 'none' },
+  ligneSaisie: { flex: 1, display: 'flex', alignItems: 'flex-end', gap: 8 },
+  inputBarFlottant: { flexShrink: 0, padding: '8px 20px 6px' },
+  pilule:   { display: 'flex', alignItems: 'flex-end', gap: 4, padding: 4, background: T.color.card, border: `1px solid ${T.color.line}`, borderRadius: T.radius.pill, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' },
+  inputFlottant: { flex: 1, minHeight: T.touch, maxHeight: 120, padding: '11px 6px 11px 14px', border: 'none', background: 'transparent', color: T.color.ink, fontFamily: T.font.body, fontSize: T.size.lg, lineHeight: 1.35, resize: 'none', boxSizing: 'border-box', WebkitAppearance: 'none', outline: 'none' },
   send:     { width: T.touch, height: T.touch, borderRadius: '50%', border: 'none', display: 'grid', placeItems: 'center', flexShrink: 0, transition: 'background .15s' },
 }
