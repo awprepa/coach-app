@@ -55,6 +55,21 @@ const TYPE_JOUR_LABELS = {
   custom:       'Jour spécial',
 }
 
+// Les 7 jours du plan dans l'ordre où le joueur va les vivre : aujourd'hui
+// d'abord, puis les jours suivants, chacun avec sa vraie date.
+function semaineAVenir(days, plan) {
+  const auj = new Date(); auj.setHours(0, 0, 0, 0)
+  const n = getPlanDayNumber(toISO(auj), plan) || 1
+  return [...days]
+    .map(d => {
+      const ecart = (d.jour_numero - n + 7) % 7
+      const date = new Date(auj); date.setDate(auj.getDate() + ecart)
+      return { day: d, ecart, date }
+    })
+    .sort((a, b) => a.ecart - b.ecart)
+}
+const fmtG = g => `${Math.round(g).toLocaleString('fr-FR')} g`
+
 function getPlanDayNumber(dateISO, plan) {
   if (!plan.date_debut) return 1
   const debut = new Date(plan.date_debut + 'T00:00:00')
@@ -542,7 +557,7 @@ export default function NutritionPlanClient() {
     <div style={{ ...S.page, ...fadeStyle }}>
 
       {/* Header */}
-      <EnTeteClient retour="/client/nutrition" titre={plan.nom} sousTitre="Plan prescrit"
+      <EnTeteClient retour="/client/nutrition" titre="Ma semaine" sousTitre={plan.nom}
         actions={<button onClick={() => navigate('/client/nutrition/historique')} style={boutonEnTete} aria-label="Historique">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </button>} />
@@ -577,16 +592,22 @@ export default function NutritionPlanClient() {
                 </div>
               </div>
             )}
-            {days.map(day => (
+            {semaineAVenir(days, plan).map(({ day, ecart, date }) => (
               <div key={day.id} style={{ marginBottom: '0.75rem' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.83rem', color: '#1a1a1a', marginBottom: 4 }}>
-                  Jour {day.jour_numero} — {day.label}
+                <div style={S.jourTete}>
+                  <span style={S.jourDate}>
+                    {ecart === 0 ? "Aujourd'hui" : ecart === 1 ? 'Demain' : date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </span>
+                  {day.type_jour && day.type_jour !== 'standard' && TYPE_JOUR_LABELS[day.type_jour] && (
+                    <span style={S.jourType}>{TYPE_JOUR_LABELS[day.type_jour]}</span>
+                  )}
                   {(day.objectif_kcal || plan.objectif_kcal) && (
-                    <span style={{ color: '#6b7280', fontWeight: 500, marginLeft: 6 }}>
-                      {day.objectif_kcal || plan.objectif_kcal} kcal
+                    <span style={S.jourKcal}>
+                      {Number(day.objectif_kcal || plan.objectif_kcal).toLocaleString('fr-FR')} kcal
                     </span>
                   )}
                 </div>
+                {day.label && <p style={S.jourLabel}>{day.label}</p>}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {(day.nutrition_plan_meals || []).sort((a, b) => a.ordre - b.ordre).map(meal => {
                     const ml = MEAL_LABELS[meal.meal_type] || { label: meal.meal_type, color: '#6b7280' }
@@ -800,7 +821,7 @@ function ShoppingItem({ item }) {
       <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a1a1a', flex: 1, textDecoration: checked ? 'line-through' : 'none' }}>{item.nom}</span>
       {item.quantite > 0 && (
         <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
-          {item.count > 1 ? `${Math.round(item.quantite)}g / sem.` : `${Math.round(item.quantite)}g`}
+          {item.count > 1 ? `${fmtG(item.quantite)} / semaine` : fmtG(item.quantite)}
         </span>
       )}
     </div>
@@ -822,6 +843,11 @@ const S = {
   mealHeader: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 14px', textAlign: 'left' },
   actionBtn: { flex: 1, padding: '0.55rem 0', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' },
   weekMealRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'white', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
+  jourTete:  { display: 'flex', alignItems: 'baseline', gap: 8, margin: '6px 2px 6px' },
+  jourDate:  { fontWeight: 800, fontSize: '0.9rem', color: '#1a1a1a', textTransform: 'capitalize' },
+  jourType:  { fontSize: '0.75rem', fontWeight: 700, color: '#4b5563', background: '#e5e7eb', borderRadius: 999, padding: '2px 8px' },
+  jourKcal:  { marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
+  jourLabel: { margin: '-2px 2px 6px', fontSize: '0.78rem', color: '#6b7280' },
   weekMealCard: { padding: '9px 12px', background: 'white', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
   shopRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
   waterCard: { background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', borderRadius: 18, padding: '16px 16px 18px', boxShadow: '0 4px 16px rgba(29,78,216,0.25)' },

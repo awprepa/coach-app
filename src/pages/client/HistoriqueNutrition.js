@@ -191,24 +191,22 @@ export default function HistoriqueNutrition() {
               </p>
             ) : (
               <>
+                {/* Seuls les plats cochés existent côté joueur : « hors plan » et « sauté »
+                    ne peuvent plus être saisis, on ne les affiche donc pas. */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                   {[
-                    { label: 'Adhérence', val: adher14 !== null ? `${adher14}%` : '—', color: adherenceColor(adher14) },
-                    { label: 'Fait',      val: totalFait14,  color: '#16a34a' },
-                    { label: 'Hors-plan', val: totalHP14,    color: '#d97706' },
-                    { label: 'Sauté',     val: totalSaute14, color: '#ef4444' },
+                    { label: 'Plats suivis', val: adher14 !== null ? `${adher14} %` : '—', color: adherenceColor(adher14) },
+                    { label: 'Plats validés', val: totalFait14, color: '#16a34a' },
                   ].map(stat => (
-                    <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: stat.color + '15', borderRadius: 10, padding: '8px 4px' }}>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: stat.color, lineHeight: 1 }}>{stat.val}</div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: stat.color, opacity: 0.8, marginTop: 3, textTransform: 'uppercase' }}>{stat.label}</div>
+                    <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: stat.color + '15', borderRadius: 12, padding: '10px 6px' }}>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 900, color: stat.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{stat.val}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4b5563', marginTop: 4 }}>{stat.label}</div>
                     </div>
                   ))}
                 </div>
                 {totalMeals14 > 0 && (
                   <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', display: 'flex' }}>
                     <div style={{ background: '#16a34a', width: `${totalFait14 / totalMeals14 * 100}%` }} />
-                    <div style={{ background: '#d97706', width: `${totalHP14 / totalMeals14 * 100}%` }} />
-                    <div style={{ background: '#ef4444', width: `${totalSaute14 / totalMeals14 * 100}%` }} />
                   </div>
                 )}
               </>

@@ -390,9 +390,9 @@ export default function ProfilNutrition() {
                   <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem', margin: '6px 0 0' }}>BMR {computed.bmr} kcal · TDEE {computed.tdee} kcal</p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
-                  <MacroCell label="Protéines" val={`${computed.prot_g}g`} color="#60a5fa" note={`${(computed.prot_g / parseFloat(poids)).toFixed(1)} g/kg`} />
+                  <MacroCell label="Protéines" val={`${computed.prot_g}g`} color="#38bdf8" note={`${(computed.prot_g / parseFloat(poids)).toFixed(1)} g/kg`} />
                   <MacroCell label="Glucides"  val={`${computed.carbs_g}g`} color="#fbbf24" note={`${Math.round(computed.carbs_g * 4 / computed.kcal * 100)}% AET`} />
-                  <MacroCell label="Lipides"   val={`${computed.fat_g}g`} color="#f87171" note={`${Math.round(computed.fat_g * 9 / computed.kcal * 100)}% AET`} />
+                  <MacroCell label="Lipides"   val={`${computed.fat_g}g`} color="#a78bfa" note={`${Math.round(computed.fat_g * 9 / computed.kcal * 100)}% AET`} />
                 </div>
                 <div style={{ background: 'rgba(96,165,250,0.12)', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <span style={{ fontSize: '1.3rem' }}><Icon name="droplet" size={14} /></span>
@@ -480,9 +480,9 @@ export default function ProfilNutrition() {
                       <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                      <MacroCell label="Protéines" val={`${planCoach.objectif_prot || '–'}g`}  color="#60a5fa" />
+                      <MacroCell label="Protéines" val={`${planCoach.objectif_prot || '–'}g`}  color="#38bdf8" />
                       <MacroCell label="Glucides"  val={`${planCoach.objectif_carbs || '–'}g`} color="#fbbf24" />
-                      <MacroCell label="Lipides"   val={`${planCoach.objectif_fat || '–'}g`}   color="#f87171" />
+                      <MacroCell label="Lipides"   val={`${planCoach.objectif_fat || '–'}g`}   color="#a78bfa" />
                     </div>
                   </>
                 ) : <div style={{ height: 12 }} />}
@@ -511,9 +511,9 @@ export default function ProfilNutrition() {
                     <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 0 0' }}>kcal par jour</p>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                    <MacroCell label="Protéines" val={`${existingGoals.prot_g || '–'}g`}  color="#60a5fa" />
+                    <MacroCell label="Protéines" val={`${existingGoals.prot_g || '–'}g`}  color="#38bdf8" />
                     <MacroCell label="Glucides"  val={`${existingGoals.carbs_g || '–'}g`} color="#fbbf24" />
-                    <MacroCell label="Lipides"   val={`${existingGoals.fat_g || '–'}g`}   color="#f87171" />
+                    <MacroCell label="Lipides"   val={`${existingGoals.fat_g || '–'}g`}   color="#a78bfa" />
                   </div>
                   {existingGoals.hydration_ml != null && (
                     <div style={{ background: 'rgba(96,165,250,0.1)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -707,7 +707,7 @@ const S = {
   recalcBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
   emptyCard: { background: 'white', borderRadius: 20, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   ctaBtn: { padding: '14px 28px', borderRadius: 14, border: 'none', background: '#1a1a1a', color: 'var(--accent-fg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' },
-  tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 88, zIndex: 50 },
+  tabBar: { display: 'flex', background: 'white', borderBottom: '1px solid #f3f4f6' },
   tab: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 700, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid transparent' },
   tabActive: { flex: 1, padding: '12px 8px', fontSize: '0.82rem', fontWeight: 800, color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '2px solid var(--accent)' },
   card: { background: 'white', borderRadius: 16, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },

@@ -209,7 +209,7 @@ export default function NutritionClient() {
     : goals
   const cible = objectifs?.kcal_target || null
   const pct = cible ? Math.min(1, total.kcal / cible) : 0
-  const R = 41, CIRC = 2 * Math.PI * R
+  const R = 47, CIRC = 2 * Math.PI * R
 
   async function majEau(delta) {
     const avant = water
@@ -277,17 +277,19 @@ export default function NutritionClient() {
       <div style={S.body}>
         <div style={S.card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
-              <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="48" cy="48" r={R} fill="none" stroke="#eef1f4" strokeWidth="9" />
+            <div style={{ position: 'relative', width: 108, height: 108, flexShrink: 0 }}>
+              <svg width="108" height="108" viewBox="0 0 108 108" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="54" cy="54" r={R} fill="none" stroke="#eef1f4" strokeWidth="8" />
                 {cible && (
-                  <circle cx="48" cy="48" r={R} fill="none" stroke="var(--accent)" strokeWidth="9" strokeLinecap="round"
+                  <circle cx="54" cy="54" r={R} fill="none" stroke="var(--accent)" strokeWidth="8" strokeLinecap="round"
                     strokeDasharray={CIRC} strokeDashoffset={CIRC - CIRC * pct} />
                 )}
               </svg>
+              {/* Total sur une ligne, objectif en dessous : tout tient dans le cercle */}
               <div style={S.ringCenter}>
                 <div style={S.ringNum}>{fmt(total.kcal)}</div>
-                <div style={S.ringLbl}>{cible ? `/ ${fmt(cible)} KCAL` : 'KCAL'}</div>
+                <div style={S.ringLbl}>{cible ? `sur ${fmt(cible)}` : 'kcal'}</div>
+                {cible && <div style={S.ringLbl}>kcal</div>}
               </div>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -410,9 +412,8 @@ export default function NutritionClient() {
           </div>
         </div>
 
-        {/* Dégagement pour que le dernier repas reste atteignable sous la barre
-            scanner fixe (hauteur du bouton + son décalage). */}
-        <div style={{ height: 150 }} />
+        {/* Dégagement : bouton scanner (96 px du bas + 52 px de haut) + une respiration */}
+        <div style={{ height: 'calc(164px + env(safe-area-inset-bottom, 0px))' }} />
       </div>
 
       {/* Barre scanner fixe */}
@@ -465,7 +466,7 @@ export default function NutritionClient() {
 }
 
 const S = {
-  page:       { minHeight: '100dvh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingBottom: 90 },
+  page:       { minHeight: '100dvh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   // Même variable de thème que la page du plan : les deux écrans doivent se
   // ressembler quand on passe de l'un à l'autre.
   header:     { background: 'var(--header-bg)', padding: '14px 16px 15px', position: 'sticky', top: 0, zIndex: 40 },
@@ -478,8 +479,8 @@ const S = {
   body:       { padding: '14px' },
   card:       { background: 'white', borderRadius: 16, padding: 15, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 12 },
   ringCenter: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
-  ringNum:    { fontSize: '1.42rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums' },
-  ringLbl:    { fontSize: '0.75rem', fontWeight: 800, color: '#6b7280', letterSpacing: '0.02em', marginTop: 3, whiteSpace: 'nowrap' },
+  ringNum:    { fontSize: '1.5rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums', marginBottom: 3 },
+  ringLbl:    { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', lineHeight: 1.25, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
   macTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.75rem' },
   macName:    { fontWeight: 800, color: '#4b5563' },
   macVal:     { fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums' },
