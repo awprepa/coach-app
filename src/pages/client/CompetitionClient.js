@@ -20,6 +20,7 @@ export default function CompetitionClient() {
   const [synchro, setSynchro]       = useState(false)
   const [erreurLien, setErreurLien] = useState(null)
   const [enregistrement, setEnregistrement] = useState(false)
+  const [ongletMatchs, setOngletMatchs] = useState(null) // 'avenir' | 'resultats' ; null = selon les données
   // Une seule mise à jour à la fois : deux en parallèle inséraient le classement en double
   const synchroEnCours = useRef(null)
 
@@ -145,6 +146,7 @@ export default function CompetitionClient() {
   const prochains = matchs.filter(m => m.date_match >= today)
   const resultats = matchs.filter(m => m.date_match < today).reverse()
   const prochain  = prochains[0]
+  const onglet    = ongletMatchs || (prochains.length ? 'avenir' : 'resultats')
 
   // Un groupe peut suivre plusieurs championnats (ex. Fédérale 2 + Fédérale B) :
   // un classement par championnat, le principal en premier.
@@ -166,12 +168,6 @@ export default function CompetitionClient() {
     : null
   const notreEquipe = ourTeam ? classementAff.find(c => c.equipe.toLowerCase() === ourTeam.toLowerCase()) : null
 
-  function fmtDate(iso) {
-    if (!iso) return ''
-    const [y, mo, d] = iso.split('-')
-    return new Date(+y, +mo - 1, +d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  }
-
   function ScoreOrHour({ m }) {
     if (m.score_dom != null) {
       const s = m.est_domicile ? `${m.score_dom} - ${m.score_ext}` : m.est_domicile === false ? `${m.score_ext} - ${m.score_dom}` : `${m.score_dom} - ${m.score_ext}`
@@ -183,139 +179,101 @@ export default function CompetitionClient() {
     return m.heure ? <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>{m.heure}</span> : null
   }
 
-  function LogoBadge({ url, initials, size = 52 }) {
+  // Notre équipe / l'adversaire d'un match. Notre logo = celui du groupe dans l'appli
+  // (pas celui scrapé sur monclubhouse) : évite le logo adverse dupliqué quand le domicile est inconnu.
+  function camps(m) {
+    const dom = m.est_domicile
+    return {
+      notreNom:  dom === true ? m.equipe_dom : dom === false ? m.equipe_ext : (m.equipe_dom || m.equipe_ext),
+      advNom:    dom === true ? m.equipe_ext : dom === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom),
+      notreLogo: activeGroupe?.logo_url || (dom === true ? m.logo_dom : dom === false ? m.logo_ext : (m.logo_dom || m.logo_ext)),
+      advLogo:   dom === true ? m.logo_ext : dom === false ? m.logo_dom : (m.logo_ext || m.logo_dom),
+    }
+  }
+
+  // Score avec notre équipe en premier, et V / N / D
+  function issue(m) {
+    if (m.score_dom == null) return null
+    const nous = m.est_domicile === false ? m.score_ext : m.score_dom
+    const eux  = m.est_domicile === false ? m.score_dom : m.score_ext
+    return { score: `${nous} – ${eux}`, res: m.est_domicile == null ? 'N' : nous > eux ? 'V' : nous < eux ? 'D' : 'N' }
+  }
+
+  function rang(nom) {
+    const c = nom && classementAff.find(r => r.equipe.toLowerCase() === nom.toLowerCase())
+    return c ? (Number(c.position) === 1 ? '1er' : `${c.position}e`) : null
+  }
+
+  function jourMois(iso) {
+    const [y, mo, d] = iso.split('-')
+    const dt = new Date(+y, +mo - 1, +d)
+    return { jour: dt.getDate(), mois: dt.toLocaleDateString('fr-FR', { month: 'short' }), court: dt.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) }
+  }
+
+  function compteARebours(iso) {
+    const [y, mo, d] = iso.split('-')
+    const [ty, tm, td] = today.split('-')
+    const n = Math.round((new Date(+y, +mo - 1, +d) - new Date(+ty, +tm - 1, +td)) / 86400000)
+    return n <= 0 ? 'Aujourd’hui' : n === 1 ? 'Demain' : `Dans ${n} jours`
+  }
+
+  function EnTeteMatch({ m }) {
+    const { notreNom, advNom, notreLogo, advLogo } = camps(m)
+    const domicile = m.est_domicile !== false
+    const gauche = domicile ? { nom: notreNom, logo: notreLogo, nous: true } : { nom: advNom, logo: advLogo }
+    const droite = domicile ? { nom: advNom, logo: advLogo } : { nom: notreNom, logo: notreLogo, nous: true }
+    const rangG = rang(gauche.nom), rangD = rang(droite.nom)
+    const forme = resultats.map(issue).filter(Boolean).slice(0, 5).reverse()
+    const d = jourMois(m.date_match)
     return (
-      <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.2),
-        background: 'rgba(255,255,255,.18)', border: '2px solid rgba(255,255,255,.4)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden', flexShrink: 0 }}>
-        {url
-          ? <img loading="lazy" src={url} alt={initials} style={{ width: size - 8, height: size - 8, objectFit: 'contain' }}
-              onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-          : null}
-        <div style={{ width:'100%', height:'100%', display: url ? 'none' : 'flex',
-          alignItems:'center', justifyContent:'center',
-          fontSize: size > 40 ? '1.1rem' : '.7rem', fontWeight:900 }}>{initials}</div>
+      <div style={S.tete}>
+        <p style={S.teteLabel}>
+          <span>Prochain match{m.journee ? ` · J${m.journee}` : ''}</span>
+          <span style={{ color: 'var(--accent)', letterSpacing: '.04em' }}>{compteARebours(m.date_match)}</span>
+        </p>
+        <div style={S.face}>
+          {[gauche, null, droite].map((e, i) => e ? (
+            <div key={i} style={S.equipe}>
+              <Logo url={e.logo} nom={e.nom} taille={64} style={{ ...S.blason, ...(e.nous ? S.blasonNous : null) }} />
+              <span style={S.equipeNom}>{e.nom}</span>
+            </div>
+          ) : (
+            <div key={i} style={{ textAlign: 'center' }}>
+              <div style={S.teteHeure}>{m.heure || 'VS'}</div>
+              <div style={S.teteDate}>{d.court}</div>
+            </div>
+          ))}
+        </div>
+        <div style={S.puces}>
+          {m.est_domicile != null && <span style={{ ...S.puce, background: 'var(--accent)', color: '#1a1a1a' }}>{m.est_domicile ? 'Domicile' : 'Extérieur'}</span>}
+          {rangG && rangD && <span style={S.puce}>{rangG} contre {rangD}</span>}
+        </div>
+        {forme.length > 0 && (
+          <div style={S.forme}>
+            <p style={S.formeTexte}>Forme · {forme.length > 1 ? `${forme.length} derniers matchs` : 'dernier match'}</p>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {forme.map((f, i) => <span key={i} style={{ ...S.pastille, background: COULEUR_RES[f.res] }}>{f.res}</span>)}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
-  function MatchCard({ m, big }) {
-    const joue = m.score_dom != null
-    const win  = joue && (m.est_domicile ? m.score_dom > m.score_ext : m.est_domicile === false ? m.score_ext > m.score_dom : null)
-    const lose = joue && (m.est_domicile ? m.score_dom < m.score_ext : m.est_domicile === false ? m.score_ext < m.score_dom : null)
-    const bg = big ? (joue ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : (activeGroupe?.couleur || '#1e40af')) : '#fff'
-
-    // Logos : dom = logo_dom / ext = logo_ext ; notre équipe selon est_domicile.
-    // Notre logo = celui du groupe dans l'appli (pas celui scrapé sur monclubhouse) — évite
-    // aussi le logo adverse dupliqué des deux côtés quand le domicile/extérieur est inconnu.
-    const notreNom  = m.est_domicile === true  ? m.equipe_dom : m.est_domicile === false ? m.equipe_ext : (m.equipe_dom || m.equipe_ext)
-    const advNom    = m.est_domicile === true  ? m.equipe_ext : m.est_domicile === false ? m.equipe_dom : (m.equipe_ext || m.equipe_dom)
-    const notreLogo = activeGroupe?.logo_url || (m.est_domicile === true ? m.logo_dom : m.est_domicile === false ? m.logo_ext : (m.logo_dom || m.logo_ext))
-    const advLogo   = m.est_domicile === true  ? m.logo_ext   : m.est_domicile === false ? m.logo_dom   : (m.logo_ext || m.logo_dom)
-    const notreInit = (notreNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    const advInit   = (advNom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-
-    // Disposition : domicile → notre logo gauche / adverse droite ; extérieur → adverse gauche / notre droite
-    const logoG  = m.est_domicile !== false ? notreLogo : advLogo
-    const logoD  = m.est_domicile !== false ? advLogo   : notreLogo
-    const nomG   = m.est_domicile !== false ? notreNom  : advNom
-    const nomD   = m.est_domicile !== false ? advNom    : notreNom
-    const initG  = m.est_domicile !== false ? notreInit : advInit
-    const initD  = m.est_domicile !== false ? advInit   : notreInit
-
-    const scoreStr = joue
-      ? (m.est_domicile ? `${m.score_dom} - ${m.score_ext}` : m.est_domicile === false ? `${m.score_ext} - ${m.score_dom}` : `${m.score_dom} - ${m.score_ext}`)
-      : null
-
-    if (big) return (
-      <div style={{ background: `linear-gradient(155deg, ${bg}, color-mix(in srgb, ${bg} 60%, #000))`,
-        borderRadius: 16, padding: '16px 14px', color: '#fff', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: .7, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>
-          Prochain match{m.journee ? ` · Journée ${m.journee}` : ''}
-        </div>
-
-        {/* Logos face à face */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 14 }}>
-          {/* Logo gauche */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
-            <LogoBadge url={logoG} initials={initG} size={60} />
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
-              maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomG}</div>
-          </div>
-          {/* Score / VS */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-            {scoreStr
-              ? <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '.03em', lineHeight: 1 }}>{scoreStr}</div>
-              : <>
-                  <div style={{ fontSize: '.82rem', fontWeight: 900, opacity: .9, letterSpacing: '.05em' }}>VS</div>
-                  {m.heure && <div style={{ fontSize: '0.7rem', opacity: .75 }}>{m.heure}</div>}
-                </>
-            }
-          </div>
-          {/* Logo droite */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1 }}>
-            <LogoBadge url={logoD} initials={initD} size={60} />
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, opacity: .85, textAlign: 'center', lineHeight: 1.2,
-              maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomD}</div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-          <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700 }}>
-            {fmtDate(m.date_match)}
-          </span>
-          {m.est_domicile != null && (
-            <span style={{ background: '#e4f816', color: '#1a1a1a', borderRadius: 7, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
-              {m.est_domicile ? 'Domicile' : 'Extérieur'}
-            </span>
-          )}
-          {joue && <span style={{ background: 'rgba(255,255,255,.18)', borderRadius: 7, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700 }}>
-            {win ? 'Victoire' : lose ? 'Défaite' : 'Nul'}
-          </span>}
-        </div>
-      </div>
-    )
-
-    // Carte compacte (liste résultats / calendrier)
+  function LigneMatch({ m }) {
+    const { advNom, advLogo } = camps(m)
+    const r = issue(m)
+    const d = jourMois(m.date_match)
     return (
-      <div style={{ background: '#fff', borderRadius: 12, padding: '10px 12px', marginBottom: 8,
-        border: '1px solid #e5e7eb' }}>
-        {/* Logos compacts côte à côte */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {/* Logo G */}
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f3f4f6',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            {logoG
-              ? <img loading="lazy" src={logoG} alt={initG} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-              : null}
-            <div style={{ width:'100%', height:'100%', display: logoG ? 'none' : 'flex',
-              alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:900, color:'#6b7280' }}>{initG}</div>
-          </div>
-          {/* Score ou VS */}
-          <div style={{ fontSize: '.75rem', fontWeight: 800, color: scoreStr ? (win ? '#16a34a' : lose ? '#dc2626' : '#64748b') : '#9ca3af',
-            flexShrink: 0, minWidth: 32, textAlign: 'center' }}>
-            {scoreStr || 'VS'}
-          </div>
-          {/* Logo D */}
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f3f4f6',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            {logoD
-              ? <img loading="lazy" src={logoD} alt={initD} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-              : null}
-            <div style={{ width:'100%', height:'100%', display: logoD ? 'none' : 'flex',
-              alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:900, color:'#6b7280' }}>{initD}</div>
-          </div>
-          {/* Infos texte */}
-          <div style={{ flex: 1, minWidth: 0, marginLeft: 4 }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{advNom}</div>
-            <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>
-              {m.journee ? `J${m.journee} · ` : ''}{fmtDate(m.date_match)}
-              {m.est_domicile != null ? ` · ${m.est_domicile ? 'Dom.' : 'Ext.'}` : ''}
-            </div>
-          </div>
-          {!scoreStr && m.heure && <span style={{ fontSize: '.7rem', color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{m.heure}</span>}
+      <div style={S.ligneMatch}>
+        <div style={S.caseJour}><b style={S.caseJourNum}>{d.jour}</b><small style={S.caseJourMois}>{d.mois}</small></div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={S.advNom}><Logo url={advLogo} nom={advNom} taille={24} style={S.mini} /><span style={S.ellipse}>{advNom}</span></p>
+          <small style={S.advInfo}>{[m.journee && `J${m.journee}`, m.est_domicile != null && (m.est_domicile ? 'Domicile' : 'Extérieur')].filter(Boolean).join(' · ')}</small>
         </div>
+        {r ? (
+          <span style={S.score}>{r.score}<span style={{ ...S.res, background: COULEUR_RES[r.res] }}>{r.res}</span></span>
+        ) : m.heure ? <span style={S.heure}>{m.heure}</span> : null}
       </div>
     )
   }
@@ -329,7 +287,6 @@ export default function CompetitionClient() {
     </div>
   )
 
-  const gc = activeGroupe?.couleur || '#333333'
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f6f8', paddingBottom: 100, fontFamily: 'inherit' }}>
@@ -347,6 +304,9 @@ export default function CompetitionClient() {
         </div>
         )}
       </EnTeteClient>
+
+      {/* Prochain match : dans le prolongement de l'en-tête foncé */}
+      {prochain && !(perso && (!perso.url || edition)) && <EnTeteMatch m={prochain} />}
 
       <div style={{ padding: '16px 16px 0' }}>
         {perso && (!perso.url || edition) ? (
@@ -393,63 +353,58 @@ export default function CompetitionClient() {
           </div>
         ) : (
           <>
-            {/* Prochain match */}
-            {prochain && <MatchCard m={prochain} big />}
-
             {/* Classement */}
             {classement.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ margin: '0 0 10px', fontSize: '.72rem', fontWeight: 900, textTransform: 'uppercase',
-                  letterSpacing: '.08em', color: '#6b7280' }}>Classement</p>
+              <section style={{ marginBottom: 24 }}>
+                <div style={S.sec}><h2 style={S.secTitre}>Classement</h2>{competitions.length === 1 && compActive?.tag && <span style={S.secInfo}>{compActive.label}</span>}</div>
                 {competitions.length > 1 && (
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10, overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8, overflowX: 'auto' }}>
                     {competitions.map((cp, i) => {
                       const on = cp === compActive
                       return (
                         <button key={cp.tag || i} onClick={() => setCompIdx(i)}
-                          style={{ padding: '0.45rem 0.95rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                            border: `1.5px solid ${on ? gc : '#e5e7eb'}`, background: on ? `color-mix(in srgb, ${gc} 10%, #fff)` : '#fff', color: on ? gc : '#6b7280' }}>
+                          style={{ minHeight: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit',
+                            border: `1.5px solid ${on ? '#333333' : '#e5e7eb'}`, background: on ? '#333333' : '#fff', color: on ? 'var(--accent)' : '#6b7280' }}>
                           {cp.label}
                         </button>
                       )
                     })}
                   </div>
                 )}
-                <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                <div style={S.carte}>
+                  {notreEquipe && (
+                    <div style={S.resume}>
+                      <div style={S.resumeCase}><b style={S.resumeVal}>{Number(notreEquipe.position) === 1 ? '1er' : `${notreEquipe.position}e`}</b><small style={S.resumeLabel}>Position</small></div>
+                      <div style={S.resumeCase}><b style={S.resumeVal}>{notreEquipe.pts}</b><small style={S.resumeLabel}>Points</small></div>
+                      <div style={S.resumeCase}><b style={{ ...S.resumeVal, color: Number(notreEquipe.diff) > 0 ? '#16a34a' : Number(notreEquipe.diff) < 0 ? '#dc2626' : '#1a1a1a' }}>{Number(notreEquipe.diff) > 0 ? '+' : ''}{notreEquipe.diff}</b><small style={S.resumeLabel}>Différence</small></div>
+                    </div>
+                  )}
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.75rem' }}>
+                    <table style={S.table}>
                       <thead>
-                        <tr style={{ background: '#f9fafb' }}>
-                          {['#', '', 'Équipe', 'Pts', 'J', 'G', 'N', 'P', '+/-'].map(h => (
-                            <th key={h} style={{ padding: '8px 8px', textAlign: h === 'Équipe' ? 'left' : 'center',
-                              fontWeight: 700, color: '#6b7280', fontSize: '0.7rem', textTransform: 'uppercase',
-                              letterSpacing: '.05em', whiteSpace: 'nowrap', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
+                        <tr>
+                          {['#', 'Équipe', 'J', 'G', 'N', 'P', '+/-', 'Pts'].map((h, i, t) => (
+                            <th key={h} style={{ ...S.th, textAlign: h === 'Équipe' ? 'left' : 'center', paddingLeft: i === 0 ? 12 : 4, paddingRight: i === t.length - 1 ? 12 : 4 }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {classementAff.map(c => {
                           const isOurs = notreEquipe?.equipe === c.equipe
-                          const initials = c.equipe.split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-                          const logoAff = (isOurs && activeGroupe?.logo_url) || c.logo
+                          const fond = isOurs ? { background: '#fafae6', color: '#1a1a1a' } : null
+                          const diff = Number(c.diff)
                           return (
-                            <tr key={c.equipe} style={{ background: isOurs ? `color-mix(in srgb, ${gc} 8%, #fff)` : 'transparent', borderBottom: '1px solid #f3f4f6' }}>
-                              <td style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: isOurs ? gc : '#6b7280', fontSize: '.78rem' }}>{c.position}</td>
-                              <td style={{ padding: '4px 4px', width: 28, textAlign: 'center' }}>
-                                {logoAff
-                                  ? <img loading="lazy" src={logoAff} alt="" style={{ width: 22, height: 22, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }} />
-                                  : null}
-                                <div style={{ width: 22, height: 22, borderRadius: 4, background: '#f0f2f5', display: logoAff ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#6b7280', margin: '0 auto' }}>{initials}</div>
+                            <tr key={c.equipe}>
+                              <td style={{ ...S.td, ...fond, width: 28, paddingLeft: 12, fontWeight: 800, color: '#374151', boxShadow: isOurs ? 'inset 3px 0 0 #333333' : 'none' }}>{c.position}</td>
+                              <td style={{ ...S.td, ...fond, textAlign: 'left', fontWeight: isOurs ? 800 : 600, color: '#1a1a1a', maxWidth: 130, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <Logo url={(isOurs && activeGroupe?.logo_url) || c.logo} nom={c.equipe} taille={24} style={{ ...S.mini, marginRight: 8, verticalAlign: 'middle' }} />{c.equipe}
                               </td>
-                              <td style={{ padding: '8px 8px', fontWeight: isOurs ? 800 : 500, color: isOurs ? gc : '#1f2937',
-                                borderLeft: isOurs ? `3px solid ${gc}` : '3px solid transparent',
-                                maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '.78rem' }}>{c.equipe}</td>
-                              <td style={{ padding: '8px', textAlign: 'center', fontWeight: isOurs ? 800 : 600, color: isOurs ? gc : '#1f2937', fontSize: '.82rem' }}>{c.pts}</td>
-                              <td style={{ padding: '8px', textAlign: 'center', color: '#6b7280', fontSize: '.75rem' }}>{c.joues}</td>
-                              <td style={{ padding: '8px', textAlign: 'center', color: '#16a34a', fontWeight: 600, fontSize: '.75rem' }}>{c.gagnes}</td>
-                              <td style={{ padding: '8px', textAlign: 'center', color: '#6b7280', fontSize: '.75rem' }}>{c.nuls}</td>
-                              <td style={{ padding: '8px', textAlign: 'center', color: '#dc2626', fontWeight: 600, fontSize: '.75rem' }}>{c.perdus}</td>
-                              <td style={{ padding: '8px', textAlign: 'center', color: Number(c.diff) >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: '.75rem' }}>{Number(c.diff) > 0 ? '+' : ''}{c.diff}</td>
+                              <td style={{ ...S.td, ...fond }}>{c.joues}</td>
+                              <td style={{ ...S.td, ...fond }}>{c.gagnes}</td>
+                              <td style={{ ...S.td, ...fond }}>{c.nuls}</td>
+                              <td style={{ ...S.td, ...fond }}>{c.perdus}</td>
+                              <td style={{ ...S.td, ...fond, fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280' }}>{diff > 0 ? '+' : ''}{c.diff}</td>
+                              <td style={{ ...S.td, ...fond, paddingRight: 12, fontWeight: 900, color: '#1a1a1a' }}>{c.pts}</td>
                             </tr>
                           )
                         })}
@@ -457,23 +412,27 @@ export default function CompetitionClient() {
                     </table>
                   </div>
                 </div>
-              </div>
+              </section>
             )}
 
-            {/* Résultats passés */}
-            {resultats.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ margin: '0 0 10px', fontSize: '.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6b7280' }}>Résultats</p>
-                {resultats.map(m => <MatchCard key={m.id} m={m} />)}
-              </div>
-            )}
-
-            {/* Matchs à venir */}
-            {prochains.slice(1).length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ margin: '0 0 10px', fontSize: '.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6b7280' }}>Calendrier à venir</p>
-                {prochains.slice(1).map(m => <MatchCard key={m.id} m={m} />)}
-              </div>
+            {/* Matchs : à venir / résultats */}
+            {matchs.length > 0 && (
+              <section style={{ marginBottom: 24 }}>
+                <div style={S.sec}><h2 style={S.secTitre}>Matchs</h2></div>
+                <div style={S.seg}>
+                  {[['avenir', 'À venir'], ['resultats', 'Résultats']].map(([cle, label]) => (
+                    <button key={cle} onClick={() => setOngletMatchs(cle)} style={{ ...S.segBtn, ...(onglet === cle ? S.segOn : null) }}>{label}</button>
+                  ))}
+                </div>
+                <div style={S.carte}>
+                  {(onglet === 'avenir' ? prochains : resultats).map((m, i) => (
+                    <div key={m.id} style={{ borderTop: i ? '1px solid #f3f4f6' : 'none' }}><LigneMatch m={m} /></div>
+                  ))}
+                  {(onglet === 'avenir' ? prochains : resultats).length === 0 && (
+                    <p style={S.vide}>{onglet === 'avenir' ? 'Aucun match à venir.' : 'Aucun résultat pour l’instant.'}</p>
+                  )}
+                </div>
+              </section>
             )}
 
             {perso && (
@@ -491,7 +450,62 @@ export default function CompetitionClient() {
   )
 }
 
+const COULEUR_RES = { V: '#16a34a', D: '#dc2626', N: '#6b7280' }
+
+// Logo d'équipe, initiales si pas d'image ou si elle ne charge pas
+function Logo({ url, nom, taille, style }) {
+  const [erreur, setErreur] = useState(false)
+  const init = (nom || '?').split(/[\s-]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  return (
+    <span style={{ width: taille, height: taille, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, ...style }}>
+      {url && !erreur
+        ? <img loading="lazy" src={url} alt="" onError={() => setErreur(true)} style={{ width: taille - 8, height: taille - 8, objectFit: 'contain' }} />
+        : init}
+    </span>
+  )
+}
+
 const S = {
+  tete:        { background: 'var(--header-bg)', color: '#fff', padding: '4px 16px 20px', marginTop: -1 },
+  teteLabel:   { margin: '0 0 12px', display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'rgba(255,255,255,.6)' },
+  face:        { display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 },
+  equipe:      { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 0 },
+  blason:      { borderRadius: 16, background: 'rgba(255,255,255,.1)', border: '1.5px solid rgba(255,255,255,.18)', fontWeight: 900, fontSize: 18, boxSizing: 'border-box' },
+  blasonNous:  { border: '1.5px solid var(--accent)', color: 'var(--accent)' },
+  equipeNom:   { fontSize: 13, fontWeight: 700, textAlign: 'center', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  teteHeure:   { fontSize: 24, fontWeight: 900, fontVariantNumeric: 'tabular-nums', lineHeight: 1 },
+  teteDate:    { fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.7)', marginTop: 4, whiteSpace: 'nowrap' },
+  puces:       { display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+  puce:        { borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 800, background: 'rgba(255,255,255,.1)', color: '#fff' },
+  forme:       { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.1)' },
+  formeTexte:  { margin: 0, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.6)' },
+  pastille:    { width: 24, height: 24, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff' },
+  sec:         { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 8px' },
+  secTitre:    { margin: 0, fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.08em' },
+  secInfo:     { fontSize: 12, fontWeight: 600, color: '#6b7280' },
+  carte:       { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', overflow: 'hidden' },
+  resume:      { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderBottom: '1px solid #f3f4f6' },
+  resumeCase:  { padding: '12px 8px', textAlign: 'center' },
+  resumeVal:   { display: 'block', fontSize: 22, fontWeight: 900, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 },
+  resumeLabel: { fontSize: 12, fontWeight: 600, color: '#6b7280' },
+  table:       { width: '100%', borderCollapse: 'collapse', fontVariantNumeric: 'tabular-nums' },
+  th:          { fontSize: 12, fontWeight: 700, color: '#9ca3af', padding: '8px 4px', whiteSpace: 'nowrap' },
+  td:          { padding: '0 4px', height: 44, textAlign: 'center', fontSize: 13, color: '#6b7280', borderTop: '1px solid #f3f4f6' },
+  mini:        { borderRadius: 6, background: '#f3f4f6', fontSize: 12, fontWeight: 800, color: '#6b7280' },
+  seg:         { display: 'flex', background: '#e9e9ea', borderRadius: 12, padding: 4, marginBottom: 8 },
+  segBtn:      { flex: 1, border: 'none', background: 'none', borderRadius: 9, minHeight: 36, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#6b7280', cursor: 'pointer' },
+  segOn:       { background: '#fff', color: '#333333', boxShadow: '0 1px 2px rgba(0,0,0,.08)' },
+  ligneMatch:  { display: 'flex', alignItems: 'center', gap: 12, padding: 12 },
+  caseJour:    { width: 44, height: 48, borderRadius: 12, background: '#f3f4f6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1, flexShrink: 0 },
+  caseJourNum: { fontSize: 17, fontWeight: 900, color: '#333333' },
+  caseJourMois:{ fontSize: 12, fontWeight: 700, color: '#6b7280', marginTop: 3 },
+  advNom:      { margin: 0, fontSize: 14, fontWeight: 700, color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 },
+  ellipse:     { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  advInfo:     { display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginTop: 3 },
+  heure:       { fontSize: 14, fontWeight: 800, color: '#333333', fontVariantNumeric: 'tabular-nums', flexShrink: 0 },
+  score:       { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 800, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums', flexShrink: 0 },
+  res:         { width: 22, height: 22, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff' },
+  vide:        { margin: 0, padding: 16, fontSize: 13, color: '#6b7280', textAlign: 'center' },
   carteLien:   { background: '#fff', borderRadius: 16, padding: '18px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: 10 },
   lienTitre:   { margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1a1a1a' },
   lienTexte:   { margin: 0, fontSize: '.85rem', color: '#6b7280', lineHeight: 1.5 },

@@ -21,6 +21,17 @@ const MACROS = [
   { k: 'glucides',  l: 'Glucides',  c: '#f59e0b' },
   { k: 'lipides',   l: 'Lipides',   c: '#8b5cf6' },
 ]
+// Lignes du tableau nutritionnel : les détails (« dont… ») sous leur macro.
+// Une ligne de détail n'apparaît que si la source de l'aliment la fournit.
+const LIGNES = [
+  MACROS[0],
+  MACROS[1], { k: 'sucres',  l: 'dont sucres',  sous: true },
+  MACROS[2], { k: 'satures', l: 'dont saturés', sous: true },
+  { k: 'fibres', l: 'Fibres', sous: true, racine: true },
+  { k: 'sel',    l: 'Sel',    sous: true, racine: true },
+]
+const DETAILS = ['sucres', 'satures', 'fibres', 'sel']
+const num = v => v == null || v === '' ? null : Number(v)
 const fmt = n => Math.round(n || 0).toLocaleString('fr-FR')
 // Grammes de macros : une décimale sous 10 g (2,5 g), arrondi au-delà
 const fmtG = n => (n || 0) < 10 ? (Math.round((n || 0) * 10) / 10).toLocaleString('fr-FR') : fmt(n)
@@ -108,6 +119,7 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
       proteines: f.prot_100 || 0,
       glucides: f.carbs_100 || 0,
       lipides: f.fat_100 || 0,
+      sucres: num(f.sugar_100), satures: num(f.satfat_100), fibres: num(f.fibre_100), sel: num(f.salt_100),
     })
     setGrammes(100)
     window.history.replaceState({}, '')
@@ -170,6 +182,11 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
   async function ouvrirQuantite(a) {
     setChoisi(a)
     setGrammes(100)
+    // Aliment CIQUAL : la recherche ne renvoie que les macros, on complète avec le détail
+    if (a.code && a.sucres === undefined) {
+      supabase.from('ciqual_aliments').select('sucres, satures, fibres, sel').eq('code', a.code).maybeSingle()
+        .then(({ data }) => data && setChoisi(c => c === a ? { ...a, sucres: num(data.sucres), satures: num(data.satures), fibres: num(data.fibres), sel: num(data.sel) } : c))
+    }
     // Portions courantes correspondant à cet aliment (« 1 banane » = 120 g).
     const { data } = await supabase.from('portions_usuelles').select('motif, grammes, libelle')
     const nom = (a.nom || '').toLowerCase()
@@ -183,6 +200,7 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
       proteines: (choisi?.proteines || 0) * r,
       glucides: (choisi?.glucides || 0) * r,
       lipides: (choisi?.lipides || 0) * r,
+      ...Object.fromEntries(DETAILS.map(k => [k, choisi?.[k] == null ? null : choisi[k] * r])),
     }
   }
 
@@ -322,9 +340,9 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
               <td style={S.tabVal}>{fmt(choisi.kcal)} kcal</td>
               <td style={{ ...S.tabVal, ...S.tabValChoisi }}>{fmt(t.kcal)} kcal</td>
             </tr>
-            {MACROS.map(m => (
+            {LIGNES.filter(m => !m.sous || choisi[m.k] != null).map(m => (
               <tr key={m.k}>
-                <td style={S.tabNom}><span style={{ ...S.macPoint, background: m.c }} />{m.l}</td>
+                <td style={m.racine ? { ...S.tabNom, paddingLeft: 28 } : m.sous ? { ...S.tabNom, ...S.tabNomSous } : S.tabNom}>{m.c && <span style={{ ...S.macPoint, background: m.c }} />}{m.l}</td>
                 <td style={S.tabVal}>{fmtG(choisi[m.k])} g</td>
                 <td style={{ ...S.tabVal, ...S.tabValChoisi }}>{fmtG(t[m.k])} g</td>
               </tr>
@@ -370,6 +388,7 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
                 groupe: s.brand || 'Scanné',
                 kcal: s.kcal_100g || 0, proteines: s.prot_100g || 0,
                 glucides: s.carbs_100g || 0, lipides: s.fat_100g || 0,
+                sucres: num(s.sugar_100g), satures: num(s.satfat_100g), fibres: num(s.fiber_100g), sel: null,
               })} style={S.row}>
                 <div style={{ minWidth: 0 }}>
                   <p style={S.rowNom}>{s.product_name}</p>
@@ -471,6 +490,7 @@ const S = {
   tabTh:      { padding: '10px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textAlign: 'right', borderBottom: '1px solid #f3f4f6' },
   tabNom:     { padding: '10px 12px', fontSize: '0.85rem', fontWeight: 700, color: '#374151', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' },
   tabVal:     { padding: '10px 12px', fontSize: '0.85rem', fontWeight: 600, color: '#6b7280', textAlign: 'right', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' },
+  tabNomSous: { paddingLeft: 40, fontWeight: 600, color: '#6b7280' },
   tabValChoisi: { fontWeight: 800, color: '#1a1a1a' },
   vide:       { color: '#6b7280', fontSize: '0.82rem', fontWeight: 600, textAlign: 'center', padding: '2rem 1rem', lineHeight: 1.5 },
   body:       { flex: 1, overflowY: 'auto', padding: '16px 20px 90px' },
