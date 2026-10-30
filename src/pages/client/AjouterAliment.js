@@ -22,6 +22,8 @@ const MACROS = [
   { k: 'lipides',   l: 'Lipides',   c: '#8b5cf6' },
 ]
 const fmt = n => Math.round(n || 0).toLocaleString('fr-FR')
+// Grammes de macros : une décimale sous 10 g (2,5 g), arrondi au-delà
+const fmtG = n => (n || 0) < 10 ? (Math.round((n || 0) * 10) / 10).toLocaleString('fr-FR') : fmt(n)
 
 // Repas proposé par défaut selon l'heure (après un scan, à 21 h, c'est le dîner)
 function repasSelonHeure() {
@@ -304,15 +306,31 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
           <b style={{ fontSize: '1.9rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{fmt(t.kcal)}</b>
           <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#6b7280' }}>kcal</span>
         </div>
-        {/* Macros de la portion : des valeurs, pas des barres (sans objectif, une barre ne mesure rien) */}
-        <div style={S.macGrille}>
-          {MACROS.map(m => (
-            <div key={m.k} style={S.macCase}>
-              <span style={{ ...S.macPoint, background: m.c }} />
-              <b style={S.macNombre}>{fmt(t[m.k])} g</b>
-              <span style={S.macName}>{m.l}</span>
-            </div>
-          ))}
+        {/* Valeurs nutritionnelles : pour 100 g et pour la quantité choisie */}
+        <div style={S.tabCadre}>
+        <table style={S.tabNutri}>
+          <thead>
+            <tr>
+              <th style={{ ...S.tabTh, textAlign: 'left' }}></th>
+              <th style={S.tabTh}>Pour 100 g</th>
+              <th style={{ ...S.tabTh, color: '#1a1a1a' }}>Pour {fmt(parseFloat(grammes) || 0)} g</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={S.tabNom}>Calories</td>
+              <td style={S.tabVal}>{fmt(choisi.kcal)} kcal</td>
+              <td style={{ ...S.tabVal, ...S.tabValChoisi }}>{fmt(t.kcal)} kcal</td>
+            </tr>
+            {MACROS.map(m => (
+              <tr key={m.k}>
+                <td style={S.tabNom}><span style={{ ...S.macPoint, background: m.c }} />{m.l}</td>
+                <td style={S.tabVal}>{fmtG(choisi[m.k])} g</td>
+                <td style={{ ...S.tabVal, ...S.tabValChoisi }}>{fmtG(t[m.k])} g</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         </div>
       </div>
       <div style={S.cta}>
@@ -447,12 +465,15 @@ const S = {
   rowK:       { marginLeft: 'auto', textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 },
   rowKNb:     { fontSize: '0.95rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 },
   rowKUnit:   { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', fontStyle: 'normal' },
-  macGrille:  { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 },
-  macCase:    { background: 'white', borderRadius: 13, padding: '10px 12px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 2 },
-  macPoint:   { width: 8, height: 8, borderRadius: '50%', marginBottom: 4 },
-  macNombre:  { fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' },
+  macPoint:   { display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 8, flexShrink: 0 },
+  tabCadre:   { background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
+  tabNutri:   { width: '100%', borderCollapse: 'collapse', fontVariantNumeric: 'tabular-nums' },
+  tabTh:      { padding: '10px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textAlign: 'right', borderBottom: '1px solid #f3f4f6' },
+  tabNom:     { padding: '10px 12px', fontSize: '0.85rem', fontWeight: 700, color: '#374151', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' },
+  tabVal:     { padding: '10px 12px', fontSize: '0.85rem', fontWeight: 600, color: '#6b7280', textAlign: 'right', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' },
+  tabValChoisi: { fontWeight: 800, color: '#1a1a1a' },
   vide:       { color: '#6b7280', fontSize: '0.82rem', fontWeight: 600, textAlign: 'center', padding: '2rem 1rem', lineHeight: 1.5 },
-  body:       { flex: 1, overflowY: 'auto', padding: '16px 14px 90px' },
+  body:       { flex: 1, overflowY: 'auto', padding: '16px 20px 90px' },
   qNom:       { fontSize: '1.12rem', fontWeight: 900, margin: '0 0 2px', lineHeight: 1.25 },
   qSub:       { fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, margin: '0 0 15px' },
   // Taille portée par le conteneur : sur téléphone, une règle globale force les
@@ -463,9 +484,9 @@ const S = {
   chips:      { display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 11 },
   chip:       { border: '1.5px solid #e5e7eb', background: 'white', borderRadius: 99, padding: '6px 13px', fontSize: '0.75rem', fontWeight: 700, color: '#4b5563', cursor: 'pointer', fontFamily: 'inherit' },
   qTot:       { display: 'flex', alignItems: 'baseline', gap: 7, margin: '19px 2px 12px' },
-  macName:    { fontWeight: 800, color: '#4b5563' },
-  cta:        { position: 'sticky', bottom: 0, padding: '12px 14px calc(16px + env(safe-area-inset-bottom, 0px))', background: 'linear-gradient(180deg, rgba(245,245,245,0) 0%, #f5f5f5 26%)' },
-  ctaBtn:     { width: '100%', border: 'none', borderRadius: 15, padding: 15, fontSize: '0.95rem', fontWeight: 800, background: '#333333', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit' },
+  // Même marge sur les côtés et en bas (20 px, ou la zone du geste d'accueil si elle est plus grande)
+  cta:        { position: 'sticky', bottom: 0, padding: '12px 20px max(20px, env(safe-area-inset-bottom, 0px))', background: 'linear-gradient(180deg, rgba(245,245,245,0) 0%, #f5f5f5 26%)' },
+  ctaBtn:     { width: '100%', minHeight: 52, border: 'none', borderRadius: 999, padding: '0 16px', fontSize: '0.95rem', fontWeight: 800, background: '#333333', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit' },
   repasRow:   { display: 'flex', gap: 6, marginBottom: 14 },
   repasChip:  { flex: 1, minHeight: 40, padding: '0 4px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: 'white', color: '#4b5563', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   erreur:     { margin: '0 0 8px', background: '#fee2e2', color: '#991b1b', borderRadius: 12, padding: '10px 12px', fontSize: '0.82rem', fontWeight: 700, textAlign: 'center' },

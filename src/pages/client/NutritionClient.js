@@ -636,7 +636,7 @@ const S = {
   // bouton la touchait presque (2px d'écart mesurés).
   scanCta:    { position: 'fixed', bottom: 'calc(96px + max(env(safe-area-inset-bottom, 0px), 0px))', left: 0, right: 0, padding: '0 14px', zIndex: 30 },
   scanCtaBtn: { width: '100%', padding: '0.9rem 1.25rem', background: '#333333', color: 'var(--accent)', border: 'none', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' },
-  message:    { position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(160px + env(safe-area-inset-bottom, 0px))', zIndex: 95, background: '#1a1a1a', color: 'white', borderRadius: 999, padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(0,0,0,0.22)', maxWidth: 'calc(100% - 40px)', textAlign: 'center' },
+  message:    { position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(160px + env(safe-area-inset-bottom, 0px))', zIndex: 95, background: '#333333', color: 'var(--accent)', borderRadius: 999, padding: '10px 18px', fontSize: '0.85rem', fontWeight: 800, boxShadow: '0 6px 20px rgba(0,0,0,0.22)', maxWidth: 'calc(100% - 40px)', textAlign: 'center' },
   loading:    { color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 },
   calTete:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   calMois:    { fontSize: '1rem', fontWeight: 800, color: '#1a1a1a', textTransform: 'capitalize' },

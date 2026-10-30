@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../supabase'
 import ClientBottomNav from '../../components/ClientBottomNav'
 import { isoLocal } from '../../utils/dates'
@@ -19,6 +19,9 @@ export default function CompetitionClient() {
   const [edition, setEdition]       = useState(false)
   const [synchro, setSynchro]       = useState(false)
   const [erreurLien, setErreurLien] = useState(null)
+  const [enregistrement, setEnregistrement] = useState(false)
+  // Une seule mise à jour à la fois : deux en parallèle inséraient le classement en double
+  const synchroEnCours = useRef(null)
 
   useEffect(() => { load() }, [])
   useAuRetourOnglet(load)
@@ -71,13 +74,27 @@ export default function CompetitionClient() {
       supabase.from('matchs_ffr').select('*').eq(colonne, id).order('date_match'),
       supabase.from('classements_ffr').select('*').eq(colonne, id).order('position'),
     ])
+    // Filet de sécurité : une même équipe n'apparaît qu'une fois par championnat
+    const vus = new Set()
+    const cl = (c || []).filter(r => {
+      const cle = `${r.competition || ''}|${r.equipe}`
+      if (vus.has(cle)) return false
+      vus.add(cle); return true
+    })
     setMatchs(m || [])
-    setClassement(c || [])
-    return { matchs: m || [], classement: c || [] }
+    setClassement(cl)
+    return { matchs: m || [], classement: cl }
   }
 
   // Récupère matchs et classement depuis Mon Clubhouse pour le lien du client
-  async function synchroniser(clientId) {
+  function synchroniser(clientId) {
+    if (!synchroEnCours.current) {
+      synchroEnCours.current = lancerSynchro(clientId).finally(() => { synchroEnCours.current = null })
+    }
+    return synchroEnCours.current
+  }
+
+  async function lancerSynchro(clientId) {
     setSynchro(true)
     try {
       const { data } = await supabase.functions.invoke('sync-ffr', { body: { client_id: clientId } })
@@ -97,14 +114,31 @@ export default function CompetitionClient() {
       setErreurLien('Ce lien ne vient pas de Mon Clubhouse. Il doit commencer par https://monclubhouse.ffr.fr/clubs/')
       return
     }
+    if (enregistrement) return
     setErreurLien(null)
+    setEnregistrement(true)
     const { error } = await supabase.from('clients').update({ monclubhouse_url: url }).eq('id', perso.clientId)
-    if (error) { setErreurLien('Le lien n\u2019a pas été enregistré. Réessaie.'); return }
+    if (error) { setEnregistrement(false); setErreurLien('Le lien n\u2019a pas été enregistré. Réessaie.'); return }
     setPerso(p => ({ ...p, url }))
     setEdition(false)
     setCompIdx(0)
+    // Une mise à jour lancée à l'ouverture de la page porte sur l'ancien lien : on attend sa fin
+    if (synchroEnCours.current) await synchroEnCours.current
     const ok = await synchroniser(perso.clientId)
+    setEnregistrement(false)
     if (!ok) setErreurLien('Aucun match ni classement trouvé avec ce lien. Copie l\u2019adresse de la page de ton équipe (Compétitions, puis ton championnat).')
+  }
+
+  // Retire le lien : plus de matchs ni de classement affichés
+  async function retirerLien() {
+    const { error } = await supabase.from('clients').update({ monclubhouse_url: null }).eq('id', perso.clientId)
+    if (error) { setErreurLien('Le lien n\u2019a pas été retiré. Réessaie.'); return }
+    setPerso(p => ({ ...p, url: null }))
+    setLien('')
+    setMatchs([])
+    setClassement([])
+    setEdition(false)
+    setErreurLien(null)
   }
 
   const today = isoLocal()
@@ -324,10 +358,15 @@ export default function CompetitionClient() {
             <input value={lien} onChange={e => { setLien(e.target.value); setErreurLien(null) }} inputMode="url" autoCapitalize="none" autoCorrect="off"
               placeholder="https://monclubhouse.ffr.fr/clubs/…" style={S.lienInput} />
             {erreurLien && <p role="alert" style={S.lienErreur}>{erreurLien}</p>}
-            <button onClick={enregistrerLien} disabled={!lien.trim() || synchro} style={{ ...S.lienBtn, opacity: !lien.trim() || synchro ? 0.5 : 1 }}>
-              {synchro ? 'Récupération du classement…' : 'Enregistrer le lien'}
+            <button onClick={enregistrerLien} disabled={!lien.trim() || synchro || enregistrement} style={{ ...S.lienBtn, opacity: !lien.trim() || synchro || enregistrement ? 0.5 : 1 }}>
+              {synchro || enregistrement ? 'Récupération du classement…' : 'Enregistrer le lien'}
             </button>
-            {edition && <button onClick={() => { setEdition(false); setLien(perso.url || ''); setErreurLien(null) }} style={S.lienAnnuler}>Annuler</button>}
+            {edition && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <button onClick={() => { setEdition(false); setLien(perso.url || ''); setErreurLien(null) }} style={S.lienAnnuler}>Annuler</button>
+                {perso.url && <button onClick={retirerLien} style={{ ...S.lienAnnuler, color: '#dc2626' }}>Retirer le lien</button>}
+              </div>
+            )}
           </div>
         ) : perso && synchro && matchs.length === 0 && classement.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
@@ -337,7 +376,10 @@ export default function CompetitionClient() {
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
             <p style={{ fontWeight: 700, color: '#374151' }}>Aucun match trouvé</p>
             <p style={{ fontSize: '.85rem' }}>{erreurLien || 'Vérifie que le lien mène bien à la page du championnat de ton équipe.'}</p>
-            <button onClick={() => setEdition(true)} style={S.lienAnnuler}>Changer le lien</button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+              <button onClick={() => setEdition(true)} style={S.lienAnnuler}>Changer le lien</button>
+              <button onClick={retirerLien} style={{ ...S.lienAnnuler, color: '#dc2626' }}>Retirer le lien</button>
+            </div>
           </div>
         ) : groupes.length === 0 && !perso ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#6b7280' }}>
@@ -435,9 +477,10 @@ export default function CompetitionClient() {
             )}
 
             {perso && (
-              <button onClick={() => setEdition(true)} style={{ ...S.lienAnnuler, display: 'block', margin: '0 auto 16px' }}>
-                Changer le lien Mon Clubhouse
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
+                <button onClick={() => setEdition(true)} style={S.lienAnnuler}>Changer le lien</button>
+                <button onClick={retirerLien} style={{ ...S.lienAnnuler, color: '#dc2626' }}>Retirer le lien</button>
+              </div>
             )}
           </>
         )}
