@@ -3,7 +3,7 @@ import SeanceAIModal from '../components/SeanceAIModal'
 import SeanceTerrainCoach from './SeanceTerrainCoach'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { autoLinkBiblio } from '../utils/exerciceMatch'
 import ChoixBibliotheque from '../components/ChoixBibliotheque'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
@@ -1095,28 +1095,23 @@ export default function Seance() {
       <div style={styles.hautSeance}>
       {/* ── Échauffement ── */}
       <div style={{ ...styles.card, minWidth: 0, flex: '1.6 1 520px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
-          <p style={styles.sectionTitle}>Échauffement</p>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={openImportTemplates} style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-              Importer {showImportEchauff ? '▲' : '▼'}
-            </button>
-            {echauffement.length > 0 && (
-              <button onClick={saveEchauffAsTemplate} style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-                Sauvegarder comme template
-              </button>
-            )}
-          </div>
+        <div style={styles.carteTete}>
+          <p style={{ ...styles.sectionTitle, margin: 0, flex: 1 }}>Échauffement</p>
+          <button onClick={() => { setShowEchauffPaste(v => !v); setEchauffParsed(null); setEchauffPasteText('') }} style={styles.btnPetit} aria-expanded={showEchauffPaste}>
+            Coller depuis Excel <Chevron haut={showEchauffPaste} />
+          </button>
+          <button onClick={openImportTemplates} style={styles.btnPetit} aria-expanded={showImportEchauff}>
+            Importer un modèle <Chevron haut={showImportEchauff} />
+          </button>
+          {echauffement.length > 0 && (
+            <button onClick={saveEchauffAsTemplate} style={styles.btnPetit}>Enregistrer comme modèle</button>
+          )}
         </div>
 
         {/* ── Zone collage Excel ── */}
-        <div style={{ marginBottom: '0.875rem' }}>
-          <button onClick={() => { setShowEchauffPaste(v => !v); setEchauffParsed(null); setEchauffPasteText('') }}
-            style={{ ...styles.btnSecondary, fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
-            Coller depuis Excel {showEchauffPaste ? '▲' : '▼'}
-          </button>
-          {showEchauffPaste && (
-            <div style={{ marginTop: '0.5rem', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
+        {showEchauffPaste && (
+        <div style={{ marginBottom: '1rem' }}>
+            <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.875rem' }}>
               <p style={{ margin: '0 0 0.5rem', fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.5 }}>
                 Colle directement depuis Excel (une ligne par exercice).<br />
                 Les lignes <span style={{ fontFamily: 'monospace', background: '#e5e7eb', padding: '1px 4px', borderRadius: 3 }}>2 tours</span> en fin de groupe seront détectées automatiquement.
@@ -1153,25 +1148,25 @@ export default function Seance() {
                             ? g.items.map((l, i) => (
                                 <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', gap: '0.75rem', padding: '0.25rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
                                   <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                                  <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
+                                  <span style={{ fontSize: '0.82rem', color: '#333333', fontWeight: '700' }}>{l.reps}</span>
                                 </div>
                               ))
                             : (() => {
                                 const tours = g.items[0]?.tours
                                 return (
-                                  <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
+                                  <div key={gi} style={{ display: 'flex', alignItems: 'stretch', background: '#f7f7f7', borderLeft: '3px solid #333333', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
                                     <div style={{ flex: 1 }}>
                                       {g.items.map((l, i) => (
                                         <div key={l.id || i} style={{ display: 'flex', gap: '0.75rem', marginTop: i > 0 ? '0.25rem' : 0 }}>
                                           <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                                          <span style={{ fontSize: '0.82rem', color: '#6366f1', fontWeight: '700' }}>{l.reps}</span>
+                                          <span style={{ fontSize: '0.82rem', color: '#333333', fontWeight: '700' }}>{l.reps}</span>
                                         </div>
                                       ))}
                                     </div>
                                     {tours && (
                                       <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
-                                        <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
-                                        <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
+                                        <div style={{ borderTop: '2px solid #9ca3af', borderRight: '2px solid #9ca3af', borderBottom: '2px solid #9ca3af', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
+                                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#374151', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
                                       </div>
                                     )}
                                   </div>
@@ -1183,14 +1178,14 @@ export default function Seance() {
                     })()}
                   </div>
                   <button onClick={confirmEchauffPaste}
-                    style={{ ...styles.btnSecondary, marginTop: '0.625rem', fontSize: '0.82rem', padding: '0.5rem 1rem', background: '#333333', color: '#e4f816', border: 'none' }}>
-                    ✓ Ajouter ces {echauffParsed.length} exercices
+                    style={{ ...styles.btnPrimary, marginTop: '0.625rem', fontSize: '0.82rem', padding: '0.5rem 1rem' }}>
+                    Ajouter ces {echauffParsed.length} exercices
                   </button>
                 </div>
               )}
             </div>
-          )}
         </div>
+        )}
 
         {/* Dropdown import templates */}
         {showImportEchauff && (
@@ -1214,12 +1209,12 @@ export default function Seance() {
 
         {/* Table des lignes */}
         {echauffement.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.875rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem', border: '1px solid #f3f4f6', borderRadius: 12, overflow: 'hidden' }}>
             {echauffement.map((l, i) => {
               const prevGroupe = i > 0 ? echauffement[i - 1].groupe : undefined
               const groupeChange = l.groupe !== prevGroupe
               return (
-              <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', border: l.groupe ? '1.5px solid #e9f7a8' : '1.5px solid #f3f4f6', borderLeft: l.groupe ? '3px solid #e4f816' : '1.5px solid #f3f4f6', borderRadius: l.groupe ? '0 10px 10px 0' : 10, marginTop: groupeChange && i > 0 ? '0.25rem' : 0 }}>
+              <div key={l.id} style={{ background: l.groupe ? '#f7f7f7' : 'white', borderLeft: `3px solid ${l.groupe ? '#333333' : 'transparent'}`, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', marginTop: l.groupe && groupeChange && i > 0 ? '0.25rem' : 0 }}>
                 {editingEchauffId === l.id ? (
                   /* ── Mode édition ── */
                   <div style={{ padding: '0.5rem 0.875rem' }}>
@@ -1234,8 +1229,8 @@ export default function Seance() {
                         <input value={editEchauffForm.tours} onChange={e => setEditEchauffForm(f => ({ ...f, tours: e.target.value }))}
                           placeholder="Tours" style={{ ...styles.formInput, width: 68, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} type="number" min="1" />
                       )}
-                      <button onClick={saveEditEchauffLine} style={{ ...styles.iconBtnSm, color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800' }}>✓</button>
-                      <button onClick={() => setEditingEchauffId(null)} style={styles.iconBtnSm}>✕</button>
+                      <button onClick={saveEditEchauffLine} style={styles.actionBtn} title="Enregistrer" aria-label="Enregistrer"><Icon name="check" size={16} /></button>
+                      <button onClick={() => setEditingEchauffId(null)} style={styles.actionBtn} title="Annuler" aria-label="Annuler"><Icon name="x" size={16} /></button>
                     </div>
                     {/* Image / GIF */}
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1254,7 +1249,7 @@ export default function Seance() {
                         disabled={uploadingEchauff}
                         style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}
                       >
-                        {uploadingEchauff ? '…' : '↑ Upload'}
+                        {uploadingEchauff ? 'Envoi…' : 'Importer une image'}
                       </button>
                       <button
                         type="button"
@@ -1262,7 +1257,7 @@ export default function Seance() {
                         style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem', background: wxKey ? '#f9fafb' : '#fffbeb', borderColor: wxKey ? '#e5e7eb' : '#fde68a', color: wxKey ? '#374151' : '#92400e' }}
                       >GIF</button>
                       {editEchauffForm.image_url && (
-                        <button type="button" onClick={() => setEditEchauffForm(f => ({ ...f, image_url: '' }))} style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
+                        <button type="button" onClick={() => setEditEchauffForm(f => ({ ...f, image_url: '' }))} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Retirer l'image" aria-label="Retirer l'image"><Icon name="x" size={16} /></button>
                       )}
                       <input ref={echauffImgRef} type="file" accept="image/*,video/gif" style={{ display: 'none' }} onChange={e => uploadEchauffImage(e.target.files[0])} />
                     </div>
@@ -1271,7 +1266,7 @@ export default function Seance() {
                   /* ── Mode affichage ── */
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem' }}>
                     {l.groupe ? (
-                      <span style={{ background: '#333333', color: '#e4f816', padding: '0.1rem 0.45rem', borderRadius: 5, fontSize: '0.68rem', fontWeight: '900', flexShrink: 0 }}>
+                      <span style={{ background: '#333333', color: '#e4f816', padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
                         {l.groupe}{l.tours && echauffement.findIndex(x => x.groupe === l.groupe) === i ? ` · ${l.tours}t` : ''}
                       </span>
                     ) : <span style={{ width: 0 }} />}
@@ -1279,24 +1274,21 @@ export default function Seance() {
                       <img loading="lazy" src={l.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
                     )}
                     <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
-                    <button onClick={() => startEditEchauffLine(l)} style={{ ...styles.iconBtnSm, fontSize: '0.75rem' }}><Icon name="edit" size={14} /></button>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#333333', minWidth: 60, fontVariantNumeric: 'tabular-nums' }}>{l.reps}</span>
+                    <button onClick={() => startEditEchauffLine(l)} style={styles.actionBtn} title="Modifier" aria-label="Modifier"><Icon name="edit" size={16} /></button>
                     {l.nom?.trim() && (
                       <button
                         onClick={() => sauvegarderEchauffEnBiblio(l)}
                         title="Sauvegarder dans la bibliothèque d'échauffements"
-                        style={{ ...styles.iconBtnSm, fontSize: '0.75rem',
-                          color: echauffBiblioFlash[l.id] === 'saved' ? '#16a34a' : echauffBiblioFlash[l.id] === 'exists' ? '#6366f1' : '#6b7280',
-                          borderColor: echauffBiblioFlash[l.id] === 'saved' ? '#bbf7d0' : echauffBiblioFlash[l.id] === 'exists' ? '#ddd6fe' : undefined,
-                          background: echauffBiblioFlash[l.id] === 'saved' ? '#f0fdf4' : echauffBiblioFlash[l.id] === 'exists' ? '#f5f3ff' : undefined
-                        }}
+                        aria-label="Sauvegarder dans la bibliothèque d'échauffements"
+                        style={{ ...styles.actionBtn, color: echauffBiblioFlash[l.id] === 'saved' ? '#16a34a' : '#6b7280' }}
                       >
-                        {echauffBiblioFlash[l.id] === 'saved' ? '✓' : echauffBiblioFlash[l.id] === 'exists' ? '~' : <Icon name="save" size={12} />}
+                        {echauffBiblioFlash[l.id] === 'saved' || echauffBiblioFlash[l.id] === 'exists' ? <Icon name="check" size={16} /> : <Icon name="save" size={16} />}
                       </button>
                     )}
-                    <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.iconBtnSm, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-                    <button onClick={() => moveEchauffLine(i, 1)} disabled={i === echauffement.length - 1} style={{ ...styles.iconBtnSm, opacity: i === echauffement.length - 1 ? 0.3 : 1 }}>↓</button>
-                    <button onClick={() => removeEchauffLine(l.id)} style={{ ...styles.iconBtnSm, color: '#dc2626' }}>✕</button>
+                    <button onClick={() => moveEchauffLine(i, -1)} disabled={i === 0} style={{ ...styles.actionBtn, opacity: i === 0 ? 0.3 : 1 }} title="Monter" aria-label="Monter"><Chevron haut taille={16} /></button>
+                    <button onClick={() => moveEchauffLine(i, 1)} disabled={i === echauffement.length - 1} style={{ ...styles.actionBtn, opacity: i === echauffement.length - 1 ? 0.3 : 1 }} title="Descendre" aria-label="Descendre"><Chevron taille={16} /></button>
+                    <button onClick={() => removeEchauffLine(l.id)} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Supprimer" aria-label="Supprimer"><Icon name="x" size={16} /></button>
                   </div>
                 )}
               </div>
@@ -1322,7 +1314,7 @@ export default function Seance() {
           )}
           <button onClick={addEchauffLine} disabled={!echauffForm.nom.trim()}
             style={{ ...styles.btnPrimary, opacity: !echauffForm.nom.trim() ? 0.5 : 1 }}>
-            + Ajouter
+            Ajouter
           </button>
         </div>
       </div>
@@ -1353,14 +1345,14 @@ export default function Seance() {
       <div style={styles.hautSeance}>
       {/* ── Blocs cardio (texte libre) ── */}
       <div style={{ ...styles.card, minWidth: 0, flex: '1 1 400px' }}>
-        <p style={styles.sectionTitle}>Blocs cardio</p>
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.75rem' }}>
+        <p style={{ ...styles.sectionTitle, marginBottom: '0.25rem' }}>Blocs cardio</p>
+        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 1rem' }}>
           Pour une séance 100 % cardio : ajoute un ou plusieurs blocs en texte libre.
         </p>
         {cardioBlocs.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
             {cardioBlocs.map((b, i) => (
-              <div key={i} style={{ background: '#f9fafb', border: '1px solid #eef0f3', borderRadius: 10, padding: '0.6rem 0.7rem' }}>
+              <div key={i} style={{ background: '#f7f7f7', borderRadius: 12, padding: '0.75rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>
                   <input
                     value={b.titre || ''}
@@ -1369,9 +1361,9 @@ export default function Seance() {
                     placeholder={`Titre du bloc ${i + 1} (optionnel)`}
                     style={{ ...styles.formInput, flex: 1, fontWeight: '700' }}
                   />
-                  <button onClick={() => removeCardioBloc(i)} title="Supprimer ce bloc"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.9rem', padding: '0.2rem 0.4rem' }}>
-                    ✕
+                  <button onClick={() => removeCardioBloc(i)} title="Supprimer ce bloc" aria-label="Supprimer ce bloc"
+                    style={{ ...styles.actionBtn, color: '#dc2626' }}>
+                    <Icon name="x" size={16} />
                   </button>
                 </div>
                 <textarea
@@ -1386,14 +1378,14 @@ export default function Seance() {
             ))}
           </div>
         )}
-        <button onClick={addCardioBloc} style={{ ...styles.btnSecondary, width: '100%' }}>
-          + Ajouter un bloc cardio
+        <button onClick={addCardioBloc} style={{ ...styles.btnSecondary, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <Icon name="plus" size={16} /> Ajouter un bloc cardio
         </button>
       </div>
 
       {/* ── Cardio ── */}
       <div style={{ ...styles.card, minWidth: 0, flex: '1 1 400px' }}>
-        <p style={styles.sectionTitle}>Cardio</p>
+        <p style={styles.sectionTitle}>Cardio avant et après la séance</p>
         {[
           { position: 'debut', label: 'Avant séance', cardioAll: cardioDebut, sem: cardioDebutSem, setSem: setCardioDebutSem },
           { position: 'fin',   label: 'Après séance', cardioAll: cardioFin,   sem: cardioFinSem,   setSem: setCardioFinSem   },
@@ -1403,17 +1395,18 @@ export default function Seance() {
             <div key={position} style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: position === 'debut' ? '1px solid #f3f4f6' : 'none' }}>
               {/* Header : label + chips semaines */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', minWidth: 90 }}>{label}</span>
-                <div style={{ display: 'flex', gap: 3 }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#374151', minWidth: 96 }}>{label}</span>
+                <div style={{ display: 'flex', gap: 4 }}>
                   {colSemaines.map(s => {
                     const hasDef = !!cardioAll[s]?.type
                     return (
-                      <button key={s} onClick={() => setSem(s)} style={{
-                        padding: '2px 7px', borderRadius: 6, border: '1.5px solid',
-                        fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer',
-                        background: sem === s ? '#1a1a1a' : hasDef ? '#f0fdf4' : 'white',
-                        borderColor: sem === s ? '#1a1a1a' : hasDef ? '#86efac' : '#e5e7eb',
-                        color: sem === s ? '#e4f816' : hasDef ? '#16a34a' : '#9ca3af',
+                      <button key={s} onClick={() => setSem(s)} aria-pressed={sem === s}
+                        title={hasDef ? `S${s} : cardio prévu` : `S${s} : rien de prévu`} style={{
+                        minWidth: 36, padding: '4px 8px', borderRadius: 999,
+                        border: `1.5px solid ${sem === s ? '#333333' : hasDef ? '#9ca3af' : '#e5e7eb'}`,
+                        fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', fontFamily: 'inherit',
+                        background: sem === s ? '#333333' : hasDef ? '#f3f4f6' : 'white',
+                        color: sem === s ? '#e4f816' : hasDef ? '#333333' : '#9ca3af',
                       }}>S{s}</button>
                     )
                   })}
@@ -1424,27 +1417,27 @@ export default function Seance() {
                       const newObj = { ...cardioAll }
                       colSemaines.forEach(s => { newObj[s] = cardio })
                       saveCardio(position, newObj)
-                    }} style={{ ...styles.btnSecondary, fontSize: '0.68rem', padding: '2px 8px' }}>
-                      Copier toutes semaines
+                    }} style={styles.btnPetit}>
+                      Copier sur toutes les semaines
                     </button>
                     <button onClick={() => {
                       const newObj = { ...cardioAll, [sem]: null }
                       saveCardio(position, newObj)
-                    }} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '700' }}>
-                      ✕ Supprimer S{sem}
+                    }} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '700', fontFamily: 'inherit', padding: '0.4rem' }}>
+                      Supprimer S{sem}
                     </button>
                   </>
                 )}
                 {!cardio && (
                   <button onClick={() => updateCardioSem(position, sem, { type: '', duree_min: '', intensite: '', note: '' })}
-                    style={{ ...styles.btnSecondary, fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
-                    + Ajouter S{sem}
+                    style={styles.btnPetit}>
+                    <Icon name="plus" size={14} /> Ajouter S{sem}
                   </button>
                 )}
               </div>
               {/* Formulaire semaine sélectionnée */}
               {cardio && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f9fafb', borderRadius: 10, padding: '0.75rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f7f7f7', borderRadius: 12, padding: '0.75rem' }}>
                   <div style={styles.editField}>
                     <label style={styles.editLabel}>Type</label>
                     <input placeholder="ex : Footing, Vélo…" aria-label="ex : Footing, Vélo…" value={cardio.type || ''}
@@ -1488,11 +1481,11 @@ export default function Seance() {
                     <button type="button" onClick={() => { const ref = position === 'debut' ? cardioImgDebutRef : cardioImgFinRef; ref.current?.click() }}
                       disabled={uploadingCardio}
                       style={{ ...styles.iconBtnSm, fontSize: '0.75rem', whiteSpace: 'nowrap', padding: '0.35rem 0.6rem' }}>
-                      {uploadingCardio ? '…' : '↑ Upload'}
+                      {uploadingCardio ? 'Envoi…' : 'Importer une image'}
                     </button>
                     {cardio.media_url && (
                       <button type="button" onClick={() => updateCardioSem(position, sem, { media_url: '' })}
-                        style={{ ...styles.iconBtnSm, color: '#dc2626', fontSize: '0.75rem' }}>✕</button>
+                        style={{ ...styles.actionBtn, color: '#dc2626' }} title="Retirer l'image" aria-label="Retirer l'image"><Icon name="x" size={16} /></button>
                     )}
                     <input ref={position === 'debut' ? cardioImgDebutRef : cardioImgFinRef}
                       type="file" accept="image/*,video/gif" style={{ display: 'none' }}
@@ -1506,11 +1499,11 @@ export default function Seance() {
       </div>
       </div>
 
-      {/* RPE + graphique */}
-      <div style={styles.rpeGrid}>
-        <div style={styles.card}>
-          <p style={styles.sectionTitle}>Intensité de la séance (RPE)</p>
-          <div style={{ overflowX: 'auto' }}>
+      {/* RPE : saisie par semaine et courbe dans la même carte */}
+      <div style={styles.card}>
+        <p style={styles.sectionTitle}>Intensité de la séance (RPE)</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center' }}>
+          <div style={{ overflowX: 'auto', flex: '1 1 360px', minWidth: 0 }}>
             <table style={styles.rpeTable}>
               <thead>
                 <tr>
@@ -1520,45 +1513,52 @@ export default function Seance() {
               </thead>
               <tbody>
                 <tr>
-                  <td style={styles.rpeTdLabel}>Cible</td>
+                  <td style={styles.rpeTdLabel}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <svg width="18" height="4" aria-hidden="true"><line x1="0" y1="2" x2="18" y2="2" stroke="#9ca3af" strokeWidth="2" strokeDasharray="4 3" /></svg>
+                      Cible
+                    </span>
+                  </td>
                   {colSemaines.map(s => (
                     <td key={s} style={styles.rpeTd}>
                       <input type="number" min="1" max="10" step="0.5"
                         defaultValue={rpeSeances[s]?.rpe_cible || ''}
                         onBlur={e => updateRpeSeance(s, 'rpe_cible', e.target.value)}
-                        style={styles.rpeInput} placeholder="—" />
+                        style={styles.rpeInput} placeholder="—" aria-label={`RPE cible S${s}`} />
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td style={{ ...styles.rpeTdLabel, color: '#6b7280' }}>Réel</td>
+                  <td style={styles.rpeTdLabel}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <svg width="18" height="4" aria-hidden="true"><line x1="0" y1="2" x2="18" y2="2" stroke="#333333" strokeWidth="2.5" /></svg>
+                      Réel
+                    </span>
+                  </td>
                   {colSemaines.map(s => (
                     <td key={s} style={styles.rpeTd}>
                       <input type="number" min="1" max="10" step="0.5"
                         defaultValue={rpeSeances[s]?.rpe_reel || ''}
                         onBlur={e => updateRpeSeance(s, 'rpe_reel', e.target.value)}
-                        style={{ ...styles.rpeInput, color: '#6b7280' }} placeholder="—" />
+                        style={styles.rpeInput} placeholder="—" aria-label={`RPE réel S${s}`} />
                     </td>
                   ))}
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div style={styles.card}>
-          <p style={styles.sectionTitle}>Progression RPE</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={graphData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.8rem' }} />
-              <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
-              <Line type="monotone" dataKey="RPE cible" stroke="#333333" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Line type="monotone" dataKey="RPE réel" stroke="#e4f816" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 5" connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
+          <div style={{ flex: '2 1 420px', minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={150}>
+              <LineChart data={graphData} margin={{ top: 8, right: 12, bottom: 0, left: -20 }}>
+                <CartesianGrid stroke="#f3f4f6" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 10]} ticks={[0, 5, 10]} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.8rem' }} />
+                <Line type="monotone" dataKey="RPE cible" stroke="#9ca3af" strokeWidth={2} strokeDasharray="5 4" dot={{ r: 3, fill: '#9ca3af' }} connectNulls />
+                <Line type="monotone" dataKey="RPE réel" stroke="#333333" strokeWidth={2.5} dot={{ r: 4, fill: '#333333' }} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -2174,17 +2174,20 @@ export default function Seance() {
 
       {/* Formulaire ajout */}
       <div style={{ ...styles.card, marginTop: '1rem' }}>
-        <p style={styles.sectionTitle}>Ajouter un exercice</p>
-
-        {/* Bibliothèque — bouton unique */}
-        <div style={{ marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button type="button" onClick={() => setShowFullLibrary(true)}
-            style={{ ...styles.btnSecondary, whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '0.55rem 0.875rem' }}>
-            Choisir dans la bibliothèque
-          </button>
+        <div style={styles.carteTete}>
+          <p style={{ ...styles.sectionTitle, margin: 0, flex: 1 }}>Ajouter un exercice</p>
           {form.bibliotheque_id && (
-            <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', whiteSpace: 'nowrap' }}>✓ Lié</span>
+            <span style={styles.lie}>
+              <Icon name="check" size={14} style={{ color: '#16a34a' }} />
+              Lié à la bibliothèque
+              <button type="button" onClick={() => setForm(f => ({ ...f, bibliotheque_id: null }))} style={{ ...styles.actionBtn, width: 28, height: 28 }} title="Délier" aria-label="Délier de la bibliothèque">
+                <Icon name="x" size={12} />
+              </button>
+            </span>
           )}
+          <button type="button" onClick={() => setShowFullLibrary(true)} style={{ ...styles.btnPrimary, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="search" size={16} /> Choisir dans la bibliothèque
+          </button>
         </div>
 
           {showFullLibrary && (
@@ -2192,16 +2195,20 @@ export default function Seance() {
           )}
 
         <form onSubmit={ajouterExercice}>
-          <div style={styles.formGrid}>
-            <input name="code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="A1" style={{ ...styles.formInput, width: '70px' }} />
+          <div style={styles.formAjout}>
+            <div style={{ ...styles.champ, flex: '0 0 72px' }}>
+              <label style={styles.champLabel} htmlFor="aj-code">Code</label>
+              <input id="aj-code" name="code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="A1" style={styles.champInput} />
+            </div>
             {/* Champ nom avec suggestions bibliothèque */}
-            <div style={{ position: 'relative' }}>
-              <input
+            <div style={{ ...styles.champ, flex: '3 1 220px', position: 'relative' }}>
+              <label style={styles.champLabel} htmlFor="aj-nom">Exercice</label>
+              <input id="aj-nom"
                 name="nom" value={form.nom}
                 onChange={e => { setForm({ ...form, nom: e.target.value, bibliotheque_id: null }); searchNom(e.target.value) }}
                 onBlur={() => setTimeout(() => setNomSuggestions([]), 150)}
-                placeholder="Exercice"
-                style={{ ...styles.formInput, width: '160px' }}
+                placeholder="Nom de l'exercice"
+                style={styles.champInput}
               />
               {nomSuggestions.length > 0 && (
                 <div style={styles.suggDropdown}>
@@ -2220,41 +2227,48 @@ export default function Seance() {
               )}
             </div>
             {['series', 'repetitions', 'tempo', 'recuperation'].map(name => (
-              <input key={name} name={name} value={form[name]} onChange={e => setForm({ ...form, [e.target.name]: e.target.value })}
-                placeholder={{ series: 'Séries', repetitions: 'Reps', tempo: 'Tempo', recuperation: 'Récup' }[name]}
-                style={{ ...styles.formInput, width: '80px' }} />
+              <div key={name} style={styles.champ}>
+                <label style={styles.champLabel} htmlFor={`aj-${name}`}>{{ series: 'Séries', repetitions: 'Reps', tempo: 'Tempo', recuperation: 'Récup' }[name]}</label>
+                <input id={`aj-${name}`} name={name} value={form[name]} onChange={e => setForm({ ...form, [e.target.name]: e.target.value })}
+                  style={styles.champInput} />
+              </div>
             ))}
-            <select name="type_intensite" value={form.type_intensite} onChange={e => setForm({ ...form, type_intensite: e.target.value })} style={{ ...styles.formInput, width: '100px' }}>
-              <option value="">Intensité</option>
+            <div style={styles.champ}>
+            <label style={styles.champLabel} htmlFor="aj-intensite">Intensité</label>
+            <select id="aj-intensite" name="type_intensite" value={form.type_intensite} onChange={e => setForm({ ...form, type_intensite: e.target.value })} style={styles.champInput}>
+              <option value="">—</option>
               <option value="RPE">RPE</option>
               <option value="RIR">RIR</option>
               <option value="% 1RM">% 1RM</option>
               <option value="Vitesse">Vitesse</option>
               <option value="Libre">Libre</option>
             </select>
-            <input name="valeur_intensite" value={form.valeur_intensite} onChange={e => setForm({ ...form, valeur_intensite: e.target.value })} placeholder="Valeur" style={{ ...styles.formInput, width: '80px' }} />
+            </div>
+            <div style={styles.champ}>
+              <label style={styles.champLabel} htmlFor="aj-valeur">Valeur</label>
+              <input id="aj-valeur" name="valeur_intensite" value={form.valeur_intensite} onChange={e => setForm({ ...form, valeur_intensite: e.target.value })} style={styles.champInput} />
+            </div>
+            {/* Lien média */}
+            <div style={{ ...styles.champ, flex: '2 1 200px' }}>
+              <label style={styles.champLabel} htmlFor="aj-media">Lien vidéo ou image</label>
+              <input id="aj-media" name="media_url" value={form.media_url} onChange={e => setForm({ ...form, media_url: e.target.value })}
+                placeholder="Facultatif" style={styles.champInput} />
+            </div>
           </div>
 
-          {/* Lien média */}
-          <div style={{ marginTop: '0.5rem' }}>
-            <input name="media_url" value={form.media_url} onChange={e => setForm({ ...form, media_url: e.target.value })}
-              placeholder="Lien média (YouTube, image PNG/GIF) — optionnel"
-              style={{ ...styles.formInput, width: '100%', boxSizing: 'border-box' }} />
-          </div>
-
-          {/* Option sauvegarde bibliothèque */}
+          {/* Option sauvegarde bibliothèque, puis bouton d'ajout sur la même ligne */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
           {!form.bibliotheque_id && (
-            <div style={{ marginTop: '0.75rem', padding: '0.875rem', background: '#f9fafb', borderRadius: '10px', border: '1.5px solid #f3f4f6' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: saveToLibrary ? '0.75rem' : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flexWrap: 'wrap', flex: 1 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', minHeight: 40 }}>
                 <input type="checkbox" checked={saveToLibrary} onChange={e => setSaveToLibrary(e.target.checked)}
                   style={{ width: 16, height: 16, accentColor: '#333333', cursor: 'pointer' }} />
                 <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}>Enregistrer dans la bibliothèque</span>
               </label>
               {saveToLibrary && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                  {libraryImagePreview && <img loading="lazy" src={libraryImagePreview} alt="" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb' }} />}
-                  <button type="button" onClick={() => libraryFileRef.current.click()}
-                    style={{ background: 'white', border: '1.5px dashed #d1d5db', borderRadius: '8px', padding: '0.5rem 0.875rem', fontSize: '0.82rem', cursor: 'pointer', color: '#374151', fontWeight: '600' }}>
+                  {libraryImagePreview && <img loading="lazy" src={libraryImagePreview} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, border: '1.5px solid #e5e7eb' }} />}
+                  <button type="button" onClick={() => libraryFileRef.current.click()} style={styles.btnPetit}>
                     {libraryImagePreview ? 'Changer la photo' : 'Ajouter une photo (optionnel)'}
                   </button>
                   <input ref={libraryFileRef} type="file" accept="image/*"
@@ -2265,8 +2279,7 @@ export default function Seance() {
             </div>
           )}
 
-          <div style={{ marginTop: '0.75rem' }}>
-            <button type="submit" style={styles.btnPrimary}>+ Ajouter</button>
+          <button type="submit" style={{ ...styles.btnPrimary, marginLeft: 'auto' }}>Ajouter l'exercice</button>
           </div>
         </form>
       </div>
@@ -2368,6 +2381,15 @@ export default function Seance() {
     </div>
   )
 }
+// Petite flèche des boutons qui ouvrent/ferment un panneau
+function Chevron({ haut, taille = 14 }) {
+  return (
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={haut ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
+    </svg>
+  )
+}
+
 const styles = {
   loading: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   page: { padding: '2rem', maxWidth: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
@@ -2380,7 +2402,7 @@ const styles = {
   rpeTable: { borderCollapse: 'collapse', width: '100%' },
   rpeThLabel: { padding: '0.4rem 0.5rem', textAlign: 'left', fontSize: '0.75rem', color: '#6b7280' },
   rpeTh: { padding: '0.4rem 0.5rem', textAlign: 'center', fontSize: '0.8rem', fontWeight: '700', color: '#374151' },
-  rpeTdLabel: { padding: '0.4rem 0.5rem', fontWeight: '700', fontSize: '0.8rem', color: '#374151', whiteSpace: 'nowrap' },
+  rpeTdLabel: { padding: '0.4rem 0.75rem 0.4rem 0', fontWeight: '700', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' },
   rpeTd: { padding: '0.25rem 0.4rem', textAlign: 'center' },
   rpeInput: { width: '50px', textAlign: 'center', border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.3rem', fontSize: '0.85rem', outline: 'none' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' },
@@ -2390,6 +2412,13 @@ const styles = {
   td: { padding: '0.6rem 0.75rem', color: '#374151' },
   tdCenter: { padding: '0.6rem 0.5rem', textAlign: 'center', color: '#374151' },
   // Cartes de même hauteur sur une ligne ; passent à la ligne sur petit écran
+  carteTete: { display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' },
+  btnPetit: { display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  lie: { display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', borderRadius: 10, padding: '0 4px 0 10px', minHeight: 40, fontSize: '0.8rem', fontWeight: 700, color: '#333333' },
+  formAjout: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end' },
+  champ: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: '1 1 90px' },
+  champLabel: { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280' },
+  champInput: { width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.85rem', color: '#333333', outline: 'none', background: 'white', fontFamily: 'inherit' },
   hautSeance: { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'stretch', marginBottom: '1rem' },
   blocLettre: { position: 'absolute', left: 12, width: 28, transform: 'translateY(-50%)', textAlign: 'center', color: '#e4f816', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1, zIndex: 1, pointerEvents: 'none' },
   blocBarre: { position: 'absolute', left: 12, width: 28, background: '#333333', color: '#e4f816', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1 },
