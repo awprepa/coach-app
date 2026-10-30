@@ -17,6 +17,7 @@ const UA = "AWprepa/1.0 (application de coaching sportif)";
 type Produit = {
   code: string; nom: string; marque: string | null;
   kcal: number; proteines: number | null; glucides: number | null; lipides: number | null;
+  sucres: number | null; satures: number | null; fibres: number | null; sel: number | null;
 };
 
 function normaliser(p: Record<string, unknown>): Produit | null {
@@ -36,6 +37,10 @@ function normaliser(p: Record<string, unknown>): Produit | null {
     proteines: num(n["proteins_100g"]),
     glucides:  num(n["carbohydrates_100g"]),
     lipides:   num(n["fat_100g"]),
+    sucres:    num(n["sugars_100g"]),
+    satures:   num(n["saturated-fat_100g"]),
+    fibres:    num(n["fiber_100g"]),
+    sel:       num(n["salt_100g"]),
   };
 }
 

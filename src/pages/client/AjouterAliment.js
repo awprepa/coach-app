@@ -446,6 +446,7 @@ export default function AjouterAliment({ feuille, repasInitial, dateInitiale, on
                 groupe: p.marque || 'Produit de marque',
                 kcal: p.kcal, proteines: p.proteines || 0,
                 glucides: p.glucides || 0, lipides: p.lipides || 0,
+                sucres: num(p.sucres), satures: num(p.satures), fibres: num(p.fibres), sel: num(p.sel),
               })} style={S.row}>
                 <div style={{ minWidth: 0 }}>
                   <p style={S.rowNom}>{p.nom}</p>
