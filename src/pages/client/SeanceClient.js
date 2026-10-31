@@ -88,12 +88,26 @@ const COL_LABEL = 56
 
 const ICONE_ECHAUFFEMENT = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.5 1.5 1.5 2.5 3 2.5-1-2-1-4.5 0-7z"/></svg>
 const ICONE_CARDIO = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>
+const ICONE_INTERVALLES = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg>
+const ICONE_VELO = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5L9 9h6l3.5 7.5M9 9l3 7.5L15 9M8 6h3"/></svg>
+const ICONE_COURSE = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2v4M6 12l3-3 4 1 2 3 3 1M11 15l2-5"/></svg>
+const ICONE_RAMEUR = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 19h18M6 19l3-6h5l3 6"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M8 11l4-1 5 2"/></svg>
+const ICONE_NAGE = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><circle cx="16" cy="7" r="2"/><path d="M5 14l5-5 3 3 3-1"/></svg>
+// Icône d'un cardio d'après son activité (texte libre saisi par le coach)
+function iconeCardio(type) {
+  const t = (type || '').toLowerCase()
+  if (/v[ée]lo|bike|assault|airbike|cycl/.test(t)) return ICONE_VELO
+  if (/rame|row|ski/.test(t)) return ICONE_RAMEUR
+  if (/nage|natation|piscine|swim/.test(t)) return ICONE_NAGE
+  if (/course|footing|run|tapis|marche|jog/.test(t)) return ICONE_COURSE
+  return ICONE_CARDIO
+}
 const COCHE = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
 
 // Échauffement / cardio validable : carte avec bouton Valider, repliée en
 // ligne verte une fois validée (comme un bloc terminé). Annulation via la
 // coche puis Oui, comme pour une série.
-function ElementValidable({ titre, sousTitre, resume, icone, valide, ouvert, confirm, onValider, onBasculer, onDemanderAnnul, onAnnulNon, onAnnulOui, children }) {
+function ElementValidable({ titre, sousTitre, resume, icone, valide, ouvert, confirm, aFaire, onValider, onBasculer, onDemanderAnnul, onAnnulNon, onAnnulOui, children }) {
   const coin = valide
     ? confirm
       ? <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -115,13 +129,13 @@ function ElementValidable({ titre, sousTitre, resume, icone, valide, ouvert, con
     )
   }
   return (
-    <div style={{ ...S.card, padding: 0, marginBottom: 0, ...(valide ? { border: '1.5px solid #86efac' } : {}) }}>
+    <div style={{ ...S.card, padding: 0, marginBottom: 0, ...(valide ? { border: '1.5px solid #86efac' } : aFaire ? { border: '1.5px solid #333333' } : {}) }}>
       <div style={S.prepHead}>
         <span style={{ ...S.prepIco, ...(valide ? S.prepIcoFait : {}) }}>{icone}</span>
         <div role={valide ? 'button' : undefined} tabIndex={valide ? 0 : undefined} onClick={valide ? onBasculer : undefined}
           style={{ flex: 1, minWidth: 0, cursor: valide ? 'pointer' : 'default' }}>
           <div style={S.prepTitre}>{titre}</div>
-          {sousTitre && <div style={S.prepSous}>{confirm ? 'Annuler la validation ?' : sousTitre}</div>}
+          {(sousTitre || (aFaire && !valide)) && <div style={{ ...S.prepSous, display: 'flex', alignItems: 'center', gap: 6 }}>{aFaire && !valide && <span style={S.aFaire}>À faire</span>}{confirm ? 'Annuler la validation ?' : sousTitre}</div>}
         </div>
         {coin}
       </div>
@@ -1130,11 +1144,11 @@ export default function SeanceClient() {
   function CarteCardio({ cle, titre, cardio }) {
     const resume = [cardio.type, cardio.duree_min && `${cardio.duree_min} min`, cardio.intensite].filter(Boolean).join(' · ')
     return (
-      <ElementValidable titre={titre} sousTitre={cardio.type} resume={resume} icone={ICONE_CARDIO} {...propsElement(cle)}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
-            {cardio.duree_min && <span style={S.cardioPuceFort}>{cardio.duree_min} min</span>}
-            {cardio.intensite && <span style={S.cardioPuce}>{cardio.intensite}</span>}
+      <ElementValidable titre={titre} sousTitre={cardio.type} resume={resume} icone={iconeCardio(cardio.type)} aFaire {...propsElement(cle)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {cardio.duree_min && <div><div style={S.cardioInfoLabel}>Durée</div><div style={S.cardioInfoVal}>{cardio.duree_min} min</div></div>}
+            {cardio.intensite && <div><div style={S.cardioInfoLabel}>Intensité</div><div style={S.cardioInfoVal}>{cardio.intensite}</div></div>}
           </div>
           {cardio.media_url && <Vignette url={cardio.media_url} nom={cardio.type} youtubeId={youtubeId} onOuvrir={setMediaModal} large={56} />}
         </div>
@@ -1875,10 +1889,13 @@ export default function SeanceClient() {
                           {...propsElement('echauffement')}>
                           {warmGroups.map((g, gi) => g.groupe
                             ? <div key={gi} style={S.circuit}>
-                                <div style={S.circuitLab}><b style={{ color: '#333333' }}>Circuit</b> à enchaîner{g.items[0]?.tours ? <>, <b style={{ color: '#333333' }}>{g.items[0].tours} tours</b></> : null}</div>
+                                <div style={S.circuitLab}>
+                                  <span>Circuit à enchaîner</span>
+                                  {g.items[0]?.tours ? <span style={S.circuitTours}>{g.items[0].tours} tours</span> : null}
+                                </div>
                                 {g.items.map((l, i) => ligne(l, l.id || i, i === 0))}
                               </div>
-                            : g.items.map((l, i) => ligne(l, l.id || `${gi}-${i}`, gi === 0 && i === 0))
+                            : g.items.map((l, i) => ligne(l, l.id || `${gi}-${i}`, i === 0 && (gi === 0 || !!warmGroups[gi - 1]?.groupe)))
                           )}
                         </ElementValidable>
                       )
@@ -2086,7 +2103,7 @@ export default function SeanceClient() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {blocs.map(({ b, cle }, i) => (
                   <ElementValidable key={cle} titre={b.titre || `Bloc cardio ${i + 1}`} sousTitre="Bloc cardio" resume="Bloc cardio"
-                    icone={ICONE_CARDIO} {...propsElement(cle)}>
+                    icone={ICONE_INTERVALLES} aFaire {...propsElement(cle)}>
                     {b.texte && <p style={S.cardioTexte}>{b.texte}</p>}
                   </ElementValidable>
                 ))}
@@ -2112,26 +2129,23 @@ export default function SeanceClient() {
           })
           if (tonnageTotal === 0 && repsTotal === 0) return null
           return (
-            <div style={{
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #333333 100%)',
-              borderRadius: 16, padding: '1rem 1.25rem', marginTop: '0.75rem', marginBottom: '0.25rem',
-              display: 'flex', gap: '0.5rem', justifyContent: 'space-around', alignItems: 'center',
-            }}>
-              {tonnageTotal > 0 && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} kg</div>
-                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tonnage total</div>
+            <div style={S.bilanSeance}>
+              <p style={{ ...S.partie, margin: '0 0 12px' }}>Bilan de la séance</p>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tonnageTotal > 0 ? 3 : 2}, 1fr)` }}>
+                {tonnageTotal > 0 && (
+                  <div style={S.bilanCase}>
+                    <div style={S.bilanChiffre}>{Math.round(tonnageTotal).toLocaleString('fr-FR')} <span style={S.bilanUnite}>kg</span></div>
+                    <div style={S.bilanLabel}>Tonnage</div>
+                  </div>
+                )}
+                <div style={{ ...S.bilanCase, ...(tonnageTotal > 0 ? S.bilanSep : {}) }}>
+                  <div style={S.bilanChiffre}>{repsTotal}</div>
+                  <div style={S.bilanLabel}>Répétitions</div>
                 </div>
-              )}
-              {repsTotal > 0 && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{repsTotal}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Volume (reps)</div>
+                <div style={{ ...S.bilanCase, ...S.bilanSep }}>
+                  <div style={S.bilanChiffre}>{exosDone}<span style={S.bilanUnite}> / {exercices.length}</span></div>
+                  <div style={S.bilanLabel}>Exercices faits</div>
                 </div>
-              )}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--accent-fg)', lineHeight: 1 }}>{exosDone}<span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/{exercices.length}</span></div>
-                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exos lancés</div>
               </div>
             </div>
           )
@@ -2377,10 +2391,18 @@ const S = {
   warmNom:     { flex: 1, minWidth: 0, fontSize: '0.88rem', fontWeight: 600, color: '#333333' },
   warmReps:    { fontSize: '0.85rem', fontWeight: 800, color: '#333333', textAlign: 'right', whiteSpace: 'nowrap' },
   vignette:    { height: 36, flexShrink: 0, borderRadius: 7, border: 'none', padding: 0, cursor: 'pointer', backgroundColor: '#1a1a1a', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  circuit:     { borderLeft: '2px solid var(--accent)', paddingLeft: 10, margin: '6px 0' },
-  circuitLab:  { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', padding: '4px 0 2px' },
-  cardioPuce:  { background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', fontWeight: 700 },
-  cardioPuceFort: { background: 'var(--chip-bg)', color: 'var(--chip-text)', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', fontWeight: 700 },
+  circuit:     { background: '#fafafa', border: '1px solid #e5e7eb', borderLeft: '3px solid var(--accent)', borderRadius: 10, padding: '0 12px 4px', margin: '8px 0' },
+  circuitLab:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: '#374151', padding: '10px 0 4px' },
+  circuitTours:{ background: 'var(--chip-bg)', color: 'var(--chip-text)', borderRadius: 999, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700 },
+  aFaire:      { fontSize: '0.7rem', fontWeight: 700, color: '#374151', background: '#f3f4f6', borderRadius: 6, padding: '2px 6px' },
+  cardioInfoLabel:{ fontSize: '0.75rem', color: '#6b7280' },
+  cardioInfoVal:  { fontSize: '0.95rem', fontWeight: 700, color: '#1a1a1a' },
+  bilanSeance: { background: 'white', borderRadius: 14, padding: 16, marginTop: 12, marginBottom: 4, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  bilanCase:   { textAlign: 'center', padding: '0 4px' },
+  bilanSep:    { borderLeft: '1px solid #f3f4f6' },
+  bilanChiffre:{ fontSize: '1.3rem', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' },
+  bilanUnite:  { fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' },
+  bilanLabel:  { fontSize: '0.75rem', color: '#6b7280', marginTop: 4, whiteSpace: 'nowrap' },
   cardioNote:  { margin: '10px 0 0', fontSize: '0.84rem', color: '#4b5563', lineHeight: 1.5 },
   cardioTexte: { margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f9fafb', borderRadius: 10, padding: '10px 12px' },
 }
