@@ -86,52 +86,59 @@ function formatTimer(secs) {
 const COL = 52
 const COL_LABEL = 56
 
-function CardioCard({ cardio, label, youtubeId, S }) {
-  const [mediaOpen, setMediaOpen] = useState(false)
-  const ytId = cardio.media_url ? youtubeId(cardio.media_url) : null
-  return (
-    <div style={{ ...S.card, marginBottom: '0.75rem', border: '1.5px solid #3b82f6' }}>
-      <p style={{ ...S.sectionLabel, color: '#2563eb', marginBottom: '0.5rem' }}>{label}</p>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-        {cardio.media_url && (
-          <button onClick={() => setMediaOpen(true)}
-            style={{ flexShrink: 0, width: 64, height: 56, borderRadius: 10, overflow: 'hidden', border: '2px solid #bfdbfe', cursor: 'pointer', background: '#1a1a1a', padding: 0, position: 'relative' }}>
-            {ytId
-              ? <><img loading="lazy" src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
-              : <img loading="lazy" src={cardio.media_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            }
-          </button>
-        )}
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a' }}>{cardio.type}</span>
-            {cardio.duree_min && <span style={{ background: '#eff6ff', color: '#2563eb', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '700' }}>{cardio.duree_min} min</span>}
-            {cardio.intensite && <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '2px 8px', fontSize: '0.8rem', fontWeight: '600' }}>{cardio.intensite}</span>}
-          </div>
-          {cardio.note && <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#6b7280', fontStyle: 'italic' }}>{cardio.note}</p>}
+const ICONE_ECHAUFFEMENT = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.5 1.5 1.5 2.5 3 2.5-1-2-1-4.5 0-7z"/></svg>
+const ICONE_CARDIO = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>
+const COCHE = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+
+// Échauffement / cardio validable : carte avec bouton Valider, repliée en
+// ligne verte une fois validée (comme un bloc terminé). Annulation via la
+// coche puis Oui, comme pour une série.
+function ElementValidable({ titre, sousTitre, resume, icone, valide, ouvert, confirm, onValider, onBasculer, onDemanderAnnul, onAnnulNon, onAnnulOui, children }) {
+  const coin = valide
+    ? confirm
+      ? <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button onClick={onAnnulNon} style={S.unvalCancelBtn}>Non</button>
+          <button onClick={onAnnulOui} style={S.unvalConfirmBtn}>Oui</button>
         </div>
+      : <button onClick={onDemanderAnnul} title="Annuler la validation" style={S.prepCheck}><span style={S.prepCheckIn}>{COCHE}</span></button>
+    : <button onClick={onValider} style={S.prepValBtn}>Valider</button>
+  if (valide && !ouvert) {
+    return (
+      <div style={S.prepFait}>
+        <span style={{ ...S.prepIco, ...S.prepIcoFait }}>{icone}</span>
+        <div role="button" tabIndex={0} onClick={onBasculer} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+          <div style={S.prepTitre}>{titre}</div>
+          <div style={S.prepSous}>{confirm ? 'Annuler la validation ?' : resume}</div>
+        </div>
+        {coin}
       </div>
-      {mediaOpen && cardio.media_url && (
-        <div onClick={() => setMediaOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: 'white', borderRadius: 20, overflow: 'hidden', width: '100%', maxWidth: 480 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1a1a1a' }}>{cardio.type}</span>
-              <button onClick={() => setMediaOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: '#6b7280', cursor: 'pointer' }}>×</button>
-            </div>
-            {ytId
-              ? <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000' }}>
-                  <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`} title={cardio.type}
-                    frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-                </div>
-              : <img loading="lazy" src={cardio.media_url} alt="" style={{ width: '100%', display: 'block', maxHeight: '70vh', objectFit: 'contain' }} />
-            }
-          </div>
+    )
+  }
+  return (
+    <div style={{ ...S.card, padding: 0, marginBottom: 0, ...(valide ? { border: '1.5px solid #86efac' } : {}) }}>
+      <div style={S.prepHead}>
+        <span style={{ ...S.prepIco, ...(valide ? S.prepIcoFait : {}) }}>{icone}</span>
+        <div role={valide ? 'button' : undefined} tabIndex={valide ? 0 : undefined} onClick={valide ? onBasculer : undefined}
+          style={{ flex: 1, minWidth: 0, cursor: valide ? 'pointer' : 'default' }}>
+          <div style={S.prepTitre}>{titre}</div>
+          {sousTitre && <div style={S.prepSous}>{confirm ? 'Annuler la validation ?' : sousTitre}</div>}
         </div>
-      )}
+        {coin}
+      </div>
+      <div style={{ padding: '0 14px 14px' }}>{children}</div>
     </div>
+  )
+}
+
+// Vignette vidéo/photo à droite d'une ligne (miniature YouTube ou image en fond)
+function Vignette({ url, nom, youtubeId, onOuvrir, large = 48 }) {
+  const yt = youtubeId(url)
+  const fond = yt ? `https://img.youtube.com/vi/${yt}/mqdefault.jpg` : url
+  return (
+    <button onClick={() => onOuvrir({ nom, url })} title="Voir le mouvement"
+      style={{ ...S.vignette, width: large, backgroundImage: `url("${fond}")` }}>
+      {yt && <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><polygon points="6 4 20 12 6 20"/></svg>}
+    </button>
   )
 }
 
@@ -175,6 +182,9 @@ export default function SeanceClient() {
   const [cardioDebutAll, setCardioDebutAll] = useState({})
   const [cardioFinAll,   setCardioFinAll]   = useState({})
   const [cardioBlocs,    setCardioBlocs]    = useState([])  // blocs cardio texte libre
+  const [elemValides, setElemValides] = useState(new Set())   // 'echauffement' | 'cardio_debut' | 'cardio_fin' | 'cardio_bloc_<i>'
+  const [elemOuverts, setElemOuverts] = useState(new Set())   // éléments validés rouverts
+  const [elemConfirm, setElemConfirm] = useState(null)        // élément dont on confirme l'annulation
   const [expandedDone, setExpandedDone] = useState(new Set())
   const [pendingSync, setPendingSync] = useState(0)
   const [offlineMode, setOfflineMode] = useState(false)  // true = données servies depuis IndexedDB
@@ -196,6 +206,14 @@ export default function SeanceClient() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSeance() }, [])
+
+  // Validations de l'échauffement et des cardios pour la semaine affichée
+  useEffect(() => {
+    if (!id) return
+    supabase.from('seance_element_validations').select('element')
+      .eq('seance_id', id).eq('semaine', semaineActuelle)
+      .then(({ data }) => setElemValides(new Set((data || []).map(v => v.element))))
+  }, [id, semaineActuelle])
 
   // Une fois le client identifié : vérifie qu'il n'est dans aucun groupe, et si
   // c'est le cas précharge son total d'XP (même calcul que ProgressionClient.js)
@@ -1053,6 +1071,55 @@ export default function SeanceClient() {
     }))
   }
 
+  async function validerElement(cle) {
+    setElemValides(prev => new Set([...prev, cle]))
+    setElemOuverts(prev => { const n = new Set(prev); n.delete(cle); return n })
+    autoPlacerSeanceSurCalendrier(seance?.programmes?.client_id, id, semaineActuelle)
+    await supabase.from('seance_element_validations').upsert(
+      { seance_id: id, semaine: semaineActuelle, element: cle },
+      { onConflict: 'seance_id,semaine,element', ignoreDuplicates: true }
+    )
+    flashSaved()
+  }
+
+  async function devaliderElement(cle) {
+    setElemValides(prev => { const n = new Set(prev); n.delete(cle); return n })
+    setElemConfirm(null)
+    await supabase.from('seance_element_validations').delete()
+      .eq('seance_id', id).eq('semaine', semaineActuelle).eq('element', cle)
+    flashSaved()
+  }
+
+  // Props communes d'un élément validable
+  function propsElement(cle) {
+    return {
+      valide: elemValides.has(cle),
+      ouvert: elemOuverts.has(cle),
+      confirm: elemConfirm === cle,
+      onValider: () => validerElement(cle),
+      onBasculer: () => setElemOuverts(prev => { const n = new Set(prev); n.has(cle) ? n.delete(cle) : n.add(cle); return n }),
+      onDemanderAnnul: () => setElemConfirm(cle),
+      onAnnulNon: () => setElemConfirm(null),
+      onAnnulOui: () => devaliderElement(cle),
+    }
+  }
+
+  function CarteCardio({ cle, titre, cardio }) {
+    const resume = [cardio.type, cardio.duree_min && `${cardio.duree_min} min`, cardio.intensite].filter(Boolean).join(' · ')
+    return (
+      <ElementValidable titre={titre} sousTitre={cardio.type} resume={resume} icone={ICONE_CARDIO} {...propsElement(cle)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+            {cardio.duree_min && <span style={S.cardioPuceFort}>{cardio.duree_min} min</span>}
+            {cardio.intensite && <span style={S.cardioPuce}>{cardio.intensite}</span>}
+          </div>
+          {cardio.media_url && <Vignette url={cardio.media_url} nom={cardio.type} youtubeId={youtubeId} onOuvrir={setMediaModal} large={56} />}
+        </div>
+        {cardio.note && <p style={S.cardioNote}>{cardio.note}</p>}
+      </ElementValidable>
+    )
+  }
+
   function flashSaved() { setSaved(true); setTimeout(() => setSaved(false), 1500) }
 
   async function toggleHisto(exId) {
@@ -1758,99 +1825,76 @@ export default function SeanceClient() {
           </button>
         )}
 
-        {/* Barre de progression */}
-        {totalBlocs > 0 && !nonEffectuee && (
-          <div style={S.progressCard}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
-              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#333333' }}>{doneBlocs} / {totalBlocs} blocs {doneBlocs === totalBlocs && doneBlocs > 0 ? '✓' : ''}</span>
-            </div>
-            <div style={S.progressTrack}>
-              <div style={{ ...S.progressFill, width: `${(doneBlocs / totalBlocs) * 100}%` }} />
-            </div>
-          </div>
-        )}
-
-        {/* Échauffement */}
-        {echauffement.length > 0 && (() => {
-          const warmGroups = []
-          echauffement.forEach(l => {
-            const last = warmGroups[warmGroups.length - 1]
-            if (l.groupe && last?.groupe === l.groupe) last.items.push(l)
-            else warmGroups.push({ groupe: l.groupe, items: [l] })
-          })
+        {/* Étapes : échauffement + cardios validables, puis blocs de musculation */}
+        {(() => {
+          const cardioDebut = cardioDebutAll?.[semaineActuelle]?.type ? cardioDebutAll[semaineActuelle] : null
+          const cardioFin   = cardioFinAll?.[semaineActuelle]?.type ? cardioFinAll[semaineActuelle] : null
+          const prepCles = [echauffement.length > 0 && 'echauffement', cardioDebut && 'cardio_debut'].filter(Boolean)
+          const finCles = [...cardioBlocs.map((b, i) => (b.titre || b.texte) ? `cardio_bloc_${i}` : null), cardioFin && 'cardio_fin'].filter(Boolean)
+          const totalEtapes = totalBlocs + prepCles.length + finCles.length
+          const doneEtapes = doneBlocs + [...prepCles, ...finCles].filter(c => elemValides.has(c)).length
+          const nbValides = cles => cles.filter(c => elemValides.has(c)).length
           return (
-            <div style={{ ...S.card, marginBottom: '0.75rem' }}>
-              <p style={S.sectionLabel}>Échauffement</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {warmGroups.map((g, gi) => {
-                  if (!g.groupe) {
-                    return g.items.map((l, i) => (
-                      <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
-                        {l.image_url && (
-                          <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0 }}>
-                            {youtubeId(l.image_url)
-                              ? <><img loading="lazy" src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
-                              : <img loading="lazy" src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                            }
-                          </button>
-                        )}
-                        <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
-                        <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
-                      </div>
-                    ))
-                  }
-                  const tours = g.items[0]?.tours
-                  return (
-                    <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid var(--accent)', background: '#fffef5', borderRadius: '0 10px 10px 0', padding: '0.5rem 0.75rem' }}>
-                      <div style={{ flex: 1 }}>
-                        {g.items.map((l, i) => (
-                          <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: i > 0 ? '0.35rem' : 0, paddingTop: i > 0 ? '0.35rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
-                            {l.image_url && (
-                              <button onClick={() => setMediaModal({ nom: l.nom, url: l.image_url })} style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 8, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative' }}>
-                                {youtubeId(l.image_url)
-                                  ? <><img loading="lazy" src={`https://img.youtube.com/vi/${youtubeId(l.image_url)}/mqdefault.jpg`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></>
-                                  : <img loading="lazy" src={l.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                }
-                              </button>
-                            )}
-                            <span style={{ flex: 1, fontSize: '0.92rem', fontWeight: '600', color: '#333333' }}>{l.nom}</span>
-                            <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#6366f1' }}>{l.reps}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {tours && (
-                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
-                          <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
-                          <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
+            <>
+              {totalEtapes > 0 && !nonEffectuee && (
+                <div style={S.progressCard}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progression séance</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#333333' }}>{doneEtapes} / {totalEtapes} étapes</span>
+                  </div>
+                  <div style={S.progressTrack}>
+                    <div style={{ ...S.progressFill, width: `${(doneEtapes / totalEtapes) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {prepCles.length > 0 && (
+                <>
+                  <p style={S.partie}>Préparation <span style={S.partieCompte}>{nbValides(prepCles)} / {prepCles.length} validé{prepCles.length > 1 ? 's' : ''}</span></p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    {echauffement.length > 0 && (() => {
+                      const warmGroups = []
+                      echauffement.forEach(l => {
+                        const last = warmGroups[warmGroups.length - 1]
+                        if (l.groupe && last?.groupe === l.groupe) last.items.push(l)
+                        else warmGroups.push({ groupe: l.groupe, items: [l] })
+                      })
+                      const avecMedia = echauffement.some(l => l.image_url)
+                      const ligne = (l, k, premiere) => (
+                        <div key={k} style={{ ...S.warmRow, ...(premiere ? { borderTop: 'none' } : {}) }}>
+                          <span style={S.warmNom}>{l.nom}</span>
+                          <span style={S.warmReps}>{l.reps}</span>
+                          {l.image_url
+                            ? <Vignette url={l.image_url} nom={l.nom} youtubeId={youtubeId} onOuvrir={setMediaModal} />
+                            : avecMedia && <span style={{ width: 48, flexShrink: 0 }} />}
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+                      )
+                      return (
+                        <ElementValidable titre="Échauffement" icone={ICONE_ECHAUFFEMENT}
+                          sousTitre={`${echauffement.length} exercice${echauffement.length > 1 ? 's' : ''}`}
+                          resume={`${echauffement.length} exercice${echauffement.length > 1 ? 's' : ''}`}
+                          {...propsElement('echauffement')}>
+                          {warmGroups.map((g, gi) => g.groupe
+                            ? <div key={gi} style={S.circuit}>
+                                <div style={S.circuitLab}><b style={{ color: '#333333' }}>Circuit</b> à enchaîner{g.items[0]?.tours ? <>, <b style={{ color: '#333333' }}>{g.items[0].tours} tours</b></> : null}</div>
+                                {g.items.map((l, i) => ligne(l, l.id || i, i === 0))}
+                              </div>
+                            : g.items.map((l, i) => ligne(l, l.id || `${gi}-${i}`, gi === 0 && i === 0))
+                          )}
+                        </ElementValidable>
+                      )
+                    })()}
+                    {cardioDebut && CarteCardio({ cle: 'cardio_debut', titre: 'Cardio avant séance', cardio: cardioDebut })}
+                  </div>
+                </>
+              )}
+
+              {totalBlocs > 0 && (prepCles.length > 0 || finCles.length > 0) && (
+                <p style={S.partie}>Musculation <span style={S.partieCompte}>{doneBlocs} / {totalBlocs} bloc{totalBlocs > 1 ? 's' : ''}</span></p>
+              )}
+            </>
           )
         })()}
-
-        {/* Cardio — traité comme un bloc de la séance, juste après l'échauffement */}
-        {cardioDebutAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioDebutAll[semaineActuelle]} label="Cardio — avant séance" youtubeId={youtubeId} S={S} />}
-        {cardioFinAll?.[semaineActuelle]?.type && <CardioCard cardio={cardioFinAll[semaineActuelle]} label="Cardio — après séance" youtubeId={youtubeId} S={S} />}
-        {cardioBlocs.length > 0 && (
-          <div style={{ ...S.card, marginBottom: '0.75rem' }}>
-            <p style={S.sectionLabel}>Cardio</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {cardioBlocs.map((b, i) => (
-                (b.titre || b.texte) ? (
-                  <div key={i} style={{ background: '#f9fafb', borderRadius: 10, padding: '0.7rem 0.8rem', border: '1.5px solid #0ea5e9' }}>
-                    {b.titre && <p style={{ margin: '0 0 0.3rem', fontWeight: 800, fontSize: '0.9rem', color: '#0c4a6e' }}>{b.titre}</p>}
-                    {b.texte && <p style={{ margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{b.texte}</p>}
-                  </div>
-                ) : null
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Exercices */}
         {nonEffectuee ? (
@@ -2030,6 +2074,28 @@ export default function SeanceClient() {
             })}
           </div>
         )}
+
+        {/* Cardio : blocs cardio puis cardio après séance, en fin de séance */}
+        {(() => {
+          const cardioFin = cardioFinAll?.[semaineActuelle]?.type ? cardioFinAll[semaineActuelle] : null
+          const blocs = cardioBlocs.map((b, i) => ({ b, cle: `cardio_bloc_${i}` })).filter(x => x.b.titre || x.b.texte)
+          const cles = [...blocs.map(x => x.cle), cardioFin && 'cardio_fin'].filter(Boolean)
+          if (!cles.length) return null
+          return (
+            <>
+              <p style={{ ...S.partie, marginTop: '1rem' }}>Cardio <span style={S.partieCompte}>{cles.filter(c => elemValides.has(c)).length} / {cles.length} validé{cles.length > 1 ? 's' : ''}</span></p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {blocs.map(({ b, cle }, i) => (
+                  <ElementValidable key={cle} titre={b.titre || `Bloc cardio ${i + 1}`} sousTitre="Bloc cardio" resume="Bloc cardio"
+                    icone={ICONE_CARDIO} {...propsElement(cle)}>
+                    {b.texte && <p style={S.cardioTexte}>{b.texte}</p>}
+                  </ElementValidable>
+                ))}
+                {cardioFin && CarteCardio({ cle: 'cardio_fin', titre: 'Cardio après séance', cardio: cardioFin })}
+              </div>
+            </>
+          )
+        })()}
 
         {/* ── Tonnage total de la séance ───────────────────────────── */}
         {!nonEffectuee && (() => {
@@ -2290,4 +2356,26 @@ const S = {
   supersetLine:   { flex: 1, height: '1px', background: 'var(--chip-bg)', opacity: 0.4 },
   supersetTag:    { fontSize: '0.7rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
   // Timer (styles inlinés directement dans le JSX)
+  // Échauffement / cardio validables
+  partie:      { display: 'flex', alignItems: 'center', gap: 8, margin: '0.25rem 2px 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  partieCompte:{ marginLeft: 'auto', letterSpacing: 0, textTransform: 'none', fontWeight: 700, color: '#6b7280' },
+  prepHead:    { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px 10px' },
+  prepIco:     { width: 36, height: 36, borderRadius: 10, background: '#f3f4f6', color: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  prepIcoFait: { background: '#f0fdf4', color: '#16a34a', width: 32, height: 32 },
+  prepTitre:   { fontSize: '0.95rem', fontWeight: 800, color: '#333333' },
+  prepSous:    { fontSize: '0.78rem', color: '#6b7280', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  prepValBtn:  { flexShrink: 0, minHeight: 36, padding: '0 14px', border: 'none', borderRadius: 8, background: 'var(--chip-bg)', color: 'var(--chip-text)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' },
+  prepCheck:   { width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', padding: 0, cursor: 'pointer' },
+  prepCheckIn: { width: 30, height: 30, borderRadius: 8, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  prepFait:    { background: 'white', border: '1.5px solid #86efac', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10, padding: '0 6px 0 12px', minHeight: 56, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  warmRow:     { display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, padding: '4px 0', borderTop: '1px solid #f3f4f6' },
+  warmNom:     { flex: 1, minWidth: 0, fontSize: '0.88rem', fontWeight: 600, color: '#333333' },
+  warmReps:    { fontSize: '0.85rem', fontWeight: 800, color: '#333333', textAlign: 'right', whiteSpace: 'nowrap' },
+  vignette:    { height: 36, flexShrink: 0, borderRadius: 7, border: 'none', padding: 0, cursor: 'pointer', backgroundColor: '#1a1a1a', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  circuit:     { borderLeft: '2px solid var(--accent)', paddingLeft: 10, margin: '6px 0' },
+  circuitLab:  { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', padding: '4px 0 2px' },
+  cardioPuce:  { background: '#f3f4f6', color: '#374151', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', fontWeight: 700 },
+  cardioPuceFort: { background: 'var(--chip-bg)', color: 'var(--chip-text)', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', fontWeight: 700 },
+  cardioNote:  { margin: '10px 0 0', fontSize: '0.84rem', color: '#4b5563', lineHeight: 1.5 },
+  cardioTexte: { margin: 0, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f9fafb', borderRadius: 10, padding: '10px 12px' },
 }
