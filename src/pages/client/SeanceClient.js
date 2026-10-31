@@ -787,6 +787,29 @@ export default function SeanceClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  function modifierSerie(exId, serieIdx, field, value, groupLetter) {
+    const serie = tracking[exId]?.[serieIdx]
+    if (!serie?.is_done) { updateTrackingField(exId, serieIdx, field, value); return }
+    const maj = { ...serie, [field]: value, valide: false, is_done: false }
+    setTracking(prev => {
+      const series = [...(prev[exId] || [])]
+      series[serieIdx] = maj
+      return { ...prev, [exId]: series }
+    })
+    setPendingUnvalidate(null)
+    supabase.from('serie_tracking').upsert({
+      exercice_id: exId, semaine: semaineActuelle, serie: serieIdx + 1,
+      poids: maj.poids || null,
+      reps_reelles: maj.reps_reelles ? parseInt(maj.reps_reelles) : null,
+      valide: false, is_done: false
+    }, { onConflict: 'exercice_id,semaine,serie' })
+    if (groupLetter) {
+      setBlocsTermines(prev => { const n = new Set(prev); n.delete(groupLetter); return n })
+      setExpandedDone(prev => { const n = new Set(prev); n.delete(groupLetter); return n })
+      setActiveBloc(groupLetter)
+    }
+  }
+
   async function devaliderSerie(exId, serieIdx, groupLetter) {
     if (!exId) return
     const newT = { ...tracking }
@@ -1419,7 +1442,7 @@ export default function SeanceClient() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: '0.3rem', flexWrap: 'wrap' }}>
                   {progActif && (
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#eff6ff', color: '#2563eb', borderRadius: 6, padding: '2px 7px', border: '1px solid #bfdbfe' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#f3f4f6', color: '#374151', borderRadius: 6, padding: '2px 7px' }}>
                       {progActif.label || `S${progActif.semaine_debut}-${progActif.semaine_fin}`}
                     </span>
                   )}
@@ -1430,7 +1453,7 @@ export default function SeanceClient() {
               {mediaUrl && (
                 <button
                   onClick={() => setMediaModal({ nom: progActif?.nom_variante || ex.nom, url: mediaUrl })}
-                  style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', background: '#111', padding: 0, position: 'relative', display: 'block' }}
+                  style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 10, overflow: 'hidden', border: 'none', cursor: 'pointer', background: '#111', padding: 0, position: 'relative', display: 'block' }}
                   title="Voir le mouvement"
                 >
                   {ytId ? (
@@ -1459,7 +1482,7 @@ export default function SeanceClient() {
 
         {/* Détail libre de la progression (ex: variante, charge max…) */}
         {progActif?.detail && (
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 10px', marginBottom: '0.5rem', fontSize: '.75rem', color: '#1e40af', fontWeight: 600, lineHeight: 1.5 }}>
+          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.8rem', color: '#374151', fontWeight: 500, lineHeight: 1.5 }}>
             {progActif.detail}
           </div>
         )}
@@ -1467,17 +1490,17 @@ export default function SeanceClient() {
         {/* Barre paramètres */}
         {(() => {
           const params = [
-            showSeries && effSeries        ? { label: 'SÉRIES',              val: effSeries }                           : null,
-            effReps                        ? { label: tempsMode ? 'DURÉE' : 'REPS', val: effReps }                     : null,
-            ex.tempo                       ? { label: 'TEMPO',               val: ex.tempo }                           : null,
-            showRecup && ex.recuperation   ? { label: 'RÉCUP',               val: ex.recuperation }                    : null,
-            ex.type_intensite              ? { label: 'INTENSITÉ',           val: effIntensity || ex.type_intensite }   : null,
+            showSeries && effSeries        ? { label: 'Séries',              val: effSeries }                           : null,
+            effReps                        ? { label: tempsMode ? 'Durée' : 'Reps', val: effReps }                     : null,
+            ex.tempo                       ? { label: 'Tempo',               val: ex.tempo }                           : null,
+            showRecup && ex.recuperation   ? { label: 'Récup',               val: ex.recuperation }                    : null,
+            ex.type_intensite              ? { label: 'Intensité',           val: effIntensity || ex.type_intensite }   : null,
           ].filter(Boolean)
           if (!params.length) return null
           return (
             <div style={S.paramsBar}>
               {params.map((p, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                   {i > 0 && <div style={S.paramDivider} />}
                   <div style={S.paramItem}>
                     <span style={S.paramLabel}>{p.label}</span>
@@ -1493,7 +1516,7 @@ export default function SeanceClient() {
         {seriesList.length > 0 && (
           <div style={S.seriesTracker}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={S.seriesTrackerLabel}>SÉRIES · SEMAINE {semaineActuelle}</span>
+              <span style={S.seriesTrackerLabel}>Séries · semaine {semaineActuelle}</span>
               <button onClick={() => toggleHisto(ex.id)} style={S.histoBtn}>
                 {isHistoOpen ? 'Masquer' : 'Historique'}
               </button>
@@ -1542,8 +1565,8 @@ export default function SeanceClient() {
                               <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
                                 {r.reps_reelles ? `× ${r.reps_reelles} ${tempsMode ? 's' : 'reps'}` : ''}
                               </span>
-                              <span style={{ marginLeft: 'auto', fontSize: '0.72rem' }}>
-                                {r.valide ? '✓' : '⚠'}
+                              <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 600, color: r.valide ? '#16a34a' : '#b45309' }}>
+                                {r.valide ? 'Fait' : 'Incomplète'}
                               </span>
                             </div>
                           ))}
@@ -1555,71 +1578,64 @@ export default function SeanceClient() {
               </div>
             )}
 
-            {/* ── Séries d'échauffement ────────────────────── */}
+            {/* ── Séries de chauffe (au-dessus des séries de travail) ── */}
             {(() => {
               const warmups = warmupTracking[ex.id] || []
               return (
-                <div style={{ marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Échauffement {warmups.length > 0 ? `· ${warmups.length} série${warmups.length > 1 ? 's' : ''}` : ''}
-                    </span>
-                    <button onClick={() => addWarmupSet(ex.id)} style={{
-                      background: 'none', border: '1px dashed #9ca3af', borderRadius: 6,
-                      color: '#4b5563', fontSize: '0.72rem', fontWeight: '500', cursor: 'pointer', padding: '0.3rem 0.65rem',
-                    }}>+ Série</button>
-                  </div>
+                <>
+                  <button onClick={() => addWarmupSet(ex.id)} style={S.ajoutChauffe}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Série de chauffe
+                  </button>
                   {warmups.map((ws, wi) => (
-                    <div key={ws.serie} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem', background: ws.fromCoach ? '#fff7ed' : '#f9fafb', borderRadius: 8, padding: '0.35rem 0.55rem', border: `1.5px solid ${ws.fromCoach ? '#fed7aa' : '#e5e7eb'}` }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: '800', color: ws.fromCoach ? '#ea580c' : '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                        É{wi + 1}{ws.fromCoach && ws.pourcentage ? ` · ${ws.pourcentage}%` : ''}
-                      </span>
+                    <div key={ws.serie} style={{ ...S.serieRow, background: '#fafafa' }}>
+                      <span style={S.serieNumChauffe}>É{wi + 1}</span>
                       <input type="text" inputMode="decimal" value={ws.poids}
                         onChange={e => updateWarmupField(ex.id, wi, 'poids', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         onFocus={scrollInputIntoView}
                         placeholder="kg"
-                        style={{ width: 48, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>kg</span>
+                        style={S.serieInput} />
+                      <span style={S.serieUnit}>kg</span>
                       <input type="text" inputMode="numeric" value={ws.reps_reelles}
                         onChange={e => updateWarmupField(ex.id, wi, 'reps_reelles', e.target.value)}
                         onBlur={() => saveWarmupSet(ex.id, wi)}
                         onFocus={scrollInputIntoView}
                         placeholder={tempsMode ? 'sec' : 'reps'}
-                        style={{ width: 44, padding: '0.25rem 0.35rem', border: '1.5px solid #e5e7eb', borderRadius: 5, fontSize: '0.82rem', fontWeight: '700', textAlign: 'center', outline: 'none', background: 'white' }} />
-                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>{tempsMode ? 's' : 'reps'}</span>
-                      <button onClick={() => removeWarmupSet(ex.id, wi)} style={{
-                        marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', fontSize: '1rem', cursor: 'pointer', padding: '0 2px', flexShrink: 0,
-                      }}>×</button>
+                        style={S.serieInput} />
+                      <span style={S.serieUnit}>{tempsMode ? 's' : 'reps'}</span>
+                      {ws.fromCoach && ws.pourcentage ? <span style={S.serieUnit}>{ws.pourcentage} %</span> : null}
+                      <button onClick={() => removeWarmupSet(ex.id, wi)} title="Supprimer" style={S.serieIconBtn}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                      </button>
                     </div>
                   ))}
-                </div>
+                </>
               )
             })()}
 
             {seriesList.map((serie, si) => {
               const prevSerie = si > 0 ? seriesList[si - 1] : null
               const canCopy = !serie.is_done && prevSerie && (prevSerie.poids || prevSerie.reps_reelles)
+              const etatStyle = serie.is_done ? (serie.valide ? S.serieRowDone : S.serieRowWarn) : {}
+              const inputEtat = serie.is_done ? (serie.valide ? S.serieInputDone : S.serieInputWarn) : {}
               return (
-              <div key={si} style={{ ...S.serieRow, ...(serie.is_done ? (serie.valide ? S.serieRowDone : S.serieRowWarn) : {}) }}>
-                <span style={S.serieNum}>{si + 1}</span>
+              <div key={si} style={{ ...S.serieRow, ...etatStyle }}>
+                <span style={{ ...S.serieNum, ...(serie.is_done ? { background: serie.valide ? '#16a34a' : '#f59e0b', color: 'white' } : {}) }}>{si + 1}</span>
                 <input type="text" inputMode="decimal" value={serie.poids}
-                  onChange={e => updateTrackingField(ex.id, si, 'poids', e.target.value)}
+                  onChange={e => modifierSerie(ex.id, si, 'poids', e.target.value, groupLetter)}
                   onBlur={() => saveSerieField(ex.id, si)}
                   onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len); scrollInputIntoView(e) }}
                   placeholder="kg"
-                  readOnly={serie.is_done}
-                  style={{ ...S.serieInput, width: 52, ...(serie.is_done ? S.serieInputDone : {}) }} />
+                  style={{ ...S.serieInput, ...inputEtat }} />
                 <span style={S.serieUnit}>kg</span>
                 <input type="text" inputMode="numeric" value={serie.reps_reelles}
-                  onChange={e => updateTrackingField(ex.id, si, 'reps_reelles', e.target.value)}
+                  onChange={e => modifierSerie(ex.id, si, 'reps_reelles', e.target.value, groupLetter)}
                   onBlur={() => saveSerieField(ex.id, si)}
                   onFocus={scrollInputIntoView}
                   placeholder={tempsMode ? (effReps ? String(effReps).replace('"', '') : 'sec') : (effReps ? String(effReps) : 'reps')}
-                  readOnly={serie.is_done}
-                  style={{ ...S.serieInput, width: 48, ...(serie.is_done ? S.serieInputDone : {}) }} />
+                  style={{ ...S.serieInput, ...inputEtat }} />
                 <span style={S.serieUnit}>{tempsMode ? 's' : 'reps'}</span>
-                {!serie.is_done && !canCopy && <span style={{ width: 26, flexShrink: 0 }} />}
                 {canCopy && (
                   <button
                     onClick={() => {
@@ -1627,14 +1643,9 @@ export default function SeanceClient() {
                       if (prevSerie.reps_reelles) updateTrackingField(ex.id, si, 'reps_reelles', prevSerie.reps_reelles)
                     }}
                     title="Reprendre les valeurs de la série précédente"
-                    style={{
-                      background: '#f3f4f6', border: 'none', borderRadius: 6,
-                      width: 26, padding: '0.28rem 0', cursor: 'pointer', flexShrink: 0,
-                      fontSize: '0.7rem', color: '#6b7280', fontWeight: 700,
-                      lineHeight: 1,
-                    }}
+                    style={{ ...S.serieIconBtn, width: 26 }}
                   >
-                    ↩
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 0 1 0 10h-2"/></svg>
                   </button>
                 )}
                 {serie.is_done
@@ -1644,13 +1655,16 @@ export default function SeanceClient() {
                         <button onClick={() => devaliderSerie(ex.id, si, groupLetter)} style={S.unvalConfirmBtn}>Oui</button>
                       </>
                     : <button onClick={() => setPendingUnvalidate({ exId: ex.id, serieIdx: si })}
+                        title="Annuler la validation"
                         style={serie.valide ? S.serieDoneBadge : S.serieDoneWarnBadge}>
-                        {serie.valide ? '✓' : '⚠'}
+                        {serie.valide
+                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 7v6M12 17v.5"/></svg>}
                       </button>
                   : <button
                       onClick={e => validerSerie(ex.id, si, groupLetter, groupItems, ex.repetitions, e.currentTarget)}
                       disabled={validatingSet.has(`${ex.id}-${si}`)}
-                      style={{ ...S.serieValBtn, opacity: validatingSet.has(`${ex.id}-${si}`) ? 0.5 : 1 }}
+                      style={{ ...S.serieValBtn, ...(canCopy ? { marginLeft: 0 } : {}), opacity: validatingSet.has(`${ex.id}-${si}`) ? 0.5 : 1 }}
                     >{validatingSet.has(`${ex.id}-${si}`) ? '…' : 'Valider'}</button>
                 }
               </div>
@@ -1668,26 +1682,10 @@ export default function SeanceClient() {
               if (allForCalc.length === 0) return null
               const totalReps = allForCalc.reduce((s, x) => s + x.reps, 0)
               const tonnage = allForCalc.reduce((s, x) => s + ((parseFloat(x.poids) || 0) * x.reps), 0)
-              const warmupCount = warmups.filter(w => (parseInt(w.reps_reelles) || 0) > 0).length
-              const workCount = doneSeries.length
               return (
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                  <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{totalReps}</span>
-                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>{tempsMode ? 'VOLUME (sec)' : 'VOLUME (reps)'}</span>
-                  </div>
-                  {tonnage > 0 && (
-                    <div style={{ background: '#1a1a1a', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--accent-fg)', lineHeight: 1 }}>{Math.round(tonnage)} kg</span>
-                      <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>TONNAGE</span>
-                    </div>
-                  )}
-                  {warmupCount > 0 && (
-                    <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '0.3rem 0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{warmupCount}+{workCount}</span>
-                      <span style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1 }}>ÉCH+TRAV</span>
-                    </div>
-                  )}
+                <div style={S.bilan}>
+                  <span><b style={S.bilanVal}>{totalReps}</b> {tempsMode ? 's' : 'reps'}</span>
+                  {tonnage > 0 && <span><b style={S.bilanVal}>{Math.round(tonnage).toLocaleString('fr-FR')}</b> kg de tonnage</span>}
                 </div>
               )
             })()}
@@ -1697,6 +1695,7 @@ export default function SeanceClient() {
               const recupSecs = parseRecup(ex.recuperation)
               return recupSecs > 0 ? (
                 <button onClick={() => lancerTimer(recupSecs)} style={S.recupBtn}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg>
                   Lancer la récup · {ex.recuperation}
                 </button>
               ) : null
@@ -1922,11 +1921,11 @@ export default function SeanceClient() {
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
                     style={{ ...S.collapsedRow, borderColor: '#e5e7eb', background: '#f9fafb' }}>
-                    <span style={{ ...S.collapsedCheck, background: '#9ca3af' }}>⊘</span>
+                    <span style={{ ...S.collapsedCheck, background: '#f3f4f6', color: '#6b7280' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg></span>
                     <span style={S.collapsedCode}>{group.letter}</span>
                     <span style={{ ...S.collapsedNom, color: '#6b7280' }}>{label}</span>
                     <span style={{ ...S.collapsedStats, color: '#6b7280' }}>Passé</span>
-                    <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>›</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
                   </div>
                 )
               }
@@ -1947,7 +1946,7 @@ export default function SeanceClient() {
                       style={S.skipBlocBtn}>
                       Passer
                     </button>
-                    <span role="button" tabIndex={0} style={{ color: '#9ca3af', fontSize: '0.85rem' }} onClick={() => setActiveBloc(group.letter)}>›</span>
+                    <span role="button" tabIndex={0} style={{ display: 'flex' }} onClick={() => setActiveBloc(group.letter)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
                   </div>
                 )
               }
@@ -1963,11 +1962,11 @@ export default function SeanceClient() {
                     ref={el => { if (group.letter) blocRefs.current[group.letter] = el }}
                     onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.add(group.letter); return s })}
                     style={S.collapsedRow}>
-                    <span style={S.collapsedCheck}>✓</span>
+                    <span style={S.collapsedCheck}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
                     <span style={S.collapsedCode}>{group.letter}</span>
                     <span style={S.collapsedNom}>{label}</span>
                     <span style={S.collapsedStats}>{summary}</span>
-                    <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>›</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
                   </div>
                 )
               }
@@ -1981,8 +1980,8 @@ export default function SeanceClient() {
                     {(isDone || isSkipped) && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         {isSkipped
-                          ? <div style={{ ...S.blocDoneBadge, background: '#f3f4f6', color: '#6b7280' }}>⊘ Bloc passé</div>
-                          : <div style={S.blocDoneBadge}>✓ Bloc terminé</div>
+                          ? <div style={{ ...S.blocDoneBadge, background: '#f3f4f6', color: '#6b7280' }}>Bloc passé</div>
+                          : <div style={S.blocDoneBadge}>Bloc terminé</div>
                         }
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                           {isSkipped && (
@@ -2009,7 +2008,7 @@ export default function SeanceClient() {
                         return t.length > 0 && t.every(s => s.is_done)
                       })
                       return allSeriesDone
-                        ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={S.terminerBlocBtn}>✓ Terminer le bloc</button>
+                        ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={S.terminerBlocBtn}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Terminer le bloc</button>
                         : null
                     })()}
                   </div>
@@ -2025,19 +2024,19 @@ export default function SeanceClient() {
                     <span style={S.supersetBadge}>SUPERSET · {group.letter}</span>
                     {isSkipped
                       ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                          <span style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>⊘ Passé</span>
+                          <span style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>Passé</span>
                           <button onClick={() => unskipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db' }}>Annuler</button>
                           <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
                             style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db' }}>Replier ↑</button>
                         </div>
                       : isDone
                         ? <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                            <span style={{ color: '#86efac', fontSize: '0.7rem', fontWeight: '700' }}>✓ Terminé</span>
+                            <span style={{ color: '#86efac', fontSize: '0.7rem', fontWeight: '700' }}>Terminé</span>
                             <button onClick={() => setExpandedDone(prev => { const s = new Set(prev); s.delete(group.letter); return s })}
                               style={{ ...S.collapseBtn, color: '#86efac', borderColor: '#16a34a' }}>Replier ↑</button>
                           </div>
                         : <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                            <span style={S.supersetHint}>Enchaîner sans récupération</span>
+                            <span style={S.supersetHint}>Sans récupération</span>
                             <button onClick={() => skipBloc(group.letter)} style={{ ...S.collapseBtn, color: '#6b7280', borderColor: '#d1d5db', fontSize: '0.7rem' }}>Passer</button>
                           </div>
                     }
@@ -2066,7 +2065,7 @@ export default function SeanceClient() {
                       return t.length > 0 && t.every(s => s.is_done)
                     })
                     return allSeriesDone
-                      ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={{ ...S.terminerBlocBtn, borderRadius: '0 0 12px 12px', marginTop: 0 }}>✓ Terminer le bloc</button>
+                      ? <button onClick={e => terminerBloc(group.letter, e.currentTarget)} style={{ ...S.terminerBlocBtn, borderRadius: '0 0 12px 12px', marginTop: 0 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Terminer le bloc</button>
                       : null
                   })()}
                 </div>
@@ -2301,61 +2300,67 @@ const S = {
   nonEffectueeBtnActive: { background: '#fef2f2', border: '1.5px solid #fca5a5', color: '#dc2626' },
   nonEffectueeCard:{ background: 'white', borderRadius: 14, padding: '2rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.75rem' },
   // Exercice actif
-  exCard:      { background: 'white', borderRadius: '14px', padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  exCard:      { background: 'white', borderRadius: '14px', padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   exCardDone:  { border: '2px solid #86efac', background: '#f0fdf4' },
   exCode:      { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' },
-  exNom:       { fontWeight: '700', fontSize: '0.92rem', color: '#333333' },
+  exNom:       { fontWeight: '700', fontSize: '1rem', color: '#333333' },
   semBadge:    { background: '#f3f4f6', color: '#6b7280', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', flexShrink: 0 },
   // Bloc en attente (non actif, non terminé)
-  pendingRow: { background: '#f9fafb', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', border: '1.5px dashed #e5e7eb' },
-  pendingCode: { width: 26, height: 26, borderRadius: 8, background: '#e5e7eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.78rem', color: '#6b7280', flexShrink: 0 },
-  pendingNom:  { flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  pendingRow: { background: 'white', borderRadius: 12, padding: '0 8px 0 12px', minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', border: '1px solid #e5e7eb' },
+  pendingCode: { width: 24, height: 24, borderRadius: 7, background: '#f3f4f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#374151', flexShrink: 0 },
+  pendingNom:  { flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#4b5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   // Exercice collapsé (terminé)
-  collapsedRow:{ background: 'white', borderRadius: 12, padding: '0.7rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1.5px solid #86efac' },
-  collapsedCheck:{ color: '#16a34a', fontWeight: '900', fontSize: '0.9rem', flexShrink: 0 },
+  collapsedRow:{ background: 'white', borderRadius: 12, padding: '0 12px', minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'pointer', border: '1px solid #bbf7d0' },
+  collapsedCheck:{ width: 24, height: 24, borderRadius: 7, background: '#f0fdf4', color: '#16a34a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   collapsedCode:{ background: '#16a34a', color: 'white', padding: '0.1rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 },
-  collapsedNom:{ fontWeight: '700', fontSize: '0.88rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  collapsedNom:{ fontWeight: '600', fontSize: '0.88rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   collapsedStats:{ fontSize: '0.78rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
   blocDoneBadge:{ background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: '800', display: 'inline-block' },
   collapseBtn: { background: 'none', border: '1px solid #86efac', color: '#16a34a', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' },
   // Boutons "Passer ce bloc"
-  skipBlocBtn:      { background: 'white', border: '1.5px solid #333333', color: '#333333', borderRadius: 8, padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
-  skipBlocBtnInline:{ background: 'white', border: '1.5px solid #333333', color: '#333333', borderRadius: 8, padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer' },
-  terminerBlocBtn:  { width: '100%', marginTop: '0.75rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.9rem', fontWeight: '800', cursor: 'pointer', letterSpacing: '0.02em' },
+  skipBlocBtn:      { background: 'white', border: '1px solid #d1d5db', color: '#374151', borderRadius: 8, padding: '6px 10px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', flexShrink: 0 },
+  skipBlocBtnInline:{ background: 'white', border: '1px solid #d1d5db', color: '#374151', borderRadius: 8, padding: '6px 10px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' },
+  terminerBlocBtn:  { width: '100%', marginTop: 12, background: '#16a34a', color: 'white', border: 'none', borderRadius: 8, minHeight: 44, fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
   // Paramètres
-  paramsBar:    { display: 'flex', alignItems: 'center', background: '#f3f4f6', borderRadius: 10, padding: '0.45rem 0.6rem', marginBottom: '0.75rem', overflowX: 'auto' },
-  paramItem:    { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0.65rem', flexShrink: 0 },
-  paramDivider: { width: 1, height: 26, background: '#e5e7eb', flexShrink: 0 },
-  paramLabel:   { fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 },
-  paramValue:   { fontSize: '0.95rem', fontWeight: '800', color: '#111827', lineHeight: 1.3, whiteSpace: 'nowrap' },
+  paramsBar:    { display: 'flex', alignItems: 'center', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', padding: '8px 0', marginBottom: 16, overflowX: 'auto' },
+  paramItem:    { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px', flexShrink: 0 },
+  paramDivider: { width: 1, height: 28, background: '#f3f4f6', flexShrink: 0 },
+  paramLabel:   { fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', lineHeight: 1.3 },
+  paramValue:   { fontSize: '0.95rem', fontWeight: '700', color: '#1a1a1a', lineHeight: 1.3, whiteSpace: 'nowrap' },
   // Séries tracker
-  seriesTracker:{ background: '#f8f9fa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.6rem' },
-  seriesTrackerLabel:{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  histoBtn:    { background: 'none', border: 'none', color: '#333333', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', padding: '0.35rem 0', textDecoration: 'underline', textUnderlineOffset: 3 },
-  serieRow:    { display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', background: 'white', borderRadius: 8, padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb' },
-  serieRowDone:{ background: '#f0fdf4', border: '1.5px solid #86efac' },
-  serieRowWarn: { background: '#fffbeb', border: '1.5px solid #fbbf24' },
-  serieNum:    { fontSize: '0.72rem', fontWeight: '900', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  serieInput:     { padding: '0.3rem 0.4rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.85rem', fontWeight: '700', color: '#333333', textAlign: 'center', outline: 'none' },
-  serieInputDone: { background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' },
-  serieUnit:   { fontSize: '0.7rem', fontWeight: '600', color: '#6b7280', flexShrink: 0 },
-  serieValBtn: { marginLeft: 'auto', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 6, padding: '0.3rem 0.65rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
-  serieDoneBadge:  { marginLeft: 'auto', background: '#16a34a', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
-  serieDoneWarnBadge: { marginLeft: 'auto', background: '#f59e0b', color: 'white', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '800', flexShrink: 0, border: 'none', cursor: 'pointer' },
-  unvalCancelBtn:  { marginLeft: 'auto', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
-  unvalConfirmBtn: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
-  recupBtn:    { width: '100%', marginTop: '0.5rem', background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 8, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' },
+  seriesTracker:{ marginBottom: 12 },
+  seriesTrackerLabel:{ fontSize: '0.82rem', fontWeight: '700', color: '#374151' },
+  histoBtn:    { background: 'none', border: 'none', color: '#374151', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', padding: '8px 0', textDecoration: 'underline', textUnderlineOffset: 3 },
+  serieRow:    { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, background: 'white', borderRadius: 8, minHeight: 44, padding: '0 6px', border: '1px solid #e5e7eb' },
+  serieRowDone:{ background: '#f0fdf4', border: '1px solid #bbf7d0' },
+  serieRowWarn: { background: '#fffbeb', border: '1px solid #fde68a' },
+  serieNum:    { fontSize: '0.72rem', fontWeight: '800', color: 'var(--chip-text)', background: 'var(--chip-bg)', width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  serieInput:     { width: 48, height: 30, boxSizing: 'border-box', padding: '0 4px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.88rem', fontWeight: '600', color: '#333333', background: 'white', textAlign: 'center', outline: 'none', flexShrink: 0 },
+  serieInputDone: { border: '1px solid #bbf7d0', color: '#15803d' },
+  serieUnit:   { fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', flexShrink: 0 },
+  serieValBtn: { marginLeft: 'auto', height: 30, background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 6, padding: '0 10px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  serieDoneBadge:  { marginLeft: 'auto', width: 30, height: 30, background: '#16a34a', color: 'white', borderRadius: 6, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', cursor: 'pointer' },
+  serieDoneWarnBadge: { marginLeft: 'auto', width: 30, height: 30, background: '#f59e0b', color: 'white', borderRadius: 6, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', cursor: 'pointer' },
+  unvalCancelBtn:  { marginLeft: 'auto', height: 30, background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 6, padding: '0 10px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  unvalConfirmBtn: { height: 30, background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '0 10px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
+  recupBtn:    { width: '100%', marginTop: 12, background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 8, minHeight: 40, fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
   // RPE toggle
   rpeToggle:   { width: '100%', background: 'white', border: 'none', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '700', color: '#374151', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '0.5rem' },
   // Superset
   supersetWrapper:{ borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--accent)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   supersetHeader: { background: 'var(--accent-dark)', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  supersetBadge:  { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' },
-  supersetHint:   { color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '600' },
+  supersetBadge:  { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.04em', whiteSpace: 'nowrap' },
+  supersetHint:   { color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: '500', whiteSpace: 'nowrap' },
   supersetConnector:{ background: '#fffef5', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem' },
   supersetLine:   { flex: 1, height: '1px', background: 'var(--chip-bg)', opacity: 0.4 },
   supersetTag:    { fontSize: '0.7rem', fontWeight: '800', color: '#a16207', whiteSpace: 'nowrap' },
   // Timer (styles inlinés directement dans le JSX)
+  serieInputWarn: { border: '1px solid #fde68a', color: '#92400e' },
+  serieNumChauffe:{ fontSize: '0.7rem', fontWeight: '800', color: '#6b7280', background: '#e5e7eb', width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  serieIconBtn:{ marginLeft: 'auto', width: 30, height: 30, background: 'none', border: 'none', borderRadius: 6, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0 },
+  ajoutChauffe:{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: '0 0 8px', fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: 'pointer' },
+  bilan:       { display: 'flex', gap: 16, paddingTop: 8, borderTop: '1px solid #f3f4f6', fontSize: '0.8rem', color: '#6b7280' },
+  bilanVal:    { fontSize: '0.9rem', fontWeight: 700, color: '#333333' },
   // Échauffement / cardio validables
   partie:      { display: 'flex', alignItems: 'center', gap: 8, margin: '0.25rem 2px 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em' },
   partieCompte:{ marginLeft: 'auto', letterSpacing: 0, textTransform: 'none', fontWeight: 700, color: '#6b7280' },
