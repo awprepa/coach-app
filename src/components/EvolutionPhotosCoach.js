@@ -33,11 +33,11 @@ export default function EvolutionPhotosCoach({ clientId }) {
   const [addDate, setAddDate]   = useState(isoLocal())
   const [uploading, setUploading] = useState(false)
   const [compare, setCompare]   = useState([])     // ids sélectionnés pour comparaison (max 2)
+  const [actif, setActif]       = useState(1)      // photo comparée (0 ou 1) remplacée au prochain clic dans la grille
   const [filtre, setFiltre]     = useState('')     // '' = toutes | face | profil | dos
   const [addPose, setAddPose]   = useState('face') // pose des photos ajoutées par le coach
   const [poseEdit, setPoseEdit] = useState(null)   // photo dont on choisit la pose
   const [dateEditVal, setDateEditVal] = useState('')
-  const [comparer, setComparer] = useState(false) // plan de travail de comparaison ouvert
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -91,10 +91,14 @@ export default function EvolutionPhotosCoach({ clientId }) {
     setCompare(prev => prev.filter(id => id !== p.id))
   }
 
-  // Jusqu'à 3 photos comparées ; au-delà on fait défiler (on retire la plus ancienne).
+  // Deux photos comparées : une fois les deux choisies, un clic dans la grille
+  // remplace la photo sélectionnée (cadre jaune) ; un clic sur une photo comparée la retire.
   function toggleCompare(id) {
-    setCompare(prev => prev.includes(id) ? prev.filter(x => x !== id)
-      : prev.length >= 3 ? [...prev.slice(1), id] : [...prev, id])
+    setCompare(prev => {
+      if (prev.includes(id)) { setActif(1); return prev.filter(x => x !== id) }
+      if (prev.length < 2) return [...prev, id]
+      return prev.map((x, i) => i === actif ? id : x)
+    })
   }
 
   // Attribuer / changer la pose d'une photo (utile pour les anciennes photos
@@ -166,23 +170,9 @@ export default function EvolutionPhotosCoach({ clientId }) {
         </div>
       )}
 
-      {/* Comparaison : ouverte en plein écran (recadrage automatique, traits) */}
-      {cmpPhotos.length >= 1 && (
-        // Barre fixe en bas de l'écran : visible où que l'on soit dans la liste des photos
-        <div style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 900, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#1a1a1a', color: 'white', borderRadius: 14, padding: '10px 12px 10px 18px', boxShadow: '0 10px 30px rgba(0,0,0,.25)', maxWidth: 'calc(100vw - 32px)' }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>
-            {cmpPhotos.length === 1 ? '1 photo sélectionnée : sélectionne une deuxième photo' : `${cmpPhotos.length} photos sélectionnées`}
-          </span>
-          <button onClick={() => setComparer(true)} disabled={cmpPhotos.length < 2} style={{ opacity: cmpPhotos.length < 2 ? 0.4 : 1, background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 9, padding: '0.6rem 1.1rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
-            Comparer
-          </button>
-          <button onClick={() => setCompare([])} style={{ background: 'none', border: 'none', color: '#d1d5db', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-            Annuler la sélection
-          </button>
-        </div>
-      )}
-      {comparer && cmpPhotos.length >= 2 && (
-        <ComparaisonPhotos clientId={clientId} photos={cmpPhotos} onClose={() => setComparer(false)} />
+      {/* Comparaison : s'affiche dès que deux photos sont choisies */}
+      {cmpPhotos.length === 2 && (
+        <ComparaisonPhotos clientId={clientId} photos={cmpPhotos} actif={actif} onActif={setActif} />
       )}
 
       {loading ? (
@@ -194,7 +184,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
       ) : (
         <>
           <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '0 0 0.6rem' }}>
-            Sélectionne 2 ou 3 photos puis « Comparer ». Touche l'étiquette de pose pour la définir.
+            {cmpPhotos.length === 2 ? 'Clique une photo pour l\u2019afficher à la place de la photo sélectionnée (cadre jaune).' : cmpPhotos.length === 1 ? 'Choisis une deuxième photo pour comparer.' : 'Choisis deux photos pour les comparer.'} Touche l'étiquette de pose pour la définir.
           </p>
           {dates.map(d => (
             <div key={d} style={{ marginBottom: '0.9rem' }}>
@@ -203,7 +193,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
                 {byDate[d].slice().sort((a, b) => (POSE_ORDER[a.pose] ?? 99) - (POSE_ORDER[b.pose] ?? 99)).map(p => {
                   const sel = compare.includes(p.id)
                   return (
-                    <div key={p.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', outline: sel ? '3px solid #1d4ed8' : 'none' }}>
+                    <div key={p.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', outline: sel ? '3px solid #333333' : 'none', outlineOffset: -3 }}>
                       {p.url
                         ? <img loading="lazy" src={p.url} alt="" onClick={() => toggleCompare(p.id)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
                         : <div style={{ width: '100%', height: '100%', background: '#f3f4f6' }} />}
@@ -212,6 +202,7 @@ export default function EvolutionPhotosCoach({ clientId }) {
                         style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,0.62)', color: p.pose ? 'white' : '#fca5a5', fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, letterSpacing: '.02em', border: 'none', cursor: 'pointer' }}>
                         {p.pose ? POSE_LABEL[p.pose].toUpperCase() : 'POSE ?'}
                       </button>
+                      {sel && <span style={{ position: 'absolute', top: 4, left: 4, width: 22, height: 22, borderRadius: 6, background: '#333333', color: '#e4f816', fontSize: 12, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{compare.indexOf(p.id) + 1}</span>}
                       {p.uploaded_by === 'coach' && <span style={{ position: 'absolute', bottom: 3, right: 3, background: 'rgba(0,0,0,0.62)', color: '#e4f816', fontSize: '0.55rem', fontWeight: 800, padding: '1px 5px', borderRadius: 4 }}>COACH</span>}
                       <button onClick={() => supprimer(p)} style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', fontSize: '0.65rem', cursor: 'pointer' }}>✕</button>
                     </div>

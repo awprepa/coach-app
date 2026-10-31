@@ -1,231 +1,268 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { detecterCorps, FORMAT, styleRecadre } from '../utils/cadragePhoto'
 
-// Comparaison de photos d'évolution, côté coach : photos recadrées
-// automatiquement à la même échelle, et traits à poser pour comparer les
-// silhouettes. Un trait « commun » apparaît au même endroit sur toutes les
-// photos ; un trait « sur une photo » ne concerne qu'elle. Les traits sont
-// enregistrés pour cet ensemble de photos.
+// Comparaison de deux photos d'évolution, côté coach, avec des mesures :
+// on pose deux repères par mesure (ex. largeur des épaules) sur chaque photo.
+// Chaque mesure est rapportée à une mesure de référence (ex. hanches) sur la
+// même photo : la distance de prise de vue n'a donc pas d'effet.
+// Les repères sont enregistrés par photo (réutilisés dans d'autres comparaisons),
+// en fractions de la largeur / hauteur de l'image.
 
 const POSE_LABEL = { face: 'Face', profil: 'Profil', dos: 'Dos' }
-const COULEUR = { commun: '#e4f816', photo: '#ff5a5f' }
-const VB_L = 300, VB_H = VB_L / FORMAT // repère des traits dans le cadre (300 × 400)
-
-function uid() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
+const PRESETS = ['Épaules', 'Taille', 'Hanches', 'Cuisses', 'Bras']
+const COULEURS = ['#e4f816', '#38bdf8', '#fb923c', '#f472b6', '#a78bfa']
+const couleur = nom => COULEURS[PRESETS.indexOf(nom)] || COULEURS[0]
 const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const fmt2 = n => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-export default function ComparaisonPhotos({ clientId, photos, onClose }) {
-  const cle = photos.map(p => p.id).sort().join('_')
-  const [cadrages, setCadrages] = useState({})      // photoId -> {…} | null (pas de corps) | 'erreur'
-  const [recadrer, setRecadrer] = useState(true)
-  const [traits, setTraits] = useState([])          // { id, type: 'h'|'v'|'libre', photoId|null, x1,y1,x2,y2 }
-  const [outil, setOutil] = useState('h')
-  const [portee, setPortee] = useState('commun')
-  const [selection, setSelection] = useState(null)
-  const [etatSauvegarde, setEtatSauvegarde] = useState('')
-  const dragRef = useRef(null)
-  const chargeRef = useRef(false)
-  const ignorerRef = useRef(false) // ne pas réenregistrer les traits qu'on vient de charger
+export default function ComparaisonPhotos({ clientId, photos, actif, onActif }) {
+  const [reperes, setReperes] = useState({})     // photoId -> { nom: [[x,y],[x,y]] }
+  const [tailles, setTailles] = useState({})     // photoId -> { w, h } (taille réelle de l'image)
+  const [ajoutees, setAjoutees] = useState([])   // mesures ajoutées pendant la séance
+  const [active, setActive] = useState(null)
+  const [reference, setReference] = useState(null)
+  const [etat, setEtat] = useState('')
+  const chargees = useRef(new Set())
+  const aEnregistrer = useRef(new Set())
+  const drag = useRef(null)
 
-  // Repérage du corps sur chaque photo
+  // Repères déjà posés sur ces photos
   useEffect(() => {
-    let annule = false
-    photos.forEach(async p => {
-      try {
-        const c = await detecterCorps(p.url)
-        if (!annule) setCadrages(prev => ({ ...prev, [p.id]: c }))
-      } catch (e) {
-        console.error('[cadrage photo]', e)
-        if (!annule) setCadrages(prev => ({ ...prev, [p.id]: 'erreur' }))
-      }
-    })
-    return () => { annule = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cle])
+    const ids = photos.map(p => p.id).filter(id => !chargees.current.has(id))
+    if (!ids.length) return
+    ids.forEach(id => chargees.current.add(id))
+    supabase.from('photo_comparaison_traits').select('cle, traits').eq('client_id', clientId).in('cle', ids.map(id => `mesures_${id}`))
+      .then(({ data }) => {
+        const r = {}
+        for (const row of data || []) if (row.traits && !Array.isArray(row.traits)) r[row.cle.slice(8)] = row.traits
+        setReperes(prev => ({ ...r, ...prev }))
+      })
+  }, [photos, clientId])
 
-  // Traits enregistrés pour ces photos
+  // Enregistrement automatique des photos modifiées (après une courte pause)
   useEffect(() => {
-    supabase.from('photo_comparaison_traits').select('traits').eq('client_id', clientId).eq('cle', cle).maybeSingle()
-      .then(({ data }) => { ignorerRef.current = true; setTraits(data?.traits || []); chargeRef.current = true })
-  }, [clientId, cle])
-
-  // Enregistrement automatique (après une courte pause)
-  useEffect(() => {
-    if (!chargeRef.current) return
-    if (ignorerRef.current) { ignorerRef.current = false; return }
-    setEtatSauvegarde('…')
+    if (!aEnregistrer.current.size) return
+    setEtat('…')
     const t = setTimeout(async () => {
-      const { error } = await supabase.from('photo_comparaison_traits')
-        .upsert({ client_id: clientId, cle, traits, updated_at: new Date().toISOString() }, { onConflict: 'client_id,cle' })
-      setEtatSauvegarde(error ? 'Traits non enregistrés' : 'Traits enregistrés')
+      const ids = [...aEnregistrer.current]
+      aEnregistrer.current.clear()
+      const { error } = await supabase.from('photo_comparaison_traits').upsert(
+        ids.map(id => ({ client_id: clientId, cle: `mesures_${id}`, traits: reperes[id] || {}, updated_at: new Date().toISOString() })),
+        { onConflict: 'client_id,cle' })
+      setEtat(error ? 'Mesures non enregistrées' : 'Mesures enregistrées')
     }, 600)
     return () => clearTimeout(t)
-  }, [traits, clientId, cle])
+  }, [reperes, clientId])
 
-  const supprimer = useCallback(id => { setTraits(prev => prev.filter(t => t.id !== id)); setSelection(null) }, [])
+  function modifier(photoId, nom, pts) {
+    aEnregistrer.current.add(photoId)
+    setReperes(prev => {
+      const r = { ...(prev[photoId] || {}) }
+      if (pts) r[nom] = pts; else delete r[nom]
+      return { ...prev, [photoId]: r }
+    })
+  }
 
-  useEffect(() => {
-    const h = e => {
-      const tag = document.activeElement?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (e.key === 'Escape') { if (selection) setSelection(null); else onClose() }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selection) { e.preventDefault(); supprimer(selection) }
-    }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [selection, supprimer, onClose])
+  // Mesures connues : celles déjà posées sur ces photos + celles ajoutées
+  const noms = [...new Set([...photos.flatMap(p => Object.keys(reperes[p.id] || {})), ...ajoutees])]
+    .sort((a, b) => (PRESETS.indexOf(a) + 1 || 99) - (PRESETS.indexOf(b) + 1 || 99))
+  const nomActif = noms.includes(active) ? active : null
+  const nomRef = noms.includes(reference) ? reference : noms.includes('Hanches') ? 'Hanches' : noms[0]
 
-  // ── Interactions sur un cadre ──
+  const longueur = (photoId, nom) => {
+    const p = reperes[photoId]?.[nom], t = tailles[photoId]
+    if (!p || p.length < 2 || !t) return null
+    return Math.hypot((p[1][0] - p[0][0]) * t.w, (p[1][1] - p[0][1]) * t.h)
+  }
+
+  // Étape en cours pour la mesure active
+  let etape = null
+  if (nomActif) {
+    const manque = photos.find(p => (reperes[p.id]?.[nomActif] || []).length < 2)
+    etape = manque
+      ? { photo: manque, n: (reperes[manque.id]?.[nomActif] || []).length }
+      : { fini: true }
+  }
+
   function point(e, svg) {
     const r = svg.getBoundingClientRect()
-    return {
-      x: Math.max(0, Math.min(VB_L, (e.clientX - r.left) / r.width * VB_L)),
-      y: Math.max(0, Math.min(VB_H, (e.clientY - r.top) / r.height * VB_H)),
-    }
+    return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]
   }
-  function onDown(e, photoId) {
+  function onDown(e, photo, i) {
     const svg = e.currentTarget
     svg.setPointerCapture?.(e.pointerId)
-    const p = point(e, svg)
-    const cible = e.target.closest('[data-trait]')
+    onActif(i)
+    const cible = e.target.closest('[data-nom]')
     if (cible) {
-      const id = cible.getAttribute('data-trait'), bout = cible.getAttribute('data-bout')
-      setSelection(id)
-      dragRef.current = { mode: bout ? 'bout' : 'deplacer', id, bout, depart: p, base: traits.find(t => t.id === id) }
+      drag.current = { photoId: photo.id, nom: cible.getAttribute('data-nom'), k: +cible.getAttribute('data-k') }
+      setActive(cible.getAttribute('data-nom'))
       return
     }
-    setSelection(null)
-    const photo = portee === 'photo' ? photoId : null
-    if (outil === 'h') {
-      const t = { id: uid(), type: 'h', photoId: photo, x1: 0, y1: p.y, x2: VB_L, y2: p.y }
-      setTraits(prev => [...prev, t]); setSelection(t.id)
-      dragRef.current = { mode: 'deplacer', id: t.id, depart: p, base: t }
-    } else if (outil === 'v') {
-      const t = { id: uid(), type: 'v', photoId: photo, x1: p.x, y1: 0, x2: p.x, y2: VB_H }
-      setTraits(prev => [...prev, t]); setSelection(t.id)
-      dragRef.current = { mode: 'deplacer', id: t.id, depart: p, base: t }
-    } else {
-      const t = { id: uid(), type: 'libre', photoId: photo, x1: p.x, y1: p.y, x2: p.x, y2: p.y }
-      setTraits(prev => [...prev, t]); setSelection(t.id)
-      dragRef.current = { mode: 'bout', id: t.id, bout: '2', depart: p, base: t, nouveau: true }
-    }
+    if (!nomActif) return
+    // Mesure déjà placée sur cette photo : on l'ajuste en faisant glisser ses repères
+    const pts = reperes[photo.id]?.[nomActif] || []
+    if (pts.length < 2) modifier(photo.id, nomActif, [...pts, point(e, svg)])
   }
-  function onMove(e) {
-    const d = dragRef.current
-    if (!d) return
-    const p = point(e, e.currentTarget)
-    const dx = p.x - d.depart.x, dy = p.y - d.depart.y
-    setTraits(prev => prev.map(t => {
-      if (t.id !== d.id) return t
-      const b = d.base
-      if (d.mode === 'bout') return d.bout === '1' ? { ...t, x1: p.x, y1: p.y } : { ...t, x2: p.x, y2: p.y }
-      if (b.type === 'h') return { ...t, y1: b.y1 + dy, y2: b.y2 + dy }
-      if (b.type === 'v') return { ...t, x1: b.x1 + dx, x2: b.x2 + dx }
-      return { ...t, x1: b.x1 + dx, y1: b.y1 + dy, x2: b.x2 + dx, y2: b.y2 + dy }
-    }))
+  function onMove(e, photo) {
+    const d = drag.current
+    if (!d || d.photoId !== photo.id) return
+    const pts = [...(reperes[photo.id]?.[d.nom] || [])]
+    pts[d.k] = point(e, e.currentTarget)
+    modifier(photo.id, d.nom, pts)
   }
-  function onUp() {
-    const d = dragRef.current
-    dragRef.current = null
-    // Trait libre trop court (simple clic) : on l'abandonne
-    if (d?.nouveau) setTraits(prev => prev.filter(t => t.id !== d.id || Math.hypot(t.x2 - t.x1, t.y2 - t.y1) > 6))
+  const onUp = () => { drag.current = null }
+
+  function ajouter(nom) {
+    setAjoutees(prev => prev.includes(nom) ? prev : [...prev, nom])
+    setActive(nom)
+  }
+  function retirer(nom) {
+    photos.forEach(p => { if (reperes[p.id]?.[nom]) modifier(p.id, nom, null) })
+    setAjoutees(prev => prev.filter(n => n !== nom))
+    if (active === nom) setActive(null)
   }
 
-  const nbFaits = Object.keys(cadrages).length
-  const echecs = photos.filter(p => cadrages[p.id] === null || cadrages[p.id] === 'erreur').length
   const posesDifferentes = new Set(photos.map(p => p.pose)).size > 1
-  const largeurCadre = `min(${Math.floor(92 / photos.length)}vw, ${Math.floor(((window.innerHeight - 230) * FORMAT))}px)`
+  const resultats = nomRef ? noms.filter(n => n !== nomRef).map(nom => {
+    const v = photos.map(p => { const a = longueur(p.id, nom), b = longueur(p.id, nomRef); return a && b ? a / b : null })
+    if (v.some(x => x == null)) return { nom, manque: true }
+    return { nom, v, pct: (v[v.length - 1] / v[0] - 1) * 100 }
+  }) : []
 
   return (
-    <div style={S.overlay}>
-      <div style={S.barre}>
-        <span style={S.titre}>Comparaison</span>
-        <div style={S.groupe}>
-          {[['h', 'Trait horizontal'], ['v', 'Trait vertical'], ['libre', 'Trait libre']].map(([k, l]) => (
-            <button key={k} onClick={() => setOutil(k)} style={{ ...S.btn, ...(outil === k ? S.btnOn : {}) }}>{l}</button>
-          ))}
-        </div>
-        <div style={S.groupe}>
-          <button onClick={() => setPortee('commun')} style={{ ...S.btn, ...(portee === 'commun' ? S.btnOn : {}) }}>
-            <span style={{ ...S.pastille, background: COULEUR.commun }} />Commun aux photos
-          </button>
-          <button onClick={() => setPortee('photo')} style={{ ...S.btn, ...(portee === 'photo' ? S.btnOn : {}) }}>
-            <span style={{ ...S.pastille, background: COULEUR.photo }} />Sur une seule photo
-          </button>
-        </div>
-        <label style={S.check}>
-          <input type="checkbox" checked={recadrer} onChange={e => setRecadrer(e.target.checked)} />
-          Recadrage automatique
-        </label>
-        <div style={{ flex: 1 }} />
-        {selection && <button onClick={() => supprimer(selection)} style={S.btnDanger}>Supprimer le trait</button>}
-        {traits.length > 0 && <button onClick={() => { setTraits([]); setSelection(null) }} style={S.btn}>Effacer les traits</button>}
-        <span style={S.etat}>{etatSauvegarde}</span>
-        <button onClick={onClose} style={S.btnFermer}>Fermer</button>
-      </div>
-
-      <div style={S.aide}>
-        {outil === 'libre' ? 'Fais glisser sur une photo pour tracer un trait.' : 'Clique sur une photo pour poser le trait, puis fais-le glisser pour l’ajuster.'}
-        {' '}Clique sur un trait pour le sélectionner ; Suppr pour l'effacer.
-        {recadrer && nbFaits < photos.length && ' Recadrage en cours…'}
-        {recadrer && echecs > 0 && ` Corps non repéré sur ${echecs} photo${echecs > 1 ? 's' : ''} : affichée${echecs > 1 ? 's' : ''} sans recadrage.`}
-        {posesDifferentes && ' Attention : ces photos ne sont pas toutes prises sous le même angle.'}
-      </div>
-
+    <div style={S.zone}>
       <div style={S.photos}>
-        {photos.map(p => {
-          const c = cadrages[p.id]
-          const recadre = recadrer && c && c !== 'erreur'
-          const visibles = traits.filter(t => !t.photoId || t.photoId === p.id)
+        {photos.map((p, i) => {
+          const t = tailles[p.id]
           return (
-            <div key={p.id} style={{ width: largeurCadre, flexShrink: 0 }}>
-              <div style={{ ...S.cadre, aspectRatio: String(FORMAT) }}>
-                <img src={p.url} alt="" draggable={false}
-                  style={recadre ? styleRecadre(c) : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
-                <svg viewBox={`0 0 ${VB_L} ${VB_H}`} preserveAspectRatio="none" style={S.svg}
-                  onPointerDown={e => onDown(e, p.id)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-                  {visibles.map(t => {
-                    const col = t.photoId ? COULEUR.photo : COULEUR.commun
-                    const sel = selection === t.id
-                    return (
-                      <g key={t.id}>
-                        <line data-trait={t.id} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="transparent" strokeWidth="14" vectorEffect="non-scaling-stroke" style={{ cursor: 'move' }} />
-                        <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="rgba(0,0,0,.55)" strokeWidth={sel ? 5 : 4} vectorEffect="non-scaling-stroke" pointerEvents="none" />
-                        <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={col} strokeWidth={sel ? 2.5 : 1.75} strokeDasharray={sel ? '6 4' : undefined} vectorEffect="non-scaling-stroke" pointerEvents="none" />
-                        {t.type === 'libre' && sel && ['1', '2'].map(b => (
-                          <circle key={b} data-trait={t.id} data-bout={b} cx={b === '1' ? t.x1 : t.x2} cy={b === '1' ? t.y1 : t.y2} r="5"
-                            fill={col} stroke="#000" strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} />
-                        ))}
-                      </g>
-                    )
-                  })}
-                </svg>
+            <div key={p.id} style={S.colonne}>
+              <div style={S.tete}>
+                <p style={S.teteDate}><span style={S.num}>{i + 1}</span>{fmtDate(p.date)}</p>
+                <small style={S.tetePose}>{POSE_LABEL[p.pose] || 'Pose ?'}</small>
               </div>
-              <p style={S.legende}>{fmtDate(p.date)} · {POSE_LABEL[p.pose] || 'Pose ?'}</p>
+              <div style={{ ...S.cadre, boxShadow: actif === i ? '0 0 0 3px #e4f816' : 'none' }} onClick={() => onActif(i)}>
+                <img src={p.url} alt="" draggable={false} style={S.img}
+                  onLoad={e => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; setTailles(prev => ({ ...prev, [p.id]: { w, h } })) }} />
+                {t && (
+                  <svg viewBox={`0 0 ${t.w} ${t.h}`} preserveAspectRatio="none" style={{ ...S.svg, cursor: nomActif ? 'crosshair' : 'default' }}
+                    onPointerDown={e => onDown(e, p, i)} onPointerMove={e => onMove(e, p)} onPointerUp={onUp} onPointerCancel={onUp}>
+                    {noms.map(nom => {
+                      const pts = (reperes[p.id]?.[nom] || []).map(([x, y]) => [x * t.w, y * t.h])
+                      const c = couleur(nom)
+                      const r = t.w * 0.016
+                      return (
+                        <g key={nom}>
+                          {pts.length === 2 && <>
+                            <line x1={pts[0][0]} y1={pts[0][1]} x2={pts[1][0]} y2={pts[1][1]} stroke="rgba(0,0,0,.55)" strokeWidth="4" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                            <line x1={pts[0][0]} y1={pts[0][1]} x2={pts[1][0]} y2={pts[1][1]} stroke={c} strokeWidth="2" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                            <text x={(pts[0][0] + pts[1][0]) / 2} y={Math.min(pts[0][1], pts[1][1]) - r * 1.6} textAnchor="middle" fontSize={t.w * 0.04} fontWeight="800"
+                              fill={c} stroke="rgba(0,0,0,.7)" strokeWidth={t.w * 0.01} paintOrder="stroke" pointerEvents="none">{nom}</text>
+                          </>}
+                          {pts.map((q, k) => (
+                            <circle key={k} data-nom={nom} data-k={k} cx={q[0]} cy={q[1]} r={r} fill={c} stroke="#000" strokeWidth="1.5" vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} />
+                          ))}
+                        </g>
+                      )
+                    })}
+                  </svg>
+                )}
+              </div>
             </div>
           )
         })}
+      </div>
+
+      <div style={S.panneau}>
+        <div style={S.etape}>
+          {!nomActif ? 'Choisis ou ajoute une mesure ci-dessous, puis clique deux repères sur chaque photo.'
+            : etape.fini ? <><b style={S.etapeNom}>{nomActif}</b> est placée sur les deux photos. Fais glisser un repère pour l'ajuster, ou passe à une autre mesure.</>
+            : <><b style={S.etapeNom}>{nomActif}</b> · photo {photos.indexOf(etape.photo) + 1} ({fmtDate(etape.photo.date)}) : clique le {etape.n === 0 ? 'premier' : 'second'} repère.</>}
+        </div>
+
+        <div style={S.bloc}>
+          <div style={S.blocTete}><h3 style={S.blocTitre}>Mesures</h3><span style={S.etat}>{etat}</span></div>
+          {noms.map(nom => {
+            const nb = photos.filter(p => (reperes[p.id]?.[nom] || []).length === 2).length
+            const on = nom === nomActif
+            return (
+              <div key={nom} onClick={() => setActive(nom)} style={{ ...S.mesure, ...(on ? S.mesureOn : null) }}>
+                <span style={{ ...S.point, background: couleur(nom) }} />
+                <span style={S.mesureNom}>{nom}</span>
+                <span style={{ ...S.mesureEtat, color: nb === photos.length ? '#16a34a' : '#6b7280' }}>{nb}/{photos.length} photos</span>
+                <button onClick={e => { e.stopPropagation(); setReference(nom) }} title="Mesure de référence"
+                  style={{ ...S.ref, ...(nom === nomRef ? S.refOn : null) }}>Référence</button>
+                {on && <button onClick={e => { e.stopPropagation(); retirer(nom) }} style={S.retirer} aria-label={`Retirer la mesure ${nom}`} title="Retirer cette mesure des deux photos">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>}
+              </div>
+            )
+          })}
+          <div style={S.ajouts}>
+            {PRESETS.filter(n => !noms.includes(n)).map(n => (
+              <button key={n} onClick={() => ajouter(n)} style={S.ajout}>+ {n}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={S.bloc}>
+          <h3 style={S.blocTitre}>Résultat</h3>
+          {resultats.length === 0 ? (
+            <p style={S.vide}>Place au moins deux mesures sur les deux photos. Chaque mesure est comparée à la mesure de référence : la distance de prise de vue n'a donc pas d'effet.</p>
+          ) : resultats.map((r, i) => {
+            const stable = !r.manque && Math.abs(r.pct) < 1
+            const col = stable ? '#6b7280' : r.pct > 0 ? '#16a34a' : '#dc2626'
+            return (
+              <div key={r.nom} style={{ ...S.res, borderTop: i ? '1px solid #f3f4f6' : 'none' }}>
+                <span style={S.resLib}>{r.nom} / {nomRef}
+                  <small style={S.resSous}>{r.manque ? 'À placer sur les deux photos'
+                    : stable ? 'Stable' : `${r.nom} ${r.pct > 0 ? 'plus' : 'moins'} large${r.nom.endsWith('s') ? 's' : ''} par rapport ${nomRef.endsWith('s') ? 'aux' : 'à la'} ${nomRef.toLowerCase()}`}</small>
+                </span>
+                {!r.manque && <>
+                  <span style={S.resVal}>{r.v.map(fmt2).join(' → ')}</span>
+                  <span style={{ ...S.pill, background: col }}>{r.pct > 0 ? '+' : ''}{r.pct.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %</span>
+                </>}
+              </div>
+            )
+          })}
+          {posesDifferentes && <p style={{ ...S.vide, color: '#b45309', marginTop: 8 }}>Ces photos ne sont pas prises sous le même angle : les mesures ne sont pas comparables.</p>}
+        </div>
       </div>
     </div>
   )
 }
 
 const S = {
-  overlay: { position: 'fixed', inset: 0, zIndex: 1100, background: '#f2f2f2', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  barre: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#ffffff', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' },
-  titre: { fontSize: 16, fontWeight: 800, color: '#1a1a1a', marginRight: 6 },
-  groupe: { display: 'flex', gap: 2, background: '#f3f4f6', borderRadius: 9, padding: 3 },
-  btn: { display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'none', color: '#374151', fontSize: 13, fontWeight: 700, padding: '7px 11px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
-  btnOn: { background: '#333333', color: '#e4f816' },
-  pastille: { width: 10, height: 10, borderRadius: 3, display: 'inline-block', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.25)' },
-  check: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer' },
-  btnDanger: { border: '1.5px solid #fecaca', background: 'white', color: '#dc2626', fontSize: 13, fontWeight: 700, padding: '7px 11px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' },
-  etat: { fontSize: 12.5, color: '#6b7280', fontWeight: 600, minWidth: 110, textAlign: 'right' },
-  btnFermer: { background: '#333333', color: '#e4f816', border: 'none', fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' },
-  aide: { fontSize: 13, color: '#4b5563', padding: '8px 16px', lineHeight: 1.5 },
-  photos: { flex: 1, minHeight: 0, display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'flex-start', padding: '4px 16px 16px', overflow: 'auto' },
-  cadre: { position: 'relative', width: '100%', overflow: 'hidden', borderRadius: 10, background: '#1a1a1a' },
-  svg: { position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none', cursor: 'crosshair' },
-  legende: { margin: '8px 0 0', fontSize: 13.5, fontWeight: 700, color: '#374151', textAlign: 'center' },
+  zone:       { display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 24 },
+  photos:     { flex: '1 1 480px', minWidth: 0, display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'flex-start', background: '#f3f4f6', borderRadius: 12, padding: 12 },
+  colonne:    { flex: '1 1 0', minWidth: 0, maxWidth: 360 },
+  tete:       { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  teteDate:   { margin: 0, fontSize: 13, fontWeight: 800, color: '#1a1a1a', display: 'flex', alignItems: 'center' },
+  tetePose:   { fontSize: 12, fontWeight: 600, color: '#6b7280' },
+  num:        { width: 22, height: 22, borderRadius: 6, background: '#333333', color: '#e4f816', fontSize: 12, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: 8, flexShrink: 0 },
+  cadre:      { position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#1a1a1a', lineHeight: 0 },
+  img:        { display: 'block', width: '100%', maxHeight: '68vh', objectFit: 'contain', userSelect: 'none' },
+  svg:        { position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none' },
+  panneau:    { flex: '0 1 340px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 },
+  etape:      { background: '#333333', color: 'white', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, lineHeight: 1.45 },
+  etapeNom:   { color: '#e4f816' },
+  bloc:       { border: '1px solid #e5e7eb', borderRadius: 12, padding: 12 },
+  blocTete:   { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' },
+  blocTitre:  { margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.06em' },
+  etat:       { fontSize: 12, fontWeight: 600, color: '#6b7280' },
+  mesure:     { display: 'flex', alignItems: 'center', gap: 8, padding: 8, minHeight: 44, borderRadius: 9, cursor: 'pointer', border: '1.5px solid transparent' },
+  mesureOn:   { border: '1.5px solid #333333', background: '#fafafa' },
+  point:      { width: 12, height: 12, borderRadius: '50%', flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.2)' },
+  mesureNom:  { flex: 1, fontSize: 14, fontWeight: 700, color: '#1a1a1a' },
+  mesureEtat: { fontSize: 12, fontWeight: 700 },
+  ref:        { fontSize: 12, fontWeight: 800, borderRadius: 999, padding: '2px 8px', border: '1.5px solid #e5e7eb', color: '#6b7280', background: 'white', cursor: 'pointer', fontFamily: 'inherit' },
+  refOn:      { background: '#333333', border: '1.5px solid #333333', color: '#e4f816' },
+  retirer:    { width: 28, height: 28, border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  ajouts:     { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  ajout:      { border: '1.5px dashed #d1d5db', background: 'white', borderRadius: 999, padding: '5px 10px', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: '#374151', cursor: 'pointer' },
+  vide:       { fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5 },
+  res:        { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' },
+  resLib:     { flex: 1, fontSize: 13, fontWeight: 700, color: '#1a1a1a' },
+  resSous:    { display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginTop: 2 },
+  resVal:     { fontSize: 13, fontWeight: 700, color: '#6b7280', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  pill:       { borderRadius: 999, padding: '3px 9px', fontSize: 12, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: 'white', whiteSpace: 'nowrap' },
 }
