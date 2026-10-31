@@ -89,17 +89,15 @@ const COL_LABEL = 56
 const ICONE_ECHAUFFEMENT = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.5 1.5 1.5 2.5 3 2.5-1-2-1-4.5 0-7z"/></svg>
 const ICONE_CARDIO = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>
 const ICONE_INTERVALLES = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg>
-const ICONE_VELO = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5L9 9h6l3.5 7.5M9 9l3 7.5L15 9M8 6h3"/></svg>
-const ICONE_COURSE = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2v4M6 12l3-3 4 1 2 3 3 1M11 15l2-5"/></svg>
-const ICONE_RAMEUR = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 19h18M6 19l3-6h5l3 6"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M8 11l4-1 5 2"/></svg>
-const ICONE_NAGE = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><circle cx="16" cy="7" r="2"/><path d="M5 14l5-5 3 3 3-1"/></svg>
-// Icône d'un cardio d'après son activité (texte libre saisi par le coach)
+const ICONE_ESCALIER = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 21h5v-4h5v-4h5V9h5"/><circle cx="12" cy="3.2" r="1.6"/><path d="M12 5.5l-1 4.5-1.5 3.5L9 17M11 10l3 1v2M11.8 7l2.7 2M11.8 7L9.5 9"/></svg>
+const ICONE_VELO = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 21h16"/><circle cx="16" cy="15" r="3.5"/><path d="M8 21l3-10M11 11L16 15M9 7h4M11 7v4M17 6l-1 9M15 6h3"/></svg>
+const ICONE_TAPIS = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h15l3-3M17 20l3-14h-3"/><circle cx="10" cy="3.5" r="1.6"/><path d="M6.5 17l2.5-4 2 1.5V17M9 13l1-5 3 2.5 2-.5M10 8l-3 2"/></svg>
+// Icône d'un cardio d'après la machine choisie par le coach (escalier, vélo, tapis)
 function iconeCardio(type) {
   const t = (type || '').toLowerCase()
-  if (/v[ée]lo|bike|assault|airbike|cycl/.test(t)) return ICONE_VELO
-  if (/rame|row|ski/.test(t)) return ICONE_RAMEUR
-  if (/nage|natation|piscine|swim/.test(t)) return ICONE_NAGE
-  if (/course|footing|run|tapis|marche|jog/.test(t)) return ICONE_COURSE
+  if (/escalier|stair|step/.test(t)) return ICONE_ESCALIER
+  if (/v[ée]lo|bike|cycl/.test(t)) return ICONE_VELO
+  if (/tapis|course|footing|run|marche|jog/.test(t)) return ICONE_TAPIS
   return ICONE_CARDIO
 }
 const COCHE = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>

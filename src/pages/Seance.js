@@ -1440,9 +1440,11 @@ export default function Seance() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end', background: '#f7f7f7', borderRadius: 12, padding: '0.75rem' }}>
                   <div style={styles.editField}>
                     <label style={styles.editLabel}>Type</label>
-                    <input placeholder="ex : Footing, Vélo…" aria-label="ex : Footing, Vélo…" value={cardio.type || ''}
-                      onChange={e => updateCardioSem(position, sem, { type: e.target.value })}
-                      style={styles.editInput} />
+                    <select value={cardio.type || ''} onChange={e => updateCardioSem(position, sem, { type: e.target.value })} style={styles.editInput}>
+                      <option value="">—</option>
+                      {[['Escalier', 'Escalier'], ['Vélo', 'Vélo'], ['Tapis', 'Tapis (marche ou course)']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      {cardio.type && !['Escalier', 'Vélo', 'Tapis'].includes(cardio.type) && <option value={cardio.type}>{cardio.type}</option>}
+                    </select>
                   </div>
                   <div style={styles.editField}>
                     <label style={styles.editLabel}>Durée (min)</label>
