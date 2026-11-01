@@ -10,9 +10,9 @@ const SANS_CAT = 'Sans catégorie'
 
 // Muscles rangés par zone du corps
 const ZONES = [
-  { titre: 'Haut du corps', muscles: ['pectoraux', 'dorsaux', 'epaules', 'trapezes', 'biceps', 'triceps', 'avant_bras'] },
+  { titre: 'Haut du corps', muscles: ['pectoraux', 'dorsaux', 'epaules', 'trapezes', 'biceps', 'triceps', 'avant_bras', 'cervicaux'] },
   { titre: 'Core', muscles: ['abdominaux', 'obliques', 'lombaires'] },
-  { titre: 'Bas du corps', muscles: ['quadriceps', 'ischio_jambiers', 'fessiers', 'mollets'] },
+  { titre: 'Bas du corps', muscles: ['quadriceps', 'ischio_jambiers', 'fessiers', 'adducteurs', 'abducteurs', 'mollets', 'tibial_anterieur'] },
 ]
 
 // Muscles d'un exercice : JSON { p, s } rangé dans description par la page

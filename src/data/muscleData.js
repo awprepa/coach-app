@@ -1,4 +1,4 @@
-// Définition des 14 groupes musculaires
+// Définition des 18 groupes musculaires
 export const MUSCLES = {
   pectoraux:       { label: 'Pectoraux',        view: 'front' },
   dorsaux:         { label: 'Dorsaux',           view: 'back'  },
@@ -6,6 +6,7 @@ export const MUSCLES = {
   triceps:         { label: 'Triceps',           view: 'back'  },
   epaules:         { label: 'Épaules',           view: 'both'  },
   trapezes:        { label: 'Trapèzes',          view: 'back'  },
+  cervicaux:       { label: 'Cervicaux',         view: 'both'  },
   avant_bras:      { label: 'Avant-bras',        view: 'front' },
   abdominaux:      { label: 'Abdominaux',        view: 'front' },
   obliques:        { label: 'Obliques',          view: 'front' },
@@ -13,7 +14,10 @@ export const MUSCLES = {
   fessiers:        { label: 'Fessiers',          view: 'back'  },
   quadriceps:      { label: 'Quadriceps',        view: 'front' },
   ischio_jambiers: { label: 'Ischio-jambiers',   view: 'back'  },
+  adducteurs:      { label: 'Adducteurs',        view: 'front' },
+  abducteurs:      { label: 'Abducteurs',        view: 'back'  },
   mollets:         { label: 'Mollets',           view: 'back'  },
+  tibial_anterieur: { label: 'Tibial antérieur', view: 'front' },
 }
 
 export const EXERCISE_DICTIONARY = [
@@ -258,6 +262,34 @@ export const EXERCISE_DICTIONARY = [
     keywords: ['corde a sauter', 'corde à sauter', 'jump rope', 'sauter a la corde'],
     primary: ['mollets', 'quadriceps'],
     secondary: ['epaules', 'abdominaux'],
+  },
+
+  // Adducteurs
+  {
+    keywords: ['copenhagen', 'copenhague', 'adduction', 'adducteur', 'adductor'],
+    primary: ['adducteurs'],
+    secondary: ['obliques'],
+  },
+
+  // Abducteurs / moyen fessier
+  {
+    keywords: ['abduction', 'abducteur', 'marche laterale', 'monster walk', 'clamshell', 'clam shell', 'side plank hip'],
+    primary: ['abducteurs'],
+    secondary: ['fessiers'],
+  },
+
+  // Cervicaux
+  {
+    keywords: ['cervical', 'cervicaux', 'nuque', 'neck', 'flexion du cou', 'extension du cou'],
+    primary: ['cervicaux'],
+    secondary: ['trapezes'],
+  },
+
+  // Tibial antérieur
+  {
+    keywords: ['tibial', 'tib raise', 'releveur', 'dorsiflexion'],
+    primary: ['tibial_anterieur'],
+    secondary: [],
   },
 
   // Pompe / push-up
