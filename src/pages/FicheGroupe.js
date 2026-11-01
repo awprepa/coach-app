@@ -9,6 +9,7 @@ import { formatRetour, getActiveBlessure } from '../components/BlessureButton'
 import GroupeTestsView from '../components/GroupeTestsView'
 import GroupeBlessuresView from '../components/GroupeBlessuresView'
 import GroupeClassementView from '../components/GroupeClassementView'
+import ClubEquipes from '../components/ClubEquipes'
 import Icon from '../components/Icon'
 import { isoLocal } from '../utils/dates'
 
@@ -377,6 +378,7 @@ export default function FicheGroupe() {
         couleur_secondaire: groupe?.couleur_secondaire || null,
         logo_url: groupe?.logo_url || null,
         parent_id: id,
+        type: groupe?.type === 'club' ? 'equipe' : 'sous_groupe',
       }]).select().single()
     if (error) { alert(error.message); return }
     setSousGroupes([...sousGroupes, data])
@@ -857,6 +859,7 @@ export default function FicheGroupe() {
   if (!groupe) return null
 
   const accent = groupe.couleur || '#333333'
+  const estClub = groupe.type === 'club'
 
   // ── Membres — recherche + filtre + tri (nom de famille affiché en premier) ──
   function membreAvg(m) {
@@ -956,25 +959,28 @@ export default function FicheGroupe() {
               </div>
           }
           <div>
-            {parent && <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Sous-groupe de {parent.nom}</p>}
+            {estClub && <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Club</p>}
+            {parent && <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{parent.type === 'club' ? 'Équipe' : 'Sous-groupe'} de {parent.nom}</p>}
             <h1 style={{ margin: 0, fontSize: '1.9rem', fontWeight: '900', color: '#1a1a1a' }}>{groupe.nom}</h1>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
               <span style={{ background: accent + '18', color: accent, border: `1px solid ${accent}44`, borderRadius: 999, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '700' }}>
-                {membres.length} membre{membres.length > 1 ? 's' : ''}
+                {estClub ? `${membres.length} joueur${membres.length > 1 ? 's' : ''} au total` : `${membres.length} membre${membres.length > 1 ? 's' : ''}`}
               </span>
               <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: 999, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '700' }}>
-                {sousGroupes.length} sous-groupe{sousGroupes.length > 1 ? 's' : ''}
+                {sousGroupes.length} {estClub ? 'équipe' : 'sous-groupe'}{sousGroupes.length > 1 ? 's' : ''}
               </span>
             </div>
           </div>
         </div>
         <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+          {!estClub && <>
           <button onClick={() => setTab('blessures')} style={S.btnSecondary}>
             <IcoCross /> Suivi blessures
           </button>
           <button onClick={() => setTab('tests')} style={S.btnSecondary}>
             <IcoChart /> Tests physiques
           </button>
+          </>}
           <button onClick={() => setEditOpen(true)} style={S.btnSecondary}>
             <IcoEdit /> Modifier
           </button>
@@ -995,6 +1001,8 @@ export default function FicheGroupe() {
         <GroupeBlessuresView groupeId={id} accent={accent} />
       ) : tab === 'classement' ? (
         <GroupeClassementView groupe={classementSrc || groupe} classementFFR={classementFFR} accent={accent} />
+      ) : estClub ? (
+        <ClubEquipes club={groupe} equipes={sousGroupes} onCree={() => load(true)} />
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
