@@ -6,7 +6,7 @@ export const MUSCLES = {
   triceps:         { label: 'Triceps',           view: 'back'  },
   epaules:         { label: 'Épaules',           view: 'both'  },
   trapezes:        { label: 'Trapèzes',          view: 'back'  },
-  cervicaux:       { label: 'Cervicaux',         view: 'both'  },
+  cervicaux:       { label: 'Cervicales',        view: 'both'  },
   avant_bras:      { label: 'Avant-bras',        view: 'front' },
   abdominaux:      { label: 'Abdominaux',        view: 'front' },
   obliques:        { label: 'Obliques',          view: 'front' },
@@ -278,9 +278,9 @@ export const EXERCISE_DICTIONARY = [
     secondary: ['fessiers'],
   },
 
-  // Cervicaux
+  // Cervicales
   {
-    keywords: ['cervical', 'cervicaux', 'nuque', 'neck', 'flexion du cou', 'extension du cou'],
+    keywords: ['cervical', 'cervicaux', 'cervicales', 'nuque', 'neck', 'flexion du cou', 'extension du cou'],
     primary: ['cervicaux'],
     secondary: ['trapezes'],
   },
