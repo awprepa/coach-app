@@ -9,6 +9,8 @@ import ChoixBibliotheque from '../components/ChoixBibliotheque'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
 import Icon from '../components/Icon'
 
+const ICONE_FLAMME = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.5 1.5 1.5 2.5 3 2.5-1-2-1-4.5 0-7z"/></svg>
+
 function newId() { return Math.random().toString(36).slice(2) }
 function youtubeId(url) {
   if (!url) return null
@@ -1718,6 +1720,9 @@ export default function Seance() {
                 let tailleBloc = 1
                 while (debutBloc && idx + tailleBloc < exercices.length && lettreBloc(exercices[idx + tailleBloc].code) === lettre) tailleBloc++
                 // Barre foncée continue sur toutes les lignes du bloc, lettre au centre
+                // Un panneau ouvert sous un exercice du bloc casse l'alignement : on centre alors la lettre sur la 1re ligne
+                const panneauDansBloc = debutBloc && exercices.slice(idx, idx + tailleBloc).some(e =>
+                  [showProgressionFor, showWarmupFor, showSeriesFor, showLibraryFor].includes(e.id))
                 const caseBloc = (
                   <td style={{ ...styles.td, position: 'relative', width: 52, padding: 0 }}>
                     {lettre && (
@@ -1730,7 +1735,7 @@ export default function Seance() {
                       </span>
                     )}
                     {lettre && debutBloc && (
-                      <span style={{ ...styles.blocLettre, top: `${tailleBloc * 50}%` }}>{lettre}</span>
+                      <span style={{ ...styles.blocLettre, top: panneauDansBloc ? '50%' : `${tailleBloc * 50}%` }}>{lettre}</span>
                     )}
                   </td>
                 )
@@ -1810,20 +1815,6 @@ export default function Seance() {
                       </td>
                       <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>
                         {ex.nom}
-                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-                          {[
-                            { l: 'Progression', n: ex.progressions?.length || 0, ouvert: showProgressionFor === ex.id, f: () => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id) },
-                            { l: 'Échauffement', n: ex.series_echauffement?.length || 0, ouvert: showWarmupFor === ex.id, f: () => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id) },
-                          ].map(o => (
-                            <button key={o.l} onClick={o.f} aria-expanded={o.ouvert}
-                              title={o.n ? `${o.l} : ${o.n} défini${o.n > 1 ? 's' : ''}` : `Ajouter : ${o.l.toLowerCase()}`}
-                              style={{ ...styles.optionPuce, ...(o.n ? styles.optionPuceDef : {}), ...(o.ouvert ? styles.optionPuceOuvert : {}) }}>
-                              {!o.n && <Icon name="plus" size={12} />}
-                              {o.l}
-                              {o.n > 0 && <span style={{ fontVariantNumeric: 'tabular-nums' }}>{o.n}</span>}
-                            </button>
-                          ))}
-                        </div>
                       </td>
                       <td style={styles.tdCenter}>{ex.series}</td>
                       <td style={styles.tdCenter}>{ex.repetitions}</td>
@@ -1843,6 +1834,17 @@ export default function Seance() {
                       </td>
                       <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: '0.25rem', position: 'relative' }}>
+                          {[
+                            { l: 'Progression par semaines', n: ex.progressions?.length || 0, ouvert: showProgressionFor === ex.id, icone: <Icon name="trend" size={16} />, f: () => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id) },
+                            { l: "Séries d'échauffement", n: ex.series_echauffement?.length || 0, ouvert: showWarmupFor === ex.id, icone: ICONE_FLAMME, f: () => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id) },
+                          ].map(o => (
+                            <button key={o.l} onClick={o.f} aria-expanded={o.ouvert}
+                              title={o.n ? `${o.l} (${o.n})` : o.l} aria-label={o.n ? `${o.l} (${o.n})` : o.l}
+                              style={{ ...styles.actionBtn, width: 'auto', minWidth: 32, padding: '0 6px', gap: 3, ...(o.n ? { color: '#333333' } : {}), background: o.ouvert ? '#f3f4f6' : 'none' }}>
+                              {o.icone}
+                              {o.n > 0 && <span style={{ fontSize: '0.75rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{o.n}</span>}
+                            </button>
+                          ))}
                           <button
                             title="Modifier" aria-label="Modifier"
                             onClick={() => { setEnEdition(ex.id); setFormEdition({ code: ex.code, nom: ex.nom, series: ex.series || '', repetitions: ex.repetitions || '', tempo: ex.tempo || '', recuperation: ex.recuperation || '', type_intensite: ex.type_intensite || '', valeur_intensite: ex.valeur_intensite || '', media_url: ex.media_url || '' }) }}
@@ -2458,9 +2460,6 @@ const styles = {
   actionBtn: { width: 32, height: 32, background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   menu: { position: 'fixed', zIndex: 500, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: 260, padding: 4, display: 'flex', flexDirection: 'column' },
   menuItem: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 8, padding: '0.6rem 0.75rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' },
-  optionPuce: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'white', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 999, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
-  optionPuceDef: { background: '#f3f4f6', color: '#333333', borderColor: '#d1d5db', fontWeight: 700 },
-  optionPuceOuvert: { background: '#333333', color: '#e4f816', borderColor: '#333333' },
   notif: { position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'inline-flex', alignItems: 'center', gap: 8, background: '#333333', color: '#e4f816', padding: '0.65rem 1.25rem', borderRadius: 12, fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', whiteSpace: 'nowrap' },
   panCase: { padding: 0, background: '#fafafa' },
   panneau: { padding: '12px 16px 16px', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb' },
