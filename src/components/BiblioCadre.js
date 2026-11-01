@@ -180,7 +180,7 @@ const S = {
   itemActif:   { background: '#333333', color: 'white', fontWeight: 700 },
   n:           { marginLeft: 'auto', color: '#6b7280', fontWeight: 600, fontSize: '0.75rem', fontVariantNumeric: 'tabular-nums' },
   case:        { width: 16, height: 16, border: '1.5px solid #c4c8cf', borderRadius: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white', color: '#e4f816' },
-  caseCochee:  { background: '#333333', borderColor: '#333333' },
+  caseCochee:  { background: '#333333', border: '1.5px solid #333333' },
   seg:         { display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#f3f4f6', borderRadius: 10, padding: 3 },
   segBtn:      { border: 'none', background: 'none', borderRadius: 8, padding: '7px 0', fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' },
   segBtnActif: { background: 'white', color: '#333333', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },

@@ -233,6 +233,8 @@ export default function BibliothequeExercices() {
   const [modeEchauff, setModeEchauff]     = useState(false) // false = exercices, true = échauffements
   const [muscleFilter, setMuscleFilter]   = useState([])
   const [menuOuvert, setMenuOuvert]       = useState(false)
+  const [filtreSansMedia, setFiltreSansMedia] = useState(false) // exercices sans image, GIF ni vidéo
+  const [filtreSansInfos, setFiltreSansInfos] = useState(false) // exercices sans muscles ou sans catégorie
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -530,6 +532,8 @@ export default function BibliothequeExercices() {
 
   const allCats  = ['Tous', ...CATEGORIES]
   const dansMode = exercices.filter(ex => !!ex.is_echauffement === modeEchauff)
+  const sansMedia = ex => !ex.image_url
+  const sansInfos = ex => { const { primary, secondary } = parseMuscles(ex); return (primary.length + secondary.length === 0) || (!modeEchauff && !ex.categorie) }
   const compteMuscle = k => dansMode.filter(ex => { const { primary, secondary } = parseMuscles(ex); return primary.includes(k) || secondary.includes(k) }).length
   const filtered = exercices.filter(ex => {
     const matchMode   = !!ex.is_echauffement === modeEchauff
@@ -539,7 +543,8 @@ export default function BibliothequeExercices() {
       const { primary, secondary } = parseMuscles(ex)
       return muscleFilter.some(k => primary.includes(k) || secondary.includes(k))
     })()
-    return matchMode && matchCat && matchSearch && matchMuscle
+    const matchACompleter = (!filtreSansMedia || sansMedia(ex)) && (!filtreSansInfos || sansInfos(ex))
+    return matchMode && matchCat && matchSearch && matchMuscle && matchACompleter
   })
 
   function renderExCard(ex) {
@@ -895,6 +900,14 @@ export default function BibliothequeExercices() {
             value={modeEchauff}
             onChange={val => { setModeEchauff(val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
           />
+          <GroupeTri titre="À compléter">
+            <ItemTri coche={filtreSansMedia} n={dansMode.filter(sansMedia).length} onClick={() => setFiltreSansMedia(v => !v)}>
+              Sans image ni vidéo
+            </ItemTri>
+            <ItemTri coche={filtreSansInfos} n={dansMode.filter(sansInfos).length} onClick={() => setFiltreSansInfos(v => !v)}>
+              {modeEchauff ? 'Sans muscles' : 'Sans muscles ou catégorie'}
+            </ItemTri>
+          </GroupeTri>
           <GroupeTri titre="Muscles" action={muscleFilter.length > 0 && <LienTri onClick={() => setMuscleFilter([])}>Effacer</LienTri>}>
             {ZONES_MUSCLES.map(z => (
               <div key={z.titre}>
@@ -926,6 +939,8 @@ export default function BibliothequeExercices() {
         <div style={BIB.barre}>
           <span style={BIB.compte}>{filtered.length} {modeEchauff ? 'échauffement' : 'exercice'}{filtered.length > 1 ? 's' : ''}</span>
           {!modeEchauff && catFilter !== 'Tous' && <PuceFiltre onRetirer={() => setCatFilter('Tous')}>{catFilter}</PuceFiltre>}
+          {filtreSansMedia && <PuceFiltre onRetirer={() => setFiltreSansMedia(false)}>Sans image ni vidéo</PuceFiltre>}
+          {filtreSansInfos && <PuceFiltre onRetirer={() => setFiltreSansInfos(false)}>{modeEchauff ? 'Sans muscles' : 'Sans muscles ou catégorie'}</PuceFiltre>}
           {muscleFilter.map(k => (
             <PuceFiltre key={k} onRetirer={() => setMuscleFilter(prev => prev.filter(x => x !== k))}>{MUSCLES[k]?.label || k}</PuceFiltre>
           ))}
