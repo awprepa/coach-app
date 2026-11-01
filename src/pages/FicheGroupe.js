@@ -109,6 +109,7 @@ export default function FicheGroupe() {
 
   // ── Vue d'ensemble — nouveaux widgets ───────────────────────────────────────
   const [classementFFR, setClassementFFR] = useState([])
+  const [classementSrc, setClassementSrc] = useState(null) // groupe dont on affiche le classement (lui-même, ou son équipe pour un sous-groupe)
   const [prochain, setProchain]           = useState(null)     // { evenement, blocs: [{ nom, dureeMin, sequences }] }
   const [monthEvents, setMonthEvents]     = useState({})       // { 'YYYY-MM-DD': [type,...] }
   const [calMonth, setCalMonth]           = useState(() => new Date())
@@ -223,25 +224,27 @@ export default function FicheGroupe() {
       setEventsCountMap({})
     }
 
+    let p = null
     if (g?.parent_id) {
-      const { data: p } = await supabase.from('groupes').select('id, nom').eq('id', g.parent_id).single()
-      setParent(p)
-    } else {
-      setParent(null)
+      ({ data: p } = await supabase.from('groupes').select('id, nom, type, logo_url, monclubhouse_url, monclubhouse_competition, monclubhouse_competition_espoirs').eq('id', g.parent_id).single())
     }
+    setParent(p)
 
-    // Classement FFR — seulement si le groupe est relié à monclubhouse (même source que l'onglet Compétition)
-    if (g?.monclubhouse_url) {
-      const { data: cls } = await supabase.from('classements_ffr').select('*').eq('groupe_id', g.id).order('position')
+    // Classement FFR — seulement si le groupe est relié à monclubhouse (même source que l'onglet Compétition).
+    // Un sous-groupe sans lien à lui reprend le classement de son équipe.
+    const src = g?.monclubhouse_url ? g : (p && p.type !== 'club' && p.monclubhouse_url ? p : null)
+    setClassementSrc(src)
+    if (src) {
+      const { data: cls } = await supabase.from('classements_ffr').select('*').eq('groupe_id', src.id).order('position')
       setClassementFFR(cls || [])
       // Sync auto en arrière-plan (au plus une fois toutes les 3h par groupe) pour que le
       // classement se mette à jour sans que le coach ait besoin d'aller cliquer "Sync" ailleurs.
-      const throttleKey = `ffrSync_${g.id}`
+      const throttleKey = `ffrSync_${src.id}`
       const lastSync = Number(localStorage.getItem(throttleKey) || 0)
       if (Date.now() - lastSync > 3 * 60 * 60 * 1000) {
         localStorage.setItem(throttleKey, String(Date.now()))
-        supabase.functions.invoke('sync-ffr', { body: { groupe_id: g.id } })
-          .then(() => supabase.from('classements_ffr').select('*').eq('groupe_id', g.id).order('position'))
+        supabase.functions.invoke('sync-ffr', { body: { groupe_id: src.id } })
+          .then(() => supabase.from('classements_ffr').select('*').eq('groupe_id', src.id).order('position'))
           .then(res => { if (res?.data) setClassementFFR(res.data) })
           .catch(() => {})
       }
@@ -991,7 +994,7 @@ export default function FicheGroupe() {
       ) : tab === 'blessures' ? (
         <GroupeBlessuresView groupeId={id} accent={accent} />
       ) : tab === 'classement' ? (
-        <GroupeClassementView groupe={groupe} classementFFR={classementFFR} accent={accent} />
+        <GroupeClassementView groupe={classementSrc || groupe} classementFFR={classementFFR} accent={accent} />
       ) : (
       <>
       {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
@@ -1200,16 +1203,17 @@ export default function FicheGroupe() {
           onClick={() => classementFFR.length > 0 && setTab('classement')} title={classementFFR.length > 0 ? 'Ouvrir le classement complet' : undefined}>
           <div style={S.panelHead}>
             <span style={S.panelLabel}>Classement</span>
+            {classementSrc && classementSrc.id !== groupe.id && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600 }}>{classementSrc.nom}</span>}
           </div>
-          {!groupe.monclubhouse_url ? (
+          {!classementSrc ? (
             <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Relie ce groupe à monclubhouse.ffr.fr (bouton Modifier) pour afficher le classement.</p>
           ) : classementFFR.length === 0 ? (
             <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
           ) : (
             <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {classementFFR.filter(c => (c.competition || null) === (groupe.monclubhouse_competition || null)).map(c => {
-                const isOurs = c.equipe?.toLowerCase().includes(groupe.nom.toLowerCase()) || groupe.nom.toLowerCase().includes(c.equipe?.toLowerCase())
-                const logoAff = (isOurs && groupe?.logo_url) || c.logo
+              {classementFFR.filter(c => (c.competition || null) === (classementSrc.monclubhouse_competition || null)).map(c => {
+                const isOurs = c.equipe?.toLowerCase().includes(classementSrc.nom.toLowerCase()) || classementSrc.nom.toLowerCase().includes(c.equipe?.toLowerCase())
+                const logoAff = (isOurs && classementSrc.logo_url) || c.logo
                 return (
                   <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
                     <span style={{ fontSize: '0.68rem', color: isOurs ? accent : '#9ca3af', fontWeight: 800, width: 16, flexShrink: 0 }}>{c.position}</span>
