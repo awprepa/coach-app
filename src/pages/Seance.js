@@ -116,7 +116,8 @@ export default function Seance() {
   const [showLibraryFor, setShowLibraryFor]         = useState(null) // exercice id
   const [librarySuggestions, setLibrarySuggestions] = useState([])
   const [librarySearching, setLibrarySearching]     = useState(false)
-  const [libraryLinked, setLibraryLinked]           = useState({}) // { exId: true } flash feedback
+  const [notif, setNotif] = useState(null) // message de confirmation éphémère
+  const notifTimer = useRef(null)
   const [editAllMode, setEditAllMode] = useState(false)
   const [formEditions, setFormEditions] = useState({}) // { [exId]: { code, nom, ... } }
   const [biblioSearch, setBiblioSearch] = useState('')
@@ -679,9 +680,27 @@ export default function Seance() {
   async function lierABibliotheque(exId, biblioId) {
     await supabase.from('exercices').update({ bibliotheque_id: biblioId }).eq('id', exId)
     setExercices(prev => prev.map(e => e.id === exId ? { ...e, bibliotheque_id: biblioId } : e))
-    setLibraryLinked(prev => ({ ...prev, [exId]: true }))
-    setTimeout(() => setLibraryLinked(prev => { const n = { ...prev }; delete n[exId]; return n }), 2000)
     setShowLibraryFor(null)
+  }
+
+  // Un clic : lie à l'exercice correspondant de la bibliothèque, ou le crée s'il n'existe pas
+  async function lierDirectement(exId) {
+    const ex = exercices.find(e => e.id === exId)
+    if (!ex?.nom) return
+    const trouve = autoLinkBiblio(ex.nom, biblioFull)
+    if (trouve) {
+      await lierABibliotheque(exId, trouve)
+      afficherNotif(`Lié à « ${biblioFull.find(b => b.id === trouve)?.nom || ex.nom} » dans la bibliothèque`)
+      return
+    }
+    const id = await creerEtLierBibliotheque(exId)
+    if (id) afficherNotif(`« ${ex.nom} » ajouté à la bibliothèque et lié`)
+  }
+
+  function afficherNotif(msg) {
+    clearTimeout(notifTimer.current)
+    setNotif(msg)
+    notifTimer.current = setTimeout(() => setNotif(null), 3000)
   }
 
   async function creerEtLierBibliotheque(exId) {
@@ -691,7 +710,9 @@ export default function Seance() {
       .insert([{ nom: ex.nom, image_url: ex.bibliotheque_exercices?.image_url || null }])
       .select().single()
     if (error) { alert(error.message); return }
+    setBiblioFull(prev => [...prev, { id: data.id, nom: data.nom }].sort((a, b) => a.nom.localeCompare(b.nom)))
     await lierABibliotheque(exId, data.id)
+    return data.id
   }
 
   async function sauvegarderTemplate() {
@@ -1047,6 +1068,12 @@ export default function Seance() {
 
   return (
     <div style={styles.page}>
+
+      {notif && (
+        <div role="status" style={styles.notif}>
+          <Icon name="check" size={16} /> {notif}
+        </div>
+      )}
 
       {/* ── Confirmation liaison bibliothèque ── */}
       {pendingAutoLink && (
@@ -1783,6 +1810,20 @@ export default function Seance() {
                       </td>
                       <td style={{ ...styles.td, fontWeight: '600', color: '#333333' }}>
                         {ex.nom}
+                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                          {[
+                            { l: 'Progression', n: ex.progressions?.length || 0, ouvert: showProgressionFor === ex.id, f: () => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id) },
+                            { l: 'Échauffement', n: ex.series_echauffement?.length || 0, ouvert: showWarmupFor === ex.id, f: () => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id) },
+                          ].map(o => (
+                            <button key={o.l} onClick={o.f} aria-expanded={o.ouvert}
+                              title={o.n ? `${o.l} : ${o.n} défini${o.n > 1 ? 's' : ''}` : `Ajouter : ${o.l.toLowerCase()}`}
+                              style={{ ...styles.optionPuce, ...(o.n ? styles.optionPuceDef : {}), ...(o.ouvert ? styles.optionPuceOuvert : {}) }}>
+                              {!o.n && <Icon name="plus" size={12} />}
+                              {o.l}
+                              {o.n > 0 && <span style={{ fontVariantNumeric: 'tabular-nums' }}>{o.n}</span>}
+                            </button>
+                          ))}
+                        </div>
                       </td>
                       <td style={styles.tdCenter}>{ex.series}</td>
                       <td style={styles.tdCenter}>{ex.repetitions}</td>
@@ -1821,10 +1862,10 @@ export default function Seance() {
                           {menuEx === ex.id && (
                             <div ref={menuRef} style={{ ...styles.menu, top: menuPos.top, left: menuPos.left }} role="menu">
                               {[
-                                { l: 'Progression par semaines', etat: ex.progressions?.length > 0 && 'définie', f: () => setShowProgressionFor(showProgressionFor === ex.id ? null : ex.id) },
-                                { l: "Séries d'échauffement", etat: ex.series_echauffement?.length > 0 && `${ex.series_echauffement.length}`, f: () => setShowWarmupFor(showWarmupFor === ex.id ? null : ex.id) },
-                                { l: 'Séries réalisées par le joueur', etat: serieTrackingMap[ex.id] && 'réalisées', f: () => setShowSeriesFor(showSeriesFor === ex.id ? null : ex.id) },
-                                { l: ex.bibliotheque_id || libraryLinked[ex.id] ? 'Lié à la bibliothèque' : 'Ajouter à la bibliothèque', f: () => openLibraryPanel(ex.id) },
+                                { l: "Séries réalisées par l'athlète", etat: serieTrackingMap[ex.id] && 'réalisées', f: () => setShowSeriesFor(showSeriesFor === ex.id ? null : ex.id) },
+                                ex.bibliotheque_id
+                                  ? { l: 'Lié à la bibliothèque', etat: 'changer', f: () => openLibraryPanel(ex.id) }
+                                  : { l: 'Lier à la bibliothèque', f: () => lierDirectement(ex.id) },
                               ].map(it => (
                                 <button key={it.l} role="menuitem" onClick={() => { setMenuEx(null); it.f() }} style={styles.menuItem}>
                                   <span style={{ flex: 1 }}>{it.l}</span>
@@ -1861,60 +1902,59 @@ export default function Seance() {
                 {/* ── Sous-ligne progression ── */}
                 {showProgressionFor === ex.id && (
                   <tr>
-                    <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f0f7ff' }}>
-                      <div style={{ padding: '12px 16px', borderTop: '2px solid #bfdbfe', borderBottom: '2px solid #bfdbfe' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Progression — {ex.nom}</span>
-                          <button onClick={() => addProgBloc(ex.id)}
-                            style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
-                            + Bloc semaines
-                          </button>
-                          {(progDraft?.length > 0) && (
-                            <button onClick={() => saveProgression(ex.id)}
-                              style={{ background: progSaved[ex.id] ? '#16a34a' : '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 14px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'background .2s' }}>
-                              {progSaved[ex.id]
-                                ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Sauvegardé !</>
-                                : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Sauvegarder</>
-                              }
+                    <td colSpan={99} style={styles.panCase}>
+                      <div style={styles.panneau}>
+                        <div style={styles.panTete}>
+                          <span style={styles.panTitre}>Progression par semaines</span>
+                          <span style={styles.panSous}>{ex.nom}</span>
+                          <div style={styles.panActions}>
+                            <button onClick={() => addProgBloc(ex.id)} style={styles.btnPetit}>
+                              <Icon name="plus" size={14} /> Bloc de semaines
                             </button>
-                          )}
-                          {(progDraft?.length > 0) && (
-                            <span style={{ fontSize: '.65rem', color: '#6b7280', marginLeft: 'auto' }}>
-                              La prescription de chaque bloc remplace automatiquement la valeur par défaut côté client
-                            </span>
-                          )}
+                            {(progDraft?.length > 0) && (
+                              <button onClick={() => saveProgression(ex.id)}
+                                style={{ ...styles.btnPrimary, padding: '0.45rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6, ...(progSaved[ex.id] ? { background: '#16a34a', color: 'white' } : {}) }}>
+                                {progSaved[ex.id] ? <><Icon name="check" size={14} /> Enregistré</> : 'Enregistrer'}
+                              </button>
+                            )}
+                          </div>
                         </div>
+                        {(progDraft?.length > 0) && (
+                          <p style={styles.panAide}>Pour chaque bloc, ces valeurs remplacent celles de l'exercice côté athlète.</p>
+                        )}
 
                         {(!(progDraft?.length)) ? (
-                          <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>
-                            Clique sur "+ Bloc semaines" pour définir une progression. Ex : S1-2 → 3 séries / RPE 7, S3-4 → 4 séries / RPE 8…
+                          <p style={styles.panVide}>
+                            Ajoute un bloc de semaines pour faire évoluer l'exercice. Ex : S1-2 → 3 séries à RPE 7, puis S3-4 → 4 séries à RPE 8.
                           </p>
                         ) : (
                           <div style={{ overflowX: 'auto' }}>
-                            <table style={{ borderCollapse: 'collapse', fontSize: '.72rem' }}>
+                            <table style={{ borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                               <thead>
                                 <tr>
-                                  <td style={{ padding: '4px 8px', fontWeight: 700, color: '#6b7280', width: 80 }}>Paramètre</td>
+                                  <td style={{ ...styles.panLibelle, width: 96 }} />
                                   {progDraft.map(p => (
-                                    <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', minWidth: 110 }}>
+                                    <td key={p.id} style={{ padding: '0 6px 8px', textAlign: 'center', minWidth: 120 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
                                         <input
                                           value={p.label ?? ''}
                                           onChange={e => updateDraftField(p.id, 'label', e.target.value)}
-                                          style={{ width: 52, textAlign: 'center', fontWeight: 800, color: '#1d4ed8', border: '1.5px solid #bfdbfe', borderRadius: 6, padding: '2px 4px', fontSize: '.72rem', outline: 'none', background: '#eff6ff' }}
+                                          aria-label="Nom du bloc"
+                                          style={{ ...styles.editInput, width: 64, textAlign: 'center', fontWeight: 700, padding: '0.3rem 0.4rem' }}
                                         />
-                                        <button onClick={() => removeProgBloc(p.id)}
-                                          style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '.8rem', lineHeight: 1, padding: 0 }}>×</button>
+                                        <button onClick={() => removeProgBloc(p.id)} title="Retirer le bloc" aria-label="Retirer le bloc" style={{ ...styles.actionBtn, width: 28, height: 28 }}>
+                                          <Icon name="x" size={14} />
+                                        </button>
                                       </div>
-                                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 3, fontSize: '.6rem', color: '#6b7280' }}>
+                                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center', marginTop: 6, fontSize: '0.75rem', color: '#6b7280' }}>
                                         <span>S</span>
-                                        <input type="number" value={p.semaine_debut ?? ''} min={1}
+                                        <input type="number" value={p.semaine_debut ?? ''} min={1} aria-label="Semaine de début"
                                           onChange={e => updateDraftField(p.id, 'semaine_debut', parseInt(e.target.value) || '')}
-                                          style={{ width: 30, textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 2px', fontSize: '.6rem', outline: 'none' }} />
-                                        <span>→</span>
-                                        <input type="number" value={p.semaine_fin ?? ''} min={1}
+                                          style={{ ...styles.editInput, width: 44, textAlign: 'center', padding: '0.2rem 0.3rem', fontSize: '0.75rem' }} />
+                                        <span>à</span>
+                                        <input type="number" value={p.semaine_fin ?? ''} min={1} aria-label="Semaine de fin"
                                           onChange={e => updateDraftField(p.id, 'semaine_fin', parseInt(e.target.value) || '')}
-                                          style={{ width: 30, textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 2px', fontSize: '.6rem', outline: 'none' }} />
+                                          style={{ ...styles.editInput, width: 44, textAlign: 'center', padding: '0.2rem 0.3rem', fontSize: '0.75rem' }} />
                                       </div>
                                     </td>
                                   ))}
@@ -1929,14 +1969,14 @@ export default function Seance() {
                                   { key: 'detail',          label: 'Détail libre' },
                                 ].map(row => (
                                   <tr key={row.key} style={{ borderTop: '1px solid #e5e7eb' }}>
-                                    <td style={{ padding: '5px 8px', fontWeight: 700, color: '#374151', background: '#f8faff', whiteSpace: 'nowrap' }}>{row.label}</td>
+                                    <td style={styles.panLibelle}>{row.label}</td>
                                     {progDraft.map(p => (
                                       <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center' }}>
                                         <input
                                           value={p[row.key] ?? ''}
                                           onChange={e => updateDraftField(p.id, row.key, e.target.value)}
-                                          placeholder="—"
-                                          style={{ width: '100%', minWidth: 80, textAlign: 'center', border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '4px 6px', fontSize: '.72rem', outline: 'none', background: '#fff', fontWeight: 600 }}
+                                          placeholder="—" aria-label={row.label}
+                                          style={{ ...styles.editInput, minWidth: 90, textAlign: 'center', padding: '0.35rem 0.5rem', fontSize: '0.8rem', fontWeight: 600 }}
                                         />
                                       </td>
                                     ))}
@@ -1953,52 +1993,51 @@ export default function Seance() {
                 {/* ── Sous-ligne séries d'échauffement ── */}
                 {showWarmupFor === ex.id && (
                   <tr>
-                    <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#fff7ed' }}>
-                      <div style={{ padding: '12px 16px', borderTop: '2px solid #fed7aa', borderBottom: '2px solid #fed7aa' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.06em' }}>Séries d'échauffement — {ex.nom}</span>
-                          <button onClick={() => addWarmupCoach(ex.id)}
-                            style={{ background: '#ea580c', color: '#fff', border: 'none', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer' }}>
-                            + Série vierge
-                          </button>
-                          <button onClick={() => openBiblioEchauff(ex.id)}
-                            style={{ background: biblioEchauffOpen === ex.id ? '#fff7ed' : 'white', color: '#ea580c', border: '1.5px solid #fed7aa', borderRadius: 7, padding: '4px 12px', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                            Depuis la bibliothèque
-                          </button>
-                          <span style={{ fontSize: '.65rem', color: '#6b7280', marginLeft: 'auto' }}>
-                            Visibles côté client, pré-remplies avec le % de la charge
-                          </span>
+                    <td colSpan={99} style={styles.panCase}>
+                      <div style={styles.panneau}>
+                        <div style={styles.panTete}>
+                          <span style={styles.panTitre}>Séries d'échauffement</span>
+                          <span style={styles.panSous}>{ex.nom}</span>
+                          <div style={styles.panActions}>
+                            <button onClick={() => addWarmupCoach(ex.id)} style={styles.btnPetit}>
+                              <Icon name="plus" size={14} /> Série vierge
+                            </button>
+                            <button onClick={() => openBiblioEchauff(ex.id)} aria-pressed={biblioEchauffOpen === ex.id}
+                              style={{ ...styles.btnPetit, ...(biblioEchauffOpen === ex.id ? { borderColor: '#333333' } : {}) }}>
+                              <Icon name="search" size={14} /> Depuis la bibliothèque
+                            </button>
+                          </div>
                         </div>
+                        <p style={styles.panAide}>Visibles côté athlète, pré-remplies avec le % de la charge.</p>
 
                         {/* Picker bibliothèque échauffements */}
                         {biblioEchauffOpen === ex.id && (
-                          <div style={{ background: '#fffbf5', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '0.75rem', marginBottom: '0.75rem' }}>
+                          <div style={styles.panBoite}>
                             <input
                               value={biblioEchauffSearch}
                               onChange={e => searchBiblioEchauff(e.target.value)}
-                              placeholder="Chercher un échauffement…"
-                              style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.65rem', border: '1.5px solid #fed7aa', borderRadius: 7, fontSize: '.82rem', outline: 'none', marginBottom: '0.5rem', background: 'white' }}
+                              placeholder="Chercher un échauffement…" aria-label="Chercher un échauffement"
+                              style={{ ...styles.editInput, marginBottom: 8 }}
                             />
-                            {biblioEchauffLoading && <p style={{ fontSize: '.72rem', color: '#6b7280', margin: 0 }}>Chargement…</p>}
+                            {biblioEchauffLoading && <p style={styles.panVide}>Chargement…</p>}
                             {!biblioEchauffLoading && biblioEchauffList.length === 0 && (
-                              <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>
+                              <p style={styles.panVide}>
                                 Aucun exercice d'échauffement dans la bibliothèque. Ajoute-en depuis "Bibliothèque d'exercices → Échauffements".
                               </p>
                             )}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 200, overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
                               {biblioEchauffList.map(item => (
                                 <div role="button" tabIndex={0} key={item.id}
                                   onClick={() => choisirDepuisBiblioEchauff(ex.id, item)}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white', border: '1.5px solid #fed7aa', borderRadius: 8, padding: '0.35rem 0.65rem', cursor: 'pointer' }}
-                                  onMouseEnter={e => e.currentTarget.style.background = '#fff7ed'}
+                                  style={{ ...styles.panLigne, cursor: 'pointer' }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                                   onMouseLeave={e => e.currentTarget.style.background = 'white'}
                                 >
                                   {item.image_url && (
-                                    <img loading="lazy" src={item.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                                    <img loading="lazy" src={item.image_url} alt="" style={styles.panVignette} />
                                   )}
-                                  <span style={{ fontSize: '.82rem', fontWeight: 600, color: '#374151', flex: 1 }}>{item.nom}</span>
-                                  <span style={{ fontSize: '.68rem', color: '#ea580c', fontWeight: 700 }}>+ Ajouter</span>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#333333', flex: 1 }}>{item.nom}</span>
+                                  <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="plus" size={12} /> Ajouter</span>
                                 </div>
                               ))}
                             </div>
@@ -2006,36 +2045,37 @@ export default function Seance() {
                         )}
 
                         {(!ex.series_echauffement?.length) ? (
-                          <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: 0 }}>
-                            Clique sur "+ Série vierge" ou choisis depuis la bibliothèque. Ex : 10 reps à 40%, puis 8 reps à 70%…
+                          <p style={styles.panVide}>
+                            Ajoute une série vierge ou choisis depuis la bibliothèque. Ex : 10 reps à 40 %, puis 8 reps à 70 %.
                           </p>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                             {(ex.series_echauffement || []).map((s, si) => (
-                              <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '0.4rem 0.75rem' }}>
-                                <button onClick={() => removeWarmupCoach(ex.id, si)}
-                                  style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
-                                {s.image_url && <img loading="lazy" src={s.image_url} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
-                                <span style={{ fontSize: '.72rem', fontWeight: 900, color: '#ea580c', flexShrink: 0 }}>É{si + 1}{s.nom ? ` · ${s.nom}` : ''}</span>
+                              <div key={si} style={styles.panLigne}>
+                                <span style={styles.panNum}>É{si + 1}</span>
+                                {s.image_url && <img loading="lazy" src={s.image_url} alt="" style={styles.panVignette} />}
+                                {s.nom && <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#333333' }}>{s.nom}</span>}
                                 <input
                                   type="text"
                                   value={s.reps}
                                   onChange={e => updateWarmupCoach(ex.id, si, 'reps', e.target.value)}
-                                  placeholder="Reps"
-                                  style={{ width: 54, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                                  placeholder="Reps" aria-label="Répétitions"
+                                  style={{ ...styles.editInput, width: 56, textAlign: 'center', fontWeight: 700, padding: '0.3rem 0.4rem' }}
                                 />
-                                <span style={{ fontSize: '.72rem', color: '#6b7280' }}>reps @</span>
+                                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>reps à</span>
                                 <input
                                   type="number"
                                   value={s.pourcentage ?? ''}
                                   onChange={e => updateWarmupCoach(ex.id, si, 'pourcentage', e.target.value)}
-                                  placeholder="%"
+                                  placeholder="%" aria-label="Pourcentage de la charge"
                                   min="1" max="100"
-                                  style={{ width: 50, padding: '0.3rem 0.45rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '.82rem', fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                                  style={{ ...styles.editInput, width: 56, textAlign: 'center', fontWeight: 700, padding: '0.3rem 0.4rem' }}
                                 />
-                                <span style={{ fontSize: '.72rem', color: '#6b7280' }}>% charge</span>
+                                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>% de la charge</span>
+                                <button onClick={() => removeWarmupCoach(ex.id, si)} title="Retirer la série" aria-label="Retirer la série"
+                                  style={{ ...styles.actionBtn, width: 28, height: 28, marginLeft: 8 }}>
+                                  <Icon name="x" size={14} />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -2053,41 +2093,42 @@ export default function Seance() {
                     : 0
                   return (
                     <tr>
-                      <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f0f9ff' }}>
-                        <div style={{ padding: '12px 16px', borderTop: '2px solid #7dd3fc', borderBottom: '2px solid #7dd3fc' }}>
-                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                            Séries réalisées — {ex.nom}
-                          </span>
+                      <td colSpan={99} style={styles.panCase}>
+                        <div style={styles.panneau}>
+                          <div style={styles.panTete}>
+                            <span style={styles.panTitre}>Séries réalisées par l'athlète</span>
+                            <span style={styles.panSous}>{ex.nom}</span>
+                          </div>
                           {!trackSemaines.length ? (
-                            <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: '8px 0 0 0' }}>
-                              Aucune série enregistrée par le client pour cet exercice.
+                            <p style={styles.panVide}>
+                              Aucune série enregistrée par l'athlète pour cet exercice.
                             </p>
                           ) : (
-                            <div style={{ overflowX: 'auto', marginTop: 10 }}>
-                              <table style={{ borderCollapse: 'collapse', fontSize: '.73rem' }}>
+                            <div style={{ overflowX: 'auto' }}>
+                              <table style={{ borderCollapse: 'collapse', fontSize: '0.8rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: 10 }}>
                                 <thead>
                                   <tr>
-                                    <th style={{ padding: '4px 10px', fontWeight: 700, color: '#6b7280', background: '#e0f2fe', borderRadius: '6px 0 0 6px', textAlign: 'left' }}>Série</th>
+                                    <th style={{ ...styles.panLibelle, textAlign: 'left', fontWeight: 700 }}>Série</th>
                                     {trackSemaines.map(s => (
-                                      <th key={s} style={{ padding: '4px 14px', fontWeight: 800, color: '#0369a1', background: '#e0f2fe', textAlign: 'center', minWidth: 90 }}>S{s}</th>
+                                      <th key={s} style={{ padding: '6px 14px', fontWeight: 700, color: '#6b7280', textAlign: 'center', minWidth: 90 }}>S{s}</th>
                                     ))}
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {Array.from({ length: maxSeries }, (_, i) => (
-                                    <tr key={i} style={{ borderTop: '1px solid #e0f2fe' }}>
-                                      <td style={{ padding: '5px 10px', fontWeight: 700, color: '#374151', background: '#f8fcff', whiteSpace: 'nowrap' }}>S{i + 1}</td>
+                                    <tr key={i} style={{ borderTop: '1px solid #f3f4f6' }}>
+                                      <td style={{ ...styles.panLibelle, color: '#333333' }}>{i + 1}</td>
                                       {trackSemaines.map(s => {
                                         const row = exData[s]?.[i]
-                                        if (!row) return <td key={s} style={{ padding: '5px 14px', textAlign: 'center', color: '#6b7280' }}>—</td>
+                                        if (!row) return <td key={s} style={{ padding: '6px 14px', textAlign: 'center', color: '#9ca3af' }}>—</td>
                                         const kg = row.poids ? `${row.poids} kg` : null
                                         const reps = row.reps_reelles != null ? `× ${row.reps_reelles}` : null
                                         const ok = row.valide
                                         return (
-                                          <td key={s} style={{ padding: '5px 14px', textAlign: 'center' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: ok ? 700 : 400, color: ok ? '#15803d' : '#374151' }}>
+                                          <td key={s} style={{ padding: '6px 14px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: ok ? 700 : 500, color: ok ? '#15803d' : '#374151' }}>
                                               {kg || '—'}{reps ? <span style={{ color: ok ? '#16a34a' : '#6b7280' }}>{reps}</span> : null}
-                                              {ok && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                                              {ok && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-label="Validée"><polyline points="20 6 9 17 4 12"/></svg>}
                                             </span>
                                           </td>
                                         )
@@ -2103,46 +2144,37 @@ export default function Seance() {
                     </tr>
                   )
                 })()}
-                {/* ── Panneau bibliothèque ── */}
+                {/* ── Panneau bibliothèque (changer l'exercice lié) ── */}
                 {showLibraryFor === ex.id && (
                   <tr>
-                    <td colSpan={99} style={{ padding: '0 0 8px 0', background: '#f5f3ff' }}>
-                      <div style={{ padding: '12px 16px', borderTop: '2px solid #ddd6fe', borderBottom: '2px solid #ddd6fe' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                          <span style={{ fontSize: '.75rem', fontWeight: 900, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                            Bibliothèque — {ex.nom}
-                          </span>
-                          {ex.bibliotheque_id && (
-                            <span style={{ fontSize: '.65rem', background: '#ede9fe', color: '#6d28d9', borderRadius: 6, padding: '2px 8px', fontWeight: 700 }}>
-                              ✓ Déjà lié
-                            </span>
-                          )}
-                          <span style={{ fontSize: '.62rem', color: '#6b7280', marginLeft: 'auto' }}>
-                            Clique pour lier ou cherche ci-dessous
-                          </span>
+                    <td colSpan={99} style={styles.panCase}>
+                      <div style={styles.panneau}>
+                        <div style={styles.panTete}>
+                          <span style={styles.panTitre}>Exercice lié dans la bibliothèque</span>
+                          <span style={styles.panSous}>{ex.nom}</span>
+                          <button onClick={() => setShowLibraryFor(null)} title="Fermer" aria-label="Fermer" style={styles.actionBtn}>
+                            <Icon name="x" size={16} />
+                          </button>
                         </div>
 
-                        {/* Barre de recherche */}
                         <input
                           defaultValue={ex.nom}
                           onChange={e => searchLibrarySuggestions(ex.id, e.target.value)}
-                          placeholder="Chercher dans la bibliothèque…"
-                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.65rem', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: '.82rem', outline: 'none', marginBottom: '0.6rem', background: 'white' }}
+                          placeholder="Chercher dans la bibliothèque…" aria-label="Chercher dans la bibliothèque"
+                          style={{ ...styles.editInput, maxWidth: 560, marginBottom: 8 }}
                         />
 
-                        {librarySearching && <p style={{ fontSize: '.72rem', color: '#6b7280', margin: 0 }}>Recherche…</p>}
+                        {librarySearching && <p style={styles.panVide}>Recherche…</p>}
 
-                        {/* Suggestions */}
                         {librarySuggestions.length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: 220, overflowY: 'auto', marginBottom: '0.6rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 560, maxHeight: 220, overflowY: 'auto', marginBottom: 8 }}>
                             {librarySuggestions.map(b => (
-                              <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'white', border: `1.5px solid ${b.id === ex.bibliotheque_id ? '#a78bfa' : '#ede9fe'}`, borderRadius: 8, padding: '0.35rem 0.65rem' }}>
-                                {b.image_url && <img loading="lazy" src={b.image_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
-                                <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, color: '#374151' }}>{b.nom}</span>
+                              <div key={b.id} style={{ ...styles.panLigne, ...(b.id === ex.bibliotheque_id ? { borderColor: '#333333' } : {}) }}>
+                                {b.image_url && <img loading="lazy" src={b.image_url} alt="" style={styles.panVignette} />}
+                                <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: '#333333' }}>{b.nom}</span>
                                 {b.id === ex.bibliotheque_id
-                                  ? <span style={{ fontSize: '.68rem', color: '#6d28d9', fontWeight: 700 }}>✓ Lié</span>
-                                  : <button onClick={() => lierABibliotheque(ex.id, b.id)}
-                                      style={{ background: '#6d28d9', color: 'white', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                                  ? <span style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={12} /> Lié</span>
+                                  : <button onClick={() => lierABibliotheque(ex.id, b.id)} style={{ ...styles.btnPrimary, padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
                                       Lier
                                     </button>
                                 }
@@ -2152,14 +2184,13 @@ export default function Seance() {
                         )}
 
                         {librarySuggestions.length === 0 && !librarySearching && (
-                          <p style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic', margin: '0 0 0.6rem' }}>
-                            Aucun résultat similaire. Crée une nouvelle entrée ci-dessous.
+                          <p style={{ ...styles.panVide, marginBottom: 8 }}>
+                            Aucun résultat proche. Tu peux créer une nouvelle entrée.
                           </p>
                         )}
 
-                        <button onClick={() => creerEtLierBibliotheque(ex.id)}
-                          style={{ background: 'white', border: '1.5px solid #ddd6fe', color: '#6d28d9', borderRadius: 7, padding: '5px 14px', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}>
-                          + Créer "{ex.nom}" dans la bibliothèque
+                        <button onClick={() => creerEtLierBibliotheque(ex.id)} style={styles.btnPetit}>
+                          <Icon name="plus" size={14} /> Créer "{ex.nom}" dans la bibliothèque
                         </button>
                       </div>
                     </td>
@@ -2427,6 +2458,23 @@ const styles = {
   actionBtn: { width: 32, height: 32, background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
   menu: { position: 'fixed', zIndex: 500, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: 260, padding: 4, display: 'flex', flexDirection: 'column' },
   menuItem: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 8, padding: '0.6rem 0.75rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' },
+  optionPuce: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'white', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 999, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  optionPuceDef: { background: '#f3f4f6', color: '#333333', borderColor: '#d1d5db', fontWeight: 700 },
+  optionPuceOuvert: { background: '#333333', color: '#e4f816', borderColor: '#333333' },
+  notif: { position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'inline-flex', alignItems: 'center', gap: 8, background: '#333333', color: '#e4f816', padding: '0.65rem 1.25rem', borderRadius: 12, fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', whiteSpace: 'nowrap' },
+  panCase: { padding: 0, background: '#fafafa' },
+  panneau: { padding: '12px 16px 16px', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb' },
+  panTete: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 },
+  panTitre: { fontSize: '0.9rem', fontWeight: 700, color: '#333333' },
+  panSous: { fontSize: '0.8rem', color: '#6b7280' },
+  panActions: { display: 'flex', gap: 8, marginLeft: 8, flexWrap: 'wrap' },
+  panAide: { fontSize: '0.75rem', color: '#6b7280', margin: '0 0 8px' },
+  panVide: { fontSize: '0.8rem', color: '#6b7280', margin: 0 },
+  panBoite: { maxWidth: 560, background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: 8, marginBottom: 8 },
+  panLigne: { display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: '6px 8px 6px 12px' },
+  panNum: { fontSize: '0.8rem', fontWeight: 800, color: '#333333', minWidth: 22 },
+  panVignette: { width: 32, height: 32, objectFit: 'cover', borderRadius: 6, flexShrink: 0 },
+  panLibelle: { padding: '6px 10px', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' },
   menuEtat: { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', background: '#f3f4f6', borderRadius: 999, padding: '1px 8px' },
   codeTag: { background: '#333333', color: '#e4f816', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' },
   intensiteTag: { background: '#f3f4f6', color: '#374151', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600' },
