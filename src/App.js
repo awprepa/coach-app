@@ -49,31 +49,34 @@ const CGV                  = lazy(() => import('./pages/CGV'))
 const Conditions            = lazy(() => import('./pages/Conditions'))
 
 // ── Pages coach — lazy (jamais vues par le client) ───────────────────────────
-const NouveauClient        = lazy(() => import('./pages/NouveauClient'))
-const FicheClient          = lazy(() => import('./pages/FicheClient'))
-const NouveauProgramme     = lazy(() => import('./pages/NouveauProgramme'))
-const Programme            = lazy(() => import('./pages/Programme'))
-const Seance               = lazy(() => import('./pages/Seance'))
-const Bibliotheque              = lazy(() => import('./pages/Bibliotheque'))
-const SchemaTypePage            = lazy(() => import('./pages/SchemaTypePage'))
-const GPS                  = lazy(() => import('./pages/GPS'))
-const Tests                = lazy(() => import('./pages/Tests'))
-const AgendaGlobal         = lazy(() => import('./pages/AgendaGlobal'))
-const Groupes              = lazy(() => import('./pages/Groupes'))
-const ChargesGroupes       = lazy(() => import('./pages/ChargesGroupes'))
-const BilanClub            = lazy(() => import('./pages/BilanClub'))
-const ResetPassword        = lazy(() => import('./pages/ResetPassword'))
-const SeanceProjection     = lazy(() => import('./pages/SeanceProjection'))
-const ImportClientExcel    = lazy(() => import('./pages/ImportClientExcel'))
-const CoachMessages        = lazy(() => import('./pages/CoachMessages'))
-const ChargeEntrainement   = lazy(() => import('./pages/ChargeEntrainement'))
-const FicheGroupe          = lazy(() => import('./pages/FicheGroupe'))
-const Factures             = lazy(() => import('./pages/Factures'))
-const NutritionCoach       = lazy(() => import('./pages/NutritionCoach'))
-const NutritionPlansCoach  = lazy(() => import('./pages/NutritionPlansCoach'))
-const NutritionPlanEditor  = lazy(() => import('./pages/NutritionPlanEditor'))
-const NutritionPlanVue     = lazy(() => import('./pages/NutritionPlanVue'))
-const NutritionHistoriquePlans = lazy(() => import('./pages/NutritionHistoriquePlans'))
+// Sur ordinateur, elles sont toutes préchargées en arrière-plan (voir App)
+const pagesCoach = []
+const lazyCoach = f => { pagesCoach.push(f); return lazy(f) }
+const NouveauClient        = lazyCoach(() => import('./pages/NouveauClient'))
+const FicheClient          = lazyCoach(() => import('./pages/FicheClient'))
+const NouveauProgramme     = lazyCoach(() => import('./pages/NouveauProgramme'))
+const Programme            = lazyCoach(() => import('./pages/Programme'))
+const Seance               = lazyCoach(() => import('./pages/Seance'))
+const Bibliotheque              = lazyCoach(() => import('./pages/Bibliotheque'))
+const SchemaTypePage            = lazyCoach(() => import('./pages/SchemaTypePage'))
+const GPS                  = lazyCoach(() => import('./pages/GPS'))
+const Tests                = lazyCoach(() => import('./pages/Tests'))
+const AgendaGlobal         = lazyCoach(() => import('./pages/AgendaGlobal'))
+const Groupes              = lazyCoach(() => import('./pages/Groupes'))
+const ChargesGroupes       = lazyCoach(() => import('./pages/ChargesGroupes'))
+const BilanClub            = lazyCoach(() => import('./pages/BilanClub'))
+const ResetPassword        = lazyCoach(() => import('./pages/ResetPassword'))
+const SeanceProjection     = lazyCoach(() => import('./pages/SeanceProjection'))
+const ImportClientExcel    = lazyCoach(() => import('./pages/ImportClientExcel'))
+const CoachMessages        = lazyCoach(() => import('./pages/CoachMessages'))
+const ChargeEntrainement   = lazyCoach(() => import('./pages/ChargeEntrainement'))
+const FicheGroupe          = lazyCoach(() => import('./pages/FicheGroupe'))
+const Factures             = lazyCoach(() => import('./pages/Factures'))
+const NutritionCoach       = lazyCoach(() => import('./pages/NutritionCoach'))
+const NutritionPlansCoach  = lazyCoach(() => import('./pages/NutritionPlansCoach'))
+const NutritionPlanEditor  = lazyCoach(() => import('./pages/NutritionPlanEditor'))
+const NutritionPlanVue     = lazyCoach(() => import('./pages/NutritionPlanVue'))
+const NutritionHistoriquePlans = lazyCoach(() => import('./pages/NutritionHistoriquePlans'))
 // ── Navigateur intégré Instagram / TikTok — bottom sheet ─────────────────────
 function InAppBrowserSheet({ onDismiss }) {
   const ua         = navigator.userAgent
@@ -517,7 +520,7 @@ function OfflineBanner() {
           show('Synchronisation en cours…')
           await _flushQueue()
           await syncDown()
-          show('✓ Synchronisé', 1500)
+          show(null)
         }
       })
     }
@@ -530,7 +533,7 @@ function OfflineBanner() {
       // supabase.js lance le flush+sync et dispatche aw:synced quand c'est fini
       setMsg(prev => prev !== null ? 'Synchronisation en cours…' : null)
     }
-    const onSynced  = () => show('✓ Synchronisé', 1500)
+    const onSynced  = () => show(null)
     const onQueue   = async () => {
       if (!navigator.onLine) {
         const n = await pendingCount()
@@ -553,11 +556,26 @@ function OfflineBanner() {
 
   if (!msg) return null
 
-  const isOffline = msg.startsWith('Hors ligne')
-  const isSyncing = msg.startsWith('Synchronisation')
+  // Synchronisation : petite roue discrète en bas à droite, pas de bandeau
+  if (msg.startsWith('Synchronisation')) return (
+    <div role="status" aria-label={msg} title={msg} style={{
+      position: 'fixed', right: 16, bottom: 16, zIndex: 900,
+      width: 36, height: 36, borderRadius: '50%', background: '#fff',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        width: 18, height: 18, borderRadius: '50%',
+        border: '2px solid #e5e7eb', borderTopColor: '#1a1a1a',
+        animation: 'spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+
   return (
     <div style={{
-      background: isOffline ? '#b45309' : isSyncing ? '#1d4ed8' : '#15803d',
+      background: '#b45309',
       color: '#fff', fontSize: '0.78rem', fontWeight: 600,
       textAlign: 'center', padding: '0.35rem 1rem',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -582,6 +600,14 @@ function App() {
     }
     navigator.serviceWorker.addEventListener('message', onMsg)
     return () => navigator.serviceWorker.removeEventListener('message', onMsg)
+  }, [])
+
+  // Ordinateur : précharge toutes les pages coach une fois l'app ouverte,
+  // pour que chaque page s'affiche ensuite sans attente
+  useEffect(() => {
+    if (!window.matchMedia('(min-width: 821px)').matches) return
+    const t = setTimeout(() => pagesCoach.forEach(f => f().catch(() => {})), 2000)
+    return () => clearTimeout(t)
   }, [])
 
   return (
