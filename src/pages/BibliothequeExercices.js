@@ -900,14 +900,6 @@ export default function BibliothequeExercices() {
             value={modeEchauff}
             onChange={val => { setModeEchauff(val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
           />
-          <GroupeTri titre="À compléter">
-            <ItemTri coche={filtreSansMedia} n={dansMode.filter(sansMedia).length} onClick={() => setFiltreSansMedia(v => !v)}>
-              Sans image ni vidéo
-            </ItemTri>
-            <ItemTri coche={filtreSansInfos} n={dansMode.filter(sansInfos).length} onClick={() => setFiltreSansInfos(v => !v)}>
-              {modeEchauff ? 'Sans muscles' : 'Sans muscles ou catégorie'}
-            </ItemTri>
-          </GroupeTri>
           <GroupeTri titre="Muscles" action={muscleFilter.length > 0 && <LienTri onClick={() => setMuscleFilter([])}>Effacer</LienTri>}>
             {ZONES_MUSCLES.map(z => (
               <div key={z.titre}>
@@ -933,6 +925,14 @@ export default function BibliothequeExercices() {
               ))}
             </GroupeTri>
           )}
+          <GroupeTri titre="À compléter">
+            <ItemTri coche={filtreSansMedia} n={dansMode.filter(sansMedia).length} onClick={() => setFiltreSansMedia(v => !v)}>
+              Sans image ni vidéo
+            </ItemTri>
+            <ItemTri coche={filtreSansInfos} n={dansMode.filter(sansInfos).length} onClick={() => setFiltreSansInfos(v => !v)}>
+              {modeEchauff ? 'Sans muscles' : 'Sans muscles ou catégorie'}
+            </ItemTri>
+          </GroupeTri>
         </>
       }>
         {/* Barre : nombre de résultats, filtres actifs, actions */}
