@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Icon from './Icon'
 
 // Mise en page commune aux onglets de la Bibliothèque : panneau de tri fixe à
@@ -8,9 +9,10 @@ export function Cadre({ panneau, children }) {
   return (
     <div className="bib-cadre" style={S.cadre}>
       <style>{`
+        .bib-panneau > *{flex-shrink:0;}
         @media (max-width: 820px){
           .bib-cadre{grid-template-columns:1fr !important;padding:1rem !important;}
-          .bib-panneau{position:static !important;gap:14px !important;}
+          .bib-panneau{position:static !important;gap:14px !important;max-height:none !important;overflow:visible !important;}
           .bib-liste{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;}
           .bib-liste > div{display:contents;}
           .bib-liste .bib-zone{flex-basis:100%;margin:4px 0 0 !important;}
@@ -41,14 +43,23 @@ export function Recherche({ value, onChange, placeholder }) {
   )
 }
 
-export function GroupeTri({ titre, action, children }) {
+// `repliable` : le groupe est fermé par défaut et s'ouvre d'un clic sur son
+// titre ; `resume` s'affiche à côté du titre quand il est fermé (ex. le choix actif).
+export function GroupeTri({ titre, action, repliable, resume, children }) {
+  const [ouvert, setOuvert] = useState(!repliable)
   return (
     <div>
       <div style={S.groupeTete}>
-        <span>{titre}</span>
+        {repliable ? (
+          <button onClick={() => setOuvert(o => !o)} aria-expanded={ouvert} style={S.groupeBouton}>
+            <span style={{ display: 'inline-flex', transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><Icon name="chevron-right" size={14} /></span>
+            {titre}
+            {!ouvert && resume && <span style={S.resume}>{resume}</span>}
+          </button>
+        ) : <span>{titre}</span>}
         {action}
       </div>
-      <div className="bib-liste" style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>{children}</div>
+      {ouvert && <div className="bib-liste" style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>{children}</div>}
     </div>
   )
 }
@@ -128,7 +139,9 @@ export const BIB = {
 
 const S = {
   cadre:       { maxWidth: 1240, margin: '0 auto', padding: '24px', display: 'grid', gridTemplateColumns: '248px 1fr', gap: 24, alignItems: 'start', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  panneau:     { position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 20 },
+  panneau:     { position: 'sticky', top: 16, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', overscrollBehavior: 'contain', display: 'flex', flexDirection: 'column', gap: 20, paddingRight: 4 },
+  groupeBouton: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', textTransform: 'inherit', letterSpacing: 'inherit' },
+  resume:      { marginLeft: 6, textTransform: 'none', letterSpacing: 0, fontWeight: 700, color: '#333333', background: '#e5e7eb', borderRadius: 999, padding: '1px 8px' },
   titre:       { fontSize: '1.5rem', fontWeight: 800, color: '#333333', margin: 0, letterSpacing: '-0.01em' },
   sous:        { color: '#6b7280', fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.45 },
   recherche:   { display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0 12px', height: 40, color: '#6b7280' },

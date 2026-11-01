@@ -8,13 +8,11 @@ import { Cadre, TitrePanneau, Recherche, GroupeTri, ItemTri, LienTri, BIB } from
 
 const TOUS = '__tous'
 const SANS = '__sans'
-const APERCU_MAX = 6 // exercices visibles sur la carte avant « + N exercices »
 
 export default function SeanceTemplates() {
   const navigate = useNavigate()
   const [templates, setTemplates]         = useState([])
   const [loading, setLoading]             = useState(true)
-  const [expanded, setExpanded]           = useState(null)
   const [openFolders, setOpenFolders]     = useState(new Set())
   const [showImport, setShowImport]       = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
@@ -25,6 +23,7 @@ export default function SeanceTemplates() {
   const [drafts, setDrafts]               = useState([])
   const [recherche, setRecherche]         = useState('')
   const [dossierActif, setDossierActif]   = useState(TOUS)
+  const [ouverts, setOuverts]             = useState(new Set()) // cartes dépliées (fermées par défaut)
 
   // Édition inline
   const [editingId, setEditingId]         = useState(null)
@@ -130,7 +129,6 @@ export default function SeanceTemplates() {
     setEditingId(t.id)
     setEditNom(t.nom)
     setEditExercices((t.exercices || []).map(ex => ({ ...ex })))
-    setExpanded(t.id)
   }
 
   function cancelEdit(e) {
@@ -322,13 +320,19 @@ export default function SeanceTemplates() {
     const isEditing = editingId === t.id
     const exs = t.exercices || []
     const nbBlocs = new Set(exs.map(ex => blocLetter(ex.code)).filter(Boolean)).size
-    const toutVoir = expanded === t.id
+    const ouvert = isEditing || ouverts.has(t.id)
+    const basculer = () => !isEditing && setOuverts(prev => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
 
     return (
       <div key={t.id} style={{ ...BIB.carte, ...(isEditing ? { gridColumn: '1 / -1' } : {}) }}>
         {/* En-tête de la carte */}
-        <div style={BIB.carteTete}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ ...BIB.carteTete, ...(ouvert ? {} : { paddingBottom: 12 }) }}>
+          {!isEditing && (
+            <button onClick={basculer} aria-expanded={ouvert} aria-label={ouvert ? 'Fermer la séance' : 'Ouvrir la séance'} style={{ ...BIB.icone, width: 24, height: 24, marginTop: -2 }}>
+              <span style={{ display: 'inline-flex', transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><Icon name="chevron-right" size={16} /></span>
+            </button>
+          )}
+          <div role="button" tabIndex={0} onClick={basculer} style={{ flex: 1, minWidth: 0, cursor: isEditing ? 'default' : 'pointer' }}>
             {isEditing ? (
               <input value={editNom} onChange={e => setEditNom(e.target.value)} aria-label="Nom du modèle"
                 style={{ ...S.editInput, fontWeight: '700', width: '100%' }} autoFocus />
@@ -375,7 +379,7 @@ export default function SeanceTemplates() {
         </div>
 
         {/* Contenu : exercices par bloc, ou éditeur */}
-        <div style={{ padding: '12px 14px' }}>
+        {ouvert && <div style={{ padding: '12px 14px' }}>
           {isEditing ? (
             <div>
               {editExercices.length === 0 && (
@@ -404,15 +408,10 @@ export default function SeanceTemplates() {
             <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Séance vide.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {renderExercicesBlocs(toutVoir ? exs : exs.slice(0, APERCU_MAX))}
-              {exs.length > APERCU_MAX && (
-                <button onClick={() => setExpanded(toutVoir ? null : t.id)} style={S.voirPlus}>
-                  {toutVoir ? 'Réduire' : `+ ${pluriel(exs.length - APERCU_MAX, 'exercice')}`}
-                </button>
-              )}
+              {renderExercicesBlocs(exs)}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Pied : actions */}
         <div style={BIB.cartePied}>
@@ -597,7 +596,6 @@ const S = {
   exRow:          { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' },
   exNom:          { flex: 1, minWidth: 0, fontSize: '0.82rem', fontWeight: '600', color: '#333333' },
   exDosage:       { fontSize: '0.78rem', fontWeight: '600', color: '#6b7280', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-  voirPlus:       { alignSelf: 'flex-start', background: 'none', border: 'none', padding: '4px 0 0', fontSize: '0.78rem', fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' },
   ajoutEx:        { marginTop: 8, background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', cursor: 'pointer', width: '100%', fontFamily: 'inherit' },
   editInput:      { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' },
   // Modal assignation

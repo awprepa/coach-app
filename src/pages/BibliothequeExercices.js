@@ -623,11 +623,10 @@ export default function BibliothequeExercices() {
             <div style={{ padding: '12px 14px 8px' }}>
               <p style={S.cardName}>{ex.nom}</p>
               {(primary.length > 0 || secondary.length > 0) ? (
-                <p style={S.musclesTexte}>
-                  {primary.length > 0 && <b style={{ color: '#333333', fontWeight: 700 }}>{primary.map(k => MUSCLES[k]?.label || k).join(', ')}</b>}
-                  {primary.length > 0 && secondary.length > 0 && ' · '}
-                  {secondary.map(k => MUSCLES[k]?.label || k).join(', ')}
-                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {primary.map(k => <span key={k} style={S.chipP} title="Muscle principal">{MUSCLES[k]?.label || k}</span>)}
+                  {secondary.map(k => <span key={k} style={S.chipS} title="Muscle secondaire">{MUSCLES[k]?.label || k}</span>)}
+                </div>
               ) : (
                 <p style={S.musclesTexte}>Muscles non renseignés</p>
               )}
@@ -896,15 +895,6 @@ export default function BibliothequeExercices() {
             value={modeEchauff}
             onChange={val => { setModeEchauff(val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
           />
-          {!modeEchauff && (
-            <GroupeTri titre="Catégorie">
-              {allCats.map(c => (
-                <ItemTri key={c} actif={catFilter === c} n={c === 'Tous' ? dansMode.length : dansMode.filter(ex => ex.categorie === c).length} onClick={() => setCatFilter(c)}>
-                  {c === 'Tous' ? 'Toutes' : c}
-                </ItemTri>
-              ))}
-            </GroupeTri>
-          )}
           <GroupeTri titre="Muscles" action={muscleFilter.length > 0 && <LienTri onClick={() => setMuscleFilter([])}>Effacer</LienTri>}>
             {ZONES_MUSCLES.map(z => (
               <div key={z.titre}>
@@ -921,6 +911,15 @@ export default function BibliothequeExercices() {
               </div>
             ))}
           </GroupeTri>
+          {!modeEchauff && (
+            <GroupeTri titre="Catégorie" repliable resume={catFilter !== 'Tous' ? catFilter : null}>
+              {allCats.map(c => (
+                <ItemTri key={c} actif={catFilter === c} n={c === 'Tous' ? dansMode.length : dansMode.filter(ex => ex.categorie === c).length} onClick={() => setCatFilter(c)}>
+                  {c === 'Tous' ? 'Toutes' : c}
+                </ItemTri>
+              ))}
+            </GroupeTri>
+          )}
         </>
       }>
         {/* Barre : nombre de résultats, filtres actifs, actions */}
@@ -1121,6 +1120,9 @@ const S = {
   grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14, alignItems: 'stretch' },
   card:       { background: 'white', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
   cardName:   { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.3rem', lineHeight: 1.3 },
+  // Muscles sur les cartes : principaux en anthracite, secondaires en gris
+  chipP:      { background: '#333333', color: 'white', padding: '2px 8px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700 },
+  chipS:      { background: 'white', color: '#374151', border: '1.5px solid #d1d5db', padding: '1px 7px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600 },
   musclesTexte: { fontSize: '0.75rem', color: '#6b7280', margin: 0, lineHeight: 1.5 },
   sansMedia:  { position: 'relative', height: 128, background: '#f3f4f6', borderRadius: '14px 14px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.75rem', fontWeight: 600 },
   catSurMedia: { position: 'absolute', left: 10, top: 10, background: 'white', color: '#333333', fontSize: '0.7rem', fontWeight: 800, borderRadius: 999, padding: '3px 9px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' },
