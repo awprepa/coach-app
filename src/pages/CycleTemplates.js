@@ -4,7 +4,11 @@ import { supabase } from '../supabase'
 import SeanceAIModal from '../components/SeanceAIModal'
 import ClientPicker from '../components/ClientPicker'
 import Icon from '../components/Icon'
+import { Cadre, TitrePanneau, Recherche, GroupeTri, ItemTri, LienTri, BIB } from '../components/BiblioCadre'
 import { copierSeanceModele, copiesDuModele, mettreAJourCopies, seancesManquantes } from '../utils/cyclesModeles'
+
+const TOUS = '__tous'
+const SANS = '__sans'
 
 export default function CycleTemplates() {
   const navigate = useNavigate()
@@ -34,9 +38,10 @@ export default function CycleTemplates() {
   const [renamingFolder, setRenamingFolder] = useState(null)
   const [renameVal, setRenameVal]         = useState('')
   const [movingId, setMovingId]           = useState(null)
+  const [recherche, setRecherche]         = useState('')
+  const [dossierActif, setDossierActif]   = useState(TOUS)
 
-  // ── Aperçu cycle ─────────────────────────────────────────────────────────────
-  const [previewCycleId, setPreviewCycleId]       = useState(null)
+  // ── Aperçu : séances dépliées sur les cartes ─────────────────────────────────
   const [openPreviewSeances, setOpenPreviewSeances] = useState(new Set())
 
   const load = useCallback(async () => {
@@ -51,19 +56,10 @@ export default function CycleTemplates() {
     setLoading(false)
   }, [])
 
-  function toggleFolder(name) {
-    setOpenFolders(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
-  }
-
   function blocLetter(code) {
     if (!code) return null
     const m = code.match(/^[A-Za-z]+/)
     return m ? m[0].toUpperCase() : null
-  }
-
-  function togglePreview(id) {
-    setPreviewCycleId(prev => prev === id ? null : id)
-    setOpenPreviewSeances(new Set())
   }
 
   function togglePreviewSeance(key) {
@@ -73,6 +69,7 @@ export default function CycleTemplates() {
   function creerDossier() {
     if (!newFolderName.trim()) return
     setOpenFolders(prev => new Set([...prev, newFolderName.trim()]))
+    setDossierActif(newFolderName.trim())
     setShowNewFolder(false)
     setNewFolderName('')
   }
@@ -82,6 +79,7 @@ export default function CycleTemplates() {
     await supabase.from('programme_templates').update({ dossier: newName.trim() }).eq('dossier', oldName)
     setTemplates(prev => prev.map(t => t.dossier === oldName ? { ...t, dossier: newName.trim() } : t))
     setOpenFolders(prev => { const n = new Set(prev); n.delete(oldName); n.add(newName.trim()); return n })
+    if (dossierActif === oldName) setDossierActif(newName.trim())
     setRenamingFolder(null)
   }
 
@@ -90,6 +88,7 @@ export default function CycleTemplates() {
     await supabase.from('programme_templates').update({ dossier: null }).eq('dossier', name)
     setTemplates(prev => prev.map(t => t.dossier === name ? { ...t, dossier: null } : t))
     setOpenFolders(prev => { const n = new Set(prev); n.delete(name); return n })
+    if (dossierActif === name) setDossierActif(TOUS)
   }
 
   async function deplacerDansFolder(templateId, dossier) {
@@ -257,45 +256,46 @@ export default function CycleTemplates() {
   // ─── LISTE ───────────────────────────────────────────────────────────────────
   {
     const allFolders = [...new Set([...openFolders, ...templates.map(t => t.dossier).filter(Boolean)])].sort()
-    const sansDossier = templates.filter(t => !t.dossier)
-    const folderOptions = [...new Set(templates.map(t => t.dossier).filter(Boolean))].sort()
+    const q = recherche.trim().toLowerCase()
+    const visibles = templates
+      .filter(t => dossierActif === TOUS || (dossierActif === SANS ? !t.dossier : t.dossier === dossierActif))
+      .filter(t => !q || t.nom.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q))
+    const titreSelection = dossierActif === TOUS ? 'Tous les cycles' : dossierActif === SANS ? 'Sans dossier' : dossierActif
+    const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
     function renderCard(t) {
-      const isPreviewed = previewCycleId === t.id
-      const nbSeances = (t.programme_template_seances || []).length
+      const seances = [...(t.programme_template_seances || [])].sort((a, b) => (a.jour - b.jour) || (a.ordre - b.ordre))
       return (
-        <div key={t.id} style={S.card}>
-          <div role="button" tabIndex={0} style={{ ...S.cardHeader, cursor: 'pointer' }} onClick={() => togglePreview(t.id)}>
+        <div key={t.id} style={BIB.carte}>
+          <div style={BIB.carteTete}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={S.cardTitle}>{t.nom}</div>
-              {t.description && <div style={S.cardDesc}>{t.description}</div>}
-              <div style={S.cardStats}>
-                {t.semaines} semaine{t.semaines > 1 ? 's' : ''} · {nbSeances} séance{nbSeances > 1 ? 's' : ''}
-              </div>
+              <p style={BIB.carteNom}>{t.nom}</p>
+              <p style={BIB.carteMeta}>
+                {[t.description, pluriel(t.semaines, 'semaine'), pluriel(seances.length, 'séance')].filter(Boolean).join(' · ')}
+              </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              {/* Bouton déplacer */}
+            <div style={{ display: 'flex', flexShrink: 0 }}>
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={e => { e.stopPropagation(); setMovingId(movingId === t.id ? null : t.id) }}
-                  style={{ ...S.btnIcon, color: movingId === t.id ? '#333333' : '#6b7280' }}
+                  style={{ ...BIB.icone, color: movingId === t.id ? '#333333' : '#6b7280' }}
                   title="Déplacer dans un dossier" aria-label="Déplacer dans un dossier"
                 >
                   <Icon name="folder" size={14} />
                 </button>
                 {movingId === t.id && (
-                  <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
-                    <div role="button" tabIndex={0} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
+                  <div style={BIB.menu} onClick={e => e.stopPropagation()}>
+                    <button style={BIB.menuItem} onClick={() => deplacerDansFolder(t.id, null)}>
                       <span style={{ color: '#6b7280' }}>Sans dossier</span>
-                    </div>
+                    </button>
                     {allFolders.map(f => (
-                      <div role="button" tabIndex={0} key={f} style={{ ...S.moveItem, fontWeight: t.dossier === f ? '700' : '500', display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => deplacerDansFolder(t.id, f)}>
+                      <button key={f} style={{ ...BIB.menuItem, fontWeight: t.dossier === f ? 700 : 600 }} onClick={() => deplacerDansFolder(t.id, f)}>
                         {t.dossier === f && <Icon name="check" size={14} />}{f}
-                      </div>
+                      </button>
                     ))}
-                    <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
-                      <input autoFocus placeholder="Nouveau dossier…" aria-label="Nouveau dossier…"
-                        style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.3rem 0.5rem', fontSize: '0.78rem', outline: 'none', boxSizing: 'border-box' }}
+                    <div style={{ padding: '0.5rem 0.65rem' }}>
+                      <input autoFocus placeholder="Nouveau dossier…" aria-label="Nouveau dossier"
+                        style={{ ...S.input, padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
                         onKeyDown={e => {
                           if (e.key === 'Enter' && e.target.value.trim()) {
                             const name = e.target.value.trim()
@@ -308,86 +308,76 @@ export default function CycleTemplates() {
                   </div>
                 )}
               </div>
-              <span style={{ ...S.chevron, transform: isPreviewed ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={16} /></span>
+              <button style={BIB.icone} onClick={() => setDeleteConfirm(t.id)} title="Supprimer le template" aria-label="Supprimer le template"><Icon name="trash" size={14} /></button>
             </div>
           </div>
 
-          {/* ── Panel aperçu séances ── */}
-          {isPreviewed && (() => {
-            const seances = [...(t.programme_template_seances || [])].sort((a, b) => (a.jour - b.jour) || (a.ordre - b.ordre))
-            return (
-              <div style={S.apercu}>
-                {seances.length === 0 ? (
-                  <p style={{ color: '#6b7280', fontSize: '0.78rem', textAlign: 'center', padding: '0.75rem' }}>Aucune séance dans ce cycle</p>
-                ) : seances.map((s, idx) => {
-                  const key = s.id || idx
-                  const seanceOpen = openPreviewSeances.has(key)
-                  const exs = s.exercices || []
-                  return (
-                    <div key={key} style={{ borderTop: idx ? '1px solid #e5e7eb' : 'none' }}>
-                      <div
-                        role="button" tabIndex={0}
-                        onClick={e => { e.stopPropagation(); togglePreviewSeance(key) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer' }}
-                      >
-                        <span style={S.jourTag}>J{s.jour}</span>
-                        <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: '0.85rem', color: '#333333' }}>{s.nom || `Séance ${idx + 1}`}</span>
-                        <span style={{ color: '#6b7280', fontSize: '0.75rem', flexShrink: 0 }}>{exs.length} exercice{exs.length > 1 ? 's' : ''}</span>
-                        <span style={{ ...S.chevron, transform: seanceOpen ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={14} /></span>
-                      </div>
-                      {seanceOpen && (
-                        <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {exs.length === 0 ? (
-                            <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0, padding: '4px 0' }}>Séance vide</p>
-                          ) : (() => {
-                            const items = []
-                            let prevBloc = null
-                            exs.forEach((ex, ei) => {
-                              const bloc = blocLetter(ex.code)
-                              if (bloc && bloc !== prevBloc) {
-                                items.push(
-                                  <div key={`hdr-${ei}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: ei > 0 ? 8 : 0, marginBottom: 2 }}>
-                                    <span style={S.blocPuce}>Bloc {bloc}</span>
-                                    <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-                                  </div>
-                                )
-                                prevBloc = bloc
-                              }
-                              items.push(
-                                <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
-                                  {ex.code && <span style={S.codeTag}>{ex.code}</span>}
-                                  <span style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', fontWeight: 600, color: '#333333' }}>{ex.nom || 'Sans nom'}</span>
-                                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                                    {[[ex.series, ex.repetitions].filter(Boolean).join(' × '), ex.tempo && `tempo ${ex.tempo}`].filter(Boolean).join(' · ')}
-                                  </span>
-                                </div>
-                              )
-                            })
-                            return items
-                          })()}
-                        </div>
-                      )}
+          {/* Séances du cycle : un clic déplie les exercices */}
+          <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {seances.length === 0 ? (
+              <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Aucune séance dans ce cycle.</p>
+            ) : seances.map((s, idx) => {
+              const key = s.id || `${t.id}-${idx}`
+              const seanceOpen = openPreviewSeances.has(key)
+              const exs = s.exercices || []
+              return (
+                <div key={key} style={S.jour}>
+                  <div role="button" tabIndex={0} onClick={() => togglePreviewSeance(key)} style={S.jourTete}>
+                    <span style={S.jourTag}>J{s.jour}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: '0.82rem', color: '#333333' }}>{s.nom || `Séance ${idx + 1}`}</span>
+                    <span style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}>{pluriel(exs.length, 'exercice')}</span>
+                    <span style={{ ...S.chevron, transform: seanceOpen ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={14} /></span>
+                  </div>
+                  {seanceOpen && (
+                    <div style={{ padding: '0 10px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {exs.length === 0 ? (
+                        <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0, padding: '4px 0' }}>Séance vide</p>
+                      ) : (() => {
+                        const items = []
+                        let prevBloc = null
+                        exs.forEach((ex, ei) => {
+                          const bloc = blocLetter(ex.code)
+                          if (bloc && bloc !== prevBloc) {
+                            items.push(
+                              <div key={`hdr-${ei}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: ei > 0 ? 8 : 0, marginBottom: 2 }}>
+                                <span style={BIB.blocPuce}>Bloc {bloc}</span>
+                                <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+                              </div>
+                            )
+                            prevBloc = bloc
+                          }
+                          items.push(
+                            <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                              {ex.code && <span style={{ ...BIB.codeTag, background: 'white', border: '1px solid #e5e7eb' }}>{ex.code}</span>}
+                              <span style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', fontWeight: 600, color: '#333333' }}>{ex.nom || 'Sans nom'}</span>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                                {[[ex.series, ex.repetitions].filter(Boolean).join(' × '), ex.tempo && `tempo ${ex.tempo}`].filter(Boolean).join(' · ')}
+                              </span>
+                            </div>
+                          )
+                        })
+                        return items
+                      })()}
                     </div>
-                  )
-                })}
-              </div>
-            )
-          })()}
+                  )}
+                </div>
+              )
+            })}
+          </div>
 
           {deleteConfirm === t.id ? (
-            <div style={S.cardActions}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginRight: 'auto' }}>Supprimer ce template ?</span>
-              <button style={S.btnSecondary} onClick={() => setDeleteConfirm(null)}>Annuler</button>
-              <button style={S.btnDanger} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
+            <div style={BIB.cartePied}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginRight: 'auto' }}>Supprimer ce cycle ?</span>
+              <button style={BIB.btnPetit} onClick={() => setDeleteConfirm(null)}>Annuler</button>
+              <button style={{ ...BIB.btnPetit, background: '#dc2626', borderColor: '#dc2626', color: 'white' }} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
             </div>
           ) : (
-            <div style={S.cardActions}>
-              <button style={S.btnPrimary} onClick={() => openSendModal(t)}>Envoyer</button>
-              <button style={S.btnSecondary} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
+            <div style={BIB.cartePied}>
+              <button style={BIB.btnPetitP} onClick={() => openSendModal(t)}>Envoyer</button>
+              <button style={BIB.btnPetit} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
                 {ouvrantId === t.id ? 'Ouverture…' : 'Modifier'}
               </button>
-              <button style={S.btnSecondary} onClick={() => ouvrirMaj(t)} title="Ajouter les nouvelles séances du modèle aux cycles déjà envoyés">Mettre à jour les envoyés</button>
-              <button style={{ ...S.btnIcon, color: '#dc2626', marginLeft: 'auto' }} onClick={() => setDeleteConfirm(t.id)} title="Supprimer le template" aria-label="Supprimer le template"><Icon name="trash" size={14} /></button>
+              <button style={BIB.btnPetit} onClick={() => ouvrirMaj(t)} title="Ajouter les nouvelles séances du modèle aux cycles déjà envoyés">Mettre à jour les envoyés</button>
             </div>
           )}
         </div>
@@ -395,19 +385,7 @@ export default function CycleTemplates() {
     }
 
     return (
-      <div role="button" tabIndex={0} style={S.page} onClick={() => setMovingId(null)}>
-        <div style={S.header}>
-          <div>
-            <div style={S.title}>Templates de cycles</div>
-            <div style={S.subtitle}>{templates.length} template{templates.length > 1 ? 's' : ''}</div>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button style={S.btnSecondary} onClick={() => setShowNewFolder(true)}>+ Dossier</button>
-            <button style={{ ...S.btnSecondary, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setShowAI(true)}><Icon name="sparkle" size={14} />Générer avec l'IA</button>
-            <button style={S.btnPrimary} onClick={creerTemplate}>+ Nouveau template</button>
-          </div>
-        </div>
-
+      <div onClick={() => setMovingId(null)}>
         {showAI && (
           <SeanceAIModal
             defaultMode="cycle"
@@ -417,85 +395,66 @@ export default function CycleTemplates() {
           />
         )}
 
-        {/* Créer dossier */}
-        {showNewFolder && (
-          <div style={{ background: 'white', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && creerDossier()}
-              placeholder="Nom du dossier…"
-              style={{ flex: 1, padding: '0.45rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.875rem', outline: 'none' }} />
-            <button onClick={creerDossier} style={S.btnPrimary}>Créer</button>
-            <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.btnSecondary}>Annuler</button>
-          </div>
-        )}
-
-        {loading ? (
-          <div style={S.empty}>Chargement…</div>
-        ) : templates.length === 0 && allFolders.length === 0 ? (
-          <div style={S.emptyState}>
-            <div style={{ fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Aucun template</div>
-            <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Crée un template de cycle pour l'appliquer rapidement à tes clients</div>
-            <button style={{ ...S.btnPrimary, marginTop: '1.25rem' }} onClick={creerTemplate}>Créer un template</button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            {/* Dossiers */}
-            {allFolders.map(folderName => {
-              const items = templates.filter(t => t.dossier === folderName)
-              const isOpen = openFolders.has(folderName)
-              return (
-                <div key={folderName} style={S.folderBlock}>
-                  <div role="button" tabIndex={0} style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
-                      <span style={{ display: 'flex', color: '#374151' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
-                      {renamingFolder === folderName ? (
-                        <input autoFocus value={renameVal}
-                          onChange={e => setRenameVal(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') renommerDossier(folderName, renameVal); if (e.key === 'Escape') setRenamingFolder(null) }}
-                          onBlur={() => renommerDossier(folderName, renameVal)}
-                          onClick={e => e.stopPropagation()}
-                          style={{ flex: 1, padding: '0.25rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.875rem', outline: 'none' }} />
-                      ) : (
-                        <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#333333' }}>{folderName}</span>
-                      )}
-                      <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} template{items.length > 1 ? 's' : ''}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.btnIcon} title="Renommer le dossier">
-                        <Icon name="edit" size={14} />
-                      </button>
-                      <button onClick={() => supprimerDossier(folderName)} style={S.btnIcon} title="Supprimer le dossier">
-                        <Icon name="trash" size={14} />
-                      </button>
-                      <span role="button" tabIndex={0} style={{ ...S.chevron, transform: isOpen ? 'rotate(90deg)' : 'none', cursor: 'pointer' }}
-                        onClick={() => toggleFolder(folderName)}><Icon name="chevron-right" size={16} /></span>
-                    </div>
-                  </div>
-                  {isOpen && (
-                    <div style={{ padding: 12 }}>
-                      {items.length === 0 ? (
-                        <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un template ici via l'icône dossier</p>
-                      ) : (
-                        <div style={S.grid}>{items.map(t => renderCard(t))}</div>
-                      )}
-                    </div>
-                  )}
+        <Cadre panneau={
+          <>
+            <TitrePanneau titre="Templates de cycles" sous={pluriel(templates.length, 'cycle')} />
+            <Recherche value={recherche} onChange={setRecherche} placeholder="Rechercher un cycle" />
+            <GroupeTri titre="Dossiers" action={<LienTri onClick={() => setShowNewFolder(true)}>+ Nouveau</LienTri>}>
+              {showNewFolder && (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                  <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') creerDossier(); if (e.key === 'Escape') { setShowNewFolder(false); setNewFolderName('') } }}
+                    placeholder="Nom du dossier" aria-label="Nom du dossier" style={{ ...S.input, padding: '0.4rem 0.6rem', fontSize: '0.85rem', flex: 1, minWidth: 0 }} />
+                  <button onClick={creerDossier} style={BIB.btnPetitP}>Créer</button>
                 </div>
-              )
-            })}
-
-            {/* Sans dossier */}
-            {sansDossier.length > 0 && (
-              <div>
-                {allFolders.length > 0 && (
-                  <p style={S.sectionLabel}>Sans dossier</p>
-                )}
-                <div style={S.grid}>{sansDossier.map(t => renderCard(t))}</div>
-              </div>
+              )}
+              <ItemTri actif={dossierActif === TOUS} n={templates.length} onClick={() => setDossierActif(TOUS)}>Tous les cycles</ItemTri>
+              {allFolders.map(f => (
+                <ItemTri key={f} icone={dossierActif === f ? 'folder-open' : 'folder'} actif={dossierActif === f}
+                  n={templates.filter(t => t.dossier === f).length} onClick={() => setDossierActif(f)}>{f}</ItemTri>
+              ))}
+              <ItemTri actif={dossierActif === SANS} n={templates.filter(t => !t.dossier).length} onClick={() => setDossierActif(SANS)}>Sans dossier</ItemTri>
+            </GroupeTri>
+          </>
+        }>
+          <div style={BIB.barre}>
+            {renamingFolder && renamingFolder === dossierActif ? (
+              <input autoFocus value={renameVal} aria-label="Nouveau nom du dossier"
+                onChange={e => setRenameVal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') renommerDossier(dossierActif, renameVal); if (e.key === 'Escape') setRenamingFolder(null) }}
+                onBlur={() => renommerDossier(dossierActif, renameVal)}
+                style={{ ...S.input, width: 220, padding: '0.45rem 0.6rem', fontWeight: 700 }} />
+            ) : (
+              <span style={BIB.compte}>{titreSelection} · {pluriel(visibles.length, 'cycle')}</span>
             )}
+            {dossierActif !== TOUS && dossierActif !== SANS && (
+              <>
+                <button onClick={() => { setRenamingFolder(dossierActif); setRenameVal(dossierActif) }} style={BIB.icone} title="Renommer le dossier" aria-label="Renommer le dossier"><Icon name="edit" size={14} /></button>
+                <button onClick={() => supprimerDossier(dossierActif)} style={BIB.icone} title="Supprimer le dossier" aria-label="Supprimer le dossier"><Icon name="trash" size={14} /></button>
+              </>
+            )}
+            <div style={BIB.droite}>
+              <button style={BIB.btn} onClick={() => setShowAI(true)}><Icon name="sparkle" size={14} />Générer avec l'IA</button>
+              <button style={BIB.btnP} onClick={creerTemplate}>+ Nouveau cycle</button>
+            </div>
           </div>
-        )}
+
+          {loading ? (
+            <div style={S.empty}>Chargement…</div>
+          ) : visibles.length === 0 ? (
+            <div style={BIB.vide}>
+              <p style={{ fontWeight: 700, color: '#374151', margin: '0 0 0.35rem' }}>
+                {templates.length === 0 ? 'Aucun cycle' : q ? 'Aucun cycle ne correspond' : 'Dossier vide'}
+              </p>
+              <p style={{ margin: 0 }}>
+                {templates.length === 0 ? 'Crée un cycle pour l’appliquer rapidement à tes clients.'
+                  : q ? 'Change ta recherche.' : 'Range un cycle ici avec l’icône dossier de sa carte.'}
+              </p>
+            </div>
+          ) : (
+            <div style={BIB.grille}>{visibles.map(t => renderCard(t))}</div>
+          )}
+        </Cadre>
 
       {/* ── Modale : mettre à jour les cycles déjà envoyés ───────────────────── */}
       {majModal && (() => {
@@ -703,36 +662,17 @@ export default function CycleTemplates() {
 }
 
 const S = {
-  page: { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
-  title: { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
-  subtitle: { fontSize: '0.85rem', color: '#6b7280' },
-  sectionLabel: { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' },
   empty: { color: '#6b7280', padding: '2rem', textAlign: 'center' },
-  emptyState: { textAlign: 'center', padding: '3rem 2rem', background: 'white', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem', alignItems: 'start' },
-  card: { background: 'white', border: '1px solid #e5e7eb', borderRadius: 14, padding: '1rem 1.1rem' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  cardTitle: { fontWeight: '700', color: '#333333', fontSize: '0.95rem' },
-  cardDesc: { fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem' },
-  cardStats: { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginTop: '0.35rem' },
-  cardActions: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, borderTop: '1px solid #f3f4f6', paddingTop: 12, marginTop: 12 },
-  apercu: { marginTop: 12, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10 },
-  jourTag: { background: '#e5e7eb', color: '#374151', fontSize: '0.72rem', fontWeight: 800, borderRadius: 6, padding: '2px 6px', flexShrink: 0 },
-  codeTag: { background: 'white', border: '1px solid #e5e7eb', color: '#374151', fontSize: '0.72rem', fontWeight: 800, borderRadius: 6, padding: '1px 6px', minWidth: 22, textAlign: 'center', flexShrink: 0 },
-  blocPuce: { background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 },
-  chevron: { display: 'inline-flex', color: '#6b7280', transition: 'transform 0.2s' },
+  jour: { background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: 10 },
+  jourTete: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', cursor: 'pointer' },
+  jourTag: { background: '#333333', color: '#e4f816', fontSize: '0.72rem', fontWeight: 800, borderRadius: 6, padding: '2px 6px', flexShrink: 0 },
+  chevron: { display: 'inline-flex', color: '#6b7280', transition: 'transform 0.2s', flexShrink: 0 },
   formGroup: { marginBottom: '1rem' },
   label: { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
   input: { width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', color: '#333333', outline: 'none' },
   btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.55rem 0.9rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnDanger: { background: '#dc2626', color: 'white', border: 'none', borderRadius: 10, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnIcon: { width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', padding: 0, color: '#6b7280', flexShrink: 0 },
-  folderBlock: { background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  folderHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' },
-  moveDropdown: { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },
-  moveItem: { padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: '#374151', fontWeight: '500', cursor: 'pointer', borderBottom: '1px solid #f9fafb' },
   overlay: {
     position: 'fixed', inset: 0, zIndex: 1000,
     background: 'rgba(0,0,0,0.5)', display: 'flex',

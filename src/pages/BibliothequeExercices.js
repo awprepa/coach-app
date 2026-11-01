@@ -4,6 +4,7 @@ import { findMuscles, MUSCLES } from '../data/muscleData'
 import { findBiblioMatch } from '../utils/exerciceMatch'
 import { searchFreeExDB } from '../utils/freeExerciseDB'
 import Icon from '../components/Icon'
+import { Cadre, TitrePanneau, Recherche, GroupeTri, ItemTri, LienTri, SousTitreTri, Segment, PuceFiltre, BIB } from '../components/BiblioCadre'
 
 // ── Helpers média ──────────────────────────────────────────────────────────
 function youtubeId(url) {
@@ -23,6 +24,11 @@ function mediaThumbnail(url) {
 
 const CATEGORIES = ['Musculation', 'Prépa physique', 'Cardio', 'Mobilité', 'Pliométrie', 'Haltérophilie', 'Gainage', 'Autre']
 const MUSCLE_KEYS = Object.keys(MUSCLES)
+const ZONES_MUSCLES = [
+  { titre: 'Haut du corps', muscles: ['pectoraux', 'dorsaux', 'epaules', 'trapezes', 'biceps', 'triceps', 'avant_bras', 'cervicaux'] },
+  { titre: 'Tronc', muscles: ['abdominaux', 'obliques', 'lombaires'] },
+  { titre: 'Bas du corps', muscles: ['quadriceps', 'fessiers', 'ischio_jambiers', 'adducteurs', 'abducteurs', 'mollets', 'tibial_anterieur'] },
+]
 
 // Lit les muscles depuis un exercice (colonnes dédiées ou fallback JSON dans description)
 function parseMuscles(ex) {
@@ -40,17 +46,6 @@ function parseMuscles(ex) {
 
 function encodeMusclesInDescription(primary, secondary) {
   return JSON.stringify({ p: primary, s: secondary })
-}
-
-// Chips lecture seule
-function MuscleChips({ primary, secondary }) {
-  if (!primary.length && !secondary.length) return null
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.4rem' }}>
-      {primary.map(k => <span key={k} style={S.chipP}>{MUSCLES[k]?.label || k}</span>)}
-      {secondary.map(k => <span key={k} style={S.chipS}>{MUSCLES[k]?.label || k}</span>)}
-    </div>
-  )
 }
 
 // Sélecteur muscles — deux lignes de chips cliquables
@@ -237,6 +232,7 @@ export default function BibliothequeExercices() {
   const [gifTranslated, setGifTranslated] = useState('')
   const [modeEchauff, setModeEchauff]     = useState(false) // false = exercices, true = échauffements
   const [muscleFilter, setMuscleFilter]   = useState([])
+  const [menuOuvert, setMenuOuvert]       = useState(false)
   const fileRef = useRef()
 
   useEffect(() => { fetchExercices(); fetchSeances() }, [])
@@ -533,6 +529,8 @@ export default function BibliothequeExercices() {
   }
 
   const allCats  = ['Tous', ...CATEGORIES]
+  const dansMode = exercices.filter(ex => !!ex.is_echauffement === modeEchauff)
+  const compteMuscle = k => dansMode.filter(ex => { const { primary, secondary } = parseMuscles(ex); return primary.includes(k) || secondary.includes(k) }).length
   const filtered = exercices.filter(ex => {
     const matchMode   = !!ex.is_echauffement === modeEchauff
     const matchCat    = modeEchauff || catFilter === 'Tous' || ex.categorie === catFilter
@@ -583,7 +581,7 @@ export default function BibliothequeExercices() {
             </button>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => sauvegarderEdition(ex.id)} disabled={saving} style={S.btnPrimary}>
-                {saving ? '...' : '✓ Sauvegarder'}
+                {saving ? 'Enregistrement…' : 'Enregistrer'}
               </button>
               <button onClick={() => setEnEdition(null)} style={S.btnSecondary}>Annuler</button>
             </div>
@@ -592,14 +590,21 @@ export default function BibliothequeExercices() {
           // ── Mode lecture ──
           <>
             {/* Miniature média */}
+            {!ex.image_url && (
+              <div style={S.sansMedia}>
+                {ex.categorie && <span style={S.catSurMedia}>{ex.categorie}</span>}
+                Pas de vidéo
+              </div>
+            )}
             {ex.image_url && (() => {
               const thumb = mediaThumbnail(ex.image_url)
               const isYt  = !!youtubeId(ex.image_url)
               return (
                 <div role="button" tabIndex={0}
                   onClick={() => setMediaModal({ nom: ex.nom, url: ex.image_url })}
-                  style={{ position: 'relative', cursor: 'pointer', background: '#111', height: 130, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
+                  style={{ position: 'relative', cursor: 'pointer', background: '#262626', height: 128, overflow: 'hidden', borderRadius: '14px 14px 0 0' }}
                 >
+                  {ex.categorie && <span style={{ ...S.catSurMedia, zIndex: 1 }}>{ex.categorie}</span>}
                   {thumb
                     ? <img loading="lazy" src={thumb} alt={ex.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
@@ -615,18 +620,19 @@ export default function BibliothequeExercices() {
                 </div>
               )
             })()}
-            <div style={{ padding: '0.875rem 0.875rem 0.5rem' }}>
+            <div style={{ padding: '12px 14px 8px' }}>
               <p style={S.cardName}>{ex.nom}</p>
-              {ex.categorie && <span style={S.catTag}>{ex.categorie}</span>}
-              <MuscleChips primary={primary} secondary={secondary} />
+              {(primary.length > 0 || secondary.length > 0) ? (
+                <p style={S.musclesTexte}>
+                  {primary.length > 0 && <b style={{ color: '#333333', fontWeight: 700 }}>{primary.map(k => MUSCLES[k]?.label || k).join(', ')}</b>}
+                  {primary.length > 0 && secondary.length > 0 && ' · '}
+                  {secondary.map(k => MUSCLES[k]?.label || k).join(', ')}
+                </p>
+              ) : (
+                <p style={S.musclesTexte}>Muscles non renseignés</p>
+              )}
             </div>
-            <div style={{ padding: '0 0.875rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button
-                onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
-                style={{ ...S.btnAddSeance, background: addingToSeance === ex.id ? '#333333' : '#f9fafb', color: addingToSeance === ex.id ? '#e4f816' : '#374151' }}
-              >
-                {addingToSeance === ex.id ? '✕ Annuler' : '+ Ajouter à une séance'}
-              </button>
+            <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
 
               {addingToSeance === ex.id && (
                 <div style={S.addPanel}>
@@ -659,17 +665,23 @@ export default function BibliothequeExercices() {
                   </div>
                   <button onClick={() => ajouterASeance(ex)} disabled={addSaving || !addForm.seance_id || !addForm.code}
                     style={{ ...S.btnPrimary, width: '100%', opacity: (!addForm.seance_id || !addForm.code) ? 0.5 : 1 }}>
-                    {addSaving ? 'Ajout...' : '✓ Ajouter à la séance'}
+                    {addSaving ? 'Ajout…' : 'Ajouter à la séance'}
                   </button>
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => { setAddingToSeance(addingToSeance === ex.id ? null : ex.id); setEnEdition(null) }}
+                  style={{ ...(addingToSeance === ex.id ? BIB.btnPetitP : BIB.btnPetit), flex: 1 }}
+                >
+                  {addingToSeance === ex.id ? 'Annuler' : '+ Ajouter à une séance'}
+                </button>
                 <button onClick={() => {
                   setEnEdition(ex.id); setAddingToSeance(null); setShowForm(false)
                   setFormEdit({ nom: ex.nom, categorie: ex.categorie || '', primary, secondary, image_url: ex.image_url || '' })
-                }} style={S.iconBtn}>Modifier</button>
-                <button onClick={() => supprimerExercice(ex.id)} style={S.iconBtnDanger}><Icon name="trash" size={14} /></button>
+                }} style={{ ...BIB.btnPetit, width: 32, padding: 0 }} title="Modifier" aria-label="Modifier"><Icon name="edit" size={14} /></button>
+                <button onClick={() => supprimerExercice(ex.id)} style={{ ...BIB.btnPetit, width: 32, padding: 0, color: '#dc2626' }} title="Supprimer" aria-label="Supprimer"><Icon name="trash" size={14} /></button>
               </div>
             </div>
           </>
@@ -679,7 +691,7 @@ export default function BibliothequeExercices() {
   }
 
   return (
-    <div style={S.page}>
+    <div>
 
       {/* ── Modal média plein écran ── */}
       {mediaModal && (
@@ -872,198 +884,170 @@ export default function BibliothequeExercices() {
         </div>
       )}
 
-      {/* ── Bannière clé API WorkoutX ── */}
-      {showKeyInput && (
-        <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#92400e' }}>
-              Clé API WorkoutX
-              <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#b45309', fontWeight: 400, fontSize: '0.72rem' }}>
-                Obtenir une clé gratuite →
-              </a>
-            </p>
-            <input
-              value={workoutxKey}
-              onChange={e => saveKey(e.target.value)}
-              placeholder="Colle ta clé API ici…"
-              style={{ ...S.input, fontSize: '0.82rem', padding: '0.55rem 0.75rem' }}
-            />
-          </div>
-          <button onClick={() => setShowKeyInput(false)} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem' }}>OK</button>
-        </div>
-      )}
-
-      {/* Adaptations mobile — aucune règle au-dessus de 820px */}
-      <style>{`
-        @media (max-width: 820px){
-          .bx-header{flex-direction:column !important;align-items:stretch !important;gap:0.75rem;}
-          .bx-actions{flex-direction:column !important;}
-          .bx-actions button{width:100%;}
-        }
-      `}</style>
-      {/* ── Header ── */}
-      <div style={S.header} className="bx-header">
-        <div>
-          <h1 style={S.title}>Bibliothèque d'exercices</h1>
-          <p style={S.subtitle}>{filtered.length} exercice{filtered.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="bx-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => setShowKeyInput(v => !v)}
-            style={{ ...S.btnSecondary, fontSize: '0.82rem', color: workoutxKey ? '#16a34a' : '#92400e', borderColor: workoutxKey ? '#bbf7d0' : '#fde68a', background: workoutxKey ? '#f0fdf4' : '#fffbeb' }}
-            title={workoutxKey ? 'Clé WorkoutX configurée' : 'Configurer la clé API WorkoutX'}
-          >
-            {workoutxKey ? 'GIF configuré' : 'Config clé GIF'}
-          </button>
+      <Cadre panneau={
+        <>
+          <TitrePanneau
+            titre={modeEchauff ? 'Échauffements' : 'Exercices'}
+            sous={`${dansMode.length} ${modeEchauff ? 'échauffement' : 'exercice'}${dansMode.length > 1 ? 's' : ''} dans ta bibliothèque`}
+          />
+          <Recherche value={search} onChange={setSearch} placeholder={modeEchauff ? 'Rechercher un échauffement' : 'Rechercher un exercice'} />
+          <Segment
+            options={[{ label: 'Travail', val: false }, { label: 'Échauffement', val: true }]}
+            value={modeEchauff}
+            onChange={val => { setModeEchauff(val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
+          />
           {!modeEchauff && (
-            <button onClick={lancerBackfill} style={{ ...S.btnSecondary, fontSize: '0.82rem' }} title="Lier automatiquement les exercices existants à la bibliothèque">
-              Lier les anciens exercices
-            </button>
+            <GroupeTri titre="Catégorie">
+              {allCats.map(c => (
+                <ItemTri key={c} actif={catFilter === c} n={c === 'Tous' ? dansMode.length : dansMode.filter(ex => ex.categorie === c).length} onClick={() => setCatFilter(c)}>
+                  {c === 'Tous' ? 'Toutes' : c}
+                </ItemTri>
+              ))}
+            </GroupeTri>
           )}
-          <button onClick={() => { if (!showForm) setForm({ nom: '', categorie: '', primary: [], secondary: [], image_url: '' }); setShowForm(!showForm); setEnEdition(null) }} style={S.btnPrimary}>
-            {showForm ? '✕ Annuler' : modeEchauff ? '+ Ajouter un échauffement' : '+ Ajouter un exercice'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Onglets Exercices / Échauffements ── */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: '1.25rem', background: '#f3f4f6', borderRadius: 12, padding: 4, width: 'fit-content' }}>
-        {[{ label: 'Exercices de travail', val: false }, { label: 'Échauffements', val: true }].map(tab => (
-          <button
-            key={String(tab.val)}
-            onClick={() => { setModeEchauff(tab.val); setShowForm(false); setCatFilter('Tous'); setSearch(''); setMuscleFilter([]) }}
-            style={{
-              border: 'none', borderRadius: 9, padding: '0.45rem 1.1rem', fontSize: '0.82rem', fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.15s',
-              background: modeEchauff === tab.val ? 'white' : 'transparent',
-              color: modeEchauff === tab.val ? '#111' : '#6b7280',
-              boxShadow: modeEchauff === tab.val ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
-            }}
-          >{tab.label}</button>
-        ))}
-      </div>
-
-      {/* ── Formulaire ajout ── */}
-      {showForm && (
-        <div style={S.formCard}>
-          <p style={S.formTitle}>{modeEchauff ? 'Nouvel échauffement' : 'Nouvel exercice'}</p>
-          <form onSubmit={ajouterExercice}>
-            <div style={S.formRow}>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <label style={S.label}>Nom *</label>
-                <input
-                  value={form.nom}
-                  onChange={e => applyAutoMuscles(e.target.value, false)}
-                  placeholder="ex : Squat barre"
-                  style={S.input} required
-                />
+          <GroupeTri titre="Muscles" action={muscleFilter.length > 0 && <LienTri onClick={() => setMuscleFilter([])}>Effacer</LienTri>}>
+            {ZONES_MUSCLES.map(z => (
+              <div key={z.titre}>
+                <SousTitreTri>{z.titre}</SousTitreTri>
+                {z.muscles.filter(k => MUSCLES[k]).map(k => {
+                  const coche = muscleFilter.includes(k)
+                  return (
+                    <ItemTri key={k} coche={coche} n={compteMuscle(k)}
+                      onClick={() => setMuscleFilter(prev => coche ? prev.filter(x => x !== k) : [...prev, k])}>
+                      {MUSCLES[k].label}
+                    </ItemTri>
+                  )
+                })}
               </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <label style={S.label}>Catégorie</label>
-                <select value={form.categorie} onChange={e => setForm({ ...form, categorie: e.target.value })} style={S.select}>
-                  <option value="">— Choisir —</option>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={S.label}>
-                Muscles ciblés
-                <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 400, textTransform: 'none', marginLeft: 6 }}>
-                  (détecté auto · ajuste si besoin)
-                </span>
-              </label>
-              <div style={{ marginTop: '0.5rem' }}>
-                <MusclePicker
-                  primary={form.primary}
-                  secondary={form.secondary}
-                  onChange={({ primary, secondary }) => setForm(prev => ({ ...prev, primary, secondary }))}
-                />
-              </div>
-            </div>
-            {/* Média */}
-            <MediaField
-              value={form.image_url}
-              onChange={url => setForm(prev => ({ ...prev, image_url: url }))}
-              onFile={e => handleFileChange(e, 'create')}
-              uploading={uploadingFor === 'create'}
-            />
-            <button
-              type="button"
-              onClick={() => ouvrirGifSearch(form.nom, 'create')}
-              style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Trouver GIF automatiquement
-            </button>
-            <button type="submit" disabled={saving} style={S.btnPrimary}>
-              {saving ? 'Enregistrement...' : '✓ Créer'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Filtres */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Rechercher un exercice..."
-          style={{ ...S.input, marginBottom: '0.75rem' }} />
-
-        {/* Filtre par catégorie */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-          {allCats.map(c => (
-            <button key={c} onClick={() => setCatFilter(c)} style={{
-              ...S.catPill,
-              background: catFilter === c ? '#333333' : 'white',
-              color:      catFilter === c ? '#e4f816' : '#374151',
-              border:     `1.5px solid ${catFilter === c ? '#333333' : '#e5e7eb'}`,
-            }}>{c}</button>
+            ))}
+          </GroupeTri>
+        </>
+      }>
+        {/* Barre : nombre de résultats, filtres actifs, actions */}
+        <div style={BIB.barre}>
+          <span style={BIB.compte}>{filtered.length} {modeEchauff ? 'échauffement' : 'exercice'}{filtered.length > 1 ? 's' : ''}</span>
+          {!modeEchauff && catFilter !== 'Tous' && <PuceFiltre onRetirer={() => setCatFilter('Tous')}>{catFilter}</PuceFiltre>}
+          {muscleFilter.map(k => (
+            <PuceFiltre key={k} onRetirer={() => setMuscleFilter(prev => prev.filter(x => x !== k))}>{MUSCLES[k]?.label || k}</PuceFiltre>
           ))}
-        </div>
-
-        {/* Filtre par muscle */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Muscles
-            </span>
-            {muscleFilter.length > 0 && (
-              <button onClick={() => setMuscleFilter([])} style={{ background: 'none', border: 'none', fontSize: '0.7rem', color: '#6366f1', fontWeight: '700', cursor: 'pointer', padding: 0 }}>
-                Tout effacer
+          <div style={BIB.droite}>
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setMenuOuvert(v => !v)} style={{ ...BIB.btn, width: 38, padding: 0, justifyContent: 'center' }} title="Réglages" aria-label="Réglages" aria-expanded={menuOuvert}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
               </button>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-            {MUSCLE_KEYS.map(k => {
-              const active = muscleFilter.includes(k)
-              return (
-                <button key={k} onClick={() => setMuscleFilter(prev => active ? prev.filter(x => x !== k) : [...prev, k])} style={{
-                  padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700',
-                  cursor: 'pointer', transition: 'all 0.12s',
-                  background: active ? '#dc2626' : 'white',
-                  color:      active ? 'white'    : '#6b7280',
-                  border:     `1.5px solid ${active ? '#dc2626' : '#e5e7eb'}`,
-                }}>
-                  {MUSCLES[k].label}
-                </button>
-              )
-            })}
+              {menuOuvert && (
+                <div style={BIB.menu}>
+                  <button style={BIB.menuItem} onClick={() => { setShowKeyInput(v => !v); setMenuOuvert(false) }}>
+                    {workoutxKey ? 'Clé GIF configurée (modifier)' : 'Configurer la clé GIF'}
+                  </button>
+                  {!modeEchauff && (
+                    <button style={{ ...BIB.menuItem, borderBottom: 'none' }} onClick={() => { lancerBackfill(); setMenuOuvert(false) }}>
+                      Lier les anciens exercices
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <button onClick={() => { if (!showForm) setForm({ nom: '', categorie: '', primary: [], secondary: [], image_url: '' }); setShowForm(!showForm); setEnEdition(null) }} style={showForm ? BIB.btn : BIB.btnP}>
+              {showForm ? 'Annuler' : modeEchauff ? '+ Nouvel échauffement' : '+ Nouvel exercice'}
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Liste */}
-      {loading ? (
-        <p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
-      ) : filtered.length === 0 ? (
-        <div style={S.empty}>
-          <p style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Aucun exercice trouvé.</p>
-          <p style={{ fontSize: '0.85rem' }}>Ajoutez votre premier exercice avec le bouton ci-dessus.</p>
-        </div>
-      ) : (
-        <div style={S.grid}>
-          {filtered.map(renderExCard)}
-        </div>
-      )}
+        {/* ── Bannière clé API WorkoutX ── */}
+        {showKeyInput && (
+          <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '1rem 1.25rem', marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>
+                Clé API WorkoutX
+                <a href="https://workoutxapp.com" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#6b7280', fontWeight: 600, fontSize: '0.75rem' }}>
+                  Obtenir une clé gratuite →
+                </a>
+              </p>
+              <input
+                value={workoutxKey}
+                onChange={e => saveKey(e.target.value)}
+                placeholder="Colle ta clé API ici…"
+                style={{ ...S.input, fontSize: '0.82rem', padding: '0.55rem 0.75rem' }}
+              />
+            </div>
+            <button onClick={() => setShowKeyInput(false)} style={{ ...S.btnPrimary, padding: '0.55rem 1rem', fontSize: '0.82rem' }}>OK</button>
+          </div>
+        )}
+
+        {/* ── Formulaire ajout ── */}
+        {showForm && (
+          <div style={S.formCard}>
+            <p style={S.formTitle}>{modeEchauff ? 'Nouvel échauffement' : 'Nouvel exercice'}</p>
+            <form onSubmit={ajouterExercice}>
+              <div style={S.formRow}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={S.label}>Nom *</label>
+                  <input
+                    value={form.nom}
+                    onChange={e => applyAutoMuscles(e.target.value, false)}
+                    placeholder="ex : Squat barre"
+                    style={S.input} required
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <label style={S.label}>Catégorie</label>
+                  <select value={form.categorie} onChange={e => setForm({ ...form, categorie: e.target.value })} style={S.select}>
+                    <option value="">— Choisir —</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={S.label}>
+                  Muscles ciblés
+                  <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 400, textTransform: 'none', marginLeft: 6 }}>
+                    (détecté auto · ajuste si besoin)
+                  </span>
+                </label>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <MusclePicker
+                    primary={form.primary}
+                    secondary={form.secondary}
+                    onChange={({ primary, secondary }) => setForm(prev => ({ ...prev, primary, secondary }))}
+                  />
+                </div>
+              </div>
+              {/* Média */}
+              <MediaField
+                value={form.image_url}
+                onChange={url => setForm(prev => ({ ...prev, image_url: url }))}
+                onFile={e => handleFileChange(e, 'create')}
+                uploading={uploadingFor === 'create'}
+              />
+              <button
+                type="button"
+                onClick={() => ouvrirGifSearch(form.nom, 'create')}
+                style={{ ...S.btnSecondary, fontSize: '0.82rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Trouver GIF automatiquement
+              </button>
+              <button type="submit" disabled={saving} style={S.btnPrimary}>
+                {saving ? 'Enregistrement…' : 'Créer'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Liste */}
+        {loading ? (
+          <p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement…</p>
+        ) : filtered.length === 0 ? (
+          <div style={BIB.vide}>
+            <p style={{ fontWeight: 700, color: '#374151', margin: '0 0 0.35rem' }}>Aucun résultat.</p>
+            <p style={{ margin: 0 }}>{dansMode.length === 0 ? 'Ajoute ton premier exercice avec le bouton ci-dessus.' : 'Change ou retire un filtre.'}</p>
+          </div>
+        ) : (
+          <div style={S.grid}>
+            {filtered.map(renderExCard)}
+          </div>
+        )}
+      </Cadre>
     </div>
   )
 }
@@ -1128,29 +1112,20 @@ function MediaField({ value, onChange, onFile, uploading }) {
 }
 
 const S = {
-  page:       { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
-  title:      { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
-  subtitle:   { color: '#6b7280', fontSize: '0.85rem', margin: 0 },
   formCard:   { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '1.75rem', border: '2px solid #e4f816' },
   formTitle:  { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1.25rem' },
   formRow:    { display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' },
   label:      { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
   input:      { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
   select:     { width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem', color: '#333333', outline: 'none', background: 'white', boxSizing: 'border-box' },
-  catPill:    { padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' },
-  empty:      { background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' },
-  card:       { background: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
-  cardName:   { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.35rem' },
-  catTag:     { background: '#f3f4f6', color: '#374151', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' },
-  chipP:      { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.1rem 0.45rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '700' },
-  chipS:      { background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', padding: '0.1rem 0.45rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: '700' },
-  iconBtn:       { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '600', color: '#374151' },
-  iconBtnDanger: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.78rem' },
+  grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14, alignItems: 'stretch' },
+  card:       { background: 'white', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
+  cardName:   { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: '0 0 0.3rem', lineHeight: 1.3 },
+  musclesTexte: { fontSize: '0.75rem', color: '#6b7280', margin: 0, lineHeight: 1.5 },
+  sansMedia:  { position: 'relative', height: 128, background: '#f3f4f6', borderRadius: '14px 14px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.75rem', fontWeight: 600 },
+  catSurMedia: { position: 'absolute', left: 10, top: 10, background: 'white', color: '#333333', fontSize: '0.7rem', fontWeight: 800, borderRadius: 999, padding: '3px 9px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' },
   btnPrimary:    { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '10px', padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
   btnSecondary:  { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' },
-  btnAddSeance:  { border: '1.5px solid #e5e7eb', borderRadius: '8px', padding: '0.45rem 0.75rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700', textAlign: 'center' },
   addPanel:      { background: '#f9fafb', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1.5px solid #e5e7eb' },
   addInput:      { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '0.8rem', color: '#333333', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' },
 }

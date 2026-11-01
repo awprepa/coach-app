@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Cadre, TitrePanneau, Recherche, GroupeTri, ItemTri } from './BiblioCadre'
 
 // ── Catalogue complet des études scientifiques utilisées dans l'app ───────────
 // Partagé entre ProfilNutrition (client) et Bibliotheque (coach).
@@ -6,14 +7,33 @@ import { useState } from 'react'
 
 const CATEGORIES = [
   { key: 'all',         label: 'Toutes' },
+  { key: 'charge',      label: 'Charge d\'entraînement' },
+  { key: 'wellness',    label: 'Bien-être' },
   { key: 'metabolisme', label: 'Métabolisme' },
   { key: 'proteines',   label: 'Protéines' },
   { key: 'nutrition',   label: 'Nutrition' },
   { key: 'hydratation', label: 'Hydratation' },
   { key: 'aliments',    label: 'Aliments' },
-  { key: 'charge',      label: 'Charge' },
-  { key: 'wellness',    label: 'Bien-être' },
 ]
+
+// Chiffre clé de chaque étude, en version courte pour l'affichage en grand
+// (le détail reste dans `chiffre_cle`)
+const CHIFFRES = {
+  1:  ['±5 %', 'd\'erreur par rapport à la calorimétrie indirecte'],
+  2:  ['×1,2 à ×1,9', 'selon le niveau d\'activité'],
+  3:  ['1,62 g/kg/j', 'seuil au-delà duquel les gains plafonnent'],
+  4:  ['25–30 %', 'des apports énergétiques en lipides'],
+  5:  ['35 ml/kg/j', 'pour les adultes actifs'],
+  6:  ['7 pays', 'européens l\'ont adopté officiellement'],
+  7:  ['+25 %', 'de risque cardiovasculaire, groupe ultra-transformé'],
+  8:  ['RPE × min', 'charge d\'une séance (r = 0,89)'],
+  9:  ['0,8–1,3', 'zone optimale ; au-delà de 1,5, risque de blessure ×2'],
+  10: ['4 items', 'sommeil, fatigue, stress, douleurs'],
+  11: ['r = 0,88', 'corrélation avec la fréquence cardiaque'],
+  12: ['±2 SD', 'seuil d\'alarme par rapport à l\'historique du joueur'],
+  13: ['> 20 km/h', 'seuil de la haute intensité'],
+  14: ['% VMA', 'distance = (VMA ÷ 3,6) × % × temps'],
+}
 
 const ETUDES = [
   // ── MÉTABOLISME ────────────────────────────────────────────────────────────
@@ -243,67 +263,76 @@ const LIBELLE_CAT = Object.fromEntries(CATEGORIES.map(c => [c.key, c.label]))
 export default function SciencesNutrition({ coachMode = false }) {
   const [catFilter, setCatFilter] = useState('all')
   const [expanded,  setExpanded]  = useState(null)
+  const [recherche, setRecherche] = useState('')
 
-  const filtered = catFilter === 'all' ? ETUDES : ETUDES.filter(e => e.cat === catFilter)
+  const q = recherche.trim().toLowerCase()
+  const filtered = ETUDES
+    .filter(e => catFilter === 'all' || e.cat === catFilter)
+    .filter(e => !q || `${e.titre_fr} ${e.auteurs} ${e.journal}`.toLowerCase().includes(q))
 
   return (
-    <div style={{ ...S.page, padding: coachMode ? '2rem' : '16px' }}>
-
-      {/* En-tête */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={S.title}>Base scientifique</h1>
-        <p style={S.subtitle}>
-          {coachMode
-            ? `${ETUDES.length} études et références officielles fondent les calculs de l'application : nutrition, charge d'entraînement et bien-être. Références complètes avec DOI.`
-            : `Tes objectifs et ton suivi sont calculés à partir de ${ETUDES.length} études publiées dans des revues internationales à comité de lecture.`}
-        </p>
-      </div>
-
-      {/* Filtres, avec le nombre d'études de chaque catégorie */}
-      <div style={S.filtres}>
-        {CATEGORIES.map(c => {
-          const actif = catFilter === c.key
-          const n = c.key === 'all' ? ETUDES.length : ETUDES.filter(e => e.cat === c.key).length
-          return (
-            <button key={c.key} onClick={() => setCatFilter(c.key)} aria-pressed={actif}
-              style={{ ...S.pilule, ...(actif ? S.piluleActive : {}) }}>
-              {c.label} <span style={{ opacity: 0.7, fontWeight: 600 }}>{n}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Liste des études */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <Cadre panneau={
+      <>
+        <TitrePanneau
+          titre="Base scientifique"
+          sous={coachMode
+            ? `${ETUDES.length} études et références officielles qui fondent les calculs de l'app. Références complètes avec DOI.`
+            : `Tes objectifs et ton suivi sont calculés à partir de ${ETUDES.length} études publiées.`}
+        />
+        <Recherche value={recherche} onChange={setRecherche} placeholder="Rechercher une étude" />
+        <GroupeTri titre="Thème">
+          {CATEGORIES.map(c => (
+            <ItemTri key={c.key} actif={catFilter === c.key} onClick={() => setCatFilter(c.key)}
+              n={c.key === 'all' ? ETUDES.length : ETUDES.filter(e => e.cat === c.key).length}>
+              {c.label}
+            </ItemTri>
+          ))}
+        </GroupeTri>
+      </>
+    }>
+      <style>{`
+        @media (max-width: 820px){
+          .sci-tete{grid-template-columns:1fr auto !important;}
+          .sci-chiffre{grid-column:1 / -1;order:2;}
+          .sci-detail{padding-left:16px !important;grid-template-columns:1fr !important;}
+        }
+      `}</style>
+      {filtered.length === 0 && (
+        <div style={S.vide}>Aucune étude ne correspond.</div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {filtered.map(etude => {
           const isOpen = expanded === etude.id
+          const [chiffre, legende] = CHIFFRES[etude.id] || [etude.chiffre_cle, '']
           return (
             <div key={etude.id} style={S.carte}>
-              {/* En-tête */}
-              <button onClick={() => setExpanded(isOpen ? null : etude.id)} aria-expanded={isOpen} style={S.carteTete}>
-                <div style={{ flex: 1, minWidth: 0 }}>
+              <button onClick={() => setExpanded(isOpen ? null : etude.id)} aria-expanded={isOpen} className="sci-tete" style={S.carteTete}>
+                <div className="sci-chiffre">
+                  <p style={S.chiffre}>{chiffre}</p>
+                  {legende && <p style={S.legende}>{legende}</p>}
+                </div>
+                <div style={{ minWidth: 0 }}>
                   <p style={S.cat}>{LIBELLE_CAT[etude.cat]}</p>
                   <p style={S.titre}>{etude.titre_fr}</p>
                   <p style={S.source}>
                     {etude.auteurs.split(',')[0]}{etude.auteurs.includes(',') ? ' et al.' : ''} · {etude.annee} · {etude.journal}
                   </p>
-                  <span style={S.chiffre}>{etude.chiffre_cle}</span>
                 </div>
                 <span style={{ ...S.chevron, transform: isOpen ? 'rotate(90deg)' : 'none' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                 </span>
               </button>
 
-              {/* Détail (accordéon) */}
               {isOpen && (
-                <div style={S.detail}>
-                  <p style={S.texte}>{etude.explication_client}</p>
-
+                <div className="sci-detail" style={S.detail}>
+                  <div>
+                    <p style={S.libelle}>En clair</p>
+                    <p style={S.texte}>{etude.explication_client}</p>
+                  </div>
                   <div>
                     <p style={S.libelle}>Dans l'app</p>
                     <p style={S.texte}>{etude.usage_app}</p>
                   </div>
-
                   {etude.formule && (
                     <div style={S.formule}>
                       {etude.formule.split('\n').map((line, i) => (
@@ -311,52 +340,40 @@ export default function SciencesNutrition({ coachMode = false }) {
                       ))}
                     </div>
                   )}
-
-                  {/* Méthodologie (coach uniquement) */}
                   {coachMode && (
                     <div>
-                      <p style={S.libelle}>Méthodologie et nuances</p>
+                      <p style={S.libelle}>Méthode et limites</p>
                       <p style={S.texte}>{etude.detail_coach}</p>
                     </div>
                   )}
-
-                  {/* Référence complète */}
-                  <div style={S.reference}>
-                    <p style={S.refLigne}><span style={{ fontWeight: 700 }}>Auteurs : </span>{etude.auteurs}</p>
-                    <p style={S.refLigne}><span style={{ fontWeight: 700 }}>Référence : </span>{etude.journal}, {etude.annee}</p>
-                    {coachMode && <p style={S.refLigne}><span style={{ fontWeight: 700 }}>DOI : </span>{etude.doi}</p>}
+                  <div>
+                    <p style={S.libelle}>Référence</p>
+                    <p style={S.texte}>{etude.auteurs}. <i>{etude.journal}</i>, {etude.annee}.</p>
+                    {coachMode && <p style={{ ...S.texte, color: '#6b7280', marginTop: 4 }}>DOI : {etude.doi}</p>}
                   </div>
                 </div>
               )}
             </div>
           )
         })}
-
-        <div style={{ height: coachMode ? 24 : 100 }} />
       </div>
-    </div>
+    </Cadre>
   )
 }
 
 const S = {
-  page:         { maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  title:        { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
-  subtitle:     { color: '#6b7280', fontSize: '0.85rem', margin: 0, maxWidth: '75ch', lineHeight: 1.5 },
-  filtres:      { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1.25rem' },
-  pilule:       { padding: '0.35rem 0.8rem', borderRadius: 999, border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  piluleActive: { background: '#333333', borderColor: '#333333', color: '#e4f816' },
+  vide:         { background: 'white', borderRadius: 14, padding: '3rem 2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   carte:        { background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' },
-  carteTete:    { display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
+  carteTete:    { display: 'grid', gridTemplateColumns: '140px 1fr auto', gap: 16, alignItems: 'start', padding: '16px 18px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
+  chiffre:      { fontSize: '1.2rem', fontWeight: 900, color: '#333333', margin: 0, lineHeight: 1.15, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' },
+  legende:      { fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', margin: '4px 0 0', lineHeight: 1.35 },
   cat:          { fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' },
   titre:        { fontWeight: 700, fontSize: '0.95rem', color: '#333333', margin: 0, lineHeight: 1.35 },
   source:       { fontSize: '0.75rem', color: '#6b7280', margin: '4px 0 0', fontWeight: 600 },
-  chiffre:      { display: 'inline-block', marginTop: 8, padding: '3px 10px', borderRadius: 999, background: '#f3f4f6', color: '#333333', fontSize: '0.75rem', fontWeight: 700 },
-  chevron:      { display: 'inline-flex', color: '#6b7280', flexShrink: 0, marginTop: 2, transition: 'transform 0.2s' },
-  detail:       { padding: '14px 16px 16px', borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 14 },
+  chevron:      { display: 'inline-flex', color: '#6b7280', marginTop: 2, transition: 'transform 0.2s' },
+  detail:       { borderTop: '1px solid #f3f4f6', padding: '16px 18px 18px 174px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 28px' },
   libelle:      { fontSize: '0.7rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' },
-  texte:        { fontSize: '0.85rem', color: '#374151', margin: 0, lineHeight: 1.6, maxWidth: '75ch' },
-  formule:      { background: '#333333', borderRadius: 10, padding: '12px 14px', alignSelf: 'flex-start', maxWidth: '100%', boxSizing: 'border-box' },
+  texte:        { fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.6 },
+  formule:      { gridColumn: '1 / -1', background: '#333333', borderRadius: 10, padding: '12px 14px' },
   formuleLigne: { fontSize: '0.8rem', margin: 0, lineHeight: 1.45, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'pre-wrap' },
-  reference:    { borderTop: '1px solid #f3f4f6', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 3 },
-  refLigne:     { fontSize: '0.75rem', color: '#6b7280', margin: 0, lineHeight: 1.5 },
 }

@@ -4,6 +4,11 @@ import { supabase } from '../supabase'
 import ImportExcel from './ImportExcel'
 import useClientsEtGroupes from '../hooks/useClientsEtGroupes'
 import Icon from '../components/Icon'
+import { Cadre, TitrePanneau, Recherche, GroupeTri, ItemTri, LienTri, BIB } from '../components/BiblioCadre'
+
+const TOUS = '__tous'
+const SANS = '__sans'
+const APERCU_MAX = 6 // exercices visibles sur la carte avant « + N exercices »
 
 export default function SeanceTemplates() {
   const navigate = useNavigate()
@@ -18,6 +23,8 @@ export default function SeanceTemplates() {
   const [renameVal, setRenameVal]         = useState('')
   const [movingId, setMovingId]           = useState(null)
   const [drafts, setDrafts]               = useState([])
+  const [recherche, setRecherche]         = useState('')
+  const [dossierActif, setDossierActif]   = useState(TOUS)
 
   // Édition inline
   const [editingId, setEditingId]         = useState(null)
@@ -90,6 +97,7 @@ export default function SeanceTemplates() {
     setShowNewFolder(false)
     setNewFolderName('')
     setOpenFolders(prev => new Set([...prev, newFolderName.trim()]))
+    setDossierActif(newFolderName.trim())
   }
 
   async function renommerDossier(oldName, newName) {
@@ -97,6 +105,7 @@ export default function SeanceTemplates() {
     await supabase.from('seance_templates').update({ dossier: newName.trim() }).eq('dossier', oldName)
     setTemplates(prev => prev.map(t => t.dossier === oldName ? { ...t, dossier: newName.trim() } : t))
     setOpenFolders(prev => { const n = new Set(prev); n.delete(oldName); n.add(newName.trim()); return n })
+    if (dossierActif === oldName) setDossierActif(newName.trim())
     setRenamingFolder(null)
   }
 
@@ -105,16 +114,13 @@ export default function SeanceTemplates() {
     await supabase.from('seance_templates').update({ dossier: null }).eq('dossier', name)
     setTemplates(prev => prev.map(t => t.dossier === name ? { ...t, dossier: null } : t))
     setOpenFolders(prev => { const n = new Set(prev); n.delete(name); return n })
+    if (dossierActif === name) setDossierActif(TOUS)
   }
 
   async function deplacerDansFolder(templateId, dossier) {
     await supabase.from('seance_templates').update({ dossier: dossier || null }).eq('id', templateId)
     setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, dossier: dossier || null } : t))
     setMovingId(null)
-  }
-
-  function toggleFolder(name) {
-    setOpenFolders(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
   }
 
   // ── Édition inline ────────────────────────────────────────────────────────
@@ -283,7 +289,7 @@ export default function SeanceTemplates() {
       if (bloc && bloc !== prevBloc) {
         items.push(
           <div key={`hdr-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: i > 0 ? 12 : 0, marginBottom: 4 }}>
-            <span style={S.blocPuce}>Bloc {bloc}</span>
+            <span style={BIB.blocPuce}>Bloc {bloc}</span>
             <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
           </div>
         )
@@ -293,7 +299,7 @@ export default function SeanceTemplates() {
       const dosage = [ex.series, ex.repetitions].filter(Boolean).join(' × ')
       items.push(
         <div key={i} style={S.exRow}>
-          {ex.code && <span style={S.codeTag}>{ex.code}</span>}
+          {ex.code && <span style={BIB.codeTag}>{ex.code}</span>}
           <span style={S.exNom}>{ex.nom}</span>
           <span style={S.exDosage}>
             {dosage}{ex.recuperation ? `${dosage ? ' · ' : ''}récup ${ex.recuperation}` : ''}
@@ -305,131 +311,129 @@ export default function SeanceTemplates() {
   }
 
   const allFolders = [...new Set([...openFolders, ...templates.map(t => t.dossier).filter(Boolean)])].sort()
-  const sansDossier = templates.filter(t => !t.dossier)
-  const folderOptions = [...new Set(templates.map(t => t.dossier).filter(Boolean))].sort()
+  const q = recherche.trim().toLowerCase()
+  const visibles = templates
+    .filter(t => dossierActif === TOUS || (dossierActif === SANS ? !t.dossier : t.dossier === dossierActif))
+    .filter(t => !q || t.nom.toLowerCase().includes(q))
+  const titreSelection = dossierActif === TOUS ? 'Tous les modèles' : dossierActif === SANS ? 'Sans dossier' : dossierActif
+  const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
   function renderTemplate(t) {
     const isEditing = editingId === t.id
-    const isExpanded = expanded === t.id
+    const exs = t.exercices || []
+    const nbBlocs = new Set(exs.map(ex => blocLetter(ex.code)).filter(Boolean)).size
+    const toutVoir = expanded === t.id
 
     return (
-      <div key={t.id} style={S.card}>
+      <div key={t.id} style={{ ...BIB.carte, ...(isEditing ? { gridColumn: '1 / -1' } : {}) }}>
         {/* En-tête de la carte */}
-        <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-          onClick={() => !isEditing && setExpanded(isExpanded ? null : t.id)}>
+        <div style={BIB.carteTete}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {isEditing ? (
-              <input
-                value={editNom}
-                onChange={e => setEditNom(e.target.value)}
-                onClick={e => e.stopPropagation()}
-                style={{ ...S.editInput, fontWeight: '700', fontSize: '0.92rem', width: '100%' }}
-                autoFocus
-              />
+              <input value={editNom} onChange={e => setEditNom(e.target.value)} aria-label="Nom du modèle"
+                style={{ ...S.editInput, fontWeight: '700', width: '100%' }} autoFocus />
             ) : (
               <>
-                <p style={S.nom}>{t.nom}</p>
-                <p style={S.meta}>{t.exercices?.length || 0} exercice{(t.exercices?.length || 0) > 1 ? 's' : ''} · {new Date(t.created_at).toLocaleDateString('fr-FR')}</p>
+                <p style={BIB.carteNom}>{t.nom}</p>
+                <p style={BIB.carteMeta}>{pluriel(exs.length, 'exercice')}{nbBlocs > 0 ? ` · ${pluriel(nbBlocs, 'bloc')}` : ''}</p>
               </>
             )}
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}>
-            {isEditing ? (
-              <>
-                <button onClick={e => saveEdit(t.id, e)} disabled={savingEdit}
-                  style={{ ...S.actionBtnSolid, background: '#333', color: '#e4f816' }}>
-                  {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
-                </button>
-                <button onClick={cancelEdit} style={S.actionBtnSolid}>Annuler</button>
-              </>
-            ) : (
-              <>
-                {/* Envoyer à un client */}
-                <button onClick={e => openAssign(t, e)} style={S.actionBtn} title="Envoyer à un client"><Icon name="send" size={14} /></button>
-                {/* Éditer */}
-                <button onClick={e => startEdit(t, e)} style={S.actionBtn} title="Modifier le modèle"><Icon name="edit" size={14} /></button>
-                {/* Déplacer */}
-                <div style={{ position: 'relative' }}>
-                  <button onClick={e => { e.stopPropagation(); setMovingId(movingId === t.id ? null : t.id) }}
-                    style={S.actionBtn} title="Déplacer dans un dossier"><Icon name="folder" size={14} /></button>
-                  {movingId === t.id && (
-                    <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
-                      <div role="button" tabIndex={0} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
-                        <span style={{ color: '#6b7280' }}>Sans dossier</span>
-                      </div>
-                      {allFolders.map(f => (
-                        <div role="button" tabIndex={0} key={f} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, f)}>
-                          {f}
-                        </div>
-                      ))}
-                      <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
-                        <input autoFocus placeholder="Nouveau dossier..." aria-label="Nouveau dossier..."
-                          style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.3rem 0.5rem', fontSize: '0.78rem', outline: 'none', boxSizing: 'border-box' }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && e.target.value.trim()) {
-                              const name = e.target.value.trim()
-                              setOpenFolders(prev => new Set([...prev, name]))
-                              deplacerDansFolder(t.id, name)
-                            }
-                          }}
-                        />
-                      </div>
+          {!isEditing && (
+            <div style={{ display: 'flex', flexShrink: 0 }}>
+              <div style={{ position: 'relative' }}>
+                <button onClick={e => { e.stopPropagation(); setMovingId(movingId === t.id ? null : t.id) }}
+                  style={BIB.icone} title="Déplacer dans un dossier" aria-label="Déplacer dans un dossier"><Icon name="folder" size={14} /></button>
+                {movingId === t.id && (
+                  <div style={BIB.menu} onClick={e => e.stopPropagation()}>
+                    <button style={BIB.menuItem} onClick={() => deplacerDansFolder(t.id, null)}>
+                      <span style={{ color: '#6b7280' }}>Sans dossier</span>
+                    </button>
+                    {allFolders.map(f => (
+                      <button key={f} style={{ ...BIB.menuItem, fontWeight: t.dossier === f ? 700 : 600 }} onClick={() => deplacerDansFolder(t.id, f)}>
+                        {t.dossier === f && <Icon name="check" size={14} />}{f}
+                      </button>
+                    ))}
+                    <div style={{ padding: '0.5rem 0.65rem' }}>
+                      <input autoFocus placeholder="Nouveau dossier…" aria-label="Nouveau dossier"
+                        style={{ ...S.editInput, width: '100%', fontSize: '0.8rem' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            const name = e.target.value.trim()
+                            setOpenFolders(prev => new Set([...prev, name]))
+                            deplacerDansFolder(t.id, name)
+                          }
+                        }}
+                      />
                     </div>
-                  )}
-                </div>
-                <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={S.actionBtn} title="Supprimer le modèle"><Icon name="trash" size={14} /></button>
-                <span style={{ ...S.chevron, transform: isExpanded ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={16} /></span>
-              </>
-            )}
-          </div>
+                  </div>
+                )}
+              </div>
+              <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={BIB.icone} title="Supprimer le modèle" aria-label="Supprimer le modèle"><Icon name="trash" size={14} /></button>
+            </div>
+          )}
         </div>
 
-        {/* Détail / éditeur */}
-        {isExpanded && (
-          <div style={{ marginTop: 12, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
-            {isEditing ? (
-              /* ── Mode édition ────────────────────────────── */
-              <div onClick={e => e.stopPropagation()}>
-                {editExercices.length === 0 && (
-                  <p style={{ color: '#6b7280', fontSize: '0.82rem', marginBottom: '0.5rem' }}>Aucun exercice : ajoute-en ci-dessous.</p>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {editExercices.map((ex, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', background: 'white', borderRadius: 8, padding: '0.4rem 0.5rem', border: '1px solid #e5e7eb' }}>
-                      <input value={ex.code || ''} onChange={e => updateEx(i, 'code', e.target.value)}
-                        placeholder="Code" style={{ ...S.editInput, width: 52, fontFamily: 'monospace', fontWeight: '700', fontSize: '0.75rem', textAlign: 'center' }} />
-                      <input value={ex.nom || ''} onChange={e => updateEx(i, 'nom', e.target.value)}
-                        placeholder="Nom exercice" style={{ ...S.editInput, flex: 1 }} />
-                      <input value={ex.series || ''} onChange={e => updateEx(i, 'series', e.target.value)}
-                        placeholder="Séries" style={{ ...S.editInput, width: 52, textAlign: 'center' }} />
-                      <input value={ex.repetitions || ''} onChange={e => updateEx(i, 'repetitions', e.target.value)}
-                        placeholder="Reps" style={{ ...S.editInput, width: 52, textAlign: 'center' }} />
-                      <input value={ex.recuperation || ''} onChange={e => updateEx(i, 'recuperation', e.target.value)}
-                        placeholder="Récup" style={{ ...S.editInput, width: 60, textAlign: 'center' }} />
-                      <button onClick={() => deleteEx(i)} style={{ ...S.actionBtn, color: '#dc2626' }} title="Retirer l'exercice" aria-label="Retirer l'exercice"><Icon name="x" size={16} /></button>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={addEx}
-                  style={{ marginTop: '0.6rem', background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#6b7280', cursor: 'pointer', width: '100%' }}>
-                  + Ajouter un exercice
+        {/* Contenu : exercices par bloc, ou éditeur */}
+        <div style={{ padding: '12px 14px' }}>
+          {isEditing ? (
+            <div>
+              {editExercices.length === 0 && (
+                <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: '0 0 0.5rem' }}>Aucun exercice : ajoute-en ci-dessous.</p>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {editExercices.map((ex, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'white', borderRadius: 10, padding: '6px 8px', border: '1px solid #e5e7eb' }}>
+                    <input value={ex.code || ''} onChange={e => updateEx(i, 'code', e.target.value)} aria-label="Code"
+                      placeholder="Code" style={{ ...S.editInput, width: 56, fontWeight: '700', textAlign: 'center' }} />
+                    <input value={ex.nom || ''} onChange={e => updateEx(i, 'nom', e.target.value)} aria-label="Nom de l'exercice"
+                      placeholder="Nom de l'exercice" style={{ ...S.editInput, flex: 1, minWidth: 0 }} />
+                    <input value={ex.series || ''} onChange={e => updateEx(i, 'series', e.target.value)} aria-label="Séries"
+                      placeholder="Séries" style={{ ...S.editInput, width: 64, textAlign: 'center' }} />
+                    <input value={ex.repetitions || ''} onChange={e => updateEx(i, 'repetitions', e.target.value)} aria-label="Répétitions"
+                      placeholder="Reps" style={{ ...S.editInput, width: 64, textAlign: 'center' }} />
+                    <input value={ex.recuperation || ''} onChange={e => updateEx(i, 'recuperation', e.target.value)} aria-label="Récupération"
+                      placeholder="Récup" style={{ ...S.editInput, width: 72, textAlign: 'center' }} />
+                    <button onClick={() => deleteEx(i)} style={{ ...BIB.icone, color: '#dc2626' }} title="Retirer l'exercice" aria-label="Retirer l'exercice"><Icon name="x" size={16} /></button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addEx} style={S.ajoutEx}>+ Ajouter un exercice</button>
+            </div>
+          ) : exs.length === 0 ? (
+            <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Séance vide.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {renderExercicesBlocs(toutVoir ? exs : exs.slice(0, APERCU_MAX))}
+              {exs.length > APERCU_MAX && (
+                <button onClick={() => setExpanded(toutVoir ? null : t.id)} style={S.voirPlus}>
+                  {toutVoir ? 'Réduire' : `+ ${pluriel(exs.length - APERCU_MAX, 'exercice')}`}
                 </button>
-              </div>
-            ) : (
-              /* ── Mode lecture ────────────────────────────── */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {renderExercicesBlocs(t.exercices || [])}
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Pied : actions */}
+        <div style={BIB.cartePied}>
+          {isEditing ? (
+            <>
+              <button onClick={e => saveEdit(t.id, e)} disabled={savingEdit} style={BIB.btnPetitP}>{savingEdit ? 'Enregistrement…' : 'Enregistrer'}</button>
+              <button onClick={cancelEdit} style={BIB.btnPetit}>Annuler</button>
+            </>
+          ) : (
+            <>
+              <button onClick={e => openAssign(t, e)} style={BIB.btnPetitP}>Envoyer</button>
+              <button onClick={e => startEdit(t, e)} style={BIB.btnPetit}>Modifier</button>
+            </>
+          )}
+        </div>
       </div>
     )
   }
 
   return (
-    <div role="button" tabIndex={0} style={S.page} onClick={() => setMovingId(null)}>
+    <div onClick={() => setMovingId(null)}>
 
       {/* Modal assignation */}
       {sendingTemplate && (
@@ -484,9 +488,9 @@ export default function SeanceTemplates() {
                 </div>
 
                 <div style={S.modalFooter}>
-                  <button onClick={() => setSendingTemplate(null)} style={S.secondaryBtn}>Annuler</button>
+                  <button onClick={() => setSendingTemplate(null)} style={BIB.btn}>Annuler</button>
                   <button onClick={assignerTemplate} disabled={assignCount === 0 || assigning}
-                    style={{ ...S.importBtn, opacity: assignCount === 0 ? 0.4 : 1 }}>
+                    style={{ ...BIB.btnP, opacity: assignCount === 0 ? 0.4 : 1 }}>
                     {assigning ? 'Envoi…' : `Envoyer à ${assignCount} client${assignCount > 1 ? 's' : ''}`}
                   </button>
                 </div>
@@ -501,148 +505,101 @@ export default function SeanceTemplates() {
           onImported={() => { setShowImport(false); reloadTemplates() }} />
       )}
 
-      {/* Header */}
-      <div style={S.header}>
-        <div>
-          <h1 style={S.title}>Modèles de séances</h1>
-          <p style={S.subtitle}>{templates.length} modèle{templates.length > 1 ? 's' : ''}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button onClick={() => setShowNewFolder(true)} style={S.secondaryBtn}>+ Dossier</button>
-          <button onClick={() => setShowImport(true)} style={S.secondaryBtn}>Excel</button>
-          <button onClick={nouvelleSeance} style={S.importBtn}>+ Nouvelle séance</button>
-        </div>
-      </div>
-
-      {/* Créer dossier */}
-      {showNewFolder && (
-        <div style={{ background: 'white', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && creerDossier()}
-            placeholder="Nom du dossier..." style={S.folderInput} />
-          <button onClick={creerDossier} style={S.importBtn}>Créer</button>
-          <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.secondaryBtn}>Annuler</button>
-        </div>
-      )}
-
-      {/* ── Brouillons ── */}
-      {drafts.length > 0 && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <p style={S.sectionLabel}>
-            Brouillons ({drafts.length})
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {drafts.map(d => (
-              <div key={d.id} style={S.brouillon}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={S.nom}>{d.nom}</p>
-                  <p style={S.meta}>Créé le {new Date(d.created_at).toLocaleDateString('fr-FR')}</p>
-                </div>
-                <button onClick={() => navigate(`/seance/${d.id}`)} style={S.actionBtnSolid}>Continuer</button>
-                <button onClick={() => supprimerBrouillon(d.id)} style={S.actionBtn} title="Supprimer le brouillon" aria-label="Supprimer le brouillon">
-                  <Icon name="trash" size={14} />
-                </button>
+      <Cadre panneau={
+        <>
+          <TitrePanneau titre="Modèles de séances" sous={pluriel(templates.length, 'modèle')} />
+          <Recherche value={recherche} onChange={setRecherche} placeholder="Rechercher un modèle" />
+          <GroupeTri titre="Dossiers" action={<LienTri onClick={() => setShowNewFolder(true)}>+ Nouveau</LienTri>}>
+            {showNewFolder && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') creerDossier(); if (e.key === 'Escape') { setShowNewFolder(false); setNewFolderName('') } }}
+                  placeholder="Nom du dossier" aria-label="Nom du dossier" style={{ ...S.editInput, flex: 1, minWidth: 0 }} />
+                <button onClick={creerDossier} style={BIB.btnPetitP}>Créer</button>
               </div>
+            )}
+            <ItemTri actif={dossierActif === TOUS} n={templates.length} onClick={() => setDossierActif(TOUS)}>Tous les modèles</ItemTri>
+            {allFolders.map(f => (
+              <ItemTri key={f} icone={dossierActif === f ? 'folder-open' : 'folder'} actif={dossierActif === f}
+                n={templates.filter(t => t.dossier === f).length} onClick={() => setDossierActif(f)}>{f}</ItemTri>
             ))}
+            <ItemTri actif={dossierActif === SANS} n={templates.filter(t => !t.dossier).length} onClick={() => setDossierActif(SANS)}>Sans dossier</ItemTri>
+          </GroupeTri>
+        </>
+      }>
+        {/* Brouillons */}
+        {drafts.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={BIB.etiquette}>Brouillons en cours</p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {drafts.map(d => (
+                <div key={d.id} style={S.brouillon}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={BIB.carteNom}>{d.nom}</p>
+                    <p style={BIB.carteMeta}>Créé le {new Date(d.created_at).toLocaleDateString('fr-FR')}</p>
+                  </div>
+                  <button onClick={() => navigate(`/seance/${d.id}`)} style={BIB.btnPetit}>Continuer</button>
+                  <button onClick={() => supprimerBrouillon(d.id)} style={BIB.icone} title="Supprimer le brouillon" aria-label="Supprimer le brouillon">
+                    <Icon name="trash" size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Barre : sélection courante, actions du dossier, création */}
+        <div style={BIB.barre}>
+          {renamingFolder && renamingFolder === dossierActif ? (
+            <input autoFocus value={renameVal} aria-label="Nouveau nom du dossier"
+              onChange={e => setRenameVal(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') renommerDossier(dossierActif, renameVal); if (e.key === 'Escape') setRenamingFolder(null) }}
+              onBlur={() => renommerDossier(dossierActif, renameVal)}
+              style={{ ...S.editInput, width: 220, fontWeight: 700 }} />
+          ) : (
+            <span style={BIB.compte}>{titreSelection} · {pluriel(visibles.length, 'modèle')}</span>
+          )}
+          {dossierActif !== TOUS && dossierActif !== SANS && (
+            <>
+              <button onClick={() => { setRenamingFolder(dossierActif); setRenameVal(dossierActif) }} style={BIB.icone} title="Renommer le dossier" aria-label="Renommer le dossier"><Icon name="edit" size={14} /></button>
+              <button onClick={() => supprimerDossier(dossierActif)} style={BIB.icone} title="Supprimer le dossier" aria-label="Supprimer le dossier"><Icon name="trash" size={14} /></button>
+            </>
+          )}
+          <div style={BIB.droite}>
+            <button onClick={() => setShowImport(true)} style={BIB.btn}>Importer depuis Excel</button>
+            <button onClick={nouvelleSeance} style={BIB.btnP}>+ Nouvelle séance</button>
           </div>
         </div>
-      )}
 
-      {templates.length === 0 && allFolders.length === 0 ? (
-        <div style={S.empty}>
-          <p style={{ fontWeight: '700', color: '#374151', marginBottom: '0.35rem' }}>Aucun modèle</p>
-          <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>Crée ta première séance ou importe depuis Excel.</p>
-          <button onClick={nouvelleSeance} style={S.importBtn}>+ Nouvelle séance</button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-          {/* Dossiers */}
-          {allFolders.map(folderName => {
-            const items = templates.filter(t => t.dossier === folderName)
-            const isOpen = openFolders.has(folderName)
-            return (
-              <div key={folderName} style={S.folderBlock}>
-                <div role="button" tabIndex={0} style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
-                    <span style={{ display: 'flex', color: '#374151' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
-                    {renamingFolder === folderName ? (
-                      <input autoFocus value={renameVal}
-                        onChange={e => setRenameVal(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') renommerDossier(folderName, renameVal); if (e.key === 'Escape') setRenamingFolder(null) }}
-                        onBlur={() => renommerDossier(folderName, renameVal)}
-                        onClick={e => e.stopPropagation()}
-                        style={{ ...S.folderInput, flex: 1 }} />
-                    ) : (
-                      <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#333333' }}>{folderName}</span>
-                    )}
-                    <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} modèle{items.length > 1 ? 's' : ''}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.actionBtn} title="Renommer le dossier"><Icon name="edit" size={14} /></button>
-                    <button onClick={() => supprimerDossier(folderName)} style={S.actionBtn} title="Supprimer le dossier"><Icon name="trash" size={14} /></button>
-                    <span role="button" tabIndex={0} style={{ ...S.chevron, transform: isOpen ? 'rotate(90deg)' : 'none', cursor: 'pointer' }}
-                      onClick={() => toggleFolder(folderName)}><Icon name="chevron-right" size={16} /></span>
-                  </div>
-                </div>
-                {isOpen && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
-                    {items.length === 0 ? (
-                      <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un modèle ici avec le bouton dossier</p>
-                    ) : (
-                      items.map(t => renderTemplate(t))
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-
-          {/* Sans dossier */}
-          {sansDossier.length > 0 && (
-            <div>
-              {allFolders.length > 0 && (
-                <p style={S.sectionLabel}>Sans dossier</p>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {sansDossier.map(t => renderTemplate(t))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        {visibles.length === 0 ? (
+          <div style={BIB.vide}>
+            <p style={{ fontWeight: 700, color: '#374151', margin: '0 0 0.35rem' }}>
+              {templates.length === 0 ? 'Aucun modèle' : q ? 'Aucun modèle ne correspond' : 'Dossier vide'}
+            </p>
+            <p style={{ margin: 0 }}>
+              {templates.length === 0 ? 'Crée ta première séance ou importe-la depuis Excel.'
+                : q ? 'Change ta recherche.' : 'Range un modèle ici avec l’icône dossier de sa carte.'}
+            </p>
+          </div>
+        ) : (
+          <div style={BIB.grille}>
+            {visibles.map(t => renderTemplate(t))}
+          </div>
+        )}
+      </Cadre>
     </div>
   )
 }
 
 const S = {
-  page:           { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   centered:       { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
-  title:          { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
-  subtitle:       { color: '#6b7280', fontSize: '0.85rem', margin: 0 },
-  sectionLabel:   { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' },
-  importBtn:      { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
-  secondaryBtn:   { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  folderInput:    { padding: '0.45rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
-  empty:          { background: 'white', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  folderBlock:    { background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  folderHeader:   { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' },
-  brouillon:      { background: 'white', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: 8 },
-  card:           { background: 'white', borderRadius: 12, padding: '0.75rem 1rem', border: '1px solid #e5e7eb' },
-  nom:            { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: 0 },
-  meta:           { color: '#6b7280', fontSize: '0.75rem', margin: '0.15rem 0 0' },
-  actionBtn:      { width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', padding: 0, flexShrink: 0 },
-  actionBtnSolid: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
-  chevron:        { display: 'inline-flex', color: '#6b7280', transition: 'transform 0.2s' },
-  moveDropdown:   { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },
-  moveItem:       { padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: '#374151', fontWeight: '600', cursor: 'pointer', borderBottom: '1px solid #f9fafb' },
-  blocPuce:       { background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 },
-  exRow:          { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' },
-  codeTag:        { background: '#f3f4f6', color: '#374151', padding: '2px 6px', borderRadius: 6, fontSize: '0.72rem', fontWeight: '800', minWidth: 22, textAlign: 'center', flexShrink: 0 },
-  exNom:          { flex: 1, minWidth: 0, fontSize: '0.85rem', fontWeight: '600', color: '#333333' },
-  exDosage:       { fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-  editInput:      { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box' },
+  brouillon:      { background: 'white', border: '1.5px dashed #c4c8cf', borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 },
+  exRow:          { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' },
+  exNom:          { flex: 1, minWidth: 0, fontSize: '0.82rem', fontWeight: '600', color: '#333333' },
+  exDosage:       { fontSize: '0.78rem', fontWeight: '600', color: '#6b7280', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  voirPlus:       { alignSelf: 'flex-start', background: 'none', border: 'none', padding: '4px 0 0', fontSize: '0.78rem', fontWeight: 600, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' },
+  ajoutEx:        { marginTop: 8, background: 'none', border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', cursor: 'pointer', width: '100%', fontFamily: 'inherit' },
+  editInput:      { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' },
   // Modal assignation
   overlay:        { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
   modal:          { background: 'white', borderRadius: 18, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
