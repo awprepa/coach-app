@@ -15,26 +15,6 @@ const CATEGORIES = [
   { key: 'wellness',    label: 'Bien-être' },
 ]
 
-const CAT_COLOR = {
-  metabolisme:  '#f97316',
-  proteines:    '#3b82f6',
-  nutrition:    '#22c55e',
-  hydratation:  '#06b6d4',
-  aliments:     '#a855f7',
-  charge:       'var(--accent)',
-  wellness:     '#ec4899',
-}
-
-const CAT_BG = {
-  metabolisme:  '#fff7ed',
-  proteines:    '#eff6ff',
-  nutrition:    '#f0fdf4',
-  hydratation:  '#ecfeff',
-  aliments:     '#faf5ff',
-  charge:       '#fefce8',
-  wellness:     '#fdf2f8',
-}
-
 const ETUDES = [
   // ── MÉTABOLISME ────────────────────────────────────────────────────────────
   {
@@ -258,6 +238,8 @@ const ETUDES = [
 
 // ── Composant ─────────────────────────────────────────────────────────────────
 
+const LIBELLE_CAT = Object.fromEntries(CATEGORIES.map(c => [c.key, c.label]))
+
 export default function SciencesNutrition({ coachMode = false }) {
   const [catFilter, setCatFilter] = useState('all')
   const [expanded,  setExpanded]  = useState(null)
@@ -265,176 +247,84 @@ export default function SciencesNutrition({ coachMode = false }) {
   const filtered = catFilter === 'all' ? ETUDES : ETUDES.filter(e => e.cat === catFilter)
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f5f5' }}>
+    <div style={{ ...S.page, padding: coachMode ? '2rem' : '16px' }}>
 
-      {/* Bannière intro */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #1f2937 100%)',
-        padding: coachMode ? '20px 24px 18px' : '18px 16px 16px',
-      }}>
-        <p style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '0.95rem', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
-          Base scientifique de l'app
-        </p>
-        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.76rem', margin: '0 0 12px', lineHeight: 1.6 }}>
+      {/* En-tête */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <h1 style={S.title}>Base scientifique</h1>
+        <p style={S.subtitle}>
           {coachMode
-            ? `${ETUDES.length} études et références officielles fondent les algorithmes de l'application — nutrition, charge d'entraînement et bien-être. Références complètes avec DOI.`
+            ? `${ETUDES.length} études et références officielles fondent les calculs de l'application : nutrition, charge d'entraînement et bien-être. Références complètes avec DOI.`
             : `Tes objectifs et ton suivi sont calculés à partir de ${ETUDES.length} études publiées dans des revues internationales à comité de lecture.`}
         </p>
-        {/* Compteurs par catégorie */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {CATEGORIES.filter(c => c.key !== 'all').map(c => {
-            const count = ETUDES.filter(e => e.cat === c.key).length
-            const color = CAT_COLOR[c.key]
-            return (
-              <span key={c.key} style={{
-                padding: '2px 8px', borderRadius: 999,
-                background: color + '22', color,
-                fontSize: '0.63rem', fontWeight: 700,
-                border: `1px solid ${color}44`,
-              }}>
-                {count} {c.label}
-              </span>
-            )
-          })}
-        </div>
       </div>
 
-      {/* Filtres */}
-      <div style={{
-        display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none',
-        padding: '10px 16px',
-        background: 'white',
-        borderBottom: '1px solid #f3f4f6',
-      }}>
-        {CATEGORIES.map(c => (
-          <button
-            key={c.key}
-            onClick={() => setCatFilter(c.key)}
-            style={{
-              padding: '5px 12px', borderRadius: 999, border: '1.5px solid',
-              fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-              background:  catFilter === c.key ? '#1a1a1a' : 'white',
-              borderColor: catFilter === c.key ? '#1a1a1a' : '#e5e7eb',
-              color:       catFilter === c.key ? 'var(--accent)' : '#6b7280',
-              flexShrink: 0,
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
+      {/* Filtres, avec le nombre d'études de chaque catégorie */}
+      <div style={S.filtres}>
+        {CATEGORIES.map(c => {
+          const actif = catFilter === c.key
+          const n = c.key === 'all' ? ETUDES.length : ETUDES.filter(e => e.cat === c.key).length
+          return (
+            <button key={c.key} onClick={() => setCatFilter(c.key)} aria-pressed={actif}
+              style={{ ...S.pilule, ...(actif ? S.piluleActive : {}) }}>
+              {c.label} <span style={{ opacity: 0.7, fontWeight: 600 }}>{n}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Liste des études */}
-      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.map(etude => {
-          const color  = CAT_COLOR[etude.cat]
-          const bg     = CAT_BG[etude.cat]
           const isOpen = expanded === etude.id
-
           return (
-            <div key={etude.id} style={{
-              background: 'white', borderRadius: 14,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-              overflow: 'hidden',
-              border: '1px solid #f3f4f6',
-            }}>
+            <div key={etude.id} style={S.carte}>
               {/* En-tête */}
-              <button
-                onClick={() => setExpanded(isOpen ? null : etude.id)}
-                style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 12,
-                  padding: '13px 14px',
-                  width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-                  textAlign: 'left', borderLeft: `4px solid ${color}`,
-                }}
-              >
+              <button onClick={() => setExpanded(isOpen ? null : etude.id)} aria-expanded={isOpen} style={S.carteTete}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 800, fontSize: '0.87rem', color: '#1a1a1a', margin: 0, lineHeight: 1.35 }}>
-                    {etude.titre_fr}
+                  <p style={S.cat}>{LIBELLE_CAT[etude.cat]}</p>
+                  <p style={S.titre}>{etude.titre_fr}</p>
+                  <p style={S.source}>
+                    {etude.auteurs.split(',')[0]}{etude.auteurs.includes(',') ? ' et al.' : ''} · {etude.annee} · {etude.journal}
                   </p>
-                  <p style={{ fontSize: '0.68rem', color: '#6b7280', margin: '3px 0 0', fontWeight: 600 }}>
-                    {etude.auteurs.split(',')[0]}{etude.auteurs.includes(',') ? ' et al.' : ''} · {etude.annee} · {etude.journal.length > 35 ? etude.journal.slice(0, 35) + '…' : etude.journal}
-                  </p>
-                  <span style={{
-                    display: 'inline-block', marginTop: 6,
-                    padding: '2px 8px', borderRadius: 999,
-                    background: color + '18', color, fontSize: '0.64rem', fontWeight: 800,
-                  }}>
-                    {etude.chiffre_cle}
-                  </span>
+                  <span style={S.chiffre}>{etude.chiffre_cle}</span>
                 </div>
-                <span style={{
-                  color: '#6b7280', fontSize: '0.9rem', flexShrink: 0, marginTop: 4,
-                  transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s',
-                }}>
-                  ▾
+                <span style={{ ...S.chevron, transform: isOpen ? 'rotate(90deg)' : 'none' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                 </span>
               </button>
 
               {/* Détail (accordéon) */}
               {isOpen && (
-                <div style={{ padding: '0 14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12 }} />
+                <div style={S.detail}>
+                  <p style={S.texte}>{etude.explication_client}</p>
 
-                  {/* Explication accessible */}
-                  <div style={{ background: bg || '#f9fafb', borderRadius: 10, padding: '10px 12px' }}>
-                    <p style={{ fontSize: '0.8rem', color: '#374151', margin: 0, lineHeight: 1.65 }}>
-                      {etude.explication_client}
-                    </p>
+                  <div>
+                    <p style={S.libelle}>Dans l'app</p>
+                    <p style={S.texte}>{etude.usage_app}</p>
                   </div>
 
-                  {/* Utilisation dans l'app */}
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0, lineHeight: 1.55 }}>
-                      <span style={{ fontWeight: 700, color: '#374151' }}>Dans l'app : </span>
-                      {etude.usage_app}
-                    </p>
-                  </div>
-
-                  {/* Formule */}
                   {etude.formule && (
-                    <div style={{ background: '#1a1a1a', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={S.formule}>
                       {etude.formule.split('\n').map((line, i) => (
-                        <p key={i} style={{
-                          fontSize: '0.73rem', color: i === 0 ? 'var(--accent)' : 'rgba(228,248,22,0.6)',
-                          margin: i === 0 ? 0 : '3px 0 0', lineHeight: 1.4,
-                          fontFamily: 'monospace',
-                        }}>
-                          {line}
-                        </p>
+                        <p key={i} style={{ ...S.formuleLigne, color: i === 0 ? '#e4f816' : 'rgba(255,255,255,0.8)', marginTop: i ? 4 : 0 }}>{line}</p>
                       ))}
                     </div>
                   )}
 
                   {/* Méthodologie (coach uniquement) */}
                   {coachMode && (
-                    <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px', border: `1.5px solid ${color}` }}>
-                      <p style={{ fontSize: '0.65rem', fontWeight: 700, color, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Méthodologie & nuances
-                      </p>
-                      <p style={{ fontSize: '0.76rem', color: '#374151', margin: 0, lineHeight: 1.65 }}>
-                        {etude.detail_coach}
-                      </p>
+                    <div>
+                      <p style={S.libelle}>Méthodologie et nuances</p>
+                      <p style={S.texte}>{etude.detail_coach}</p>
                     </div>
                   )}
 
                   {/* Référence complète */}
-                  <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <p style={{ fontSize: '0.67rem', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                      <span style={{ fontWeight: 700 }}>Auteurs : </span>
-                      {etude.auteurs}
-                    </p>
-                    <p style={{ fontSize: '0.67rem', color: '#6b7280', margin: 0 }}>
-                      <span style={{ fontWeight: 700 }}>Référence : </span>
-                      {etude.journal}, {etude.annee}
-                    </p>
-                    {coachMode && (
-                      <p style={{ fontSize: '0.67rem', color: '#6b7280', margin: 0 }}>
-                        <span style={{ fontWeight: 700 }}>DOI : </span>
-                        {etude.doi}
-                      </p>
-                    )}
+                  <div style={S.reference}>
+                    <p style={S.refLigne}><span style={{ fontWeight: 700 }}>Auteurs : </span>{etude.auteurs}</p>
+                    <p style={S.refLigne}><span style={{ fontWeight: 700 }}>Référence : </span>{etude.journal}, {etude.annee}</p>
+                    {coachMode && <p style={S.refLigne}><span style={{ fontWeight: 700 }}>DOI : </span>{etude.doi}</p>}
                   </div>
                 </div>
               )}
@@ -446,4 +336,27 @@ export default function SciencesNutrition({ coachMode = false }) {
       </div>
     </div>
   )
+}
+
+const S = {
+  page:         { maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  title:        { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
+  subtitle:     { color: '#6b7280', fontSize: '0.85rem', margin: 0, maxWidth: '75ch', lineHeight: 1.5 },
+  filtres:      { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1.25rem' },
+  pilule:       { padding: '0.35rem 0.8rem', borderRadius: 999, border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  piluleActive: { background: '#333333', borderColor: '#333333', color: '#e4f816' },
+  carte:        { background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' },
+  carteTete:    { display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
+  cat:          { fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' },
+  titre:        { fontWeight: 700, fontSize: '0.95rem', color: '#333333', margin: 0, lineHeight: 1.35 },
+  source:       { fontSize: '0.75rem', color: '#6b7280', margin: '4px 0 0', fontWeight: 600 },
+  chiffre:      { display: 'inline-block', marginTop: 8, padding: '3px 10px', borderRadius: 999, background: '#f3f4f6', color: '#333333', fontSize: '0.75rem', fontWeight: 700 },
+  chevron:      { display: 'inline-flex', color: '#6b7280', flexShrink: 0, marginTop: 2, transition: 'transform 0.2s' },
+  detail:       { padding: '14px 16px 16px', borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 14 },
+  libelle:      { fontSize: '0.7rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' },
+  texte:        { fontSize: '0.85rem', color: '#374151', margin: 0, lineHeight: 1.6, maxWidth: '75ch' },
+  formule:      { background: '#333333', borderRadius: 10, padding: '12px 14px', alignSelf: 'flex-start', maxWidth: '100%', boxSizing: 'border-box' },
+  formuleLigne: { fontSize: '0.8rem', margin: 0, lineHeight: 1.45, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'pre-wrap' },
+  reference:    { borderTop: '1px solid #f3f4f6', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 3 },
+  refLigne:     { fontSize: '0.75rem', color: '#6b7280', margin: 0, lineHeight: 1.5 },
 }

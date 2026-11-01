@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import SeanceAIModal from '../components/SeanceAIModal'
 import ClientPicker from '../components/ClientPicker'
+import Icon from '../components/Icon'
 import { copierSeanceModele, copiesDuModele, mettreAJourCopies, seancesManquantes } from '../utils/cyclesModeles'
 
 export default function CycleTemplates() {
@@ -54,11 +55,6 @@ export default function CycleTemplates() {
     setOpenFolders(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
   }
 
-  const BLOC_COLORS = ['#6366f1','#16a34a','#ea580c','#2563eb','#dc2626','#ca8a04','#0891b2','#9333ea']
-  function blocColor(letter) {
-    if (!letter) return '#9ca3af'
-    return BLOC_COLORS[(letter.toUpperCase().charCodeAt(0) - 65 + BLOC_COLORS.length) % BLOC_COLORS.length]
-  }
   function blocLetter(code) {
     if (!code) return null
     const m = code.match(/^[A-Za-z]+/)
@@ -266,33 +262,35 @@ export default function CycleTemplates() {
 
     function renderCard(t) {
       const isPreviewed = previewCycleId === t.id
+      const nbSeances = (t.programme_template_seances || []).length
       return (
         <div key={t.id} style={S.card}>
           <div role="button" tabIndex={0} style={{ ...S.cardHeader, cursor: 'pointer' }} onClick={() => togglePreview(t.id)}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={S.cardTitle}>{t.nom}</div>
               {t.description && <div style={S.cardDesc}>{t.description}</div>}
+              <div style={S.cardStats}>
+                {t.semaines} semaine{t.semaines > 1 ? 's' : ''} · {nbSeances} séance{nbSeances > 1 ? 's' : ''}
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-              <span style={{ color: '#9ca3af', fontSize: '1.1rem', transform: isPreviewed ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-              <div style={S.badge}>{t.semaines} sem.</div>
+            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
               {/* Bouton déplacer */}
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={e => { e.stopPropagation(); setMovingId(movingId === t.id ? null : t.id) }}
-                  style={{ ...S.btnIcon, color: movingId === t.id ? '#6366f1' : '#9ca3af' }}
-                  title="Déplacer dans un dossier"
+                  style={{ ...S.btnIcon, color: movingId === t.id ? '#333333' : '#6b7280' }}
+                  title="Déplacer dans un dossier" aria-label="Déplacer dans un dossier"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <Icon name="folder" size={14} />
                 </button>
                 {movingId === t.id && (
                   <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
                     <div role="button" tabIndex={0} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
-                      <span style={{ opacity: 0.5 }}>— Sans dossier</span>
+                      <span style={{ color: '#6b7280' }}>Sans dossier</span>
                     </div>
                     {allFolders.map(f => (
-                      <div role="button" tabIndex={0} key={f} style={{ ...S.moveItem, fontWeight: t.dossier === f ? '700' : '500' }} onClick={() => deplacerDansFolder(t.id, f)}>
-                        {t.dossier === f ? '✓ ' : ''}{f}
+                      <div role="button" tabIndex={0} key={f} style={{ ...S.moveItem, fontWeight: t.dossier === f ? '700' : '500', display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => deplacerDansFolder(t.id, f)}>
+                        {t.dossier === f && <Icon name="check" size={14} />}{f}
                       </div>
                     ))}
                     <div style={{ padding: '0.4rem 0.65rem', borderTop: '1px solid #f3f4f6' }}>
@@ -310,20 +308,15 @@ export default function CycleTemplates() {
                   </div>
                 )}
               </div>
+              <span style={{ ...S.chevron, transform: isPreviewed ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={16} /></span>
             </div>
-          </div>
-          <div style={S.cardStats}>
-            <span style={S.stat}>
-              {(t.programme_template_seances || []).length} séance{(t.programme_template_seances || []).length > 1 ? 's' : ''}
-            </span>
-            <span style={S.stat}>{t.semaines} sem.</span>
           </div>
 
           {/* ── Panel aperçu séances ── */}
           {isPreviewed && (() => {
             const seances = [...(t.programme_template_seances || [])].sort((a, b) => (a.jour - b.jour) || (a.ordre - b.ordre))
             return (
-              <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa' }}>
+              <div style={S.apercu}>
                 {seances.length === 0 ? (
                   <p style={{ color: '#6b7280', fontSize: '0.78rem', textAlign: 'center', padding: '0.75rem' }}>Aucune séance dans ce cycle</p>
                 ) : seances.map((s, idx) => {
@@ -331,42 +324,41 @@ export default function CycleTemplates() {
                   const seanceOpen = openPreviewSeances.has(key)
                   const exs = s.exercices || []
                   return (
-                    <div key={key} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <div key={key} style={{ borderTop: idx ? '1px solid #e5e7eb' : 'none' }}>
                       <div
+                        role="button" tabIndex={0}
                         onClick={e => { e.stopPropagation(); togglePreviewSeance(key) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer' }}
                       >
-                        <span style={{ background: '#e5e7eb', color: '#374151', fontSize: '0.63rem', fontWeight: 700, borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>J{s.jour}</span>
-                        <span style={{ flex: 1, fontWeight: 600, fontSize: '0.8rem', color: '#374151' }}>{s.nom || `Séance ${idx + 1}`}</span>
-                        <span style={{ color: '#6b7280', fontSize: '0.7rem', flexShrink: 0 }}>{exs.length} ex.</span>
-                        <span style={{ color: '#9ca3af', fontSize: '1rem', transform: seanceOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>›</span>
+                        <span style={S.jourTag}>J{s.jour}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: '0.85rem', color: '#333333' }}>{s.nom || `Séance ${idx + 1}`}</span>
+                        <span style={{ color: '#6b7280', fontSize: '0.75rem', flexShrink: 0 }}>{exs.length} exercice{exs.length > 1 ? 's' : ''}</span>
+                        <span style={{ ...S.chevron, transform: seanceOpen ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={14} /></span>
                       </div>
                       {seanceOpen && (
-                        <div style={{ padding: '0.25rem 0.875rem 0.6rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {exs.length === 0 ? (
-                            <p style={{ color: '#6b7280', fontSize: '0.72rem', padding: '0.25rem 0' }}>Séance vide</p>
+                            <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0, padding: '4px 0' }}>Séance vide</p>
                           ) : (() => {
                             const items = []
                             let prevBloc = null
                             exs.forEach((ex, ei) => {
                               const bloc = blocLetter(ex.code)
                               if (bloc && bloc !== prevBloc) {
-                                const color = blocColor(bloc)
                                 items.push(
-                                  <div key={`hdr-${ei}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: ei > 0 ? '0.5rem' : 0, marginBottom: '0.05rem' }}>
-                                    <span style={{ background: color, color: 'white', fontSize: '0.55rem', fontWeight: '800', borderRadius: 3, padding: '1px 5px', letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>Bloc {bloc}</span>
-                                    <div style={{ flex: 1, height: 1, background: color, opacity: 0.25 }} />
+                                  <div key={`hdr-${ei}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: ei > 0 ? 8 : 0, marginBottom: 2 }}>
+                                    <span style={S.blocPuce}>Bloc {bloc}</span>
+                                    <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
                                   </div>
                                 )
                                 prevBloc = bloc
                               }
-                              const color = bloc ? blocColor(bloc) : null
                               items.push(
-                                <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.4rem', borderLeft: `3px solid ${color || '#e5e7eb'}`, borderRadius: '0 3px 3px 0' }}>
-                                  {ex.code && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '0.62rem', fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>{ex.code}</span>}
-                                  <span style={{ flex: 1, fontSize: '0.78rem', color: '#374151' }}>{ex.nom || '—'}</span>
-                                  <span style={{ fontSize: '0.68rem', color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                    {[ex.series && `${ex.series}×`, ex.repetitions, ex.tempo && `@${ex.tempo}`].filter(Boolean).join(' ')}
+                                <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                                  {ex.code && <span style={S.codeTag}>{ex.code}</span>}
+                                  <span style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', fontWeight: 600, color: '#333333' }}>{ex.nom || 'Sans nom'}</span>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', flexShrink: 0, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                                    {[[ex.series, ex.repetitions].filter(Boolean).join(' × '), ex.tempo && `tempo ${ex.tempo}`].filter(Boolean).join(' · ')}
                                   </span>
                                 </div>
                               )
@@ -382,21 +374,22 @@ export default function CycleTemplates() {
             )
           })()}
 
-          <div style={S.cardActions}>
-            <button style={S.btnPrimary} onClick={() => openSendModal(t)}>Envoyer</button>
-            <button style={S.btnSecondary} onClick={() => ouvrirMaj(t)} title="Ajouter les nouvelles séances du modèle aux cycles déjà envoyés">Mettre à jour les envoyés</button>
-            <button style={S.btnSecondary} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
-              {ouvrantId === t.id ? 'Ouverture…' : 'Modifier'}
-            </button>
-            {deleteConfirm === t.id ? (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button style={S.btnDanger} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
-                <button style={S.btnSecondary} onClick={() => setDeleteConfirm(null)}>Annuler</button>
-              </div>
-            ) : (
-              <button style={S.btnGhost} onClick={() => setDeleteConfirm(t.id)}>Supprimer</button>
-            )}
-          </div>
+          {deleteConfirm === t.id ? (
+            <div style={S.cardActions}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginRight: 'auto' }}>Supprimer ce template ?</span>
+              <button style={S.btnSecondary} onClick={() => setDeleteConfirm(null)}>Annuler</button>
+              <button style={S.btnDanger} onClick={() => deleteTemplate(t.id)}>Supprimer</button>
+            </div>
+          ) : (
+            <div style={S.cardActions}>
+              <button style={S.btnPrimary} onClick={() => openSendModal(t)}>Envoyer</button>
+              <button style={S.btnSecondary} onClick={() => ouvrirDraft(t)} disabled={ouvrantId === t.id}>
+                {ouvrantId === t.id ? 'Ouverture…' : 'Modifier'}
+              </button>
+              <button style={S.btnSecondary} onClick={() => ouvrirMaj(t)} title="Ajouter les nouvelles séances du modèle aux cycles déjà envoyés">Mettre à jour les envoyés</button>
+              <button style={{ ...S.btnIcon, color: '#dc2626', marginLeft: 'auto' }} onClick={() => setDeleteConfirm(t.id)} title="Supprimer le template" aria-label="Supprimer le template"><Icon name="trash" size={14} /></button>
+            </div>
+          )}
         </div>
       )
     }
@@ -410,7 +403,7 @@ export default function CycleTemplates() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button style={S.btnSecondary} onClick={() => setShowNewFolder(true)}>+ Dossier</button>
-            <button style={S.btnAI} onClick={() => setShowAI(true)}>IA</button>
+            <button style={{ ...S.btnSecondary, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setShowAI(true)}><Icon name="sparkle" size={14} />Générer avec l'IA</button>
             <button style={S.btnPrimary} onClick={creerTemplate}>+ Nouveau template</button>
           </div>
         </div>
@@ -426,13 +419,13 @@ export default function CycleTemplates() {
 
         {/* Créer dossier */}
         {showNewFolder && (
-          <div style={{ background: 'white', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
+          <div style={{ background: 'white', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
             <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && creerDossier()}
               placeholder="Nom du dossier…"
               style={{ flex: 1, padding: '0.45rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.875rem', outline: 'none' }} />
             <button onClick={creerDossier} style={S.btnPrimary}>Créer</button>
-            <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.btnSecondary}>✕</button>
+            <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.btnSecondary}>Annuler</button>
           </div>
         )}
 
@@ -455,9 +448,7 @@ export default function CycleTemplates() {
                 <div key={folderName} style={S.folderBlock}>
                   <div role="button" tabIndex={0} style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill={isOpen ? '#e4f816' : 'none'} stroke={isOpen ? '#333' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                      </svg>
+                      <span style={{ display: 'flex', color: '#374151' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
                       {renamingFolder === folderName ? (
                         <input autoFocus value={renameVal}
                           onChange={e => setRenameVal(e.target.value)}
@@ -466,23 +457,23 @@ export default function CycleTemplates() {
                           onClick={e => e.stopPropagation()}
                           style={{ flex: 1, padding: '0.25rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: '0.875rem', outline: 'none' }} />
                       ) : (
-                        <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#111827' }}>{folderName}</span>
+                        <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#333333' }}>{folderName}</span>
                       )}
                       <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} template{items.length > 1 ? 's' : ''}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.btnIcon} title="Renommer">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.btnIcon} title="Renommer le dossier">
+                        <Icon name="edit" size={14} />
                       </button>
                       <button onClick={() => supprimerDossier(folderName)} style={S.btnIcon} title="Supprimer le dossier">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        <Icon name="trash" size={14} />
                       </button>
-                      <span role="button" tabIndex={0} style={{ color: '#6b7280', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
-                        onClick={() => toggleFolder(folderName)}>›</span>
+                      <span role="button" tabIndex={0} style={{ ...S.chevron, transform: isOpen ? 'rotate(90deg)' : 'none', cursor: 'pointer' }}
+                        onClick={() => toggleFolder(folderName)}><Icon name="chevron-right" size={16} /></span>
                     </div>
                   </div>
                   {isOpen && (
-                    <div style={{ padding: '0.75rem', background: 'white' }}>
+                    <div style={{ padding: 12 }}>
                       {items.length === 0 ? (
                         <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un template ici via l'icône dossier</p>
                       ) : (
@@ -498,7 +489,7 @@ export default function CycleTemplates() {
             {sansDossier.length > 0 && (
               <div>
                 {allFolders.length > 0 && (
-                  <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
+                  <p style={S.sectionLabel}>Sans dossier</p>
                 )}
                 <div style={S.grid}>{sansDossier.map(t => renderCard(t))}</div>
               </div>
@@ -515,7 +506,7 @@ export default function CycleTemplates() {
         return (
           <div style={S.overlay} onClick={() => !majModal.enCours && setMajModal(null)}>
             <div style={{ ...S.modal, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#111827', marginBottom: '0.3rem' }}>Mettre à jour « {majModal.template.nom} »</div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#333333', marginBottom: '0.3rem' }}>Mettre à jour « {majModal.template.nom} »</div>
               <p style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: 1.5, margin: '0 0 1rem' }}>
                 Ajoute aux cycles déjà envoyés les séances du modèle qu'ils n'ont pas encore. Les séances existantes, et tout ce que les clients ont rempli, ne sont pas modifiés.
               </p>
@@ -567,8 +558,8 @@ export default function CycleTemplates() {
             {sendSuccess ? (
               // Succès
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827', marginBottom: '0.4rem' }}>
-                  {sendMode === 'ecraser' ? 'Cycle mis à jour !' : 'Cycle envoyé !'}
+                <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#333333', marginBottom: '0.4rem' }}>
+                  {sendMode === 'ecraser' ? 'Cycle mis à jour' : 'Cycle envoyé'}
                 </div>
                 <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
                   « {sendModal.nom} » {sendMode === 'ecraser' ? 'a été appliqué à' : 'a été créé pour'} <strong>{sendSuccess}</strong>
@@ -581,12 +572,12 @@ export default function CycleTemplates() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
                   <div>
-                    <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#111827' }}>Envoyer un cycle</div>
+                    <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#333333' }}>Envoyer un cycle</div>
                     <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
                       Template : <strong>{sendModal.nom}</strong> · {sendModal.semaines} sem.
                     </div>
                   </div>
-                  <button onClick={() => setSendModal(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }}>✕</button>
+                  <button onClick={() => setSendModal(null)} style={S.btnIcon} aria-label="Fermer"><Icon name="x" size={18} /></button>
                 </div>
 
                 {/* Nom du programme */}
@@ -654,7 +645,7 @@ export default function CycleTemplates() {
                     {loadingProgrammes ? (
                       <div style={{ color: '#6b7280', fontSize: '0.85rem', padding: '0.4rem 0' }}>Chargement…</div>
                     ) : clientProgrammes.length === 0 ? (
-                      <div style={{ color: '#ef4444', fontSize: '0.82rem', padding: '0.4rem 0' }}>Ce client n'a pas encore de cycle.</div>
+                      <div style={{ color: '#dc2626', fontSize: '0.82rem', padding: '0.4rem 0' }}>Ce client n'a pas encore de cycle.</div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '160px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem' }}>
                         {clientProgrammes.map(p => (
@@ -667,7 +658,7 @@ export default function CycleTemplates() {
                               background: programmeToOverwrite?.id === p.id ? '#1a1a1a' : 'transparent',
                             }}
                           >
-                            <span style={{ fontWeight: '600', fontSize: '0.875rem', color: programmeToOverwrite?.id === p.id ? '#e4f816' : '#111827' }}>
+                            <span style={{ fontWeight: '600', fontSize: '0.875rem', color: programmeToOverwrite?.id === p.id ? '#e4f816' : '#333333' }}>
                               {p.nom}
                             </span>
                             <span style={{ fontSize: '0.75rem', color: programmeToOverwrite?.id === p.id ? 'rgba(228,248,22,0.7)' : '#6b7280' }}>
@@ -712,38 +703,34 @@ export default function CycleTemplates() {
 }
 
 const S = {
-  page: { padding: '2rem', maxWidth: '900px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  title: { fontSize: '1.4rem', fontWeight: '700', color: '#111827' },
-  subtitle: { fontSize: '0.875rem', color: '#6b7280', marginTop: '0.2rem' },
+  page: { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
+  title: { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
+  subtitle: { fontSize: '0.85rem', color: '#6b7280' },
+  sectionLabel: { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' },
   empty: { color: '#6b7280', padding: '2rem', textAlign: 'center' },
-  emptyState: { textAlign: 'center', padding: '4rem 2rem', background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' },
-  card: { background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' },
-  cardTitle: { fontWeight: '700', color: '#111827', fontSize: '1rem' },
-  cardDesc: { fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' },
-  badge: { background: '#f3f4f6', color: '#374151', borderRadius: '6px', padding: '0.2rem 0.6rem', fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap' },
-  cardStats: { display: 'flex', gap: '0.75rem', marginBottom: '1rem' },
-  stat: { fontSize: '0.8rem', color: '#6b7280' },
-  cardActions: { display: 'flex', gap: '0.5rem', borderTop: '1px solid #f3f4f6', paddingTop: '0.875rem' },
-  form: { background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.5rem' },
+  emptyState: { textAlign: 'center', padding: '3rem 2rem', background: 'white', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem', alignItems: 'start' },
+  card: { background: 'white', border: '1px solid #e5e7eb', borderRadius: 14, padding: '1rem 1.1rem' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
+  cardTitle: { fontWeight: '700', color: '#333333', fontSize: '0.95rem' },
+  cardDesc: { fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem' },
+  cardStats: { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginTop: '0.35rem' },
+  cardActions: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, borderTop: '1px solid #f3f4f6', paddingTop: 12, marginTop: 12 },
+  apercu: { marginTop: 12, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10 },
+  jourTag: { background: '#e5e7eb', color: '#374151', fontSize: '0.72rem', fontWeight: 800, borderRadius: 6, padding: '2px 6px', flexShrink: 0 },
+  codeTag: { background: 'white', border: '1px solid #e5e7eb', color: '#374151', fontSize: '0.72rem', fontWeight: 800, borderRadius: 6, padding: '1px 6px', minWidth: 22, textAlign: 'center', flexShrink: 0 },
+  blocPuce: { background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 },
+  chevron: { display: 'inline-flex', color: '#6b7280', transition: 'transform 0.2s' },
   formGroup: { marginBottom: '1rem' },
-  label: { display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#374151', marginBottom: '0.4rem' },
-  input: { width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.875rem', outline: 'none' },
-  sectionTitle: { fontWeight: '700', color: '#111827', marginBottom: '0.75rem', marginTop: '1.25rem', fontSize: '0.95rem' },
-  seanceRow: { display: 'flex', gap: '0.5rem', alignItems: 'center' },
-  seanceNum: { background: '#333333', color: '#e4f816', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', minWidth: '32px', textAlign: 'center' },
-  btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer' },
-  btnAI:      { background: '#111827', color: '#e4f816', border: '1.5px solid rgba(228,248,22,0.35)', borderRadius: '8px', padding: '0.5rem 1.25rem', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer' },
-  btnSecondary: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' },
-  btnGhost: { background: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
-  btnDanger: { background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' },
-  btnRemove: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' },
-  btnBack: { background: 'none', border: 'none', color: '#6b7280', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem 0' },
-  btnIcon: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.3rem', color: '#6b7280' },
-  folderBlock: { background: '#f9fafb', borderRadius: 14, overflow: 'visible', border: '1px solid #e5e7eb' },
-  folderHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.1rem', cursor: 'pointer', background: '#f3f4f6', borderRadius: '14px 14px 0 0', borderBottom: '1px solid #e5e7eb' },
+  label: { display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' },
+  input: { width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', color: '#333333', outline: 'none' },
+  btnPrimary: { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.55rem 0.9rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnDanger: { background: '#dc2626', color: 'white', border: 'none', borderRadius: 10, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnIcon: { width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', padding: 0, color: '#6b7280', flexShrink: 0 },
+  folderBlock: { background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  folderHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' },
   moveDropdown: { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },
   moveItem: { padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: '#374151', fontWeight: '500', cursor: 'pointer', borderBottom: '1px solid #f9fafb' },
   overlay: {

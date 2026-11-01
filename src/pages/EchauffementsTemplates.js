@@ -11,34 +11,24 @@ function WarmupDisplay({ lignes }) {
     if (l.groupe && last?.groupe === l.groupe) last.items.push(l)
     else groups.push({ groupe: l.groupe, items: [l] })
   })
+  const ligne = (l, k) => (
+    <div key={l.id || k} style={S.wLigne}>
+      <span style={S.wNom}>{l.nom}</span>
+      <span style={S.wReps}>{l.reps}</span>
+    </div>
+  )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {groups.map((g, gi) => {
-        if (!g.groupe) {
-          return g.items.map((l, i) => (
-            <div key={l.id || `${gi}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.3rem 0.5rem', background: '#f9fafb', borderRadius: 8 }}>
-              <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6366f1', minWidth: 50, textAlign: 'right' }}>{l.reps}</span>
-            </div>
-          ))
-        }
+        if (!g.groupe) return g.items.map((l, i) => ligne(l, `${gi}-${i}`))
         const tours = g.items[0]?.tours
         return (
-          <div key={gi} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #e4f816', background: '#fffef5', borderRadius: '0 8px 8px 0', padding: '0.4rem 0.75rem' }}>
-            <div style={{ flex: 1 }}>
-              {g.items.map((l, i) => (
-                <div key={l.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: i > 0 ? '0.3rem' : 0, paddingTop: i > 0 ? '0.3rem' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
-                  <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6366f1' }}>{l.reps}</span>
-                </div>
-              ))}
+          <div key={gi} style={S.wBloc}>
+            <div style={S.wBlocTete}>
+              <span style={S.blocPuce}>Bloc {g.groupe}</span>
+              {tours && <span style={S.wTours}>{tours} tours</span>}
             </div>
-            {tours && (
-              <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem', flexShrink: 0 }}>
-                <div style={{ borderTop: '2px solid #d97706', borderRight: '2px solid #d97706', borderBottom: '2px solid #d97706', borderRadius: '0 4px 4px 0', width: 6, alignSelf: 'stretch' }} />
-                <span style={{ fontSize: '0.72rem', fontWeight: '900', color: '#d97706', paddingLeft: '0.35rem', whiteSpace: 'nowrap' }}>{tours} tours</span>
-              </div>
-            )}
+            {g.items.map((l, i) => ligne(l, i))}
           </div>
         )
       })}
@@ -225,7 +215,7 @@ export default function EchauffementsTemplates() {
     <div style={S.page}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem' }}>
+      <div style={S.header}>
         <div>
           <h1 style={S.title}>Échauffements</h1>
           <p style={S.subtitle}>Templates réutilisables, applicables à n'importe quelle séance</p>
@@ -285,7 +275,7 @@ export default function EchauffementsTemplates() {
                     </div>
                     <button onClick={confirmPaste}
                       style={{ ...S.btnPrimary, marginTop: '0.625rem', fontSize: '0.82rem', padding: '0.5rem 1rem' }}>
-                      ✓ Ajouter ces {parsedPreview.length} exercices
+                      Ajouter ces {parsedPreview.length} exercices
                     </button>
                   </div>
                 )}
@@ -300,7 +290,7 @@ export default function EchauffementsTemplates() {
                 const prevGroupe = i > 0 ? formLignes[i - 1].groupe : undefined
                 const groupeChange = l.groupe !== prevGroupe
                 return (
-                <div key={l.id} style={{ background: l.groupe ? '#fffef5' : 'white', border: l.groupe ? '1.5px solid #e9f7a8' : '1.5px solid #f3f4f6', borderLeft: l.groupe ? '3px solid #e4f816' : '1.5px solid #f3f4f6', borderRadius: l.groupe ? '0 10px 10px 0' : 10, marginTop: groupeChange && i > 0 ? '0.25rem' : 0 }}>
+                <div key={l.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, marginTop: groupeChange && i > 0 ? 8 : 0 }}>
                   {editingLineId === l.id ? (
                     /* ── Mode édition ── */
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', padding: '0.5rem 0.875rem' }}>
@@ -314,23 +304,23 @@ export default function EchauffementsTemplates() {
                         <input value={editLineForm.tours} onChange={e => setEditLineForm(f => ({ ...f, tours: e.target.value }))}
                           placeholder="Tours" style={{ ...S.input, width: 68, padding: '0.35rem 0.6rem', fontSize: '0.82rem' }} type="number" min="1" />
                       )}
-                      <button onClick={saveEditLine} style={{ ...S.iconBtn, color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800' }}>✓</button>
-                      <button onClick={() => setEditingLineId(null)} style={S.iconBtn}>✕</button>
+                      <button onClick={saveEditLine} style={S.iconBtn} title="Valider" aria-label="Valider"><Icon name="check" size={16} /></button>
+                      <button onClick={() => setEditingLineId(null)} style={S.iconBtn} title="Annuler" aria-label="Annuler"><Icon name="x" size={16} /></button>
                     </div>
                   ) : (
                     /* ── Mode affichage ── */
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem' }}>
                       {l.groupe && (
-                        <span style={{ background: '#333333', color: '#e4f816', padding: '0.1rem 0.45rem', borderRadius: 5, fontSize: '0.68rem', fontWeight: '900', flexShrink: 0 }}>
-                          {l.groupe}{l.tours && formLignes.findIndex(x => x.groupe === l.groupe) === i ? ` · ${l.tours}t` : ''}
+                        <span style={{ ...S.blocPuce, flexShrink: 0 }}>
+                          Bloc {l.groupe}{l.tours && formLignes.findIndex(x => x.groupe === l.groupe) === i ? ` · ${l.tours} tours` : ''}
                         </span>
                       )}
-                      <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: '600', color: '#333' }}>{l.nom}</span>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6366f1', minWidth: 60 }}>{l.reps}</span>
-                      <button onClick={() => startEditLine(l)} style={{ ...S.iconBtn, fontSize: '0.75rem' }}><Icon name="edit" size={14} /></button>
-                      <button onClick={() => moveLigne(i, -1)} disabled={i === 0} style={{ ...S.iconBtn, opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-                      <button onClick={() => moveLigne(i, 1)} disabled={i === formLignes.length - 1} style={{ ...S.iconBtn, opacity: i === formLignes.length - 1 ? 0.3 : 1 }}>↓</button>
-                      <button onClick={() => removeLigne(l.id)} style={{ ...S.iconBtn, color: '#dc2626', borderColor: '#fecaca' }}>✕</button>
+                      <span style={S.wNom}>{l.nom}</span>
+                      <span style={{ ...S.wReps, minWidth: 60 }}>{l.reps}</span>
+                      <button onClick={() => startEditLine(l)} style={S.iconBtn} title="Modifier la ligne" aria-label="Modifier la ligne"><Icon name="edit" size={14} /></button>
+                      <button onClick={() => moveLigne(i, -1)} disabled={i === 0} style={{ ...S.iconBtn, opacity: i === 0 ? 0.3 : 1 }} title="Monter" aria-label="Monter"><Icon name="chevron-up" size={16} /></button>
+                      <button onClick={() => moveLigne(i, 1)} disabled={i === formLignes.length - 1} style={{ ...S.iconBtn, opacity: i === formLignes.length - 1 ? 0.3 : 1 }} title="Descendre" aria-label="Descendre"><Icon name="arrow-down" size={16} /></button>
+                      <button onClick={() => removeLigne(l.id)} style={{ ...S.iconBtn, color: '#dc2626' }} title="Retirer la ligne" aria-label="Retirer la ligne"><Icon name="x" size={16} /></button>
                     </div>
                   )}
                 </div>
@@ -380,7 +370,7 @@ export default function EchauffementsTemplates() {
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
             <button onClick={saveTemplate} disabled={saving || !formNom.trim()}
               style={{ ...S.btnPrimary, opacity: !formNom.trim() || saving ? 0.5 : 1 }}>
-              {saving ? 'Enregistrement...' : editingId ? '✓ Enregistrer' : '✓ Créer le template'}
+              {saving ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Créer le template'}
             </button>
             <button onClick={cancelForm} style={S.btnSecondary}>Annuler</button>
           </div>
@@ -389,28 +379,28 @@ export default function EchauffementsTemplates() {
 
       {/* ── Liste des templates ── */}
       {loading ? (
-        <p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement...</p>
+        <p style={{ color: '#6b7280', textAlign: 'center', padding: '3rem' }}>Chargement…</p>
       ) : templates.length === 0 && !creating ? (
         <div style={S.empty}>
           <p style={{ fontWeight: '700', color: '#374151', margin: '0 0 0.35rem' }}>Aucun template</p>
           <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Crée ton premier template d'échauffement pour le réutiliser dans tes séances.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem', alignItems: 'start' }}>
           {templates.map(t => (
             <div key={t.id} style={S.templateCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
-                <div>
-                  <p style={{ fontWeight: '800', fontSize: '1rem', color: '#1a1a1a', margin: '0 0 0.2rem' }}>{t.nom}</p>
-                  <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>{(t.lignes || []).length} exercice{(t.lignes || []).length !== 1 ? 's' : ''}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={S.cardNom}>{t.nom}</p>
+                  <p style={S.cardMeta}>{(t.lignes || []).length} exercice{(t.lignes || []).length > 1 ? 's' : ''}</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
-                  <button onClick={() => startEdit(t)} style={S.iconBtn}><Icon name="edit" size={14} /></button>
-                  <button onClick={() => deleteTemplate(t.id)} style={{ ...S.iconBtn, color: '#dc2626' }}><Icon name="trash" size={14} /></button>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button onClick={() => startEdit(t)} style={S.iconBtn} title="Modifier" aria-label="Modifier"><Icon name="edit" size={14} /></button>
+                  <button onClick={() => deleteTemplate(t.id)} style={{ ...S.iconBtn, color: '#dc2626' }} title="Supprimer" aria-label="Supprimer"><Icon name="trash" size={14} /></button>
                 </div>
               </div>
               {(t.lignes || []).length === 0 ? (
-                <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Aucune ligne</p>
+                <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: 0 }}>Aucun exercice pour l'instant.</p>
               ) : (
                 <WarmupDisplay lignes={t.lignes} />
               )}
@@ -423,15 +413,26 @@ export default function EchauffementsTemplates() {
 }
 
 const S = {
-  page:         { padding: '2rem', maxWidth: '1000px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  title:        { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: 0 },
-  subtitle:     { color: '#6b7280', fontSize: '0.875rem', margin: '0.25rem 0 0' },
+  page:         { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  header:       { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
+  title:        { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
+  subtitle:     { color: '#6b7280', fontSize: '0.85rem', margin: 0 },
   sectionLabel: { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.875rem' },
-  btnPrimary:   { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  iconBtn:      { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 7, padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: '#6b7280' },
+  btnPrimary:   { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnSecondary: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
+  iconBtn:      { width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: 0, cursor: 'pointer', color: '#374151', flexShrink: 0 },
   input:        { padding: '0.6rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.85rem', color: '#333333', outline: 'none' },
-  formCard:     { background: 'white', borderRadius: 16, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1.5px solid #e5e7eb' },
-  templateCard: { background: 'white', borderRadius: 14, padding: '1.1rem 1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  empty:        { background: 'white', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  formCard:     { background: 'white', borderRadius: 16, padding: '1.5rem', marginBottom: '1.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', border: '2px solid #e4f816' },
+  templateCard: { background: 'white', borderRadius: 14, padding: '1rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  cardNom:      { fontWeight: '700', fontSize: '0.95rem', color: '#333333', margin: '0 0 0.15rem' },
+  cardMeta:     { fontSize: '0.75rem', color: '#6b7280', margin: 0 },
+  empty:        { background: 'white', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  // Affichage d'un échauffement : lignes simples, blocs sur fond doux avec leur puce
+  wLigne:       { display: 'flex', alignItems: 'baseline', gap: 12, padding: '6px 10px' },
+  wNom:         { flex: 1, minWidth: 0, fontSize: '0.85rem', fontWeight: '600', color: '#333333' },
+  wReps:        { fontSize: '0.85rem', fontWeight: '700', color: '#333333', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  wBloc:        { background: '#f3f4f6', borderRadius: 10, padding: '6px 0' },
+  wBlocTete:    { display: 'flex', alignItems: 'center', gap: 8, padding: '2px 10px 4px' },
+  wTours:       { fontSize: '0.75rem', fontWeight: '700', color: '#374151' },
+  blocPuce:     { background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.02em', whiteSpace: 'nowrap' },
 }

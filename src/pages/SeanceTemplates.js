@@ -201,18 +201,18 @@ export default function SeanceTemplates() {
     const progs = clientProgrammes[c.id] || []
     const isChecked = selectedAssign[c.id] !== undefined
     return (
-      <div key={c.id} style={{ ...S.clientRow, background: isChecked ? '#f0fdf4' : 'white', borderColor: isChecked ? '#bbf7d0' : '#f3f4f6' }}>
+      <div key={c.id} style={{ ...S.clientRow, background: isChecked ? '#f3f4f6' : 'white', borderColor: isChecked ? '#d1d5db' : '#e5e7eb' }}>
         <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: progs.length > 0 ? 'pointer' : 'default' }}
           onClick={() => progs.length > 0 && toggleClient(c.id)}>
           <div style={{
-            width: 20, height: 20, borderRadius: 6, border: `2px solid ${isChecked ? '#22c55e' : '#d1d5db'}`,
-            background: isChecked ? '#22c55e' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            width: 20, height: 20, borderRadius: 6, border: `2px solid ${isChecked ? '#333333' : '#d1d5db'}`,
+            background: isChecked ? '#333333' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            {isChecked && <span style={{ color: 'white', fontSize: '0.7rem', fontWeight: '900' }}>✓</span>}
+            {isChecked && <span style={{ color: '#e4f816', display: 'flex' }}><Icon name="check" size={14} /></span>}
           </div>
           <div>
             <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>{c.prenom} {c.nom}</p>
-            {progs.length === 0 && <p style={{ margin: 0, fontSize: '0.72rem', color: '#ef4444' }}>Aucun cycle de training</p>}
+            {progs.length === 0 && <p style={{ margin: 0, fontSize: '0.75rem', color: '#dc2626' }}>Aucun cycle : envoi impossible</p>}
           </div>
         </div>
         {isChecked && progs.length > 1 && (
@@ -270,11 +270,6 @@ export default function SeanceTemplates() {
 
   if (loading) return <div style={S.centered}><p style={{ color: '#6b7280' }}>Chargement...</p></div>
 
-  const BLOC_COLORS = ['#6366f1','#16a34a','#ea580c','#2563eb','#dc2626','#ca8a04','#0891b2','#9333ea']
-  function blocColor(letter) {
-    if (!letter) return '#9ca3af'
-    return BLOC_COLORS[(letter.toUpperCase().charCodeAt(0) - 65 + BLOC_COLORS.length) % BLOC_COLORS.length]
-  }
   function blocLetter(code) {
     if (!code) return null
     const m = code.match(/^[A-Za-z]+/)
@@ -286,25 +281,23 @@ export default function SeanceTemplates() {
     exs.forEach((ex, i) => {
       const bloc = blocLetter(ex.code)
       if (bloc && bloc !== prevBloc) {
-        const color = blocColor(bloc)
         items.push(
-          <div key={`hdr-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: i > 0 ? '0.6rem' : 0, marginBottom: '0.1rem' }}>
-            <span style={{ background: color, color: 'white', fontSize: '0.58rem', fontWeight: '800', borderRadius: 3, padding: '1px 6px', letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>Bloc {bloc}</span>
-            <div style={{ flex: 1, height: 1, background: color, opacity: 0.25 }} />
+          <div key={`hdr-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: i > 0 ? 12 : 0, marginBottom: 4 }}>
+            <span style={S.blocPuce}>Bloc {bloc}</span>
+            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
           </div>
         )
         prevBloc = bloc
       }
-      const color = bloc ? blocColor(bloc) : null
+      // « 4 × 6 » ; les répétitions non numériques (« 30 s ») restent telles quelles
+      const dosage = [ex.series, ex.repetitions].filter(Boolean).join(' × ')
       items.push(
-        <div key={i} style={{ ...S.exRow, border: `1.5px solid ${color || '#e5e7eb'}`, paddingLeft: '0.5rem', borderRadius: '0 4px 4px 0' }}>
+        <div key={i} style={S.exRow}>
           {ex.code && <span style={S.codeTag}>{ex.code}</span>}
           <span style={S.exNom}>{ex.nom}</span>
-          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
-            {ex.series && <span style={S.chip}>{ex.series} séries</span>}
-            {ex.repetitions && <span style={S.chip}>{ex.repetitions} reps</span>}
-            {ex.recuperation && <span style={S.chip}>{ex.recuperation}</span>}
-          </div>
+          <span style={S.exDosage}>
+            {dosage}{ex.recuperation ? `${dosage ? ' · ' : ''}récup ${ex.recuperation}` : ''}
+          </span>
         </div>
       )
     })
@@ -346,7 +339,7 @@ export default function SeanceTemplates() {
               <>
                 <button onClick={e => saveEdit(t.id, e)} disabled={savingEdit}
                   style={{ ...S.actionBtnSolid, background: '#333', color: '#e4f816' }}>
-                  {savingEdit ? '…' : '✓ Sauvegarder'}
+                  {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
                 <button onClick={cancelEdit} style={S.actionBtnSolid}>Annuler</button>
               </>
@@ -363,7 +356,7 @@ export default function SeanceTemplates() {
                   {movingId === t.id && (
                     <div style={S.moveDropdown} onClick={e => e.stopPropagation()}>
                       <div role="button" tabIndex={0} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, null)}>
-                        <span style={{ opacity: 0.5 }}>— Sans dossier</span>
+                        <span style={{ color: '#6b7280' }}>Sans dossier</span>
                       </div>
                       {allFolders.map(f => (
                         <div role="button" tabIndex={0} key={f} style={S.moveItem} onClick={() => deplacerDansFolder(t.id, f)}>
@@ -385,8 +378,8 @@ export default function SeanceTemplates() {
                     </div>
                   )}
                 </div>
-                <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={S.actionBtn}><Icon name="trash" size={14} /></button>
-                <span style={{ color: '#9ca3af', fontSize: '1.2rem', transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+                <button onClick={e => { e.stopPropagation(); supprimer(t.id) }} style={S.actionBtn} title="Supprimer le modèle"><Icon name="trash" size={14} /></button>
+                <span style={{ ...S.chevron, transform: isExpanded ? 'rotate(90deg)' : 'none' }}><Icon name="chevron-right" size={16} /></span>
               </>
             )}
           </div>
@@ -394,12 +387,12 @@ export default function SeanceTemplates() {
 
         {/* Détail / éditeur */}
         {isExpanded && (
-          <div style={{ marginTop: '0.875rem', borderTop: '1px solid #f3f4f6', paddingTop: '0.875rem' }}>
+          <div style={{ marginTop: 12, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
             {isEditing ? (
               /* ── Mode édition ────────────────────────────── */
               <div onClick={e => e.stopPropagation()}>
                 {editExercices.length === 0 && (
-                  <p style={{ color: '#6b7280', fontSize: '0.82rem', marginBottom: '0.5rem' }}>Aucun exercice — ajoutez-en ci-dessous.</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.82rem', marginBottom: '0.5rem' }}>Aucun exercice : ajoute-en ci-dessous.</p>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {editExercices.map((ex, i) => (
@@ -414,7 +407,7 @@ export default function SeanceTemplates() {
                         placeholder="Reps" style={{ ...S.editInput, width: 52, textAlign: 'center' }} />
                       <input value={ex.recuperation || ''} onChange={e => updateEx(i, 'recuperation', e.target.value)}
                         placeholder="Récup" style={{ ...S.editInput, width: 60, textAlign: 'center' }} />
-                      <button onClick={() => deleteEx(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem', padding: '0.2rem', flexShrink: 0 }}>✕</button>
+                      <button onClick={() => deleteEx(i)} style={{ ...S.actionBtn, color: '#dc2626' }} title="Retirer l'exercice" aria-label="Retirer l'exercice"><Icon name="x" size={16} /></button>
                     </div>
                   ))}
                 </div>
@@ -425,7 +418,7 @@ export default function SeanceTemplates() {
               </div>
             ) : (
               /* ── Mode lecture ────────────────────────────── */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {renderExercicesBlocs(t.exercices || [])}
               </div>
             )}
@@ -447,12 +440,12 @@ export default function SeanceTemplates() {
                 <p style={S.modalLabel}>Envoyer le modèle</p>
                 <p style={S.modalTitle}>{sendingTemplate.nom}</p>
               </div>
-              <button onClick={() => setSendingTemplate(null)} style={S.closeBtn}>✕</button>
+              <button onClick={() => setSendingTemplate(null)} style={S.closeBtn} aria-label="Fermer"><Icon name="x" size={18} /></button>
             </div>
 
             {assignDone ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                <p style={{ fontWeight: '700', color: '#333' }}>Séance ajoutée !</p>
+                <p style={{ fontWeight: '700', color: '#333' }}>Séance ajoutée</p>
               </div>
             ) : (
               <>
@@ -474,7 +467,7 @@ export default function SeanceTemplates() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: g.couleur || '#6b7280', flexShrink: 0 }} />
                                 <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#333' }}>{g.nom}</p>
-                                {nbCoches > 0 && <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 700 }}>{nbCoches} coché{nbCoches > 1 ? 's' : ''}</span>}
+                                {nbCoches > 0 && <span style={{ fontSize: '0.75rem', color: '#333333', fontWeight: 700 }}>{nbCoches} coché{nbCoches > 1 ? 's' : ''}</span>}
                               </div>
                               <span style={{ marginLeft: 'auto', color: '#6b7280', fontSize: '0.75rem' }}>{g.membres.length} membre{g.membres.length > 1 ? 's' : ''} {isOpen ? '▲' : '▼'}</span>
                             </div>
@@ -528,31 +521,25 @@ export default function SeanceTemplates() {
             onKeyDown={e => e.key === 'Enter' && creerDossier()}
             placeholder="Nom du dossier..." style={S.folderInput} />
           <button onClick={creerDossier} style={S.importBtn}>Créer</button>
-          <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.secondaryBtn}>✕</button>
+          <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} style={S.secondaryBtn}>Annuler</button>
         </div>
       )}
 
       {/* ── Brouillons ── */}
       {drafts.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>
+          <p style={S.sectionLabel}>
             Brouillons ({drafts.length})
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {drafts.map(d => (
-              <div key={d.id} style={{ background: '#fffbeb', border: '1.5px dashed #fcd34d', borderRadius: 10, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div key={d.id} style={S.brouillon}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#92400e' }}>{d.nom}</p>
-                  <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#b45309' }}>
-                    Modifié le {new Date(d.created_at).toLocaleDateString('fr-FR')}
-                  </p>
+                  <p style={S.nom}>{d.nom}</p>
+                  <p style={S.meta}>Créé le {new Date(d.created_at).toLocaleDateString('fr-FR')}</p>
                 </div>
-                <button onClick={() => navigate(`/seance/${d.id}`)}
-                  style={{ background: '#b45309', color: 'white', border: 'none', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  Continuer
-                </button>
-                <button onClick={() => supprimerBrouillon(d.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontSize: '0.85rem', padding: '0.2rem' }}>
+                <button onClick={() => navigate(`/seance/${d.id}`)} style={S.actionBtnSolid}>Continuer</button>
+                <button onClick={() => supprimerBrouillon(d.id)} style={S.actionBtn} title="Supprimer le brouillon" aria-label="Supprimer le brouillon">
                   <Icon name="trash" size={14} />
                 </button>
               </div>
@@ -578,7 +565,7 @@ export default function SeanceTemplates() {
               <div key={folderName} style={S.folderBlock}>
                 <div role="button" tabIndex={0} style={S.folderHeader} onClick={() => toggleFolder(folderName)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
-                    <span style={{ fontSize: '1rem' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
+                    <span style={{ display: 'flex', color: '#374151' }}><Icon name={isOpen ? 'folder-open' : 'folder'} size={16} /></span>
                     {renamingFolder === folderName ? (
                       <input autoFocus value={renameVal}
                         onChange={e => setRenameVal(e.target.value)}
@@ -592,14 +579,14 @@ export default function SeanceTemplates() {
                     <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>{items.length} modèle{items.length > 1 ? 's' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.folderActionBtn}><Icon name="edit" size={14} /></button>
-                    <button onClick={() => supprimerDossier(folderName)} style={S.folderActionBtn}><Icon name="trash" size={14} /></button>
-                    <span role="button" tabIndex={0} style={{ color: '#6b7280', fontSize: '1.1rem', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', cursor: 'pointer' }}
-                      onClick={() => toggleFolder(folderName)}>›</span>
+                    <button onClick={() => { setRenamingFolder(folderName); setRenameVal(folderName) }} style={S.actionBtn} title="Renommer le dossier"><Icon name="edit" size={14} /></button>
+                    <button onClick={() => supprimerDossier(folderName)} style={S.actionBtn} title="Supprimer le dossier"><Icon name="trash" size={14} /></button>
+                    <span role="button" tabIndex={0} style={{ ...S.chevron, transform: isOpen ? 'rotate(90deg)' : 'none', cursor: 'pointer' }}
+                      onClick={() => toggleFolder(folderName)}><Icon name="chevron-right" size={16} /></span>
                   </div>
                 </div>
                 {isOpen && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem 0.75rem 0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
                     {items.length === 0 ? (
                       <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.75rem 0' }}>Dossier vide — déplace un modèle ici avec le bouton dossier</p>
                     ) : (
@@ -615,7 +602,7 @@ export default function SeanceTemplates() {
           {sansDossier.length > 0 && (
             <div>
               {allFolders.length > 0 && (
-                <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' }}>Sans dossier</p>
+                <p style={S.sectionLabel}>Sans dossier</p>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {sansDossier.map(t => renderTemplate(t))}
@@ -629,30 +616,33 @@ export default function SeanceTemplates() {
 }
 
 const S = {
-  page:           { padding: '2rem', maxWidth: '700px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  page:           { padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   centered:       { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  header:         { marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title:          { fontSize: '1.5rem', fontWeight: '800', color: '#333333', margin: 0 },
-  subtitle:       { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
-  importBtn:      { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.6rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
-  secondaryBtn:   { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.6rem 0.875rem', fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
+  header:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' },
+  title:          { fontSize: '1.75rem', fontWeight: '800', color: '#333333', margin: '0 0 0.25rem' },
+  subtitle:       { color: '#6b7280', fontSize: '0.85rem', margin: 0 },
+  sectionLabel:   { fontSize: '0.72rem', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.6rem' },
+  importBtn:      { background: '#333333', color: '#e4f816', border: 'none', borderRadius: 10, padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  secondaryBtn:   { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   folderInput:    { padding: '0.45rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333333', outline: 'none', boxSizing: 'border-box' },
-  empty:          { background: 'white', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  folderBlock:    { background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  folderHeader:   { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.1rem', cursor: 'pointer', background: '#f9fafb', borderBottom: '1px solid #f3f4f6' },
-  folderActionBtn:{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem' },
-  card:           { background: '#f9fafb', borderRadius: 10, padding: '0.875rem 1rem', border: '1px solid #f0f0f0' },
+  empty:          { background: 'white', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  folderBlock:    { background: 'white', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  folderHeader:   { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' },
+  brouillon:      { background: 'white', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: 8 },
+  card:           { background: 'white', borderRadius: 12, padding: '0.75rem 1rem', border: '1px solid #e5e7eb' },
   nom:            { fontWeight: '700', fontSize: '0.92rem', color: '#333333', margin: 0 },
   meta:           { color: '#6b7280', fontSize: '0.75rem', margin: '0.15rem 0 0' },
-  actionBtn:      { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.3rem' },
-  actionBtnSolid: { background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.35rem 0.65rem', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  actionBtn:      { width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#6b7280', padding: 0, flexShrink: 0 },
+  actionBtnSolid: { background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' },
+  chevron:        { display: 'inline-flex', color: '#6b7280', transition: 'transform 0.2s' },
   moveDropdown:   { position: 'absolute', right: 0, top: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 180, marginTop: 4 },
   moveItem:       { padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: '#374151', fontWeight: '600', cursor: 'pointer', borderBottom: '1px solid #f9fafb' },
-  exRow:          { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0' },
-  codeTag:        { background: '#333333', color: '#e4f816', padding: '0.1rem 0.4rem', borderRadius: 5, fontSize: '0.68rem', fontWeight: '800', flexShrink: 0 },
-  exNom:          { fontSize: '0.82rem', fontWeight: '600', color: '#374151' },
-  chip:           { background: '#e5e7eb', color: '#6b7280', padding: '0.1rem 0.45rem', borderRadius: 999, fontSize: '0.68rem', fontWeight: '600' },
-  editInput:      { padding: '0.3rem 0.5rem', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: '0.83rem', color: '#333', outline: 'none', boxSizing: 'border-box' },
+  blocPuce:       { background: '#333333', color: '#e4f816', padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 },
+  exRow:          { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' },
+  codeTag:        { background: '#f3f4f6', color: '#374151', padding: '2px 6px', borderRadius: 6, fontSize: '0.72rem', fontWeight: '800', minWidth: 22, textAlign: 'center', flexShrink: 0 },
+  exNom:          { flex: 1, minWidth: 0, fontSize: '0.85rem', fontWeight: '600', color: '#333333' },
+  exDosage:       { fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  editInput:      { padding: '0.45rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: '0.85rem', color: '#333', outline: 'none', boxSizing: 'border-box' },
   // Modal assignation
   overlay:        { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
   modal:          { background: 'white', borderRadius: 18, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
