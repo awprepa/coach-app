@@ -1,25 +1,49 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Icon from './Icon'
 
 // Mise en page commune aux onglets de la Bibliothèque : panneau de tri fixe à
 // gauche (titre, recherche, listes avec compteurs), contenu à droite.
 // Sur téléphone, le panneau passe au-dessus du contenu.
 
+const HAUT_FIXE = 62 + 12 // barre de navigation coach (collée en haut) + marge
+
 export function Cadre({ panneau, children }) {
+  // Sur ordinateur, le panneau a sa propre barre de défilement : sa hauteur
+  // suit la place réellement visible sous la barre de navigation, pour que le
+  // bas de la liste reste toujours atteignable sans faire défiler la page.
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ajuster = () => {
+      if (window.innerWidth <= 820) { el.style.maxHeight = ''; return }
+      const haut = Math.max(el.getBoundingClientRect().top, HAUT_FIXE)
+      el.style.maxHeight = `${Math.max(window.innerHeight - haut - 12, 200)}px`
+    }
+    ajuster()
+    window.addEventListener('scroll', ajuster, { passive: true })
+    window.addEventListener('resize', ajuster)
+    return () => { window.removeEventListener('scroll', ajuster); window.removeEventListener('resize', ajuster) }
+  }, [])
+
   return (
     <div className="bib-cadre" style={S.cadre}>
       <style>{`
         .bib-panneau > *{flex-shrink:0;}
+        .bib-panneau{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.25) transparent;}
+        .bib-panneau .bib-item:hover{background:rgba(255,255,255,0.08) !important;}
+        .bib-panneau .bib-item[aria-pressed="true"]:not(.bib-case):hover{background:#e4f816 !important;}
+        .bib-panneau input::placeholder{color:rgba(255,255,255,0.45);}
         @media (max-width: 820px){
           .bib-cadre{grid-template-columns:1fr !important;padding:1rem !important;}
           .bib-panneau{position:static !important;gap:14px !important;max-height:none !important;overflow:visible !important;}
           .bib-liste{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;}
           .bib-liste > div{display:contents;}
           .bib-liste .bib-zone{flex-basis:100%;margin:4px 0 0 !important;}
-          .bib-liste .bib-item{width:auto !important;border:1.5px solid #e5e7eb !important;border-radius:999px !important;padding:6px 12px !important;min-height:36px;}
+          .bib-liste .bib-item{width:auto !important;border:1.5px solid rgba(255,255,255,0.2) !important;border-radius:999px !important;padding:6px 12px !important;min-height:36px;}
         }
       `}</style>
-      <aside className="bib-panneau" style={S.panneau}>{panneau}</aside>
+      <aside ref={ref} className="bib-panneau" style={S.panneau}>{panneau}</aside>
       <main style={{ minWidth: 0 }}>{children}</main>
     </div>
   )
@@ -78,7 +102,7 @@ export function ItemTri({ actif, coche, n, icone, onClick, children }) {
   const caseACocher = coche !== undefined
   const fonce = !caseACocher && actif
   return (
-    <button onClick={onClick} aria-pressed={caseACocher ? coche : actif} className="bib-item"
+    <button onClick={onClick} aria-pressed={caseACocher ? coche : actif} className={caseACocher ? 'bib-item bib-case' : 'bib-item'}
       style={{ ...S.item, ...(fonce ? S.itemActif : {}) }}>
       {caseACocher && (
         <span style={{ ...S.case, ...(coche ? S.caseCochee : {}) }}>
@@ -87,7 +111,7 @@ export function ItemTri({ actif, coche, n, icone, onClick, children }) {
       )}
       {icone && <span style={{ display: 'flex', flexShrink: 0 }}><Icon name={icone} size={16} /></span>}
       <span style={{ flex: 1, minWidth: 0, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
-      {n !== undefined && <span style={{ ...S.n, ...(fonce ? { color: '#e4f816' } : {}) }}>{n}</span>}
+      {n !== undefined && <span style={{ ...S.n, ...(fonce ? { color: '#1a1a1a' } : {}) }}>{n}</span>}
     </button>
   )
 }
@@ -139,24 +163,25 @@ export const BIB = {
 
 const S = {
   cadre:       { maxWidth: 1240, margin: '0 auto', padding: '24px', display: 'grid', gridTemplateColumns: '248px 1fr', gap: 24, alignItems: 'start', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
-  panneau:     { position: 'sticky', top: 16, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', overscrollBehavior: 'contain', display: 'flex', flexDirection: 'column', gap: 20, paddingRight: 4 },
+  // Panneau de tri : bloc anthracite, séparé visuellement des cartes blanches
+  panneau:     { position: 'sticky', top: HAUT_FIXE, overflowY: 'auto', overscrollBehavior: 'contain', display: 'flex', flexDirection: 'column', gap: 20, background: '#333333', color: 'white', borderRadius: 16, padding: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' },
   groupeBouton: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', textTransform: 'inherit', letterSpacing: 'inherit' },
-  resume:      { marginLeft: 6, textTransform: 'none', letterSpacing: 0, fontWeight: 700, color: '#333333', background: '#e5e7eb', borderRadius: 999, padding: '1px 8px' },
-  titre:       { fontSize: '1.5rem', fontWeight: 800, color: '#333333', margin: 0, letterSpacing: '-0.01em' },
-  sous:        { color: '#6b7280', fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.45 },
-  recherche:   { display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0 12px', height: 40, color: '#6b7280' },
-  rechercheInput: { border: 'none', outline: 'none', flex: 1, minWidth: 0, fontSize: '0.85rem', color: '#333333', background: 'none', fontFamily: 'inherit' },
-  groupeTete:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' },
-  lien:        { background: 'none', border: 'none', padding: 0, color: '#6b7280', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textTransform: 'none', letterSpacing: 0, fontFamily: 'inherit' },
-  zone:        { fontSize: '0.72rem', color: '#6b7280', fontWeight: 700, margin: '10px 10px 2px' },
-  item:        { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#374151', background: 'none', border: 'none', width: '100%', fontFamily: 'inherit' },
-  itemActif:   { background: '#333333', color: 'white' },
-  n:           { marginLeft: 'auto', color: '#6b7280', fontWeight: 600, fontSize: '0.75rem', fontVariantNumeric: 'tabular-nums' },
-  case:        { width: 16, height: 16, border: '1.5px solid #c4c8cf', borderRadius: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white', color: '#e4f816' },
-  caseCochee:  { background: '#333333', borderColor: '#333333' },
-  seg:         { display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#ebebeb', borderRadius: 10, padding: 3 },
-  segBtn:      { border: 'none', background: 'none', borderRadius: 8, padding: '7px 0', fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit' },
-  segBtnActif: { background: 'white', color: '#333333', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
+  resume:      { marginLeft: 6, textTransform: 'none', letterSpacing: 0, fontWeight: 700, color: '#1a1a1a', background: '#e4f816', borderRadius: 999, padding: '1px 8px' },
+  titre:       { fontSize: '1.4rem', fontWeight: 800, color: 'white', margin: 0, letterSpacing: '-0.01em' },
+  sous:        { color: 'rgba(255,255,255,0.65)', fontSize: '0.8rem', margin: '4px 0 0', lineHeight: 1.45 },
+  recherche:   { display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '0 12px', height: 40, color: 'rgba(255,255,255,0.6)' },
+  rechercheInput: { border: 'none', outline: 'none', flex: 1, minWidth: 0, fontSize: '0.85rem', color: 'white', background: 'none', fontFamily: 'inherit' },
+  groupeTete:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' },
+  lien:        { background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textTransform: 'none', letterSpacing: 0, fontFamily: 'inherit' },
+  zone:        { fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', fontWeight: 700, margin: '10px 10px 2px' },
+  item:        { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'rgba(255,255,255,0.88)', background: 'none', border: 'none', width: '100%', fontFamily: 'inherit' },
+  itemActif:   { background: '#e4f816', color: '#1a1a1a', fontWeight: 700 },
+  n:           { marginLeft: 'auto', color: 'rgba(255,255,255,0.55)', fontWeight: 600, fontSize: '0.75rem', fontVariantNumeric: 'tabular-nums' },
+  case:        { width: 16, height: 16, border: '1.5px solid rgba(255,255,255,0.45)', borderRadius: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', color: '#1a1a1a' },
+  caseCochee:  { background: '#e4f816', borderColor: '#e4f816' },
+  seg:         { display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 3 },
+  segBtn:      { border: 'none', background: 'none', borderRadius: 8, padding: '7px 0', fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: 'inherit' },
+  segBtnActif: { background: 'white', color: '#333333' },
   puce:        { display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 999, padding: '3px 4px 3px 11px', fontSize: '0.75rem', fontWeight: 700, color: '#374151' },
   puceX:       { width: 20, height: 20, borderRadius: '50%', background: '#f3f4f6', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', cursor: 'pointer', padding: 0 },
 }
