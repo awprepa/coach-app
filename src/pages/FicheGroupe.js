@@ -71,9 +71,6 @@ export default function FicheGroupe() {
   const [wellnessMap, setWellnessMap]     = useState({})  // { client_id: dernier wellness }
   const [wellnessDetail, setWellnessDetail] = useState(false) // détail des wellness du jour
   const [manquantsOuverts, setManquantsOuverts] = useState(false) // liste « pas encore rempli » dépliée
-  const [sgMembres, setSgMembres] = useState(new Set()) // client_id présents dans au moins un sous-groupe
-  const [sgCompte, setSgCompte] = useState({}) // sous-groupe -> nombre de membres
-  const [sansSGOuvert, setSansSGOuvert] = useState(false)
   const [eventsCountMap, setEventsCountMap] = useState({}) // { client_id: nb événements cette semaine }
   const [programmes, setProgrammes]       = useState([])
   const [loading, setLoading]             = useState(true)
@@ -110,6 +107,12 @@ export default function FicheGroupe() {
 
   // ── Vue d'ensemble — nouveaux widgets ───────────────────────────────────────
   const [classementFFR, setClassementFFR] = useState([])
+  const [onglets, setOnglets]             = useState(null) // { equipe: {id, nom, n}, sgs: [{id, nom, n}], sans } — onglets équipe / sous-groupes
+  const [sgParClient, setSgParClient]     = useState({})   // { client_id: [noms des sous-groupes] }
+  const [idsCal, setIdsCal]               = useState([])   // groupes dont on montre les événements (le sous-groupe + son équipe)
+  const [prochainMatch, setProchainMatch] = useState(null) // { date, heure, adversaire, domicile }
+  const [bascule, setBascule]             = useState(false) // changement d'onglet en cours
+  const [menuOuvert, setMenuOuvert]       = useState(false)
   const [classementSrc, setClassementSrc] = useState(null) // groupe dont on affiche le classement (lui-même, ou son équipe pour un sous-groupe)
   const [prochain, setProchain]           = useState(null)     // { evenement, blocs: [{ nom, dureeMin, sequences }] }
   const [monthEvents, setMonthEvents]     = useState({})       // { 'YYYY-MM-DD': [type,...] }
@@ -124,8 +127,12 @@ export default function FicheGroupe() {
   const [blesses, setBlesses]             = useState([]) // joueurs blessés du groupe [{ nomComplet, description, duree_estimee, date_retour_prevue }]
 
   // ── Chargement ────────────────────────────────────────────────────────────
-  useEffect(() => { load() }, [id]) // eslint-disable-line
-  useEffect(() => { if (groupe?.id) loadMonthEvents() }, [groupe?.id, calMonth]) // eslint-disable-line
+  // Passer d'un onglet (équipe / sous-groupe) à l'autre recharge sans écran de chargement
+  useEffect(() => {
+    if (groupe) setBascule(true)
+    load(!!groupe).then(() => setBascule(false))
+  }, [id]) // eslint-disable-line
+  useEffect(() => { if (idsCal.length) loadMonthEvents() }, [idsCal, calMonth]) // eslint-disable-line
 
   async function load(silent = false) {
     if (!silent) setLoading(true)
@@ -160,34 +167,70 @@ export default function FicheGroupe() {
     }
     setMembres(membresList)
 
-    // Membres déjà répartis dans un sous-groupe (pour lister ceux qui ne le sont pas)
-    if (sg?.length) {
-      const { data: sgm } = await supabase.from('groupe_membres').select('groupe_id, client_id').in('groupe_id', sg.map(x => x.id))
-      setSgMembres(new Set((sgm || []).map(r => r.client_id)))
-      const compte = {}
-      for (const r of (sgm || [])) compte[r.groupe_id] = (compte[r.groupe_id] || 0) + 1
-      setSgCompte(compte)
-    } else {
-      setSgMembres(new Set())
-      setSgCompte({})
-    }
     setProgrammes(progs || [])
 
     // Poste principal de chaque membre — vient de l'effectif (groupe_joueurs
     // liés par client_id), pas des clients directement.
-    const { data: joueursData } = await supabase
-      .from('groupe_joueurs').select('client_id, prenom, nom, joueur_postes(poste, is_primary), joueur_blessures(statut, description, duree_estimee, date_retour_prevue)')
-      .eq('groupe_id', id).not('client_id', 'is', null)
+    // Un sous-groupe affiche aussi le calendrier et les fiches de son équipe ;
+    // une équipe lit aussi les fiches rangées dans ses sous-groupes.
+    let p = null
+    if (g?.parent_id) {
+      ({ data: p } = await supabase.from('groupes').select('id, nom, type, logo_url, monclubhouse_url, monclubhouse_competition, monclubhouse_competition_espoirs').eq('id', g.parent_id).single())
+    }
+    setParent(p)
+    const estSG = !!(p && p.type !== 'club')
+    const lies = estSG ? [id, p.id] : [id]
+    setIdsCal(lies)
+
+    // Onglets : l'équipe, ses sous-groupes et les joueurs sans sous-groupe
+    const equipe = estSG ? p : g
+    let freres = sg || [], frMembres = null, nEquipe = membresList.length, idsEquipe = new Set(membresList.map(m => m.id))
+    if (estSG) {
+      const [{ data: fr }, { data: em }] = await Promise.all([
+        supabase.from('groupes').select('*').eq('parent_id', p.id).order('created_at'),
+        supabase.from('groupe_membres').select('client_id').eq('groupe_id', p.id),
+      ])
+      freres = fr || []
+      idsEquipe = new Set((em || []).map(r => r.client_id))
+      nEquipe = idsEquipe.size
+    }
+    if (freres.length) {
+      ({ data: frMembres } = await supabase.from('groupe_membres').select('groupe_id, client_id').in('groupe_id', freres.map(x => x.id)))
+    }
+    const parClient = {}
+    for (const r of (frMembres || [])) {
+      const nomSG = freres.find(x => x.id === r.groupe_id)?.nom
+      if (nomSG) (parClient[r.client_id] ||= []).push(nomSG)
+    }
+    setSgParClient(parClient)
+    setOnglets(g?.type === 'club' || !freres.length ? null : {
+      equipe: { id: equipe.id, nom: equipe.nom, n: nEquipe },
+      sgs: freres.map(x => ({ id: x.id, nom: x.nom, n: (frMembres || []).filter(r => r.groupe_id === x.id).length })),
+      sans: [...idsEquipe].filter(c => !parClient[c]).length,
+    })
+
+    const idsJoueurs = estSG ? lies : [id, ...(sg || []).map(x => x.id)]
+    const { data: joueursTous } = await supabase
+      .from('groupe_joueurs').select('groupe_id, client_id, prenom, nom, joueur_postes(poste, is_primary), joueur_blessures(statut, description, duree_estimee, date_retour_prevue)')
+      .in('groupe_id', idsJoueurs).not('client_id', 'is', null)
+    // Une fiche par joueur : celle du groupe affiché d'abord, sinon celle de l'équipe ou d'un sous-groupe
+    const idsMembres = new Set(membresList.map(m => m.id))
+    const joueursData = []
+    const vusJ = new Set()
+    for (const j of [...(joueursTous || [])].sort((a, b) => (b.groupe_id === id) - (a.groupe_id === id))) {
+      if (!idsMembres.has(j.client_id) || vusJ.has(j.client_id)) continue
+      vusJ.add(j.client_id); joueursData.push(j)
+    }
     const pMap = {}
-    for (const j of (joueursData || [])) {
+    for (const j of joueursData) {
       if (!j.client_id) continue
       const postes = j.joueur_postes || []
       const primary = postes.find(p => p.is_primary) || postes[0]
       if (primary) pMap[j.client_id] = POSTE_NOMS[primary.poste] || `Poste ${primary.poste}`
     }
     setPosteMap(pMap)
-    setRosterClientIds(new Set((joueursData || []).map(j => j.client_id)))
-    setBlesses((joueursData || [])
+    setRosterClientIds(new Set((joueursTous || []).filter(j => j.groupe_id === id).map(j => j.client_id)))
+    setBlesses(joueursData
       .map(j => ({ j, bl: getActiveBlessure(j.joueur_blessures) }))
       .filter(({ bl }) => bl)
       .map(({ j, bl }) => ({
@@ -225,12 +268,6 @@ export default function FicheGroupe() {
       setEventsCountMap({})
     }
 
-    let p = null
-    if (g?.parent_id) {
-      ({ data: p } = await supabase.from('groupes').select('id, nom, type, logo_url, monclubhouse_url, monclubhouse_competition, monclubhouse_competition_espoirs').eq('id', g.parent_id).single())
-    }
-    setParent(p)
-
     // Classement FFR — seulement si le groupe est relié à monclubhouse (même source que l'onglet Compétition).
     // Un sous-groupe sans lien à lui reprend le classement de son équipe.
     const src = g?.monclubhouse_url ? g : (p && p.type !== 'club' && p.monclubhouse_url ? p : null)
@@ -256,7 +293,7 @@ export default function FicheGroupe() {
     // Prochain entraînement (le plus proche à venir) + ses blocs/séquences
     const todayISO = isoLocal()
     const { data: nextEvts } = await supabase.from('groupe_evenements')
-      .select('*').eq('groupe_id', id).eq('type', 'entrainement')
+      .select('*').in('groupe_id', lies).eq('type', 'entrainement')
       .gte('date', todayISO).order('date').order('heure').limit(1)
     const nextEvt = nextEvts?.[0] || null
     if (nextEvt) {
@@ -278,6 +315,20 @@ export default function FicheGroupe() {
       setProchain(null)
     }
 
+    // Prochain match : calendrier FFR de l'équipe, sinon match saisi à la main
+    const [{ data: mFFR }, { data: mEv }] = await Promise.all([
+      supabase.from('matchs_ffr').select('date_match, heure, equipe_dom, equipe_ext, est_domicile').eq('groupe_id', equipe?.id || id)
+        .gte('date_match', todayISO).order('date_match').limit(1),
+      supabase.from('groupe_evenements').select('date, heure, titre, adversaire, domicile').in('groupe_id', lies).eq('type', 'match')
+        .gte('date', todayISO).order('date').limit(1),
+    ])
+    const f = mFFR?.[0], e = mEv?.[0]
+    const matchs = [
+      f && { date: f.date_match, heure: f.heure, adversaire: f.est_domicile ? f.equipe_ext : f.equipe_dom, domicile: f.est_domicile },
+      e && { date: e.date, heure: e.heure, adversaire: e.adversaire || e.titre, domicile: e.domicile },
+    ].filter(Boolean).sort((a, b) => a.date.localeCompare(b.date))
+    setProchainMatch(matchs[0] || null)
+
     if (!silent) setLoading(false)
   }
 
@@ -288,7 +339,7 @@ export default function FicheGroupe() {
     const endDate = new Date(y, m + 1, 0)
     const end = `${y}-${String(m + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
     const { data } = await supabase.from('groupe_evenements')
-      .select('date, type').eq('groupe_id', id).gte('date', start).lte('date', end)
+      .select('date, type').in('groupe_id', idsCal).gte('date', start).lte('date', end)
     const map = {}
     for (const e of (data || [])) { (map[e.date] ||= []).push(e.type) }
     setMonthEvents(map)
@@ -381,21 +432,15 @@ export default function FicheGroupe() {
         type: groupe?.type === 'club' ? 'equipe' : 'sous_groupe',
       }]).select().single()
     if (error) { alert(error.message); return }
-    setSousGroupes([...sousGroupes, data])
     setNewSGNom('')
     setShowAddSG(false)
-  }
-
-  async function supprimerSousGroupe(sgId) {
-    if (!window.confirm('Supprimer ce sous-groupe et tous ses membres ?')) return
-    await supabase.from('groupes').delete().eq('id', sgId)
-    setSousGroupes(sousGroupes.filter(s => s.id !== sgId))
+    navigate(`/groupe/${data.id}`)
   }
 
   async function supprimerGroupe() {
     if (!window.confirm(`Supprimer le groupe "${groupe?.nom}" ? Les membres redeviendront des clients individuels.`)) return
     await supabase.from('groupes').delete().eq('id', id)
-    navigate('/clients')
+    navigate(parent ? `/groupe/${parent.id}` : '/clients')
   }
 
   // ── Membres ────────────────────────────────────────────────────────────────
@@ -403,7 +448,7 @@ export default function FicheGroupe() {
   // le groupe principal (ils y restent), plutôt que de proposer des clients
   // qui n'y sont pas.
   async function ouvrirAddMembre() {
-    if (groupe?.parent_id) return ouvrirTransfererMembre()
+    if (parent && parent.type !== 'club') return ouvrirTransfererMembre()
     // Charger tous les clients qui ne sont dans AUCUN groupe
     const { data: tousMembres } = await supabase.from('groupe_membres').select('client_id')
     const membresIds = new Set((tousMembres || []).map(m => m.client_id))
@@ -448,7 +493,7 @@ export default function FicheGroupe() {
   }
 
   async function ajouterMembresSelectionnes() {
-    if (groupe?.parent_id) return transfererMembresSelectionnes()
+    if (parent && parent.type !== 'club') return transfererMembresSelectionnes()
     if (!selectedCandidats.size) return
     setAddingMembres(true)
     const newIds = [...selectedCandidats]
@@ -860,6 +905,16 @@ export default function FicheGroupe() {
 
   const accent = groupe.couleur || '#333333'
   const estClub = groupe.type === 'club'
+  const estSG = !!(parent && parent.type !== 'club')
+  // Onglet « Sans sous-groupe » : la page de l'équipe limitée aux joueurs non répartis
+  const vueSans = searchParams.get('vue') === 'sans' && !estSG && !!onglets?.sgs.length
+  const membresVue = vueSans ? membres.filter(m => !sgParClient[m.id]) : membres
+  const idsVue = new Set(membresVue.map(m => m.id))
+  const blessesVue = blesses.filter(b => idsVue.has(b.clientId))
+  const blessesParClient = Object.fromEntries(blesses.map(b => [b.clientId, b]))
+  const nousClassement = classementSrc && classementFFR
+    .filter(c => (c.competition || null) === (classementSrc.monclubhouse_competition || null))
+    .find(c => c.equipe?.toLowerCase().includes(classementSrc.nom.toLowerCase()) || classementSrc.nom.toLowerCase().includes(c.equipe?.toLowerCase()))
 
   // ── Membres — recherche + filtre + tri (nom de famille affiché en premier) ──
   function membreAvg(m) {
@@ -873,7 +928,7 @@ export default function FicheGroupe() {
     const w = wellnessMap[m.id]
     return w ? WELLNESS_DIMS.some(([k]) => w[k] <= 2) : false
   }
-  const membresAffiches = membres
+  const membresAffiches = membresVue
     .filter(m => `${m.prenom} ${m.nom}`.toLowerCase().includes(membreSearch.toLowerCase()))
     .filter(m => {
       if (membreFiltre !== 'surveiller') return true
@@ -894,16 +949,15 @@ export default function FicheGroupe() {
 
   // ── Wellness du jour ──
   const todayISOW = isoLocal()
-  const wellnessDuJour = membres
+  const wellnessDuJour = membresVue
     .filter(m => wellnessMap[m.id]?.date === todayISOW)
     .map(m => ({ m, w: wellnessMap[m.id], avg: membreAvg(m), alerte: membreAlerte(m) }))
     .sort((a, b) => (b.alerte - a.alerte) || (a.avg - b.avg))
-  const wellnessManquants = membres.filter(m => wellnessMap[m.id]?.date !== todayISOW)
+  const wellnessManquants = membresVue.filter(m => wellnessMap[m.id]?.date !== todayISOW)
     .sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
   const wellnessMoyenne = wellnessDuJour.length
     ? wellnessDuJour.reduce((s, x) => s + x.avg, 0) / wellnessDuJour.length : null
   const wellnessAlertes = wellnessDuJour.filter(x => x.alerte)
-  const basses = w => WELLNESS_DIMS.filter(([k]) => w[k] <= 2).map(([k, l]) => `${l} ${w[k]}`).join(' · ')
 
   // ── Mini calendrier ──
   const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
@@ -919,12 +973,6 @@ export default function FicheGroupe() {
 
   // ── Prochain entraînement — timeline proportionnelle à la durée ──
   const BLOC_TIMELINE_COLORS = ['#2c5faa', '#b45309', '#1d4ed8', '#7c3aed', '#0f766e', '#be185d']
-
-  // Hauteur totale fixe commune aux 3 panneaux Membres / Classement / Prochain
-  // entraînement, pour qu'ils restent alignés quel que soit leur contenu
-  // (grid align-items:stretch ne suffit pas : les tracks "auto" se calent sur
-  // le contenu max avant tout rétrécissement flex, d'où une hauteur explicite).
-  const DASH_ROW_H = 400
 
 
   return (
@@ -944,36 +992,42 @@ export default function FicheGroupe() {
           .fg-header{flex-wrap:wrap;gap:0.75rem;}
           .fg-actions{width:100%;}
           .fg-actions button{flex:1;}
-          .fg-row2{grid-template-columns:1fr !important;}
-          .fg-row2b{grid-template-columns:1fr !important;}
-          .fg-row3{grid-template-columns:1fr !important;}
+          .fg-bande{grid-template-columns:1fr 1fr !important;}
+          .fg-grille{grid-template-columns:1fr !important;}
         }
+        .fg-onglet:not([aria-current]):hover{background:#ececec !important;color:#1a1a1a !important;}
       `}</style>
       {/* ── Header groupe ── */}
-      <div className="fg-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+      <div className="fg-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', marginBottom: onglets && tab === 'groupe' ? '1.5rem' : '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {groupe.logo_url
-            ? <img loading="lazy" src={groupe.logo_url} alt={groupe.nom} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 12 }} />
-            : <div style={{ width: 64, height: 64, borderRadius: 12, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.3rem', color: accent }}>
+            ? <img loading="lazy" src={groupe.logo_url} alt={groupe.nom} style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 12 }} />
+            : <div style={{ width: 56, height: 56, borderRadius: 12, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.15rem', color: accent }}>
                 {groupe.nom.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
               </div>
           }
           <div>
-            {estClub && <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Club</p>}
-            {parent && <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{parent.type === 'club' ? 'Équipe' : 'Sous-groupe'} de {parent.nom}</p>}
-            <h1 style={{ margin: 0, fontSize: '1.9rem', fontWeight: '900', color: '#1a1a1a' }}>{groupe.nom}</h1>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-              <span style={{ background: accent + '18', color: accent, border: `1px solid ${accent}44`, borderRadius: 999, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '700' }}>
-                {estClub ? `${membres.length} joueur${membres.length > 1 ? 's' : ''} au total` : `${membres.length} membre${membres.length > 1 ? 's' : ''}`}
-              </span>
-              <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: 999, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '700' }}>
-                {sousGroupes.length} {estClub ? 'équipe' : 'sous-groupe'}{sousGroupes.length > 1 ? 's' : ''}
-              </span>
-            </div>
+            <p style={{ margin: '0 0 0.25rem', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {estClub ? 'Club' : estSG ? `Sous-groupe · ${parent.nom}` : parent ? `Équipe · ${parent.nom}` : 'Équipe'}
+            </p>
+            <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: '900', color: '#1a1a1a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>{groupe.nom}</h1>
+            {estClub && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ background: '#333', color: '#fff', borderRadius: 999, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '700' }}>
+                  {membres.length} joueur{membres.length > 1 ? 's' : ''} au total
+                </span>
+                <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: 999, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '700' }}>
+                  {sousGroupes.length} équipe{sousGroupes.length > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-        <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="fg-actions" style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
           {!estClub && <>
+          <button onClick={() => setTab('calendrier')} style={S.btnSecondary}>
+            <IcoCalendar /> Calendrier
+          </button>
           <button onClick={() => setTab('blessures')} style={S.btnSecondary}>
             <IcoCross /> Suivi blessures
           </button>
@@ -981,17 +1035,62 @@ export default function FicheGroupe() {
             <IcoChart /> Tests physiques
           </button>
           </>}
-          <button onClick={() => setEditOpen(true)} style={S.btnSecondary}>
-            <IcoEdit /> Modifier
+          <button onClick={() => setMenuOuvert(o => !o)} aria-label="Modifier ou supprimer" aria-expanded={menuOuvert}
+            style={{ ...S.btnSecondary, padding: '0.65rem 0.8rem' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg>
           </button>
-          <button onClick={supprimerGroupe} style={{ ...S.btnSecondary, color: '#dc2626', borderColor: '#fee2e2' }}>
-            <IcoTrash /> Supprimer
-          </button>
+          {menuOuvert && <>
+            <div onClick={() => setMenuOuvert(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
+            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 21, background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: 6, minWidth: 180 }}>
+              <button onClick={() => { setMenuOuvert(false); setEditOpen(true) }} style={S.menuItem}><IcoEdit /> Modifier</button>
+              <button onClick={() => { setMenuOuvert(false); supprimerGroupe() }} style={{ ...S.menuItem, color: '#dc2626' }}><IcoTrash /> Supprimer</button>
+            </div>
+          </>}
         </div>
       </div>
 
-      {/* ── Barre accent ── */}
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}44)`, borderRadius: 999, marginBottom: '1.25rem' }} />
+      {/* ── Onglets équipe / sous-groupes : on passe de l'un à l'autre sans quitter la page ── */}
+      {onglets && tab === 'groupe' && (
+        <div className="fg-onglets" style={{ display: 'flex', alignItems: 'flex-end', gap: 4, borderBottom: '1px solid #e5e7eb', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          {[
+            { key: 'equipe', nom: "Toute l'équipe", n: onglets.equipe.n, actif: groupe.id === onglets.equipe.id && !vueSans, go: () => navigate(`/groupe/${onglets.equipe.id}`) },
+            ...onglets.sgs.map(x => ({ key: x.id, nom: x.nom, n: x.n, actif: groupe.id === x.id, go: () => navigate(`/groupe/${x.id}`) })),
+            ...(onglets.sgs.length && onglets.sans ? [{ key: 'sans', nom: 'Sans sous-groupe', n: onglets.sans, actif: vueSans, discret: true,
+              go: () => groupe.id === onglets.equipe.id ? setSearchParams({ vue: 'sans' }) : navigate(`/groupe/${onglets.equipe.id}?vue=sans`) }] : []),
+          ].map(o => (
+            <button key={o.key} onClick={() => !o.actif && o.go()} aria-current={o.actif ? 'page' : undefined} className="fg-onglet"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 1rem', border: 'none', borderRadius: '10px 10px 0 0', font: 'inherit', fontSize: '0.88rem', fontWeight: 700, cursor: o.actif ? 'default' : 'pointer',
+                background: o.actif ? '#333333' : 'transparent', color: o.actif ? '#fff' : o.discret ? '#9ca3af' : '#5b626c', transition: 'background .15s, color .15s' }}>
+              {o.nom}<span style={{ fontSize: '0.75rem', fontWeight: 700, color: o.actif ? '#e4f816' : '#9ca3af' }}>{o.n}</span>
+            </button>
+          ))}
+          {!estSG && (
+            <button onClick={() => setShowAddSG(v => !v)} className="fg-onglet"
+              style={{ marginLeft: 'auto', height: 40, padding: '0 0.75rem', border: 'none', background: 'none', font: 'inherit', fontSize: '0.82rem', fontWeight: 700, color: '#6b7280', cursor: 'pointer' }}>
+              + Sous-groupe
+            </button>
+          )}
+        </div>
+      )}
+      {showAddSG && !estSG && tab === 'groupe' && (
+        <div style={{ ...S.panel, display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', padding: '0.9rem 1.1rem', marginBottom: '1.5rem' }}>
+          <input
+            autoFocus value={newSGNom} onChange={e => setNewSGNom(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && creerSousGroupe()}
+            placeholder="Nom du sous-groupe..." style={{ ...S.input, flex: 1, minWidth: 200 }}
+          />
+          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={() => setNewSGCouleur('')}
+              style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            {PALETTE_SG.map(c => (
+              <button key={c} onClick={() => setNewSGCouleur(c)}
+                style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+            ))}
+          </div>
+          <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
+          <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#6b7280', fontWeight: '600' }}>Annuler</button>
+        </div>
+      )}
 
       {tab === 'calendrier' ? (
         <CalendrierSaison groupeId={id} embedded openEventId={openEventId} />
@@ -1005,51 +1104,204 @@ export default function FicheGroupe() {
         <ClubEquipes club={groupe} equipes={sousGroupes} onCree={() => load(true)} />
       ) : (
       <>
-      {/* ── Ligne 1 : Intensité (prioritaire, en haut) + mini calendrier ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1.4fr 0.8fr 1fr' }} className="fg-row2">
+      <div style={{ opacity: bascule ? 0.45 : 1, transition: 'opacity .15s' }}>
+      {/* ── Bandeau du jour : wellness, blessés, prochain match, classement ── */}
+      <div className="fg-bande" style={{ ...S.panel, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.5rem' }}>
+        <button onClick={() => setWellnessDetail(true)} style={S.kpi} title="Voir les wellness du jour">
+          <span style={S.kpiLabel}>Wellness du jour</span>
+          <span style={S.kpiVal}>{wellnessDuJour.length}<small style={S.kpiSur}>/ {membresVue.length}</small></span>
+          <span style={S.kpiSub}>
+            {wellnessMoyenne != null
+              ? <><span style={{ width: 8, height: 8, borderRadius: '50%', background: wellnessColor(wellnessMoyenne) }} />Moyenne {wellnessMoyenne.toFixed(1)} / 4</>
+              : 'Personne pour le moment'}
+            {wellnessAlertes.length > 0 && <strong style={{ color: '#dc2626' }}>· {wellnessAlertes.length} à surveiller</strong>}
+          </span>
+        </button>
+        <button onClick={() => setTab('blessures')} style={{ ...S.kpi, borderLeft: '1px solid #f3f4f6' }} title="Ouvrir le suivi blessures">
+          <span style={S.kpiLabel}>Blessés</span>
+          <span style={S.kpiVal}>{blessesVue.length}</span>
+          <span style={S.kpiSub}>{blessesVue.length ? blessesVue.map(b => b.nomComplet.split(' ').map((w, i) => i ? w[0] + '.' : w).join(' ')).join(', ') : 'Aucun'}</span>
+        </button>
+        <button onClick={() => setTab('calendrier')} style={{ ...S.kpi, borderLeft: '1px solid #f3f4f6' }} title="Ouvrir le calendrier">
+          <span style={S.kpiLabel}>Prochain match</span>
+          {prochainMatch ? <>
+            <span style={{ ...S.kpiVal, fontSize: '1.5rem' }}>{new Date(prochainMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+            <span style={S.kpiSub}>{[prochainMatch.adversaire, prochainMatch.domicile == null ? null : prochainMatch.domicile ? 'domicile' : 'extérieur', prochainMatch.heure?.slice(0, 5).replace(':', 'h')].filter(Boolean).join(' · ')}</span>
+          </> : <><span style={S.kpiVal}>–</span><span style={S.kpiSub}>Aucun match prévu</span></>}
+        </button>
+        <button onClick={() => classementFFR.length && setTab('classement')} style={{ ...S.kpi, borderLeft: '1px solid #f3f4f6', cursor: classementFFR.length ? 'pointer' : 'default' }}>
+          <span style={S.kpiLabel}>Classement{classementSrc && classementSrc.id !== groupe.id ? ` · ${classementSrc.nom}` : ''}</span>
+          {nousClassement ? <>
+            <span style={S.kpiVal}>{nousClassement.position}<small style={{ ...S.kpiSur, marginLeft: 1 }}>{nousClassement.position === 1 ? 'er' : 'e'}</small></span>
+            <span style={S.kpiSub}>{nousClassement.pts} pts · {nousClassement.joues} match{nousClassement.joues > 1 ? 's' : ''}</span>
+          </> : <><span style={S.kpiVal}>–</span><span style={S.kpiSub}>{classementSrc ? 'Pas encore synchronisé' : 'Non relié à la FFR'}</span></>}
+        </button>
+      </div>
+
+      {/* ── Colonne large : intensité + joueurs ; colonne étroite : entraînement, calendrier, programmes, classement ── */}
+      <div className="fg-grille" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(0, 1fr)', gap: '1.5rem', alignItems: 'start', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
+        {!estSG && (
         <div style={S.panel}>
           <div style={S.panelHead}><span style={S.panelLabel}>Intensité des entraînements</span></div>
           <div style={{ padding: '0 1.1rem 1.1rem' }}>
             <GroupeIntensite groupeId={id} accent={accent} />
           </div>
         </div>
+        )}
 
-        <div role="button" tabIndex={0} style={{ ...S.panel, cursor: 'pointer' }} onClick={() => setWellnessDetail(true)}
-          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setWellnessDetail(true)} title="Voir les wellness du jour">
-          <div style={S.panelHead}><span style={S.panelLabel}>Wellness du jour</span></div>
-          <div style={{ padding: '0 1.1rem 1.1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span style={{ fontSize: '2rem', fontWeight: 900, color: '#1a1a1a', lineHeight: 1 }}>{wellnessDuJour.length}</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#6b7280' }}>/ {membres.length} remplis</span>
+        <div style={{ ...S.panel, maxHeight: 640, display: 'flex', flexDirection: 'column' }}>
+          <div style={S.panelHead}><span style={S.panelLabel}>{vueSans ? 'Sans sous-groupe' : 'Joueurs'} · {membresVue.length}</span></div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 9, padding: '0.4rem 0.7rem' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+              <input value={membreSearch} onChange={e => setMembreSearch(e.target.value)} placeholder="Rechercher un membre..."
+                style={{ border: 'none', outline: 'none', background: 'transparent', font: 'inherit', fontSize: '0.8rem', width: '100%' }} />
             </div>
-            <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden', margin: '0.6rem 0 0.8rem' }}>
-              <div style={{ height: '100%', width: `${membres.length ? (wellnessDuJour.length / membres.length) * 100 : 0}%`, background: '#333333', borderRadius: 999 }} />
-            </div>
-            {wellnessMoyenne != null && (
-              <p style={{ margin: '0 0 0.5rem', fontSize: '0.82rem', color: '#374151', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: wellnessColor(wellnessMoyenne) }} />
-                Moyenne du groupe <strong style={{ color: '#1a1a1a' }}>{wellnessMoyenne.toFixed(1)} / 4</strong>
-              </p>
-            )}
-            {wellnessAlertes.length > 0 ? (
-              <>
-                <p style={{ margin: '0 0 0.35rem', fontSize: '0.78rem', fontWeight: 800, color: '#dc2626' }}>
-                  {wellnessAlertes.length} à surveiller
-                </p>
-                {wellnessAlertes.slice(0, 3).map(({ m, w }) => (
-                  <p key={m.id} style={{ margin: '0 0 0.2rem', fontSize: '0.78rem', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    <strong>{m.prenom} {m.nom?.[0]}.</strong> <span style={{ color: '#dc2626' }}>{basses(w)}</span>
-                  </p>
-                ))}
-                {wellnessAlertes.length > 3 && <p style={{ margin: 0, fontSize: '0.74rem', color: '#6b7280' }}>et {wellnessAlertes.length - 3} autre{wellnessAlertes.length > 4 ? 's' : ''}</p>}
-              </>
-            ) : wellnessDuJour.length > 0 ? (
-              <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Aucune note basse aujourd'hui.</p>
-            ) : (
-              <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Personne n'a encore rempli son wellness aujourd'hui.</p>
-            )}
-            <p style={{ margin: '0.75rem 0 0', fontSize: '0.78rem', fontWeight: 700, color: '#333333', textDecoration: 'underline', textUnderlineOffset: 3 }}>Voir le détail</p>
+            {[['tous', 'Tous'], ['surveiller', 'À surveiller']].map(([k, l]) => (
+              <button key={k} onClick={() => setMembreFiltre(k)}
+                style={{ font: 'inherit', fontSize: '0.74rem', fontWeight: 700, color: membreFiltre === k ? '#fff' : '#6b7280', background: membreFiltre === k ? '#333' : '#f3f4f6', border: 'none', borderRadius: 8, padding: '0.4rem 0.7rem', cursor: 'pointer' }}>
+                {l}
+              </button>
+            ))}
           </div>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+              <thead>
+                <tr>
+                  {[['nom', 'Nom'], ['poste', 'Poste'], ['wellness', 'Wellness']].map(([k, l]) => (
+                    <th key={k} onClick={() => toggleMembreSort(k)}
+                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 0.55rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                      {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
+                    </th>
+                  ))}
+                  {onglets?.sgs.length > 0 && <th style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 0.55rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>Sous-groupes</th>}
+                  <th style={{ padding: '0.4rem 0.5rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', width: 34, position: 'sticky', right: 0 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {membresAffiches.map(m => {
+                  const poste = posteMap[m.id]
+                  const avg = membreAvg(m)
+                  const alerte = membreAlerte(m)
+                  const col = avg !== null ? (alerte ? '#ef4444' : wellnessColor(avg)) : '#9ca3af'
+                  const w = wellnessMap[m.id]
+                  return (
+                    <tr key={m.id} onClick={async () => {
+                      if (!rosterClientIds.has(m.id)) {
+                        // Pas encore dans l'effectif (groupe_joueurs) → on le crée à la volée
+                        // pour pouvoir ouvrir directement sa fiche (statut, blessure…) sans
+                        // passer par un ajout manuel au poste.
+                        await supabase.from('groupe_joueurs').insert({
+                          groupe_id: id, client_id: m.id,
+                          prenom: m.prenom || '', nom: m.nom || '',
+                        })
+                        setRosterClientIds(prev => new Set(prev).add(m.id))
+                      }
+                      setEffectifOpen(true); setOpenJoueurClientId(m.id)
+                    }} style={{ cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
+                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.56rem', fontWeight: 800, flexShrink: 0 }}>
+                            {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
+                          </span>
+                          <span style={{ fontWeight: 700, color: '#333' }}>{m.nom} {m.prenom}</span>
+                          {blessesParClient[m.id] && (
+                            <span title={blessesParClient[m.id].description || 'Blessé'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', fontWeight: 700, color: '#b91c1c', whiteSpace: 'nowrap' }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626' }} />
+                              {formatRetour(blessesParClient[m.id].date_retour_prevue) || 'Blessé'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6', color: poste ? '#374151' : '#c4ccd4', fontSize: '0.74rem' }}>
+                        {poste || '—'}
+                      </td>
+                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
+                        {avg !== null ? (
+                          <div title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: col }} />{avg.toFixed(1)}
+                              {alerte && <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#ef4444', background: '#fee2e2', borderRadius: 999, padding: '0.05rem 0.4rem' }}>alerte</span>}
+                            </span>
+                            <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                              {WELLNESS_DIMS.map(([k, l]) => (
+                                <span key={k} style={{ fontSize: '0.62rem', fontWeight: 700, color: w[k] <= 2 ? '#ef4444' : '#9ca3af' }}>{l}{w[k]}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : <span style={{ color: '#c4ccd4' }}>—</span>}
+                      </td>
+                      {onglets?.sgs.length > 0 && (
+                        <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {(sgParClient[m.id] || []).map(n => (
+                              <span key={n} style={{ fontSize: '0.66rem', fontWeight: 700, borderRadius: 6, padding: '0.1rem 0.45rem', background: n === groupe.nom && estSG ? '#333' : '#f3f4f6', color: n === groupe.nom && estSG ? '#fff' : '#374151' }}>{n}</span>
+                            ))}
+                          </div>
+                        </td>
+                      )}
+                      <td style={{ padding: '0.32rem 0.5rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', position: 'sticky', right: 0, background: 'white' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); retirerMembre(m.id) }}
+                          title="Retirer du groupe"
+                          style={{ width: 24, height: 24, borderRadius: 7, border: 'none', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {membresAffiches.length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.78rem' }}>Aucun membre trouvé.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>
+            {estSG ? `+ Ajouter depuis ${parent?.nom || 'le groupe principal'}` : '+ Ajouter un membre'}
+          </button>
+        </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
+        <div role="button" tabIndex={0} style={{ ...S.panel, height: 300, display: 'flex', flexDirection: 'column', cursor: prochain ? 'pointer' : 'default' }}
+          onClick={() => prochain && openCalendrierEvent(prochain.evenement.id)} title={prochain ? "Ouvrir cet entraînement" : undefined}>
+          <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
+          {!prochain ? (
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, padding: '0 1.1rem 0.6rem', margin: 0 }}>
+                {new Date(prochain.evenement.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {prochain.evenement.heure ? ` · ${prochain.evenement.heure}` : ''}
+                {prochain.evenement.duree_min ? ` · ${prochain.evenement.duree_min} min` : ''}
+              </p>
+              {/* Chaque bloc remplit une part de la hauteur disponible proportionnelle
+                  à sa durée (flex-grow = dureeMin) : la carte s'étire pour occuper
+                  toute la hauteur de la carte,
+                  quel que soit le nombre de séquences à l'intérieur. */}
+              <div style={{ padding: '0 1.1rem 1.1rem', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {prochain.blocs.map((b, i) => (
+                  <div key={i} style={{ borderRadius: 6, padding: '5px 8px', position: 'relative', background: BLOC_TIMELINE_COLORS[i % BLOC_TIMELINE_COLORS.length],
+                    flex: `${Math.max(b.dureeMin, 1)} 1 0%`, minHeight: 20, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: b.hasSequences ? 20 : 0 }}>{b.nom}</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#fff', opacity: 0.85 }}>{b.dureeMin} min</span>
+                    {b.hasSequences && (
+                      <span title={`Aperçu des séquences jeu / récup — jeu effectif ${b.jeuMin} min`}
+                        onClick={e => e.stopPropagation()}
+                        style={{ position: 'absolute', top: 5, right: 5, width: 17, height: 17, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <IcoEye />
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div role="button" tabIndex={0} style={{ ...S.panel, cursor: 'pointer' }} onClick={() => setTab('calendrier')} title="Ouvrir le calendrier">
@@ -1101,271 +1353,6 @@ export default function FicheGroupe() {
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── Ligne 2 : Membres (triable, défilant) + Classement + Prochain entraînement ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1.15fr 0.7fr 0.75fr 0.75fr' }} className="fg-row2b">
-        <div style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column' }}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Membres · {membres.length}</span></div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0 1.1rem 0.7rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 9, padding: '0.4rem 0.7rem' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-              <input value={membreSearch} onChange={e => setMembreSearch(e.target.value)} placeholder="Rechercher un membre..."
-                style={{ border: 'none', outline: 'none', background: 'transparent', font: 'inherit', fontSize: '0.8rem', width: '100%' }} />
-            </div>
-            {[['tous', 'Tous'], ['surveiller', 'À surveiller']].map(([k, l]) => (
-              <button key={k} onClick={() => setMembreFiltre(k)}
-                style={{ font: 'inherit', fontSize: '0.74rem', fontWeight: 700, color: membreFiltre === k ? '#fff' : '#6b7280', background: membreFiltre === k ? '#333' : '#f3f4f6', border: 'none', borderRadius: 8, padding: '0.4rem 0.7rem', cursor: 'pointer' }}>
-                {l}
-              </button>
-            ))}
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-              <thead>
-                <tr>
-                  {[['nom', 'Nom'], ['poste', 'Poste'], ['wellness', 'Wellness']].map(([k, l]) => (
-                    <th key={k} onClick={() => toggleMembreSort(k)}
-                      style={{ textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.4rem 0.55rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
-                      {l} <span style={{ opacity: membreSort.key === k ? 1 : 0.3, color: membreSort.key === k ? accent : 'inherit' }}>{membreSort.key === k && membreSort.dir === -1 ? '↑' : '↓'}</span>
-                    </th>
-                  ))}
-                  <th style={{ padding: '0.4rem 0.5rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', width: 34, position: 'sticky', right: 0 }} />
-                </tr>
-              </thead>
-              <tbody>
-                {membresAffiches.map(m => {
-                  const poste = posteMap[m.id]
-                  const avg = membreAvg(m)
-                  const alerte = membreAlerte(m)
-                  const col = avg !== null ? (alerte ? '#ef4444' : wellnessColor(avg)) : '#9ca3af'
-                  const w = wellnessMap[m.id]
-                  return (
-                    <tr key={m.id} onClick={async () => {
-                      if (!rosterClientIds.has(m.id)) {
-                        // Pas encore dans l'effectif (groupe_joueurs) → on le crée à la volée
-                        // pour pouvoir ouvrir directement sa fiche (statut, blessure…) sans
-                        // passer par un ajout manuel au poste.
-                        await supabase.from('groupe_joueurs').insert({
-                          groupe_id: id, client_id: m.id,
-                          prenom: m.prenom || '', nom: m.nom || '',
-                        })
-                        setRosterClientIds(prev => new Set(prev).add(m.id))
-                      }
-                      setEffectifOpen(true); setOpenJoueurClientId(m.id)
-                    }} style={{ cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#fafafa'} onMouseLeave={e => e.currentTarget.style.background = ''}>
-                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ width: 20, height: 20, borderRadius: '50%', background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.56rem', fontWeight: 800, flexShrink: 0 }}>
-                            {(m.prenom?.[0] || '') + (m.nom?.[0] || '')}
-                          </span>
-                          <span style={{ fontWeight: 700, color: '#333' }}>{m.nom} {m.prenom}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6', color: poste ? '#374151' : '#c4ccd4', fontSize: '0.74rem' }}>
-                        {poste || '—'}
-                      </td>
-                      <td style={{ padding: '0.32rem 0.55rem', borderBottom: '1px solid #f3f4f6' }}>
-                        {avg !== null ? (
-                          <div title={`Som. ${w.sommeil} · Fat. ${w.fatigue} · Doul. ${w.douleurs} · Stress ${w.stress}`}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 800, color: col }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: col }} />{avg.toFixed(1)}
-                              {alerte && <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#ef4444', background: '#fee2e2', borderRadius: 999, padding: '0.05rem 0.4rem' }}>alerte</span>}
-                            </span>
-                            <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-                              {WELLNESS_DIMS.map(([k, l]) => (
-                                <span key={k} style={{ fontSize: '0.62rem', fontWeight: 700, color: w[k] <= 2 ? '#ef4444' : '#9ca3af' }}>{l}{w[k]}</span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : <span style={{ color: '#c4ccd4' }}>—</span>}
-                      </td>
-                      <td style={{ padding: '0.32rem 0.5rem', borderBottom: '1px solid #f3f4f6', textAlign: 'center', position: 'sticky', right: 0, background: 'white' }}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); retirerMembre(m.id) }}
-                          title="Retirer du groupe"
-                          style={{ width: 24, height: 24, borderRadius: 7, border: 'none', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 6L6 18M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {membresAffiches.length === 0 && (
-                  <tr><td colSpan={3} style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.78rem' }}>Aucun membre trouvé.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <button onClick={ouvrirAddMembre} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>
-            {groupe.parent_id ? `+ Ajouter depuis ${parent?.nom || 'le groupe principal'}` : '+ Ajouter un membre'}
-          </button>
-        </div>
-
-        <div role="button" tabIndex={0} style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: classementFFR.length > 0 ? 'pointer' : 'default' }}
-          onClick={() => classementFFR.length > 0 && setTab('classement')} title={classementFFR.length > 0 ? 'Ouvrir le classement complet' : undefined}>
-          <div style={S.panelHead}>
-            <span style={S.panelLabel}>Classement</span>
-            {classementSrc && classementSrc.id !== groupe.id && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600 }}>{classementSrc.nom}</span>}
-          </div>
-          {!classementSrc ? (
-            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Relie ce groupe à monclubhouse.ffr.fr (bouton Modifier) pour afficher le classement.</p>
-          ) : classementFFR.length === 0 ? (
-            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
-          ) : (
-            <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {classementFFR.filter(c => (c.competition || null) === (classementSrc.monclubhouse_competition || null)).map(c => {
-                const isOurs = c.equipe?.toLowerCase().includes(classementSrc.nom.toLowerCase()) || classementSrc.nom.toLowerCase().includes(c.equipe?.toLowerCase())
-                const logoAff = (isOurs && classementSrc.logo_url) || c.logo
-                return (
-                  <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
-                    <span style={{ fontSize: '0.68rem', color: isOurs ? accent : '#9ca3af', fontWeight: 800, width: 16, flexShrink: 0 }}>{c.position}</span>
-                    {logoAff
-                      ? <img loading="lazy" src={logoAff} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
-                      : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#6b7280', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
-                    }
-                    <span style={{ flex: 1, fontSize: '0.75rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.equipe}</span>
-                    <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, width: 14, textAlign: 'right' }}>{c.joues}</span>
-                    <span style={{ fontSize: '0.75rem', color: isOurs ? accent : '#1a1a1a', fontWeight: 900, width: 20, textAlign: 'right' }}>{c.pts}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        <div role="button" tabIndex={0} style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: prochain ? 'pointer' : 'default' }}
-          onClick={() => prochain && openCalendrierEvent(prochain.evenement.id)} title={prochain ? "Ouvrir cet entraînement" : undefined}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Prochain entraînement</span></div>
-          {!prochain ? (
-            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Aucun entraînement à venir de planifié.</p>
-          ) : (
-            <>
-              <p style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, padding: '0 1.1rem 0.6rem', margin: 0 }}>
-                {new Date(prochain.evenement.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                {prochain.evenement.heure ? ` · ${prochain.evenement.heure}` : ''}
-                {prochain.evenement.duree_min ? ` · ${prochain.evenement.duree_min} min` : ''}
-              </p>
-              {/* Chaque bloc remplit une part de la hauteur disponible proportionnelle
-                  à sa durée (flex-grow = dureeMin) : la carte s'étire pour occuper
-                  toute la hauteur de la ligne (alignée sur Membres/Classement),
-                  quel que soit le nombre de séquences à l'intérieur. */}
-              <div style={{ padding: '0 1.1rem 1.1rem', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {prochain.blocs.map((b, i) => (
-                  <div key={i} style={{ borderRadius: 6, padding: '5px 8px', position: 'relative', background: BLOC_TIMELINE_COLORS[i % BLOC_TIMELINE_COLORS.length],
-                    flex: `${Math.max(b.dureeMin, 1)} 1 0%`, minHeight: 20, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: b.hasSequences ? 20 : 0 }}>{b.nom}</span>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#fff', opacity: 0.85 }}>{b.dureeMin} min</span>
-                    {b.hasSequences && (
-                      <span title={`Aperçu des séquences jeu / récup — jeu effectif ${b.jeuMin} min`}
-                        onClick={e => e.stopPropagation()}
-                        style={{ position: 'absolute', top: 5, right: 5, width: 17, height: 17, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <IcoEye />
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div role="button" tabIndex={0} onClick={() => setTab('blessures')} title="Ouvrir le suivi blessures du groupe"
-          style={{ ...S.panel, height: DASH_ROW_H, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Blessés · {blesses.length}</span></div>
-          {blesses.length === 0 ? (
-            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Aucun joueur blessé actuellement.</p>
-          ) : (
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {blesses.map((b, i) => (
-                <div key={i} onClick={e => { e.stopPropagation(); b.clientId && navigate(`/client/${b.clientId}`) }}
-                  style={{ padding: '0.6rem 1.1rem', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', cursor: b.clientId ? 'pointer' : 'default' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1a1a1a' }}>{b.nomComplet}</span>
-                  </div>
-                  {b.description && <p style={{ margin: '0 0 2px', fontSize: '0.74rem', color: '#374151', lineHeight: 1.35 }}>{b.description}</p>}
-                  {(formatRetour(b.date_retour_prevue) || b.duree_estimee) && (
-                    <p style={{ margin: 0, fontSize: '0.68rem', color: '#dc2626', fontWeight: 700 }}>{formatRetour(b.date_retour_prevue) || b.duree_estimee}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Ligne 3 : Sous-groupes + Programmes ── */}
-      <div style={{ ...S.dashRow, gridTemplateColumns: '1fr 1fr' }} className="fg-row3">
-        <div style={S.panel}>
-          <div style={S.panelHead}><span style={S.panelLabel}>Sous-groupes · {sousGroupes.length}</span></div>
-          {sousGroupes.map(sg => (
-            <div role="button" tabIndex={0} key={sg.id} onClick={() => navigate(`/groupe/${sg.id}`)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1.1rem', borderTop: '1px solid #f3f4f6', cursor: 'pointer' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: sg.couleur }} />
-                <span style={{ fontWeight: 700, color: '#333', fontSize: '0.85rem' }}>{sg.nom}</span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>{sgCompte[sg.id] || 0}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <button onClick={e => { e.stopPropagation(); supprimerSousGroupe(sg.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.8rem', padding: '0.1rem 0.3rem' }}>✕</button>
-                <span style={{ color: '#9ca3af', fontSize: '1.15rem' }}>›</span>
-              </div>
-            </div>
-          ))}
-          {sousGroupes.length > 0 && (() => {
-            const sansSG = membres.filter(m => !sgMembres.has(m.id)).sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
-            return (
-              <div style={{ borderTop: '1px solid #f3f4f6' }}>
-                <button onClick={() => sansSG.length && setSansSGOuvert(v => !v)} aria-expanded={sansSGOuvert}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.7rem 1.1rem', background: 'none', border: 'none', cursor: sansSG.length ? 'pointer' : 'default', fontFamily: 'inherit' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px dashed #9ca3af', boxSizing: 'border-box' }} />
-                    <span style={{ fontWeight: 700, color: '#374151', fontSize: '0.85rem' }}>Sans sous-groupe</span>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: sansSG.length ? '#b45309' : '#6b7280' }}>{sansSG.length}</span>
-                  </span>
-                  {sansSG.length > 0 && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: sansSGOuvert ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><path d="M9 6l6 6-6 6" /></svg>
-                  )}
-                </button>
-                {sansSGOuvert && sansSG.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 1.1rem 0.8rem' }}>
-                    {sansSG.map(m => (
-                      <span key={m.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', background: '#f3f4f6', borderRadius: 999, padding: '0.25rem 0.65rem' }}>{m.prenom} {m.nom}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
-          {showAddSG ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.9rem 1.1rem', borderTop: sousGroupes.length ? '1px solid #f3f4f6' : 'none' }}>
-              <input
-                autoFocus value={newSGNom} onChange={e => setNewSGNom(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && creerSousGroupe()}
-                placeholder="Nom du sous-groupe..." style={S.input}
-              />
-              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <button onClick={() => setNewSGCouleur('')}
-                  style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', border: !newSGCouleur ? '2.5px solid #1a1a1a' : '2px solid #d1d5db', cursor: 'pointer', padding: 0, fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                {PALETTE_SG.map(c => (
-                  <button key={c} onClick={() => setNewSGCouleur(c)}
-                    style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: newSGCouleur === c ? '2.5px solid #1a1a1a' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={creerSousGroupe} style={S.btnPrimary}>Créer</button>
-                <button onClick={() => setShowAddSG(false)} style={{ background: 'none', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.5rem 0.875rem', cursor: 'pointer', color: '#6b7280', fontWeight: '600' }}>Annuler</button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => setShowAddSG(true)} style={{ ...S.btnAdd, margin: '0.85rem 1.1rem 1.1rem', width: 'calc(100% - 2.2rem)' }}>+ Créer un sous-groupe</button>
-          )}
         </div>
 
         <div style={S.panel}>
@@ -1429,6 +1416,39 @@ export default function FicheGroupe() {
             + Nouveau programme de groupe
           </button>
         </div>
+
+        <div role="button" tabIndex={0} style={{ ...S.panel, maxHeight: 380, display: 'flex', flexDirection: 'column', cursor: classementFFR.length > 0 ? 'pointer' : 'default' }}
+          onClick={() => classementFFR.length > 0 && setTab('classement')} title={classementFFR.length > 0 ? 'Ouvrir le classement complet' : undefined}>
+          <div style={S.panelHead}>
+            <span style={S.panelLabel}>Classement</span>
+            {classementSrc && classementSrc.id !== groupe.id && <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600 }}>{classementSrc.nom}</span>}
+          </div>
+          {!classementSrc ? (
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Relie ce groupe à monclubhouse.ffr.fr (bouton Modifier) pour afficher le classement.</p>
+          ) : classementFFR.length === 0 ? (
+            <p style={{ fontSize: '0.76rem', color: '#6b7280', padding: '0 1.1rem 1.1rem' }}>Pas encore synchronisé — voir l'onglet Calendrier ▸ Compétition.</p>
+          ) : (
+            <div style={{ padding: '0.1rem 0 0.6rem', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              {classementFFR.filter(c => (c.competition || null) === (classementSrc.monclubhouse_competition || null)).map(c => {
+                const isOurs = c.equipe?.toLowerCase().includes(classementSrc.nom.toLowerCase()) || classementSrc.nom.toLowerCase().includes(c.equipe?.toLowerCase())
+                const logoAff = (isOurs && classementSrc.logo_url) || c.logo
+                return (
+                  <div key={c.equipe} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 1.1rem', background: isOurs ? accent + '14' : 'transparent' }}>
+                    <span style={{ fontSize: '0.68rem', color: isOurs ? accent : '#9ca3af', fontWeight: 800, width: 16, flexShrink: 0 }}>{c.position}</span>
+                    {logoAff
+                      ? <img loading="lazy" src={logoAff} alt="" style={{ width: 17, height: 17, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+                      : <span style={{ width: 17, height: 17, borderRadius: '50%', background: '#f3f4f6', color: '#6b7280', fontSize: '0.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.equipe?.slice(0, 2).toUpperCase()}</span>
+                    }
+                    <span style={{ flex: 1, fontSize: '0.75rem', fontWeight: isOurs ? 800 : 700, color: isOurs ? accent : '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.equipe}</span>
+                    <span style={{ fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, width: 14, textAlign: 'right' }}>{c.joues}</span>
+                    <span style={{ fontSize: '0.75rem', color: isOurs ? accent : '#1a1a1a', fontWeight: 900, width: 20, textAlign: 'right' }}>{c.pts}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        </div>
       </div>
 
       {/* ── Effectif — sous-menu repliable (fermé par défaut, contenu long) ── */}
@@ -1452,6 +1472,7 @@ export default function FicheGroupe() {
       <div style={{ ...S.panel, marginBottom: 0, padding: '1.1rem' }}>
         <GroupesNiveauView groupeId={id} groupColor={accent} />
       </div>
+      </div>
       </>
       )}
 
@@ -1459,7 +1480,7 @@ export default function FicheGroupe() {
       {wellnessDetail && (
         <Modal title={`Wellness du ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`} onClose={() => setWellnessDetail(false)} maxWidth={620}>
           <p style={{ margin: '0 0 0.9rem', fontSize: '0.82rem', color: '#6b7280' }}>
-            {wellnessDuJour.length} / {membres.length} remplis{wellnessMoyenne != null ? ` · moyenne ${wellnessMoyenne.toFixed(1)} / 4` : ''}. Notes de 1 (mauvais) à 4 (très bien) ; une note de 2 ou moins est signalée « bas ».
+            {wellnessDuJour.length} / {membresVue.length} remplis{wellnessMoyenne != null ? ` · moyenne ${wellnessMoyenne.toFixed(1)} / 4` : ''}. Notes de 1 (mauvais) à 4 (très bien) ; une note de 2 ou moins est signalée « bas ».
           </p>
           {wellnessDuJour.length > 0 && (
             <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
@@ -1672,7 +1693,7 @@ export default function FicheGroupe() {
 
       {/* ── Modal ajout membre ── */}
       {showAddMembre && (
-        <Modal title={groupe.parent_id ? `Ajouter depuis ${parent?.nom || 'le groupe principal'}` : 'Ajouter des membres'} onClose={() => setShowAddMembre(false)}>
+        <Modal title={estSG ? `Ajouter depuis ${parent?.nom || 'le groupe principal'}` : 'Ajouter des membres'} onClose={() => setShowAddMembre(false)}>
           <label style={S.label}>Rechercher un client</label>
           <input
             autoFocus value={searchMembre} onChange={e => setSearchMembre(e.target.value)}
@@ -1692,7 +1713,7 @@ export default function FicheGroupe() {
             <p style={{ color: '#6b7280', textAlign: 'center', padding: '1rem 0' }}>
               {searchMembre
                 ? 'Aucun client trouvé.'
-                : groupe.parent_id
+                : estSG
                   ? `Tous les joueurs de ${parent?.nom || 'le groupe principal'} sont déjà dans ce sous-groupe.`
                   : 'Tous les clients sont déjà dans un groupe.'}
             </p>
@@ -1861,5 +1882,11 @@ const S = {
   btnAdd: { background: 'white', color: '#6b7280', border: '1.5px dashed #d1d5db', borderRadius: 12, padding: '0.65rem 1.25rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', width: '100%', textAlign: 'center' },
   btnAction: { border: 'none', borderRadius: 10, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' },
   input: { padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' },
+  kpi: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', padding: '1rem 1.5rem', background: 'none', border: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', minWidth: 0 },
+  kpiLabel: { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280' },
+  kpiVal: { fontSize: '2rem', fontWeight: 900, color: '#1a1a1a', lineHeight: 1.1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' },
+  kpiSur: { fontSize: '1rem', color: '#6b7280', fontWeight: 700, marginLeft: 4, letterSpacing: 0 },
+  kpiSub: { fontSize: '0.8rem', color: '#374151', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  menuItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', background: 'none', border: 'none', borderRadius: 8, padding: '0.6rem 0.75rem', font: 'inherit', fontSize: '0.88rem', fontWeight: 600, color: '#374151', cursor: 'pointer', textAlign: 'left' },
   label: { display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#6b7280', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' },
 }
