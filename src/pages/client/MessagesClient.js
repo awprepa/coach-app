@@ -97,7 +97,7 @@ export default function MessagesClient() {
   return (
     <>
       <div ref={cadreRef} style={{ ...S.page, top: 0, bottom: 0, paddingBottom: NAV_H }}>
-        <EnTeteClient titre="Arthur" sousTitre="Ton coach" actions={<img loading="lazy" src="/coach-avatar.png" alt="" style={S.avatar} />} />
+        <EnTeteClient titre="Arthur" sousTitre="Ton coach" actions={<img loading="lazy" src="/coach-avatar.jpg" alt="Arthur" style={S.avatar} />} />
 
         {loadError ? (
           <div style={S.centre}>
