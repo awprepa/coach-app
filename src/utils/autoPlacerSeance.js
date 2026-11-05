@@ -51,7 +51,27 @@ export function autoPlacerSeanceSurCalendrier(clientId, seanceId, semaine) {
       // `titre` est NOT NULL en base — Calendrier.js l'ignore pour les
       // événements de type séance (il affiche seances(nom) via jointure) mais
       // il faut quand même lui donner une valeur à l'insertion.
-      const { data: sea } = await supabase.from('seances').select('nom').eq('id', seanceId).maybeSingle()
+      const { data: sea } = await supabase.from('seances').select('nom, programmes(date_debut)').eq('id', seanceId).maybeSingle()
+
+      // Séance placée à la main par le client (donc sans `semaine`) un autre jour
+      // de cette même semaine du programme : ne pas la placer une seconde fois.
+      const debut = sea?.programmes?.date_debut
+      if (debut) {
+        const [y, m, d] = debut.split('-').map(Number)
+        const lundi = new Date(y, m - 1, d + (semaine - 1) * 7)
+        const dimanche = new Date(y, m - 1, d + (semaine - 1) * 7 + 6)
+        const iso = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+        const { data: placeeCetteSemaine } = await supabase
+          .from('evenements')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('seance_id', seanceId)
+          .is('semaine', null)
+          .gte('date', iso(lundi))
+          .lte('date', iso(dimanche))
+          .limit(1)
+        if (placeeCetteSemaine?.length) return
+      }
 
       const { error } = await supabase.from('evenements').insert([{
         client_id: clientId,
