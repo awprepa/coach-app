@@ -2,6 +2,14 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
+    <script>
+      // Lien « mot de passe oublié » ou d'invitation : Supabase ne renvoie que
+      // vers /login (seule adresse autorisée dans ses réglages). On bascule tout
+      // de suite sur /reset-password, avant que l'app ne lise le jeton du lien.
+      if (location.pathname !== '/reset-password' && /type=recovery|error_code=otp_expired/.test(location.hash)) {
+        location.replace('/reset-password' + location.hash)
+      }
+    </script>
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
