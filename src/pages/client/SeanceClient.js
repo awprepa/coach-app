@@ -653,11 +653,15 @@ export default function SeanceClient() {
     setNonEffectueeSaving(false)
   }
 
+  const noteNotifiee = useRef(null)
   async function saveCommentaire() {
     if (!commentaire.trim()) return
     // Note nouvelle ou modifiée (pas un simple enregistrement à l'identique) : on prévient le coach
     const avant = (commentaires.find(c => c.semaine === semaineActuelle)?.texte || '').trim()
-    const changee = commentaire.trim() !== avant
+    // « Enregistrer » déclenche aussi la sortie du champ : deux sauvegardes quasi
+    // simultanées qui voyaient chacune l'ancienne note → deux notifications.
+    const changee = commentaire.trim() !== avant && commentaire.trim() !== noteNotifiee.current
+    if (changee) noteNotifiee.current = commentaire.trim()
     const { error } = await supabase.from('seance_commentaires').upsert(
       { seance_id: id, semaine: semaineActuelle, texte: commentaire.trim() },
       { onConflict: 'seance_id,semaine' }
