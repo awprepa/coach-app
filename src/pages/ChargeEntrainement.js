@@ -853,7 +853,6 @@ async function loadExerciseWeights(cid, progId = null) {
     .from('serie_tracking')
     .select('exercice_id, semaine, poids, reps_reelles, valide, is_done')
     .in('exercice_id', exIds)
-    .not('poids', 'is', null)
     .lt('serie', 1000)
   if (seriesError) { console.error('[loadExerciseWeights] serie_tracking error:', seriesError); return null }
 
@@ -876,10 +875,19 @@ async function loadExerciseWeights(cid, progId = null) {
   //                  (reps_reelles=null sur entrée legacy = non confirmé → ne pas compter)
   const trackingValidMax = {}
   const trackingAny = {}
+  // Poids du corps : séries validées sans charge → max de reps par semaine
+  const pdcMax = {}
   ;(series || []).forEach(s => {
     const poids = num(s.poids)
-    if (!poids || isNaN(poids) || !s.semaine) return
+    if (!s.semaine) return
     const exId = s.exercice_id, sem = s.semaine
+    if (!poids || isNaN(poids)) {
+      if (s.valide !== true) return
+      if (!pdcMax[exId]) pdcMax[exId] = {}
+      const reps = parseInt(s.reps_reelles) || 0
+      if (pdcMax[exId][sem] == null || reps > pdcMax[exId][sem]) pdcMax[exId][sem] = reps
+      return
+    }
     // is_done=false = brouillon auto-save (saveSerieField) sans validation → ne compte pas
     if (s.is_done !== false) {
       if (!trackingAny[exId]) trackingAny[exId] = {}
@@ -955,6 +963,22 @@ async function loadExerciseWeights(cid, progId = null) {
     })
 
     if (Object.keys(entry.weeks).length > 0) byId[exId] = entry
+  })
+
+  // Exercices au poids du corps (aucune série chargée) : on suit les reps
+  Object.keys(pdcMax).forEach(exId => {
+    const exo = exoMap[exId]
+    if (!exo || byId[exId]) return
+    const entry = {
+      id: exo.id, nom: exo.nom,
+      seance_id: exo.seance_id, ordre: exo.ordre ?? 999,
+      weeks: {}, allTimeMax: 0, pdc: true,
+    }
+    Object.entries(pdcMax[exId]).forEach(([sem, reps]) => {
+      entry.weeks[Number(sem)] = { poids: reps, reps: reps || null }
+      if (reps > entry.allTimeMax) entry.allTimeMax = reps
+    })
+    byId[exId] = entry
   })
 
   // Semaines présentes dans le tracking validé
@@ -1473,15 +1497,15 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
           const keys = Object.keys(e.weeks).map(Number).sort((a, b) => a - b)
           const myLast = keys[keys.length - 1]
           const w = myLast !== undefined ? e.weeks[myLast] : null
-          return w && parseFloat(w.poids) >= e.allTimeMax
+          return w && e.allTimeMax > 0 && parseFloat(w.poids) >= e.allTimeMax
         }).length
-        const chargesLastWeek = exercises.filter(e => e.weeks[lastWeek]).map(e => e.weeks[lastWeek].poids)
+        const chargesLastWeek = exercises.filter(e => !e.pdc && e.weeks[lastWeek]).map(e => e.weeks[lastWeek].poids)
         const chargeMaxMoy = chargesLastWeek.length
           ? (chargesLastWeek.reduce((s, v) => s + v, 0) / chargesLastWeek.length).toFixed(1)
           : null
         const tonnageSemaine = exercises.reduce((sum, e) => {
           const w = e.weeks[lastWeek]
-          if (!w) return sum
+          if (!w || e.pdc) return sum
           return sum + (parseFloat(w.poids) || 0) * (parseFloat(w.reps) || 1)
         }, 0)
 
@@ -1493,7 +1517,8 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
           const myFirstWeek = exoWeeks[0]
           const currentW = myLastWeek !== undefined ? exo.weeks[myLastWeek] : null
           const firstW = myFirstWeek !== undefined ? exo.weeks[myFirstWeek] : null
-          const isPR = currentW && parseFloat(currentW.poids) >= exo.allTimeMax
+          const unite = exo.pdc ? ' reps' : ' kg'
+          const isPR = currentW && exo.allTimeMax > 0 && parseFloat(currentW.poids) >= exo.allTimeMax
           // Première semaine où le PR actuel a été atteint (seule semaine qui affiche l'étoile)
           const prWeek = exoWeeks.find(w => parseFloat(exo.weeks[w]?.poids) >= exo.allTimeMax)
           let evo = null
@@ -1529,24 +1554,25 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                 const wd = exo.weeks[w]
                 if (!wd) return <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}><span style={{ color: '#6b7280', fontSize: '0.7rem' }}>—</span></td>
                 const level = weightLevel(wd.poids, exo.allTimeMax)
-                const isCellPR = wd.poids >= exo.allTimeMax
+                const isCellPR = exo.allTimeMax > 0 && wd.poids >= exo.allTimeMax
                 const isCellPRFirst = isCellPR && w === prWeek // étoile uniquement sur la 1re semaine du PR
                 const bg = isCellPR ? PR_COLOR : (LEVEL_COLORS[level] || '#e5e7eb')
+                const vide = !isCellPR && !LEVEL_COLORS[level]
                 return (
                   <td key={w} style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative' }}>
-                      {wd.poids}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 54, height: 36, borderRadius: 8, background: bg, color: vide ? '#374151' : '#fff', fontWeight: 700, fontSize: '0.78rem', position: 'relative' }}>
+                      {exo.pdc ? (wd.reps ? `×${wd.reps}` : 'Fait') : wd.poids}
                       {isCellPRFirst && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 8, color: '#fff' }}>★</span>}
                     </div>
                   </td>
                 )
               })}
-              <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap' }}>{exo.allTimeMax} kg</td>
-              <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center', color: '#6b7280', whiteSpace: 'nowrap' }}>{currentW?.reps ? `×${currentW.reps}` : '—'}</td>
+              <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap' }}>{exo.pdc ? (exo.allTimeMax ? `×${exo.allTimeMax}` : '—') : `${exo.allTimeMax} kg`}</td>
+              <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center', color: '#6b7280', whiteSpace: 'nowrap' }}>{exo.pdc ? 'PDC' : currentW?.reps ? `×${currentW.reps}` : '—'}</td>
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
                 {evo === null ? <span style={{ color: '#6b7280', fontSize: '0.7rem' }}>—</span>
-                  : evo > 0 ? <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>+{evo} kg</span>
-                  : evo < 0 ? <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>{evo} kg</span>
+                  : evo > 0 ? <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>+{evo}{unite}</span>
+                  : evo < 0 ? <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>{evo}{unite}</span>
                   : <span style={{ background: '#f5f5f5', color: '#aaa', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: '0.75rem' }}>= 0</span>}
               </td>
               <td style={{ padding: '0.4rem 0.3rem', textAlign: 'center' }}>
@@ -1672,7 +1698,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                       <tr key={`recap-${seance.id ?? si}`} style={{ background: '#fafbff' }}>
                         <td style={{ padding: '0.4rem 0.75rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', position: 'sticky', left: 0, background: '#fafbff' }}>moy.</td>
                         {allWeeks.map(w => {
-                          const vals = seance.exercises.map(e => e.weeks[w]?.poids).filter(Boolean)
+                          const vals = seance.exercises.filter(e => !e.pdc).map(e => e.weeks[w]?.poids).filter(Boolean)
                           if (!vals.length) return <td key={w} style={{ padding: '0.3rem 0.3rem', textAlign: 'center', color: '#6b7280', fontSize: '0.68rem' }}>—</td>
                           const moy = (vals.reduce((s, v) => s + parseFloat(v), 0) / vals.length).toFixed(1)
                           return <td key={w} style={{ padding: '0.3rem 0.3rem', textAlign: 'center', fontSize: '0.68rem', color: '#6b7280', fontWeight: 600 }}>{moy}</td>
