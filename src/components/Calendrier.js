@@ -10,7 +10,7 @@ import { fmtAllure, fmtDistance, fmtDuree, lireFichierCourse } from '../utils/fi
 const EVENT_TYPES = [
   { value: 'seance',       label: 'Séance',        bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
   { value: 'entrainement', label: 'Entraînement',  bg: '#f97316', text: 'white'   },
-  { value: 'match',        label: 'Match',         bg: 'var(--chip-bg)', text: 'var(--chip-text)' },
+  { value: 'match',        label: 'Match',         bg: '#1e3a8a', text: 'white'   },
   { value: 'combat',       label: 'Combat',        bg: '#dc2626', text: 'white'   },
   { value: 'competition',  label: 'Compétition',   bg: '#7c3aed', text: 'white'   },
   { value: 'course',       label: 'Course',        bg: '#0f766e', text: 'white'   },

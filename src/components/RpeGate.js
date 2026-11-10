@@ -94,6 +94,22 @@ export function Jauge({ value, onChange }) {
   )
 }
 
+// L'adversaire enregistré sur un match importé peut être notre propre équipe
+// (équipe en rassemblement mal reconnue à l'import). On le recalcule depuis les
+// matchs FFR du groupe : notre équipe est celle qui joue tous les matchs.
+async function vraiAdversaire(ev) {
+  const { data: ffr } = await supabase.from('matchs_ffr')
+    .select('date_match, equipe_dom, equipe_ext, est_domicile').eq('groupe_id', ev.groupe_id)
+  const m = (ffr || []).find(x => x.date_match === ev.date)
+  if (!m) return ev.adversaire
+  if (m.est_domicile === true) return m.equipe_ext
+  if (m.est_domicile === false) return m.equipe_dom
+  const compte = {}
+  ffr.forEach(x => [x.equipe_dom, x.equipe_ext].forEach(n => { if (n) compte[n] = (compte[n] || 0) + 1 }))
+  const notre = Object.keys(compte).sort((a, b) => compte[b] - compte[a])[0]
+  return m.equipe_dom === notre ? m.equipe_ext : m.equipe_ext === notre ? m.equipe_dom : ev.adversaire
+}
+
 function RpeOverlay({ clientId, nomJoueur, evenement, onDone }) {
   const [vals, setVals]     = useState({ rpe_cardio: null, rpe_jambes: null, rpe_contact: null })
   const [commentaire, setCommentaire] = useState('')
@@ -311,7 +327,7 @@ export default function RpeGate({ children }) {
           setLsKey(key)
           setClientId(client.id)
           setNomJoueur([client.prenom, client.nom].filter(Boolean).join(' '))
-          setEvenement(ev)
+          setEvenement(ev.type === 'match' ? { ...ev, adversaire: await vraiAdversaire(ev) } : ev)
           setShow(true)
           return
         }

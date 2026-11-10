@@ -225,6 +225,18 @@ function parseCalendar(data: Record<string, any>, groupeId: string, clubSlug: st
     }
   }
 
+  // Équipe en rassemblement (ex. « Ras Bscr / Saf XV ») : son nom ne reprend pas
+  // le slug du club, donc rien n'est reconnu. Notre équipe est alors celle qui
+  // joue tous les matchs de la compétition : le nom le plus fréquent.
+  if (rows.some(r => r.est_domicile === null)) {
+    const compte: Record<string, number> = {};
+    rows.forEach(r => [r.equipe_dom, r.equipe_ext].forEach(n => { if (n) compte[n] = (compte[n] || 0) + 1; }));
+    const [notre, n] = Object.entries(compte).sort((a, b) => b[1] - a[1])[0] || [];
+    if (notre && n > 1) rows.forEach(r => {
+      if (r.est_domicile === null) r.est_domicile = r.equipe_dom === notre ? true : r.equipe_ext === notre ? false : null;
+    });
+  }
+
   return rows;
 }
 
