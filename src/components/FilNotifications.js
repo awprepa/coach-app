@@ -43,7 +43,11 @@ export default function FilNotifications({ notifs, estNonLue, markRead, markAllR
   const logoDe = g => { let x = g; while (x && !x.logo_url && x.parent_id) x = parId[x.parent_id]; return x?.logo_url ? x : g }
 
   // Infos utiles de chaque notification
-  const infos = notifs.map(n => {
+  // « Séance non terminée » masquée si la même séance a été terminée ensuite
+  const nomSeance = n => (n.corps || '').match(/"([^"]+)"/)?.[1]
+  const finiesEnsuite = n => notifs.some(t => t.titre === 'Séance terminée' && t.lien === n.lien
+    && nomSeance(t) === nomSeance(n) && t.created_at > n.created_at)
+  const infos = notifs.filter(n => !(n.titre === 'Séance non terminée' && finiesEnsuite(n))).map(n => {
     const clientId = lienId(n.lien, 'client')
     let equipe = (lienId(n.lien, 'groupe') && parId[lienId(n.lien, 'groupe')]) || (clientId ? equipeDe[clientId] : null)
     if (equipe?.type === 'sous_groupe' && parId[equipe.parent_id]) equipe = parId[equipe.parent_id]

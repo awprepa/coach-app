@@ -403,6 +403,16 @@ export default function Calendrier({ clientId, readOnly = false, eventSource = '
     const strava = form.type === 'course' ? lienStrava(form.strava) : null
     const activite = form.type === 'course' && (form.activite || strava) ? { ...(form.activite || {}), strava_url: strava } : null
     setSaving(true)
+    // Séance déjà présente ce jour-là (placée automatiquement au démarrage) : pas de doublon
+    if (form.type === 'seance' && form.seanceId) {
+      const { data: deja } = await supabase.from('evenements').select('id')
+        .eq('client_id', clientId).eq('seance_id', form.seanceId).eq('date', formatDate(selectedDay)).limit(1)
+      if (deja?.length) {
+        alert('Cette séance est déjà dans le calendrier ce jour-là.')
+        setSaving(false)
+        return
+      }
+    }
     const payload = {
       client_id: clientId,
       date: formatDate(selectedDay),
