@@ -12,6 +12,7 @@ import GroupeClassementView from '../components/GroupeClassementView'
 import ClubEquipes from '../components/ClubEquipes'
 import Icon from '../components/Icon'
 import { isoLocal } from '../utils/dates'
+import { rangerParPoste } from '../utils/rangerParPoste'
 
 const PALETTE_SG = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#e4f816','#f97316']
 
@@ -124,6 +125,7 @@ export default function FicheGroupe() {
   const [rosterClientIds, setRosterClientIds] = useState(new Set()) // client_id présents dans l'effectif (groupe_joueurs)
   const [openJoueurClientId, setOpenJoueurClientId] = useState(null) // déclenche l'ouverture du profil groupe depuis Membres
   const [membreFiltre, setMembreFiltre]   = useState('tous') // 'tous' | 'surveiller'
+  const [rangement, setRangement]         = useState([]) // joueurs rangés automatiquement en Avants / 3/4
   const [blesses, setBlesses]             = useState([]) // joueurs blessés du groupe [{ nomComplet, description, duree_estimee, date_retour_prevue }]
 
   // ── Chargement ────────────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ export default function FicheGroupe() {
   }, [id]) // eslint-disable-line
   useEffect(() => { if (idsCal.length) loadMonthEvents() }, [idsCal, calMonth]) // eslint-disable-line
 
-  async function load(silent = false) {
+  async function load(silent = false, dejaRange = false) {
     if (!silent) setLoading(true)
     const [{ data: g }, { data: sg }, { data: gm }, { data: progs }] = await Promise.all([
       supabase.from('groupes').select('*').eq('id', id).single(),
@@ -193,6 +195,18 @@ export default function FicheGroupe() {
       freres = fr || []
       idsEquipe = new Set((em || []).map(r => r.client_id))
       nEquipe = idsEquipe.size
+    }
+    // Avants / 3/4 rangés automatiquement selon le poste rempli dans l'app
+    if (!dejaRange && equipe?.type === 'equipe' && freres.length) {
+      const faits = await rangerParPoste(equipe.id, freres)
+      if (faits.length) {
+        const { data: cl } = await supabase.from('clients').select('id, prenom, nom').in('id', faits.map(f => f.client_id))
+        setRangement(faits.map(f => {
+          const c = (cl || []).find(x => x.id === f.client_id)
+          return { ...f, nom: c ? `${c.prenom} ${c.nom}` : 'Joueur' }
+        }))
+        return load(true, true)
+      }
     }
     if (freres.length) {
       ({ data: frMembres } = await supabase.from('groupe_membres').select('groupe_id, client_id').in('groupe_id', freres.map(x => x.id)))
@@ -1048,6 +1062,17 @@ export default function FicheGroupe() {
           </>}
         </div>
       </div>
+
+      {rangement.length > 0 && (
+        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <strong>Rangés automatiquement selon leur poste :</strong>{' '}
+            {rangement.map(r => `${r.nom} → ${r.sousGroupe}`).join(', ')}.
+            <div style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: 4 }}>Pour leur donner le programme de leur sous-groupe, ouvre-le et clique sur « Pousser aux … » sur son programme : ceux qui l'ont déjà ne le reçoivent pas en double.</div>
+          </div>
+          <button onClick={() => setRangement([])} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', minHeight: 44 }}>Fermer</button>
+        </div>
+      )}
 
       {/* ── Onglets équipe / sous-groupes : on passe de l'un à l'autre sans quitter la page ── */}
       {onglets && tab === 'groupe' && (
