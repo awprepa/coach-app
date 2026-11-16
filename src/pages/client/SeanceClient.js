@@ -15,6 +15,7 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { autoPlacerSeanceSurCalendrier } from '../../utils/autoPlacerSeance'
 import SeanceTerrainClient from './SeanceTerrainClient'
 import { isoLocal } from '../../utils/dates'
+import { testPourExercice } from '../../utils/testsMax'
 import EnTeteClient from '../../components/EnTeteClient'
 
 function getSemaineActuelle(dateDebut) {
@@ -163,6 +164,10 @@ export default function SeanceClient() {
   const seanceRef = useRef(null)       // miroir de `seance` toujours à jour (évite les closures périmées dans les handlers montés une seule fois)
   const [exercices, setExercices] = useState([])
   const [videoDemandes, setVideoDemandes] = useState({}) // { exercice_id: demande en_attente }
+  const [maxDemandes, setMaxDemandes] = useState({}) // { exercice_id: demande de max en_attente }
+  const [maxSaisie, setMaxSaisie] = useState({}) // { exercice_id: charge tapée }
+  const [maxEnvoi, setMaxEnvoi] = useState(null)
+  const [maxFait, setMaxFait] = useState({}) // { exercice_id: message de confirmation }
   const [charges, setCharges] = useState({})
   const [rpeSeances, setRpeSeances] = useState({})
   const [semaines, setSemaines] = useState(4)
@@ -512,6 +517,11 @@ export default function SeanceClient() {
       const vMap = {}
       ;(demandes || []).forEach(d => { vMap[d.exercice_id] = d })
       setVideoDemandes(vMap)
+      const { data: dMax } = await supabase
+        .from('demandes_max').select('*').in('exercice_id', exIds).eq('statut', 'en_attente')
+      const mMap = {}
+      ;(dMax || []).forEach(d => { mMap[d.exercice_id] = d })
+      setMaxDemandes(mMap)
     }
     const { data: allRows } = await supabase.from('serie_tracking').select('*').in('exercice_id', exIds).eq('semaine', sem)
     const rows = allRows || []
@@ -618,6 +628,48 @@ export default function SeanceClient() {
     const cur = data.find(c => c.semaine === sem)
     if (cur) { setCommentaire(cur.texte); setNonEffectuee(cur.non_effectuee || false) }
     return data
+  }
+
+  // Test max demandé par le coach : 1 rep à la charge max → tests du joueur
+  async function validerMax(exerciceId) {
+    const demande = maxDemandes[exerciceId]
+    const charge = parseFloat(String(maxSaisie[exerciceId] || '').replace(',', '.'))
+    if (!demande || !(charge > 0)) return
+    setMaxEnvoi(exerciceId)
+    try {
+      const exo = exercices.find(e => e.id === exerciceId)
+      const clientId = seance?.programmes?.client_id || demande.client_id
+      const type = await testPourExercice(exo?.nom)
+      const { data: avant } = await supabase.from('tests_resultats').select('valeur')
+        .eq('client_id', clientId).eq('test_type_id', type.id)
+      const record = Math.max(0, ...(avant || []).map(r => parseFloat(r.valeur) || 0))
+      const { error } = await supabase.from('tests_resultats')
+        .insert({ client_id: clientId, test_type_id: type.id, valeur: charge, date: isoLocal() })
+      if (error) throw error
+      await supabase.from('demandes_max')
+        .update({ statut: 'faite', valeur: charge, fait_le: new Date().toISOString() })
+        .eq('id', demande.id)
+      setMaxDemandes(prev => { const n = { ...prev }; delete n[exerciceId]; return n })
+      const kg = v => `${String(v).replace('.', ',')} kg`
+      setMaxFait(prev => ({ ...prev, [exerciceId]: record && charge > record
+        ? `Nouveau record : ${kg(charge)} (+${kg(Math.round((charge - record) * 10) / 10)}). Ajouté à tes tests.`
+        : `${kg(charge)} ajouté à tes tests.` }))
+      const [coachId, { data: cl }] = await Promise.all([
+        getCoachId(),
+        supabase.from('clients').select('prenom, nom').eq('id', clientId).maybeSingle(),
+      ])
+      if (coachId) {
+        sendNotif(coachId, {
+          titre: `${cl ? `${cl.prenom} ${cl.nom}` : 'Un client'} a fait son max`,
+          corps: `${exo?.nom || 'Exercice'} : ${kg(charge)}`,
+          type: 'test',
+          lien: `/client/${clientId}`,
+        })
+      }
+    } catch (e) {
+      alert("Le max n'a pas pu être enregistré : " + (e?.message || 'erreur'))
+    }
+    setMaxEnvoi(null)
   }
 
   async function marquerVideoEnvoyee(exerciceId) {
@@ -1497,6 +1549,25 @@ export default function SeanceClient() {
           </div>
         )}
 
+        {/* Test max demandé par le coach : une série de 1 rep à valider */}
+        {maxDemandes[ex.id] && (
+          <div style={S.maxBloc}>
+            <span style={S.maxTitre}>Test max demandé par ton coach</span>
+            <span style={S.maxTexte}>Monte progressivement en charge, puis fais 1 rep à ta charge maximale. Note la meilleure charge réussie.</span>
+            <div style={S.maxLigne}>
+              <span style={S.maxSerie}>1 rep</span>
+              <input value={maxSaisie[ex.id] || ''} onChange={e => setMaxSaisie(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                inputMode="decimal" placeholder="Charge" aria-label="Charge réussie en kg" style={S.maxInput} />
+              <span style={S.maxKg}>kg</span>
+              <button onClick={() => validerMax(ex.id)} disabled={maxEnvoi === ex.id || !(parseFloat(String(maxSaisie[ex.id] || '').replace(',', '.')) > 0)}
+                style={{ ...S.maxBtn, opacity: maxEnvoi === ex.id || !(parseFloat(String(maxSaisie[ex.id] || '').replace(',', '.')) > 0) ? 0.5 : 1 }}>
+                {maxEnvoi === ex.id ? 'Envoi…' : 'Valider'}
+              </button>
+            </div>
+          </div>
+        )}
+        {maxFait[ex.id] && <div style={S.maxOk}>{maxFait[ex.id]}</div>}
+
         {/* Détail libre de la progression (ex: variante, charge max…) */}
         {progActif?.detail && (
           <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.8rem', color: '#374151', fontWeight: 500, lineHeight: 1.5 }}>
@@ -2302,6 +2373,15 @@ const S = {
   curBadge:    { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
   rattrapageHint: { fontSize: '0.72rem', fontWeight: '700', color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 999, padding: '0.2rem 0.6rem' },
   videoBanner: { display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 10, padding: '0.6rem 0.75rem', marginBottom: '0.6rem', fontSize: '0.78rem', color: '#5b21b6', fontWeight: 600, lineHeight: 1.4 },
+  maxBloc: { display: 'flex', flexDirection: 'column', gap: '0.5rem', background: '#fcfde9', border: '2px solid #333333', borderRadius: 10, padding: '0.75rem', marginBottom: '0.6rem' },
+  maxTitre: { fontSize: '0.8rem', fontWeight: 800, color: '#1a1a1a' },
+  maxTexte: { fontSize: '0.78rem', color: '#374151', lineHeight: 1.4 },
+  maxLigne: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
+  maxSerie: { fontSize: '0.78rem', fontWeight: 700, color: '#6b7280', minWidth: 40 },
+  maxInput: { flex: 1, minWidth: 0, height: 44, border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: '1rem', fontWeight: 700, padding: '0 0.75rem', background: 'white' },
+  maxKg: { fontSize: '0.8rem', fontWeight: 700, color: '#6b7280' },
+  maxBtn: { height: 44, background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 10, padding: '0 1rem', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer' },
+  maxOk: { background: '#dcfce7', color: '#15803d', borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.6rem' },
   videoBannerBtn: { alignSelf: 'flex-start', background: '#5b21b6', color: 'white', border: 'none', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' },
   weekSelect: { fontSize: '0.85rem', fontWeight: '700', color: '#333333', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.45rem 0.6rem', background: 'white' },
   weekSelectHint: { fontSize: '0.72rem', color: '#6b7280', margin: '0.35rem 0 0', lineHeight: 1.4 },

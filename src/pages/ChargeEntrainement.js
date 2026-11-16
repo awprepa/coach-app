@@ -1018,6 +1018,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
   const [selectedProgId, setSelectedProgId] = useState(null)
   const [allProgs, setAllProgs] = useState([])
   const [videoDemandes, setVideoDemandes] = useState({}) // { exercice_id: demande en_attente }
+  const [maxDemandes, setMaxDemandes] = useState({}) // { exercice_id: demande de max en_attente }
   // Liste indépendante du suivi de charges : TOUS les exercices du cycle
   // sélectionné, y compris ceux jamais tenté/loggés — pour pouvoir demander
   // une vidéo dessus même sans historique.
@@ -1075,6 +1076,41 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         ;(data || []).forEach(d => { map[d.exercice_id] = d })
         setVideoDemandes(map)
       })
+  }
+
+  function reloadMaxDemandes(cid) {
+    supabase.from('demandes_max').select('*').eq('client_id', cid).eq('statut', 'en_attente')
+      .then(({ data }) => {
+        const map = {}
+        ;(data || []).forEach(d => { map[d.exercice_id] = d })
+        setMaxDemandes(map)
+      })
+  }
+
+  // Test max : le joueur verra une série de 1 rep à valider sur l'exercice
+  async function demanderMax(exerciceId) {
+    const { data, error } = await supabase.from('demandes_max')
+      .insert({ exercice_id: exerciceId, client_id: clientId })
+      .select().single()
+    if (error) { alert(error.message); return }
+    setMaxDemandes(prev => ({ ...prev, [exerciceId]: data }))
+    const { data: exo } = await supabase.from('exercices').select('nom').eq('id', exerciceId).maybeSingle()
+    const { data: client } = await supabase.from('clients').select('user_id').eq('id', clientId).maybeSingle()
+    if (client?.user_id) {
+      sendNotif(client.user_id, {
+        titre: 'Test max demandé par ton coach',
+        corps: `"${exo?.nom || 'Cet exercice'}" : une série de 1 rep à ta charge maximale, à valider dans ta séance.`,
+        type: 'test',
+        lien: '/client/programme',
+      })
+    }
+  }
+
+  async function annulerDemandeMax(exerciceId) {
+    const demande = maxDemandes[exerciceId]
+    if (!demande) return
+    await supabase.from('demandes_max').delete().eq('id', demande.id)
+    setMaxDemandes(prev => { const n = { ...prev }; delete n[exerciceId]; return n })
   }
 
   async function demanderVideo(exerciceId) {
@@ -1237,6 +1273,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
       loadCharge(clientId)
       reloadExWeights(clientId, null)
       reloadVideoDemandes(clientId)
+      reloadMaxDemandes(clientId)
       setVideoProgs([]); setVideoProgId(null); setVideoExosList([])
       loadVideoProgs(clientId)
     }
@@ -1411,7 +1448,7 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
         <div style={{ ...S.indicateursSection, marginBottom: '1rem' }}>
           <div role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
             onClick={() => setVideoPickerOpen(v => !v)}>
-            <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>Demander une vidéo</div>
+            <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>Demander une vidéo ou un max</div>
             <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{videoPickerOpen ? 'Masquer ▲' : 'Afficher ▼'}</span>
           </div>
 
@@ -1457,6 +1494,18 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0.75rem', borderTop: i > 0 && !seanceHeader ? '1px solid #f3f4f6' : 'none' }}>
                             <span style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>{exo.nom}</span>
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            {maxDemandes[exo.id] ? (
+                              <button onClick={() => annulerDemandeMax(exo.id)}
+                                style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#f59e0b', borderRadius: 8, padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Max en attente · Annuler
+                              </button>
+                            ) : (
+                              <button onClick={() => demanderMax(exo.id)}
+                                style={{ background: 'white', border: '1px solid #e5e7eb', color: '#374151', borderRadius: 8, padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Demander un max
+                              </button>
+                            )}
                             {enAttente ? (
                               <button onClick={() => annulerDemandeVideo(exo.id)}
                                 style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#f59e0b', borderRadius: 8, padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -1465,9 +1514,10 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                             ) : (
                               <button onClick={() => demanderVideo(exo.id)}
                                 style={{ background: 'white', border: '1px solid #e5e7eb', color: '#374151', borderRadius: 8, padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                Demander
+                                Demander une vidéo
                               </button>
                             )}
+                            </div>
                           </div>
                         </div>
                       )
@@ -1546,6 +1596,17 @@ export function ChargePanel({ clientId, clientPrenom, clientNom }) {
                     <button onClick={() => demanderVideo(exo.id)}
                       style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
                       Demander une vidéo
+                    </button>
+                  )}
+                  {maxDemandes[exo.id] ? (
+                    <button onClick={() => annulerDemandeMax(exo.id)}
+                      style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                      Max en attente · Annuler
+                    </button>
+                  ) : (
+                    <button onClick={() => demanderMax(exo.id)}
+                      style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                      Demander un max
                     </button>
                   )}
                 </div>

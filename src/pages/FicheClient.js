@@ -11,6 +11,7 @@ import { MUSCLES } from '../data/muscleData'
 import EnvoyerContratModal from '../components/EnvoyerContratModal'
 import ModifierClientModal from '../components/ModifierClientModal'
 import NotesSeancesClient from '../components/NotesSeancesClient'
+import TestsClientPanel from '../components/TestsClientPanel'
 import ClientListSidebar from '../components/ClientListSidebar'
 import { ensureJoueurId, getActiveBlessure, ZONES, NIVEAUX, formatRetour } from '../components/BlessureButton'
 import { isoLocal } from '../utils/dates'
@@ -686,6 +687,11 @@ export default function FicheClient() {
               <path d="M9 7 Q10 5 9 3"/><path d="M12 7 Q13 5 12 3"/><path d="M15 7 Q16 5 15 3"/>
             </svg>
           )},
+          { k: 'tests', l: 'Tests', icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M12 2v3M9 2h6"/>
+            </svg>
+          )},
           { k: 'bilan', l: 'Bilan', icon: (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>
@@ -832,6 +838,7 @@ export default function FicheClient() {
       )}
 
       {/* Onglet Bilan : notes de semaine + journal des modifications (coach uniquement) */}
+      {activeTab === 'tests' && client && <TestsClientPanel key={id} clientId={id} prenom={client.prenom} />}
       {activeTab === 'bilan' && client && <BilanClient key={id} clientId={id} />}
 
       {/* Onglet Photos d'évolution (privé — coach uniquement) */}
