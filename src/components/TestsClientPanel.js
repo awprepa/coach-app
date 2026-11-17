@@ -95,7 +95,7 @@ export default function TestsClientPanel({ clientId, prenom }) {
                 <div key={t.id} style={S.test}>
                   <span style={S.nom}>{t.nom}</span>
                   <span style={S.val}>{nombre(der.valeur)}<small style={S.unite}>{t.unite || ''}</small></span>
-                  <span style={S.date}>{dateCourte(der.date)}</span>
+                  <span style={S.date}>{dateCourte(der.date)}{der.rpe != null ? ` · RPE ${nombre(der.rpe)}` : ''}</span>
                   {ecart === null ? <span style={{ ...S.pill, ...S.pillGris }}>Premier test</span>
                     : <span style={{ ...S.pill, ...(ecart > 0 ? S.pillVert : ecart < 0 ? S.pillRouge : S.pillGris) }}>
                         {ecart > 0 ? '+' : ''}{nombre(ecart)} {t.unite || ''} depuis le {dateCourte(prec.date)}
@@ -107,6 +107,7 @@ export default function TestsClientPanel({ clientId, prenom }) {
                       <div key={x.id} style={S.ligne}>
                         <span>{dateCourte(x.date)}</span>
                         <span style={{ fontWeight: 700 }}>{nombre(x.valeur)} {t.unite || ''}</span>
+                        {x.rpe != null && <span style={{ color: '#6b7280' }}>RPE {nombre(x.rpe)}</span>}
                         <button onClick={() => supprimer(x.id)} style={S.suppr} aria-label="Supprimer ce résultat">Supprimer</button>
                       </div>
                     ))}

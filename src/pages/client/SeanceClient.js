@@ -561,7 +561,7 @@ export default function SeanceClient() {
       if (maxMap[ex.id]) {
         // Test max : les séries sont les essais à 1 rep (série 1, 2, 3…)
         const essais = rows.filter(r => r.exercice_id === ex.id && r.serie < 1000).sort((a, b) => a.serie - b.serie)
-          .map(r => ({ poids: r.poids || '', reps_reelles: '1', valide: r.valide || false, is_done: r.is_done || false }))
+          .map(r => ({ poids: r.poids || '', reps_reelles: '1', valide: r.valide || false, is_done: r.is_done || false, rpe: r.rpe != null ? String(r.rpe).replace('.', ',') : '' }))
         const dernier = maxMap[ex.id].dernier
         t[ex.id] = essais.length ? essais : [{ poids: dernier ? String(dernier.valeur) : '', reps_reelles: '1', valide: false, is_done: false }]
         return
@@ -782,6 +782,26 @@ export default function SeanceClient() {
       alert("L'essai n'a pas pu être enregistré : " + (e?.message || 'erreur'))
     }
     setMaxEnCours(null)
+  }
+
+  // Test max : RPE de la rep réussie (essai + résultat du jour dans les tests)
+  async function enregistrerRpeMax(exId, idx) {
+    const essai = tracking[exId]?.[idx]
+    const rpe = parseFloat(String(essai?.rpe || '').replace(',', '.'))
+    if (!essai?.valide || !(rpe >= 1 && rpe <= 10)) return
+    await supabase.from('serie_tracking').update({ rpe })
+      .eq('exercice_id', exId).eq('semaine', semaineActuelle).eq('serie', idx + 1)
+    // Le résultat du jour correspond au meilleur essai réussi : il prend son RPE
+    const reussis = (tracking[exId] || []).filter(e => e.is_done && e.valide)
+    const meilleur = Math.max(...reussis.map(e => parseFloat(e.poids) || 0))
+    const clientId = seance?.programmes?.client_id
+    if (clientId && parseFloat(essai.poids) === meilleur) {
+      const exo = exercices.find(e => e.id === exId)
+      const type = await testPourExercice(exo?.nom)
+      await supabase.from('tests_resultats').update({ rpe })
+        .eq('client_id', clientId).eq('test_type_id', type.id).eq('date', isoLocal())
+    }
+    flashSaved()
   }
 
   // Test max : ajouter un essai, 2,5 kg au-dessus du dernier réussi
@@ -1684,7 +1704,20 @@ export default function SeanceClient() {
                       style={{ ...S.serieInput, ...(ok ? S.serieInputDone : rate ? { color: '#b91c1c', borderColor: '#fecaca' } : {}) }} />
                     <span style={S.serieUnit}>kg</span>
                     <span style={S.maxReps}>× 1</span>
-                    {ok ? <span style={{ ...S.serieDoneBadge, cursor: 'default' }}>{COCHE}</span>
+                    {ok ? <>
+                        <span style={{ ...S.serieUnit, marginLeft: 'auto' }}>RPE</span>
+                        <input type="text" inputMode="decimal" value={e.rpe || ''} placeholder="?"
+                          aria-label="RPE de la rep réussie, de 1 à 10"
+                          onChange={ev => setTracking(prev => {
+                            const arr = [...(prev[ex.id] || [])]
+                            arr[ei] = { ...arr[ei], rpe: ev.target.value }
+                            return { ...prev, [ex.id]: arr }
+                          })}
+                          onBlur={() => enregistrerRpeMax(ex.id, ei)}
+                          onFocus={scrollInputIntoView}
+                          style={{ ...S.serieInput, width: 40, ...(e.rpe ? S.serieInputDone : { border: '1.5px solid #333333' }) }} />
+                        <span style={{ ...S.serieDoneBadge, marginLeft: 0, cursor: 'default' }}>{COCHE}</span>
+                      </>
                       : rate ? <span style={S.maxEtatRate}>Raté</span>
                       : <>
                           <button onClick={() => validerEssaiMax(ex.id, ei, false)} disabled={!pret || !!maxEnCours}
@@ -2518,7 +2551,7 @@ const S = {
   videoIco:   { width: 36, height: 36, borderRadius: '50%', background: '#e4f816', color: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   videoTitre: { fontSize: '0.88rem', fontWeight: 700, color: '#333333' },
   videoTexte: { fontSize: '0.8rem', color: '#6b7280', marginTop: 2, lineHeight: 1.4 },
-  videoBtn:   { marginTop: 10, minHeight: 44, background: '#333333', color: 'white', border: 'none', borderRadius: 10, padding: '0 14px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' },
+  videoBtn:   { marginTop: 10, minHeight: 40, background: 'var(--chip-bg)', color: 'var(--chip-text)', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' },
   maxTag:     { background: 'var(--chip-bg)', color: 'var(--chip-text)', padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 },
   maxDernier: { fontSize: '0.8rem', color: '#6b7280', marginTop: 6 },
   maxGroupe:  { fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 8px' },
