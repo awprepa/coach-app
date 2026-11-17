@@ -997,63 +997,47 @@ export default function SeanceClient() {
       }
     }
 
-    // ── Détection 1RM PR ─────────────────────────────────────────────────
+    // ── Série de 1 rep = max du joueur (onglet Tests) ────────────────────
+    // Rangé dans le même test que « Demander un max » (MAX + nom de l'exercice).
+    // Un seul résultat par jour : on garde le plus lourd. Notif coach si record.
     const repsR = parseInt(serie.reps_reelles)
     const poids1RM = parseFloat(serie.poids)
-    if (repsR === 1 && poids1RM > 0 && poids1RM > (prNotifiedRef.current[exId] || 0)) {
+    const clientId1RM = seance?.programmes?.client_id
+    if (repsR === 1 && poids1RM > 0 && clientId1RM) {
       ;(async () => {
         try {
-          // Max historique des semaines précédentes (exclut la semaine en cours)
-          const { data: prevRows } = await supabase
-            .from('serie_tracking').select('poids')
-            .eq('exercice_id', exId).eq('reps_reelles', 1).eq('is_done', true)
-            .lt('semaine', semaineActuelle)
-          const prevMax = prevRows?.length
-            ? Math.max(...prevRows.map(r => parseFloat(r.poids) || 0))
-            : 0
-          // Aussi comparer au max déjà notifié cette séance (même semaine)
-          const sessionMax = prNotifiedRef.current[exId] || 0
-          if (poids1RM > Math.max(prevMax, sessionMax)) {
+          const exo = exercices.find(e => e.id === exId)
+          const exoNom = exo?.nom || 'Exercice'
+          const type = await testPourExercice(exoNom)
+          const today = isoLocal()
+          const { data: prev } = await supabase.from('tests_resultats').select('id, valeur, date')
+            .eq('client_id', clientId1RM).eq('test_type_id', type.id)
+          const duJour = (prev || []).find(r => r.date === today)
+          const record = Math.max(0, ...(prev || []).filter(r => r.date !== today).map(r => parseFloat(r.valeur) || 0))
+          if (duJour) {
+            if (poids1RM <= (parseFloat(duJour.valeur) || 0)) return
+            await supabase.from('tests_resultats').update({ valeur: poids1RM }).eq('id', duJour.id)
+          } else {
+            await supabase.from('tests_resultats').insert({
+              test_type_id: type.id, client_id: clientId1RM, valeur: poids1RM, date: today,
+              notes: `Série de 1 rep — ${seance?.nom || ''} S${semaineActuelle}`,
+            })
+          }
+          if (poids1RM > record && poids1RM > (prNotifiedRef.current[exId] || 0)) {
             prNotifiedRef.current[exId] = poids1RM
-            const exo = exercices.find(e => e.id === exId)
-            const exoNom = exo?.nom || 'Exercice'
-            const clientId = seance?.programmes?.client_id
             const coachId = await getCoachId()
-            // Notif coach
-            if (coachId && clientId) {
+            if (coachId) {
               const { data: clientData } = await supabase
-                .from('clients').select('prenom').eq('id', clientId).maybeSingle()
-              const prenom = clientData?.prenom || 'Un client'
+                .from('clients').select('prenom').eq('id', clientId1RM).maybeSingle()
               sendNotif(coachId, {
                 titre: 'Nouveau 1RM',
-                corps: `${prenom} — ${exoNom} : ${poids1RM} kg`,
+                corps: `${clientData?.prenom || 'Un client'} — ${exoNom} : ${poids1RM} kg`,
                 type: 'pr',
-                lien: `/client/${clientId}`,
+                lien: `/client/${clientId1RM}`,
               })
             }
-            // Insérer dans tests_resultats
-            if (clientId) {
-              // Trouver ou créer le test_type correspondant à l'exercice
-              let { data: testType } = await supabase
-                .from('tests_types').select('id').ilike('nom', exoNom).maybeSingle()
-              if (!testType) {
-                const { data: newType } = await supabase
-                  .from('tests_types').insert({ nom: exoNom, unite: 'kg' }).select().single()
-                testType = newType
-              }
-              if (testType?.id) {
-                const today = isoLocal()
-                await supabase.from('tests_resultats').insert({
-                  test_type_id: testType.id,
-                  client_id: clientId,
-                  valeur: poids1RM,
-                  date: today,
-                  notes: `1RM automatique — ${seance?.nom || ''} S${semaineActuelle}`,
-                })
-              }
-            }
           }
-        } catch (e) { console.warn('[1rm-pr] échec:', e) }
+        } catch (e) { console.warn('[1rm] échec:', e) }
       })()
     }
 
