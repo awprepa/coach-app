@@ -143,6 +143,7 @@ export default function NutritionClient() {
   // Plan du coach : ses repas prescrits s'affichent dans les mêmes sections que
   // les aliments ajoutés librement, au lieu d'une page séparée.
   const [plan, setPlan]       = useState(null)
+  const [planAVenir, setPlanAVenir] = useState(null)
   const [joursPlan, setJoursPlan] = useState([])
   const [logs, setLogs]       = useState([])
   const [coche, setCoche]     = useState(null)   // id du repas en cours d'envoi
@@ -185,6 +186,12 @@ export default function NutritionClient() {
           .select('jour_numero, objectif_kcal, objectif_prot, objectif_carbs, objectif_fat, nutrition_plan_meals(id, meal_type, nom, kcal, prot_g, carbs_g, fat_g, recette, nutrition_plan_foods(id, nom, quantite_g, kcal, prot_g, carbs_g, fat_g, ordre))')
           .eq('plan_id', p.id).order('jour_numero')
         setJoursPlan(jrs || [])
+      } else {
+        // Pas de plan en cours : un plan qui commence bientôt ?
+        const { data: prochain } = await supabase.from('nutrition_plans')
+          .select('id, date_debut').eq('client_id', data.id).eq('statut', 'actif')
+          .gt('date_debut', today).order('date_debut', { ascending: true }).limit(1).maybeSingle()
+        if (prochain) setPlanAVenir(prochain)
       }
     })()
   }, [])
@@ -419,9 +426,9 @@ export default function NutritionClient() {
           )}
         </div>
 
-        {plan && (
+        {(plan || planAVenir) && (
           <button onClick={() => navigate('/client/nutrition/plan')} style={S.planBtn}>
-            <span>Ma semaine et mes courses</span>
+            <span>{plan ? 'Ma semaine et mes courses' : `Mon prochain plan, dès le ${new Date(planAVenir.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}</span>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M9 5l7 7-7 7" /></svg>
           </button>
         )}

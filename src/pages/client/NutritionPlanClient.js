@@ -59,11 +59,14 @@ const TYPE_JOUR_LABELS = {
 // d'abord, puis les jours suivants, chacun avec sa vraie date.
 function semaineAVenir(days, plan) {
   const auj = new Date(); auj.setHours(0, 0, 0, 0)
-  const n = getPlanDayNumber(toISO(auj), plan) || 1
+  // Plan pas encore commencé : la semaine part de son premier jour
+  const debut = plan.date_debut ? new Date(plan.date_debut + 'T00:00:00') : null
+  const base = debut && debut > auj ? debut : auj
+  const n = getPlanDayNumber(toISO(base), plan) || 1
   return [...days]
     .map(d => {
-      const ecart = (d.jour_numero - n + 7) % 7
-      const date = new Date(auj); date.setDate(auj.getDate() + ecart)
+      const date = new Date(base); date.setDate(base.getDate() + (d.jour_numero - n + 7) % 7)
+      const ecart = Math.round((date - auj) / 86400000)
       return { day: d, ecart, date }
     })
     .sort((a, b) => a.ecart - b.ecart)
@@ -275,6 +278,7 @@ export default function NutritionPlanClient() {
   const [days, setDays]     = useState([])
   const [planAVenir, setPlanAVenir] = useState(null)
   const [daysAVenir, setDaysAVenir] = useState([])
+  const [planPasCommence, setPlanPasCommence] = useState(false)
   const [coursesAvenir, setCoursesAvenir] = useState(false)
   const [logs, setLogs]     = useState([])
   const [water, setWater]   = useState({ ml: 0 })
@@ -325,6 +329,24 @@ export default function NutritionPlanClient() {
         .or(`date_fin.is.null,date_fin.gte.${today}`)
         .order('date_debut', { ascending: false }).limit(1).maybeSingle()
 
+      // Prochain plan (statut actif, pas encore commencé) : pas pour logger —
+      // seulement pour que le client prépare ses courses en avance.
+      const { data: nextPlan } = await supabase
+        .from('nutrition_plans').select('*').eq('client_id', c.id).eq('statut', 'actif')
+        .gt('date_debut', today)
+        .order('date_debut', { ascending: true }).limit(1).maybeSingle()
+
+      // Pas de plan en cours mais un plan qui arrive : on affiche celui-là
+      if (!activePlan && nextPlan) {
+        setPlan(nextPlan)
+        setPlanPasCommence(true)
+        const { data: daysNext } = await supabase
+          .from('nutrition_plan_days')
+          .select(`*, nutrition_plan_meals(*, nutrition_plan_foods(*))`)
+          .eq('plan_id', nextPlan.id).order('jour_numero')
+        setDays(daysNext || [])
+      }
+
       if (activePlan) {
         setPlan(activePlan)
         const { data: daysData } = await supabase
@@ -334,13 +356,7 @@ export default function NutritionPlanClient() {
         setDays(daysData || [])
       }
 
-      // Prochain plan (statut actif, pas encore commencé) : pas pour logger —
-      // seulement pour que le client prépare ses courses en avance.
-      const { data: nextPlan } = await supabase
-        .from('nutrition_plans').select('*').eq('client_id', c.id).eq('statut', 'actif')
-        .gt('date_debut', today)
-        .order('date_debut', { ascending: true }).limit(1).maybeSingle()
-      if (nextPlan) {
+      if (activePlan && nextPlan) {
         setPlanAVenir(nextPlan)
         const { data: daysNext } = await supabase
           .from('nutrition_plan_days')
@@ -581,6 +597,14 @@ export default function NutritionPlanClient() {
         {/* ══ 7 JOURS ══════════════════════════════════════════════════════ */}
         {tab === 'semaine' && (
           <div>
+            {planPasCommence && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffbe8', border: '1px solid #fde68a', borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: '0.9rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <div style={{ flex: 1, fontSize: '0.78rem', color: '#92400e', lineHeight: 1.4 }}>
+                  Ton plan commence le {formatDateCourt(plan.date_debut)} — tu peux déjà préparer tes courses dans l'onglet <b>Courses</b>.
+                </div>
+              </div>
+            )}
             {planAVenir && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffbe8', border: '1px solid #fde68a', borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: '0.9rem' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -644,6 +668,14 @@ export default function NutritionPlanClient() {
         {/* ══ COURSES ══════════════════════════════════════════════════════ */}
         {tab === 'courses' && (
           <div>
+            {planPasCommence && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffbe8', border: '1px solid #fde68a', borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: '0.9rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <div style={{ flex: 1, fontSize: '0.78rem', color: '#92400e', lineHeight: 1.4 }}>
+                  Ton plan commence le {formatDateCourt(plan.date_debut)} — tu peux déjà préparer tes courses dans l'onglet <b>Courses</b>.
+                </div>
+              </div>
+            )}
             {planAVenir && (
               <div style={{ display: 'flex', gap: 8, marginBottom: '0.85rem', background: '#f3f4f6', borderRadius: 12, padding: 4 }}>
                 <button
