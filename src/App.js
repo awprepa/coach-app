@@ -325,8 +325,7 @@ function GlobalInstallGuide() {
 
   useEffect(() => {
     if (isIOS) return  // iOS → géré par IOSInstallWall
-    // Gardée aussi sur window : le calculateur public s'en sert pour son bouton « Écran d'accueil »
-    const handler = (e) => { e.preventDefault(); setDeferred(e); window.__awInstallPrompt = e }
+    const handler = (e) => { e.preventDefault(); setDeferred(e) }
     window.addEventListener('beforeinstallprompt', handler)
     const timer = setTimeout(() => {
       if (shouldShowInstall()) setShow(true)

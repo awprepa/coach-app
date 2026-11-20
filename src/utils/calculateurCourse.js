@@ -57,3 +57,42 @@ export function calculerSeance({ distance, effort, recup, reps, series, recupSer
 }
 
 export { REGLAGES_DEFAUT }
+
+// Schéma du parcours sur un terrain de rugby (même format que les schémas de
+// l'appli, affiché avec SchemaTerrainView) : trajets de même longueur, dans
+// l'ordre demi-tours, virages à 90°, virages à 45° (les virages alternent
+// gauche / droite pour rester compacts). Passages au sol : aux plots de
+// changement de direction, puis à l'arrivée, puis au départ.
+const U_PAR_M = 0.8 // terrain de rugby : 0,8 unité de dessin par mètre (courseVmi.ECHELLE.gazon)
+export function genererParcours({ distance, demiTours = 0, virages90 = 0, virages45 = 0, sol = 0 }) {
+  const virages = [...Array(demiTours).fill(180), ...Array(virages90).fill(90), ...Array(virages45).fill(45)]
+  const n = virages.length + 1
+  const L = distance / n
+  let cap = -90, x = 0, y = 0, cote = 1
+  const pts = [[0, 0]]
+  for (let i = 0; i < n; i++) {
+    x += L * Math.cos(cap * Math.PI / 180); y += L * Math.sin(cap * Math.PI / 180)
+    pts.push([x, y])
+    const v = virages[i]
+    if (v === 180) cap += 180
+    else if (v) { cap += cote * v; cote = -cote }
+  }
+  const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2
+  const P = pts.map(([a, b]) => ({ x: 50 + (a - cx) * U_PAR_M, y: 50 + (b - cy) * U_PAR_M }))
+  // Un plot par emplacement (en navette, on repasse aux mêmes plots)
+  const plots = []
+  const plotEn = (q, couleur, label) => {
+    let p = plots.find(o => Math.hypot(o.x - q.x, o.y - q.y) < 0.5)
+    if (!p) { p = { id: `p${plots.length}`, x: q.x, y: q.y, color: couleur, label: '' }; plots.push(p) }
+    if (label && !p.label.includes(label)) p.label = p.label ? `${p.label} · ${label}` : label
+    return p
+  }
+  plotEn(P[0], '#f2c94c', 'Départ')
+  P.slice(1, -1).forEach(q => plotEn(q, '#2f80ed', ''))
+  plotEn(P[P.length - 1], '#eb5757', 'Arrivée')
+  const ordreSol = [...P.slice(1, -1), P[P.length - 1], P[0]]
+  for (let i = 0; i < Math.min(sol, ordreSol.length); i++) plotEn(ordreSol[i]).sol = true
+  const arrows = P.slice(0, -1).map((a, i) => ({ id: `a${i}`, x1: a.x, y1: a.y, x2: P[i + 1].x, y2: P[i + 1].y, color: '#1a1d21', style: 'plein', mode: 'avant' }))
+  return { schema: { surface: 'gazon', plots, arrows, zones: [] }, trajet: arrondiDemi(L), trajets: n }
+}
