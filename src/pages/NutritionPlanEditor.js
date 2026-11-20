@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
+import { datesActivation } from '../utils/plansNutrition'
 
 // ─── Prompt maître IA ─────────────────────────────────────────────────────────
 export const MASTER_PROMPT = `Tu es un diététicien expert en nutrition sportive. Génère un plan nutritionnel complet au format JSON strict.
@@ -297,8 +298,12 @@ export default function NutritionPlanEditor() {
   // ── Changer le statut ─────────────────────────────────────────────────────
   async function changeStatut(statut) {
     if (!plan) return
-    await supabase.from('nutrition_plans').update({ statut }).eq('id', plan.id)
-    setPlan(p => ({ ...p, statut }))
+    // Dates prises dans le formulaire (même pas encore enregistrées)
+    const saisies = { date_debut: form.date_debut || null, date_fin: form.date_fin || null }
+    const dates = statut === 'actif' ? (datesActivation(saisies, client?.prenom) || saisies) : null
+    await supabase.from('nutrition_plans').update({ statut, ...dates }).eq('id', plan.id)
+    setPlan(p => ({ ...p, statut, ...dates }))
+    if (dates) setForm(f => ({ ...f, date_debut: dates.date_debut, date_fin: dates.date_fin || '' }))
   }
 
   // ── Copier le prompt ──────────────────────────────────────────────────────

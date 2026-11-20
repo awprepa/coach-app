@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { isoLocal } from '../utils/dates'
 import AdherenceSemaines from '../components/AdherenceSemaines'
-import { chargerPlanComplet, dupliquerPlan } from '../utils/plansNutrition'
+import { chargerPlanComplet, dupliquerPlan, datesActivation } from '../utils/plansNutrition'
 
 const STATUT_CONFIG = {
   brouillon: { label: 'Brouillon', bg: '#fef9c3', color: '#854d0e' },
@@ -172,8 +172,9 @@ export default function NutritionPlansCoach() {
   async function toggleStatut(plan, e) {
     e.stopPropagation()
     const next = plan.statut === 'actif' ? 'archive' : plan.statut === 'brouillon' ? 'actif' : 'brouillon'
-    await supabase.from('nutrition_plans').update({ statut: next }).eq('id', plan.id)
-    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, statut: next } : p))
+    const dates = next === 'actif' ? datesActivation(plan, client?.prenom) : null
+    await supabase.from('nutrition_plans').update({ statut: next, ...dates }).eq('id', plan.id)
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, statut: next, ...dates } : p))
     setSuiviLoaded(false)
   }
 

@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { MASTER_PROMPT } from '../pages/NutritionPlanEditor'
+import { isoLocal } from './dates'
 
 // Outils communs pour réutiliser un plan nutritionnel : le charger en entier,
 // le copier vers un client, ou préparer un prompt pour en créer un similaire.
@@ -93,4 +94,23 @@ ${regles}
 - Recalcule toutes les quantités, calories et macros pour qu'elles soient cohérentes avec les modifications demandées.
 
 Réponds UNIQUEMENT avec le JSON brut du nouveau plan. Pas de markdown, pas d'explication, pas de texte avant ou après. Commence directement par { et termine par }.`
+}
+
+// À l'activation : un plan sans date de début, ou déjà terminé, n'apparaît pas
+// chez le client. On propose de le faire démarrer lundi prochain (même durée).
+// Renvoie les nouvelles dates à enregistrer, ou null si rien à changer.
+export function datesActivation(plan, prenom) {
+  const today = isoLocal()
+  if (plan.date_debut && (!plan.date_fin || plan.date_fin >= today)) return null
+  const lundi = new Date(); lundi.setHours(0, 0, 0, 0)
+  lundi.setDate(lundi.getDate() + (8 - lundi.getDay()) % 7)
+  let fin = null
+  if (plan.date_debut && plan.date_fin) {
+    const duree = Math.round((new Date(plan.date_fin + 'T00:00:00') - new Date(plan.date_debut + 'T00:00:00')) / 86400000)
+    const f = new Date(lundi); f.setDate(f.getDate() + duree); fin = isoLocal(f)
+  }
+  const jour = lundi.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const raison = plan.date_debut ? 'Les dates de ce plan sont passées' : "Ce plan n'a pas de date de début"
+  if (!window.confirm(`${raison} : ${prenom || 'le client'} ne le verra pas.\n\nLe faire démarrer le ${jour} ?`)) return null
+  return { date_debut: isoLocal(lundi), date_fin: fin }
 }
