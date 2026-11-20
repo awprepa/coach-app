@@ -61,7 +61,7 @@ export default function CalculateurCourse({ publique = false }) {
     demiTours: p.demiTours, virages90: p.virages90, virages45: p.virages45, sol: p.sol,
   })
   const seance = !r.erreur ? calculerSeance({ distance: r.distance, effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
-  const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
+  const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries), perte: r.perte }) : null
   const parcours = !r.erreur ? genererParcours({ distance: r.distance, demiTours: p.demiTours, virages90: p.virages90, virages45: p.virages45, sol: p.sol }) : null
   const formatActif = FORMATS_COURSE.find(f => f.effort === Number(p.effort) && f.recup === Number(p.recup))?.nom
   const ref = p.reference === 'vmi' ? 'VMI' : 'VMA'
@@ -222,23 +222,13 @@ function Compteur({ label, detail, value, onChange, pas = 1, min = 0, max = 20, 
   )
 }
 
-// Faisabilité (pastille) et difficulté (barre en 4 niveaux)
-const COULEURS_NIVEAU = [T.color.success, T.color.warning, T.color.danger, '#7f1d1d']
-const FAISABILITE = {
-  faisable:   { texte: 'Faisable', couleur: T.color.success },
-  limite:     { texte: 'À la limite', couleur: T.color.warning },
-  irrealiste: { texte: 'Peu réaliste', couleur: T.color.danger },
-}
+// Difficulté estimée : barre en 5 niveaux, de « Légère » à « Impossible »
+const COULEURS_NIVEAU = [T.color.success, '#ca8a04', T.color.warning, T.color.danger, '#7f1d1d']
 function Jauge({ e }) {
-  const f = FAISABILITE[e.faisabilite]
   const c = COULEURS_NIVEAU[e.niveau]
   return (
     <div style={S.jauge}>
       <div style={S.jaugeLigne}>
-        <span style={S.jaugeLabel}>Faisabilité</span>
-        <span style={{ ...S.pastille, color: f.couleur, background: `${f.couleur}1a` }}>{f.texte}</span>
-      </div>
-      <div style={{ ...S.jaugeLigne, marginTop: 12 }}>
         <span style={S.jaugeLabel}>Difficulté</span>
         <span style={{ ...S.jaugeNiveau, color: c }}>{e.libelle}</span>
       </div>
@@ -247,6 +237,9 @@ function Jauge({ e }) {
           <div key={n} style={{ ...S.segment4, background: i <= e.niveau ? c : T.color.line }} />
         ))}
       </div>
+      {e.repetitionEpuisement && (
+        <p style={S.jaugeNote}>Épuisement estimé vers la répétition {e.repetitionEpuisement}</p>
+      )}
     </div>
   )
 }
@@ -316,8 +309,8 @@ const S = {
   jaugeLigne: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   jaugeLabel: { fontSize: T.size.base, fontWeight: 600, color: T.color.ink },
   jaugeNiveau: { fontSize: T.size.base, fontWeight: 800 },
-  pastille: { padding: '6px 12px', borderRadius: T.radius.pill, fontSize: T.size.sm, fontWeight: 700 },
-  segments: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 8 },
+  segments: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginTop: 8 },
+  jaugeNote: { margin: '8px 0 0', fontSize: T.size.sm, fontWeight: 600, color: '#7f1d1d' },
   segment4: { height: 8, borderRadius: T.radius.pill },
   bilan: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, padding: 12, background: T.color.soft, borderRadius: T.radius.control },
 

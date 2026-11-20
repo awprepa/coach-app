@@ -108,36 +108,44 @@ export function genererParcours({ distance, demiTours = 0, virages90 = 0, virage
   return { schema, surTerrain, trajet: arrondiDemi(L), trajets: n }
 }
 
-// Faisabilité et difficulté de la séance (indicatif ; règles validées par Arthur le 20/11/2026).
-// Faisabilité : la vitesse visée est-elle tenable sur la durée de l'effort ?
-//   VMI : fourchette de Buchheit selon la durée (repereIntensite) ;
-//   VMA : 100 à 110 % (efforts de 10 s ou moins : 110 à 120 %).
-//   Au-dessus du haut de la fourchette : à la limite (jusqu'à +10 points), puis peu réaliste.
-// Difficulté (score de 0 à 10) :
-//   intensité dans la fourchette 0 à 2 · récupération / effort : ≥ 2 → 0, ≥ 1 → 1, < 1 → 2 ·
-//   répétitions totales (le volume compte en répétitions, pas en temps : 10 min de 30-30
-//   sont plus faciles que 10 min de 15-15) : < 8 → 0, < 15 → 1, < 30 → 2, < 60 → 3, sinon 4 ·
-//   récupération entre les séries (s'il y en a plusieurs) : < 2 min → 2, < 3 min → 1, sinon 0.
-export function fourchetteIntensite(reference, effort) {
-  if (!(effort > 0)) return null
-  if (reference === 'vmi') return repereIntensite(effort)
-  return effort <= 10 ? { min: 110, max: 120 } : { min: 100, max: 110 }
-}
+// Difficulté de la séance : modèle de fatigue simulé répétition par répétition
+// (« réserve » anaérobie D′ qui se vide à chaque effort au-dessus d'une vitesse
+// critique et se recharge pendant la récupération, comme le W′bal de Skiba).
+// Calé sur 2 études d'intermittents en récupération passive, en % de VMA :
+//   - 15-15 à 120 % de VMA : épuisement après 745 s (Dupont et al., Can J Appl Physiol 2004) ;
+//   - 15-15 : la vitesse tenable « sans fin » est d'environ 106 % de VMA (Dupont, Blondel, Billat, Berthoin 1999).
+// Résultat du calage : vitesse critique 77 % de VMA, réserve = 7 min à 100 % de VMA en continu
+// (Billat : 4 à 11 min), recharge avec une constante de 325 s (Skiba : environ 360 s au repos).
+// VMI -> VMA : VMA ≈ VMI / 1,15 (30-15 IFT 18,7 km/h contre 16,3 km/h sur tapis, JSSM).
+// Changements de direction et passages au sol : le temps perdu compte comme de l'effort
+// (correction de Buchheit), plus un surcoût de 50 % pour les relances (estimation AWprepa).
+// Niveau = part de la réserve vidée au pire moment de la séance (la perception de l'effort
+// augmente avec la part du temps limite écoulée) ; réserve vide = séance impossible.
+const VITESSE_CRITIQUE = 0.77
+const RESERVE = (1 - VITESSE_CRITIQUE) * 420 // en « VMA × s »
+const RECHARGE_S = 325
+const VMI_SUR_VMA = 1.15
+const SURCOUT_RELANCE = 0.5
 
-export const NIVEAUX_DIFFICULTE = ['Légère', 'Modérée', 'Difficile', 'Très difficile']
+export const NIVEAUX_DIFFICULTE = ['Légère', 'Modérée', 'Difficile', 'Très difficile', 'Impossible']
 
-export function evaluerSeance({ reference, intensite, effort, recup, reps, series, recupSeriesMin }) {
-  const f = fourchetteIntensite(reference, effort)
-  if (!f || !(intensite > 0)) return null
-  const faisabilite = intensite <= f.max ? 'faisable' : intensite <= f.max + 10 ? 'limite' : 'irrealiste'
-
-  const ptsIntensite = intensite <= f.min ? 0 : intensite >= f.max ? 2 : Math.round(2 * (intensite - f.min) / (f.max - f.min))
-  const ratio = effort > 0 ? (recup || 0) / effort : 0
-  const ptsRecup = ratio >= 2 ? 0 : ratio >= 1 ? 1 : 2
-  const total = (reps > 0 ? reps : 0) * (series > 0 ? series : 1)
-  const ptsReps = total < 8 ? 0 : total < 15 ? 1 : total < 30 ? 2 : total < 60 ? 3 : 4
-  const ptsSeries = series > 1 ? ((recupSeriesMin || 0) < 2 ? 2 : (recupSeriesMin || 0) < 3 ? 1 : 0) : 0
-  const score = ptsIntensite + ptsRecup + ptsReps + ptsSeries
-  const niveau = score <= 2 ? 0 : score <= 4 ? 1 : score <= 6 ? 2 : 3
-  return { faisabilite, fourchette: f, score, niveau, libelle: NIVEAUX_DIFFICULTE[niveau] }
+export function evaluerSeance({ reference, intensite, effort, recup, reps, series, recupSeriesMin, perte = 0 }) {
+  if (!(intensite > 0) || !(effort > 0) || !(reps > 0)) return null
+  const v = (intensite / 100) * (reference === 'vmi' ? VMI_SUR_VMA : 1) // en fraction de VMA
+  const depense = Math.max(0, (v - VITESSE_CRITIQUE) * effort + SURCOUT_RELANCE * v * Math.min(perte, effort))
+  const recharge = t => 1 - Math.exp(-Math.max(0, t) / RECHARGE_S)
+  let reserve = RESERVE, mini = RESERVE, n = 0
+  const nbSeries = Math.max(1, Math.round(series) || 1)
+  for (let s = 0; s < nbSeries; s++) {
+    for (let r = 0; r < reps; r++) {
+      reserve -= depense; n++
+      if (reserve < 0) return { niveau: 4, libelle: NIVEAUX_DIFFICULTE[4], repetitionEpuisement: n, part: 1 }
+      mini = Math.min(mini, reserve)
+      reserve += (RESERVE - reserve) * recharge(recup)
+    }
+    reserve += (RESERVE - reserve) * recharge((recupSeriesMin || 0) * 60)
+  }
+  const part = 1 - mini / RESERVE
+  const niveau = part < 0.35 ? 0 : part < 0.55 ? 1 : part < 0.75 ? 2 : 3
+  return { niveau, libelle: NIVEAUX_DIFFICULTE[niveau], part }
 }
