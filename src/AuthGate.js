@@ -5,7 +5,7 @@ import { supabase } from './supabase'
 const COACH_EMAIL = 'wehrey.arthur@gmail.com'
 
 // Chemins publics (accessibles sans auth, jamais redirigés)
-const PUBLIC_PATHS = ['/login', '/reset-password', '/cgv']
+const PUBLIC_PATHS = ['/login', '/reset-password', '/cgv', '/calculateur']
 
 function redirect(navigate, user, path) {
   // Ne jamais rediriger depuis les pages publiques (login, reset-password)

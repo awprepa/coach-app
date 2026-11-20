@@ -10,9 +10,10 @@
 export const ECHELLE = { gazon: 0.8, salle: 2.5, vierge: 2 }
 export const echelleDe = surface => ECHELLE[surface] || ECHELLE.gazon
 
-// Valeurs par défaut validées par Arthur le 20/10/2026 (modifiables par exercice)
+// Valeurs par défaut validées par Arthur le 20/10/2026 (modifiables par exercice) ;
+// demi-tour passé de 1 à 0,8 s le 20/11/2026 (exemple de Buchheit : navette de 40 m à 95 % VIFT)
 export const REGLAGES_DEFAUT = {
-  cdd180: 1,      // s perdues pour un demi-tour
+  cdd180: 0.8,    // s perdues pour un demi-tour
   cdd90: 0.5,     // s perdues pour un virage à 90°
   cdd45: 0.2,     // s perdues pour un virage à 45°
   sol: 1.5,       // s perdues pour un passage au sol

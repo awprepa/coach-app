@@ -41,6 +41,7 @@ const ScannerArticle       = lazy(() => import('./pages/client/ScannerArticle'))
 const HistoriqueScans      = lazy(() => import('./pages/client/HistoriqueScans'))
 const PhotosClient         = lazy(() => import('./pages/client/PhotosClient'))
 const SciencesClient       = lazy(() => import('./pages/client/SciencesClient'))
+const CalculateurCourse    = lazy(() => import('./pages/CalculateurCourse'))
 const ProgressionClient    = lazy(() => import('./pages/client/ProgressionClient'))
 const MentionsLegales      = lazy(() => import('./pages/client/MentionsLegales'))
 const ProfilClient         = lazy(() => import('./pages/client/ProfilClient'))
@@ -170,12 +171,17 @@ function InAppBrowserSheet({ onDismiss }) {
 }
 
 // ── BanniereNavigateur — rendu conditionnel selon contexte ────────────────────
+// Page publique du calculateur (ressource gratuite) : utilisable telle quelle,
+// sans installer l'appli ni changer de navigateur
+const estPagePublique = pathname => pathname === '/calculateur' || pathname.startsWith('/calculateur/')
+
 function BanniereNavigateur() {
+  const { pathname }   = useLocation()
   const ua             = navigator.userAgent
   const isInAppBrowser = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i.test(ua)
   const [inAppFerme, setInAppFerme] = useState(false)
 
-  if (isInAppBrowser && !inAppFerme) {
+  if (isInAppBrowser && !inAppFerme && !estPagePublique(pathname)) {
     return <InAppBrowserSheet onDismiss={() => setInAppFerme(true)} />
   }
 
@@ -184,6 +190,7 @@ function BanniereNavigateur() {
 
 // ── Mur d'installation iOS Safari — bloque totalement l'app si non installée ──
 function IOSInstallWall() {
+  const { pathname } = useLocation()
   const ua         = navigator.userAgent || ''
   const isIOS      = /iPhone|iPad|iPod/i.test(ua)
   const isInApp    = /Instagram|FBAN|FBAV|TikTok|BytedanceWebview/i.test(ua)
@@ -195,7 +202,7 @@ function IOSInstallWall() {
   const isNonSafariBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\//i.test(ua)
 
   // Afficher seulement sur iOS, non installé, hors in-app browser
-  if (!isIOS || isStandalone || isInApp) return null
+  if (!isIOS || isStandalone || isInApp || estPagePublique(pathname)) return null
 
   return createPortal(
     <div style={{
@@ -278,10 +285,26 @@ function IOSInstallWall() {
             </div>
           </div>
 
+          {/* Bouton qui ouvre directement le menu Partager de Safari (étape 1 en un appui) */}
+          {navigator.share && (
+            <button onClick={() => navigator.share({ title: 'AWprepa', url: window.location.href }).catch(() => {})} style={{
+              width: '100%', maxWidth: 340, height: 52, marginTop: -16, marginBottom: 20,
+              background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 14,
+              fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+              Ouvrir le menu Partager
+            </button>
+          )}
+
           {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-              Le bouton Partager est en bas ↓
+              {navigator.share ? 'Ou le bouton Partager de Safari, en bas ↓' : 'Le bouton Partager est en bas ↓'}
             </p>
             <div style={{ animation: 'nudgeDown 1.2s ease-in-out infinite' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -310,6 +333,7 @@ const SW = {
 
 // ── Guide installation PWA — Android uniquement (iOS est géré par IOSInstallWall) ─
 function GlobalInstallGuide() {
+  const { pathname } = useLocation()
   const ua         = navigator.userAgent || ''
   const isIOS      = /iPhone|iPad|iPod/i.test(ua)
   const [show, setShow]               = useState(false)
@@ -317,7 +341,8 @@ function GlobalInstallGuide() {
 
   useEffect(() => {
     if (isIOS) return  // iOS → géré par IOSInstallWall
-    const handler = (e) => { e.preventDefault(); setDeferred(e) }
+    // Gardée aussi sur window : le calculateur public s'en sert pour son bouton « Écran d'accueil »
+    const handler = (e) => { e.preventDefault(); setDeferred(e); window.__awInstallPrompt = e }
     window.addEventListener('beforeinstallprompt', handler)
     const timer = setTimeout(() => {
       if (shouldShowInstall()) setShow(true)
@@ -328,7 +353,7 @@ function GlobalInstallGuide() {
     }
   }, [isIOS])
 
-  if (!show) return null
+  if (!show || estPagePublique(pathname)) return null
   return (
     <InstallGuide
       deferredPrompt={deferredPrompt}
@@ -634,12 +659,14 @@ function App() {
               <Route path="/client/progression"          element={<WithNotifs><ProgressionClient /></WithNotifs>} />
               <Route path="/client/competition"          element={<WithNotifs>{null}</WithNotifs>} />
               <Route path="/client/profil"              element={<WithNotifs><ProfilClient /></WithNotifs>} />
+              <Route path="/client/calculateur"         element={<WithNotifs><CalculateurCourse /></WithNotifs>} />
               <Route path="/client/mentions-legales"    element={<MentionsLegales />} />
 
               {/* ── Auth ── */}
               <Route path="/login"          element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/cgv"            element={<CGV />} />
+              <Route path="/calculateur"    element={<CalculateurCourse publique />} />
               <Route path="/conditions"     element={<Conditions />} />
 
               {/* ── Home (coach → Dashboard, client → AccueilClient) ── */}
