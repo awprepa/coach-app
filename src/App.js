@@ -249,21 +249,9 @@ function IOSInstallWall() {
             display: 'flex', flexDirection: 'column', gap: 14,
           }}>
             <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-              3 étapes pour installer
+              2 étapes pour installer
             </p>
-            {/* Étape 1 — icône menu (traits horizontaux) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={SW.num}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
-                </svg>
-              </div>
-              <div>
-                <p style={SW.stepTitle}>Appuie sur l'icône <strong style={{ color: '#e4f816' }}>menu</strong> en bas de Safari</p>
-                <p style={SW.stepSub}>Le bouton avec des traits horizontaux, dans la barre de navigation</p>
-              </div>
-            </div>
-            {/* Étape 2 — icône partager (carré + flèche vers le haut) */}
+            {/* Étape 1 — icône partager (carré + flèche vers le haut) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={SW.num}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -273,10 +261,9 @@ function IOSInstallWall() {
               </div>
               <div>
                 <p style={SW.stepTitle}>Appuie sur <strong style={{ color: '#e4f816' }}>"Partager"</strong></p>
-                <p style={SW.stepSub}>Dans le menu qui s'affiche</p>
               </div>
             </div>
-            {/* Étape 3 — icône "+" dans un carré arrondi (Sur l'écran d'accueil) */}
+            {/* Étape 2 — icône "+" dans un carré arrondi (Sur l'écran d'accueil) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={SW.num}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -294,7 +281,7 @@ function IOSInstallWall() {
           {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-              Le bouton menu est ici ↓
+              Le bouton Partager est en bas ↓
             </p>
             <div style={{ animation: 'nudgeDown 1.2s ease-in-out infinite' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
