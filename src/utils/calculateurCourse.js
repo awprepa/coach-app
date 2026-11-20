@@ -63,7 +63,11 @@ export { REGLAGES_DEFAUT }
 // l'ordre demi-tours, virages à 90°, virages à 45° (les virages alternent
 // gauche / droite pour rester compacts). Passages au sol : aux plots de
 // changement de direction, puis à l'arrivée, puis au départ.
-const U_PAR_M = 0.8 // terrain de rugby : 0,8 unité de dessin par mètre (courseVmi.ECHELLE.gazon)
+// Terrain de rugby : 0,8 unité de dessin par mètre (courseVmi.ECHELLE.gazon), 70 m × 120 m.
+// Parcours trop grand pour le terrain : surface vierge (2 unités par mètre), dézoomée
+// juste assez (mêmes tailles que l'éditeur de schémas).
+const TERRAIN = { large: 66, long: 116 } // m utilisables (petite marge sous les lignes)
+const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
 export function genererParcours({ distance, demiTours = 0, virages90 = 0, virages45 = 0, sol = 0 }) {
   const virages = [...Array(demiTours).fill(180), ...Array(virages90).fill(90), ...Array(virages45).fill(45)]
   const n = virages.length + 1
@@ -78,8 +82,12 @@ export function genererParcours({ distance, demiTours = 0, virages90 = 0, virage
     else if (v) { cap += cote * v; cote = -cote }
   }
   const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
+  const larg = Math.max(...xs) - Math.min(...xs), haut = Math.max(...ys) - Math.min(...ys)
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2
-  const P = pts.map(([a, b]) => ({ x: 50 + (a - cx) * U_PAR_M, y: 50 + (b - cy) * U_PAR_M }))
+  const surTerrain = larg <= TERRAIN.large && haut <= TERRAIN.long
+  const k = surTerrain ? 0.8 : 2
+  const taille = surTerrain ? null : (TAILLES_VIERGE.find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 600)
+  const P = pts.map(([a, b]) => ({ x: 50 + (a - cx) * k, y: 50 + (b - cy) * k }))
   // Un plot par emplacement (en navette, on repasse aux mêmes plots)
   const plots = []
   const plotEn = (q, couleur, label) => {
@@ -94,5 +102,8 @@ export function genererParcours({ distance, demiTours = 0, virages90 = 0, virage
   const ordreSol = [...P.slice(1, -1), P[P.length - 1], P[0]]
   for (let i = 0; i < Math.min(sol, ordreSol.length); i++) plotEn(ordreSol[i]).sol = true
   const arrows = P.slice(0, -1).map((a, i) => ({ id: `a${i}`, x1: a.x, y1: a.y, x2: P[i + 1].x, y2: P[i + 1].y, color: '#1a1d21', style: 'plein', mode: 'avant' }))
-  return { schema: { surface: 'gazon', plots, arrows, zones: [] }, trajet: arrondiDemi(L), trajets: n }
+  const schema = surTerrain
+    ? { surface: 'gazon', plots, arrows, zones: [] }
+    : { surface: 'vierge', ...(taille > 100 ? { taille } : {}), plots, arrows, zones: [] }
+  return { schema, surTerrain, trajet: arrondiDemi(L), trajets: n }
 }

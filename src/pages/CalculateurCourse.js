@@ -67,17 +67,18 @@ export default function CalculateurCourse({ publique = false }) {
 
   return (
     <div style={S.page}>
-      <EnTeteClient retour={publique ? undefined : true} titre="Calculateur de course" sousTitre="Intermittent selon ta VMI ou ta VMA" />
+      {publique ? (
+        // Page publique : à la place de l'en-tête, la barre « appli AWprepa » reste en haut de l'écran
+        <a href="/" style={S.barreAppli}>
+          <span style={S.barreIcone}><img src="/logo-blanc.png" alt="" style={{ height: 36, width: 'auto', display: 'block' }} /></span>
+          <span style={S.barreTexte}>Retrouve-le dans l'appli AWprepa</span>
+          <span style={S.barreBouton}>Télécharger</span>
+        </a>
+      ) : (
+        <EnTeteClient retour titre="Calculateur de course" sousTitre="Intermittent selon ta VMI ou ta VMA" />
+      )}
 
       <main style={S.contenu}>
-        {publique && (
-          <a href="/" style={S.cadran}>
-            <span style={S.cadranIcone}><img src="/logo-blanc.png" alt="" style={{ height: 30, width: 'auto', display: 'block' }} /></span>
-            <span style={S.cadranTexte}>Retrouve-le dans l'appli AWprepa</span>
-            <span style={S.cadranBouton}>Télécharger</span>
-          </a>
-        )}
-
         {/* 1. Vitesse de référence */}
         <section style={S.carte}>
           <Titre n="1" texte="Ta vitesse de référence" />
@@ -144,6 +145,7 @@ export default function CalculateurCourse({ publique = false }) {
                 </p>
               )}
               <div style={S.schema}><SchemaTerrainView value={parcours.schema} consigne={false} zoom /></div>
+              {!parcours.surTerrain && <p style={S.resultatNote}>Parcours plus long qu’un terrain de rugby</p>}
             </>
           )}
         </section>
@@ -232,10 +234,11 @@ const S = {
   page: { minHeight: '100vh', background: T.color.page, fontFamily: T.font.body, paddingBottom: 'calc(env(safe-area-inset-bottom) + 96px)' },
   contenu: { maxWidth: 560, margin: '0 auto', padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 },
 
-  cadran: { display: 'flex', alignItems: 'center', gap: 12, background: T.color.anthracite, borderRadius: T.radius.card, padding: 12, textDecoration: 'none' },
-  cadranIcone: { width: 52, height: 52, borderRadius: 14, background: '#1a1a1a', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  cadranTexte: { flex: 1, minWidth: 0, fontSize: T.size.md, fontWeight: 700, color: T.color.onDark, lineHeight: 1.3 },
-  cadranBouton: { minHeight: 36, padding: '0 14px', borderRadius: T.radius.pill, background: T.color.signal, color: T.color.anthracite, fontSize: T.size.sm, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 },
+  // même fond que l'en-tête de l'appli (var(--header-bg)), collée en haut de l'écran
+  barreAppli: { position: 'sticky', top: 0, zIndex: 40, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--header-bg)', padding: 'calc(env(safe-area-inset-top) + 12px) 16px 12px', textDecoration: 'none', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' },
+  barreIcone: { width: 56, height: 56, borderRadius: 14, background: '#1a1a1a', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  barreTexte: { flex: 1, minWidth: 0, fontSize: T.size.base, fontWeight: 700, color: T.color.onDark, lineHeight: 1.3 },
+  barreBouton: { minHeight: 40, padding: '0 14px', borderRadius: T.radius.pill, background: T.color.signal, color: T.color.anthracite, fontSize: T.size.sm, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 },
 
   carte: { ...T.card },
   titre: { margin: 0, display: 'flex', alignItems: 'center', gap: 10, fontSize: T.size.lg, fontWeight: 700, color: T.color.ink },
@@ -266,13 +269,14 @@ const S = {
   compteurValeur: { minWidth: 44, textAlign: 'center', fontSize: T.size.xl, fontWeight: 700, color: T.color.ink, ...T.num },
   compteurUnite: { fontSize: T.size.sm, fontWeight: 600, color: T.color.muted },
 
-  resultat: { background: T.color.anthracite, borderRadius: T.radius.card, padding: '18px 16px' },
+  resultat: { background: T.color.ink, borderRadius: T.radius.card, padding: '18px 16px' },
   resultatLabel: { margin: 0, fontSize: T.size.sm, fontWeight: 600, color: T.color.onDarkMuted },
   resultatValeur: { margin: '4px 0 0', fontSize: 48, fontWeight: 800, color: T.color.onDark, lineHeight: 1, letterSpacing: -1, ...T.num },
   resultatUnite: { fontSize: T.size.xl, fontWeight: 700, color: T.color.onDarkMuted },
   resultatLigne: { margin: '10px 0 0', fontSize: T.size.base, color: T.color.onDark, lineHeight: 1.4 },
   resultatErreur: { margin: 0, fontSize: T.size.base, color: T.color.onDark, lineHeight: 1.45 },
   schema: { marginTop: 14 },
+  resultatNote: { margin: '8px 0 0', fontSize: T.size.xs, color: T.color.onDarkMuted, textAlign: 'center' },
   infoLabel: { margin: 0, fontSize: T.size.xs, fontWeight: 600, color: T.color.muted },
   infoValeur: { margin: '2px 0 0', fontSize: T.size.lg, fontWeight: 700, color: T.color.ink, ...T.num },
 
