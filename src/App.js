@@ -285,26 +285,10 @@ function IOSInstallWall() {
             </div>
           </div>
 
-          {/* Bouton qui ouvre directement le menu Partager de Safari (étape 1 en un appui) */}
-          {navigator.share && (
-            <button onClick={() => navigator.share({ title: 'AWprepa', url: window.location.href }).catch(() => {})} style={{
-              width: '100%', maxWidth: 340, height: 52, marginTop: -16, marginBottom: 20,
-              background: '#e4f816', color: '#1a1a1a', border: 'none', borderRadius: 14,
-              fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
-              Ouvrir le menu Partager
-            </button>
-          )}
-
           {/* Flèche animée → pointe vers le bouton natif Safari en bas */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-              {navigator.share ? 'Ou le bouton Partager de Safari, en bas ↓' : 'Le bouton Partager est en bas ↓'}
+              Le bouton Partager est en bas ↓
             </p>
             <div style={{ animation: 'nudgeDown 1.2s ease-in-out infinite' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e4f816" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

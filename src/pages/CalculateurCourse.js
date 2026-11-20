@@ -298,8 +298,9 @@ function Navette({ ligne, trajets }) {
 }
 
 // Ajout à l'écran d'accueil.
-// iPhone : Safari ne permet pas à un site de s'ajouter tout seul ; le bouton ouvre
-// le menu Partager, où se trouve « Sur l'écran d'accueil ».
+// iPhone : Safari ne permet pas à un site de s'ajouter tout seul, et le menu Partager
+// ouvert par un site (navigator.share) n'a PAS « Sur l'écran d'accueil » (testé par
+// Arthur le 20/11/2026) : il faut le bouton Partager de Safari lui-même.
 // Android (Chrome) : installation en un appui quand le navigateur la propose.
 // Navigateur d'Instagram, Facebook ou TikTok : il faut d'abord ouvrir la page dans le navigateur du téléphone.
 function AjoutEcranAccueil({ onFermer }) {
@@ -316,8 +317,6 @@ function AjoutEcranAccueil({ onFermer }) {
       try { await invite.userChoice } catch (_) {}
       window.__awInstallPrompt = null
       onFermer()
-    } else if (navigator.share) {
-      try { await navigator.share({ title: 'Calculateur de course', url: window.location.origin + '/calculateur' }) } catch (_) {}
     }
   }
 
@@ -331,13 +330,12 @@ function AjoutEcranAccueil({ onFermer }) {
       ['plus', <>Puis reviens sur ce bouton dans {isIOS ? 'Safari' : 'ton navigateur'}</>],
     ]
   } else if (isIOS && isNonSafari) {
-    etapes = [['ouvrir', <>Sur iPhone, l’ajout fonctionne depuis <strong style={S.feuilleFort}>Safari</strong> : ouvre awprepa.app/calculateur dans Safari</>]]
+    etapes = [['ouvrir', <>Sur iPhone, l’ajout fonctionne depuis <strong style={S.feuilleFort}>Safari</strong> : ouvre {window.location.host}/calculateur dans Safari</>]]
   } else if (isIOS) {
     etapes = [
-      ['partager', <>Appuie sur <strong style={S.feuilleFort}>Partager</strong> {navigator.share ? '(le bouton ci-dessous)' : 'dans le menu de Safari, en bas de l’écran'}</>],
+      ['partager', <>Appuie sur le bouton <strong style={S.feuilleFort}>Partager</strong> de Safari, en bas de l’écran (ou dans le menu aux trois points)</>],
       ['plus', <>Choisis <strong style={S.feuilleFort}>« Sur l’écran d’accueil »</strong>, puis « Ajouter »</>],
     ]
-    if (navigator.share) bouton = 'Ouvrir le menu Partager'
   } else if (invite) {
     etapes = [['plus', 'Un appui suffit : le calculateur s’ajoute à ton écran d’accueil.']]
     bouton = 'Ajouter à l’écran d’accueil'
