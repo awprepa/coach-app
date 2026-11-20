@@ -3,7 +3,7 @@ import EnTeteClient from '../components/EnTeteClient'
 import ClientBottomNav from '../components/ClientBottomNav'
 import SchemaTerrainView from '../components/SchemaTerrainView'
 import T from '../theme/tokens'
-import { FORMATS_COURSE, calculerCourse, calculerSeance, intensiteConseillee, genererParcours } from '../utils/calculateurCourse'
+import { FORMATS_COURSE, calculerCourse, calculerSeance, intensiteConseillee, genererParcours, evaluerSeance, NIVEAUX_DIFFICULTE } from '../utils/calculateurCourse'
 
 // Calculateur de course intermittente.
 // - /calculateur : page publique (sans compte), ressource gratuite envoyée en
@@ -61,6 +61,7 @@ export default function CalculateurCourse({ publique = false }) {
     demiTours: p.demiTours, virages90: p.virages90, virages45: p.virages45, sol: p.sol,
   })
   const seance = !r.erreur ? calculerSeance({ distance: r.distance, effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
+  const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
   const parcours = !r.erreur ? genererParcours({ distance: r.distance, demiTours: p.demiTours, virages90: p.virages90, virages45: p.virages45, sol: p.sol }) : null
   const formatActif = FORMATS_COURSE.find(f => f.effort === Number(p.effort) && f.recup === Number(p.recup))?.nom
   const ref = p.reference === 'vmi' ? 'VMI' : 'VMA'
@@ -70,7 +71,7 @@ export default function CalculateurCourse({ publique = false }) {
       {publique ? (
         // Page publique : à la place de l'en-tête, la barre « appli AWprepa » reste en haut de l'écran
         <a href="/" style={S.barreAppli}>
-          <span style={S.barreIcone}><img src="/logo-blanc.png" alt="" style={{ height: 36, width: 'auto', display: 'block' }} /></span>
+          <img src="/apple-touch-icon.png" alt="" style={S.barreIcone} />
           <span style={S.barreTexte}>Retrouve-le dans l'appli AWprepa</span>
           <span style={S.barreBouton}>Télécharger</span>
         </a>
@@ -165,6 +166,7 @@ export default function CalculateurCourse({ publique = false }) {
               <Info label="Répétitions" valeur={seance.repsTotal} />
             </div>
           )}
+          {evaluation && <Jauge e={evaluation} />}
         </section>
 
         {publique && <p style={S.pied}>AWprepa - préparation physique</p>}
@@ -220,6 +222,35 @@ function Compteur({ label, detail, value, onChange, pas = 1, min = 0, max = 20, 
   )
 }
 
+// Faisabilité (pastille) et difficulté (barre en 4 niveaux)
+const COULEURS_NIVEAU = [T.color.success, T.color.warning, T.color.danger, '#7f1d1d']
+const FAISABILITE = {
+  faisable:   { texte: 'Faisable', couleur: T.color.success },
+  limite:     { texte: 'À la limite', couleur: T.color.warning },
+  irrealiste: { texte: 'Peu réaliste', couleur: T.color.danger },
+}
+function Jauge({ e }) {
+  const f = FAISABILITE[e.faisabilite]
+  const c = COULEURS_NIVEAU[e.niveau]
+  return (
+    <div style={S.jauge}>
+      <div style={S.jaugeLigne}>
+        <span style={S.jaugeLabel}>Faisabilité</span>
+        <span style={{ ...S.pastille, color: f.couleur, background: `${f.couleur}1a` }}>{f.texte}</span>
+      </div>
+      <div style={{ ...S.jaugeLigne, marginTop: 12 }}>
+        <span style={S.jaugeLabel}>Difficulté</span>
+        <span style={{ ...S.jaugeNiveau, color: c }}>{e.libelle}</span>
+      </div>
+      <div style={S.segments} role="img" aria-label={`Difficulté : ${e.libelle}`}>
+        {NIVEAUX_DIFFICULTE.map((n, i) => (
+          <div key={n} style={{ ...S.segment4, background: i <= e.niveau ? c : T.color.line }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Info({ label, valeur }) {
   return (
     <div>
@@ -236,7 +267,8 @@ const S = {
 
   // même fond que l'en-tête de l'appli (var(--header-bg)), collée en haut de l'écran
   barreAppli: { position: 'sticky', top: 0, zIndex: 40, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--header-bg)', padding: 'calc(env(safe-area-inset-top) + 12px) 16px 12px', textDecoration: 'none', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' },
-  barreIcone: { width: 56, height: 56, borderRadius: 14, background: '#1a1a1a', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // l'icône de l'appli telle qu'elle apparaît sur l'écran d'accueil
+  barreIcone: { width: 56, height: 56, borderRadius: 13, display: 'block', flexShrink: 0, boxShadow: '0 0 0 1px rgba(255,255,255,0.12)' },
   barreTexte: { flex: 1, minWidth: 0, fontSize: T.size.base, fontWeight: 700, color: T.color.onDark, lineHeight: 1.3 },
   barreBouton: { minHeight: 40, padding: '0 14px', borderRadius: T.radius.pill, background: T.color.signal, color: T.color.anthracite, fontSize: T.size.sm, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 },
 
@@ -280,6 +312,13 @@ const S = {
   infoLabel: { margin: 0, fontSize: T.size.xs, fontWeight: 600, color: T.color.muted },
   infoValeur: { margin: '2px 0 0', fontSize: T.size.lg, fontWeight: 700, color: T.color.ink, ...T.num },
 
+  jauge: { marginTop: 12, paddingTop: 14, borderTop: `1px solid ${T.color.soft}` },
+  jaugeLigne: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  jaugeLabel: { fontSize: T.size.base, fontWeight: 600, color: T.color.ink },
+  jaugeNiveau: { fontSize: T.size.base, fontWeight: 800 },
+  pastille: { padding: '6px 12px', borderRadius: T.radius.pill, fontSize: T.size.sm, fontWeight: 700 },
+  segments: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 8 },
+  segment4: { height: 8, borderRadius: T.radius.pill },
   bilan: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, padding: 12, background: T.color.soft, borderRadius: T.radius.control },
 
   pied: { margin: '8px 0 0', textAlign: 'center', fontSize: T.size.xs, color: T.color.muted },

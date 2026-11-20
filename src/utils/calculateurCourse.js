@@ -107,3 +107,37 @@ export function genererParcours({ distance, demiTours = 0, virages90 = 0, virage
     : { surface: 'vierge', ...(taille > 100 ? { taille } : {}), plots, arrows, zones: [] }
   return { schema, surTerrain, trajet: arrondiDemi(L), trajets: n }
 }
+
+// Faisabilité et difficulté de la séance (indicatif ; règles validées par Arthur le 20/11/2026).
+// Faisabilité : la vitesse visée est-elle tenable sur la durée de l'effort ?
+//   VMI : fourchette de Buchheit selon la durée (repereIntensite) ;
+//   VMA : 100 à 110 % (efforts de 10 s ou moins : 110 à 120 %).
+//   Au-dessus du haut de la fourchette : à la limite (jusqu'à +10 points), puis peu réaliste.
+// Difficulté (score de 0 à 10) :
+//   intensité dans la fourchette 0 à 2 · récupération / effort : ≥ 2 → 0, ≥ 1 → 1, < 1 → 2 ·
+//   répétitions totales (le volume compte en répétitions, pas en temps : 10 min de 30-30
+//   sont plus faciles que 10 min de 15-15) : < 8 → 0, < 15 → 1, < 30 → 2, < 60 → 3, sinon 4 ·
+//   récupération entre les séries (s'il y en a plusieurs) : < 2 min → 2, < 3 min → 1, sinon 0.
+export function fourchetteIntensite(reference, effort) {
+  if (!(effort > 0)) return null
+  if (reference === 'vmi') return repereIntensite(effort)
+  return effort <= 10 ? { min: 110, max: 120 } : { min: 100, max: 110 }
+}
+
+export const NIVEAUX_DIFFICULTE = ['Légère', 'Modérée', 'Difficile', 'Très difficile']
+
+export function evaluerSeance({ reference, intensite, effort, recup, reps, series, recupSeriesMin }) {
+  const f = fourchetteIntensite(reference, effort)
+  if (!f || !(intensite > 0)) return null
+  const faisabilite = intensite <= f.max ? 'faisable' : intensite <= f.max + 10 ? 'limite' : 'irrealiste'
+
+  const ptsIntensite = intensite <= f.min ? 0 : intensite >= f.max ? 2 : Math.round(2 * (intensite - f.min) / (f.max - f.min))
+  const ratio = effort > 0 ? (recup || 0) / effort : 0
+  const ptsRecup = ratio >= 2 ? 0 : ratio >= 1 ? 1 : 2
+  const total = (reps > 0 ? reps : 0) * (series > 0 ? series : 1)
+  const ptsReps = total < 8 ? 0 : total < 15 ? 1 : total < 30 ? 2 : total < 60 ? 3 : 4
+  const ptsSeries = series > 1 ? ((recupSeriesMin || 0) < 2 ? 2 : (recupSeriesMin || 0) < 3 ? 1 : 0) : 0
+  const score = ptsIntensite + ptsRecup + ptsReps + ptsSeries
+  const niveau = score <= 2 ? 0 : score <= 4 ? 1 : score <= 6 ? 2 : 3
+  return { faisabilite, fourchette: f, score, niveau, libelle: NIVEAUX_DIFFICULTE[niveau] }
+}
