@@ -92,7 +92,7 @@ export default function CalculateurCourse({ publique = false }) {
   const parcours = !r.erreur ? genererParcours({ longueurs: r.longueurs, virages: p.virages, sols: p.sols }) : null
   // Couleur des plots de chaque trajet (sans résultat : longueurs de 10 m pour placer les plots)
   const couleurs = (parcours || genererParcours({ longueurs: p.longueurs.map(() => 10), virages: p.virages })).couleurs
-  const conseil = intensiteConseillee(p.reference, Number(p.effort))
+  const conseil = p.reference === 'vmi' && Number(p.effort) > 60 ? null : intensiteConseillee(p.reference, Number(p.effort))
   const kmh = nombre(p.vitesse) > 0 ? nombre(p.vitesse) * (Number(p.intensite) || 0) / 100 : null
   // Parcours : un changement de direction ajouté à la fin crée un nouveau trajet après lui
   function ajouterVirage(a) {
@@ -150,7 +150,7 @@ export default function CalculateurCourse({ publique = false }) {
           </div>
           <div style={S.deuxColonnes}>
             <ChampNombre label="Effort" unite="s" value={p.effort} onChange={v => {
-              const c = intensiteConseillee(p.reference, v)
+              const c = p.reference === 'vmi' && v > 60 ? null : intensiteConseillee(p.reference, v)
               setP(x => ({ ...x, effort: v, intensite: c ? c.conseil : x.intensite }))
             }} />
             <ChampNombre label="Récupération" unite="s" value={p.recup} onChange={v => maj('recup', v)} />
@@ -162,7 +162,7 @@ export default function CalculateurCourse({ publique = false }) {
           <Titre n="3" texte="L’intensité" />
           <Compteur label={`% de ta ${ref}`} detail={kmh ? `soit ${virgule(kmh)} km/h` : undefined} value={Number(p.intensite) || 0} pas={5} min={50} max={140} onChange={v => maj('intensite', v)} unite="%" dernier
             info={<button onClick={() => setInfoIntensite(v => !v)} aria-expanded={infoIntensite} aria-label="Quel pourcentage choisir ?" style={S.infoZone}><span style={{ ...S.info, ...(infoIntensite ? S.infoActif : {}) }}>i</span></button>} />
-          {infoIntensite && <InfoIntensite reference={p.reference} effort={Number(p.effort)} intensite={Number(p.intensite) || 0} conseil={conseil} appliquer={v => maj('intensite', v)} />}
+          {infoIntensite && <InfoIntensite reference={p.reference} intensite={Number(p.intensite) || 0} conseil={conseil} appliquer={v => maj('intensite', v)} />}
         </section>
 
         {/* 4. Parcours */}
@@ -220,7 +220,7 @@ export default function CalculateurCourse({ publique = false }) {
               <p style={S.resultatLabel}>Distance à courir en {p.effort} s</p>
               <p style={S.resultatValeur}>{virgule(r.distance)} <span style={S.resultatUnite}>m</span></p>
               {ligneResultat && <p style={S.resultatLigne}>{ligneResultat}</p>}
-              <div style={S.schema} data-schema-calc><SchemaTerrainView value={parcours.schema} consigne={false} zoom coteMin={28} /></div>
+              <div style={S.schema} data-schema-calc><SchemaTerrainView value={parcours.schema} consigne={false} zoom coteMin={28} etiquettesLibres /></div>
               {!parcours.surTerrain && <p style={S.resultatNote}>Parcours plus long qu’un terrain de rugby</p>}
             </>
           )}
@@ -305,17 +305,16 @@ function Compteur({ label, detail, value, onChange, pas = 1, min = 0, max = 20, 
 }
 
 // Explication de l'intensité (bouton « i ») : quel % choisir selon la durée de l'effort
-const REPERES_VMI = [['Moins de 10 s', 100, 110], ['10 à 20 s', 90, 100], ['21 à 60 s', 85, 95], ['1 à 2 min', 80, 90], ['Plus de 2 min', 80, 85]]
-function InfoIntensite({ reference, effort, intensite, conseil, appliquer }) {
+// La VMI sert aux efforts courts (jusqu'à 1 min) ; au-delà, on se base sur la VMA
+const REPERES_VMI = [['Moins de 10 s', 100, 110], ['10 à 20 s', 90, 100], ['21 à 60 s', 85, 95]]
+function InfoIntensite({ reference, intensite, conseil, appliquer }) {
   const vmi = reference === 'vmi'
-  const fourchette = conseil ? (conseil.min === conseil.max ? `${conseil.min} %` : `${conseil.min} à ${conseil.max} %`) : null
   return (
     <div style={S.repere}>
       <p style={S.repereTitre}><strong>Quel pourcentage choisir ?</strong></p>
       {vmi ? (
         <>
-          <p style={S.repereTexte}>Ta VMI est la vitesse atteinte à la fin du test 30-15 IFT. Comme le test comporte des demi-tours et des relances, elle est plus élevée que ta VMA.</p>
-          <p style={S.repereTexte}>Plus chaque effort est court, plus tu peux courir vite. Le pourcentage dépend donc de la durée de l’effort :</p>
+          <p style={S.repereTexte}>Plus chaque effort est court, plus tu peux courir vite. Le pourcentage dépend de la durée de l’effort :</p>
           <div style={S.repereTable}>
             {REPERES_VMI.map(([duree, mn, mx]) => {
               const actif = conseil && conseil.min === mn && conseil.max === mx
@@ -326,17 +325,14 @@ function InfoIntensite({ reference, effort, intensite, conseil, appliquer }) {
               )
             })}
           </div>
+          <p style={S.repereTexte}>Plus d’une minute d’effort : base-toi plutôt sur ta VMA.</p>
           <p style={S.repereSource}>Repères de Buchheit et Laursen (2013).</p>
         </>
       ) : (
         <>
-          <p style={S.repereTexte}>Ta VMA est la vitesse maximale aérobie, mesurée sur un test en ligne droite (VAMEVAL, Léger-Boucher, demi-Cooper…).</p>
           <p style={S.repereTexte}>Le 30-30 se court à 100 % de ta VMA. Plus l’effort est court, plus tu peux monter au-dessus ; plus il est long, plus tu descends en dessous.</p>
           <p style={S.repereSource}>Repère de Billat (2000).</p>
         </>
-      )}
-      {fourchette && (
-        <p style={{ ...S.repereTexte, color: T.color.ink }}>Pour {effort} s d’effort : <strong>{fourchette}</strong>. Prends le bas de la fourchette si tu reprends ou si tu enchaînes beaucoup de répétitions, le haut pour une séance courte et intense.</p>
       )}
       {conseil && intensite !== conseil.conseil && (
         <button onClick={() => appliquer(conseil.conseil)} style={S.repereBouton}>Mettre {conseil.conseil} %</button>
@@ -383,104 +379,118 @@ function resumeParcours(r, virages) {
   return virages.every(v => v.a === 180) ? `Plots à ${demi(L[0])} m, ${L.length} trajets` : `${L.length} trajets de ${demi(L[0])} m`
 }
 
-// Fiche de la séance en image (PNG) : document aux couleurs de l'appli (bandeau
-// anthracite, liseré jaune), chiffres clés, schéma du parcours, séance.
+// Fiche de la séance en image (PNG) au format plein écran iPhone : document aux
+// couleurs de l'appli (bandeau anthracite, liseré jaune), chiffres clés, schéma, séance.
 // Dessinée en SVG puis convertie en image dans le navigateur (rien n'est envoyé).
 const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const POLICE = '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
 
 async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, format }) {
-  // Fiche « document » : bandeau sombre, chiffres clés, parcours, séance ; ni cartes ni tuiles du site
-  const W = 1080, M = 72
+  // Format plein écran iPhone (1179 × 2556, Dynamic Island en haut, barre d'accueil en bas) :
+  // bandeau anthracite, chiffres clés, parcours, séance ; le fond va jusqu'aux bords
+  const W = 1179, H = 2556, M = 80, HAUT = 230, PIED = 230
   const mesure = document.createElement('canvas').getContext('2d')
   const largeur = (t, taille, gras = 600) => { mesure.font = `${gras} ${taille}px ${POLICE}`; return mesure.measureText(t).width }
   const txt = (x, y, t, { taille = 30, gras = 600, couleur = '#1a1a1a', ancre = 'start', espace = 0 } = {}) =>
     `<text x="${x}" y="${y}" font-size="${taille}" font-weight="${gras}" fill="${couleur}" text-anchor="${ancre}"${espace ? ` letter-spacing="${espace}"` : ''}>${esc(t)}</text>`
-  const rubrique = (y, t) => txt(M, y, t.toUpperCase(), { taille: 24, gras: 800, couleur: '#6b7280', espace: 3 })
+  const rubrique = (y, t) => txt(M, y, t.toUpperCase(), { taille: 26, gras: 800, couleur: '#6b7280', espace: 3 })
   const filet = y => `<rect x="${M}" y="${y}" width="${W - 2 * M}" height="2" fill="#e5e7eb"/>`
   const parts = []
 
-  // Bandeau : logo (dessiné ensuite), titre de la séance, date ; liseré jaune
-  parts.push(`<rect width="${W}" height="300" fill="#333333"/>`)
-  parts.push(txt(M + 112, 96, 'AWPREPA · SÉANCE DE COURSE', { taille: 24, gras: 800, couleur: '#e4f816', espace: 3 }))
-  parts.push(txt(M + 112, 134, new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), { taille: 26, couleur: 'rgba(255,255,255,0.6)' }))
-  parts.push(txt(M, 250, `${format} à ${p.intensite} % ${ref}`, { taille: 76, gras: 800, couleur: '#ffffff' }))
-  parts.push(`<rect y="300" width="${W}" height="12" fill="#e4f816"/>`)
-  let y = 312
+  // Bandeau : logo (dessiné ensuite), titre, blocs de répétitions ; liseré jaune
+  const blocs = Array.from({ length: Math.max(1, Number(p.series) || 1) }, () => Number(p.reps) || 0)
+  const BAS_BANDEAU = 680
+  parts.push(`<rect width="${W}" height="${BAS_BANDEAU}" fill="#333333"/>`)
+  parts.push(txt(M + 128, HAUT + 64, 'AWPREPA · SÉANCE DE COURSE', { taille: 28, gras: 800, couleur: '#e4f816', espace: 3 }))
+  parts.push(txt(M, HAUT + 230, `${format} à ${p.intensite} % ${ref}`, { taille: 96, gras: 800, couleur: '#ffffff' }))
+  const lib = `${blocs.length} bloc${blocs.length > 1 ? 's' : ''}`
+  let bx = M
+  const by = HAUT + 320
+  parts.push(txt(bx, by + 46, lib, { taille: 38, gras: 800, couleur: '#ffffff' }))
+  bx += largeur(lib, 38, 800) + 24
+  blocs.forEach(n => {
+    const t = String(n), w = Math.max(72, largeur(t, 36, 800) + 40)
+    parts.push(`<rect x="${bx}" y="${by}" width="${w}" height="64" rx="14" fill="rgba(228,248,22,0.14)" stroke="#e4f816" stroke-width="2"/>`)
+    parts.push(txt(bx + w / 2, by + 45, t, { taille: 36, gras: 800, couleur: '#e4f816', ancre: 'middle' }))
+    bx += w + 12
+  })
+  parts.push(txt(bx + 8, by + 44, 'répétitions', { taille: 30, couleur: 'rgba(255,255,255,0.6)' }))
+  parts.push(`<rect y="${BAS_BANDEAU}" width="${W}" height="14" fill="#e4f816"/>`)
+  let y = BAS_BANDEAU + 14
 
-  // Chiffres clés sur trois colonnes séparées par des filets
-  y += 86
+  // Chiffres clés sur trois colonnes
+  y += 100
   const col = (W - 2 * M) / 3
   const cles = [
     ['Distance', `${demi(r.distance)} m`, `par effort de ${p.effort} s`],
     ['Vitesse', kmh ? `${virgule(kmh)} km/h` : '-', `${p.intensite} % de ta ${ref}`],
-    ['Volume', `${seance.volume.toLocaleString('fr-FR').replace(/\s/g, ' ')} m`, Number(p.series) > 1 ? `${p.reps} × ${p.series} répétitions` : `${p.reps} répétitions`],
+    ['Volume', `${seance.volume.toLocaleString('fr-FR').replace(/\s/g, ' ')} m`, `${seance.repsTotal} répétitions`],
   ]
   cles.forEach(([l, v, sous], i) => {
-    const x = M + i * col + (i ? 32 : 0)
-    if (i) parts.push(`<rect x="${M + i * col}" y="${y - 40}" width="2" height="190" fill="#e5e7eb"/>`)
-    parts.push(txt(x, y, l.toUpperCase(), { taille: 22, gras: 800, couleur: '#6b7280', espace: 2 }))
-    parts.push(txt(x, y + 78, v, { taille: 58, gras: 800 }))
-    parts.push(txt(x, y + 124, sous, { taille: 24, couleur: '#6b7280' }))
+    const x = M + i * col + (i ? 36 : 0)
+    if (i) parts.push(`<rect x="${M + i * col}" y="${y - 44}" width="2" height="206" fill="#e5e7eb"/>`)
+    parts.push(txt(x, y, l.toUpperCase(), { taille: 24, gras: 800, couleur: '#6b7280', espace: 2 }))
+    parts.push(txt(x, y + 84, v, { taille: 62, gras: 800 }))
+    parts.push(txt(x, y + 134, sous, { taille: 26, couleur: '#6b7280' }))
   })
-  y += 190
+  y += 206
   parts.push(filet(y))
 
-  // Le parcours : repères en une ligne, puis le schéma
-  y += 70
+  // Le parcours
+  y += 76
   parts.push(rubrique(y, 'Le parcours'))
   const nbCdd = p.virages.length
   const nbSol = p.sols.filter(Boolean).length
-  const infos = [`${nbCdd} changement${nbCdd > 1 ? 's' : ''} de direction`, ...(nbSol ? [`${nbSol} passage${nbSol > 1 ? 's' : ''} au sol`] : [])].join('  ·  ')
-  y += 52
-  parts.push(txt(M, y, infos, { taille: 30, gras: 700 }))
-  if (ligneResultat) {
-    y += 54
-    const w = largeur(ligneResultat, 28, 700) + 32
-    parts.push(`<rect x="${M}" y="${y - 38}" width="${w}" height="54" rx="10" fill="#e4f816"/>`)
-    parts.push(txt(M + 16, y - 2, ligneResultat, { taille: 28, gras: 700, couleur: '#1a1a1a' }))
-  }
-  y += 36
-  const dessin = document.querySelector('[data-schema-calc] svg')
-  const TS = W - 2 * M
-  if (dessin) {
-    const copie = dessin.cloneNode(true)
-    copie.removeAttribute('style')
-    copie.setAttribute('x', M); copie.setAttribute('y', y); copie.setAttribute('width', TS); copie.setAttribute('height', TS)
-    parts.push(`<clipPath id="cs"><rect x="${M}" y="${y}" width="${TS}" height="${TS}" rx="24"/></clipPath><g clip-path="url(#cs)">${new XMLSerializer().serializeToString(copie)}</g>`)
-    y += TS
-  }
   y += 56
-  parts.push(filet(y))
+  parts.push(txt(M, y, [`${nbCdd} changement${nbCdd > 1 ? 's' : ''} de direction`, ...(nbSol ? [`${nbSol} passage${nbSol > 1 ? 's' : ''} au sol`] : [])].join('  ·  '), { taille: 32, gras: 700 }))
+  if (ligneResultat) {
+    y += 60
+    const w = largeur(ligneResultat, 30, 700) + 36
+    parts.push(`<rect x="${M}" y="${y - 42}" width="${w}" height="60" rx="12" fill="#e4f816"/>`)
+    parts.push(txt(M + 18, y - 2, ligneResultat, { taille: 30, gras: 700 }))
+  }
+  y += 40
 
-  // La séance : récupérations, durée, difficulté
-  y += 70
-  parts.push(rubrique(y, 'La séance'))
+  // La séance (hauteur connue d'avance pour donner au schéma toute la place qui reste)
   const lignes = [
-    ['Récupération', `${p.recup} s entre les efforts${Number(p.series) > 1 ? `, ${p.recupSeries} min entre les séries` : ''}`],
+    ['Récupération', `${p.recup} s entre les efforts${blocs.length > 1 ? `, ${p.recupSeries} min entre les blocs` : ''}`],
     ['Durée', `environ ${seance.dureeMin} min`],
   ]
+  const hSeance = 76 + 60 * lignes.length + (evaluation ? 60 + (evaluation.repetitionEpuisement ? 50 : 0) : 0) + 40
+  const place = H - PIED - 70 - hSeance - y - 56
+  const TS = Math.min(W - 2 * M, place)
+  const dessin = document.querySelector('[data-schema-calc] svg')
+  if (dessin && TS > 200) {
+    const sx = (W - TS) / 2
+    const copie = dessin.cloneNode(true)
+    copie.removeAttribute('style')
+    copie.setAttribute('x', sx); copie.setAttribute('y', y); copie.setAttribute('width', TS); copie.setAttribute('height', TS)
+    parts.push(`<clipPath id="cs"><rect x="${sx}" y="${y}" width="${TS}" height="${TS}" rx="28"/></clipPath><g clip-path="url(#cs)">${new XMLSerializer().serializeToString(copie)}</g>`)
+  }
+  y += Math.max(0, place) + 56
+  parts.push(filet(y))
+
+  y += 76
+  parts.push(rubrique(y, 'La séance'))
   lignes.forEach(([l, v]) => {
-    y += 54
-    parts.push(txt(M, y, l, { taille: 28, couleur: '#6b7280' }))
-    parts.push(txt(M + 260, y, v, { taille: 28, gras: 700 }))
+    y += 60
+    parts.push(txt(M, y, l, { taille: 30, couleur: '#6b7280' }))
+    parts.push(txt(M + 270, y, v, { taille: 30, gras: 700 }))
   })
   if (evaluation) {
     const c = COULEURS_NIVEAU[evaluation.niveau]
-    y += 54
-    parts.push(txt(M, y, 'Difficulté', { taille: 28, couleur: '#6b7280' }))
-    parts.push(txt(M + 260, y, evaluation.libelle, { taille: 28, gras: 800, couleur: c }))
-    const bx = M + 260 + largeur(evaluation.libelle, 28, 800) + 28, bw = W - M - bx, sw = (bw - 4 * 8) / 5
-    NIVEAUX_DIFFICULTE.forEach((_, i) => parts.push(`<rect x="${bx + i * (sw + 8)}" y="${y - 20}" width="${sw}" height="12" rx="6" fill="${i <= evaluation.niveau ? c : '#e5e7eb'}"/>`))
-    if (evaluation.repetitionEpuisement) { y += 46; parts.push(txt(M + 260, y, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 24, gras: 700, couleur: '#7f1d1d' })) }
+    y += 60
+    parts.push(txt(M, y, 'Difficulté', { taille: 30, couleur: '#6b7280' }))
+    parts.push(txt(M + 270, y, evaluation.libelle, { taille: 30, gras: 800, couleur: c }))
+    const gx = M + 270 + largeur(evaluation.libelle, 30, 800) + 30, gw = W - M - gx, sw = (gw - 4 * 8) / 5
+    NIVEAUX_DIFFICULTE.forEach((_, i) => parts.push(`<rect x="${gx + i * (sw + 8)}" y="${y - 21}" width="${sw}" height="13" rx="6.5" fill="${i <= evaluation.niveau ? c : '#e5e7eb'}"/>`))
+    if (evaluation.repetitionEpuisement) { y += 50; parts.push(txt(M + 270, y, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 26, gras: 700, couleur: '#7f1d1d' })) }
   }
-  y += 72
 
-  // Pied de page
-  parts.push(`<rect y="${y}" width="${W}" height="96" fill="#f5f5f5"/>`)
-  parts.push(txt(M, y + 58, 'Calculé sur awprepa.app/calculateur', { taille: 24, couleur: '#6b7280' }))
-  parts.push(txt(W - M, y + 58, 'AWprepa - préparation physique', { taille: 24, gras: 700, couleur: '#333333', ancre: 'end' }))
-  const H = y + 96
+  // Pied jusqu'au bas de l'écran (au-dessus de la barre d'accueil)
+  parts.push(`<rect y="${H - PIED}" width="${W}" height="${PIED}" fill="#f5f5f5"/>`)
+  parts.push(txt(M, H - PIED + 96, 'Calculé sur awprepa.app/calculateur', { taille: 26, couleur: '#6b7280' }))
+  parts.push(txt(W - M, H - PIED + 96, 'AWprepa - préparation physique', { taille: 26, gras: 700, couleur: '#333333', ancre: 'end' }))
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${POLICE}"><rect width="${W}" height="${H}" fill="#ffffff"/>${parts.join('')}</svg>`
   const image = new Image()
@@ -493,7 +503,7 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
   // Logo de l'appli, coins arrondis
   try {
     const logo = new Image(); logo.src = '/apple-touch-icon.png'; await logo.decode()
-    ctx.save(); ctx.beginPath(); ctx.roundRect(M, 52, 92, 92, 22); ctx.clip(); ctx.drawImage(logo, M, 52, 92, 92); ctx.restore()
+    ctx.save(); ctx.beginPath(); ctx.roundRect(M, HAUT, 104, 104, 24); ctx.clip(); ctx.drawImage(logo, M, HAUT, 104, 104); ctx.restore()
   } catch (_) {}
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
   const nom = `seance-course-${new Date().toISOString().slice(0, 10)}.png`

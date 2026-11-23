@@ -114,7 +114,8 @@ export function flechesDecalees(arrows, e = 1) {
 }
 
 // Flèche : la distance est posée au milieu du trait, dans une étiquette.
-export function ArrowShape({ a: brute, selected, surface, decale, plots = [], e = 1 }) {
+// `labelPos` (facultatif) : position imposée de l'étiquette de distance
+export function ArrowShape({ a: brute, selected, surface, decale, plots = [], e = 1, labelPos }) {
   let a = brute, lx = 0, ly = 0
   if (decale) {
     const l = Math.hypot(brute.x2 - brute.x1, brute.y2 - brute.y1) || 1
@@ -128,7 +129,7 @@ export function ArrowShape({ a: brute, selected, surface, decale, plots = [], e 
   const m = arrondiDemi(metresFleche(a, surface))
   const mode = a.mode === 'arriere' ? ' · arrière' : a.mode === 'chasses' ? ' · chassés' : ''
   const label = a.masquerDistance || m < 0.5 ? null : `${String(m).replace('.', ',')} m${mode}`
-  const mx = (a.x1 + a.x2) / 2 + lx, my = (a.y1 + a.y2) / 2 + ly
+  const mx = labelPos ? labelPos.x : (a.x1 + a.x2) / 2 + lx, my = labelPos ? labelPos.y : (a.y1 + a.y2) / 2 + ly
   const w = label ? (label.length * 1.15 + 1.8) * e : 0
   // La flèche va jusqu'à son point d'arrivée. Si elle part d'un plot ou y
   // arrive, elle s'arrête au bord du plot (la pointe touche le plot).
