@@ -24,27 +24,74 @@ export function intensiteConseillee(reference, effort) {
   return effort > 0 ? { min: 100, max: 100, conseil: 100 } : null
 }
 
-export function calculerCourse({ vitesseRef, intensite, effort, demiTours = 0, virages90 = 0, virages45 = 0, sol = 0, reglages = REGLAGES_DEFAUT }) {
+// Parcours construit dans l'ordre : trajets séparés par des changements de direction
+// (virages[i] = { a: 180 | 90 | 45, s: 'g' | 'd' } entre le trajet i et le trajet i + 1).
+// longueurs[i] : mètres choisis, ou vide = « auto » (les trajets auto se partagent
+// ce qui reste de la distance). Si tous les trajets ont une longueur et que le
+// parcours est plus court que la distance, il s'enchaîne : en boucle s'il revient
+// au départ, sinon en repartant en sens inverse (demi-tour au bout).
+const coutVirage = (a, reglages = REGLAGES_DEFAUT) => (a === 180 ? reglages.cdd180 : a === 90 ? reglages.cdd90 : a ? reglages.cdd45 : 0)
+
+export function calculerParcours({ vitesseRef, intensite, effort, virages = [], longueurs = [], sol = 0, reglages = REGLAGES_DEFAUT }) {
   if (!(vitesseRef > 0)) return { erreur: 'Renseigne ta vitesse (en km/h).' }
   if (!(effort > 0)) return { erreur: 'Renseigne le temps d’effort.' }
   const pct = intensite > 0 ? intensite : 100
   const vitesse = (vitesseRef / 3.6) * (pct / 100) // m/s
-  const perteDemiTours = demiTours * reglages.cdd180
-  const perteVirages = virages90 * reglages.cdd90 + virages45 * reglages.cdd45
+  const n = virages.length + 1
+  const fixes = Array.from({ length: n }, (_, i) => (Number(longueurs[i]) > 0 ? Number(longueurs[i]) : null))
+  const nbAuto = fixes.filter(l => l == null).length
+  const perteVirages = virages.reduce((t, v) => t + coutVirage(v.a, reglages), 0)
   const perteSol = sol * reglages.sol
-  const perte = perteDemiTours + perteVirages + perteSol
-  const tempsCourse = effort - perte
-  if (tempsCourse <= 0) return { erreur: 'Trop de changements de direction ou de passages au sol pour ce temps d’effort.', perte }
-  const distance = vitesse * tempsCourse
-  const distanceDroite = vitesse * effort // même effort sans rien qui ralentit
-  // Navette simple (que des demi-tours) : on sait où poser les plots
-  const navette = virages90 === 0 && virages45 === 0
-  const ligne = navette ? distance / (demiTours + 1) : null
-  return {
-    vitesse, vitesseKmh: vitesse * 3.6, perte, perteDemiTours, perteVirages, perteSol, tempsCourse,
-    distance: arrondiDemi(distance), distanceDroite: arrondiDemi(distanceDroite),
-    navette, ligne: ligne != null ? arrondiDemi(ligne) : null, trajets: demiTours + 1,
+  const somme = fixes.reduce((t, l) => t + (l || 0), 0)
+
+  if (nbAuto > 0) {
+    const perte = perteVirages + perteSol
+    const tempsCourse = effort - perte
+    if (tempsCourse <= 0) return { erreur: 'Trop de changements de direction ou de passages au sol pour ce temps d’effort.', perte }
+    const distance = vitesse * tempsCourse
+    const reste = distance - somme
+    if (reste <= 0) return { erreur: `Tes longueurs font déjà ${String(Math.round(somme * 10) / 10).replace('.', ',')} m, plus que les ${String(arrondiDemi(distance)).replace('.', ',')} m à courir. Raccourcis un trajet ou passe-le en auto.`, perte }
+    const auto = reste / nbAuto
+    return { vitesse, perte, distance: arrondiDemi(distance), longueurs: fixes.map(l => (l == null ? auto : l)), auto: fixes.map(l => l == null), boucle: null }
   }
+
+  // Tous les trajets ont une longueur : on court le parcours jusqu'à la fin de l'effort
+  const pts = tracer(fixes, virages)
+  const fin = pts[pts.length - 1]
+  const ferme = Math.hypot(fin[0], fin[1]) < 0.5
+  let cap = 0
+  virages.forEach(v => { cap += v.a === 180 ? 180 : (v.s === 'g' ? -1 : 1) * v.a })
+  const ecart = ((cap % 360) + 360) % 360
+  const angle = ecart > 180 ? 360 - ecart : ecart
+  const jonction = ferme ? (angle < 1 ? 0 : angle <= 45 ? reglages.cdd45 : angle <= 90 ? reglages.cdd90 : reglages.cdd180) : reglages.cdd180
+  let budget = effort - perteSol, distance = 0, perte = perteSol, tours = 0
+  if (budget <= 0) return { erreur: 'Trop de passages au sol pour ce temps d’effort.', perte }
+  for (let garde = 0; budget > 0 && garde < 500; garde++) {
+    for (let i = 0; i < n && budget > 0; i++) {
+      const t = fixes[i] / vitesse
+      if (budget >= t) { budget -= t; distance += fixes[i] } else { distance += budget * vitesse; budget = 0 }
+      const c = i < n - 1 ? coutVirage(virages[i].a, reglages) : null
+      if (c != null && budget > 0) { const pris = Math.min(c, budget); budget -= pris; perte += pris }
+    }
+    if (budget > 0) { tours++; const pris = Math.min(jonction, budget); budget -= pris; perte += pris }
+  }
+  return {
+    vitesse, perte, distance: arrondiDemi(distance), longueurs: fixes, auto: fixes.map(() => false),
+    boucle: { longueur: somme, tours, reste: arrondiDemi(distance - tours * somme), ferme },
+  }
+}
+
+// Points du parcours (en mètres) : départ vers le haut, virages vus par le coureur
+function tracer(longueurs, virages) {
+  let cap = -90, x = 0, y = 0
+  const pts = [[0, 0]]
+  longueurs.forEach((L, i) => {
+    x += L * Math.cos(cap * Math.PI / 180); y += L * Math.sin(cap * Math.PI / 180)
+    pts.push([x, y])
+    const v = virages[i]
+    if (v) cap += v.a === 180 ? 180 : (v.s === 'g' ? -1 : 1) * v.a
+  })
+  return pts
 }
 
 // Volume et durée de la séance
@@ -59,38 +106,25 @@ export function calculerSeance({ distance, effort, recup, reps, series, recupSer
 export { REGLAGES_DEFAUT }
 
 // Schéma du parcours sur un terrain de rugby (même format que les schémas de
-// l'appli, affiché avec SchemaTerrainView) : trajets de même longueur, dans
-// l'ordre demi-tours, virages à 90°, virages à 45° (les virages alternent
-// gauche / droite pour rester compacts). Passages au sol : aux plots de
+// l'appli, affiché avec SchemaTerrainView) : un passage du parcours, à l'échelle,
+// dans l'ordre choisi. Passages au sol : aux plots de
 // changement de direction, puis à l'arrivée, puis au départ.
 // Terrain de rugby : 0,8 unité de dessin par mètre (courseVmi.ECHELLE.gazon), 70 m × 120 m.
 // Parcours trop grand pour le terrain : surface vierge (2 unités par mètre), dézoomée
 // juste assez (mêmes tailles que l'éditeur de schémas).
 const TERRAIN = { large: 66, long: 116 } // m utilisables (petite marge sous les lignes)
 const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
-export const sensVirage = (sens, k) => sens?.[k] || (k % 2 === 0 ? 'd' : 'g')
-
-// sens : côté de chaque virage à 90° puis à 45°, dans l'ordre ('g' ou 'd', vu par le coureur).
-// Sans choix, les virages alternent droite / gauche.
-export function genererParcours({ distance, demiTours = 0, virages90 = 0, virages45 = 0, sol = 0, sens = [] }) {
-  const virages = [...Array(demiTours).fill(180), ...Array(virages90).fill(90), ...Array(virages45).fill(45)]
-  const n = virages.length + 1
-  const L = distance / n
-  let cap = -90, x = 0, y = 0, nv = 0
-  const pts = [[0, 0]]
-  for (let i = 0; i < n; i++) {
-    x += L * Math.cos(cap * Math.PI / 180); y += L * Math.sin(cap * Math.PI / 180)
-    pts.push([x, y])
-    const v = virages[i]
-    if (v === 180) cap += 180
-    else if (v) { cap += (sensVirage(sens, nv) === 'd' ? 1 : -1) * v; nv++ }
-  }
+export function genererParcours({ longueurs, virages = [], sol = 0 }) {
+  const pts = tracer(longueurs, virages)
   const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
   const larg = Math.max(...xs) - Math.min(...xs), haut = Math.max(...ys) - Math.min(...ys)
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2
   const surTerrain = larg <= TERRAIN.large && haut <= TERRAIN.long
-  const k = surTerrain ? 0.8 : 2
-  const taille = surTerrain ? null : (TAILLES_VIERGE.find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 600)
+  // Petit parcours (30 m au plus) : illisible sur tout le terrain, on zoome sur une surface vierge
+  const petit = Math.max(larg, haut) <= 30
+  const k = surTerrain && !petit ? 0.8 : 2
+  const taille = petit ? [40, 60, 80].find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 100
+    : surTerrain ? null : (TAILLES_VIERGE.find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 600)
   const P = pts.map(([a, b]) => ({ x: 50 + (a - cx) * k, y: 50 + (b - cy) * k }))
   // Un plot par emplacement (en navette, on repasse aux mêmes plots)
   const plots = []
@@ -106,10 +140,10 @@ export function genererParcours({ distance, demiTours = 0, virages90 = 0, virage
   const ordreSol = [...P.slice(1, -1), P[P.length - 1], P[0]]
   for (let i = 0; i < Math.min(sol, ordreSol.length); i++) plotEn(ordreSol[i]).sol = true
   const arrows = P.slice(0, -1).map((a, i) => ({ id: `a${i}`, x1: a.x, y1: a.y, x2: P[i + 1].x, y2: P[i + 1].y, color: '#1a1d21', style: 'plein', mode: 'avant' }))
-  const schema = surTerrain
+  const schema = surTerrain && !petit
     ? { surface: 'gazon', plots, arrows, zones: [] }
-    : { surface: 'vierge', ...(taille > 100 ? { taille } : {}), plots, arrows, zones: [] }
-  return { schema, surTerrain, trajet: arrondiDemi(L), trajets: n }
+    : { surface: 'vierge', ...(taille !== 100 ? { taille } : {}), plots, arrows, zones: [] }
+  return { schema, surTerrain }
 }
 
 // Difficulté de la séance : modèle de fatigue simulé répétition par répétition
