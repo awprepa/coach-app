@@ -68,18 +68,22 @@ export { REGLAGES_DEFAUT }
 // juste assez (mêmes tailles que l'éditeur de schémas).
 const TERRAIN = { large: 66, long: 116 } // m utilisables (petite marge sous les lignes)
 const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
-export function genererParcours({ distance, demiTours = 0, virages90 = 0, virages45 = 0, sol = 0 }) {
+export const sensVirage = (sens, k) => sens?.[k] || (k % 2 === 0 ? 'd' : 'g')
+
+// sens : côté de chaque virage à 90° puis à 45°, dans l'ordre ('g' ou 'd', vu par le coureur).
+// Sans choix, les virages alternent droite / gauche.
+export function genererParcours({ distance, demiTours = 0, virages90 = 0, virages45 = 0, sol = 0, sens = [] }) {
   const virages = [...Array(demiTours).fill(180), ...Array(virages90).fill(90), ...Array(virages45).fill(45)]
   const n = virages.length + 1
   const L = distance / n
-  let cap = -90, x = 0, y = 0, cote = 1
+  let cap = -90, x = 0, y = 0, nv = 0
   const pts = [[0, 0]]
   for (let i = 0; i < n; i++) {
     x += L * Math.cos(cap * Math.PI / 180); y += L * Math.sin(cap * Math.PI / 180)
     pts.push([x, y])
     const v = virages[i]
     if (v === 180) cap += 180
-    else if (v) { cap += cote * v; cote = -cote }
+    else if (v) { cap += (sensVirage(sens, nv) === 'd' ? 1 : -1) * v; nv++ }
   }
   const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
   const larg = Math.max(...xs) - Math.min(...xs), haut = Math.max(...ys) - Math.min(...ys)

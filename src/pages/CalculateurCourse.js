@@ -3,7 +3,7 @@ import EnTeteClient from '../components/EnTeteClient'
 import ClientBottomNav from '../components/ClientBottomNav'
 import SchemaTerrainView from '../components/SchemaTerrainView'
 import T from '../theme/tokens'
-import { FORMATS_COURSE, calculerCourse, calculerSeance, intensiteConseillee, genererParcours, evaluerSeance, NIVEAUX_DIFFICULTE } from '../utils/calculateurCourse'
+import { FORMATS_COURSE, calculerCourse, calculerSeance, intensiteConseillee, genererParcours, evaluerSeance, NIVEAUX_DIFFICULTE, sensVirage } from '../utils/calculateurCourse'
 
 // Calculateur de course intermittente.
 // - /calculateur : page publique (sans compte), ressource gratuite envoyée en
@@ -62,7 +62,16 @@ export default function CalculateurCourse({ publique = false }) {
   })
   const seance = !r.erreur ? calculerSeance({ distance: r.distance, effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
   const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries), perte: r.perte }) : null
-  const parcours = !r.erreur ? genererParcours({ distance: r.distance, demiTours: p.demiTours, virages90: p.virages90, virages45: p.virages45, sol: p.sol }) : null
+  const parcours = !r.erreur ? genererParcours({ distance: r.distance, demiTours: p.demiTours, virages90: p.virages90, virages45: p.virages45, sol: p.sol, sens: p.sens }) : null
+  // Virages dont on choisit le côté : ceux à 90° puis ceux à 45° (le demi-tour n'a pas de côté)
+  const virages = [...Array(Number(p.virages90) || 0).fill(90), ...Array(Number(p.virages45) || 0).fill(45)]
+  function choisirSens(k, cote) {
+    setP(x => {
+      const sens = virages.map((_, i) => sensVirage(x.sens, i))
+      sens[k] = cote
+      return { ...x, sens }
+    })
+  }
   const formatActif = FORMATS_COURSE.find(f => f.effort === Number(p.effort) && f.recup === Number(p.recup))?.nom
   const ref = p.reference === 'vmi' ? 'VMI' : 'VMA'
 
@@ -128,7 +137,19 @@ export default function CalculateurCourse({ publique = false }) {
           <Compteur label="Demi-tour (180°)" value={p.demiTours} onChange={v => maj('demiTours', v)} />
           <Compteur label="À 90°" value={p.virages90} onChange={v => maj('virages90', v)} />
           <Compteur label="À 45°" value={p.virages45} onChange={v => maj('virages45', v)} />
-          <Compteur label="Passages au sol" detail="plaquage et relevé" value={p.sol} onChange={v => maj('sol', v)} dernier />
+          <Compteur label="Passages au sol" detail="plaquage et relevé" value={p.sol} onChange={v => maj('sol', v)} dernier={!virages.length} />
+          {virages.length > 0 && <p style={{ ...S.groupe, marginTop: 12 }}>Sens des virages</p>}
+          {virages.map((angle, k) => (
+            <div key={k} style={{ ...S.compteur, ...(k === virages.length - 1 ? { borderBottom: 'none' } : {}) }}>
+              <p style={{ ...S.compteurLabel, flex: 1 }}>Virage {k + 1} <span style={S.compteurUnite}>à {angle}°</span></p>
+              <div style={{ ...S.segment, marginBottom: 0, width: 170 }}>
+                {[['g', 'Gauche'], ['d', 'Droite']].map(([c, l]) => (
+                  <button key={c} onClick={() => choisirSens(k, c)} aria-pressed={sensVirage(p.sens, k) === c}
+                    style={{ ...S.segmentBouton, ...(sensVirage(p.sens, k) === c ? S.segmentActif : {}) }}>{l}</button>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
 
         {/* Résultat */}
