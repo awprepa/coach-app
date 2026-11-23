@@ -32,7 +32,7 @@ export function intensiteConseillee(reference, effort) {
 // au départ, sinon en repartant en sens inverse (demi-tour au bout).
 const coutVirage = (a, reglages = REGLAGES_DEFAUT) => (a === 180 ? reglages.cdd180 : a === 90 ? reglages.cdd90 : a ? reglages.cdd45 : 0)
 
-export function calculerParcours({ vitesseRef, intensite, effort, virages = [], longueurs = [], sol = 0, reglages = REGLAGES_DEFAUT }) {
+export function calculerParcours({ vitesseRef, intensite, effort, virages = [], longueurs = [], sols = [], reglages = REGLAGES_DEFAUT }) {
   if (!(vitesseRef > 0)) return { erreur: 'Renseigne ta vitesse (en km/h).' }
   if (!(effort > 0)) return { erreur: 'Renseigne le temps d’effort.' }
   const pct = intensite > 0 ? intensite : 100
@@ -41,7 +41,8 @@ export function calculerParcours({ vitesseRef, intensite, effort, virages = [], 
   const fixes = Array.from({ length: n }, (_, i) => (Number(longueurs[i]) > 0 ? Number(longueurs[i]) : null))
   const nbAuto = fixes.filter(l => l == null).length
   const perteVirages = virages.reduce((t, v) => t + coutVirage(v.a, reglages), 0)
-  const perteSol = sol * reglages.sol
+  const auSol = i => (sols[i] ? reglages.sol : 0)
+  const perteSol = Array.from({ length: n }, (_, i) => auSol(i)).reduce((t, v) => t + v, 0)
   const somme = fixes.reduce((t, l) => t + (l || 0), 0)
 
   if (nbAuto > 0) {
@@ -64,14 +65,13 @@ export function calculerParcours({ vitesseRef, intensite, effort, virages = [], 
   const ecart = ((cap % 360) + 360) % 360
   const angle = ecart > 180 ? 360 - ecart : ecart
   const jonction = ferme ? (angle < 1 ? 0 : angle <= 45 ? reglages.cdd45 : angle <= 90 ? reglages.cdd90 : reglages.cdd180) : reglages.cdd180
-  let budget = effort - perteSol, distance = 0, perte = perteSol, tours = 0
-  if (budget <= 0) return { erreur: 'Trop de passages au sol pour ce temps d’effort.', perte }
+  let budget = effort, distance = 0, perte = 0, tours = 0
   for (let garde = 0; budget > 0 && garde < 500; garde++) {
     for (let i = 0; i < n && budget > 0; i++) {
       const t = fixes[i] / vitesse
       if (budget >= t) { budget -= t; distance += fixes[i] } else { distance += budget * vitesse; budget = 0 }
-      const c = i < n - 1 ? coutVirage(virages[i].a, reglages) : null
-      if (c != null && budget > 0) { const pris = Math.min(c, budget); budget -= pris; perte += pris }
+      const c = (i < n - 1 ? coutVirage(virages[i].a, reglages) : 0) + auSol(i)
+      if (c > 0 && budget > 0) { const pris = Math.min(c, budget); budget -= pris; perte += pris }
     }
     if (budget > 0) { tours++; const pris = Math.min(jonction, budget); budget -= pris; perte += pris }
   }
@@ -107,43 +107,38 @@ export { REGLAGES_DEFAUT }
 
 // Schéma du parcours sur un terrain de rugby (même format que les schémas de
 // l'appli, affiché avec SchemaTerrainView) : un passage du parcours, à l'échelle,
-// dans l'ordre choisi. Passages au sol : aux plots de
-// changement de direction, puis à l'arrivée, puis au départ.
+// dans l'ordre choisi. Passages au sol : au plot où ils sont placés.
 // Terrain de rugby : 0,8 unité de dessin par mètre (courseVmi.ECHELLE.gazon), 70 m × 120 m.
 // Parcours trop grand pour le terrain : surface vierge (2 unités par mètre), dézoomée
 // juste assez (mêmes tailles que l'éditeur de schémas).
 const TERRAIN = { large: 66, long: 116 } // m utilisables (petite marge sous les lignes)
 const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
-export function genererParcours({ longueurs, virages = [], sol = 0 }) {
+// Couleurs des plots, dans l'ordre où on les rencontre (jaune = départ, sans étiquette)
+export const COULEURS_PLOTS = ['#f2c94c', '#2f80ed', '#eb5757', '#27ae60', '#f2994a', '#9b51e0', '#56ccf2', '#e84393', '#1a1d21', '#ffffff']
+export function genererParcours({ longueurs, virages = [], sols = [] }) {
   const pts = tracer(longueurs, virages)
   const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
   const larg = Math.max(...xs) - Math.min(...xs), haut = Math.max(...ys) - Math.min(...ys)
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2
   const surTerrain = larg <= TERRAIN.large && haut <= TERRAIN.long
-  // Petit parcours (30 m au plus) : illisible sur tout le terrain, on zoome sur une surface vierge
-  const petit = Math.max(larg, haut) <= 30
-  const k = surTerrain && !petit ? 0.8 : 2
-  const taille = petit ? [40, 60, 80].find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 100
-    : surTerrain ? null : (TAILLES_VIERGE.find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 600)
+  const k = surTerrain ? 0.8 : 2
+  const taille = surTerrain ? null : (TAILLES_VIERGE.find(t => Math.max(larg, haut) * k + 12 * t / 100 <= t) || 600)
   const P = pts.map(([a, b]) => ({ x: 50 + (a - cx) * k, y: 50 + (b - cy) * k }))
-  // Un plot par emplacement (en navette, on repasse aux mêmes plots)
+  // Un plot par emplacement (en navette, on repasse aux mêmes plots), chacun de sa couleur :
+  // le trajet se lit « du plot jaune au plot bleu »
   const plots = []
-  const plotEn = (q, couleur, label) => {
+  const plotEn = q => {
     let p = plots.find(o => Math.hypot(o.x - q.x, o.y - q.y) < 0.5)
-    if (!p) { p = { id: `p${plots.length}`, x: q.x, y: q.y, color: couleur, label: '' }; plots.push(p) }
-    if (label && !p.label.includes(label)) p.label = p.label ? `${p.label} · ${label}` : label
+    if (!p) { p = { id: `p${plots.length}`, x: q.x, y: q.y, color: COULEURS_PLOTS[plots.length % COULEURS_PLOTS.length], label: '' }; plots.push(p) }
     return p
   }
-  plotEn(P[0], '#f2c94c', 'Départ')
-  P.slice(1, -1).forEach(q => plotEn(q, '#2f80ed', ''))
-  plotEn(P[P.length - 1], '#eb5757', 'Arrivée')
-  const ordreSol = [...P.slice(1, -1), P[P.length - 1], P[0]]
-  for (let i = 0; i < Math.min(sol, ordreSol.length); i++) plotEn(ordreSol[i]).sol = true
+  const parPoint = P.map(plotEn)
+  sols.forEach((s, i) => { if (s && parPoint[i + 1]) parPoint[i + 1].sol = true })
   const arrows = P.slice(0, -1).map((a, i) => ({ id: `a${i}`, x1: a.x, y1: a.y, x2: P[i + 1].x, y2: P[i + 1].y, color: '#1a1d21', style: 'plein', mode: 'avant' }))
-  const schema = surTerrain && !petit
+  const schema = surTerrain
     ? { surface: 'gazon', plots, arrows, zones: [] }
-    : { surface: 'vierge', ...(taille !== 100 ? { taille } : {}), plots, arrows, zones: [] }
-  return { schema, surTerrain }
+    : { surface: 'vierge', ...(taille > 100 ? { taille } : {}), plots, arrows, zones: [] }
+  return { schema, surTerrain, couleurs: parPoint.map(p => p.color) }
 }
 
 // Difficulté de la séance : modèle de fatigue simulé répétition par répétition

@@ -18,11 +18,10 @@ export const surfaceOf = schema => (SURFACES[schema?.surface] ? schema.surface :
 // Surface vierge : on peut dézoomer pour faire de plus grands schémas.
 // `taille` = côté visible en unités (100 par défaut), centré sur le milieu ;
 // `e` agrandit d'autant plots, flèches et étiquettes pour qu'ils restent lisibles.
-// (Le calculateur de course utilise aussi des tailles sous 100 pour zoomer sur un petit parcours.)
 export const TAILLES_VIERGE = [100, 150, 200, 300, 400, 600]
 export function cadreDe(schema) {
-  const t = surfaceOf(schema) === 'vierge' && schema?.taille >= 20 ? schema.taille : 100
-  return { x0: 50 - t / 2, y0: 50 - t / 2, t, e: t < 100 ? Math.sqrt(t / 100) : t / 100 }
+  const t = surfaceOf(schema) === 'vierge' && schema?.taille > 100 ? schema.taille : 100
+  return { x0: 50 - t / 2, y0: 50 - t / 2, t, e: t / 100 }
 }
 export const fondUrl = (surface, e = 1) => `url(#surf-${surface === 'vierge' ? `vierge-${Math.round(e * 100)}` : surface})`
 

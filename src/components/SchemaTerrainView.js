@@ -5,7 +5,8 @@ import { surfaceDefs, markerDefs, surfaceMarkings, surfaceOf, ArrowShape, PlotSh
 // `consigne` : afficher la ligne de consigne de course sous le dessin (pas dans les vignettes)
 // `zoom` : sur le terrain de rugby, cadre resserré autour des plots et des flèches
 // quand l'exercice est petit (toute la largeur du terrain reste visible).
-export default function SchemaTerrainView({ value, style, consigne: avecConsigne = true, zoom = false }) {
+// `coteMin` : zoom maximal (côté visible minimal, en unités ; 68 = toute la largeur du terrain)
+export default function SchemaTerrainView({ value, style, consigne: avecConsigne = true, zoom = false, coteMin = 68 }) {
   const schema = value || { surface: 'gazon', plots: [], arrows: [], zones: [] }
   const surface = surfaceOf(schema)
   let { x0, y0, t, e } = cadreDe(schema)
@@ -13,7 +14,7 @@ export default function SchemaTerrainView({ value, style, consigne: avecConsigne
   if (zoom && surface === 'gazon' && pts.length) {
     const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
     // largeur du terrain (lignes de touche et repères 22 / 40 / 50) toujours visible
-    const cote = Math.min(100, Math.max(68, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.4 + 10))
+    const cote = Math.min(100, Math.max(coteMin, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.4 + 10))
     const borne = v => Math.min(100 - cote, Math.max(0, v))
     x0 = borne(50 - cote / 2)
     y0 = borne((Math.min(...ys) + Math.max(...ys) - cote) / 2)

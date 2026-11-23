@@ -12,7 +12,7 @@ import { FORMATS_COURSE, calculerParcours, calculerSeance, intensiteConseillee, 
 // - /client/calculateur : la même page dans l'espace client (menu du profil).
 
 const CLE = 'aw_calculateur_course_v1'
-const DEFAUT = { reference: 'vmi', vitesse: '', effort: 30, recup: 30, intensite: 90, virages: [{ a: 180 }], longueurs: ['', ''], sol: 0, reps: 10, series: 1, recupSeries: 3 }
+const DEFAUT = { reference: 'vmi', vitesse: '', effort: 30, recup: 30, intensite: 90, virages: [{ a: 180 }], longueurs: ['', ''], sols: [false, false], reps: 10, series: 1, recupSeries: 3 }
 const MAX_VIRAGES = 20
 
 // Réglages enregistrés : reprend l'ancien format (compteurs de virages) et
@@ -31,7 +31,10 @@ function relire(brut) {
   x.virages = x.virages.filter(v => [180, 90, 45].includes(v?.a)).slice(0, MAX_VIRAGES)
   const l = Array.isArray(brut?.longueurs) ? brut.longueurs : []
   x.longueurs = Array.from({ length: x.virages.length + 1 }, (_, i) => (Number(l[i]) > 0 ? l[i] : ''))
-  delete x.demiTours; delete x.virages90; delete x.virages45; delete x.sens
+  // passages au sol : un par trajet (en arrivant au plot) ; l'ancien compteur remplissait dans l'ordre
+  const nbSol = Number(brut?.sol) || 0
+  x.sols = Array.from({ length: x.longueurs.length }, (_, i) => (Array.isArray(brut?.sols) ? !!brut.sols[i] : i < nbSol))
+  delete x.demiTours; delete x.virages90; delete x.virages45; delete x.sens; delete x.sol
   return x
 }
 
@@ -81,19 +84,24 @@ export default function CalculateurCourse({ publique = false }) {
 
   const r = calculerParcours({
     vitesseRef: nombre(p.vitesse), intensite: Number(p.intensite), effort: Number(p.effort),
-    virages: p.virages, longueurs: p.longueurs.map(nombre), sol: p.sol,
+    virages: p.virages, longueurs: p.longueurs.map(nombre), sols: p.sols,
   })
   const seance = !r.erreur ? calculerSeance({ distance: r.distance, effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
   const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries), perte: r.perte }) : null
-  const parcours = !r.erreur ? genererParcours({ longueurs: r.longueurs, virages: p.virages, sol: p.sol }) : null
+  const parcours = !r.erreur ? genererParcours({ longueurs: r.longueurs, virages: p.virages, sols: p.sols }) : null
+  // Couleur des plots de chaque trajet (sans résultat : longueurs de 10 m pour placer les plots)
+  const couleurs = (parcours || genererParcours({ longueurs: p.longueurs.map(() => 10), virages: p.virages })).couleurs
+  const conseil = intensiteConseillee(p.reference, Number(p.effort))
+  const kmh = nombre(p.vitesse) > 0 ? nombre(p.vitesse) * (Number(p.intensite) || 0) / 100 : null
   // Parcours : un changement de direction ajouté à la fin crée un nouveau trajet après lui
   function ajouterVirage(a) {
-    setP(x => x.virages.length >= MAX_VIRAGES ? x : ({ ...x, virages: [...x.virages, a === 180 ? { a } : { a, s: 'd' }], longueurs: [...x.longueurs, ''] }))
+    setP(x => x.virages.length >= MAX_VIRAGES ? x : ({ ...x, virages: [...x.virages, a === 180 ? { a } : { a, s: 'd' }], longueurs: [...x.longueurs, ''], sols: [...x.sols, false] }))
   }
   function retirerVirage(i) {
-    setP(x => ({ ...x, virages: x.virages.filter((_, k) => k !== i), longueurs: x.longueurs.filter((_, k) => k !== i + 1) }))
+    setP(x => ({ ...x, virages: x.virages.filter((_, k) => k !== i), longueurs: x.longueurs.filter((_, k) => k !== i + 1), sols: x.sols.filter((_, k) => k !== i) }))
   }
   const choisirSens = (i, cote) => setP(x => ({ ...x, virages: x.virages.map((v, k) => (k === i ? { ...v, s: cote } : v)) }))
+  const basculerSol = i => setP(x => ({ ...x, sols: x.sols.map((v, k) => (k === i ? !v : v)) }))
   const choisirLongueur = (i, val) => setP(x => ({ ...x, longueurs: x.longueurs.map((l, k) => (k === i ? val : l)) }))
   const ligneResultat = !r.erreur ? resumeParcours(r, p.virages) : ''
   const formatActif = FORMATS_COURSE.find(f => f.effort === Number(p.effort) && f.recup === Number(p.recup))?.nom
@@ -151,27 +159,45 @@ export default function CalculateurCourse({ publique = false }) {
         {/* 3. Intensité */}
         <section style={S.carte}>
           <Titre n="3" texte="L’intensité" />
-          <Compteur label={`% de ta ${ref}`} value={Number(p.intensite) || 0} pas={5} min={50} max={140} onChange={v => maj('intensite', v)} unite="%" dernier />
+          <Compteur label={`% de ta ${ref}`} detail={kmh ? `soit ${virgule(kmh)} km/h` : undefined} value={Number(p.intensite) || 0} pas={5} min={50} max={140} onChange={v => maj('intensite', v)} unite="%" dernier />
+          {conseil && (() => {
+            const i = Number(p.intensite) || 0
+            const zone = i < conseil.min ? { t: 'Plus facile que le repère', c: T.color.muted } : i > conseil.max ? { t: 'Plus dur que le repère', c: T.color.warning } : { t: 'Dans le repère', c: T.color.success }
+            return (
+              <div style={S.repere}>
+                <p style={S.repereTitre}>Repère pour {p.effort} s d’effort : <strong>{conseil.min === conseil.max ? `${conseil.min} %` : `${conseil.min} à ${conseil.max} %`}</strong></p>
+                <p style={S.repereTexte}>{p.reference === 'vmi'
+                  ? 'Plus l’effort est court, plus tu cours vite : moins de 10 s, au-dessus de ta VMI ; plus d’une minute, en dessous (repères de Buchheit).'
+                  : 'Le 30-30 classique se court à 100 % de ta VMA (Billat). Sur des efforts plus longs, baisse l’intensité.'}</p>
+                <div style={S.repereLigne}>
+                  <span style={{ ...S.repereZone, color: zone.c, borderColor: zone.c }}>{zone.t}</span>
+                  {i !== conseil.conseil && <button onClick={() => maj('intensite', conseil.conseil)} style={S.repereBouton}>Mettre {conseil.conseil} %</button>}
+                </div>
+              </div>
+            )
+          })()}
         </section>
 
         {/* 4. Parcours */}
         <section style={S.carte}>
           <Titre n="4" texte="Ton parcours" />
           <p style={S.groupe}>Dans l'ordre</p>
+          <p style={S.aide}>Chaque ligne va d’un plot à l’autre, comme sur le schéma. « Sol » : passage au sol en arrivant au plot.</p>
           {p.longueurs.map((l, i) => (
             <div key={i}>
               <div style={S.trajet}>
-                <span style={{ ...S.point, background: i === 0 ? '#f2c94c' : '#2f80ed' }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={S.compteurLabel}>Trajet {i + 1}</p>
-                  {!(nombre(l) > 0) && <p style={S.compteurDetail}>auto</p>}
-                </div>
+                <span style={{ ...S.point, background: couleurs[i] }} aria-hidden="true" />
+                <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6h14M11 2l4 4-4 4" fill="none" stroke={T.color.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span style={{ ...S.point, background: couleurs[i + 1] }} aria-hidden="true" />
+                <span style={S.auto}>{nombre(l) > 0 ? '' : 'auto'}</span>
                 <div style={{ ...S.entreeUnite, width: 104 }}>
                   <input type="text" inputMode="decimal" aria-label={`Longueur du trajet ${i + 1}`} value={l}
                     placeholder={r.longueurs ? demi(r.longueurs[i]) : 'auto'}
                     onChange={e => choisirLongueur(i, e.target.value.replace(/[^0-9.,]/g, '').slice(0, 5))} style={S.entree} />
                   <span style={S.unite}>m</span>
                 </div>
+                <button onClick={() => basculerSol(i)} aria-pressed={!!p.sols[i]} aria-label={`Passage au sol en arrivant au plot (trajet ${i + 1})`}
+                  style={{ ...S.solBouton, ...(p.sols[i] ? S.segmentActif : {}) }}>Sol</button>
               </div>
               {i < p.virages.length && (
                 <div style={S.virage}>
@@ -197,7 +223,6 @@ export default function CalculateurCourse({ publique = false }) {
               <button key={a} onClick={() => ajouterVirage(a)} disabled={p.virages.length >= MAX_VIRAGES} style={S.ajoutBouton}>+ {lib}</button>
             ))}
           </div>
-          <Compteur label="Passage au sol" value={p.sol} onChange={v => maj('sol', v)} dernier />
         </section>
 
         {/* Résultat */}
@@ -209,7 +234,7 @@ export default function CalculateurCourse({ publique = false }) {
               <p style={S.resultatLabel}>Distance à courir en {p.effort} s</p>
               <p style={S.resultatValeur}>{virgule(r.distance)} <span style={S.resultatUnite}>m</span></p>
               {ligneResultat && <p style={S.resultatLigne}>{ligneResultat}</p>}
-              <div style={S.schema}><SchemaTerrainView value={parcours.schema} consigne={false} zoom /></div>
+              <div style={S.schema} data-schema-calc><SchemaTerrainView value={parcours.schema} consigne={false} zoom coteMin={28} /></div>
               {!parcours.surTerrain && <p style={S.resultatNote}>Parcours plus long qu’un terrain de rugby</p>}
             </>
           )}
@@ -234,7 +259,7 @@ export default function CalculateurCourse({ publique = false }) {
         </section>
 
         {!r.erreur && seance && (
-          <button onClick={() => creerPdf({ p, r, seance, evaluation, parcours, ref, ligneResultat }).catch(err => alert(`Impossible de créer le PDF : ${err.message}`))} style={S.creer}>
+          <button onClick={() => creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat }).catch(err => alert(`Impossible de créer la fiche : ${err.message}`))} style={S.creer}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Créer ta séance
           </button>
@@ -327,113 +352,135 @@ function resumeParcours(r, virages) {
       : `Parcours de ${demi(b.longueur)} m : enchaîne-le ${b.tours} fois en repartant en sens inverse${fin}`
   }
   if (L.length < 2) return ''
-  const egal = L.every(l => Math.abs(l - L[0]) < 0.25)
-  if (egal) return virages.every(v => v.a === 180) ? `Plots à ${demi(L[0])} m, ${L.length} trajets` : `${L.length} trajets de ${demi(L[0])} m`
-  const groupes = []
-  L.forEach((l, i) => {
-    const g = groupes.find(x => Math.abs(x.l - l) < 0.25)
-    if (g) g.n.push(i + 1); else groupes.push({ l, n: [i + 1] })
-  })
-  const texte = groupes.map(g => `${g.n.length > 1 ? 'trajets' : 'trajet'} ${g.n.length > 1 ? `${g.n.slice(0, -1).join(', ')} et ${g.n[g.n.length - 1]}` : g.n[0]} de ${demi(g.l)} m`).join(', ')
-  return texte.charAt(0).toUpperCase() + texte.slice(1)
+  if (!L.every(l => Math.abs(l - L[0]) < 0.25)) return '' // longueurs différentes : écrites sur le schéma
+  return virages.every(v => v.a === 180) ? `Plots à ${demi(L[0])} m, ${L.length} trajets` : `${L.length} trajets de ${demi(L[0])} m`
 }
 
-// Bilan de la séance en PDF (jsPDF, chargé seulement au clic), avec le schéma du parcours
-async function creerPdf({ p, r, seance, evaluation, parcours, ref, ligneResultat }) {
-  const { jsPDF } = await import('jspdf')
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const W = 210, M = 16
-  const texte = v => String(v).replace(/[\u2019]/g, "'")
-  // En-tête
-  doc.setFillColor(51, 51, 51); doc.rect(0, 0, W, 30, 'F')
-  doc.setTextColor(228, 248, 22); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text('AWprepa', M, 12)
-  doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.text('Ta séance de course', M, 23)
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(10)
-  doc.text(new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), W - M, 23, { align: 'right' })
+// Fiche de la séance en image (PNG), au design de la page : en-tête de l'appli,
+// carte sombre avec la distance et le schéma, carte blanche de la séance.
+// Dessinée en SVG puis convertie en image dans le navigateur (rien n'est envoyé).
+const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const POLICE = '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
 
-  let y = 42
-  const titre = t => { doc.setTextColor(26, 26, 26); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(texte(t), M, y); y += 7 }
-  const ligne = (label, valeur) => {
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(107, 114, 128); doc.text(texte(label), M, y)
-    doc.setTextColor(26, 26, 26); doc.setFont('helvetica', 'bold')
-    const lignes = doc.splitTextToSize(texte(valeur), W - M - 70)
-    doc.text(lignes, 70, y); y += 6 * lignes.length
+async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat }) {
+  const W = 1080, X = 40, CW = W - 2 * X, PAD = 48
+  const mesure = document.createElement('canvas').getContext('2d')
+  const largeur = (t, taille, gras = 600) => { mesure.font = `${gras} ${taille}px ${POLICE}`; return mesure.measureText(t).width }
+  const txt = (x, y, t, { taille = 30, gras = 600, couleur = '#ffffff', ancre = 'start' } = {}) =>
+    `<text x="${x}" y="${y}" font-size="${taille}" font-weight="${gras}" fill="${couleur}" text-anchor="${ancre}">${esc(t)}</text>`
+  const parts = []
+  let y = 0
+
+  // En-tête (logo dessiné ensuite sur le canvas)
+  parts.push(`<defs><linearGradient id="h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#333333"/><stop offset="1" stop-color="#1f2937"/></linearGradient></defs>`)
+  parts.push(`<rect width="${W}" height="220" fill="url(#h)"/>`)
+  parts.push(txt(200, 112, 'Ta séance de course', { taille: 54, gras: 800 }))
+  parts.push(txt(200, 162, new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), { taille: 30, couleur: 'rgba(255,255,255,0.6)' }))
+  y = 252
+
+  // Carte sombre : distance, réglages en pastilles, schéma
+  const debutCarte = y
+  const corps = []
+  let cy = y + 78
+  corps.push(txt(X + PAD, cy, `Distance à courir en ${p.effort} s`, { taille: 32, couleur: 'rgba(255,255,255,0.6)' }))
+  cy += 150
+  const valeur = demi(r.distance)
+  corps.push(txt(X + PAD, cy, valeur, { taille: 150, gras: 800 }))
+  corps.push(txt(X + PAD + largeur(valeur, 150, 800) + 16, cy, 'm', { taille: 56, gras: 700, couleur: 'rgba(255,255,255,0.6)' }))
+  cy += 44
+  const nbCdd = p.virages.length
+  const nbSol = p.sols.filter(Boolean).length
+  const pastilles = [
+    `${p.effort} s / ${p.recup} s`,
+    `${p.intensite} % ${ref}${kmh ? ` · ${virgule(kmh)} km/h` : ''}`,
+    `${nbCdd} changement${nbCdd > 1 ? 's' : ''} de direction`,
+    ...(nbSol ? [`${nbSol} passage${nbSol > 1 ? 's' : ''} au sol`] : []),
+  ]
+  let px = X + PAD
+  pastilles.forEach(t => {
+    const w = largeur(t, 28, 700) + 48
+    if (px + w > X + CW - PAD) { px = X + PAD; cy += 80 }
+    corps.push(`<rect x="${px}" y="${cy}" width="${w}" height="64" rx="32" fill="rgba(255,255,255,0.1)"/>`)
+    corps.push(txt(px + 24, cy + 42, t, { taille: 28, gras: 700 }))
+    px += w + 14
+  })
+  cy += 64
+  if (ligneResultat) { cy += 58; corps.push(txt(X + PAD, cy, ligneResultat, { taille: 30, gras: 700, couleur: '#e4f816' })) }
+  cy += 36
+  // Schéma : le dessin affiché sur la page, recopié tel quel
+  const dessin = document.querySelector('[data-schema-calc] svg')
+  const TS = CW - 2 * PAD
+  if (dessin) {
+    const copie = dessin.cloneNode(true)
+    copie.removeAttribute('style')
+    copie.setAttribute('x', X + PAD); copie.setAttribute('y', cy); copie.setAttribute('width', TS); copie.setAttribute('height', TS)
+    corps.push(`<clipPath id="cs"><rect x="${X + PAD}" y="${cy}" width="${TS}" height="${TS}" rx="20"/></clipPath><g clip-path="url(#cs)">${new XMLSerializer().serializeToString(copie)}</g>`)
+    cy += TS
   }
+  cy += PAD
+  parts.push(`<rect x="${X}" y="${debutCarte}" width="${CW}" height="${cy - debutCarte}" rx="36" fill="#333333"/>`, ...corps)
+  y = cy + 28
 
-  titre('Réglages')
-  ligne(`Ta ${ref}`, `${virgule(nombre(p.vitesse))} km/h`)
-  ligne('Intensité', `${p.intensite} % de ta ${ref}, soit ${virgule(r.vitesse * 3.6)} km/h`)
-  ligne('Format', `${p.effort} s d'effort, ${p.recup} s de récupération`)
-  y += 4
-
-  titre('Chaque répétition')
-  ligne('Distance à courir', `${demi(r.distance)} m en ${p.effort} s`)
-  if (ligneResultat) ligne('Repères', ligneResultat)
-  const etapes = []
-  r.longueurs.forEach((l, i) => {
-    etapes.push(`Trajet ${i + 1} : ${demi(l)} m`)
-    if (p.virages[i]) etapes.push(NOM_VIRAGE(p.virages[i]))
+  // Carte blanche : la séance
+  const debutSeance = y
+  const sc = []
+  let sy = y + 76
+  sc.push(txt(X + PAD, sy, 'Ta séance', { taille: 36, gras: 800, couleur: '#333333' }))
+  if (evaluation) {
+    const c = COULEURS_NIVEAU[evaluation.niveau]
+    sy += 66
+    sc.push(txt(X + PAD, sy, 'Difficulté', { taille: 30, couleur: '#333333' }))
+    sc.push(txt(X + CW - PAD, sy, evaluation.libelle, { taille: 30, gras: 800, couleur: c, ancre: 'end' }))
+    sy += 24
+    const sw = (CW - 2 * PAD - 4 * 10) / 5
+    NIVEAUX_DIFFICULTE.forEach((_, i) => sc.push(`<rect x="${X + PAD + i * (sw + 10)}" y="${sy}" width="${sw}" height="16" rx="8" fill="${i <= evaluation.niveau ? c : '#e5e7eb'}"/>`))
+    sy += 16
+    if (evaluation.repetitionEpuisement) { sy += 44; sc.push(txt(X + PAD, sy, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 26, gras: 700, couleur: '#7f1d1d' })) }
+  }
+  sy += 36
+  const tuiles = [
+    ['Répétitions', Number(p.series) > 1 ? `${p.reps} × ${p.series}` : `${p.reps}`],
+    ['Volume', `${seance.volume.toLocaleString('fr-FR').replace(/\s/g, ' ')} m`],
+    ['Durée', `${seance.dureeMin} min`],
+  ]
+  const tw = (CW - 2 * PAD - 2 * 16) / 3
+  tuiles.forEach(([l, v], i) => {
+    const tx = X + PAD + i * (tw + 16)
+    sc.push(`<rect x="${tx}" y="${sy}" width="${tw}" height="132" rx="20" fill="#f3f4f6"/>`)
+    sc.push(txt(tx + 24, sy + 48, l, { taille: 24, couleur: '#6b7280' }))
+    sc.push(txt(tx + 24, sy + 102, v, { taille: 40, gras: 800, couleur: '#333333' }))
   })
-  ligne('Parcours', etapes.join(', '))
-  if (p.sol > 0) ligne('Passages au sol', String(p.sol))
-  y += 2
+  sy += 132
+  if (Number(p.series) > 1) { sy += 50; sc.push(txt(X + PAD, sy, `Récupération entre les séries : ${p.recupSeries} min`, { taille: 26, couleur: '#6b7280' })) }
+  sy += PAD
+  parts.push(`<rect x="${X}" y="${debutSeance}" width="${CW}" height="${sy - debutSeance}" rx="36" fill="#ffffff"/>`, ...sc)
+  y = sy + 64
+  parts.push(txt(W / 2, y, 'awprepa.app/calculateur', { taille: 26, couleur: '#6b7280', ancre: 'middle' }))
+  const H = y + 48
 
-  // Schéma : traits et plots du parcours, à l'échelle, dans un cadre vert
-  const sch = parcours.schema
-  const pts = [...sch.plots.map(o => [o.x, o.y]), ...sch.arrows.flatMap(a => [[a.x1, a.y1], [a.x2, a.y2]])]
-  const xs = pts.map(q => q[0]), ys = pts.map(q => q[1])
-  const larg = Math.max(...xs) - Math.min(...xs) || 1, haut = Math.max(...ys) - Math.min(...ys) || 1
-  const cadre = { x: M, y, w: W - 2 * M, h: 78 }
-  const k = Math.min((cadre.w - 30) / larg, (cadre.h - 20) / haut)
-  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2
-  const X = v => cadre.x + cadre.w / 2 + (v - cx) * k, Y = v => cadre.y + cadre.h / 2 + (v - cy) * k
-  doc.setFillColor(58, 138, 63); doc.roundedRect(cadre.x, cadre.y, cadre.w, cadre.h, 3, 3, 'F')
-  doc.setDrawColor(26, 29, 33); doc.setLineWidth(0.6)
-  const proche = (a, b, c, d) => Math.hypot(a - c, b - d) < 0.5
-  sch.arrows.forEach((a, i) => {
-    let x1 = X(a.x1), y1 = Y(a.y1), x2 = X(a.x2), y2 = Y(a.y2)
-    const d = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / d, uy = (y2 - y1) / d
-    // aller et retour sur le même trait : chacun décalé de son côté
-    if (sch.arrows.some(b => b !== a && proche(b.x1, b.y1, a.x2, a.y2) && proche(b.x2, b.y2, a.x1, a.y1))) {
-      x1 -= uy * 1.6; x2 -= uy * 1.6; y1 += ux * 1.6; y2 += ux * 1.6
-    }
-    const ex = x2 - ux * 3, ey = y2 - uy * 3
-    doc.setDrawColor(26, 29, 33); doc.setLineWidth(0.6)
-    doc.line(x1 + ux * 3, y1 + uy * 3, ex, ey)
-    doc.setFillColor(26, 29, 33)
-    doc.triangle(ex + ux * 2, ey + uy * 2, ex - ux * 1.5 - uy * 1.5, ey - uy * 1.5 + ux * 1.5, ex - ux * 1.5 + uy * 1.5, ey - uy * 1.5 - ux * 1.5, 'F')
-    // longueur du trajet au milieu du trait
-    const lib = `${demi(r.longueurs[i])} m`
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5)
-    const lw = doc.getTextWidth(lib) + 3, mx = (x1 + x2) / 2 - uy * 3.2, my = (y1 + y2) / 2 + ux * 3.2
-    doc.roundedRect(mx - lw / 2, my - 2.4, lw, 4.2, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255); doc.text(lib, mx, my + 0.9, { align: 'center' })
-  })
-  sch.plots.forEach(o => {
-    const c = o.color === '#f2c94c' ? [242, 201, 76] : o.color === '#eb5757' ? [235, 87, 87] : [47, 128, 237]
-    doc.setFillColor(...c); doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.4); doc.circle(X(o.x), Y(o.y), 2.2, 'FD')
-    const lib = [o.label, o.sol ? 'sol' : ''].filter(Boolean).join(' · ')
-    if (lib) { doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(texte(lib), X(o.x) + 4, Y(o.y) + 1) }
-  })
-  y += cadre.h + 10
-
-  titre('Ta séance')
-  ligne('Répétitions', `${p.reps} par série, ${p.series} ${Number(p.series) > 1 ? 'séries' : 'série'}`)
-  if (Number(p.series) > 1) ligne('Récupération entre les séries', `${p.recupSeries} min`)
-  ligne('Volume total', `${seance.volume.toLocaleString('fr-FR').replace(/\s/g, ' ')} m`)
-  ligne('Durée', `environ ${seance.dureeMin} min`)
-  if (evaluation) ligne('Difficulté', evaluation.repetitionEpuisement ? `${evaluation.libelle} (épuisement estimé vers la répétition ${evaluation.repetitionEpuisement})` : evaluation.libelle)
-
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 114, 128)
-  doc.text('Calculé avec le calculateur de course AWprepa - awprepa.app/calculateur', W / 2, 287, { align: 'center' })
-
-  const nom = `seance-course-${new Date().toISOString().slice(0, 10)}.pdf`
-  const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-  const fichier = new File([doc.output('blob')], nom, { type: 'application/pdf' })
-  if (mobile && navigator.canShare?.({ files: [fichier] })) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${POLICE}"><rect width="${W}" height="${H}" fill="#f5f5f5"/>${parts.join('')}</svg>`
+  const image = new Image()
+  image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+  await image.decode()
+  const canvas = document.createElement('canvas')
+  canvas.width = W; canvas.height = H
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(image, 0, 0)
+  // Logo de l'appli, coins arrondis
+  try {
+    const logo = new Image(); logo.src = '/apple-touch-icon.png'; await logo.decode()
+    ctx.save(); ctx.beginPath(); ctx.roundRect(48, 50, 120, 120, 28); ctx.clip(); ctx.drawImage(logo, 48, 50, 120, 120); ctx.restore()
+  } catch (_) {}
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
+  const nom = `seance-course-${new Date().toISOString().slice(0, 10)}.png`
+  const fichier = new File([blob], nom, { type: 'image/png' })
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && navigator.canShare?.({ files: [fichier] })) {
     try { await navigator.share({ files: [fichier], title: 'Ta séance de course' }); return } catch (e) { if (e.name === 'AbortError') return }
   }
-  doc.save(nom)
+  const lien = document.createElement('a')
+  lien.href = URL.createObjectURL(blob); lien.download = nom
+  document.body.appendChild(lien); lien.click(); lien.remove()
+  setTimeout(() => URL.revokeObjectURL(lien.href), 10000)
 }
 
 function Info({ label, valeur }) {
@@ -506,8 +553,17 @@ const S = {
   segment4: { height: 8, borderRadius: T.radius.pill },
   bilan: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, padding: 12, background: T.color.soft, borderRadius: T.radius.control },
 
-  trajet: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' },
-  point: { width: 10, height: 10, borderRadius: T.radius.pill, flexShrink: 0, boxShadow: '0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,0.12)' },
+  trajet: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' },
+  point: { width: 16, height: 16, borderRadius: T.radius.pill, flexShrink: 0, boxShadow: '0 0 0 1.5px rgba(0,0,0,0.25)' },
+  auto: { flex: 1, minWidth: 0, fontSize: T.size.xs, fontWeight: 600, color: T.color.muted },
+  solBouton: { minHeight: T.touch, minWidth: 52, padding: '0 10px', borderRadius: T.radius.control, border: `1.5px solid ${T.color.line}`, background: T.color.card, color: T.color.muted, fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
+  aide: { margin: '0 0 6px', fontSize: T.size.xs, color: T.color.muted, lineHeight: 1.4 },
+  repere: { marginTop: 4, padding: 12, background: T.color.soft, borderRadius: T.radius.control },
+  repereTitre: { margin: 0, fontSize: T.size.md, color: T.color.ink },
+  repereTexte: { margin: '6px 0 0', fontSize: T.size.xs, color: T.color.muted, lineHeight: 1.45 },
+  repereLigne: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 10 },
+  repereZone: { fontSize: T.size.xs, fontWeight: 700, border: '1.5px solid', borderRadius: T.radius.pill, padding: '4px 10px', background: T.color.card },
+  repereBouton: { minHeight: 36, padding: '0 12px', borderRadius: T.radius.pill, border: 'none', background: T.color.ink, color: T.color.signal, fontFamily: T.font.body, fontSize: T.size.xs, fontWeight: 700, cursor: 'pointer' },
   virage: { display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 0 4px', padding: '0 0 0 16px', borderLeft: `2px solid ${T.color.line}`, minHeight: 44 },
   virageNom: { flex: 1, fontSize: T.size.md, fontWeight: 700, color: T.color.muted },
   sens: { display: 'flex', gap: 4, background: T.color.soft, borderRadius: T.radius.control, padding: 3 },
