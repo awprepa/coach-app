@@ -134,7 +134,13 @@ export function genererParcours({ longueurs, virages = [], sols = [] }) {
   }
   const parPoint = P.map(plotEn)
   sols.forEach((s, i) => { if (s && parPoint[i + 1]) parPoint[i + 1].sol = true })
-  const arrows = P.slice(0, -1).map((a, i) => ({ id: `a${i}`, x1: a.x, y1: a.y, x2: P[i + 1].x, y2: P[i + 1].y, color: '#1a1d21', style: 'plein', mode: 'avant' }))
+  // Une seule distance écrite par paire de plots (aller et retour = même longueur)
+  const paires = new Set()
+  const arrows = P.slice(0, -1).map((a, i) => {
+    const cle = [parPoint[i].id, parPoint[i + 1].id].sort().join('-')
+    const deja = paires.has(cle); paires.add(cle)
+    return { id: `a${i}`, x1: a.x, y1: a.y, x2: P[i + 1].x, y2: P[i + 1].y, color: '#1a1d21', style: 'plein', mode: 'avant', ...(deja ? { masquerDistance: true } : {}) }
+  })
   const schema = surTerrain
     ? { surface: 'gazon', plots, arrows, zones: [] }
     : { surface: 'vierge', ...(taille > 100 ? { taille } : {}), plots, arrows, zones: [] }

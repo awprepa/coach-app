@@ -71,6 +71,7 @@ export default function CalculateurCourse({ publique = false }) {
     }
   }, [publique])
 
+  const [infoIntensite, setInfoIntensite] = useState(false)
   const maj = (cle, val) => setP(x => ({ ...x, [cle]: val }))
 
   function choisirFormat(f) {
@@ -159,30 +160,15 @@ export default function CalculateurCourse({ publique = false }) {
         {/* 3. Intensité */}
         <section style={S.carte}>
           <Titre n="3" texte="L’intensité" />
-          <Compteur label={`% de ta ${ref}`} detail={kmh ? `soit ${virgule(kmh)} km/h` : undefined} value={Number(p.intensite) || 0} pas={5} min={50} max={140} onChange={v => maj('intensite', v)} unite="%" dernier />
-          {conseil && (() => {
-            const i = Number(p.intensite) || 0
-            const zone = i < conseil.min ? { t: 'Plus facile que le repère', c: T.color.muted } : i > conseil.max ? { t: 'Plus dur que le repère', c: T.color.warning } : { t: 'Dans le repère', c: T.color.success }
-            return (
-              <div style={S.repere}>
-                <p style={S.repereTitre}>Repère pour {p.effort} s d’effort : <strong>{conseil.min === conseil.max ? `${conseil.min} %` : `${conseil.min} à ${conseil.max} %`}</strong></p>
-                <p style={S.repereTexte}>{p.reference === 'vmi'
-                  ? 'Plus l’effort est court, plus tu cours vite : moins de 10 s, au-dessus de ta VMI ; plus d’une minute, en dessous (repères de Buchheit).'
-                  : 'Le 30-30 classique se court à 100 % de ta VMA (Billat). Sur des efforts plus longs, baisse l’intensité.'}</p>
-                <div style={S.repereLigne}>
-                  <span style={{ ...S.repereZone, color: zone.c, borderColor: zone.c }}>{zone.t}</span>
-                  {i !== conseil.conseil && <button onClick={() => maj('intensite', conseil.conseil)} style={S.repereBouton}>Mettre {conseil.conseil} %</button>}
-                </div>
-              </div>
-            )
-          })()}
+          <Compteur label={`% de ta ${ref}`} detail={kmh ? `soit ${virgule(kmh)} km/h` : undefined} value={Number(p.intensite) || 0} pas={5} min={50} max={140} onChange={v => maj('intensite', v)} unite="%" dernier
+            info={<button onClick={() => setInfoIntensite(v => !v)} aria-expanded={infoIntensite} aria-label="Quel pourcentage choisir ?" style={S.infoZone}><span style={{ ...S.info, ...(infoIntensite ? S.infoActif : {}) }}>i</span></button>} />
+          {infoIntensite && <InfoIntensite reference={p.reference} effort={Number(p.effort)} intensite={Number(p.intensite) || 0} conseil={conseil} appliquer={v => maj('intensite', v)} />}
         </section>
 
         {/* 4. Parcours */}
         <section style={S.carte}>
           <Titre n="4" texte="Ton parcours" />
           <p style={S.groupe}>Dans l'ordre</p>
-          <p style={S.aide}>Chaque ligne va d’un plot à l’autre, comme sur le schéma. « Sol » : passage au sol en arrivant au plot.</p>
           {p.longueurs.map((l, i) => (
             <div key={i}>
               <div style={S.trajet}>
@@ -259,7 +245,7 @@ export default function CalculateurCourse({ publique = false }) {
         </section>
 
         {!r.erreur && seance && (
-          <button onClick={() => creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat }).catch(err => alert(`Impossible de créer la fiche : ${err.message}`))} style={S.creer}>
+          <button onClick={() => creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, format: formatActif || `${p.effort}-${p.recup}` }).catch(err => alert(`Impossible de créer la fiche : ${err.message}`))} style={S.creer}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Créer ta séance
           </button>
@@ -299,12 +285,12 @@ function ChampNombre({ label, unite, value, onChange }) {
   )
 }
 
-function Compteur({ label, detail, value, onChange, pas = 1, min = 0, max = 20, unite, dernier }) {
+function Compteur({ label, detail, value, onChange, pas = 1, min = 0, max = 20, unite, dernier, info }) {
   const v = Number(value) || 0
   return (
     <div style={{ ...S.compteur, ...(dernier ? { borderBottom: 'none' } : {}) }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={S.compteurLabel}>{label}</p>
+        <p style={S.compteurLabel}>{label}{info && <> {info}</>}</p>
         {detail && <p style={S.compteurDetail}>{detail}</p>}
       </div>
       <button aria-label={`Moins : ${label}`} onClick={() => onChange(Math.max(min, v - pas))} style={S.compteurBouton} disabled={v <= min}>
@@ -314,6 +300,47 @@ function Compteur({ label, detail, value, onChange, pas = 1, min = 0, max = 20, 
       <button aria-label={`Plus : ${label}`} onClick={() => onChange(Math.min(max, v + pas))} style={S.compteurBouton} disabled={v >= max}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
       </button>
+    </div>
+  )
+}
+
+// Explication de l'intensité (bouton « i ») : quel % choisir selon la durée de l'effort
+const REPERES_VMI = [['Moins de 10 s', 100, 110], ['10 à 20 s', 90, 100], ['21 à 60 s', 85, 95], ['1 à 2 min', 80, 90], ['Plus de 2 min', 80, 85]]
+function InfoIntensite({ reference, effort, intensite, conseil, appliquer }) {
+  const vmi = reference === 'vmi'
+  const fourchette = conseil ? (conseil.min === conseil.max ? `${conseil.min} %` : `${conseil.min} à ${conseil.max} %`) : null
+  return (
+    <div style={S.repere}>
+      <p style={S.repereTitre}><strong>Quel pourcentage choisir ?</strong></p>
+      {vmi ? (
+        <>
+          <p style={S.repereTexte}>Ta VMI est la vitesse atteinte à la fin du test 30-15 IFT. Comme le test comporte des demi-tours et des relances, elle est plus élevée que ta VMA.</p>
+          <p style={S.repereTexte}>Plus chaque effort est court, plus tu peux courir vite. Le pourcentage dépend donc de la durée de l’effort :</p>
+          <div style={S.repereTable}>
+            {REPERES_VMI.map(([duree, mn, mx]) => {
+              const actif = conseil && conseil.min === mn && conseil.max === mx
+              return (
+                <div key={duree} style={{ ...S.repereRang, ...(actif ? S.repereRangActif : {}) }}>
+                  <span>{duree}</span><strong>{mn} à {mx} %</strong>
+                </div>
+              )
+            })}
+          </div>
+          <p style={S.repereSource}>Repères de Buchheit et Laursen (2013).</p>
+        </>
+      ) : (
+        <>
+          <p style={S.repereTexte}>Ta VMA est la vitesse maximale aérobie, mesurée sur un test en ligne droite (VAMEVAL, Léger-Boucher, demi-Cooper…).</p>
+          <p style={S.repereTexte}>Le 30-30 se court à 100 % de ta VMA. Plus l’effort est court, plus tu peux monter au-dessus ; plus il est long, plus tu descends en dessous.</p>
+          <p style={S.repereSource}>Repère de Billat (2000).</p>
+        </>
+      )}
+      {fourchette && (
+        <p style={{ ...S.repereTexte, color: T.color.ink }}>Pour {effort} s d’effort : <strong>{fourchette}</strong>. Prends le bas de la fourchette si tu reprends ou si tu enchaînes beaucoup de répétitions, le haut pour une séance courte et intense.</p>
+      )}
+      {conseil && intensite !== conseil.conseil && (
+        <button onClick={() => appliquer(conseil.conseil)} style={S.repereBouton}>Mettre {conseil.conseil} %</button>
+      )}
     </div>
   )
 }
@@ -356,109 +383,106 @@ function resumeParcours(r, virages) {
   return virages.every(v => v.a === 180) ? `Plots à ${demi(L[0])} m, ${L.length} trajets` : `${L.length} trajets de ${demi(L[0])} m`
 }
 
-// Fiche de la séance en image (PNG), au design de la page : en-tête de l'appli,
-// carte sombre avec la distance et le schéma, carte blanche de la séance.
+// Fiche de la séance en image (PNG) : document aux couleurs de l'appli (bandeau
+// anthracite, liseré jaune), chiffres clés, schéma du parcours, séance.
 // Dessinée en SVG puis convertie en image dans le navigateur (rien n'est envoyé).
 const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const POLICE = '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
 
-async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat }) {
-  const W = 1080, X = 40, CW = W - 2 * X, PAD = 48
+async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, format }) {
+  // Fiche « document » : bandeau sombre, chiffres clés, parcours, séance ; ni cartes ni tuiles du site
+  const W = 1080, M = 72
   const mesure = document.createElement('canvas').getContext('2d')
   const largeur = (t, taille, gras = 600) => { mesure.font = `${gras} ${taille}px ${POLICE}`; return mesure.measureText(t).width }
-  const txt = (x, y, t, { taille = 30, gras = 600, couleur = '#ffffff', ancre = 'start' } = {}) =>
-    `<text x="${x}" y="${y}" font-size="${taille}" font-weight="${gras}" fill="${couleur}" text-anchor="${ancre}">${esc(t)}</text>`
+  const txt = (x, y, t, { taille = 30, gras = 600, couleur = '#1a1a1a', ancre = 'start', espace = 0 } = {}) =>
+    `<text x="${x}" y="${y}" font-size="${taille}" font-weight="${gras}" fill="${couleur}" text-anchor="${ancre}"${espace ? ` letter-spacing="${espace}"` : ''}>${esc(t)}</text>`
+  const rubrique = (y, t) => txt(M, y, t.toUpperCase(), { taille: 24, gras: 800, couleur: '#6b7280', espace: 3 })
+  const filet = y => `<rect x="${M}" y="${y}" width="${W - 2 * M}" height="2" fill="#e5e7eb"/>`
   const parts = []
-  let y = 0
 
-  // En-tête (logo dessiné ensuite sur le canvas)
-  parts.push(`<defs><linearGradient id="h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#333333"/><stop offset="1" stop-color="#1f2937"/></linearGradient></defs>`)
-  parts.push(`<rect width="${W}" height="220" fill="url(#h)"/>`)
-  parts.push(txt(200, 112, 'Ta séance de course', { taille: 54, gras: 800 }))
-  parts.push(txt(200, 162, new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), { taille: 30, couleur: 'rgba(255,255,255,0.6)' }))
-  y = 252
+  // Bandeau : logo (dessiné ensuite), titre de la séance, date ; liseré jaune
+  parts.push(`<rect width="${W}" height="300" fill="#333333"/>`)
+  parts.push(txt(M + 112, 96, 'AWPREPA · SÉANCE DE COURSE', { taille: 24, gras: 800, couleur: '#e4f816', espace: 3 }))
+  parts.push(txt(M + 112, 134, new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), { taille: 26, couleur: 'rgba(255,255,255,0.6)' }))
+  parts.push(txt(M, 250, `${format} à ${p.intensite} % ${ref}`, { taille: 76, gras: 800, couleur: '#ffffff' }))
+  parts.push(`<rect y="300" width="${W}" height="12" fill="#e4f816"/>`)
+  let y = 312
 
-  // Carte sombre : distance, réglages en pastilles, schéma
-  const debutCarte = y
-  const corps = []
-  let cy = y + 78
-  corps.push(txt(X + PAD, cy, `Distance à courir en ${p.effort} s`, { taille: 32, couleur: 'rgba(255,255,255,0.6)' }))
-  cy += 150
-  const valeur = demi(r.distance)
-  corps.push(txt(X + PAD, cy, valeur, { taille: 150, gras: 800 }))
-  corps.push(txt(X + PAD + largeur(valeur, 150, 800) + 16, cy, 'm', { taille: 56, gras: 700, couleur: 'rgba(255,255,255,0.6)' }))
-  cy += 44
+  // Chiffres clés sur trois colonnes séparées par des filets
+  y += 86
+  const col = (W - 2 * M) / 3
+  const cles = [
+    ['Distance', `${demi(r.distance)} m`, `par effort de ${p.effort} s`],
+    ['Vitesse', kmh ? `${virgule(kmh)} km/h` : '-', `${p.intensite} % de ta ${ref}`],
+    ['Volume', `${seance.volume.toLocaleString('fr-FR').replace(/\s/g, ' ')} m`, Number(p.series) > 1 ? `${p.reps} × ${p.series} répétitions` : `${p.reps} répétitions`],
+  ]
+  cles.forEach(([l, v, sous], i) => {
+    const x = M + i * col + (i ? 32 : 0)
+    if (i) parts.push(`<rect x="${M + i * col}" y="${y - 40}" width="2" height="190" fill="#e5e7eb"/>`)
+    parts.push(txt(x, y, l.toUpperCase(), { taille: 22, gras: 800, couleur: '#6b7280', espace: 2 }))
+    parts.push(txt(x, y + 78, v, { taille: 58, gras: 800 }))
+    parts.push(txt(x, y + 124, sous, { taille: 24, couleur: '#6b7280' }))
+  })
+  y += 190
+  parts.push(filet(y))
+
+  // Le parcours : repères en une ligne, puis le schéma
+  y += 70
+  parts.push(rubrique(y, 'Le parcours'))
   const nbCdd = p.virages.length
   const nbSol = p.sols.filter(Boolean).length
-  const pastilles = [
-    `${p.effort} s / ${p.recup} s`,
-    `${p.intensite} % ${ref}${kmh ? ` · ${virgule(kmh)} km/h` : ''}`,
-    `${nbCdd} changement${nbCdd > 1 ? 's' : ''} de direction`,
-    ...(nbSol ? [`${nbSol} passage${nbSol > 1 ? 's' : ''} au sol`] : []),
-  ]
-  let px = X + PAD
-  pastilles.forEach(t => {
-    const w = largeur(t, 28, 700) + 48
-    if (px + w > X + CW - PAD) { px = X + PAD; cy += 80 }
-    corps.push(`<rect x="${px}" y="${cy}" width="${w}" height="64" rx="32" fill="rgba(255,255,255,0.1)"/>`)
-    corps.push(txt(px + 24, cy + 42, t, { taille: 28, gras: 700 }))
-    px += w + 14
-  })
-  cy += 64
-  if (ligneResultat) { cy += 58; corps.push(txt(X + PAD, cy, ligneResultat, { taille: 30, gras: 700, couleur: '#e4f816' })) }
-  cy += 36
-  // Schéma : le dessin affiché sur la page, recopié tel quel
+  const infos = [`${nbCdd} changement${nbCdd > 1 ? 's' : ''} de direction`, ...(nbSol ? [`${nbSol} passage${nbSol > 1 ? 's' : ''} au sol`] : [])].join('  ·  ')
+  y += 52
+  parts.push(txt(M, y, infos, { taille: 30, gras: 700 }))
+  if (ligneResultat) {
+    y += 54
+    const w = largeur(ligneResultat, 28, 700) + 32
+    parts.push(`<rect x="${M}" y="${y - 38}" width="${w}" height="54" rx="10" fill="#e4f816"/>`)
+    parts.push(txt(M + 16, y - 2, ligneResultat, { taille: 28, gras: 700, couleur: '#1a1a1a' }))
+  }
+  y += 36
   const dessin = document.querySelector('[data-schema-calc] svg')
-  const TS = CW - 2 * PAD
+  const TS = W - 2 * M
   if (dessin) {
     const copie = dessin.cloneNode(true)
     copie.removeAttribute('style')
-    copie.setAttribute('x', X + PAD); copie.setAttribute('y', cy); copie.setAttribute('width', TS); copie.setAttribute('height', TS)
-    corps.push(`<clipPath id="cs"><rect x="${X + PAD}" y="${cy}" width="${TS}" height="${TS}" rx="20"/></clipPath><g clip-path="url(#cs)">${new XMLSerializer().serializeToString(copie)}</g>`)
-    cy += TS
+    copie.setAttribute('x', M); copie.setAttribute('y', y); copie.setAttribute('width', TS); copie.setAttribute('height', TS)
+    parts.push(`<clipPath id="cs"><rect x="${M}" y="${y}" width="${TS}" height="${TS}" rx="24"/></clipPath><g clip-path="url(#cs)">${new XMLSerializer().serializeToString(copie)}</g>`)
+    y += TS
   }
-  cy += PAD
-  parts.push(`<rect x="${X}" y="${debutCarte}" width="${CW}" height="${cy - debutCarte}" rx="36" fill="#333333"/>`, ...corps)
-  y = cy + 28
+  y += 56
+  parts.push(filet(y))
 
-  // Carte blanche : la séance
-  const debutSeance = y
-  const sc = []
-  let sy = y + 76
-  sc.push(txt(X + PAD, sy, 'Ta séance', { taille: 36, gras: 800, couleur: '#333333' }))
+  // La séance : récupérations, durée, difficulté
+  y += 70
+  parts.push(rubrique(y, 'La séance'))
+  const lignes = [
+    ['Récupération', `${p.recup} s entre les efforts${Number(p.series) > 1 ? `, ${p.recupSeries} min entre les séries` : ''}`],
+    ['Durée', `environ ${seance.dureeMin} min`],
+  ]
+  lignes.forEach(([l, v]) => {
+    y += 54
+    parts.push(txt(M, y, l, { taille: 28, couleur: '#6b7280' }))
+    parts.push(txt(M + 260, y, v, { taille: 28, gras: 700 }))
+  })
   if (evaluation) {
     const c = COULEURS_NIVEAU[evaluation.niveau]
-    sy += 66
-    sc.push(txt(X + PAD, sy, 'Difficulté', { taille: 30, couleur: '#333333' }))
-    sc.push(txt(X + CW - PAD, sy, evaluation.libelle, { taille: 30, gras: 800, couleur: c, ancre: 'end' }))
-    sy += 24
-    const sw = (CW - 2 * PAD - 4 * 10) / 5
-    NIVEAUX_DIFFICULTE.forEach((_, i) => sc.push(`<rect x="${X + PAD + i * (sw + 10)}" y="${sy}" width="${sw}" height="16" rx="8" fill="${i <= evaluation.niveau ? c : '#e5e7eb'}"/>`))
-    sy += 16
-    if (evaluation.repetitionEpuisement) { sy += 44; sc.push(txt(X + PAD, sy, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 26, gras: 700, couleur: '#7f1d1d' })) }
+    y += 54
+    parts.push(txt(M, y, 'Difficulté', { taille: 28, couleur: '#6b7280' }))
+    parts.push(txt(M + 260, y, evaluation.libelle, { taille: 28, gras: 800, couleur: c }))
+    const bx = M + 260 + largeur(evaluation.libelle, 28, 800) + 28, bw = W - M - bx, sw = (bw - 4 * 8) / 5
+    NIVEAUX_DIFFICULTE.forEach((_, i) => parts.push(`<rect x="${bx + i * (sw + 8)}" y="${y - 20}" width="${sw}" height="12" rx="6" fill="${i <= evaluation.niveau ? c : '#e5e7eb'}"/>`))
+    if (evaluation.repetitionEpuisement) { y += 46; parts.push(txt(M + 260, y, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 24, gras: 700, couleur: '#7f1d1d' })) }
   }
-  sy += 36
-  const tuiles = [
-    ['Répétitions', Number(p.series) > 1 ? `${p.reps} × ${p.series}` : `${p.reps}`],
-    ['Volume', `${seance.volume.toLocaleString('fr-FR').replace(/\s/g, ' ')} m`],
-    ['Durée', `${seance.dureeMin} min`],
-  ]
-  const tw = (CW - 2 * PAD - 2 * 16) / 3
-  tuiles.forEach(([l, v], i) => {
-    const tx = X + PAD + i * (tw + 16)
-    sc.push(`<rect x="${tx}" y="${sy}" width="${tw}" height="132" rx="20" fill="#f3f4f6"/>`)
-    sc.push(txt(tx + 24, sy + 48, l, { taille: 24, couleur: '#6b7280' }))
-    sc.push(txt(tx + 24, sy + 102, v, { taille: 40, gras: 800, couleur: '#333333' }))
-  })
-  sy += 132
-  if (Number(p.series) > 1) { sy += 50; sc.push(txt(X + PAD, sy, `Récupération entre les séries : ${p.recupSeries} min`, { taille: 26, couleur: '#6b7280' })) }
-  sy += PAD
-  parts.push(`<rect x="${X}" y="${debutSeance}" width="${CW}" height="${sy - debutSeance}" rx="36" fill="#ffffff"/>`, ...sc)
-  y = sy + 64
-  parts.push(txt(W / 2, y, 'awprepa.app/calculateur', { taille: 26, couleur: '#6b7280', ancre: 'middle' }))
-  const H = y + 48
+  y += 72
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${POLICE}"><rect width="${W}" height="${H}" fill="#f5f5f5"/>${parts.join('')}</svg>`
+  // Pied de page
+  parts.push(`<rect y="${y}" width="${W}" height="96" fill="#f5f5f5"/>`)
+  parts.push(txt(M, y + 58, 'Calculé sur awprepa.app/calculateur', { taille: 24, couleur: '#6b7280' }))
+  parts.push(txt(W - M, y + 58, 'AWprepa - préparation physique', { taille: 24, gras: 700, couleur: '#333333', ancre: 'end' }))
+  const H = y + 96
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${POLICE}"><rect width="${W}" height="${H}" fill="#ffffff"/>${parts.join('')}</svg>`
   const image = new Image()
   image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
   await image.decode()
@@ -469,7 +493,7 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat })
   // Logo de l'appli, coins arrondis
   try {
     const logo = new Image(); logo.src = '/apple-touch-icon.png'; await logo.decode()
-    ctx.save(); ctx.beginPath(); ctx.roundRect(48, 50, 120, 120, 28); ctx.clip(); ctx.drawImage(logo, 48, 50, 120, 120); ctx.restore()
+    ctx.save(); ctx.beginPath(); ctx.roundRect(M, 52, 92, 92, 22); ctx.clip(); ctx.drawImage(logo, M, 52, 92, 92); ctx.restore()
   } catch (_) {}
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
   const nom = `seance-course-${new Date().toISOString().slice(0, 10)}.png`
@@ -557,13 +581,18 @@ const S = {
   point: { width: 16, height: 16, borderRadius: T.radius.pill, flexShrink: 0, boxShadow: '0 0 0 1.5px rgba(0,0,0,0.25)' },
   auto: { flex: 1, minWidth: 0, fontSize: T.size.xs, fontWeight: 600, color: T.color.muted },
   solBouton: { minHeight: T.touch, minWidth: 52, padding: '0 10px', borderRadius: T.radius.control, border: `1.5px solid ${T.color.line}`, background: T.color.card, color: T.color.muted, fontFamily: T.font.body, fontSize: T.size.sm, fontWeight: 700, cursor: 'pointer', flexShrink: 0 },
-  aide: { margin: '0 0 6px', fontSize: T.size.xs, color: T.color.muted, lineHeight: 1.4 },
   repere: { marginTop: 4, padding: 12, background: T.color.soft, borderRadius: T.radius.control },
   repereTitre: { margin: 0, fontSize: T.size.md, color: T.color.ink },
   repereTexte: { margin: '6px 0 0', fontSize: T.size.xs, color: T.color.muted, lineHeight: 1.45 },
-  repereLigne: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 10 },
-  repereZone: { fontSize: T.size.xs, fontWeight: 700, border: '1.5px solid', borderRadius: T.radius.pill, padding: '4px 10px', background: T.color.card },
-  repereBouton: { minHeight: 36, padding: '0 12px', borderRadius: T.radius.pill, border: 'none', background: T.color.ink, color: T.color.signal, fontFamily: T.font.body, fontSize: T.size.xs, fontWeight: 700, cursor: 'pointer' },
+  repereTable: { display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 },
+  repereRang: { display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 10px', borderRadius: 8, fontSize: T.size.sm, color: T.color.ink, ...T.num },
+  repereRangActif: { background: T.color.ink, color: T.color.signal },
+  repereSource: { margin: '6px 0 0', fontSize: T.size.xs, color: T.color.muted, fontStyle: 'italic' },
+  // zone tactile de 44 px autour d'un petit rond « i »
+  infoZone: { width: T.touch, height: T.touch, margin: '-12px -10px', padding: 0, border: 'none', background: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle', cursor: 'pointer' },
+  info: { width: 22, height: 22, borderRadius: T.radius.pill, border: `1.5px solid ${T.color.muted}`, color: T.color.muted, fontFamily: 'Georgia, serif', fontSize: 13, fontWeight: 700, fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' },
+  infoActif: { background: T.color.ink, borderColor: T.color.ink, color: T.color.signal },
+  repereBouton: { marginTop: 10, minHeight: 36, padding: '0 12px', borderRadius: T.radius.pill, border: 'none', background: T.color.ink, color: T.color.signal, fontFamily: T.font.body, fontSize: T.size.xs, fontWeight: 700, cursor: 'pointer' },
   virage: { display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 0 4px', padding: '0 0 0 16px', borderLeft: `2px solid ${T.color.line}`, minHeight: 44 },
   virageNom: { flex: 1, fontSize: T.size.md, fontWeight: 700, color: T.color.muted },
   sens: { display: 'flex', gap: 4, background: T.color.soft, borderRadius: T.radius.control, padding: 3 },
