@@ -399,22 +399,10 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
 
   // Bandeau : logo (dessiné ensuite), titre, blocs de répétitions ; liseré jaune
   const blocs = Array.from({ length: Math.max(1, Number(p.series) || 1) }, () => Number(p.reps) || 0)
-  const BAS_BANDEAU = 680
+  const BAS_BANDEAU = HAUT + 320
   parts.push(`<rect width="${W}" height="${BAS_BANDEAU}" fill="#333333"/>`)
   parts.push(txt(M + 128, HAUT + 64, 'AWPREPA · SÉANCE DE COURSE', { taille: 28, gras: 800, couleur: '#e4f816', espace: 3 }))
   parts.push(txt(M, HAUT + 230, `${format} à ${p.intensite} % ${ref}`, { taille: 96, gras: 800, couleur: '#ffffff' }))
-  const lib = `${blocs.length} bloc${blocs.length > 1 ? 's' : ''}`
-  let bx = M
-  const by = HAUT + 320
-  parts.push(txt(bx, by + 46, lib, { taille: 38, gras: 800, couleur: '#ffffff' }))
-  bx += largeur(lib, 38, 800) + 24
-  blocs.forEach(n => {
-    const t = String(n), w = Math.max(72, largeur(t, 36, 800) + 40)
-    parts.push(`<rect x="${bx}" y="${by}" width="${w}" height="64" rx="14" fill="rgba(228,248,22,0.14)" stroke="#e4f816" stroke-width="2"/>`)
-    parts.push(txt(bx + w / 2, by + 45, t, { taille: 36, gras: 800, couleur: '#e4f816', ancre: 'middle' }))
-    bx += w + 12
-  })
-  parts.push(txt(bx + 8, by + 44, 'répétitions', { taille: 30, couleur: 'rgba(255,255,255,0.6)' }))
   parts.push(`<rect y="${BAS_BANDEAU}" width="${W}" height="14" fill="#e4f816"/>`)
   let y = BAS_BANDEAU + 14
 
@@ -436,13 +424,21 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
   y += 206
   parts.push(filet(y))
 
-  // Le parcours
+  // Au programme : ce qu'on enchaîne, combien de fois, et la récupération entre les blocs
   y += 76
-  parts.push(rubrique(y, 'Le parcours'))
-  const nbCdd = p.virages.length
-  const nbSol = p.sols.filter(Boolean).length
+  parts.push(rubrique(y, 'Au programme'))
+  const effort = Number(p.recup) > 0 ? `${p.effort} s - ${p.recup} s` : `${p.effort} s`
+  const reps = Number(p.reps) || 0
+  y += 74
+  parts.push(txt(M, y, blocs.length > 1 ? `${blocs.length} blocs de ${reps} × ${effort}` : `${reps} × ${effort}`, { taille: 56, gras: 800 }))
+  const dureeBloc = reps * Number(p.effort) + Math.max(0, reps - 1) * Number(p.recup)
+  const duree = sec => (sec < 60 ? `${sec} s` : `${Math.floor(sec / 60)} min${sec % 60 ? ` ${String(sec % 60).padStart(2, '0')}` : ''}`)
   y += 56
-  parts.push(txt(M, y, [`${nbCdd} changement${nbCdd > 1 ? 's' : ''} de direction`, ...(nbSol ? [`${nbSol} passage${nbSol > 1 ? 's' : ''} au sol`] : [])].join('  ·  '), { taille: 32, gras: 700 }))
+  parts.push(txt(M, y, `${blocs.length > 1 ? 'Chaque bloc dure' : 'Le bloc dure'} ${duree(dureeBloc)}`, { taille: 32, gras: 600, couleur: '#333333' }))
+  if (blocs.length > 1) {
+    y += 48
+    parts.push(txt(M, y, `${p.recupSeries} min de récupération entre deux blocs`, { taille: 32, gras: 600, couleur: '#333333' }))
+  }
   if (ligneResultat) {
     y += 60
     const w = largeur(ligneResultat, 30, 700) + 36
@@ -452,9 +448,12 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
   y += 40
 
   // La séance (hauteur connue d'avance pour donner au schéma toute la place qui reste)
+  const nbCdd = p.virages.length
+  const nbSol = p.sols.filter(Boolean).length
   const lignes = [
-    ['Récupération', `${p.recup} s entre les efforts${blocs.length > 1 ? `, ${p.recupSeries} min entre les blocs` : ''}`],
-    ['Durée', `environ ${seance.dureeMin} min`],
+    ['Changements de direction', `${nbCdd}`],
+    ...(nbSol ? [['Passages au sol', `${nbSol}`]] : []),
+    ['Durée totale', `environ ${seance.dureeMin} min`],
   ]
   const hSeance = 76 + 60 * lignes.length + (evaluation ? 60 + (evaluation.repetitionEpuisement ? 50 : 0) : 0) + 40
   const place = H - PIED - 70 - hSeance - y - 56
@@ -475,16 +474,16 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
   lignes.forEach(([l, v]) => {
     y += 60
     parts.push(txt(M, y, l, { taille: 30, couleur: '#6b7280' }))
-    parts.push(txt(M + 270, y, v, { taille: 30, gras: 700 }))
+    parts.push(txt(M + 420, y, v, { taille: 30, gras: 700 }))
   })
   if (evaluation) {
     const c = COULEURS_NIVEAU[evaluation.niveau]
     y += 60
     parts.push(txt(M, y, 'Difficulté', { taille: 30, couleur: '#6b7280' }))
-    parts.push(txt(M + 270, y, evaluation.libelle, { taille: 30, gras: 800, couleur: c }))
-    const gx = M + 270 + largeur(evaluation.libelle, 30, 800) + 30, gw = W - M - gx, sw = (gw - 4 * 8) / 5
+    parts.push(txt(M + 420, y, evaluation.libelle, { taille: 30, gras: 800, couleur: c }))
+    const gx = M + 420 + largeur(evaluation.libelle, 30, 800) + 30, gw = W - M - gx, sw = (gw - 4 * 8) / 5
     NIVEAUX_DIFFICULTE.forEach((_, i) => parts.push(`<rect x="${gx + i * (sw + 8)}" y="${y - 21}" width="${sw}" height="13" rx="6.5" fill="${i <= evaluation.niveau ? c : '#e5e7eb'}"/>`))
-    if (evaluation.repetitionEpuisement) { y += 50; parts.push(txt(M + 270, y, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 26, gras: 700, couleur: '#7f1d1d' })) }
+    if (evaluation.repetitionEpuisement) { y += 50; parts.push(txt(M + 420, y, `Épuisement estimé vers la répétition ${evaluation.repetitionEpuisement}`, { taille: 26, gras: 700, couleur: '#7f1d1d' })) }
   }
 
   // Pied jusqu'au bas de l'écran (au-dessus de la barre d'accueil)
