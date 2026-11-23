@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'https://ytdqyhajqxnmkwxehwmg.supabase.co'
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0ZHF5aGFqcXhubWt3eGVod21nIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzkyNDI1NywiZXhwIjoyMDkzNTAwMjU3fQ.lBnGPGpAGloCSzB7Pzde8Ox0Z8_PFZKFwVDGXFfmEiQ'
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY // ne jamais écrire la clé ici (dépôt public)
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
