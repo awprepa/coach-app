@@ -95,12 +95,13 @@ function tracer(longueurs, virages) {
 }
 
 // Volume et durée de la séance
-export function calculerSeance({ distance, effort, recup, reps, series, recupSeriesMin }) {
-  const r = reps > 0 ? reps : 0
-  const s = series > 0 ? series : 1
-  const volume = Math.round(distance * r * s)
-  const dureeSec = s * r * (effort + recup) + Math.max(0, s - 1) * (recupSeriesMin || 0) * 60
-  return { volume, dureeMin: Math.round(dureeSec / 60), repsTotal: r * s }
+// blocs : nombre de répétitions de chaque bloc (ex. [6, 15, 15])
+export function calculerSeance({ distance, effort, recup, blocs, recupSeriesMin }) {
+  const b = (blocs || []).map(n => (n > 0 ? n : 0))
+  const total = b.reduce((t, n) => t + n, 0)
+  const volume = Math.round(distance * total)
+  const dureeSec = total * (effort + recup) + Math.max(0, b.length - 1) * (recupSeriesMin || 0) * 60
+  return { volume, dureeMin: Math.round(dureeSec / 60), repsTotal: total }
 }
 
 export { REGLAGES_DEFAUT }
@@ -168,14 +169,13 @@ const SURCOUT_RELANCE = 0.5
 
 export const NIVEAUX_DIFFICULTE = ['Légère', 'Modérée', 'Difficile', 'Très difficile', 'Impossible']
 
-export function evaluerSeance({ reference, intensite, effort, recup, reps, series, recupSeriesMin, perte = 0 }) {
-  if (!(intensite > 0) || !(effort > 0) || !(reps > 0)) return null
+export function evaluerSeance({ reference, intensite, effort, recup, blocs, recupSeriesMin, perte = 0 }) {
+  if (!(intensite > 0) || !(effort > 0) || !(blocs || []).some(n => n > 0)) return null
   const v = (intensite / 100) * (reference === 'vmi' ? VMI_SUR_VMA : 1) // en fraction de VMA
   const depense = Math.max(0, (v - VITESSE_CRITIQUE) * effort + SURCOUT_RELANCE * v * Math.min(perte, effort))
   const recharge = t => 1 - Math.exp(-Math.max(0, t) / RECHARGE_S)
   let reserve = RESERVE, mini = RESERVE, n = 0
-  const nbSeries = Math.max(1, Math.round(series) || 1)
-  for (let s = 0; s < nbSeries; s++) {
+  for (const reps of blocs) {
     for (let r = 0; r < reps; r++) {
       reserve -= depense; n++
       if (reserve < 0) return { niveau: 4, libelle: NIVEAUX_DIFFICULTE[4], repetitionEpuisement: n, part: 1 }

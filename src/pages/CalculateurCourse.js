@@ -12,7 +12,7 @@ import { FORMATS_COURSE, calculerParcours, calculerSeance, intensiteConseillee, 
 // - /client/calculateur : la même page dans l'espace client (menu du profil).
 
 const CLE = 'aw_calculateur_course_v1'
-const DEFAUT = { reference: 'vmi', vitesse: '', effort: 30, recup: 30, intensite: 90, virages: [{ a: 180 }], longueurs: ['', ''], sols: [false, false], reps: 10, series: 1, recupSeries: 3 }
+const DEFAUT = { reference: 'vmi', vitesse: '', effort: 30, recup: 30, intensite: 90, virages: [{ a: 180 }], longueurs: ['', ''], sols: [false, false], blocs: [10], recupSeries: 3 }
 const MAX_VIRAGES = 20
 
 // Réglages enregistrés : reprend l'ancien format (compteurs de virages) et
@@ -34,7 +34,10 @@ function relire(brut) {
   // passages au sol : un par trajet (en arrivant au plot) ; l'ancien compteur remplissait dans l'ordre
   const nbSol = Number(brut?.sol) || 0
   x.sols = Array.from({ length: x.longueurs.length }, (_, i) => (Array.isArray(brut?.sols) ? !!brut.sols[i] : i < nbSol))
-  delete x.demiTours; delete x.virages90; delete x.virages45; delete x.sens; delete x.sol
+  // blocs : répétitions de chaque bloc (avant : « répétitions par série » × « séries », identiques)
+  const blocs = Array.isArray(brut?.blocs) ? brut.blocs : Array(Math.max(1, Number(brut?.series) || 1)).fill(Number(brut?.reps) || 10)
+  x.blocs = blocs.slice(0, 10).map(n => Math.min(60, Math.max(1, Number(n) || 1)))
+  delete x.demiTours; delete x.virages90; delete x.virages45; delete x.sens; delete x.sol; delete x.reps; delete x.series
   return x
 }
 
@@ -87,8 +90,8 @@ export default function CalculateurCourse({ publique = false }) {
     vitesseRef: nombre(p.vitesse), intensite: Number(p.intensite), effort: Number(p.effort),
     virages: p.virages, longueurs: p.longueurs.map(nombre), sols: p.sols,
   })
-  const seance = !r.erreur ? calculerSeance({ distance: r.distance, effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries) }) : null
-  const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), reps: Number(p.reps), series: Number(p.series), recupSeriesMin: Number(p.recupSeries), perte: r.perte }) : null
+  const seance = !r.erreur ? calculerSeance({ distance: r.distance, effort: Number(p.effort), recup: Number(p.recup), blocs: p.blocs, recupSeriesMin: Number(p.recupSeries) }) : null
+  const evaluation = !r.erreur ? evaluerSeance({ reference: p.reference, intensite: Number(p.intensite), effort: Number(p.effort), recup: Number(p.recup), blocs: p.blocs, recupSeriesMin: Number(p.recupSeries), perte: r.perte }) : null
   const parcours = !r.erreur ? genererParcours({ longueurs: r.longueurs, virages: p.virages, sols: p.sols }) : null
   // Couleur des plots de chaque trajet (sans résultat : longueurs de 10 m pour placer les plots)
   const couleurs = (parcours || genererParcours({ longueurs: p.longueurs.map(() => 10), virages: p.virages })).couleurs
@@ -102,6 +105,9 @@ export default function CalculateurCourse({ publique = false }) {
     setP(x => ({ ...x, virages: x.virages.filter((_, k) => k !== i), longueurs: x.longueurs.filter((_, k) => k !== i + 1), sols: x.sols.filter((_, k) => k !== i) }))
   }
   const choisirSens = (i, cote) => setP(x => ({ ...x, virages: x.virages.map((v, k) => (k === i ? { ...v, s: cote } : v)) }))
+  // Blocs : en ajouter un reprend le nombre de répétitions du dernier
+  const nbBlocs = n => setP(x => ({ ...x, blocs: n > x.blocs.length ? [...x.blocs, ...Array(n - x.blocs.length).fill(x.blocs[x.blocs.length - 1])] : x.blocs.slice(0, n) }))
+  const majBloc = (k, v) => setP(x => ({ ...x, blocs: x.blocs.map((n, i) => (i === k ? v : n)) }))
   const basculerSol = i => setP(x => ({ ...x, sols: x.sols.map((v, k) => (k === i ? !v : v)) }))
   const choisirLongueur = (i, val) => setP(x => ({ ...x, longueurs: x.longueurs.map((l, k) => (k === i ? val : l)) }))
   const ligneResultat = !r.erreur ? resumeParcours(r, p.virages) : ''
@@ -230,10 +236,13 @@ export default function CalculateurCourse({ publique = false }) {
         <section style={S.carte}>
           <Titre n="5" texte="Ta séance" />
           {evaluation && <Jauge e={evaluation} />}
-          <Compteur label="Répétitions par série" value={Number(p.reps) || 0} min={1} max={60} onChange={v => maj('reps', v)} />
-          <Compteur label="Séries" value={Number(p.series) || 1} min={1} max={10} onChange={v => maj('series', v)} />
-          {Number(p.series) > 1 && (
-            <Compteur label="Récupération entre les séries" value={Number(p.recupSeries) || 0} min={0} max={15} unite="min" onChange={v => maj('recupSeries', v)} dernier />
+          <Compteur label="Blocs" value={p.blocs.length} min={1} max={10} onChange={nbBlocs} />
+          {p.blocs.map((n, k) => (
+            <Compteur key={k} label={p.blocs.length > 1 ? `Bloc ${k + 1}` : 'Répétitions'} detail={p.blocs.length > 1 ? 'répétitions' : undefined}
+              value={n} min={1} max={60} onChange={v => majBloc(k, v)} dernier={p.blocs.length === 1} />
+          ))}
+          {p.blocs.length > 1 && (
+            <Compteur label="Récupération entre les blocs" value={Number(p.recupSeries) || 0} min={0} max={15} unite="min" onChange={v => maj('recupSeries', v)} dernier />
           )}
           {seance && (
             <div style={S.bilan}>
@@ -398,7 +407,7 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
   const parts = []
 
   // Bandeau : logo (dessiné ensuite), titre, blocs de répétitions ; liseré jaune
-  const blocs = Array.from({ length: Math.max(1, Number(p.series) || 1) }, () => Number(p.reps) || 0)
+  const blocs = p.blocs
   const BAS_BANDEAU = HAUT + 320
   parts.push(`<rect width="${W}" height="${BAS_BANDEAU}" fill="#333333"/>`)
   parts.push(txt(M + 128, HAUT + 64, 'AWPREPA · SÉANCE DE COURSE', { taille: 28, gras: 800, couleur: '#e4f816', espace: 3 }))
@@ -428,13 +437,18 @@ async function creerFiche({ p, r, seance, evaluation, ref, kmh, ligneResultat, f
   y += 76
   parts.push(rubrique(y, 'Au programme'))
   const effort = Number(p.recup) > 0 ? `${p.effort} s - ${p.recup} s` : `${p.effort} s`
-  const reps = Number(p.reps) || 0
+  const egaux = blocs.every(n => n === blocs[0])
+  const liste = t => (t.length > 1 ? `${t.slice(0, -1).join(', ')} et ${t[t.length - 1]}` : `${t[0]}`)
+  const programme = blocs.length === 1 ? `${blocs[0]} × ${effort}`
+    : egaux ? `${blocs.length} blocs de ${blocs[0]} × ${effort}` : `${blocs.length} blocs : ${liste(blocs)} × ${effort}`
+  const tProg = Math.min(56, Math.floor(56 * (W - 2 * M) / largeur(programme, 56, 800)))
   y += 74
-  parts.push(txt(M, y, blocs.length > 1 ? `${blocs.length} blocs de ${reps} × ${effort}` : `${reps} × ${effort}`, { taille: 56, gras: 800 }))
-  const dureeBloc = reps * Number(p.effort) + Math.max(0, reps - 1) * Number(p.recup)
+  parts.push(txt(M, y, programme, { taille: tProg, gras: 800 }))
   const duree = sec => (sec < 60 ? `${sec} s` : `${Math.floor(sec / 60)} min${sec % 60 ? ` ${String(sec % 60).padStart(2, '0')}` : ''}`)
+  const dureeBloc = n => n * Number(p.effort) + Math.max(0, n - 1) * Number(p.recup)
   y += 56
-  parts.push(txt(M, y, `${blocs.length > 1 ? 'Chaque bloc dure' : 'Le bloc dure'} ${duree(dureeBloc)}`, { taille: 32, gras: 600, couleur: '#333333' }))
+  parts.push(txt(M, y, blocs.length === 1 ? `Le bloc dure ${duree(dureeBloc(blocs[0]))}`
+    : egaux ? `Chaque bloc dure ${duree(dureeBloc(blocs[0]))}` : `Blocs de ${liste(blocs.map(n => duree(dureeBloc(n))))}`, { taille: 32, gras: 600, couleur: '#333333' }))
   if (blocs.length > 1) {
     y += 48
     parts.push(txt(M, y, `${p.recupSeries} min de récupération entre deux blocs`, { taille: 32, gras: 600, couleur: '#333333' }))
