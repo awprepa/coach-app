@@ -824,12 +824,15 @@ export default function SeanceClient() {
     setVideoDemandes(prev => { const n = { ...prev }; delete n[exerciceId]; return n })
     setVideoEnvoyees(prev => new Set([...prev, exerciceId]))
     try {
-      const coachId = await getCoachId()
       const exo = exercices.find(e => e.id === exerciceId)
       const clientId = seance?.programmes?.client_id
+      const [coachId, { data: cl }] = await Promise.all([
+        getCoachId(),
+        supabase.from('clients').select('prenom, nom').eq('id', clientId).maybeSingle(),
+      ])
       if (coachId) {
         sendNotif(coachId, {
-          titre: 'Vidéo envoyée sur WhatsApp',
+          titre: `${cl ? `${cl.prenom} ${cl.nom}` : 'Un client'} a envoyé une vidéo sur WhatsApp`,
           corps: `${exo?.nom || 'Un exercice'} — à corriger`,
           type: 'video',
           lien: clientId ? `/client/${clientId}` : '/',
