@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +19,7 @@ Deno.serve(async (req) => {
   // Vérifier le JWT avec la clé anon
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
+    SB_PUBLIC!,
     { global: { headers: { Authorization: authHeader } } }
   );
 
@@ -24,7 +29,7 @@ Deno.serve(async (req) => {
   // Client admin (service role) pour les suppressions
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    SB_SECRET!
   );
 
   try {

@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 // ── Calendrier ICS dynamique ──────────────────────────────────────────────────
 // GET /calendar-ics?client_id=<uuid>
@@ -8,7 +13,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // Sécurité : le client_id est un UUID v4 (non-devinable).
 
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SERVICE_KEY   = SB_SECRET!;
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 

@@ -1,3 +1,8 @@
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 /**
  * calendar-ai
  * POST { messages: {role,content}[], context: { groupe, phases, recentEvents, currentDate } }
@@ -83,7 +88,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: "Non authentifié" }), { status: 401, headers: JSON_CT })
   }
   const { createClient } = await import("npm:@supabase/supabase-js@2")
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, SB_PUBLIC!, {
     global: { headers: { Authorization: authHeader } },
   })
   const { data: { user } } = await sb.auth.getUser()

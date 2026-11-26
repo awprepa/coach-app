@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 // Heure et date du jour en Europe/Paris (le runtime Deno tourne en UTC).
 function parisNow() {
@@ -22,16 +27,16 @@ function appelAutorise(req: Request): boolean {
   const secret = Deno.env.get("CRON_SECRET") ?? "";
   if (secret && req.headers.get("x-cron-secret") === secret) return true;
   const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  return bearer !== "" && bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  return bearer !== "" && bearer === SB_SECRET;
 }
 
 Deno.serve(async (req) => {
   if (!appelAutorise(req)) return new Response("forbidden", { status: 403 });
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = SB_SECRET ?? "";
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      SB_SECRET!
     );
 
     const { data: coachSetting } = await supabase
@@ -86,6 +91,7 @@ Deno.serve(async (req) => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${serviceRoleKey}`,
+            "apikey": serviceRoleKey,
           },
           body: JSON.stringify({ record: { destinataire_id: coachId, titre, corps, lien } }),
         });

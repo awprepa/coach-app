@@ -5,6 +5,11 @@
 // bascule via l'API admin. Réservé STRICTEMENT aux 2 emails d'Arthur : la fonction
 // vérifie que l'appelant est déjà connecté à l'un d'eux avant de délivrer l'autre.
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,7 +33,7 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "unauthorized" }, 401);
 
   const url  = Deno.env.get("SUPABASE_URL")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const anon = SB_PUBLIC!;
 
   // 1. Identifier l'appelant à partir de son JWT.
   const caller = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
@@ -41,7 +46,7 @@ Deno.serve(async (req) => {
 
   const target = ALLOWED[0] === email ? ALLOWED[1] : ALLOWED[0];
 
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+  const admin = createClient(url, SB_SECRET!, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 

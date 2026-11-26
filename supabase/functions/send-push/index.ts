@@ -1,5 +1,10 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 const VAPID_PUBLIC  = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
@@ -16,14 +21,14 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // ── Vérification service role — seul Supabase peut appeler cette fonction ─
-  // Les webhooks DB Supabase envoient le service role key en Authorization
-  const authHeader = req.headers.get("Authorization") ?? ""
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  if (!serviceRoleKey || authHeader !== `Bearer ${serviceRoleKey}`) {
-    console.error("[send-push] ✗ Appel non autorisé (header Authorization invalide)")
-    return new Response("Forbidden", { status: 403, headers: corsHeaders })
+  // Appel autorisé : joueur ou coach connecté (jeton de session), ou une autre fonction (clé secrète)
+  const jeton = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "")
+  let autorise = !!SB_SECRET && (jeton === SB_SECRET || req.headers.get("apikey") === SB_SECRET)
+  if (!autorise && jeton.startsWith("eyJ")) {
+    const { data } = await createClient(Deno.env.get("SUPABASE_URL")!, SB_PUBLIC!).auth.getUser(jeton)
+    autorise = !!data?.user
   }
+  if (!autorise) return new Response("Forbidden", { status: 403, headers: corsHeaders })
 
   console.error("[send-push] ► invoquée, method:", req.method);
   try {
@@ -40,7 +45,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      SB_SECRET!
     );
 
     const { data: subs, error: subErr } = await supabase

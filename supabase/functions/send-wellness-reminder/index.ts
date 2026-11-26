@@ -1,5 +1,10 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 const VAPID_PUBLIC  = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
@@ -12,8 +17,8 @@ Deno.serve(async (req) => {
     // contrôle, tout utilisateur connecté pouvait déclencher l'envoi à tous.
     const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     const cronOk = !!Deno.env.get("CRON_SECRET") && req.headers.get("x-cron-secret") === Deno.env.get("CRON_SECRET");
-    if (!cronOk && bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-      const sbUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    if (!cronOk && bearer !== SB_SECRET) {
+      const sbUser = createClient(Deno.env.get("SUPABASE_URL")!, SB_PUBLIC!, {
         global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
       });
       const { data: estCoach } = await sbUser.rpc("is_coach");
@@ -22,7 +27,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      SB_SECRET!
     );
 
     // Exclure le coach de l'envoi

@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+// Clés Supabase : nouvelles clés (sb_secret_ / sb_publishable_), anciennes en secours
+const cleDe = (v: string) => { try { return JSON.parse(Deno.env.get(v) ?? "{}").default; } catch { return undefined; } };
+const SB_SECRET = cleDe("SUPABASE_SECRET_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SB_PUBLIC = cleDe("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_ANON_KEY");
+
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!
 
@@ -15,7 +20,7 @@ Deno.serve(async (req) => {
   try {
     // Réservé au coach : sans ce contrôle, n'importe quel utilisateur connecté
     // (un athlète) pouvait envoyer un e-mail quelconque depuis le compte d'envoi.
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, SB_PUBLIC!, {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
     })
     const { data: estCoach } = await sb.rpc("is_coach")
